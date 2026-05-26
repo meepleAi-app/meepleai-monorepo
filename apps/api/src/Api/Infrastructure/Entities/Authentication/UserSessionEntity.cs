@@ -37,6 +37,16 @@ public class UserSessionEntity
     /// </summary>
     public DateTime? ImpersonatedUntil { get; set; }
 
+    /// <summary>
+    /// UTC timestamp of the last successful TOTP verification on this session — login OR step-up.
+    /// Null when no TOTP verification has occurred (e.g. password-only login, or pre-S3 sessions
+    /// at flag-flip time). The <c>TwoFactorEnforcementBehavior</c> reads this to enforce
+    /// <c>[RequireTwoFactor(MaxAgeMinutes)]</c> recency. For impersonate sessions, this is INHERITED
+    /// from the actor's session at creation (S3 spike §5) — represents the actor's recency,
+    /// not the subject's. SP5 Admin Security S3 — D-S3-3.
+    /// </summary>
+    public DateTime? LastTotpVerifiedAt { get; set; }
+
     required public UserEntity User { get; set; }
 }
 

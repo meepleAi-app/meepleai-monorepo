@@ -207,6 +207,10 @@ public class SessionRepository : RepositoryBase, ISessionRepository
         var impersonatedUntilProp = typeof(Session).GetProperty("ImpersonatedUntil");
         impersonatedUntilProp?.SetValue(session, entity.ImpersonatedUntil);
 
+        // SP5 Admin Security S3 — hydrate TOTP recency.
+        var lastTotpVerifiedAtProp = typeof(Session).GetProperty("LastTotpVerifiedAt");
+        lastTotpVerifiedAtProp?.SetValue(session, entity.LastTotpVerifiedAt);
+
         return session;
     }
 
@@ -229,6 +233,8 @@ public class SessionRepository : RepositoryBase, ISessionRepository
             // SP5 Admin Security S2 — propagate dual-principal fields end-to-end.
             ImpersonatedByUserId = domainEntity.ImpersonatedByUserId,
             ImpersonatedUntil = domainEntity.ImpersonatedUntil,
+            // SP5 Admin Security S3 — propagate TOTP recency.
+            LastTotpVerifiedAt = domainEntity.LastTotpVerifiedAt,
             User = null! // Required navigation property, will be loaded by EF Core
         };
     }

@@ -9,6 +9,7 @@ using Api.SharedKernel.Domain.ValueObjects;
 using Api.Tests.Constants;
 using FluentAssertions;
 using MediatR;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
@@ -29,6 +30,7 @@ public class ImpersonationStartCommandHandlerTests
 {
     private readonly Mock<IUserRepository> _mockUserRepository;
     private readonly Mock<IMediator> _mockMediator;
+    private readonly Mock<IHttpContextAccessor> _mockHttpContextAccessor;
     private readonly FakeTimeProvider _timeProvider;
     private readonly ImpersonationStartCommandHandler _handler;
 
@@ -36,12 +38,14 @@ public class ImpersonationStartCommandHandlerTests
     {
         _mockUserRepository = new Mock<IUserRepository>();
         _mockMediator = new Mock<IMediator>();
+        _mockHttpContextAccessor = new Mock<IHttpContextAccessor>();   // default: HttpContext null → no inheritance
         _timeProvider = new FakeTimeProvider(DateTimeOffset.Parse("2026-05-26T12:00:00Z"));
 
         _handler = new ImpersonationStartCommandHandler(
             _mockUserRepository.Object,
             _mockMediator.Object,
             _timeProvider,
+            _mockHttpContextAccessor.Object,
             Mock.Of<ILogger<ImpersonationStartCommandHandler>>());
     }
 
@@ -167,6 +171,73 @@ public class ImpersonationStartCommandHandlerTests
 
         var act = () => _handler.Handle(command, CancellationToken.None);
         await act.Should().ThrowAsync<ConflictException>().WithMessage("*demo account*");
+    }
+
+    [Fact]
+    public async Task Handle_HappyPath_InheritsActorLastTotpVerifiedAtFromHttpContext()
+    {
+        // SP5 S3 spike §5: the impersonate session's LastTotpVerifiedAt must inherit the
+        // ACTOR's value (read from HttpContext SessionStatusDto), not the target's. The strict
+        // TwoFactorEnforcementBehavior thus gates impersonate commands against the admin's
+        // step-up recency.
+        var requesterId = Guid.NewGuid();
+        var targetId = Guid.NewGuid();
+        SetupUser(requesterId, "root@test.com", "superadmin");
+        SetupUser(targetId, "bob@test.com", "user");
+
+        // Arrange — actor session with a fresh TOTP verification 2min ago.
+        var actorVerifiedAt = _timeProvider.GetUtcNow().UtcDateTime.AddMinutes(-2);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Items[nameof(SessionStatusDto)] = new SessionStatusDto(
+            IsValid: true,
+            Principal: null,                       // not needed for this inheritance path
+            ExpiresAt: null,
+            LastSeenAt: null,
+            LastTotpVerifiedAt: actorVerifiedAt);
+        _mockHttpContextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
+
+        CreateSessionCommand? captured = null;
+        _mockMediator
+            .Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<CreateSessionResponse>, CancellationToken>((cmd, _) => captured = (CreateSessionCommand)cmd)
+            .ReturnsAsync(new CreateSessionResponse(
+                User: null!, SessionToken: "tok", ExpiresAt: _timeProvider.GetUtcNow().UtcDateTime.AddMinutes(15), SessionId: Guid.NewGuid()));
+
+        var command = new ImpersonationStartCommand(targetId, requesterId, "Inherit actor TOTP recency");
+
+        // Act
+        await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        captured.Should().NotBeNull();
+        captured!.LastTotpVerifiedAt.Should().Be(actorVerifiedAt,
+            "the impersonate session inherits the actor's TOTP recency so the strict behavior gates against it");
+    }
+
+    [Fact]
+    public async Task Handle_HappyPath_WhenNoHttpContext_LastTotpVerifiedAtIsNull()
+    {
+        // Defensive path: the endpoint is gated by RequireSuperAdmin so HttpContext is normally
+        // populated, but the handler must not crash if it isn't. Inheritance defaults to null.
+        var requesterId = Guid.NewGuid();
+        var targetId = Guid.NewGuid();
+        SetupUser(requesterId, "root@test.com", "superadmin");
+        SetupUser(targetId, "bob@test.com", "user");
+
+        // _mockHttpContextAccessor default returns null HttpContext.
+
+        CreateSessionCommand? captured = null;
+        _mockMediator
+            .Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<CreateSessionResponse>, CancellationToken>((cmd, _) => captured = (CreateSessionCommand)cmd)
+            .ReturnsAsync(new CreateSessionResponse(
+                User: null!, SessionToken: "tok", ExpiresAt: _timeProvider.GetUtcNow().UtcDateTime.AddMinutes(15), SessionId: Guid.NewGuid()));
+
+        var command = new ImpersonationStartCommand(targetId, requesterId, "No HttpContext defensive case");
+
+        await _handler.Handle(command, CancellationToken.None);
+
+        captured!.LastTotpVerifiedAt.Should().BeNull();
     }
 
     [Fact]

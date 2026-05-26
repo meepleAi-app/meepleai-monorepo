@@ -123,7 +123,10 @@ internal class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery,
             Principal: principal,
             ExpiresAt: session.ExpiresAt,
             LastSeenAt: session.LastSeenAt,
-            SessionId: session.Id
+            SessionId: session.Id,
+            // SP5 S3 D-S3-3: surface TOTP recency so TwoFactorEnforcementBehavior can enforce
+            // per-command MaxAgeMinutes without re-querying the session row.
+            LastTotpVerifiedAt: session.LastTotpVerifiedAt
         );
     }
 

@@ -75,34 +75,29 @@
 
 ## Task 1: Migration + `LastTotpVerifiedAt` + Session domain
 
-- [ ] **Step 1: Estendi `UserSessionEntity` con la colonna**
+- [x] **Step 1: Estendi `UserSessionEntity` con la colonna**
 
   ```csharp
   public DateTime? LastTotpVerifiedAt { get; set; }
   ```
 
-- [ ] **Step 2: `UserSessionEntityConfiguration` mapping**
+- [x] **Step 2: `UserSessionEntityConfiguration` mapping**
 
   ```csharp
   builder.Property(e => e.LastTotpVerifiedAt).HasColumnName("last_totp_verified_at");
   ```
 
-- [ ] **Step 3: `Session` domain entity**
+- [x] **Step 3: `Session` domain entity**
 
   Aggiungi proprietà + `UpdateTotpVerified(TimeProvider)` metodo; `IsTotpRecent(int maxAgeMinutes, TimeProvider)` query.
 
-- [ ] **Step 4: `SessionRepository.MapToPersistence` + `MapToDomain` hydrate**
+- [x] **Step 4: `SessionRepository.MapToPersistence` + `MapToDomain` hydrate** + spike §6 amends (CreateSessionCommand param, SessionStatusDto field, ValidateSessionQueryHandler populate, ImpersonationStartCommandHandler inheritance via HttpContext)
 
-- [ ] **Step 5: Genera migration EF**
+- [x] **Step 5: Genera migration EF** — `20260526124527_AddTwoFactorRecencyToUserSession` adds `last_totp_verified_at` nullable timestamptz, no index. Touches only `user_sessions`.
 
-  ```bash
-  cd apps/api/src/Api
-  dotnet ef migrations add AddTwoFactorRecencyToUserSession
-  ```
+- [x] **Step 6: Test schema migration (Testcontainers)** — coperto da `ValidateSessionQueryImpersonationTests` (5 unit) + tutta la suite Impersonation (2481/2481 PASS locale post-T1 changes); integration via `ApplyMigrationsAsync` in `GetActiveImpersonationsQueryIntegrationTests` exercises the new migration.
 
-- [ ] **Step 6: Test schema migration (Testcontainers)**
-
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
   ```bash
   git commit -m "feat(2fa): migration + LastTotpVerifiedAt on UserSession (SP5 S3 T1)"

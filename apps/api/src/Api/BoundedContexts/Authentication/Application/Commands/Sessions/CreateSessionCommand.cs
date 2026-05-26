@@ -13,7 +13,8 @@ internal record CreateSessionCommand(
     string? IpAddress = null,
     string? UserAgent = null,
     Guid? ImpersonatedByUserId = null,    // SP5 S2: actor (admin) when this session is an impersonation
-    DateTime? ImpersonatedUntil = null    // SP5 S2: auto-expiry timestamp for impersonate sessions
+    DateTime? ImpersonatedUntil = null,   // SP5 S2: auto-expiry timestamp for impersonate sessions
+    DateTime? LastTotpVerifiedAt = null   // SP5 S3: pre-seeded TOTP recency (impersonate inherits actor's value)
 ) : ICommand<CreateSessionResponse>;
 
 internal record CreateSessionResponse(

@@ -58,18 +58,19 @@ on:
 # Switching to true makes a fresh trigger CANCEL the stuck run and start clean,
 # so the pipeline is self-healing. This is safe because every stage is
 # idempotent and re-runnable:
-#   - generate-migration-sql: produces an idempotent SQL script (every
-#     migration wrapped in IF NOT EXISTS vs __EFMigrationsHistory). Re-running
-#     re-uploads the same artifact — no DB side effects.
-#   - deploy: the "Apply migrations on staging" step uses that idempotent SQL,
-#     so re-applying is a no-op. `docker compose up --force-recreate` then
+#   - deploy.steps."Generate idempotent migration SQL": produces SQL with every
+#     migration wrapped in IF NOT EXISTS vs __EFMigrationsHistory. Re-running
+#     re-emits identical SQL — no DB side effects yet.
+#   - deploy.steps."Apply migrations on staging": uses that idempotent SQL,
+#     so re-applying is a no-op when no new migrations exist.
+#   - deploy.steps."Deploy via SSH": `docker compose up --force-recreate`
 #     converges to the target image regardless of partial prior state.
 # A mid-flight cancel therefore can't corrupt staging; the next run re-converges.
 #
 # Architectural rework (also tracked in #1573, NOW SHIPPED with this commit):
-#   - migrate-db job split: SQL generation on ubuntu-latest, apply moved as a
-#     step INSIDE the deploy job. If the deploy is never picked by the runner,
-#     the migration is never applied — atomicity is now job-level.
+#   - migrate-db job collapsed: SQL generation AND apply moved as steps INSIDE
+#     the deploy job (Plan B, fully inline). If the deploy is never picked by
+#     the runner, the migration is never applied — atomicity is now job-level.
 # Still deferred: queue-time watchdog for self-hosted jobs (#1573 P1).
 concurrency:
   group: deploy-staging
@@ -124,7 +125,7 @@ jobs:
       commit_sha: ${{ github.event.workflow_run.head_sha || github.sha }}
       commit_message: ${{ github.event.workflow_run.head_commit.message || github.event.head_commit.message || 'Manual trigger' }}
       run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      job_list: '["detect-changes", "pre-deploy-check", "build", "generate-migration-sql", "snapshot-baseline", "deploy", "validate", "e2e-staging"]'
+      job_list: '["detect-changes", "pre-deploy-check", "build", "snapshot-baseline", "deploy", "validate", "e2e-staging"]'
       caller_workflow_id: ${{ github.workflow_id }}
     secrets:
       SLACK_GITNOTIFY_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}
@@ -490,89 +491,6 @@ jobs:
           echo "  API built: ${{ needs.detect-changes.outputs.deploy_api }}"
           echo "  Web built: ${{ needs.detect-changes.outputs.deploy_web }}"
 
-  # Generate the idempotent migration SQL script on a cloud runner.
-  #
-  # ISSUE #1573 — atomicity rework
-  # ============================================
-  # The previous design ran a separate `migrate-db` job that did BOTH:
-  #   (a) generate the idempotent SQL via dotnet-ef
-  #   (b) apply it to staging via SSH
-  # ...BEFORE the `deploy` job ran. On 2026-05-26 the `deploy` job orphaned
-  # in the self-hosted runner queue (runner=None, never picked), so the
-  # migration had already been applied while the containers kept running
-  # pre-merge code. Result: 1h45m of schema/code drift on staging, including
-  # 2 destructive migrations (column drops).
-  #
-  # This job is now SPLIT in two halves:
-  #   - generate-migration-sql (this job, ubuntu-latest) — produces the SQL
-  #     artifact. Cloud runner because dotnet SDK + build are expensive and
-  #     don't need staging connectivity.
-  #   - The APPLY step now lives INSIDE the deploy job (see "Apply migrations"
-  #     step below). Same SSH session, same runner pickup as the container
-  #     restart. If the deploy job is never picked, the migration is never
-  #     applied — the DB cannot drift from the deployed code.
-  #
-  # Idempotent SQL means every migration is wrapped in `IF NOT EXISTS` against
-  # `__EFMigrationsHistory`, so the apply step is a no-op when no new
-  # migrations exist. If psql fails mid-stream during apply, ON_ERROR_STOP=1
-  # aborts the script and the pre-migration backup (created as the first
-  # apply substep) can be restored with `pg_restore`.
-  generate-migration-sql:
-    name: Generate Migration SQL
-    runs-on: ubuntu-latest
-    needs: [build]
-    if: vars.DEPLOY_METHOD == 'ssh'
-    timeout-minutes: 10
-    steps:
-      - name: Checkout source at deploy SHA
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ env.DEPLOY_SHA }}
-          # sparse-checkout: only the API project is needed for dotnet-ef
-          sparse-checkout: |
-            apps/api/
-            .github/
-          sparse-checkout-cone-mode: true
-
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: '9.0.x'
-
-      - name: Install dotnet-ef tool
-        run: |
-          dotnet tool install --global dotnet-ef --version 9.*
-          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
-
-      - name: Restore and build API project
-        working-directory: apps/api/src/Api
-        run: |
-          dotnet restore
-          dotnet build --no-restore -c Release
-
-      - name: Generate idempotent migration SQL
-        working-directory: apps/api/src/Api
-        run: |
-          # Note: no --no-build — dotnet-ef needs the project built. We built
-          # it in the previous step but ef defaults to Debug configuration,
-          # so we let it trigger its own build without the flag to avoid
-          # Release/Debug path mismatches.
-          dotnet ef migrations script --idempotent -o migrations.sql
-          lines=$(wc -l < migrations.sql)
-          echo "✅ Generated ${lines} lines of SQL at apps/api/src/Api/migrations.sql"
-          if [ "$lines" -lt 10 ]; then
-            echo "❌ SQL output suspiciously small (< 10 lines). Aborting."
-            exit 1
-          fi
-
-      - name: Upload migration SQL artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: migration-sql-${{ github.run_id }}
-          path: apps/api/src/Api/migrations.sql
-          retention-days: 7
-          if-no-files-found: error
-
   # Snapshot previous performance baseline before deploy overwrites DEPLOYMENT.json
   snapshot-baseline:
     name: Snapshot Performance Baseline
@@ -617,27 +535,33 @@ jobs:
 
   # Deploy to staging server (only changed services).
   #
-  # Issue #1573 — atomicity rework
+  # Issue #1573 — atomicity rework (Plan B: fully inline)
   # ============================================
-  # The migration APPLY step now lives in this job (the previous separate
-  # `migrate-db` job ran BEFORE deploy and could leave the DB ahead of the
-  # containers if deploy was orphaned in the runner queue — 2026-05-26 incident,
-  # 1h45m of schema/code drift). The sequence inside this job is:
-  #   1. Download migration SQL artifact (built by generate-migration-sql)
-  #   2. Apply migrations via SSH (pre-migration backup + psql ON_ERROR_STOP)
-  #   3. Deploy via SSH (docker pull + compose up + health checks + DEPLOYMENT.json)
-  # Steps 1+2 are gated on vars.DEPLOY_METHOD == 'ssh' so non-SSH deploys skip
-  # them. If this job is never picked by the runner, NO migration is applied —
+  # The migration GENERATE AND APPLY steps both live in this job (the previous
+  # separate `migrate-db` job ran BEFORE deploy and could leave the DB ahead of
+  # the containers if deploy was orphaned in the runner queue — 2026-05-26
+  # incident, 1h45m of schema/code drift). The sequence inside this job is:
+  #   1. Setup .NET + dotnet-ef + Restore/build API
+  #   2. Generate idempotent migration SQL via dotnet ef migrations script
+  #   3. Apply migrations via SSH (pre-migration backup + psql ON_ERROR_STOP)
+  #   4. Deploy via SSH (docker pull + compose up + health checks)
+  # All steps gated on vars.DEPLOY_METHOD == 'ssh' so non-SSH deploys skip them.
+  # If this job is never picked by the runner, NO migration is applied —
   # atomicity is guaranteed by job-level pickup.
+  #
+  # Plan A (split: generate-migration-sql cloud job + deploy with artifact
+  # download) was tried in commit 7cfc9c7a3 and skipped/failed under
+  # workflow_dispatch with skip_tests=true: the generate-migration-sql job
+  # was skipped by GHA scheduling, leaving the download step with no artifact.
+  # See PR #1596 review for full incident analysis.
   deploy:
     name: Deploy to Staging
     runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
-    # Issue #1573: bumped 15 → 30 to absorb the migration apply step
-    # (pg_dump backup + scp + psql + verify ≈ 5-10 min depending on schema
-    # size). Deploy SSH itself stays under 5 min. Headroom kept conservative.
+    # Issue #1573: bumped 15 → 30 to absorb gen SQL (~2-3 min) + migration
+    # apply (~5-10 min). Deploy SSH itself stays under 5 min.
     timeout-minutes: 30
-    needs: [build, generate-migration-sql, snapshot-baseline]
-    if: always() && needs.build.result == 'success' && (needs.generate-migration-sql.result == 'success' || needs.generate-migration-sql.result == 'skipped') && (needs.snapshot-baseline.result == 'success' || needs.snapshot-baseline.result == 'skipped')
+    needs: [build, snapshot-baseline]
+    if: always() && needs.build.result == 'success' && (needs.snapshot-baseline.result == 'success' || needs.snapshot-baseline.result == 'skipped')
     environment:
       name: staging
       url: https://meepleai.app
@@ -646,21 +570,62 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: ${{ env.DEPLOY_SHA }}  # Spec R2: pin to actual deploy SHA
-          # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
+          # sparse-checkout: apps/api/ needed for dotnet ef gen below.
+          # excludes data/ (1.3GB PDFs) — runner disk is limited
           sparse-checkout: |
+            apps/api/
             infra/
             .github/
           sparse-checkout-cone-mode: true
 
-      # Issue #1573: migration apply moved here from the (removed) migrate-db
-      # job. If this job is never picked up by the runner, the migration is
-      # not applied — DB schema cannot drift from deployed code.
-      - name: Download migration SQL artifact
+      # Issue #1573: migration gen + apply moved here (inline) from the removed
+      # `migrate-db` job. If this job is never picked up by the runner, no
+      # migration is applied — DB schema cannot drift from deployed code.
+      - name: Setup .NET SDK
         if: vars.DEPLOY_METHOD == 'ssh'
-        uses: actions/download-artifact@v8
+        uses: actions/setup-dotnet@v5
         with:
-          name: migration-sql-${{ github.run_id }}
-          path: /tmp/
+          dotnet-version: '9.0.x'
+
+      - name: Install dotnet-ef tool
+        if: vars.DEPLOY_METHOD == 'ssh'
+        # Idempotent: use pre-installed tool if present (self-hosted runner may
+        # already have dotnet-ef from a newer SDK). `dotnet tool install` does
+        # not support downgrades, so skipping install when a compatible version
+        # exists avoids exit 1 on runners with ef 10.x already global.
+        run: |
+          if dotnet tool list --global | awk '{print $1}' | grep -qx 'dotnet-ef'; then
+            echo "dotnet-ef already installed globally — using existing version:"
+            dotnet tool list --global | grep '^dotnet-ef'
+          else
+            dotnet tool install --global dotnet-ef --version 9.*
+          fi
+          # Self-hosted runners: $HOME/.dotnet/tools needs manual PATH append
+          # because setup-dotnet only sets DOTNET_ROOT, not the user-global
+          # tools dir. Regression caught on staging deploy run 24779812732.
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Restore and build API project (for ef tools)
+        if: vars.DEPLOY_METHOD == 'ssh'
+        working-directory: apps/api/src/Api
+        run: |
+          dotnet restore
+          dotnet build --no-restore -c Release
+
+      - name: Generate idempotent migration SQL
+        if: vars.DEPLOY_METHOD == 'ssh'
+        working-directory: apps/api/src/Api
+        run: |
+          # No --no-build: dotnet-ef needs the project built. Built in prior
+          # step; let ef trigger its own build without the flag to avoid
+          # Release/Debug path mismatches.
+          dotnet ef migrations script --idempotent -o /tmp/migrations.sql
+          lines=$(wc -l < /tmp/migrations.sql)
+          echo "✅ Generated ${lines} lines of SQL at /tmp/migrations.sql"
+          if [ "$lines" -lt 10 ]; then
+            echo "❌ SQL output suspiciously small (< 10 lines). Aborting."
+            exit 1
+          fi
 
       - name: Apply migrations on staging
         if: vars.DEPLOY_METHOD == 'ssh'
@@ -1123,7 +1088,7 @@ jobs:
 
   notify-end:
     if: always()
-    needs: [detect-changes, pre-deploy-check, build, generate-migration-sql, snapshot-baseline, deploy, validate, e2e-staging]
+    needs: [detect-changes, pre-deploy-check, build, snapshot-baseline, deploy, validate, e2e-staging]
     uses: ./.github/workflows/notify-slack.yml
     with:
       event: ${{ contains(join(needs.*.result, ','), 'failure') && 'failed' || contains(join(needs.*.result, ','), 'cancelled') && 'cancelled' || 'completed' }}

@@ -6,10 +6,12 @@
  * kb / session / chat). Each variant carries the common `HybridHubItemBase`
  * fields plus its own entity-specific extras.
  *
- * The discriminant is `entity`, which matches `MeepleEntityType` in
- * `components/ui/data-display/meeple-card/types.ts` (a `MeepleCard` accepts
- * all 5). Phase 2 will render `<MeepleCard entity={item.entity} ... />` in
- * the grid for every item, regardless of kind.
+ * The discriminant is `entity`. The 5 values here are a strict subset of
+ * `MeepleEntityType` in `components/ui/data-display/meeple-card/types.ts`
+ * (which covers 9 kinds total: game/player/session/agent/kb/chat/event/toolkit/tool).
+ * Because the 5 values are valid `MeepleEntityType` members, passing
+ * `item.entity` directly to `<MeepleCard entity={item.entity} />` in
+ * Phase 2's grid requires no cast.
  *
  * `updatedAt` is an ISO timestamp string — it drives the cross-entity
  * "recent" sort in `deriveHybridItems`. Each mapper resolves it from the
@@ -47,6 +49,7 @@ export interface GameHubItem extends HybridHubItemBase {
 export interface AgentHubItem extends HybridHubItemBase {
   readonly entity: 'agent';
   readonly gameName?: string;
+  /** Maps from `AgentDto.type` (renamed to avoid the reserved-word feel of `type`). */
   readonly agentType: string;
   readonly isActive: boolean;
 }
@@ -54,6 +57,7 @@ export interface AgentHubItem extends HybridHubItemBase {
 export interface KbHubItem extends HybridHubItemBase {
   readonly entity: 'kb';
   readonly gameName?: string;
+  /** Backend `ProcessingState` enum (Pending/Processing/Ready/Failed); kept as `string` until the FE schema lands with BE-1 #1588. */
   readonly processingState: string;
   readonly pageCount?: number;
 }
@@ -62,6 +66,7 @@ export interface SessionHubItem extends HybridHubItemBase {
   readonly entity: 'session';
   readonly gameName?: string;
   readonly status: string;
+  /** `GameSessionDto.playerCount` if available; otherwise the mapper derives it from `participants.length`. */
   readonly playerCount: number;
 }
 

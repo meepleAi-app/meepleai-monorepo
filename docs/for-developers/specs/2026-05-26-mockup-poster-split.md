@@ -341,6 +341,12 @@ Effort: ~2-3 h. Annotation richiede leggere ogni `.section` per assegnare `data-
 | Pilot | 2026-05-26 | `dashboard-new-user-mockup.html` | `dashboard-new-user.html` | merge-sections, 3 phones stacked (per scelta utente — refinement vero-merge differito) |
 | 1 | 2026-05-26 | `mobile-card-layout-mockup.html` | `mobile-card--card-view-focus.html`, `mobile-card--drawer-view.html` | per-variant, OK |
 | 1 (deferred) | — | `meeple-card-drawer-tabs-mockup.html` | — | **Skip**: phone generati via JS runtime, parser statico non li vede. Vedi § Out-of-scope. |
+| 2.1 | 2026-05-26 | `mobile-card-entity-types.html` | `mobile-card-entity--{game,session,agent,chat,kb,player,event}.html` (7) | per-variant, OK |
+| 2.2 | 2026-05-26 | `toolkit-mobile-mockup.html` | `toolkit-mobile--{dice-build,dice-result,quick-log,win-tracker}.html` (4) | per-variant, OK |
+| 2.3 | 2026-05-26 | `us32-play-records-mockups.html` | `play-records--{list,new-step1-game,new-step2-players,new-step3-summary,detail,stats}.html` (6) | per-variant, dark theme preservato, OK |
+| 3 (D) | TBD | `meeple-card-{nav-buttons-mockup,real-app-render,summary-render,visual-test}.html` | TBD | **Pending**: component showcase, modalità `per-component`. Effort separato (file 554–2887 righe). |
+
+**Totale Wave 1+2 (5 poster, 20 standalone)**: Pilot (1) + Wave 1 (2) + Wave 2.1 (7) + Wave 2.2 (4) + Wave 2.3 (6).
 
 ## Open Questions — Decisions log
 

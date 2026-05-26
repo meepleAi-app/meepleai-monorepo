@@ -111,6 +111,26 @@ seed-nanolith-demo: ## Sprint -1: seed Nanolith libro game demo (account + game 
 seed-nanolith-demo-staging: ## Same, against staging tunnel (requires SSH key + INITIAL_ADMIN_* secrets)
 	bash scripts/seed-nanolith-demo.sh staging
 
+# === SP4 dataset seed (full mockup-faithful dataset for visual review) ===
+
+seed-sp4: ## Seed full SP4 dataset on local stack (5 users + 8 games + KB + agents + toolkits + sessions + records + events + chats)
+	bash scripts/seed-sp4/seed-sp4.sh --target local
+
+seed-sp4-staging: ## Same against staging (requires SSH tunnel open)
+	bash scripts/seed-sp4/seed-sp4.sh --target staging
+
+seed-sp4-step: ## Run a single SP4 seed step (usage: make seed-sp4-step STEP=30)
+	bash scripts/seed-sp4/seed-sp4.sh --target local --step $(STEP)
+
+seed-sp4-from: ## Run SP4 seed from a given step onwards (usage: make seed-sp4-from FROM=40)
+	bash scripts/seed-sp4/seed-sp4.sh --target local --from $(FROM)
+
+seed-sp4-reset: ## Delete all SP4 seeded data via API (local only by default)
+	bash scripts/seed-sp4/seed-sp4.sh --target local --reset
+
+seed-sp4-reset-staging: ## Reset SP4 data on staging — requires explicit confirmation
+	bash scripts/seed-sp4/seed-sp4.sh --target staging --reset --confirm
+
 # === Demo Runthrough Phase A ===
 
 demo-smoke-local: ## Stadio 1 G1: smoke test 7 endpoint /api/v1/* contro stack locale (richiede make dev + make seed-nanolith-demo)

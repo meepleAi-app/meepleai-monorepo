@@ -1,0 +1,110 @@
+{
+  "_source": "admin-mockups/design_files/data.js (SP4 mockup dataset)",
+  "_generated": "2026-05-26 from data.js via manual port (DS object → JSON, dropped UI-only fields cover/coverEmoji/gradient/coverHsl)",
+
+  "users": [
+    { "slug": "marco",  "email": "marco@meepleai.test",  "displayName": "Marco R.",  "role": "User" },
+    { "slug": "sara",   "email": "sara@meepleai.test",   "displayName": "Sara T.",   "role": "User" },
+    { "slug": "luca",   "email": "luca@meepleai.test",   "displayName": "Luca B.",   "role": "User" },
+    { "slug": "giulia", "email": "giulia@meepleai.test", "displayName": "Giulia M.", "role": "User" },
+    { "slug": "andrea", "email": "andrea@meepleai.test", "displayName": "Andrea P.", "role": "User" }
+  ],
+
+  "games": [
+    { "slug": "azul",       "title": "Azul",                "publisher": "Plan B Games",   "year": 2017, "designers": ["Michael Kiesling"],   "minPlayers": 2, "maxPlayers": 4, "playingTimeMinutes": 45,  "complexityRating": 1.77, "averageRating": 7.8, "description": "Tile-drafting abstract game where players collect colored tiles to decorate the walls of the Royal Palace of Evora.", "imageUrl": "https://placehold.co/600x400/3b82f6/ffffff?text=Azul", "thumbnailUrl": "https://placehold.co/200x200/3b82f6/ffffff?text=Azul" },
+    { "slug": "catan",      "title": "I Coloni di Catan",   "publisher": "Kosmos",         "year": 1995, "designers": ["Klaus Teuber"],       "minPlayers": 3, "maxPlayers": 4, "playingTimeMinutes": 90,  "complexityRating": 2.33, "averageRating": 7.1, "description": "Trade, build, and settle the island of Catan. Roll dice to gather resources and outmaneuver opponents.", "imageUrl": "https://placehold.co/600x400/f59e0b/ffffff?text=Catan", "thumbnailUrl": "https://placehold.co/200x200/f59e0b/ffffff?text=Catan" },
+    { "slug": "wingspan",   "title": "Wingspan",            "publisher": "Stonemaier",     "year": 2019, "designers": ["Elizabeth Hargrave"], "minPlayers": 1, "maxPlayers": 5, "playingTimeMinutes": 70,  "complexityRating": 2.42, "averageRating": 8.1, "description": "Engine-builder where players are bird enthusiasts seeking to discover and attract the best birds to their network of wildlife preserves.", "imageUrl": "https://placehold.co/600x400/84cc16/ffffff?text=Wingspan", "thumbnailUrl": "https://placehold.co/200x200/84cc16/ffffff?text=Wingspan" },
+    { "slug": "brass",      "title": "Brass: Birmingham",   "publisher": "Roxley",         "year": 2018, "designers": ["Wallace", "Lopiano"], "minPlayers": 2, "maxPlayers": 4, "playingTimeMinutes": 120, "complexityRating": 3.91, "averageRating": 8.6, "description": "Economic strategy game set in Birmingham during the industrial revolution. Build canal and rail networks, mine coal, smelt iron.", "imageUrl": "https://placehold.co/600x400/64748b/ffffff?text=Brass", "thumbnailUrl": "https://placehold.co/200x200/64748b/ffffff?text=Brass" },
+    { "slug": "gloomhaven", "title": "Gloomhaven",          "publisher": "Cephalofair",    "year": 2017, "designers": ["Isaac Childres"],     "minPlayers": 1, "maxPlayers": 4, "playingTimeMinutes": 150, "complexityRating": 3.90, "averageRating": 8.7, "description": "Cooperative campaign-driven dungeon crawler. Players play mercenaries with unique skills and personal motives, battling through a Euro-inspired tactical combat system.", "imageUrl": "https://placehold.co/600x400/dc2626/ffffff?text=Gloomhaven", "thumbnailUrl": "https://placehold.co/200x200/dc2626/ffffff?text=Gloomhaven" },
+    { "slug": "arknova",    "title": "Ark Nova",            "publisher": "Feuerland",      "year": 2021, "designers": ["Mathias Wigge"],      "minPlayers": 1, "maxPlayers": 4, "playingTimeMinutes": 150, "complexityRating": 3.72, "averageRating": 8.5, "description": "Build a modern, scientifically-managed zoo. Choose between five different action cards each turn to attract animals, manage habitats, and run conservation projects.", "imageUrl": "https://placehold.co/600x400/16a34a/ffffff?text=Ark+Nova", "thumbnailUrl": "https://placehold.co/200x200/16a34a/ffffff?text=Ark+Nova" },
+    { "slug": "spirit",     "title": "Spirit Island",       "publisher": "GMT",            "year": 2017, "designers": ["R. Eric Reuss"],      "minPlayers": 1, "maxPlayers": 4, "playingTimeMinutes": 120, "complexityRating": 4.08, "averageRating": 8.3, "description": "Asymmetric cooperative game where players play powerful nature spirits defending their island home from colonial invaders.", "imageUrl": "https://placehold.co/600x400/0d9488/ffffff?text=Spirit+Island", "thumbnailUrl": "https://placehold.co/200x200/0d9488/ffffff?text=Spirit+Island" },
+    { "slug": "7wonders",   "title": "7 Wonders Duel",      "publisher": "Repos",          "year": 2015, "designers": ["Cathala", "Bauza"],   "minPlayers": 2, "maxPlayers": 2, "playingTimeMinutes": 30,  "complexityRating": 2.23, "averageRating": 8.0, "description": "Two-player only variant of 7 Wonders. Draft cards to build your civilization through three ages while keeping an eye on your opponent's progress.", "imageUrl": "https://placehold.co/600x400/eab308/ffffff?text=7+Wonders+Duel", "thumbnailUrl": "https://placehold.co/200x200/eab308/ffffff?text=7+Wonders+Duel" }
+  ],
+
+  "kbDocs": [
+    { "slug": "kb-azul-ita",  "uploadName": "azul-regole-ita.pdf",       "sourcePdf": "azul_rulebook.pdf",            "gameSlug": "azul",     "_targetState": "indexed" },
+    { "slug": "kb-azul-eng",  "uploadName": "azul-rules-en.pdf",         "sourcePdf": "azul_rulebook.pdf",            "gameSlug": "azul",     "_targetState": "indexed" },
+    { "slug": "kb-catan",     "uploadName": "catan-regole.pdf",          "sourcePdf": "catan_en_rulebook.pdf",        "gameSlug": "catan",    "_targetState": "indexed" },
+    { "slug": "kb-brass",     "uploadName": "brass-rulebook.pdf",        "sourcePdf": "brass-birmingham_rulebook.pdf","gameSlug": "brass",    "_targetState": "indexed", "_processing": true },
+    { "slug": "kb-wingspan",  "uploadName": "wingspan-rules.pdf",        "sourcePdf": "wingspan_en_rulebook.pdf",     "gameSlug": "wingspan", "_targetState": "indexed" },
+    { "slug": "kb-gloomhaven","uploadName": "gloomhaven-scenarios.pdf",  "sourcePdf": "gloomhaven_rulebook.pdf",      "gameSlug": "gloomhaven", "_targetState": "failed", "_note": "data.js marks this as Failed (48MB). Real file is 51MB; upload may still succeed — mock state is decorative." }
+  ],
+
+  "library": {
+    "_doc": "Per-user library entries — gameSlug + status. Status enum: Owned | Wishlist (other states like InPrestito/Nuovo come from PR #635 brownfield).",
+    "marco":  [ { "gameSlug": "azul",     "status": "Owned" }, { "gameSlug": "catan",    "status": "Owned" }, { "gameSlug": "wingspan", "status": "Owned" }, { "gameSlug": "brass",      "status": "Owned" }, { "gameSlug": "gloomhaven","status": "Wishlist" }, { "gameSlug": "arknova", "status": "Owned" }, { "gameSlug": "spirit", "status": "Owned" }, { "gameSlug": "7wonders", "status": "Owned" } ],
+    "sara":   [ { "gameSlug": "azul",     "status": "Owned" }, { "gameSlug": "wingspan", "status": "Owned" }, { "gameSlug": "brass",    "status": "Owned" }, { "gameSlug": "spirit",     "status": "Owned" }, { "gameSlug": "7wonders", "status": "Owned" } ],
+    "luca":   [ { "gameSlug": "catan",    "status": "Owned" }, { "gameSlug": "wingspan", "status": "Owned" }, { "gameSlug": "azul",     "status": "Wishlist" } ],
+    "giulia": [ { "gameSlug": "azul",     "status": "Owned" }, { "gameSlug": "wingspan", "status": "Owned" }, { "gameSlug": "brass",    "status": "Wishlist" } ],
+    "andrea": [ { "gameSlug": "arknova",  "status": "Owned" }, { "gameSlug": "catan",    "status": "Owned" }, { "gameSlug": "spirit",   "status": "Owned" } ]
+  },
+
+  "agents": [
+    { "slug": "a-azul-rules",   "ownerSlug": "marco", "name": "Azul Rules Expert",  "gameSlug": "azul",     "agentType": "rag", "strategyName": "rag-default", "kbSlugs": ["kb-azul-ita", "kb-azul-eng"] },
+    { "slug": "a-catan-coach",  "ownerSlug": "luca",  "name": "Catan Coach",        "gameSlug": "catan",    "agentType": "rag", "strategyName": "rag-default", "kbSlugs": ["kb-catan"] },
+    { "slug": "a-brass-expert", "ownerSlug": "marco", "name": "Brass Helper",       "gameSlug": "brass",    "agentType": "rag", "strategyName": "rag-default", "kbSlugs": ["kb-brass"] },
+    { "slug": "a-wing-rules",   "ownerSlug": "sara",  "name": "Wingspan Rules",     "gameSlug": "wingspan", "agentType": "rag", "strategyName": "rag-default", "kbSlugs": ["kb-wingspan"] },
+    { "slug": "a-universal",    "ownerSlug": "sara",  "name": "Game Night Host",    "gameSlug": null,       "agentType": "rag", "strategyName": "rag-default", "kbSlugs": [] }
+  ],
+
+  "toolkits": [
+    { "slug": "tk-azul-v2",    "ownerSlug": "marco", "name": "Azul Toolkit v2",       "gameSlug": "azul",  "_publish": true,
+      "tools": [
+        { "kind": "timer",   "name": "Timer Turno Azul", "durationSeconds": 300, "timerType": "countdown", "isPerPlayer": true, "warningThresholdSeconds": 30 },
+        { "kind": "counter", "name": "Punteggi Azul",    "minValue": 0, "maxValue": 200, "defaultValue": 0, "isPerPlayer": true },
+        { "kind": "dice",    "name": "Estrazione tessere", "diceType": "d6", "quantity": 2, "isInteractive": true }
+      ]
+    },
+    { "slug": "tk-catan-base", "ownerSlug": "sara", "name": "Catan Essentials",      "gameSlug": "catan", "_publish": true,
+      "tools": [
+        { "kind": "dice",    "name": "Dado Catan", "diceType": "d6", "quantity": 2, "isInteractive": true },
+        { "kind": "counter", "name": "Punti Vittoria", "minValue": 0, "maxValue": 13, "defaultValue": 0, "isPerPlayer": true },
+        { "kind": "timer",   "name": "Timer Turno", "durationSeconds": 180, "timerType": "countdown", "isPerPlayer": true, "warningThresholdSeconds": 30 }
+      ]
+    },
+    { "slug": "tk-brass-pro",  "ownerSlug": "marco", "name": "Brass Pro Tools",      "gameSlug": "brass", "_publish": false,
+      "tools": [
+        { "kind": "counter", "name": "Risorse Brass", "minValue": 0, "maxValue": 99, "defaultValue": 0, "isPerPlayer": true }
+      ]
+    },
+    { "slug": "tk-generic",    "ownerSlug": "sara", "name": "Universal Game Night", "gameSlug": null, "_publish": true,
+      "tools": [
+        { "kind": "timer",   "name": "Timer Generico", "durationSeconds": 600, "timerType": "countdown", "isPerPlayer": false, "warningThresholdSeconds": 60 },
+        { "kind": "dice",    "name": "Dado Universale", "diceType": "d20", "quantity": 1, "isInteractive": true }
+      ]
+    }
+  ],
+
+  "sessions": [
+    { "slug": "s-azul-live",     "ownerSlug": "marco",  "gameSlug": "azul",     "_targetState": "InProgress", "playerSlugs": ["marco", "sara", "luca", "giulia"] },
+    { "slug": "s-wing-042",      "ownerSlug": "sara",   "gameSlug": "wingspan", "_targetState": "Completed",  "playerSlugs": ["sara", "marco", "giulia", "luca", "andrea"], "winnerSlug": "sara" },
+    { "slug": "s-brass-041",     "ownerSlug": "marco",  "gameSlug": "brass",    "_targetState": "Completed",  "playerSlugs": ["marco", "sara", "luca"], "winnerSlug": "marco" },
+    { "slug": "s-catan-pause",   "ownerSlug": "andrea", "gameSlug": "catan",    "_targetState": "Paused",     "playerSlugs": ["andrea", "sara", "giulia"] },
+    { "slug": "s-arknova-setup", "ownerSlug": "marco",  "gameSlug": "arknova",  "_targetState": "Created",    "playerSlugs": ["marco", "sara"] },
+    { "slug": "s-agricola-arch", "ownerSlug": "marco",  "gameSlug": null,       "_targetState": "Completed",  "playerSlugs": ["marco", "andrea"], "winnerSlug": "andrea", "_note": "archive — no gameSlug in data.js" }
+  ],
+
+  "playRecords": {
+    "_doc": "Per-user play counts from data.js (totalSessions/totalWins/winRate). Generated as N records distributed across owned games. winnerSlug picked deterministically to match winRate. Stored aggregated for orchestrator to expand into N POST calls per user.",
+    "marco":  { "totalSessions": 89, "totalWins": 47, "favoriteGameSlug": "azul"   },
+    "sara":   { "totalSessions": 142, "totalWins": 71, "favoriteGameSlug": "wingspan" },
+    "luca":   { "totalSessions": 54, "totalWins": 22, "favoriteGameSlug": "catan"  },
+    "giulia": { "totalSessions": 12, "totalWins": 4,  "favoriteGameSlug": "brass"  },
+    "andrea": { "totalSessions": 78, "totalWins": 31, "favoriteGameSlug": "arknova" }
+  },
+
+  "events": [
+    { "slug": "e-marco-serata", "ownerSlug": "marco", "title": "Serata da Marco",   "dateTime": "2026-03-15T19:00:00", "location": "Casa di Marco",   "participantSlugs": ["marco", "sara", "luca", "giulia", "andrea"], "gameSlugs": ["azul", "wingspan", "7wonders"], "_publish": true },
+    { "slug": "e-club-night",   "ownerSlug": "marco", "title": "Game Night Club",   "dateTime": "2026-03-22T20:00:00", "location": "The Dragon Pub",  "participantSlugs": ["marco", "sara", "andrea"],                  "gameSlugs": ["brass", "spirit"],          "_publish": true },
+    { "slug": "e-torneo",       "ownerSlug": "luca",  "title": "Torneo 7 Wonders",  "dateTime": "2026-04-05T14:00:00", "location": "Ludoteca Centrale","participantSlugs": ["marco", "sara", "luca", "giulia", "andrea"], "gameSlugs": ["7wonders"],                 "_publish": false },
+    { "slug": "e-archive",      "ownerSlug": "giulia","title": "Capodanno Ludico",  "dateTime": "2025-12-31T20:00:00", "location": "Casa Giulia",     "participantSlugs": ["marco", "sara", "luca", "giulia", "andrea"], "gameSlugs": ["azul", "brass", "catan", "wingspan"], "_publish": true }
+  ],
+
+  "chats": [
+    { "slug": "c-azul-rules", "ownerSlug": "marco", "title": "Come si gioca ad Azul?",         "agentSlug": "a-azul-rules",   "gameSlug": "azul"     },
+    { "slug": "c-azul-score", "ownerSlug": "marco", "title": "Come calcolo i bonus di riga?", "agentSlug": "a-azul-rules",   "gameSlug": "azul"     },
+    { "slug": "c-catan-strat","ownerSlug": "luca",  "title": "Strategia inizio partita",      "agentSlug": "a-catan-coach",  "gameSlug": "catan"    },
+    { "slug": "c-brass-ind",  "ownerSlug": "marco", "title": "Link industry obbligatorio?",   "agentSlug": "a-brass-expert", "gameSlug": "brass"    },
+    { "slug": "c-wing-food",  "ownerSlug": "sara",  "title": "Azione Guadagna cibo?",         "agentSlug": "a-wing-rules",   "gameSlug": "wingspan" }
+  ]
+}

@@ -73,6 +73,12 @@ export function HubToolkitCardGrid({
       data-slot="toolkits-index-card"
       tabIndex={0}
       onClick={() => onClick?.(toolkit.id)}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick?.(toolkit.id);
+        }
+      }}
       className={clsx(
         'group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border border-border bg-card',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-entity-toolkit/40',
@@ -141,7 +147,7 @@ export function HubToolkitCardGrid({
               data-slot="toolkits-index-card-rating"
               className="mt-1 flex items-center gap-1.5 font-mono text-[10px] font-semibold text-muted-foreground"
             >
-              <Stars value={Math.round(toolkit.ratingAverage)} />
+              <Stars value={toolkit.ratingAverage} />
               <span className="tabular-nums">{toolkit.ratingAverage.toFixed(1)}</span>
               {toolkit.version !== undefined && (
                 <>

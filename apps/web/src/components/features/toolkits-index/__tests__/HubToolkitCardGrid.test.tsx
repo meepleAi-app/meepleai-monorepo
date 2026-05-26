@@ -134,6 +134,22 @@ describe('HubToolkitCardGrid (Issue #1480)', () => {
     expect(onInstall).toHaveBeenCalledWith('tk-1');
   });
 
+  it('fires onClick on Enter key when card has focus (keyboard a11y)', () => {
+    const onClick = vi.fn();
+    render(<HubToolkitCardGrid toolkit={makeToolkit()} labels={labels} onClick={onClick} />);
+    const card = screen.getByRole('article');
+    fireEvent.keyDown(card, { key: 'Enter' });
+    expect(onClick).toHaveBeenCalledWith('tk-1');
+  });
+
+  it('fires onClick on Space key when card has focus (keyboard a11y)', () => {
+    const onClick = vi.fn();
+    render(<HubToolkitCardGrid toolkit={makeToolkit()} labels={labels} onClick={onClick} />);
+    const card = screen.getByRole('article');
+    fireEvent.keyDown(card, { key: ' ' });
+    expect(onClick).toHaveBeenCalledWith('tk-1');
+  });
+
   // T8
   it('composes className and passes axe a11y scan', async () => {
     const { container } = render(

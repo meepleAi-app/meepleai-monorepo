@@ -92,6 +92,7 @@ export function HubToolkitsBody({
   function resetFilters(): void {
     onQueryChange('');
     onStatusChange('all');
+    onSortChange('popular');
   }
 
   return (

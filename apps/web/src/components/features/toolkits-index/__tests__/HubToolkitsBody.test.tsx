@@ -167,13 +167,33 @@ describe('HubToolkitsBody (Issue #1480)', () => {
   });
 
   // T7
-  it('HubEmptyFiltered onReset triggers onQueryChange("") + onStatusChange("all")', () => {
+  it('HubEmptyFiltered onReset triggers full reset (query + status + sort)', () => {
     const onQueryChange = vi.fn();
     const onStatusChange = vi.fn();
-    renderBody({ state: 'default', toolkits: [], onQueryChange, onStatusChange });
+    const onSortChange = vi.fn();
+    render(
+      <HubToolkitsBody
+        state="default"
+        toolkits={[]}
+        heroStats={heroStats}
+        query=""
+        onQueryChange={onQueryChange}
+        status="all"
+        onStatusChange={onStatusChange}
+        sort="popular"
+        onSortChange={onSortChange}
+        onRetry={() => {}}
+        heroLabels={heroLabels}
+        filterLabels={filterLabels}
+        cardLabels={cardLabels}
+        emptyLabels={emptyLabels}
+        errorLabels={errorLabels}
+      />
+    );
     fireEvent.click(screen.getByRole('button', { name: emptyLabels.resetAriaLabel }));
     expect(onQueryChange).toHaveBeenCalledWith('');
     expect(onStatusChange).toHaveBeenCalledWith('all');
+    expect(onSortChange).toHaveBeenCalledWith('popular');
   });
 
   // T8

@@ -37,6 +37,9 @@ function matchToolkit(toolkit: RecommendedToolkit, status: HubFiltersStatus, q: 
   }
   if (status === 'all') return true;
   if (status === 'featured') return (toolkit.ratingAverage ?? 0) >= 4;
+  // P83 deferred: RecommendedToolkit v1 schema has no createdAt/publishedAt field,
+  // so "new" cannot be filtered yet — returns all items. Follow-up: extend BE schema
+  // with a createdAt cursor so this branch can filter to e.g. last 30 days.
   if (status === 'new') return true;
   if (status === 'top') return (toolkit.ratingAverage ?? 0) >= 4.5 && toolkit.ratingCount >= 5;
   return true;

@@ -15,9 +15,10 @@
  */
 
 import type { AgentDto } from '@/lib/api/schemas/agents.schemas';
+import type { GameSessionDto } from '@/lib/api/schemas/games.schemas';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 
-import type { AgentHubItem, GameHubItem, KbHubItem } from './hybrid-hub.types';
+import type { AgentHubItem, GameHubItem, KbHubItem, SessionHubItem } from './hybrid-hub.types';
 
 /**
  * KbDoc — greenfield FE interface for the cross-game user KB listing.
@@ -79,5 +80,19 @@ export function kbDocToHubItem(doc: KbDoc): KbHubItem {
     gameName: doc.gameName ?? undefined,
     processingState: doc.processingState,
     pageCount: doc.pageCount ?? undefined,
+  };
+}
+
+export function sessionToHubItem(session: GameSessionDto): SessionHubItem {
+  return {
+    id: session.id,
+    entity: 'session',
+    title: `Session ${session.id.slice(0, 8)}`,
+    subtitle: session.winnerName ?? undefined,
+    updatedAt: session.completedAt ?? session.startedAt,
+    href: `/sessions/${session.id}`,
+    gameName: undefined,
+    status: session.status,
+    playerCount: session.playerCount,
   };
 }

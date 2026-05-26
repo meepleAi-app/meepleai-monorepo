@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import type { AgentDto } from '@/lib/api/schemas/agents.schemas';
+import type { GameSessionDto } from '@/lib/api/schemas/games.schemas';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 
 import {
   agentToHubItem,
   kbDocToHubItem,
   libraryEntryToHubItem,
+  sessionToHubItem,
   type KbDoc,
 } from '../hybrid-hub.mappers';
 
@@ -176,5 +178,55 @@ describe('kbDocToHubItem', () => {
   it('returns undefined pageCount when the field is absent', () => {
     const result = kbDocToHubItem({ ...baseKbDoc, pageCount: null });
     expect(result.pageCount).toBeUndefined();
+  });
+});
+
+const baseSession: GameSessionDto = {
+  id: '00000000-0000-0000-0000-0000000000d1',
+  gameId: '00000000-0000-0000-0000-0000000000aa',
+  status: 'Completed',
+  startedAt: '2026-04-20T19:00:00Z',
+  completedAt: '2026-04-20T21:30:00Z',
+  playerCount: 4,
+  players: [],
+  winnerName: 'Alice',
+  notes: null,
+  durationMinutes: 150,
+};
+
+describe('sessionToHubItem', () => {
+  it('maps a GameSessionDto to a SessionHubItem with entity="session"', () => {
+    const result = sessionToHubItem(baseSession);
+    expect(result.entity).toBe('session');
+    expect(result.id).toBe(baseSession.id);
+    expect(result.status).toBe('Completed');
+    expect(result.playerCount).toBe(4);
+    expect(result.subtitle).toBe('Alice');
+    expect(result.href).toBe(`/sessions/${baseSession.id}`);
+  });
+
+  it('leaves gameName undefined (DTO does not include it; Phase 2 enrich)', () => {
+    const result = sessionToHubItem(baseSession);
+    expect(result.gameName).toBeUndefined();
+  });
+
+  it('prefers completedAt over startedAt for updatedAt', () => {
+    const result = sessionToHubItem(baseSession);
+    expect(result.updatedAt).toBe('2026-04-20T21:30:00Z');
+  });
+
+  it('falls back to startedAt when completedAt is null', () => {
+    const result = sessionToHubItem({ ...baseSession, completedAt: null });
+    expect(result.updatedAt).toBe('2026-04-20T19:00:00Z');
+  });
+
+  it('uses a short-id fallback title (Phase 2 will enrich with game name)', () => {
+    const result = sessionToHubItem(baseSession);
+    expect(result.title).toBe('Session 00000000');
+  });
+
+  it('returns undefined subtitle when there is no winner', () => {
+    const result = sessionToHubItem({ ...baseSession, winnerName: null });
+    expect(result.subtitle).toBeUndefined();
   });
 });

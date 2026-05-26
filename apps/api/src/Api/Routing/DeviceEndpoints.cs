@@ -24,12 +24,12 @@ internal static class DeviceEndpoints
             if (!authenticated) return error!;
 
             var query = new GetUserDevicesQuery(
-                UserId: session!.User!.Id,
+                UserId: session!.Principal!.Subject.Id,
                 CurrentSessionId: session.SessionId
             );
 
             var devices = await mediator.Send(query, ct).ConfigureAwait(false);
-            logger.LogInformation("User {UserId} retrieved {Count} devices", session.User.Id, devices.Count);
+            logger.LogInformation("User {UserId} retrieved {Count} devices", session.Principal!.Subject.Id, devices.Count);
 
             return Results.Json(devices);
         })
@@ -63,7 +63,7 @@ internal static class DeviceEndpoints
 
             var command = new RevokeSessionCommand(
                 SessionId: deviceId,
-                RequestingUserId: session.User!.Id,
+                RequestingUserId: session.Principal!.Subject.Id,
                 IsRequestingUserAdmin: false,
                 Reason: "User revoked device"
             );
@@ -73,11 +73,11 @@ internal static class DeviceEndpoints
             if (!result.Success)
             {
                 logger.LogWarning("User {UserId} failed to revoke device {DeviceId}: {Error}",
-                    session.User.Id, deviceId, result.ErrorMessage);
+                    session.Principal!.Subject.Id, deviceId, result.ErrorMessage);
                 return Results.NotFound(new { error = result.ErrorMessage ?? "Device not found or already revoked" });
             }
 
-            logger.LogInformation("User {UserId} revoked device {DeviceId}", session.User.Id, deviceId);
+            logger.LogInformation("User {UserId} revoked device {DeviceId}", session.Principal!.Subject.Id, deviceId);
             return Results.Json(new { ok = true, message = "Device revoked successfully" });
         })
         .Produces(200)

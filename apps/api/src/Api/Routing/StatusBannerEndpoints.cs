@@ -66,7 +66,7 @@ internal static class StatusBannerEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var updatedBy = session.User?.Id.ToString();
+            var updatedBy = session.Principal?.Subject?.Id.ToString();
 
             var command = new UpdateStatusBannerCommand(
                 Message: request.Message ?? string.Empty,

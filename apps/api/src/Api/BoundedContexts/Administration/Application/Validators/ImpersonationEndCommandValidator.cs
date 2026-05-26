@@ -4,19 +4,18 @@ using FluentValidation;
 namespace Api.BoundedContexts.Administration.Application.Validators;
 
 /// <summary>
-/// Validator for EndImpersonationCommand.
-/// Ensures session ID and admin ID are valid.
+/// Validator for <c>ImpersonationEndCommand</c> (SP5 Admin Security S2 — T4).
 /// </summary>
-internal sealed class EndImpersonationCommandValidator : AbstractValidator<EndImpersonationCommand>
+internal sealed class ImpersonationEndCommandValidator : AbstractValidator<ImpersonationEndCommand>
 {
-    public EndImpersonationCommandValidator()
+    public ImpersonationEndCommandValidator()
     {
         RuleFor(x => x.SessionId)
             .NotEmpty()
             .WithMessage("SessionId is required");
 
-        RuleFor(x => x.AdminUserId)
+        RuleFor(x => x.RequestingUserId)
             .NotEmpty()
-            .WithMessage("AdminUserId is required");
+            .WithMessage("RequestingUserId is required");
     }
 }

@@ -48,7 +48,7 @@ internal static class KbManagementEndpoints
             var (authenticated, session, error) = httpContext.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var command = new ReindexGameKbCommand(GameId: gameId, UserId: session.User!.Id);
+            var command = new ReindexGameKbCommand(GameId: gameId, UserId: session.Principal!.Subject.Id);
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             return Results.Accepted(
@@ -91,7 +91,7 @@ internal static class KbManagementEndpoints
             var query = new GetKbReindexJobStatusQuery(
                 GameId: gameId,
                 JobId: jobId,
-                RequestingUserId: session.User!.Id);
+                RequestingUserId: session.Principal!.Subject.Id);
             var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
             return result is null
@@ -129,7 +129,7 @@ internal static class KbManagementEndpoints
 
             try
             {
-                var command = new RebuildRaptorCommand(GameId: gameId, UserId: session.User!.Id);
+                var command = new RebuildRaptorCommand(GameId: gameId, UserId: session.Principal!.Subject.Id);
                 var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
                 return Results.Accepted(

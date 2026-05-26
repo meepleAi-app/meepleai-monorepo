@@ -30,7 +30,7 @@ internal static class UserAccountEndpoints
             CancellationToken ct) =>
         {
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            var userId = session!.User!.Id;
+            var userId = session!.Principal!.Subject.Id;
 
             var command = new DeleteOwnAccountCommand(UserId: userId);
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -74,7 +74,7 @@ OAuth accounts, backup codes, LLM request logs, conversation memories, and Redis
             CancellationToken ct) =>
         {
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            var userId = session!.User!.Id;
+            var userId = session!.Principal!.Subject.Id;
 
             var command = new ExportUserDataCommand(UserId: userId);
             var result = await mediator.Send(command, ct).ConfigureAwait(false);

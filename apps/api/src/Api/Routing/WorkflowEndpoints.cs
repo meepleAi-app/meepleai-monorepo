@@ -85,11 +85,11 @@ internal static class WorkflowEndpoints
                 Name: request.Name,
                 BaseUrl: request.BaseUrl,
                 ApiKeyEncrypted: apiKeyEncrypted,
-                CreatedByUserId: session!.User!.Id,
+                CreatedByUserId: session!.Principal!.EffectiveActor.Id,
                 WebhookUrl: request.WebhookUrl
             );
 
-            logger.LogInformation("Admin {UserId} creating n8n config: {Name}", session.User.Id, LogSanitizer.Sanitize(request.Name));
+            logger.LogInformation("Admin {UserId} creating n8n config: {Name}", session.Principal!.EffectiveActor.Id, LogSanitizer.Sanitize(request.Name));
             var config = await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("n8n config {ConfigId} created successfully", config.Id);
             return Results.Json(config);
@@ -119,7 +119,7 @@ internal static class WorkflowEndpoints
                 IsActive: request.IsActive
             );
 
-            logger.LogInformation("Admin {UserId} updating n8n config {ConfigId}", session!.User!.Id, configId);
+            logger.LogInformation("Admin {UserId} updating n8n config {ConfigId}", session!.Principal!.EffectiveActor.Id, configId);
             var config = await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("n8n config {ConfigId} updated successfully", config.Id);
             return Results.Json(config);
@@ -135,7 +135,7 @@ internal static class WorkflowEndpoints
 
             var command = new DeleteN8NConfigCommand(ConfigId: configId);
 
-            logger.LogInformation("Admin {UserId} deleting n8n config {ConfigId}", session!.User!.Id, configId);
+            logger.LogInformation("Admin {UserId} deleting n8n config {ConfigId}", session!.Principal!.EffectiveActor.Id, configId);
             var deleted = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (!deleted)
@@ -155,7 +155,7 @@ internal static class WorkflowEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            logger.LogInformation("Admin {UserId} testing n8n config {ConfigId}", session!.User!.Id, configId);
+            logger.LogInformation("Admin {UserId} testing n8n config {ConfigId}", session!.Principal!.EffectiveActor.Id, configId);
 
             var command = new Api.BoundedContexts.WorkflowIntegration.Application.Commands.N8NConfig.TestN8NConnectionCommand
             {
@@ -231,13 +231,13 @@ internal static class WorkflowEndpoints
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            logger.LogInformation("User {UserId} importing n8n template {TemplateId}", session!.User!.Id, LogSanitizer.Sanitize(id));
+            logger.LogInformation("User {UserId} importing n8n template {TemplateId}", session!.Principal!.EffectiveActor.Id, LogSanitizer.Sanitize(id));
 
             var command = new Api.BoundedContexts.WorkflowIntegration.Application.Commands.N8NTemplates.ImportN8NTemplateCommand
             {
                 TemplateId = id,
                 Parameters = request.Parameters,
-                UserId = session.User.Id.ToString()
+                UserId = session.Principal!.EffectiveActor.Id.ToString()
             };
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 

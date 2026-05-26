@@ -22,7 +22,7 @@ internal static class OnboardingEndpoints
             CancellationToken ct) =>
         {
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            var query = new GetOnboardingStatusQuery(session!.User!.Id);
+            var query = new GetOnboardingStatusQuery(session!.Principal!.Subject.Id);
             var result = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
@@ -43,7 +43,7 @@ and checklist step completion derived from real data (games, sessions, profile).
             CancellationToken ct) =>
         {
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            var userId = session!.User!.Id;
+            var userId = session!.Principal!.Subject.Id;
             // Direct update to avoid IUnitOfWork scope mismatch (SaveChanges returned 0 via MediatR handlers)
             var rows = await dbContext.Users
                 .Where(u => u.Id == userId && u.OnboardingWizardSeenAt == null)
@@ -68,7 +68,7 @@ and checklist step completion derived from real data (games, sessions, profile).
             CancellationToken ct) =>
         {
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            var userId = session!.User!.Id;
+            var userId = session!.Principal!.Subject.Id;
             // Direct update to avoid IUnitOfWork scope mismatch (SaveChanges returned 0 via MediatR handlers)
             var rows = await dbContext.Users
                 .Where(u => u.Id == userId && u.OnboardingDismissedAt == null)

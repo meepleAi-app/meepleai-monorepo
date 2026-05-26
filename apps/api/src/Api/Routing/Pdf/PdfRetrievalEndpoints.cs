@@ -154,7 +154,7 @@ internal static class PdfRetrievalEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         var result = await mediator.Send(
             new GetPdfPageTextQuery(pdfId, pageNumber, userId), ct).ConfigureAwait(false);
@@ -165,8 +165,8 @@ internal static class PdfRetrievalEndpoints
     private static async Task<IResult> HandleDownloadPdf(Guid pdfId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
-        bool isAdmin = string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        var userId = session!.Principal!.Subject.Id;
+        bool isAdmin = string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
 
         // DDD Migration Phase 4: Use DownloadPdfQuery via IMediator
         var query = new DownloadPdfQuery(
@@ -217,12 +217,12 @@ internal static class PdfRetrievalEndpoints
             return Results.NotFound(new { error = "PDF not found" });
         }
 
-        if (!CheckPdfAuthorization(session.User!, pdf))
+        if (!CheckPdfAuthorization(session.Principal!.Subject, pdf))
         {
-            await LogPdfAccessDeniedAsync(auditService, session.User!.Id.ToString(), "DELETE", pdfId.ToString(), session.User!.Role ?? "Unknown", pdf.UploadedByUserId, ct).ConfigureAwait(false);
+            await LogPdfAccessDeniedAsync(auditService, session.Principal!.Subject.Id.ToString(), "DELETE", pdfId.ToString(), session.Principal!.EffectiveActor.Role ?? "Unknown", pdf.UploadedByUserId, ct).ConfigureAwait(false);
 
             logger.LogWarning("User {UserId} with role {Role} denied access to delete PDF {PdfId} (owner: {OwnerId})",
-                session.User!.Id, session.User!.Role, pdfId, pdf.UploadedByUserId);
+                session.Principal!.Subject.Id, session.Principal!.EffectiveActor.Role, pdfId, pdf.UploadedByUserId);
 
             return Results.StatusCode(StatusCodes.Status403Forbidden);
         }
@@ -235,15 +235,15 @@ internal static class PdfRetrievalEndpoints
             return Results.BadRequest(new { error = result.Message });
         }
 
-        logger.LogInformation("User {UserId} deleted PDF {PdfId}", session.User!.Id, pdfId);
+        logger.LogInformation("User {UserId} deleted PDF {PdfId}", session.Principal!.Subject.Id, pdfId);
 
         await auditService.LogAsync(
-            session.User!.Id.ToString(),
+            session.Principal!.Subject.Id.ToString(),
             "DELETE",
             "PdfDocument",
             pdfId.ToString(),
             "Success",
-            $"PDF deleted successfully by user with role: {session.User!.Role}",
+            $"PDF deleted successfully by user with role: {session.Principal!.EffectiveActor.Role}",
             null,
             null,
             ct).ConfigureAwait(false);
@@ -261,7 +261,7 @@ internal static class PdfRetrievalEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         var pdf = await mediator.Send(new GetPdfOwnershipQuery(pdfId), ct).ConfigureAwait(false);
 
@@ -270,9 +270,9 @@ internal static class PdfRetrievalEndpoints
             return Results.NotFound(new { error = "PDF not found" });
         }
 
-        if (!CheckPdfAuthorization(session.User!, pdf))
+        if (!CheckPdfAuthorization(session.Principal!.Subject, pdf))
         {
-            await LogPdfAccessDeniedAsync(auditService, userId.ToString(), "change visibility of", pdfId.ToString(), session.User!.Role ?? "Unknown", pdf.UploadedByUserId, ct).ConfigureAwait(false);
+            await LogPdfAccessDeniedAsync(auditService, userId.ToString(), "change visibility of", pdfId.ToString(), session.Principal!.EffectiveActor.Role ?? "Unknown", pdf.UploadedByUserId, ct).ConfigureAwait(false);
 
             logger.LogWarning("User {UserId} denied access to change visibility of PDF {PdfId} (owner: {OwnerId})",
                 userId, pdfId, pdf.UploadedByUserId);
@@ -296,7 +296,7 @@ internal static class PdfRetrievalEndpoints
             "PdfDocument",
             pdfId.ToString(),
             "Success",
-            $"PDF visibility changed to {(request.IsPublic ? "public" : "private")} by user with role: {session!.User!.Role}",
+            $"PDF visibility changed to {(request.IsPublic ? "public" : "private")} by user with role: {session!.Principal!.EffectiveActor.Role}",
             null,
             null,
             ct).ConfigureAwait(false);
@@ -314,7 +314,7 @@ internal static class PdfRetrievalEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         var result = await mediator.Send(new AcceptCopyrightDisclaimerCommand(userId, pdfId), ct).ConfigureAwait(false);
 

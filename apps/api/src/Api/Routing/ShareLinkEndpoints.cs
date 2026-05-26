@@ -72,14 +72,14 @@ internal static class ShareLinkEndpoints
 
         logger.LogInformation(
             "Creating share link for thread {ThreadId} with role {Role} by user {UserId}",
-            threadId, role, session.User!.Id);
+            threadId, role, session.Principal!.Subject.Id);
 
         var command = new CreateShareLinkCommand(
             ThreadId: threadId,
             Role: role,
             ExpiresAt: expiresAt,
             Label: req.Label,
-            UserId: session.User.Id
+            UserId: session.Principal!.Subject.Id
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -115,11 +115,11 @@ internal static class ShareLinkEndpoints
 
         logger.LogInformation(
             "Revoking share link {ShareLinkId} by user {UserId}",
-            shareLinkId, session.User!.Id);
+            shareLinkId, session.Principal!.Subject.Id);
 
         var command = new RevokeShareLinkCommand(
             ShareLinkId: shareLinkId,
-            UserId: session.User.Id
+            UserId: session.Principal!.Subject.Id
         );
 
         var success = await mediator.Send(command, ct).ConfigureAwait(false);

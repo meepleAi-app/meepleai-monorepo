@@ -64,7 +64,7 @@ internal sealed class TwoFactorEnforcementBehavior<TRequest, TResponse> : IPipel
             return await next().ConfigureAwait(false);
         }
 
-        var user = session.User;
+        var user = session.Principal?.Subject;
         if (user is null)
         {
             // Anonymous request hit a 2FA-required command — outer authorization layer

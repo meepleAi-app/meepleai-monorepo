@@ -19,13 +19,31 @@ internal record SessionDto(
 );
 
 /// <summary>
-/// DTO for session status check.
-/// Issue #3340: Added SessionId for device tracking.
+/// DTO for session status check. Issue #3340: Added SessionId for device tracking.
+///
+/// SP5 Admin Security S2 — D-S2-2: dual-principal session. The legacy <c>User: UserDto?</c>
+/// primary-constructor parameter has been replaced by <see cref="Principal"/>. Consumers MUST
+/// read:
+/// <list type="bullet">
+/// <item><c>Principal.Subject</c> for ownership/identity and rate-limit/quota keys (Clusters C+D)</item>
+/// <item><c>Principal.EffectiveActor</c> for authorization checks and audit attribution (Clusters A+B)</item>
+/// <item><c>Principal.IsImpersonating</c> for UI banners / log signals</item>
+/// </list>
+/// See <c>audits/2026-05-26-s2-spike-cluster-classification.md</c> §3 for the cluster classification
+/// and the codemod that closed the transition. The transitional bridge property <c>User</c> was
+/// removed at the end of T2 once the 107-file refactor was verified green.
 /// </summary>
 internal record SessionStatusDto(
     bool IsValid,
-    UserDto? User,
+    Principal? Principal,
     DateTime? ExpiresAt,
     DateTime? LastSeenAt,
-    Guid? SessionId = null
+    Guid? SessionId = null,
+    // SP5 S2 D-S2-4: set when a session that EXISTED was an impersonation and is now invalid
+    // because its ImpersonatedUntil window elapsed. The auth middleware uses this to emit a
+    // 401 + "ImpersonationAutoEnded" audit instead of failing open as a plain anonymous request.
+    // Carries the subject + actor ids so the middleware can attribute the audit row.
+    bool WasImpersonationAutoEnded = false,
+    Guid? ImpersonationSubjectUserId = null,
+    Guid? ImpersonationActorUserId = null
 );

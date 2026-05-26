@@ -11,11 +11,14 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 internal record CreateSessionCommand(
     Guid UserId,
     string? IpAddress = null,
-    string? UserAgent = null
+    string? UserAgent = null,
+    Guid? ImpersonatedByUserId = null,    // SP5 S2: actor (admin) when this session is an impersonation
+    DateTime? ImpersonatedUntil = null    // SP5 S2: auto-expiry timestamp for impersonate sessions
 ) : ICommand<CreateSessionResponse>;
 
 internal record CreateSessionResponse(
     UserDto User,
     string SessionToken,
-    DateTime ExpiresAt
+    DateTime ExpiresAt,
+    Guid SessionId = default   // SP5 S2: exposed so callers (e.g. impersonation) can reference the row
 );

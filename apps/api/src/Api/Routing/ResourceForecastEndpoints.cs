@@ -91,7 +91,7 @@ internal static class ResourceForecastEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         var command = new SaveResourceForecastCommand(
             request.Name,
@@ -128,7 +128,7 @@ internal static class ResourceForecastEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         var query = new GetResourceForecastsQuery(
             userId,

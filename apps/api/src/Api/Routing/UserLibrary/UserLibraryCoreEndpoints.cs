@@ -66,7 +66,7 @@ internal static class UserLibraryCoreEndpoints
         userId = Guid.Empty;
         if (session != null)
         {
-            userId = session.User!.Id;
+            userId = session.Principal!.Subject.Id;
             return true;
         }
 
@@ -583,8 +583,8 @@ internal static class UserLibraryCoreEndpoints
                 StrategyName: request.StrategyName,
                 StrategyParameters: request.StrategyParameters,
                 UserId: userId,
-                UserTier: session?.User?.Tier ?? "Free",
-                UserRole: session?.User?.Role ?? "User"
+                UserTier: session?.Principal?.Subject?.Tier ?? "Free",
+                UserRole: session?.Principal?.Subject?.Role ?? "User"
             );
 
             try

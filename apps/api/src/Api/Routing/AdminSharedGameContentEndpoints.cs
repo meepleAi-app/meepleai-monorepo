@@ -184,7 +184,7 @@ internal static class AdminSharedGameContentEndpoints
 
         var command = new BulkUploadPdfsCommand(
             SharedGameId: gameId,
-            UserId: session!.User!.Id,
+            UserId: session!.Principal!.Subject.Id,
             Files: pdfFiles);
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);

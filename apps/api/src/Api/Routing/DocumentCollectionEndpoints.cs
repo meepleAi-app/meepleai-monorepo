@@ -58,7 +58,7 @@ internal static class DocumentCollectionEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var userId = session!.User!.Id;
+            var userId = session!.Principal!.Subject.Id;
 
             logger.LogInformation(
                 "User {UserId} creating document collection '{CollectionName}' for game {GameId}",
@@ -106,7 +106,7 @@ internal static class DocumentCollectionEndpoints
             if (!authenticated) return error!;
 
             logger.LogInformation("User {UserId} retrieving collection for game {GameId}",
-                session!.User!.Id, gameId);
+                session!.Principal!.Subject.Id, gameId);
 
             var result = await mediator.Send(new GetCollectionByGameQuery(gameId), ct)
                 .ConfigureAwait(false);
@@ -139,7 +139,7 @@ internal static class DocumentCollectionEndpoints
             if (!authenticated) return error!;
 
             logger.LogInformation("User {UserId} retrieving collection {CollectionId} for game {GameId}",
-                session!.User!.Id, collectionId, gameId);
+                session!.Principal!.Subject.Id, collectionId, gameId);
 
             var result = await mediator.Send(new GetCollectionByIdQuery(collectionId), ct)
                 .ConfigureAwait(false);
@@ -184,8 +184,8 @@ internal static class DocumentCollectionEndpoints
             if (!authenticated) return error!;
 
             // Authorization: Users can only view their own collections unless they are admin
-            var currentUserId = session!.User!.Id;
-            var isAdmin = string.Equals(session!.User!.Role, UserRole.Admin.ToString(),
+            var currentUserId = session!.Principal!.Subject.Id;
+            var isAdmin = string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(),
                 StringComparison.OrdinalIgnoreCase);
 
             if (currentUserId != userId && !isAdmin)
@@ -235,14 +235,14 @@ internal static class DocumentCollectionEndpoints
 
             logger.LogInformation(
                 "User {UserId} adding document {PdfId} to collection {CollectionId}",
-                session!.User!.Id, request.PdfDocumentId, collectionId);
+                session!.Principal!.Subject.Id, request.PdfDocumentId, collectionId);
 
             var command = new AddDocumentToCollectionCommand(
                 collectionId,
                 request.PdfDocumentId,
                 request.DocumentType,
                 request.SortOrder,
-                session!.User!.Id); // Authorization: pass current user ID
+                session!.Principal!.Subject.Id); // Authorization: pass current user ID
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
@@ -282,12 +282,12 @@ internal static class DocumentCollectionEndpoints
 
             logger.LogInformation(
                 "User {UserId} removing document {DocumentId} from collection {CollectionId}",
-                session!.User!.Id, documentId, collectionId);
+                session!.Principal!.Subject.Id, documentId, collectionId);
 
             var command = new RemoveDocumentFromCollectionCommand(
                 collectionId,
                 documentId,
-                session!.User!.Id); // SECURITY: Pass userId for authorization
+                session!.Principal!.Subject.Id); // SECURITY: Pass userId for authorization
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 

@@ -14357,6 +14357,14 @@ namespace Api.Infrastructure.Migrations
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("ImpersonatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("impersonated_by_user_id");
+
+                    b.Property<DateTime?>("ImpersonatedUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("impersonated_until");
+
                     b.Property<string>("IpAddress")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
@@ -14381,6 +14389,10 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ImpersonatedByUserId")
+                        .HasDatabaseName("ix_user_sessions_impersonated_by_user_id")
+                        .HasFilter("\"impersonated_by_user_id\" IS NOT NULL");
 
                     b.HasIndex("TokenHash")
                         .IsUnique();

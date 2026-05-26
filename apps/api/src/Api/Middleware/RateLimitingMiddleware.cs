@@ -63,10 +63,13 @@ internal class RateLimitingMiddleware
 
             var (authenticated, session, _) = context.TryGetActiveSession();
 
-            if (authenticated && session.User is not null)
+            if (authenticated && session.Principal?.Subject is not null)
             {
-                role = session.User.Role;
-                rateKey = $"user:{session.User.Id}";
+                // Cluster D (rate-limit/quota): MUST use Subject — an admin impersonating a user
+                // must NOT bypass that user's rate-limit by virtue of their own admin role/tier.
+                // See audits/2026-05-26-s2-spike-cluster-classification.md §3 Cluster D.
+                role = session.Principal!.Subject.Role;
+                rateKey = $"user:{session.Principal!.Subject.Id}";
             }
             else
             {

@@ -171,14 +171,14 @@ internal static class AdminUserTierEndpoints
         if (!Guid.TryParse(id, out var userId))
         {
             logger.LogWarning("Admin {AdminId} attempted to update tier with invalid user ID: {UserId}",
-                session!.User!.Id, id);
+                session!.Principal!.EffectiveActor.Id, id);
             return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
         }
 
         // Validate requester ID format
-        if (!Guid.TryParse(session!.User!.Id.ToString(), out var requesterId))
+        if (!Guid.TryParse(session!.Principal!.EffectiveActor.Id.ToString(), out var requesterId))
         {
-            logger.LogError("Invalid requester ID format in session: {RequesterId}", session.User!.Id);
+            logger.LogError("Invalid requester ID format in session: {RequesterId}", session.Principal!.EffectiveActor.Id);
             return Results.BadRequest(new { error = "invalid_session", message = "Invalid session user ID format" });
         }
 
@@ -224,13 +224,13 @@ internal static class AdminUserTierEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} setting level for user {UserId} to {Level}",
-            session!.User!.Id, userId, request.Level);
+            session!.Principal!.EffectiveActor.Id, userId, request.Level);
 
         var command = new SetUserLevelCommand(userId, request.Level);
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
         logger.LogInformation("User {UserId} level set to {Level} by admin {AdminId}",
-            userId, request.Level, session.User.Id);
+            userId, request.Level, session.Principal!.EffectiveActor.Id);
 
         return Results.Ok(result);
     }
@@ -245,14 +245,14 @@ internal static class AdminUserTierEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        logger.LogInformation("Admin {AdminId} retrieving badges for user {UserId}", session!.User!.Id, userId);
+        logger.LogInformation("Admin {AdminId} retrieving badges for user {UserId}", session!.Principal!.EffectiveActor.Id, userId);
 
         // Reuse existing GetUserBadgesQuery with IncludeHidden: true
         var query = new GetUserBadgesQuery(userId, IncludeHidden: true);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
         logger.LogInformation("Admin {AdminId} retrieved {Count} badges for user {UserId}",
-            session.User.Id, result.Count, userId);
+            session.Principal!.EffectiveActor.Id, result.Count, userId);
 
         return Results.Ok(result);
     }
@@ -268,13 +268,13 @@ internal static class AdminUserTierEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} retrieving role history for user {UserId}",
-            session!.User!.Id, userId);
+            session!.Principal!.EffectiveActor.Id, userId);
 
         var query = new GetUserRoleHistoryQuery(userId);
         var history = await mediator.Send(query, ct).ConfigureAwait(false);
 
         logger.LogInformation("Admin {AdminId} retrieved {Count} role changes for user {UserId}",
-            session.User.Id, history.Count, userId);
+            session.Principal!.EffectiveActor.Id, history.Count, userId);
 
         return Results.Ok(history);
     }
@@ -291,15 +291,15 @@ internal static class AdminUserTierEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} changing role for user {UserId} to {NewRole}, reason: {Reason}",
-            session!.User!.Id, userId, request.NewRole, request.Reason ?? "(none)");
+            session!.Principal!.EffectiveActor.Id, userId, request.NewRole, request.Reason ?? "(none)");
 
         try
         {
-            var command = new ChangeUserRoleCommand(userId.ToString(), request.NewRole, request.Reason, session!.User!.Role);
+            var command = new ChangeUserRoleCommand(userId.ToString(), request.NewRole, request.Reason, session!.Principal!.EffectiveActor.Role);
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation("Role changed for user {UserId} to {NewRole} by admin {AdminId}",
-                userId, request.NewRole, session.User.Id);
+                userId, request.NewRole, session.Principal!.EffectiveActor.Id);
 
             return Results.Ok(result);
         }

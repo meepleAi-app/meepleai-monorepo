@@ -38,15 +38,30 @@ internal class CreateSessionCommandHandler : ICommandHandler<CreateSessionComman
         if (user == null)
             throw new DomainException($"User with ID {command.UserId} not found");
 
-        // Create session
+        // Create session. SP5 S2: optional impersonate-pair (subject/UserId + actor/ImpersonatedByUserId)
+        // propagated to the domain Session aggregate so the repository persists the two new
+        // user_sessions columns. When both are null this behaves exactly as before. When
+        // ImpersonatedUntil is set, the session lifetime is capped to the impersonation window
+        // (typically 15min) rather than the default 30-day login lifetime — D-S2-4.
         var sessionId = Guid.NewGuid();
         var sessionToken = SessionToken.Generate();
+        var now = DateTime.UtcNow;
+        TimeSpan? lifetime = null;
+        if (command.ImpersonatedUntil is { } until)
+        {
+            lifetime = until - now;
+            if (lifetime <= TimeSpan.Zero)
+                throw new DomainException("ImpersonatedUntil must be strictly in the future.");
+        }
         var session = new Session(
             id: sessionId,
             userId: user.Id,
             token: sessionToken,
+            lifetime: lifetime,
             ipAddress: command.IpAddress,
-            userAgent: command.UserAgent
+            userAgent: command.UserAgent,
+            impersonatedByUserId: command.ImpersonatedByUserId,
+            impersonatedUntil: command.ImpersonatedUntil
         );
 
         await _sessionRepository.AddAsync(session, cancellationToken).ConfigureAwait(false);
@@ -58,7 +73,8 @@ internal class CreateSessionCommandHandler : ICommandHandler<CreateSessionComman
         return new CreateSessionResponse(
             User: userDto,
             SessionToken: sessionToken.Value,
-            ExpiresAt: session.ExpiresAt
+            ExpiresAt: session.ExpiresAt,
+            SessionId: sessionId
         );
     }
 

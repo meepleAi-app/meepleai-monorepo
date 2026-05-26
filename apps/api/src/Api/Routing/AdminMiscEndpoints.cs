@@ -27,11 +27,11 @@ internal static class AdminMiscEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            logger.LogInformation("Admin {UserId} seeding E2E test users", session!.User!.Id);
+            logger.LogInformation("Admin {UserId} seeding E2E test users", session!.Principal!.EffectiveActor.Id);
 
             await mediator.Send(new SeedE2ETestUsersCommand(), ct).ConfigureAwait(false);
 
-            logger.LogInformation("E2E test users seeded successfully by admin {UserId}", session.User.Id);
+            logger.LogInformation("E2E test users seeded successfully by admin {UserId}", session.Principal!.EffectiveActor.Id);
             // SEC-02: Do not expose passwords in response
             return Results.Json(new
             {

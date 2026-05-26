@@ -330,7 +330,7 @@ public sealed class AuditLoggingBehaviorTests
         {
             context.Items[nameof(SessionStatusDto)] = new SessionStatusDto(
                 true,
-                user,
+                new Principal(user, Actor: null),
                 DateTime.UtcNow.AddHours(1),
                 DateTime.UtcNow);
         }

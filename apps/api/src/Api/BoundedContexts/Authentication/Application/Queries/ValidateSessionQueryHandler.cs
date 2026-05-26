@@ -42,7 +42,7 @@ internal class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery,
         }
         catch
         {
-            return new SessionStatusDto(IsValid: false, User: null, ExpiresAt: null, LastSeenAt: null);
+            return new SessionStatusDto(IsValid: false, Principal: null, ExpiresAt: null, LastSeenAt: null);
         }
 
         // Find session by token hash
@@ -52,7 +52,7 @@ internal class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery,
         {
             return new SessionStatusDto(
                 IsValid: false,
-                User: null,
+                Principal: null,
                 ExpiresAt: null,
                 LastSeenAt: null
             );
@@ -61,11 +61,20 @@ internal class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery,
         // Check if session is valid
         if (!session.IsValid(_timeProvider))
         {
+            // SP5 S2 D-S2-4: distinguish an EXPIRED IMPERSONATION from a plain invalid session.
+            // When the impersonation window (ImpersonatedUntil, mirrored into ExpiresAt) elapsed,
+            // surface the subject/actor ids so the middleware can emit a 401 + ImpersonationAutoEnded
+            // audit. This is read-only — the audit write happens in the middleware, keeping the
+            // query side-effect-free.
+            var wasImpersonationAutoEnded = session.IsImpersonation && session.RevokedAt is null;
             return new SessionStatusDto(
                 IsValid: false,
-                User: null,
+                Principal: null,
                 ExpiresAt: session.ExpiresAt,
-                LastSeenAt: session.LastSeenAt
+                LastSeenAt: session.LastSeenAt,
+                WasImpersonationAutoEnded: wasImpersonationAutoEnded,
+                ImpersonationSubjectUserId: wasImpersonationAutoEnded ? session.UserId : null,
+                ImpersonationActorUserId: wasImpersonationAutoEnded ? session.ImpersonatedByUserId : null
             );
         }
 
@@ -74,24 +83,44 @@ internal class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery,
         var lastSeenAt = session.LastSeenAt ?? _timeProvider.GetUtcNow().UtcDateTime;
         await _sessionRepository.UpdateLastSeenAsync(session.Id, lastSeenAt, cancellationToken).ConfigureAwait(false);
 
-        // Get user information
+        // Get user information (the SUBJECT of the session — for regular login this IS the user;
+        // for impersonate sessions this is the impersonated target, NOT the admin actor).
         var user = await _userRepository.GetByIdAsync(session.UserId, cancellationToken).ConfigureAwait(false);
 
         if (user == null)
         {
             return new SessionStatusDto(
                 IsValid: false,
-                User: null,
+                Principal: null,
                 ExpiresAt: null,
                 LastSeenAt: null
             );
         }
 
-        var userDto = MapToUserDto(user);
+        var subjectDto = MapToUserDto(user);
+
+        // SP5 Admin Security S2 D-S2-2 (Option B dual-principal): when the session carries an
+        // impersonation marker, project the acting admin as Principal.Actor. AuditLoggingBehavior
+        // reads this via ExtractImpersonationActorId() to wire audit_logs.impersonated_user_id,
+        // and EffectiveActor-based authz (Actor ?? Subject) restores the admin's privileges so
+        // they can call /admin/impersonation/end on their own session. If the impersonating admin
+        // has been deleted between session creation and now, degrade to Actor=null + subject-only
+        // attribution rather than failing the whole session.
+        UserDto? actorDto = null;
+        if (session.ImpersonatedByUserId is { } actorId)
+        {
+            var actor = await _userRepository.GetByIdAsync(actorId, cancellationToken).ConfigureAwait(false);
+            if (actor is not null)
+            {
+                actorDto = MapToUserDto(actor);
+            }
+        }
+
+        var principal = new Principal(subjectDto, Actor: actorDto);
 
         return new SessionStatusDto(
             IsValid: true,
-            User: userDto,
+            Principal: principal,
             ExpiresAt: session.ExpiresAt,
             LastSeenAt: session.LastSeenAt,
             SessionId: session.Id

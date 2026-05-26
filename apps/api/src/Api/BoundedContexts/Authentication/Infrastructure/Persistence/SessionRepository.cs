@@ -200,6 +200,13 @@ public class SessionRepository : RepositoryBase, ISessionRepository
         var userAgentProp = typeof(Session).GetProperty("UserAgent");
         userAgentProp?.SetValue(session, entity.UserAgent);
 
+        // SP5 Admin Security S2 — hydrate dual-principal fields. Reflection is the existing
+        // pattern in this mapper because Session's properties are `private set`.
+        var impersonatedByUserIdProp = typeof(Session).GetProperty("ImpersonatedByUserId");
+        impersonatedByUserIdProp?.SetValue(session, entity.ImpersonatedByUserId);
+        var impersonatedUntilProp = typeof(Session).GetProperty("ImpersonatedUntil");
+        impersonatedUntilProp?.SetValue(session, entity.ImpersonatedUntil);
+
         return session;
     }
 
@@ -219,6 +226,9 @@ public class SessionRepository : RepositoryBase, ISessionRepository
             RevokedAt = domainEntity.RevokedAt,
             IpAddress = domainEntity.IpAddress,
             UserAgent = domainEntity.UserAgent,
+            // SP5 Admin Security S2 — propagate dual-principal fields end-to-end.
+            ImpersonatedByUserId = domainEntity.ImpersonatedByUserId,
+            ImpersonatedUntil = domainEntity.ImpersonatedUntil,
             User = null! // Required navigation property, will be loaded by EF Core
         };
     }

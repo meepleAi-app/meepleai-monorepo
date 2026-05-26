@@ -347,7 +347,7 @@ internal static class SharedGameCatalogWizardEndpoints
             documentType,
             version,
             tags,
-            session!.User!.Id,
+            session!.Principal!.Subject.Id,
             isAdmin);
 
         logger.LogInformation(
@@ -394,7 +394,7 @@ internal static class SharedGameCatalogWizardEndpoints
         }
 
         var isAdmin = context.User.IsInRole("Admin");
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
         var items = new List<AddRagToSharedGameCommand>();
 
         for (var i = 0; i < sharedGameIdStrings.Count; i++)

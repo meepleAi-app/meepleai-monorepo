@@ -159,6 +159,16 @@ These limitations account for **most of the residual 33 eligible findings** (16 
   - `mockup_landmarks`: `['article', 'aside']`
   - `component_landmarks`: `['aside']`
 
+### Route `/library/[gameId]` (libro variant)
+
+- **[AUDIT 2026-05-26 #1486 PR #1551]** Conformity check applied to libro-game variant of `/library/[gameId]` (`LibroGameDetailView` + `CampaignSetupDrawer` shipped via SP6 Phase B PR #1037). 20/20 mockup sections matched across 2 mockups (`librogame-runthrough-game-detail.html` + `librogame-runthrough-setup-wizard.html`). Drift ratio **0%** — best alignment in C-audit series so far.
+  - `audit_pr`: `#1551`
+  - `gap_report`: `admin-mockups/design_handoff/libro-detail-gap-report.md`
+  - `findings`: 0 missing components; 0 missing CTAs; 1 deferred-by-design (`LibroGameOnboardingPanel` — separate SP6 backlog row); 3 follow-ups #1552 (LibroGameDetailView + isLibroGame tests, S), #1553 (CampaignSetupDrawer tests, M), #1554 (drawer step-change focus management, XS a11y polish)
+  - `path_decision`: components already at canonical `components/features/gamebook/` (issue body reference to `v2/gamebook/` was stale — no relocation needed)
+  - `bonus`: 2 states beyond mockup (submit loading + submit error)
+  - `verdict`: production-ready
+
 ### Route `/players`
 
 - **[CRITICAL]** `EmptyPlayers.tsx, PlayersFiltersInline.tsx, PlayersHero.tsx, PlayersResultsGrid.tsx` (nav): Missing Link to /player/[id] (mockup: sp4-player-detail.html)

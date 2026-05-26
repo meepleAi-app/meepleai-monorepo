@@ -229,4 +229,29 @@ Then response 200 (6min ≤ 30min)
 
 ---
 
+## DoD verification log
+
+**Date:** 2026-05-26 (T9 sign-off)
+**Branch:** `feature/sp5-admin-security-s3-strict-2fa` @ `b5df523cf`
+**Predecessor:** S2 PR #1555 / `7ca5b5151` su `main-dev` (MERGED)
+
+Tutti i 10 criteri verificati su `b5df523cf` (working tree pulito, `dotnet build` exit 0).
+
+| # | Criterio | Stato | Evidenza |
+|---|----------|-------|----------|
+| 1 | Migration `last_totp_verified_at` applica clean | ✅ | `apps/api/src/Api/Infrastructure/Migrations/20260526124527_AddTwoFactorRecencyToUserSession.cs:14-18` — `AddColumn` timestamptz nullable, no index. Commit `6800273d9`. Schema exercise via Testcontainers in `GetActiveImpersonationsQueryIntegrationTests` (ApplyMigrationsAsync). |
+| 2 | Strict behavior throw `TwoFactorRequiredException` dietro flag `TwoFactorStrictMode` | ✅ | Flag wrapper: `TwoFactorEnforcementConfiguration.cs:18` (`"TwoFactor:StrictMode"`) + `:21` (`StrictModeDefault = false`) + `:55-68` (fail-closed read). Behavior strict path: `TwoFactorEnforcementBehavior.cs:102-137`. Commit `634712b34` (flag) + `64cdbccb3` (strict path). Unit: `TwoFactorEnforcementBehaviorStrictTests` 10/10 + flag tests 5/5. |
+| 3 | ExceptionFilter → 401 + body + header `WWW-Authenticate` | ✅ | `ApiExceptionHandlerMiddleware.cs:97` dispatcher → `:251` `HandleTwoFactorRequiredAsync` → `:266` setta `WWW-Authenticate: TOTP-StepUp realm="meepleai-admin"` + `:270` body `error = "two_factor_required"` + `subcode` (snake_case). 503 path `:287` `HandleTwoFactorUnavailableAsync` → `:304` body `error = "two_factor_unavailable"`. Commit `bd9cc5f96`. Unit: 3 mapping tests (StepUpRequired/EnrollRequired/LockedOut) + 1 503 test = **4/4** in `ApiExceptionHandlerMiddlewareTests`. |
+| 4 | `POST /api/v1/auth/2fa/step-up` con rate-limit DB-backed (5/min, lockout 15min) | ✅ | Endpoint: `TwoFactorEndpoints.cs:170-219` (Option B). Rate-limit/lockout: riusa Redis di `TotpService.VerifyCodeAsync`/`IsLockedOutAsync` (post-T0 spike — `TwoFactorStepUpAttemptEntity` CANCELED). Handler `StepUpTwoFactorCommandHandler.cs:52-95`. Commit `240f7c1b5` + Option B `399c98543`. Unit: handler `StepUpTwoFactorCommandHandlerTests` 12/12 (success/invalid/lockout/vanished-session/null/unavailable) — fresh test run via `dotnet test --filter "FullyQualifiedName~S3AcceptanceScenariosTests"` 2026-05-26 → S3-4 + S3-5 PASS in pipeline reale. |
+| 5 | 4 comandi decorati + ImpersonationStart con MaxAge=5min | ✅ | `DeleteUserCommand.cs:20` (`[RequireTwoFactor(Reason = "Irreversible…")]`, MaxAge default 30) + `ChangeUserRoleCommand.cs:17` (default 30) + `SuspendUserCommand.cs:16` (default 30) + `ImpersonationStartCommand.cs:47` (`[RequireTwoFactor(MaxAgeMinutes = 5, Reason = "Impersonate other user; HIGH RISK")]`). Differenziazione validata da S3-8 acceptance scenario. Commit `64cdbccb3`. |
+| 6 | Audit `TwoFactorRequired` + `TwoFactorStepUp` + `TwoFactorStepUpLockout` via outbox | ✅ | `TwoFactorRequired`: `TwoFactorEnforcementBehavior.cs:160-193` (fresh DI scope per atomicity con `[AtomicAudit]` rollback). `TwoFactorStepUp`: `StepUpTwoFactorCommandHandler.cs:111-118`. `TwoFactorStepUpLockout`: `StepUpTwoFactorCommandHandler.cs:74-81`. Best-effort (S1 default — non distruttivi). Attribution impersonate: `ExtractImpersonationActorId` (S2) wira `user_id=subject, impersonated_user_id=actor`. Acceptance S3-2/S3-4/S3-5 validano end-to-end. |
+| 7 | Admin endpoint `GET /admin/users/no-2fa` per ops sweep | ✅ | `AdminTwoFactorComplianceEndpoints.cs:22-39` — `RequireSuperAdminSession()` + `.RequireAuthorization("RequireSuperAdmin")`. Query handler `GetAdminsWithoutTwoFactorQuery` riusa `IUserRepository.GetAdminUsersAsync` (già scopato admin/superadmin) + filter `!IsTwoFactorEnabled`. Commit `215173bad`. Integration: `GetAdminsWithoutTwoFactorQueryIntegrationTests` 2/2 PASS (Testcontainers Postgres). |
+| 8 | Acceptance tests via pipeline reale (no fixture diretto di `SessionStatusDto`) | ✅ | `apps/api/tests/Api.Tests/Integration/Administration/S3AcceptanceScenariosTests.cs` — 8/8 PASS, ~3m22s su Testcontainers Postgres + `WebApplicationFactory` + real HTTP + real `TotpService` + Redis-counter via `ConcurrentDictionary` (pattern da `TwoFactorSecurityPenetrationTests`). TOTP codes minted with `OtpNet` contro l'encrypted secret. Endpoints exercised: `POST /api/v1/admin/impersonation/start` (MaxAge=5), `DELETE /api/v1/admin/users/{id}` (default MaxAge=30), `POST /api/v1/auth/2fa/step-up`, `GET /api/v1/auth/me` (regression). [[feedback_acceptance_tests_must_exercise_real_pipeline]] applicato. Commit `b5df523cf`. |
+| 9 | Wire format `docs/api/2fa-step-up-protocol.md` published | ✅ | File presente (Option B as-built, post-spec-panel critique: Wiegers per-command MaxAge table, Newman/Nygard replay-guard + 5xx FE rule, Adzic curl example). Commit `249aee74a` (T7 draft) + Option B refactor `399c98543`. Cross-link a piano + audit (D-S3-2/4/4b/5). |
+| 10 | Regression scenario S3-7 (non-decorated commands) | ✅ | Short-circuit: `TwoFactorEnforcementBehavior.cs:72-76` (`if (attr is null) return await next()`). Acceptance scenario S3-7: `GET /api/v1/auth/me` in strict mode → 200 (no enforcement on commands missing `[RequireTwoFactor]`). PASS in T8 8/8 batch. |
+
+**Conclusion:** ✅ 10/10 criteri DoD soddisfatti. Branch ready per push + PR su `main-dev` (no `Closes #N` — pattern S2 deciso 2026-05-26, vedi `feedback_acceptance_tests_must_exercise_real_pipeline.md` per lesson applicata).
+
+---
+
 *Questo documento è il riferimento autoritativo per la DoD di S3. Citarlo dai commit messages dei task e dal merge finale. Cita anche il three-amigos S2 per il pattern dual-principal e [[feedback_acceptance_tests_must_exercise_real_pipeline]] per il pattern di testing.*

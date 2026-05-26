@@ -85,7 +85,14 @@ internal sealed class EnqueueStorageMigrationCommandHandler
             }
             catch (AmazonS3Exception ex)
             {
-                errors.Add($"S3 list-objects failed: {ex.ErrorCode} — {ex.Message}");
+                // SECURITY (test-guarded): keep ex.ErrorCode (enum-like, e.g.
+                // "SignatureDoesNotMatch", "AccessDenied") but NEVER include
+                // ex.Message — AmazonS3Exception.Message routinely carries
+                // bucket names, RequestId, region/endpoint info, and signature
+                // fragments. Full message + stack remain in ILogger.LogError
+                // server-side. Enforced by
+                // EnqueueStorageMigrationCommandHandlerTests.Handle_WhenS3ListObjectsThrows_ShouldNotIncludeRawExceptionMessageInError.
+                errors.Add($"S3 list-objects failed ({ex.ErrorCode}, {ex.GetType().Name})");
                 _logger.LogError(ex, "S3 list-objects failed for prefix {Prefix}", request.LegacyPrefix);
                 break;
             }
@@ -131,7 +138,11 @@ internal sealed class EnqueueStorageMigrationCommandHandler
                 catch (Exception ex)
                 {
                     failed++;
-                    errors.Add($"Enqueue failed for {legacyKey}: {ex.Message}");
+                    // SECURITY (test-guarded): never embed ex.Message — EF Core /
+                    // npgsql exceptions carry SQL fragments and parameter values.
+                    // Full message + stack remain in ILogger.LogWarning. Enforced by
+                    // EnqueueStorageMigrationCommandHandlerTests.Handle_WhenOutboxEnqueueThrows_ShouldNotIncludeRawExceptionMessageInError.
+                    errors.Add($"Enqueue failed for {legacyKey} ({ex.GetType().Name})");
                     _logger.LogWarning(ex, "Enqueue failed for {LegacyKey}", legacyKey);
                 }
 #pragma warning restore CA1031

@@ -126,7 +126,13 @@ internal sealed class ReverseStorageMigrationCommandHandler
                         catch (Exception ex)
                         {
                             failed++;
-                            errors.Add($"Reverse failed for {row.NewKey}: {ex.Message}");
+                            // SECURITY (test-guarded): never embed ex.Message — the
+                            // underlying S3 Copy/DeleteObjectAsync throw
+                            // AmazonS3Exception carrying bucket names, RequestId,
+                            // region and other infrastructure details. Full diagnostic
+                            // detail remains in ILogger.LogWarning. Enforced by
+                            // ReverseStorageMigrationCommandHandlerTests.Handle_WhenS3CopyObjectThrowsForSentRow_ShouldNotIncludeRawExceptionMessageInError.
+                            errors.Add($"Reverse failed for {row.NewKey} ({ex.GetType().Name})");
                             _logger.LogWarning(ex, "Reverse failed for {NewKey}", row.NewKey);
                         }
 #pragma warning restore CA1031

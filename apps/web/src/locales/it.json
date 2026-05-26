@@ -1976,6 +1976,8 @@
     },
     "toolkitsHub": {
       "eyebrow": "Hub · /toolkits",
+      "title": "Catalogo toolkit community",
+      "subtitle": "Bundle pronti all'uso di strumenti (timer, dadi, counter, deck) per i tuoi giochi. Ogni toolkit è versionato e pubblicato dalla community.",
       "heroStats": {
         "toolkits": "Toolkit",
         "installs": "Installazioni",
@@ -1984,6 +1986,12 @@
       },
       "searchClearAriaLabel": "Pulisci ricerca",
       "statusTablistAriaLabel": "Filtra toolkit per status",
+      "statusOptions": {
+        "all": "Tutti",
+        "featured": "Featured",
+        "new": "Nuovi",
+        "top": "Top 100"
+      },
       "sortLabel": "Ordina",
       "sortOptions": {
         "popular": "Popolarità",
@@ -1992,6 +2000,8 @@
         "uses": "Uses"
       },
       "countTemplate": "{count} toolkit",
+      "emptyTitle": "Nessun toolkit trovato",
+      "emptyBody": "Nessun toolkit corrisponde ai filtri attuali. Prova a modificare la ricerca.",
       "gameRefFallback": "Universale (multi-game)",
       "installAriaLabel": "Installa {title}",
       "toolsLabel": "Strumenti:",

@@ -142,10 +142,12 @@ export function HubFilters({
         </select>
       </label>
 
-      {/* Count label */}
-      <span className="font-mono text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-        {interpolateCount(labels.countTemplate, count)}
-      </span>
+      {/* Count label — compact (mobile) only, matching the mockup (desktop hides it) */}
+      {compact && (
+        <span className="font-mono text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+          {interpolateCount(labels.countTemplate, count)}
+        </span>
+      )}
     </div>
   );
 }

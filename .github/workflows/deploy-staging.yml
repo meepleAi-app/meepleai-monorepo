@@ -216,6 +216,59 @@ jobs:
             data/rulebook/golden/
           sparse-checkout-cone-mode: true
 
+      # Pre-deploy disk headroom guard (issue #1575 follow-up).
+      # The pre-deploy-check job runs on the self-hosted runner that lives on
+      # the staging VPS — `df /` here reflects the same filesystem the deploy
+      # will write to. Fail fast BEFORE Build Images (~1.5 GB pull) and
+      # Database Migration (creates schema/WAL artefacts) so we never leave
+      # the DB schema migrated while the deploy itself aborts later on
+      # disk-full (the exact failure mode from 2026-05-26 incident).
+      #
+      # Threshold: 10 GB. Rationale on a 75 GB disk:
+      #   - Image pull (api+web) reserves ~1.5 GB.
+      #   - Migration WAL + temp objects reserves ~0.5–1 GB.
+      #   - Safety margin against per-job runner _diag growth: ~3 GB.
+      #   - Below 10 GB free we are within 5 GB of the disk-full reproduction
+      #     window (#1348). Better to fail the deploy than corrupt staging.
+      #
+      # Override: set repo variable DEPLOY_DISK_GATE_GB to a different
+      # threshold (e.g. "0" disables the gate for emergencies).
+      - name: Verify VPS disk headroom
+        if: vars.RUNNER  # only runs on self-hosted (skipped on ubuntu-latest)
+        env:
+          DEPLOY_DISK_GATE_GB: ${{ vars.DEPLOY_DISK_GATE_GB || '10' }}
+        run: |
+          THRESHOLD_GB="$DEPLOY_DISK_GATE_GB"
+          FREE_GB=$(df -BG / | awk 'NR==2 {gsub(/G/,"",$4); print $4}')
+          USAGE_PCT=$(df -h / | awk 'NR==2 {gsub(/%/,"",$5); print $5}')
+          echo "VPS disk: ${FREE_GB} GB free (usage ${USAGE_PCT}%) — gate threshold ${THRESHOLD_GB} GB"
+
+          if [ "$THRESHOLD_GB" -eq 0 ]; then
+            echo "⚠️ Disk gate disabled (DEPLOY_DISK_GATE_GB=0)"
+            exit 0
+          fi
+
+          if [ "$FREE_GB" -lt "$THRESHOLD_GB" ]; then
+            echo "::error::Insufficient disk on staging VPS: ${FREE_GB} GB free < ${THRESHOLD_GB} GB threshold"
+            echo ""
+            echo "🚫 Aborting BEFORE Build Images / Database Migration to avoid schema/code drift."
+            echo "   (Incident 2026-05-26 left the DB migrated while the Deploy job was orphaned;"
+            echo "    see issue #1573, audit audits/2026-05-26-disk-cleanup-1575.md.)"
+            echo ""
+            echo "Top consumers — run on the VPS:"
+            echo "  sudo du -h --max-depth=2 /home/deploy /var/lib/docker /var/log | sort -rh | head"
+            echo ""
+            echo "Manual cleanup options (safest first):"
+            echo "  1. bash /opt/meepleai/repo/infra/scripts/daily-disk-prune.sh"
+            echo "  2. docker rmi \$(docker images --format '{{.Repository}}:{{.Tag}}' | grep 'staging-' | grep -v \$(docker inspect meepleai-api --format '{{.Config.Image}}'))"
+            echo "  3. find /home/deploy/actions-runner/_diag/blocks -type f -mtime +1 -delete"
+            echo ""
+            echo "Emergency override (use sparingly): set repo variable DEPLOY_DISK_GATE_GB to a lower value or 0 to disable."
+            exit 1
+          fi
+
+          echo "✅ Disk headroom OK"
+
       - name: Verify CI passed on this commit
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

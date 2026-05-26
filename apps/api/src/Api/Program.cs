@@ -593,6 +593,13 @@ using (var scope = app.Services.CreateScope())
     MeepleAiMetrics.RegisterAuditOutboxGauges(auditOutboxTracker);
 }
 
+// SP5 Admin Security S2 T7: register the impersonation active-count gauge.
+{
+    var impersonationTracker = app.Services
+        .GetRequiredService<Api.BoundedContexts.Administration.Infrastructure.Health.IImpersonationHealthTracker>();
+    MeepleAiMetrics.RegisterImpersonationGauges(impersonationTracker);
+}
+
 // Configure middleware pipeline
 app.ConfigureMiddlewarePipeline(forwardedHeadersEnabled);
 

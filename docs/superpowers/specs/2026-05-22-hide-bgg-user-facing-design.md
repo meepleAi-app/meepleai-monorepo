@@ -43,7 +43,7 @@ The goal is to **hide every BGG mention from the non-admin UI surface** while pr
 | # | File | Change |
 |---|------|--------|
 | 1 | `apps/web/src/components/catalog/MeepleGameCatalogCard.tsx` | Remove `if (game.bggId) subtitleParts.push(\`ID: ${game.bggId}\`)` block (lines 194-195) |
-| 2 | `apps/web/src/components/shared-games/SharedGameDetailModal.tsx` | Remove `{game.bggId && <a href={bggUrl}>View on BGG</a>}` block (lines 345-348 region) — the anchor pointed at `boardgamegeek.com/boardgame/{bggId}` |
+| 2 | `apps/web/src/components/shared-games/SharedGameDetailModal.tsx` | Remove the "View on BGG" anchor block (lines 345-348 region) — it linked to `boardgamegeek.com/boardgame/{bggId}` |
 | 3 | `apps/web/src/app/(authenticated)/settings/services/page.tsx` | Remove `{ id: 'bgg', label: 'BoardGameGeek', ... }` entry from services array |
 | 4 | `apps/web/src/components/games/BggSearchPanel.tsx` | DELETE (orphan duplicate) |
 | 5 | `apps/web/src/__tests__/components/games/BggSearchPanel.test.tsx` | DELETE (test of orphan) |

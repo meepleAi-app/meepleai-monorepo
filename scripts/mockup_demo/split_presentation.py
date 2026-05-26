@@ -104,9 +104,11 @@ body.standalone-viewport{{
   color:var(--text,#2b1f12);
   min-height:100vh;
   display:flex;
+  flex-direction:column;
   align-items:center;
-  justify-content:center;
-  padding:24px;
+  justify-content:flex-start;
+  gap:32px;
+  padding:32px 24px;
 }}
 body.standalone-viewport > .phone{{
   flex-shrink:0;

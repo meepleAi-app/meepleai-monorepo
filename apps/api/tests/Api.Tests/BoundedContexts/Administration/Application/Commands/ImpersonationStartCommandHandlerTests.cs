@@ -170,6 +170,37 @@ public class ImpersonationStartCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_SelfImpersonate_ThrowsForbidden()
+    {
+        // D-S2-1 rule 2: a superadmin cannot impersonate their own account.
+        var sameId = Guid.NewGuid();
+        SetupUser(sameId, "root@test.com", "superadmin");
+
+        var command = new ImpersonationStartCommand(sameId, sameId, "trying to impersonate self");
+
+        var act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ForbiddenException>().WithMessage("*impersonate yourself*");
+    }
+
+    [Fact]
+    public async Task Handle_TargetIsBanned_ThrowsConflict()
+    {
+        // D-S2-1 rule 6: banned accounts are ineligible targets. Asserts the "banned" error is
+        // surfaced specifically — NOT "suspended" — even though User.Ban() also sets
+        // IsSuspended=true (Epic #4068). The handler must check banned before the suspended guard.
+        var requesterId = Guid.NewGuid();
+        var targetId = Guid.NewGuid();
+        SetupUser(requesterId, "root@test.com", "superadmin");
+        var banned = SetupUser(targetId, "banned@test.com", "user");
+        banned.Ban("Banned for testing");
+
+        var command = new ImpersonationStartCommand(targetId, requesterId, "impersonate banned user");
+
+        var act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ConflictException>().WithMessage("*banned*");
+    }
+
+    [Fact]
     public async Task Handle_RequesterNotFound_ThrowsNotFound()
     {
         var requesterId = Guid.NewGuid();

@@ -2,6 +2,7 @@ using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Authentication.Application.Commands;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Domain.Enums;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -91,20 +92,24 @@ internal sealed class ImpersonationStartCommandHandler
             throw new ForbiddenException("Cannot impersonate admin or superadmin users");
         }
 
+        // D-S2-1 rule 6: cannot impersonate a banned account. Checked BEFORE the suspended guard
+        // because User.Ban() also sets IsSuspended=true for backward compat (Epic #4068); a banned
+        // target would otherwise be caught by rule 4 and surface a misleading "suspended" error.
+        if (target.Status == UserAccountStatus.Banned)
+        {
+            throw new ConflictException($"Cannot impersonate banned user '{command.TargetUserId}'");
+        }
+
         // D-S2-1 rule 4: cannot impersonate a suspended account.
         if (target.IsSuspended)
         {
             throw new ConflictException($"Cannot impersonate suspended user '{command.TargetUserId}'");
         }
 
-        // D-S2-1 rules 5+6: cannot impersonate demo or banned accounts.
+        // D-S2-1 rule 5: cannot impersonate a demo account.
         if (target.IsDemoAccount)
         {
             throw new ConflictException($"Cannot impersonate demo account '{command.TargetUserId}'");
-        }
-        if (string.Equals(target.Status.ToString(), "Banned", StringComparison.OrdinalIgnoreCase))
-        {
-            throw new ConflictException($"Cannot impersonate banned user '{command.TargetUserId}'");
         }
 
         // Create the impersonation session. UserId = target (subject); ImpersonatedByUserId =

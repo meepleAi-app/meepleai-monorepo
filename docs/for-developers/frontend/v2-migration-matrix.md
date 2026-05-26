@@ -377,13 +377,13 @@ the PR review.
 
 | Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
 |--------|-----------|------|-------|--------|----|----|----------|
-| `sp4-hub-toolkits.jsx` | `HubToolkitsHero` | `apps/web/src/components/features/toolkits-index/HubToolkitsHero.tsx` | `/toolkits` | pending | — | T A V | — |
-| `sp4-hub-toolkits.jsx` | `HubFilters` | `apps/web/src/components/features/toolkits-index/HubFilters.tsx` | `/toolkits` | pending | — | T A V | — |
-| `sp4-hub-toolkits.jsx` | `HubToolkitCardGrid` | `apps/web/src/components/features/toolkits-index/HubToolkitCardGrid.tsx` | `/toolkits` | pending | — | T A V | — |
-| `sp4-hub-toolkits.jsx` | `HubToolkitsBody` | `apps/web/src/components/features/toolkits-index/HubToolkitsBody.tsx` | `/toolkits` | pending | — | T A V | — |
-| `sp4-hub-toolkits.jsx` | `HubEmptyFiltered` | `apps/web/src/components/features/toolkits-index/HubEmptyFiltered.tsx` | `/toolkits` | pending | — | T A V | — |
-| `sp4-hub-toolkits.jsx` | `ErrorState` | `apps/web/src/components/features/toolkits-index/ErrorState.tsx` | `/toolkits` | pending | — | T A V | — |
-| `sp4-hub-toolkits.jsx` | `SkeletonCard` | `apps/web/src/components/features/toolkits-index/SkeletonCard.tsx` | `/toolkits` | pending | — | T A V | — |
+| `sp4-hub-toolkits.jsx` | `HubToolkitsHero` | `apps/web/src/components/features/toolkits-index/HubToolkitsHero.tsx` | `/toolkits` | done | #1563 | T A V | — |
+| `sp4-hub-toolkits.jsx` | `HubFilters` | `apps/web/src/components/features/toolkits-index/HubFilters.tsx` | `/toolkits` | done | #1563 | T A V | — |
+| `sp4-hub-toolkits.jsx` | `HubToolkitCardGrid` | `apps/web/src/components/features/toolkits-index/HubToolkitCardGrid.tsx` | `/toolkits` | done | #1563 | T A V | — |
+| `sp4-hub-toolkits.jsx` | `HubToolkitsBody` | `apps/web/src/components/features/toolkits-index/HubToolkitsBody.tsx` | `/toolkits` | done | #1563 | T A V | — |
+| `sp4-hub-toolkits.jsx` | `HubEmptyFiltered` | `apps/web/src/components/features/toolkits-index/HubEmptyFiltered.tsx` | `/toolkits` | done | #1563 | T A V | — |
+| `sp4-hub-toolkits.jsx` | `ErrorState` | `apps/web/src/components/features/toolkits-index/ErrorState.tsx` | `/toolkits` | done | #1563 | T A V | — |
+| `sp4-hub-toolkits.jsx` | `SkeletonCard` | `apps/web/src/components/features/toolkits-index/SkeletonCard.tsx` | `/toolkits` | done | #1563 | T A V | — |
 
 ### KB hub — `/knowledge-base` (F1a) — 8 components — **Tier M**
 

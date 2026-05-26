@@ -39,7 +39,7 @@ internal static class TestEndpoints
             var session = sessionResult.Session;
 
             logger.LogInformation("Admin {UserId} simulating error type: {ErrorType}",
-                session.User!.Id, LogSanitizer.Sanitize(request.ErrorType));
+                session.Principal!.Subject.Id, LogSanitizer.Sanitize(request.ErrorType));
 
             try
             {
@@ -139,7 +139,7 @@ internal static class TestEndpoints
 
             logger.LogWarning(
                 "User {UserId} invoking smoke-aaron reset",
-                session!.User!.Id);
+                session!.Principal!.Subject.Id);
 
             try
             {

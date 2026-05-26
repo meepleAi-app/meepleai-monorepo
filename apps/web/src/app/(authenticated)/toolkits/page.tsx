@@ -107,8 +107,8 @@ function HubToolkitsContent(): ReactElement {
   const heroLabels = useMemo<HubToolkitsHeroLabels>(
     () => ({
       eyebrow: t('pages.toolkitsHub.eyebrow'),
-      title: t('pages.hub.toolkits.title'),
-      subtitle: t('pages.hub.toolkits.subtitle'),
+      title: t('pages.toolkitsHub.title'),
+      subtitle: t('pages.toolkitsHub.subtitle'),
     }),
     [t]
   );
@@ -119,10 +119,10 @@ function HubToolkitsContent(): ReactElement {
       searchClearAriaLabel: t('pages.toolkitsHub.searchClearAriaLabel'),
       statusTablistAriaLabel: t('pages.toolkitsHub.statusTablistAriaLabel'),
       statusOptions: {
-        all: t('pages.hub.common.filters.all'),
-        featured: t('pages.hub.common.filters.featured'),
-        new: t('pages.hub.common.filters.new'),
-        top: t('pages.hub.common.filters.top'),
+        all: t('pages.toolkitsHub.statusOptions.all'),
+        featured: t('pages.toolkitsHub.statusOptions.featured'),
+        new: t('pages.toolkitsHub.statusOptions.new'),
+        top: t('pages.toolkitsHub.statusOptions.top'),
       },
       sortLabel: t('pages.toolkitsHub.sortLabel'),
       sortOptions: {
@@ -149,8 +149,8 @@ function HubToolkitsContent(): ReactElement {
 
   const emptyLabels = useMemo<HubEmptyFilteredLabels>(
     () => ({
-      title: t('pages.hub.common.filteredEmptyTitle'),
-      body: t('pages.hub.common.filteredEmptyBody'),
+      title: t('pages.toolkitsHub.emptyTitle'),
+      body: t('pages.toolkitsHub.emptyBody'),
       reset: t('pages.toolkitsHub.resetFilters'),
       resetAriaLabel: t('pages.toolkitsHub.resetFiltersAriaLabel'),
     }),

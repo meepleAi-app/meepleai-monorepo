@@ -63,7 +63,7 @@ internal static class AdminStagingAllowlistEndpoints
         var command = new AddStagingAllowlistEntryCommand(
             Email: request.Email,
             Note: request.Note,
-            AddedByUserId: session!.User!.Id);
+            AddedByUserId: session!.Principal!.Subject.Id);
 
         var dto = await mediator.Send(command, ct).ConfigureAwait(false);
         return Results.Created($"/api/v1/admin/staging-allowlist/{dto.Id}", dto);
@@ -82,7 +82,7 @@ internal static class AdminStagingAllowlistEndpoints
         }
 
         await mediator.Send(
-            new RemoveStagingAllowlistEntryCommand(id, session!.User!.Id),
+            new RemoveStagingAllowlistEntryCommand(id, session!.Principal!.Subject.Id),
             ct).ConfigureAwait(false);
 
         return Results.NoContent();

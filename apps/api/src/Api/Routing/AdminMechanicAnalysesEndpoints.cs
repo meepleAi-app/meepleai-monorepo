@@ -65,7 +65,7 @@ internal static class AdminMechanicAnalysesEndpoints
             CancellationToken ct) =>
         {
             var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
-            var adminId = session!.User!.Id;
+            var adminId = session!.Principal!.Subject.Id;
 
             logger.LogInformation(
                 "Admin {AdminId} kicking off mechanic analysis for game {SharedGameId}, PDF {PdfDocumentId}",
@@ -124,7 +124,7 @@ internal static class AdminMechanicAnalysesEndpoints
             CancellationToken ct) =>
         {
             var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
-            var adminId = session!.User!.Id;
+            var adminId = session!.Principal!.Subject.Id;
 
             var command = new SubmitMechanicAnalysisForReviewCommand(id, adminId);
             var response = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -147,7 +147,7 @@ internal static class AdminMechanicAnalysesEndpoints
             CancellationToken ct) =>
         {
             var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
-            var reviewerId = session!.User!.Id;
+            var reviewerId = session!.Principal!.Subject.Id;
 
             var command = new ApproveMechanicAnalysisCommand(id, reviewerId);
             var response = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -191,7 +191,7 @@ internal static class AdminMechanicAnalysesEndpoints
             CancellationToken ct) =>
         {
             var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
-            var reviewerId = session!.User!.Id;
+            var reviewerId = session!.Principal!.Subject.Id;
 
             var command = new ApproveMechanicClaimCommand(id, claimId, reviewerId);
             var response = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -215,7 +215,7 @@ internal static class AdminMechanicAnalysesEndpoints
             CancellationToken ct) =>
         {
             var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
-            var reviewerId = session!.User!.Id;
+            var reviewerId = session!.Principal!.Subject.Id;
 
             var command = new RejectMechanicClaimCommand(id, claimId, reviewerId, request.Note);
             var response = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -237,7 +237,7 @@ internal static class AdminMechanicAnalysesEndpoints
             CancellationToken ct) =>
         {
             var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
-            var reviewerId = session!.User!.Id;
+            var reviewerId = session!.Principal!.Subject.Id;
 
             var command = new BulkApproveMechanicClaimsCommand(id, reviewerId);
             var response = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -261,7 +261,7 @@ internal static class AdminMechanicAnalysesEndpoints
             CancellationToken ct) =>
         {
             var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
-            var actorId = session!.User!.Id;
+            var actorId = session!.Principal!.Subject.Id;
 
             var command = new SuppressMechanicAnalysisCommand(
                 AnalysisId: id,

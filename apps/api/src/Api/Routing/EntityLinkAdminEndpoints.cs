@@ -83,7 +83,7 @@ internal static class EntityLinkAdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var adminUserId = session!.User!.Id;
+            var adminUserId = session!.Principal!.Subject.Id;
 
             var command = new CreateEntityLinkCommand(
                 SourceEntityType: request.SourceEntityType,
@@ -133,7 +133,7 @@ internal static class EntityLinkAdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var adminUserId = session!.User!.Id;
+            var adminUserId = session!.Principal!.Subject.Id;
 
             var command = new DeleteEntityLinkCommand(
                 EntityLinkId: linkId,
@@ -172,7 +172,7 @@ internal static class EntityLinkAdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var adminUserId = session!.User!.Id;
+            var adminUserId = session!.Principal!.Subject.Id;
 
             var command = new ImportBggExpansionsCommand(
                 SharedGameId: sharedGameId,

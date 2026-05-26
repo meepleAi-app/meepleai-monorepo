@@ -157,7 +157,7 @@ internal static class TierStrategyAdminEndpoints
 
         logger.LogInformation(
             "Admin {AdminId} updating tier-strategy access: {Tier}/{Strategy} = {IsEnabled}",
-            session!.User!.Id,
+            session!.Principal!.Subject.Id,
             request.Tier,
             request.Strategy,
             request.IsEnabled);
@@ -183,7 +183,7 @@ internal static class TierStrategyAdminEndpoints
 
         logger.LogInformation(
             "Admin {AdminId} updating strategy-model mapping: {Strategy} -> {Provider}/{Model}",
-            session!.User!.Id,
+            session!.Principal!.Subject.Id,
             request.Strategy,
             request.Provider,
             request.PrimaryModel);
@@ -210,7 +210,7 @@ internal static class TierStrategyAdminEndpoints
 
         logger.LogInformation(
             "Admin {AdminId} applying model replacement: {DeprecatedModel} → {ReplacementModel}",
-            session!.User!.Id,
+            session!.Principal!.Subject.Id,
             request.DeprecatedModelId,
             request.ReplacementModelId);
 
@@ -262,7 +262,7 @@ internal static class TierStrategyAdminEndpoints
 
         logger.LogInformation(
             "Admin {AdminId} triggered immediate model availability check",
-            session!.User!.Id);
+            session!.Principal!.Subject.Id);
 
         var command = new TriggerModelAvailabilityCheckCommand();
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -281,7 +281,7 @@ internal static class TierStrategyAdminEndpoints
 
         logger.LogWarning(
             "Admin {AdminId} resetting tier-strategy configuration: AccessMatrix={ResetAccess}, ModelMappings={ResetMappings}",
-            session!.User!.Id,
+            session!.Principal!.Subject.Id,
             request?.ResetAccessMatrix ?? true,
             request?.ResetModelMappings ?? true);
 

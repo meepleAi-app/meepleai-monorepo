@@ -422,7 +422,7 @@ internal static class PrivateGameEndpoints
         userId = Guid.Empty;
         if (session != null)
         {
-            userId = session.User!.Id;
+            userId = session.Principal!.Subject.Id;
             return true;
         }
 

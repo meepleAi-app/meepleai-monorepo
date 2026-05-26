@@ -31,7 +31,7 @@ internal static class UserLlmDataEndpoints
             CancellationToken ct) =>
         {
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            var userId = session!.User!.Id;
+            var userId = session!.Principal!.Subject.Id;
 
             var command = new DeleteUserLlmDataCommand(
                 UserId: userId,
@@ -86,14 +86,14 @@ conversation memories, and Redis session keys for the current user.
 
             var command = new DeleteUserLlmDataCommand(
                 UserId: userId,
-                RequestedByUserId: session!.User!.Id,
+                RequestedByUserId: session!.Principal!.Subject.Id,
                 IsAdminRequest: true);
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogWarning(
                 "GDPR admin erasure completed: TargetUserId={TargetUserId}, AdminUserId={AdminUserId}, Logs={Logs}, Memories={Memories}, Redis={Redis}",
-                userId, session.User.Id, result.LlmRequestLogsDeleted, result.ConversationMemoriesDeleted, result.RedisKeysCleared);
+                userId, session.Principal!.Subject.Id, result.LlmRequestLogsDeleted, result.ConversationMemoriesDeleted, result.RedisKeysCleared);
 
             return Results.Json(new
             {

@@ -256,7 +256,7 @@ public class NotificationRateLimitFilterTests
                 );
                 var session = new SessionStatusDto(
                     IsValid: true,
-                    User: userDto,
+                    Principal: new Principal(userDto, Actor: null),
                     ExpiresAt: DateTime.UtcNow.AddHours(1),
                     LastSeenAt: DateTime.UtcNow
                 );

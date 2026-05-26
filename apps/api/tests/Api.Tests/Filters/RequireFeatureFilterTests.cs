@@ -233,7 +233,8 @@ public class RequireFeatureFilterTests
     {
         return new SessionStatusDto(
             IsValid: true,
-            User: new Api.BoundedContexts.Authentication.Application.DTOs.UserDto(
+            Principal: new Api.BoundedContexts.Authentication.Application.DTOs.Principal(
+                Subject: new Api.BoundedContexts.Authentication.Application.DTOs.UserDto(
                 Id: userId,
                 Email: "test@example.com",
                 DisplayName: "Test User",
@@ -244,6 +245,7 @@ public class RequireFeatureFilterTests
                 TwoFactorEnabledAt: null,
                 Level: 1,
                 ExperiencePoints: 0),
+                Actor: null),
             ExpiresAt: DateTime.UtcNow.AddHours(1),
             LastSeenAt: DateTime.UtcNow,
             SessionId: Guid.NewGuid()

@@ -97,7 +97,7 @@ internal static class AdminCategoriesEndpoints
 
         logger.LogInformation(
             "Admin {AdminId} creating category {Name}",
-            session!.User!.Id,
+            session!.Principal!.Subject.Id,
             LogSanitizer.Sanitize(request.Name));
 
         var command = new CreateGameCategoryCommand(
@@ -105,7 +105,7 @@ internal static class AdminCategoriesEndpoints
             Slug: request.Slug,
             Emoji: request.Emoji,
             Color: request.Color,
-            ActorUserId: session.User!.Id);
+            ActorUserId: session.Principal!.Subject.Id);
 
         var category = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.Created($"/api/v1/admin/categories/{category.Id}", category);
@@ -124,7 +124,7 @@ internal static class AdminCategoriesEndpoints
 
         logger.LogInformation(
             "Admin {AdminId} updating category {Id}",
-            session!.User!.Id,
+            session!.Principal!.Subject.Id,
             id);
 
         var command = new UpdateGameCategoryCommand(
@@ -133,7 +133,7 @@ internal static class AdminCategoriesEndpoints
             Slug: request.Slug,
             Emoji: request.Emoji,
             Color: request.Color,
-            ActorUserId: session.User!.Id);
+            ActorUserId: session.Principal!.Subject.Id);
 
         var category = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.Ok(category);
@@ -151,10 +151,10 @@ internal static class AdminCategoriesEndpoints
 
         logger.LogInformation(
             "Admin {AdminId} deleting category {Id}",
-            session!.User!.Id,
+            session!.Principal!.Subject.Id,
             id);
 
-        var command = new DeleteGameCategoryCommand(Id: id, ActorUserId: session.User!.Id);
+        var command = new DeleteGameCategoryCommand(Id: id, ActorUserId: session.Principal!.Subject.Id);
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }

@@ -22,3 +22,63 @@ groups:
             The API may be approaching memory limits.
             Check for memory leaks or increase container resources.
           dashboard_url: "http://localhost:3001/d/infrastructure"
+
+      # WARNING: Disk space below 15 GB on staging VPS root filesystem (#1575).
+      # 15 GB = ~80% used on a 75 GB disk. Triggers when the daily prune is
+      # no longer keeping pace with growth (the exact canary failure mode
+      # we hit on 2026-05-25/26 — see audits/2026-05-26-disk-cleanup-1575.md).
+      # Sustained for 10 min to filter out transient deploy-time spikes.
+      - alert: DiskSpaceLowOnRoot
+        expr: |
+          node_filesystem_avail_bytes{mountpoint="/",fstype!~"tmpfs|overlay|squashfs"} < 15 * 1024 * 1024 * 1024
+        for: 10m
+        labels:
+          severity: warning
+          service: vps
+          category: resources
+          component: infrastructure
+        annotations:
+          summary: "VPS root filesystem below 15 GB available"
+          description: |
+            Available disk: {{ $value | humanize1024 }}B on mountpoint /.
+            The daily prune (infra/scripts/daily-disk-prune.sh) is no longer
+            keeping the VPS in safe range. Investigate top consumers:
+              sudo du -h --max-depth=2 /home/deploy /var/lib/docker /var/log | sort -rh | head
+            See audits/2026-05-26-disk-cleanup-1575.md for the playbook.
+          dashboard_url: "http://localhost:3001/d/infrastructure"
+
+  # CRITICAL: separate group so the route can match severity=critical and
+  # send immediate notification (alertmanager.yml routes critical with
+  # group_wait=0s, repeat_interval=15m).
+  - name: infrastructure_critical_alerts
+    interval: 30s
+    rules:
+      # CRITICAL: disk below 5 GB on root — within the disk-full reproduction
+      # window for incident #1348. At this point the next deploy WILL fail
+      # (Build Images pull ~1.5 GB + Database Migration ~0.5–1 GB + headroom).
+      # The pre-deploy disk gate (#1577) blocks at 10 GB, so reaching 5 GB
+      # means either the gate is disabled or growth between deploys is
+      # uncontrolled — page on-call.
+      - alert: DiskSpaceCriticalOnRoot
+        expr: |
+          node_filesystem_avail_bytes{mountpoint="/",fstype!~"tmpfs|overlay|squashfs"} < 5 * 1024 * 1024 * 1024
+        for: 5m
+        labels:
+          severity: critical
+          service: vps
+          category: resources
+          component: infrastructure
+        annotations:
+          summary: "VPS root filesystem CRITICAL — below 5 GB available"
+          description: |
+            Available disk: {{ $value | humanize1024 }}B on mountpoint /.
+            Within incident #1348 disk-full reproduction window. The next
+            deploy will fail at Build Images or Database Migration. Pre-deploy
+            disk gate (#1577) blocks at 10 GB — reaching 5 GB means the gate
+            is disabled or growth between deploys is uncontrolled.
+
+            Immediate actions:
+              1. bash /opt/meepleai/repo/infra/scripts/daily-disk-prune.sh
+              2. Check #1575 audit doc for stale _diag/blocks cleanup commands.
+              3. If repeated: open follow-up issue (likely #1578 AI image drift).
+          dashboard_url: "http://localhost:3001/d/infrastructure"

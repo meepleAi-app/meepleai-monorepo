@@ -364,7 +364,7 @@ internal static class SharedGameCatalogAdminShareRequestEndpoints
         var (authorized, session, error) = context.RequireAdminOrEditorSession();
         if (!authorized) return error!;
 
-        var editorId = session!.User!.Id;
+        var editorId = session!.Principal!.Subject.Id;
 
         logger.LogInformation(
             "Editor {EditorId} bulk approving {Count} share requests",
@@ -404,7 +404,7 @@ internal static class SharedGameCatalogAdminShareRequestEndpoints
         var (authorized, session, error) = context.RequireAdminOrEditorSession();
         if (!authorized) return error!;
 
-        var editorId = session!.User!.Id;
+        var editorId = session!.Principal!.Subject.Id;
 
         logger.LogInformation(
             "Editor {EditorId} bulk rejecting {Count} share requests with reason: {Reason}",

@@ -32,7 +32,7 @@ internal static class TestingMetricsEndpoints
             if (!sessionResult.IsAuthorized) return sessionResult.ErrorResult!;
             var session = sessionResult.Session;
 
-            logger.LogInformation("Admin {UserId} retrieving accessibility metrics", session!.User!.Id);
+            logger.LogInformation("Admin {UserId} retrieving accessibility metrics", session!.Principal!.Subject.Id);
 
             var metrics = await mediator.Send(new GetAccessibilityMetricsQuery(), ct).ConfigureAwait(false);
 
@@ -83,7 +83,7 @@ internal static class TestingMetricsEndpoints
             if (!sessionResult.IsAuthorized) return sessionResult.ErrorResult!;
             var session = sessionResult.Session;
 
-            logger.LogInformation("Admin {UserId} retrieving performance metrics", session!.User!.Id);
+            logger.LogInformation("Admin {UserId} retrieving performance metrics", session!.Principal!.Subject.Id);
 
             var metrics = await mediator.Send(new GetPerformanceMetricsQuery(), ct).ConfigureAwait(false);
 
@@ -147,7 +147,7 @@ internal static class TestingMetricsEndpoints
             if (!sessionResult.IsAuthorized) return sessionResult.ErrorResult!;
             var session = sessionResult.Session;
 
-            logger.LogInformation("Admin {UserId} retrieving E2E test metrics", session!.User!.Id);
+            logger.LogInformation("Admin {UserId} retrieving E2E test metrics", session!.Principal!.Subject.Id);
 
             var metrics = await mediator.Send(new GetE2EMetricsQuery(), ct).ConfigureAwait(false);
 

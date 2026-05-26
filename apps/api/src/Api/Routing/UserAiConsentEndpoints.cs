@@ -29,14 +29,14 @@ internal static class UserAiConsentEndpoints
             CancellationToken ct) =>
         {
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            var query = new GetUserAiConsentQuery(session!.User!.Id);
+            var query = new GetUserAiConsentQuery(session!.Principal!.Subject.Id);
             var consent = await mediator.Send(query, ct).ConfigureAwait(false);
 
             // Return default state if no consent record exists yet
             if (consent is null)
             {
                 return Results.Json(new UserAiConsentDto(
-                    session.User.Id,
+                    session.Principal!.Subject.Id,
                     ConsentedToAiProcessing: false,
                     ConsentedToExternalProviders: false,
                     ConsentedAt: DateTime.MinValue,
@@ -71,14 +71,14 @@ internal static class UserAiConsentEndpoints
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             var command = new UpdateUserAiConsentCommand(
-                UserId: session!.User!.Id,
+                UserId: session!.Principal!.Subject.Id,
                 ConsentedToAiProcessing: payload.ConsentedToAiProcessing,
                 ConsentedToExternalProviders: payload.ConsentedToExternalProviders,
                 ConsentVersion: payload.ConsentVersion);
 
             await mediator.Send(command, ct).ConfigureAwait(false);
 
-            logger.LogInformation("AI consent updated for user {UserId}", session.User.Id);
+            logger.LogInformation("AI consent updated for user {UserId}", session.Principal!.Subject.Id);
 
             return Results.Json(new { ok = true, message = "AI consent preferences updated" });
         })

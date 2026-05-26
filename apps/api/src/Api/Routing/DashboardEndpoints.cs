@@ -224,7 +224,7 @@ Feedback is used to calculate accuracy metrics (target: >75% relevance).
         {
             // Session validated by RequireSession filter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            var userId = session.User!.Id;
+            var userId = session.Principal!.Subject.Id;
 
             // Get event stream via CQRS query
             IAsyncEnumerable<MediatR.INotification> eventStream;
@@ -321,7 +321,7 @@ eventSource.addEventListener('DashboardStatsUpdatedEvent', (e) => {
         // Session validated by RequireSession filter
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-        var query = new GetDashboardQuery(session.User!.Id);
+        var query = new GetDashboardQuery(session.Principal!.Subject.Id);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
         return Results.Json(result);
@@ -354,7 +354,7 @@ eventSource.addEventListener('DashboardStatsUpdatedEvent', (e) => {
             : SortDirection.Descending;
 
         var query = new GetActivityTimelineQuery(
-            UserId: session.User!.Id,
+            UserId: session.Principal!.Subject.Id,
             Types: types,
             SearchTerm: search,
             DateFrom: dateFrom,
@@ -376,7 +376,7 @@ eventSource.addEventListener('DashboardStatsUpdatedEvent', (e) => {
         // Session validated by RequireSession filter
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-        var query = new GetDashboardInsightsQuery(session.User!.Id);
+        var query = new GetDashboardInsightsQuery(session.Principal!.Subject.Id);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
         return Results.Json(result);
@@ -404,7 +404,7 @@ eventSource.addEventListener('DashboardStatsUpdatedEvent', (e) => {
 
         var command = new SubmitInsightFeedbackCommand
         {
-            UserId = session.User!.Id,
+            UserId = session.Principal!.Subject.Id,
             InsightId = request.InsightId,
             InsightType = request.InsightType,
             IsRelevant = request.IsRelevant,

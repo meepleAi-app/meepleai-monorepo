@@ -135,7 +135,7 @@ Validates a player move against game rules using the Arbitro Agent's AI reasonin
             {
                 ValidationId = req.ValidationId,
                 GameSessionId = req.GameSessionId,
-                UserId = session.User!.Id,
+                UserId = session.Principal!.Subject.Id,
                 Rating = req.Rating,
                 Accuracy = req.Accuracy,
                 Comment = req.Comment,
@@ -148,7 +148,7 @@ Validates a player move against game rules using the Arbitro Agent's AI reasonin
 
             logger.LogInformation(
                 "Feedback submitted: feedbackId={FeedbackId}, validation={ValidationId}, user={UserId}, rating={Rating}",
-                feedbackId, req.ValidationId, session.User!.Id, req.Rating);
+                feedbackId, req.ValidationId, session.Principal!.Subject.Id, req.Rating);
 
             return Results.Ok(new { FeedbackId = feedbackId, Message = "Feedback submitted successfully" });
         })

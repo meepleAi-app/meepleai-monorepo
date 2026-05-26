@@ -121,6 +121,13 @@ internal static class ApplicationServiceExtensions
         services.AddHostedService(sp =>
             sp.GetRequiredService<Api.BoundedContexts.Administration.Infrastructure.BackgroundJobs.AuditOutboxProcessor>());
 
+        // SP5 Admin Security S2 T7: impersonation active-count health tracker + periodic refresh
+        // service feeding the meepleai.security.impersonation.active.count gauge.
+        services.AddSingleton<
+            Api.BoundedContexts.Administration.Infrastructure.Health.IImpersonationHealthTracker,
+            Api.BoundedContexts.Administration.Infrastructure.Health.ImpersonationHealthTracker>();
+        services.AddHostedService<Api.BoundedContexts.Administration.Infrastructure.BackgroundJobs.ImpersonationMetricsRefreshService>();
+
         return services;
     }
 

@@ -114,8 +114,8 @@ internal static class ChatSessionEndpoints
         // Determine tier limit for auto-archive sliding window
         var (authenticated, session, _) = httpContext.TryGetActiveSession();
         var tierLimit = 0;
-        if (authenticated && session?.User != null)
-            tierLimit = ChatSessionTierLimits.GetLimit(session.User.Tier, session.User.Role);
+        if (authenticated && session?.Principal?.Subject != null)
+            tierLimit = ChatSessionTierLimits.GetLimit(session.Principal!.Subject.Tier, session.Principal!.Subject.Role);
 
         var command = new CreateChatSessionCommand(
             UserId: userId,
@@ -128,7 +128,7 @@ internal static class ChatSessionEndpoints
             AgentType: request.AgentType,
             AgentName: request.AgentName,
             TierLimit: tierLimit,
-            UserRole: session?.User?.Role
+            UserRole: session?.Principal?.Subject?.Role
         );
 
         var sessionId = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
@@ -229,10 +229,10 @@ internal static class ChatSessionEndpoints
         string tierName;
         int limit;
 
-        if (authenticated && session?.User != null)
+        if (authenticated && session?.Principal?.Subject != null)
         {
-            tierName = session.User.Tier ?? "user";
-            limit = ChatSessionTierLimits.GetLimit(session.User.Tier, session.User.Role);
+            tierName = session.Principal!.Subject.Tier ?? "user";
+            limit = ChatSessionTierLimits.GetLimit(session.Principal!.Subject.Tier, session.Principal!.Subject.Role);
         }
         else
         {

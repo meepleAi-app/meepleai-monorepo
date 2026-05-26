@@ -297,16 +297,34 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
         string? email = null;
 
         if (httpContext.Items.TryGetValue(nameof(SessionStatusDto), out var value)
-            && value is SessionStatusDto { IsValid: true, User: not null } session)
+            && value is SessionStatusDto { IsValid: true, Principal: not null } session)
         {
-            userId = session.User.Id.ToString();
-            email = session.User.Email;
+            userId = session.Principal!.Subject.Id.ToString();
+            email = session.Principal!.Subject.Email;
         }
 
         var ipAddress = httpContext.Connection.RemoteIpAddress?.ToString();
         var userAgent = httpContext.Request.Headers.UserAgent.FirstOrDefault();
 
         return (userId, email, ipAddress, userAgent);
+    }
+
+    /// <summary>
+    /// SP5 S2 D-S2-3: returns the impersonation ACTOR id when the current session is an active
+    /// impersonation, else null. The behavior pairs this into <c>impersonated_user_id</c> so any
+    /// audited command executed DURING an impersonation is attributed to both the subject
+    /// (user_id) and the acting admin (impersonated_user_id). This is the S2 wiring of the column
+    /// S1 left null ("wired in S2").
+    /// </summary>
+    private Guid? ExtractImpersonationActorId()
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext?.Items.TryGetValue(nameof(SessionStatusDto), out var value) == true
+            && value is SessionStatusDto { IsValid: true, Principal: { Actor: not null } principal })
+        {
+            return principal.Actor!.Id;
+        }
+        return null;
     }
 
     private static string? ExtractResourceId(TRequest request)
@@ -391,11 +409,50 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
         var oversize = snapshotPayloads.Any(s =>
             PayloadTruncator.IsOversizeJson(s.BeforeJson) || PayloadTruncator.IsOversizeJson(s.AfterJson));
 
+        // SP5 S2 D-S2-3: select user_id source per [AuditableAction(UserIdSource=...)].
+        //   • Default (Caller): user_id = caller (e.g. UserUpdateProfile — Bob updates Bob).
+        //   • ResourceId: user_id = the resource id (target of the command), and the caller is
+        //     promoted to impersonated_user_id. Used for management commands like
+        //     ImpersonationStartCommand where the row's natural subject is the target user.
+        //
+        // ⚠ Limitation: when ResourceId is selected but the request has no extractable resource id,
+        // we fall back to the caller (Caller semantics). The behavior logs a warning so a misuse
+        // surfaces in observability rather than producing a misleading audit row.
+        // SP5 S2: actor of an active impersonation (null for regular sessions / management commands
+        // whose caller is acting directly).
+        var impersonationActorId = ExtractImpersonationActorId();
+
+        string? userIdForRow;
+        Guid? impersonatedUserIdForRow;
+        if (attr.UserIdSource == AuditUserIdSource.ResourceId && !string.IsNullOrEmpty(resourceId))
+        {
+            // Management command (e.g. ImpersonationStartCommand): user_id = the target resource,
+            // impersonated_user_id = the caller (the admin performing the action). D-S2-3.
+            userIdForRow = resourceId;
+            impersonatedUserIdForRow = Guid.TryParse(adminUserId, out var actorGuid) ? actorGuid : null;
+        }
+        else
+        {
+            if (attr.UserIdSource == AuditUserIdSource.ResourceId)
+            {
+                _logger.LogWarning(
+                    "AuditLoggingBehavior: [AuditableAction(UserIdSource=ResourceId)] on {Command} "
+                    + "but the request has no extractable ResourceId. Falling back to Caller semantics.",
+                    typeof(TRequest).Name);
+            }
+            // Caller source: user_id = the caller (the session subject). When the session is an
+            // active impersonation, the real admin (Principal.Actor) is paired into
+            // impersonated_user_id — so a command executed AS the impersonated user is forensically
+            // attributable to the acting admin. D-S2-3.
+            userIdForRow = adminUserId;
+            impersonatedUserIdForRow = impersonationActorId;
+        }
+
         return new AuditOutboxPayload
         {
             Action      = attr.Action,
             Resource    = attr.Resource,
-            UserId      = adminUserId,
+            UserId      = userIdForRow,
             ResourceId  = resourceId,
             Result      = result,
             IpAddress   = ipAddress,
@@ -403,9 +460,8 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
             RequestType = typeof(TRequest).Name,
             Details     = details,
             Snapshots   = snapshotPayloads,
-            // Populated by S2 (impersonation) / S3 (step-up); null until then.
-            ImpersonatedUserId = null,
-            StepUpTokenId      = null,
+            ImpersonatedUserId = impersonatedUserIdForRow,
+            StepUpTokenId      = null,  // populated by S3
             Timestamp   = DateTimeOffset.UtcNow,
             Oversize    = oversize,
         };

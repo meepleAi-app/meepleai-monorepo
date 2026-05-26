@@ -88,7 +88,7 @@ internal static class AdminSandboxEndpoints
         if (!authorized) return error!;
 
         var command = new ApplySandboxConfigCommand(
-            AdminUserId: session!.User!.Id,
+            AdminUserId: session!.Principal!.Subject.Id,
             GameId: request.GameId,
             Config: new SandboxConfigOverrideDto(
                 Strategy: request.Strategy,

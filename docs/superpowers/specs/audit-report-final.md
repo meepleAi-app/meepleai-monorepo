@@ -169,6 +169,17 @@ These limitations account for **most of the residual 33 eligible findings** (16 
   - `bonus`: 2 states beyond mockup (submit loading + submit error)
   - `verdict`: production-ready
 
+### Route `/library/[gameId]/play/[campaignId]/translate`
+
+- **[AUDIT 2026-05-26 #1487 PR #1556]** Conformity check applied to 4 shipped components (`TranslateViewer` 178 LOC + `SegmentPicker` + `BookPicker` + `TranslationPane`) shipped via SP6 Phase A PR #790 (route refactored #871). Drift ratio **8/13 = 61.5%** — highest in C-series.
+  - `audit_pr`: `#1556`
+  - `gap_report`: `admin-mockups/design_handoff/translate-gap-report.md`
+  - `findings`: 5 mockup sections matched (A-E camera/segment/translate/view); 4 Aaron CORE refinement states MISSING (loading 4-step skeleton, reader-mode toggle, multi-lang detection+override, manual-mode entry) + 3 other states missing (low-confidence banner, wake-lock indicator, abort CTA); 1 partial (AAA contrast verify on TranslationPane)
+  - `aaron_core_coverage`: 0/4 (all 4 priorities NOT implemented; verified live with grep — zero matches for `reader-mode`/`localStorage`/`lang-detect`/`sourceLang`/`mode=manual`)
+  - `follow_ups`: 5 issues #1557 (F1 loading skeleton, L P1), #1558 (F2 reader-mode, M P1), #1559 (F3 multi-lang BE+FE, L P1), #1560 (F4 manual-mode, L P1), #1561 (F5 AAA contrast verify, S P2)
+  - `root_cause`: Phase A shipped 2026-05 under original scope; Aaron CORE refinement spec landed 2026-05-23; Phase A.1 impl plan never opened
+  - `verdict`: ⚠️ NOT production-ready against current mockup; production-ready against original Phase A scope only. Not a regression (shipped code internally correct); mockup advanced beyond implementation.
+
 ### Route `/players`
 
 - **[CRITICAL]** `EmptyPlayers.tsx, PlayersFiltersInline.tsx, PlayersHero.tsx, PlayersResultsGrid.tsx` (nav): Missing Link to /player/[id] (mockup: sp4-player-detail.html)

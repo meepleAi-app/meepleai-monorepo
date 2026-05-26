@@ -408,15 +408,21 @@ the PR review.
 | `sp4-kb-hub.jsx` | `RaptorPanel` | `apps/web/src/components/features/kb-hub/RaptorPanel.tsx` | `/library/[gameId]/kb` | done | #1481 | T A V | — |
 | `sp4-kb-hub.jsx` | `DeleteDialog` | `apps/web/src/components/features/kb-hub/DeleteDialog.tsx` | `/library/[gameId]/kb` | done | #1481 | T A M V | — |
 
-### KB globale — `/knowledge-base/global` (F1b) — 10 components — **Tier L** ⚠️ Phase 0.5 likely required
+### KB globale — `/knowledge-base/global` (F1b) — 10 components — **Tier L** ✅ Phase 0.5 contract delivered (#1482)
 
 > Mockup delivered post 2026-05-10 as `sp4-kb-globale.jsx`. Global search,
 > doc viewer (desktop + mobile), inline editor, and AI drawer (4-state FSM:
-> idle/streaming/completed/error). Route subpath TBD — `/knowledge-base/global`
-> placeholder used; may consolidate under `/knowledge-base/search` or split
-> across `/kb/search`, `/kb/[id]/viewer`, `/kb/[id]/edit` at implementation
-> time. Phase 0.5 sub-hook contract likely required for streaming/citation
-> flow (mirror pattern from `library-id-onboarding-hooks.md`).
+> idle/streaming/completed/error).
+> **Phase 0.5 sub-hook contract DELIVERED** (#1482): [`contracts/kb-globale-hooks.md`](contracts/kb-globale-hooks.md).
+> Route decided: `/knowledge-base/global` (canonical). Dispatch is 2-phase
+> (Foundation: search/home/results/filters/empty + `useGlobalKbSearch`;
+> Interactions: viewer/editor/AI-drawer + `useKbAskStream` mirroring
+> `useAgentChatStream`, all lazy-split). Reuse verified: `streaming.schemas.ts`
+> (CitationSchema + StreamingEventType), `kb-chunks.schemas.ts`, `useKbDocDetail`,
+> `useKbChunksList`. Greenfield: `useGlobalKbSearch` + `useKbAskStream`.
+> **6 open questions** (BE cross-game search + kb-ask SSE endpoints, citation
+> click, RBAC, editor scope, facets) must resolve before impl dispatch — see
+> contract §7. Components remain `pending` until Foundation/Interactions PRs land.
 
 | Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
 |--------|-----------|------|-------|--------|----|----|----------|

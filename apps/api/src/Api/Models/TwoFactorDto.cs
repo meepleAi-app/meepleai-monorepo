@@ -21,6 +21,15 @@ internal class TwoFactorVerifyRequest
 }
 
 /// <summary>
+/// Request to step-up (re-verify) 2FA on the current session. SP5 Admin Security S3 — T5.
+/// The session is identified by the auth cookie (resolved server-side); only the code is sent.
+/// </summary>
+internal class TwoFactorStepUpRequest
+{
+    public string Code { get; set; } = string.Empty;
+}
+
+/// <summary>
 /// Request to disable two-factor authentication
 /// </summary>
 internal class TwoFactorDisableRequest

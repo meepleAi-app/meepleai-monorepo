@@ -45,6 +45,14 @@ internal interface ITotpService
     Task<bool> VerifyBackupCodeAsync(Guid userId, string backupCode, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// SP5 S3 — D-S3-4b: read-only check of the TOTP lockout state (5 failed attempts within the
+    /// 15-min window). Does NOT consume the rate-limit token bucket — it only reads the failed
+    /// counter. Lets the step-up endpoint surface a distinct <c>locked_out</c> response while
+    /// <see cref="VerifyCodeAsync"/> remains the single source of truth that also re-checks lockout.
+    /// </summary>
+    Task<bool> IsLockedOutAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Disable two-factor authentication with password and code verification
     /// </summary>
     /// <param name="userId">User ID</param>

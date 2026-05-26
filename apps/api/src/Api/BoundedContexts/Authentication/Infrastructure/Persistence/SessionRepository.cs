@@ -94,6 +94,17 @@ public class SessionRepository : RepositoryBase, ISessionRepository
                 cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<int> UpdateLastTotpVerifiedAtAsync(Guid sessionId, DateTime lastTotpVerifiedAt, CancellationToken cancellationToken = default)
+    {
+        // Single-column SQL UPDATE — atomic, no change-tracking, returns rows affected so the
+        // caller can detect a vanished session. SP5 S3 — D-S3-4.
+        return await DbContext.UserSessions
+            .Where(s => s.Id == sessionId)
+            .ExecuteUpdateAsync(setters =>
+                setters.SetProperty(s => s.LastTotpVerifiedAt, lastTotpVerifiedAt),
+                cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task RevokeAllUserSessionsAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;

@@ -345,9 +345,11 @@ Effort: ~2-3 h. Annotation richiede leggere ogni `.section` per assegnare `data-
 | 2.2 | 2026-05-26 | `toolkit-mobile-mockup.html` | `toolkit-mobile--{dice-build,dice-result,quick-log,win-tracker}.html` (4) | per-variant, OK |
 | 2.3 | 2026-05-26 | `us32-play-records-mockups.html` | `play-records--{list,new-step1-game,new-step2-players,new-step3-summary,detail,stats}.html` (6) | per-variant, dark theme preservato, OK |
 | 3 pilot (D) | 2026-05-26 | `meeple-card-real-app-render.html` | `meeple-card-real-app--{game-catalog,library-game,session,agent,chat,kb,player}-card.html` + `--{minor-variants,comparison-matrix,unused-features}.html` (10) | **per-component** mode, first e2e exercise. 7 entity-card renders + 3 showcase/meta sections. Poster references live BGG cover URLs (now 400) — pre-existing, falls back to gradients. |
-| 3 (D, remaining) | TBD | `meeple-card-{visual-test,nav-buttons-mockup,summary-render}.html` | TBD | **Pending user review** of pilot. ~16 sections. summary-render is meta-heavy (Color System / Feature Matrix / File Architecture are not UI). |
+| 3.2 (D) | 2026-05-26 | `meeple-card-visual-test.html` | `meeple-card-visual--{grid-view,list-view,table-view,flip-card,carousel-3d,multi-entity-grid}.html` (6) | per-component, OK |
+| 3.3 (D) | 2026-05-26 | `meeple-card-nav-buttons-mockup.html` | `meeple-card-nav--nav-{grid-view,list-view,featured-view,popover-multi-entity,disabled-states,session-card,kb-card,agent-card,chat-card,player-card,complete-matrix}.html` (11) | per-component, OK |
+| 3.4 (D) | 2026-05-26 | `meeple-card-summary-render.html` | `meeple-card-summary--{color-system,grid-variant,list-compact-variants,hero-variant,feature-matrix,adapter-components,file-architecture}.html` (7) | per-component, incl. meta sections (user opted for full coverage) |
 
-**Totale Wave 1+2+3pilot (6 poster, 30 standalone)**: Pilot (1) + Wave 1 (2) + Wave 2.1 (7) + Wave 2.2 (4) + Wave 2.3 (6) + Wave 3 pilot (10).
+**Totale finale (9 poster, 54 standalone)**: Pilot (1) + Wave 1 (2) + Wave 2.1/2.2/2.3 (17) + Wave 3 (10+6+11+7 = 34). Solo `meeple-card-drawer-tabs-mockup.html` resta non-splittato (JS-rendered — vedi § Out-of-scope).
 
 ## Open Questions — Decisions log
 

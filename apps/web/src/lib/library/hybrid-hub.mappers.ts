@@ -14,9 +14,10 @@
  *   - `href`: stick to current public routes; final routing in Phase 2.
  */
 
+import type { AgentDto } from '@/lib/api/schemas/agents.schemas';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 
-import type { GameHubItem } from './hybrid-hub.types';
+import type { AgentHubItem, GameHubItem } from './hybrid-hub.types';
 
 export function libraryEntryToHubItem(entry: UserLibraryEntry): GameHubItem {
   return {
@@ -30,5 +31,19 @@ export function libraryEntryToHubItem(entry: UserLibraryEntry): GameHubItem {
     rating: entry.averageRating ?? undefined,
     state: entry.currentState,
     imageUrl: entry.gameImageUrl ?? entry.gameIconUrl ?? undefined,
+  };
+}
+
+export function agentToHubItem(agent: AgentDto): AgentHubItem {
+  return {
+    id: agent.id,
+    entity: 'agent',
+    title: agent.name,
+    subtitle: agent.gameName ?? undefined,
+    updatedAt: agent.lastInvokedAt ?? agent.createdAt,
+    href: `/agents/${agent.id}`,
+    gameName: agent.gameName ?? undefined,
+    agentType: agent.type,
+    isActive: agent.isActive,
   };
 }

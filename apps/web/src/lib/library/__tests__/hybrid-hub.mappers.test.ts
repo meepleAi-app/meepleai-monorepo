@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
+import type { AgentDto } from '@/lib/api/schemas/agents.schemas';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 
-import { libraryEntryToHubItem } from '../hybrid-hub.mappers';
+import { agentToHubItem, libraryEntryToHubItem } from '../hybrid-hub.mappers';
 
 const baseEntry: UserLibraryEntry = {
   id: '00000000-0000-0000-0000-000000000001',
@@ -86,5 +87,52 @@ describe('libraryEntryToHubItem', () => {
   it('returns undefined rating when averageRating is null', () => {
     const result = libraryEntryToHubItem({ ...baseEntry, averageRating: null });
     expect(result.rating).toBeUndefined();
+  });
+});
+
+const baseAgent: AgentDto = {
+  id: '00000000-0000-0000-0000-0000000000b1',
+  name: 'Catan Tutor',
+  type: 'Tutor',
+  strategyName: 'HybridSearch',
+  strategyParameters: {},
+  isActive: true,
+  createdAt: '2026-01-15T09:00:00Z',
+  lastInvokedAt: '2026-03-12T18:30:00Z',
+  invocationCount: 47,
+  isRecentlyUsed: true,
+  isIdle: false,
+  gameId: '00000000-0000-0000-0000-0000000000aa',
+  gameName: 'Catan',
+  createdByUserId: '00000000-0000-0000-0000-000000000099',
+};
+
+describe('agentToHubItem', () => {
+  it('maps an AgentDto to an AgentHubItem with entity="agent"', () => {
+    const result = agentToHubItem(baseAgent);
+    expect(result.entity).toBe('agent');
+    expect(result.id).toBe(baseAgent.id);
+    expect(result.title).toBe('Catan Tutor');
+    expect(result.subtitle).toBe('Catan');
+    expect(result.gameName).toBe('Catan');
+    expect(result.agentType).toBe('Tutor');
+    expect(result.isActive).toBe(true);
+    expect(result.href).toBe(`/agents/${baseAgent.id}`);
+  });
+
+  it('prefers lastInvokedAt over createdAt for updatedAt', () => {
+    const result = agentToHubItem(baseAgent);
+    expect(result.updatedAt).toBe('2026-03-12T18:30:00Z');
+  });
+
+  it('falls back to createdAt when lastInvokedAt is null', () => {
+    const result = agentToHubItem({ ...baseAgent, lastInvokedAt: null });
+    expect(result.updatedAt).toBe('2026-01-15T09:00:00Z');
+  });
+
+  it('returns undefined gameName/subtitle when the agent is not game-bound', () => {
+    const result = agentToHubItem({ ...baseAgent, gameName: null, gameId: null });
+    expect(result.gameName).toBeUndefined();
+    expect(result.subtitle).toBeUndefined();
   });
 });

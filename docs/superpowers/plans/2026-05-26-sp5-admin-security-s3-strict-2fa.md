@@ -28,24 +28,28 @@
   - `apps/api/src/Api/Routing/Auth/TwoFactorStepUpEndpoints.cs`
   - `apps/api/src/Api/Routing/Admin/AdminTwoFactorComplianceEndpoints.cs`
   - `apps/api/src/Api/Middleware/TwoFactorRequiredExceptionFilter.cs` (or extend existing exception filter)
-  - `apps/api/src/Api/BoundedContexts/Authentication/Infrastructure/RateLimit/TwoFactorStepUpRateLimiter.cs`
-  - `apps/api/src/Api/Infrastructure/Entities/Authentication/TwoFactorStepUpAttemptEntity.cs` (for rate-limit counter)
-  - `apps/api/src/Api/Infrastructure/Migrations/{ts}_AddTwoFactorStrictMode.cs`
+  - ~~`TwoFactorStepUpRateLimiter.cs`~~ — **CANCELED post-T0**: riusa `TotpService.VerifyCodeAsync` (Redis rate-limit 5/5min + lockout 15min già implementati). Spike §6.
+  - ~~`TwoFactorStepUpAttemptEntity.cs`~~ — **CANCELED post-T0**: no nuova tabella; Redis è authoritative
+  - `apps/api/src/Api/Infrastructure/Migrations/{ts}_AddTwoFactorRecencyToUserSession.cs`
   - `docs/api/2fa-step-up-protocol.md` (wire format spec for FE handoff)
   - `tests/Api.Tests/Integration/Administration/S3AcceptanceScenariosTests.cs`
   - `tests/Api.Tests/BoundedContexts/Authentication/Application/Commands/StepUpTwoFactorCommandHandlerTests.cs`
   - `tests/Api.Tests/BoundedContexts/Authentication/Application/Behaviors/TwoFactorEnforcementBehaviorStrictTests.cs`
 
 - **Modify:**
-  - `apps/api/src/Api/BoundedContexts/Authentication/Application/Behaviors/TwoFactorEnforcementBehavior.cs` (strict path + flag read)
+  - `apps/api/src/Api/BoundedContexts/Authentication/Application/Behaviors/TwoFactorEnforcementBehavior.cs` (strict path + flag read; legge `sessionStatus.LastTotpVerifiedAt`)
   - `apps/api/src/Api/BoundedContexts/Authentication/Application/Attributes/RequireTwoFactorAttribute.cs` (doc update only — semantics unchanged)
   - `apps/api/src/Api/BoundedContexts/Administration/Application/Commands/ImpersonationStartCommand.cs` (MaxAgeMinutes = 5)
+  - **NEW post-T0** `ImpersonationStartCommandHandler.cs` — inherit actor's `LastTotpVerifiedAt` nella session impersonate (spike §5)
   - `apps/api/src/Api/Infrastructure/Entities/Authentication/UserSessionEntity.cs` (LastTotpVerifiedAt)
   - `apps/api/src/Api/Infrastructure/EntityConfigurations/Authentication/UserSessionEntityConfiguration.cs`
   - `apps/api/src/Api/BoundedContexts/Authentication/Domain/Entities/Session.cs` (LastTotpVerifiedAt + UpdateTotpVerified method)
-  - `apps/api/src/Api/BoundedContexts/Authentication/Infrastructure/Persistence/SessionRepository.cs` (hydrate)
+  - `apps/api/src/Api/BoundedContexts/Authentication/Infrastructure/Persistence/SessionRepository.cs` (hydrate + UpdateLastTotpVerifiedAtAsync method)
+  - `apps/api/src/Api/BoundedContexts/Authentication/Application/Commands/CreateSessionCommand.cs` — **NEW post-T0**: accept optional `LastTotpVerifiedAt` param (per impersonate inheritance)
+  - `apps/api/src/Api/BoundedContexts/Authentication/Application/DTOs/SessionDto.cs` — **NEW post-T0**: add `LastTotpVerifiedAt? : DateTime?` field (mirror S2 SessionId pattern)
+  - `apps/api/src/Api/BoundedContexts/Authentication/Application/Queries/ValidateSessionQueryHandler.cs` — **NEW post-T0**: populate `LastTotpVerifiedAt` in SessionStatusDto
   - `apps/api/src/Api/BoundedContexts/SystemConfiguration/...` (TwoFactorStrictMode config key, default false)
-  - `apps/api/src/Api/Program.cs` (wire new endpoints + rate-limiter + exception filter)
+  - `apps/api/src/Api/Program.cs` (wire new endpoints + exception filter; NO rate-limiter — riuso `TotpService`)
 
 ---
 
@@ -55,17 +59,17 @@
 
 **Output:** `audits/2026-05-26-s3-spike-cutover-readiness.md`
 
-- [ ] **Step 1: Inventory dei 4 comandi decorati `[RequireTwoFactor]`** — confermare MaxAge attuale, identificare i call site, mappare l'audit emission attuale (action names) per gli scenari S3-1..S3-8.
+- [x] **Step 1: Inventory dei 4 comandi decorati `[RequireTwoFactor]`** — confermare MaxAge attuale, identificare i call site, mappare l'audit emission attuale (action names) per gli scenari S3-1..S3-8.
 
-- [ ] **Step 2: Inventario sistema 2FA enrollment esistente** — dove vive il TOTP secret? Quale endpoint setta `IsTwoFactorEnabled=true`? Come funziona oggi la verifica TOTP (interfaccia + library)? Identifica i punti dove inserire l'aggiornamento di `LastTotpVerifiedAt` (probabile: login + enroll-verify + step-up).
+- [x] **Step 2: Inventario sistema 2FA enrollment esistente** — dove vive il TOTP secret? Quale endpoint setta `IsTwoFactorEnabled=true`? Come funziona oggi la verifica TOTP (interfaccia + library)? Identifica i punti dove inserire l'aggiornamento di `LastTotpVerifiedAt` (probabile: login + enroll-verify + step-up).
 
-- [ ] **Step 3: Conta gli admin senza 2FA in dev/staging** — `SELECT count(*) FROM users WHERE (role='admin' OR role='superadmin') AND is_two_factor_enabled=false`. Output: numero da sweep prima del flip prod (D-S3-5).
+- [x] **Step 3: Conta gli admin senza 2FA in dev/staging** (SQL query proposed; live count differito a ops sweep via T6 endpoint) — `SELECT count(*) FROM users WHERE (role='admin' OR role='superadmin') AND is_two_factor_enabled=false`. Output: numero da sweep prima del flip prod (D-S3-5).
 
-- [ ] **Step 4: Identifica i 401 handler esistenti nel FE** — `apps/web/src/lib/api/*` — verifica che esista logica per distinguere `subcode` nel body. Output: gap document per il plan FE separato.
+- [x] **Step 4: Identifica i 401 handler esistenti nel FE** — 8 handler in `apps/web/src/lib/api/core/httpClient.ts` + `errors.ts` + `i18n/errors.ts`, tutti generic redirect-to-login. Migration spec documentata in spike §8. — `apps/web/src/lib/api/*` — verifica che esista logica per distinguere `subcode` nel body. Output: gap document per il plan FE separato.
 
-- [ ] **Step 5: Risk matrix (Nygard)** — failure modes documentati: (a) TOTP store unavailable, (b) rate-limit counter DB unreachable, (c) flag toggle race, (d) sessione esistente con `LastTotpVerifiedAt=null` al flip → tutte richiedono step-up (questo è l'effetto voluto post-sweep).
+- [x] **Step 5: Risk matrix (Nygard)** — 7 failure modes (F1-F7) documentati in spike §7 — failure modes documentati: (a) TOTP store unavailable, (b) rate-limit counter DB unreachable, (c) flag toggle race, (d) sessione esistente con `LastTotpVerifiedAt=null` al flip → tutte richiedono step-up (questo è l'effetto voluto post-sweep).
 
-- [ ] **Step 6: Commit spike doc + amend kickoff se servono refinement**
+- [x] **Step 6: Commit spike doc + amend kickoff se servono refinement** — spike `audits/2026-05-26-s3-spike-cutover-readiness.md` con 2 semplificazioni (D-S3-4b riusa Redis rate-limit di TotpService; impersonate inherit actor's LastTotpVerifiedAt). File Structure del plan aggiornato di conseguenza (vedi sotto).
 
 ---
 

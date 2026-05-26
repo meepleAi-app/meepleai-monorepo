@@ -1,7 +1,8 @@
 # S3 Three-Amigos Kickoff — Strict 2FA Enforcement Cutover
 
 **Date:** 2026-05-26
-**Status:** decisions converged (post-critique revision)
+**Status:** decisions converged (post-critique revision) + **T0 spike amends** (2026-05-26b)
+**T0 spike:** [`audits/2026-05-26-s3-spike-cutover-readiness.md`](2026-05-26-s3-spike-cutover-readiness.md) — autoritativo per: (1) semplificazione D-S3-4b (riusa Redis rate-limit di `TotpService.VerifyCodeAsync`); (2) impersonate context (inherit actor's `LastTotpVerifiedAt` in T1); (3) actor-aware reading nel behavior (legge `sessionStatus.LastTotpVerifiedAt`)
 **Plan di riferimento:** `docs/superpowers/plans/2026-05-26-sp5-admin-security-s3-strict-2fa.md`
 **Predecessor:** S2 (`audits/2026-05-25-s2-three-amigos-kickoff.md`) — MERGED in `main-dev` as PR #1555 / commit `7ca5b5151`.
 **Issue:** Q2 2026 Security Review #186 P1.1 — 2FA admin enforcement.

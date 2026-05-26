@@ -57,6 +57,27 @@ SUPPORTED_MODES = {"merge-sections", "per-variant", "per-component"}
 # idempotency: rerunning with no source changes should report "unchanged".
 _TIMESTAMP_RE = re.compile(r" regenerated=\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z")
 
+# Parses the per-file SPLIT-GEN marker to rebuild the index from disk:
+# <!-- SPLIT-GEN: source=mockup/<poster> mode=<mode> variant=<key> regenerated=... -->
+_MARKER_FIELDS_RE = re.compile(
+    r"<!-- SPLIT-GEN: source=mockup/(?P<poster>\S+) "
+    r"mode=(?P<mode>\S+) variant=(?P<variant>\S+) "
+)
+
+
+def _display_path(p: Path) -> str:
+    """Repo-relative path for logging, or absolute if outside the repo."""
+    try:
+        return str(p.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(p)
+
+
+def _slugify(key: str) -> str:
+    """Filename-safe slug for a variant/section/component key."""
+    slug = re.sub(r"[^a-z0-9_-]+", "-", key.lower()).strip("-")
+    return slug or "unnamed"
+
 # Selectors whose CSS rules are stripped from the extracted page styles.
 # These are "poster chrome" — gallery layout, labels, legends — and must not
 # leak into standalone pages where they would create visual noise.
@@ -229,6 +250,7 @@ class _SubtreeExtractor(HTMLParser):
         self.attribute = attribute
         self.results: dict[str, str] = {}
         self.order: list[str] = []  # preserve doc order
+        self.duplicates: list[str] = []  # keys seen more than once
         # Stack of (key, depth, buffer); empty when not capturing.
         self._captures: list[tuple[str, int, list[str]]] = []
 
@@ -242,9 +264,13 @@ class _SubtreeExtractor(HTMLParser):
         raw = self.get_starttag_text() or _reconstruct_starttag(tag, attrs)
         if key is not None and not self._captures_has(key):
             # Start a new capture
-            self._captures.append((key, 1, [raw]))
-            if key not in self.results:
+            if key in self.order:
+                # Second element with the same key: it will overwrite the first
+                # in handle_endtag. Record it so the caller can warn.
+                self.duplicates.append(key)
+            else:
                 self.order.append(key)
+            self._captures.append((key, 1, [raw]))
             return
         # Otherwise, emit into all active captures + increment depth if nested
         self._emit(raw)
@@ -355,6 +381,18 @@ def strip_chrome_css(css_text: str) -> str:
             i += 1
         if i >= n:
             break
+        # Skip (and preserve) CSS comments. Without this, a comment immediately
+        # before a rule gets folded into selector_list, breaking both the `@`
+        # at-rule detection and the `^\s*` anchor of CHROME_SELECTOR_RE — letting
+        # chrome rules leak through.
+        if css_text.startswith("/*", i):
+            end = css_text.find("*/", i + 2)
+            if end == -1:
+                out.append(css_text[i:])
+                break
+            out.append(css_text[i:end + 2])
+            i = end + 2
+            continue
         # Find the next "{"
         brace = css_text.find("{", i)
         if brace == -1:
@@ -468,6 +506,16 @@ def _build_standalone_html(
     )
 
 
+def _warn_duplicates(extractor: "_SubtreeExtractor", poster_name: str) -> None:
+    if extractor.duplicates:
+        uniq = ", ".join(sorted(set(extractor.duplicates)))
+        print(
+            f"  warning: {poster_name}: duplicate {extractor.attribute} "
+            f"value(s) [{uniq}] — only the last occurrence of each is emitted",
+            file=sys.stderr,
+        )
+
+
 def process_merge_sections(
     poster_path: Path,
     annotation: MockupAnnotation,
@@ -488,6 +536,7 @@ def process_merge_sections(
             f"{poster_path.name}: no elements with data-section found "
             f"(needed for merge-sections mode)"
         )
+    _warn_duplicates(extractor, poster_path.name)
 
     # For merge-sections, each captured element is typically <div class="mockup-col">
     # wrapping a <div class="phone">. We want to extract ONLY the .phone subtree
@@ -510,7 +559,7 @@ def process_merge_sections(
     marker = _build_marker(poster_path.name, "all-sections", annotation.mode)
     standalone_html = _build_standalone_html(title, marker, page_styles, body_content)
 
-    output_path = STANDALONE_DIR / f"{annotation.output_name}.html"
+    output_path = STANDALONE_DIR / f"{_slugify(annotation.output_name)}.html"
     return [StandaloneFile(
         path=output_path,
         content=standalone_html,
@@ -539,6 +588,7 @@ def process_per_variant(
         raise ValueError(
             f"{poster_path.name}: no elements with data-variant found"
         )
+    _warn_duplicates(extractor, poster_path.name)
 
     results = []
     for key in extractor.order:
@@ -550,7 +600,7 @@ def process_per_variant(
         standalone_html = _build_standalone_html(
             f"{title} — {key}", marker, page_styles, body_content,
         )
-        output_path = STANDALONE_DIR / f"{annotation.output_prefix}--{key}.html"
+        output_path = STANDALONE_DIR / f"{annotation.output_prefix}--{_slugify(key)}.html"
         results.append(StandaloneFile(
             path=output_path,
             content=standalone_html,
@@ -580,6 +630,7 @@ def process_per_component(
         raise ValueError(
             f"{poster_path.name}: no elements with data-component found"
         )
+    _warn_duplicates(extractor, poster_path.name)
 
     results = []
     for key in extractor.order:
@@ -597,7 +648,7 @@ def process_per_component(
             'body.standalone-viewport{background:#f7f3ee !important;align-items:flex-start !important;justify-content:flex-start !important;',
             1,
         )
-        output_path = STANDALONE_DIR / f"{annotation.output_prefix}--{key}.html"
+        output_path = STANDALONE_DIR / f"{annotation.output_prefix}--{_slugify(key)}.html"
         results.append(StandaloneFile(
             path=output_path,
             content=standalone_html,
@@ -682,23 +733,41 @@ def write_standalone(file: StandaloneFile, dry_run: bool = False) -> str:
 
 # ─── Index generation ────────────────────────────────────────────────────────
 
-def generate_index(
-    files: list[StandaloneFile],
-    dry_run: bool = False,
-) -> str:
-    by_poster: dict[str, list[StandaloneFile]] = {}
-    for f in files:
-        by_poster.setdefault(f.source_poster, []).append(f)
+def _scan_standalones(out_dir: Path) -> dict[str, list[tuple[str, str, str]]]:
+    """Scan out_dir for SPLIT-GEN files, grouped by source poster.
+
+    Returns {poster_name: [(filename, mode, variant), ...]}. Reading the marker
+    from disk (rather than relying on the current run's outputs) makes the index
+    complete regardless of whether the script was invoked with --poster X or for
+    all posters.
+    """
+    by_poster: dict[str, list[tuple[str, str, str]]] = {}
+    for path in sorted(out_dir.glob("*.html")):
+        if path.name == "_index.html":
+            continue
+        head = path.read_text(encoding="utf-8")[:1024]
+        m = _MARKER_FIELDS_RE.search(head)
+        if not m:
+            continue  # not a SPLIT-GEN file — leave it out of the index
+        by_poster.setdefault(m["poster"], []).append(
+            (path.name, m["mode"], m["variant"])
+        )
+    return by_poster
+
+
+def generate_index(dry_run: bool = False) -> str:
+    by_poster = _scan_standalones(STANDALONE_DIR)
+    total = sum(len(v) for v in by_poster.values())
 
     groups_html = []
     for poster in sorted(by_poster):
-        entries = sorted(by_poster[poster], key=lambda f: f.path.name)
+        entries = sorted(by_poster[poster], key=lambda e: e[0])
         rows = "\n".join(
-            f'    <a class="entry" href="{html.escape(f.path.name, quote=True)}">'
-            f'<span class="entry-name">{html.escape(f.path.name)}</span>'
-            f'<span class="entry-mode">{html.escape(f.mode)} · {html.escape(f.variant_key)}</span>'
+            f'    <a class="entry" href="{html.escape(fname, quote=True)}">'
+            f'<span class="entry-name">{html.escape(fname)}</span>'
+            f'<span class="entry-mode">{html.escape(mode)} · {html.escape(variant)}</span>'
             f'</a>'
-            for f in entries
+            for fname, mode, variant in entries
         )
         groups_html.append(
             f'<div class="group">\n'
@@ -717,7 +786,7 @@ def generate_index(
     content = INDEX_TEMPLATE.format(
         marker=marker,
         timestamp=html.escape(timestamp),
-        total=len(files),
+        total=total,
         posters=len(by_poster),
         groups="\n".join(groups_html),
     )
@@ -734,12 +803,10 @@ def generate_index(
             raise RuntimeError(
                 f"refusing to overwrite {index_path} — missing SPLIT-GEN marker"
             )
-        # Ignore timestamp field for idempotency comparison
-        _INDEX_TS_RE = re.compile(r"index regenerated=[^>]+")
-        if (
-            _INDEX_TS_RE.sub("", existing) == _INDEX_TS_RE.sub("", content)
-            and _TIMESTAMP_RE.sub("", existing) == _TIMESTAMP_RE.sub("", content)
-        ):
+        # Ignore both timestamps (marker `index regenerated=...` AND the body
+        # `Generated: ...` line) for idempotency — both use `YYYY-MM-DD HH:MM UTC`.
+        _INDEX_TS_RE = re.compile(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC")
+        if _INDEX_TS_RE.sub("", existing) == _INDEX_TS_RE.sub("", content):
             return "unchanged"
     index_path.write_text(content, encoding="utf-8")
     return "written"
@@ -805,7 +872,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             files = process_poster(poster_path)
         except (ValueError, RuntimeError) as e:
-            errors.append((poster_path.name, str(e)))
+            errors.append(str(e))
             continue
         if not files:
             skipped_count += 1
@@ -817,17 +884,17 @@ def main(argv: list[str] | None = None) -> int:
             try:
                 status = write_standalone(f, dry_run=args.dry_run)
             except RuntimeError as e:
-                errors.append((f.path.name, str(e)))
+                errors.append(str(e))
                 continue
-            print(f"  {status:9} {f.path.relative_to(REPO_ROOT)}  ({f.mode}/{f.variant_key})")
+            print(f"  {status:9} {_display_path(f.path)}  ({f.mode}/{f.variant_key})")
         all_files.extend(files)
 
-    if not args.no_index and all_files:
+    if not args.no_index:
         try:
-            status = generate_index(all_files, dry_run=args.dry_run)
-            print(f"  {status:9} {(STANDALONE_DIR / '_index.html').relative_to(REPO_ROOT)}  (index)")
+            status = generate_index(dry_run=args.dry_run)
+            print(f"  {status:9} {_display_path(STANDALONE_DIR / '_index.html')}  (index)")
         except RuntimeError as e:
-            errors.append(("_index.html", str(e)))
+            errors.append(str(e))
 
     print()
     print(
@@ -838,8 +905,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     if errors:
         print("\nErrors:")
-        for name, msg in errors:
-            print(f"  - {name}: {msg}")
+        for msg in errors:
+            print(f"  - {msg}")
         return 1
     return 0
 

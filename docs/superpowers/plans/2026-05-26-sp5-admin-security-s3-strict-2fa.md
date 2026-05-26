@@ -117,15 +117,11 @@
 
 ## Task 3: `SystemConfiguration.TwoFactorStrictMode` flag (default false)
 
-- [ ] **Step 1: Aggiungi key** al SystemConfiguration BC (pattern `RegistrationMode`).
-
-- [ ] **Step 2: Admin toggle UI** — endpoint esistente `/api/v1/admin/config` deve esporre la nuova key per il toggle.
-
-- [ ] **Step 3: Read non-cached** — il behavior legge il flag a ogni request (no Redis cache su questo specifico flag — vedi D-S3-1).
-
-- [ ] **Step 4: Unit test su read/write del flag**
-
-- [ ] **Step 5: Commit**
+- [x] **Step 1: Aggiungi key** — `TwoFactorConfigurationKeys.StrictMode = "TwoFactor:StrictMode"` (compile-time constant) + `StrictModeDefault = false`. La key è dinamica (DB row creata al primo toggle via admin UI esistente); il constant la documenta in codice e la rende rifattorizzabile.
+- [x] **Step 2: Admin toggle UI** — l'endpoint esistente generico (`ConfigurationEndpoints` + `BulkUpdateConfigsCommand`) già consente CRUD su qualsiasi key. Nessun codice nuovo BE necessario; il FE renderizzerà il toggle nella sezione Security di `/admin/config`.
+- [x] **Step 3: Read non-cached** — `ITwoFactorEnforcementConfiguration.GetStrictModeAsync()` chiama `IConfigurationService.GetValueAsync<bool?>` direttamente ad ogni request. No Redis wrapper su questa specifica chiave (la latenza DB lookup PK è < 1ms).
+- [x] **Step 4: Unit test su read/write del flag** — 5/5 PASS: StrictModeDefault=false, colon-namespace convention, true path, null→default, throws→fail-closed
+- [x] **Step 5: Commit**
 
 ---
 

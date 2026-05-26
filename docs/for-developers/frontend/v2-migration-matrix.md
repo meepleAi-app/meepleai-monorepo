@@ -292,11 +292,11 @@ the PR review.
 
 | Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
 |--------|-----------|------|-------|--------|----|----|----------|
-| `sp4-player-detail.jsx` | `PlayerHero` | `apps/web/src/components/features/player-detail/PlayerHero.tsx` | `/players/[id]` | done | #1539 | T A M V | — |
-| `sp4-player-detail.jsx` | `PlayerStatsGrid` | `apps/web/src/components/features/player-detail/PlayerStatsGrid.tsx` | `/players/[id]` | done | #1539 | T A V | — |
-| `sp4-player-detail.jsx` | `PlayerLeaderboardCard` | `apps/web/src/components/features/player-detail/PlayerLeaderboardCard.tsx` | `/players/[id]` | done | #1539 | T A V | — |
-| `sp4-player-detail.jsx` | `FavoriteAgentCard` | `apps/web/src/components/features/player-detail/FavoriteAgentCard.tsx` | `/players/[id]` | done | #1539 | T A V | — |
-| `sp4-player-detail.jsx` | `AchievementBadgeGrid` | `apps/web/src/components/features/player-detail/AchievementBadgeGrid.tsx` | `/players/[id]` | done | #1539 | T A V | — |
+| `sp4-player-detail.jsx` | `PlayerHero` | `apps/web/src/components/features/player-detail/PlayerHero.tsx` | `/players/[id]` | done | #1539 | T A M V | #1544 |
+| `sp4-player-detail.jsx` | `PlayerStatsGrid` | `apps/web/src/components/features/player-detail/PlayerStatsGrid.tsx` | `/players/[id]` | done | #1539 | T A V | #1544 |
+| `sp4-player-detail.jsx` | `PlayerLeaderboardCard` | `apps/web/src/components/features/player-detail/PlayerLeaderboardCard.tsx` | `/players/[id]` | done | #1539 | T A V | #1544 |
+| `sp4-player-detail.jsx` | `FavoriteAgentCard` | `apps/web/src/components/features/player-detail/FavoriteAgentCard.tsx` | `/players/[id]` | done | #1539 | T A V | #1544 |
+| `sp4-player-detail.jsx` | `AchievementBadgeGrid` | `apps/web/src/components/features/player-detail/AchievementBadgeGrid.tsx` | `/players/[id]` | done | #1539 | T A V | #1544 |
 
 ### Toolkit detail — `/toolkits/[id]` — 6 components — **Tier M**
 

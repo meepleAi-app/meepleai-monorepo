@@ -884,6 +884,7 @@ v1Api.MapUserActivityEndpoints();      // Issue #4652: User activity log for Adm
 v1Api.MapAdminAgentAnalyticsEndpoints(); // Issue #4653: Agents analytics for Admin Dashboard
 v1Api.MapAdminAnalyticsEndpoints();      // Admin analytics: overview, chat, PDF, model performance, MAU
 v1Api.MapAdminOperationsEndpoints();   // Issue #3696: Operations - Service Control Panel
+v1Api.MapAdminImpersonationEndpoints(); // SP5 S2: consolidated impersonation API (start/end/revoke/active)
 v1Api.MapAdminCategoriesEndpoints();   // Issue #1440: SharedGame categories CRUD
 v1Api.MapAdminInfrastructureEndpoints(); // AI Infrastructure Dashboard: service status, config, restart
 v1Api.MapDatabaseSyncEndpoints();     // Database sync admin panel

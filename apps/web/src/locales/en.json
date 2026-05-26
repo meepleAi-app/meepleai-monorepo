@@ -1926,6 +1926,8 @@
     },
     "toolkitsHub": {
       "eyebrow": "Hub · /toolkits",
+      "title": "Community toolkits catalog",
+      "subtitle": "Ready-to-use bundles of tools (timer, dice, counter, deck) for your games. Every toolkit is versioned and published by the community.",
       "heroStats": {
         "toolkits": "Toolkits",
         "installs": "Installs",
@@ -1934,6 +1936,12 @@
       },
       "searchClearAriaLabel": "Clear search",
       "statusTablistAriaLabel": "Filter toolkits by status",
+      "statusOptions": {
+        "all": "All",
+        "featured": "Featured",
+        "new": "New",
+        "top": "Top 100"
+      },
       "sortLabel": "Sort",
       "sortOptions": {
         "popular": "Popularity",
@@ -1942,6 +1950,8 @@
         "uses": "Uses"
       },
       "countTemplate": "{count} toolkits",
+      "emptyTitle": "No toolkit found",
+      "emptyBody": "No toolkit matches the current filters. Try adjusting your search.",
       "gameRefFallback": "Universal (multi-game)",
       "installAriaLabel": "Install {title}",
       "toolsLabel": "Tools:",

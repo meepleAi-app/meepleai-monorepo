@@ -118,10 +118,27 @@ describe('HubFilters (Issue #1480)', () => {
     expect(onSortChange).toHaveBeenCalledWith('title');
   });
 
-  // T6
-  it('renders the count label via countTemplate', () => {
-    renderFilters({ count: 42 });
+  // T6 — count is compact (mobile) only, matching the mockup (desktop hides it)
+  it('renders the count label via countTemplate when compact', () => {
+    render(
+      <HubFilters
+        query=""
+        onQueryChange={() => {}}
+        status="all"
+        onStatusChange={() => {}}
+        sort="popular"
+        onSortChange={() => {}}
+        count={42}
+        labels={labels}
+        compact
+      />
+    );
     expect(screen.getByText('42 toolkit')).toBeInTheDocument();
+  });
+
+  it('hides the count label on desktop (non-compact)', () => {
+    renderFilters({ count: 42 });
+    expect(screen.queryByText('42 toolkit')).not.toBeInTheDocument();
   });
 
   // T7

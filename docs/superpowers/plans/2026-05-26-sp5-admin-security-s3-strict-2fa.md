@@ -127,9 +127,9 @@
 
 ## Task 4: `TwoFactorEnforcementBehavior` strict path
 
-- [ ] **Step 1: TDD — unit test scenari S3-1, S3-2, S3-3, S3-7, S3-8** (con mock `ISystemConfiguration`)
+- [x] **Step 1: TDD — unit test scenari S3-1, S3-2, S3-3, S3-7, S3-8** — `TwoFactorEnforcementBehaviorTests` 10/10: fresh/stale/null TOTP, not-enrolled, non-decorated, per-command MaxAge (5 vs 30), shadow passthrough, no-session, impersonation actor-gate
 
-- [ ] **Step 2: Strict path implementation**
+- [x] **Step 2: Strict path implementation**
 
   Pseudo:
   ```csharp
@@ -154,11 +154,13 @@
   return await next();
   ```
 
-- [ ] **Step 3: Aggiorna `ImpersonationStartCommand`** con `[RequireTwoFactor(MaxAgeMinutes = 5)]` (D-S3-7).
+- [x] **Step 3: Aggiorna `ImpersonationStartCommand`** con `[RequireTwoFactor(MaxAgeMinutes = 5)]` (D-S3-7).
 
-- [ ] **Step 4: Test PASS** (5 scenari unit)
+- [x] **Step 4: Test PASS** — 101/101 unit (behavior + impersonation + validate-session regression)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
+
+> **Design note (investigated, T4):** AuditLoggingBehavior (pipeline-outer) wraps the 2FA behavior. For `[AtomicAudit]` commands (DeleteUser, ImpersonationStart) a 2FA throw rolls back the transaction → no command audit; for best-effort commands the catch emits an "Error" audit. To get a CONSISTENT forensic `TwoFactorRequired` row that survives the atomic rollback, the behavior emits it from a FRESH DI scope (independent DbContext) via `AuditService.LogAsync` (direct-write — consistent with the existing 2FA audit family in `TotpService`). The gate also reads `Principal.EffectiveActor` (not Subject) so impersonation enforces the acting admin's 2FA recency (inherited at impersonate-start, T1).
 
 ---
 

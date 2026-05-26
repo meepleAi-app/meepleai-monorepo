@@ -136,7 +136,12 @@ Then auth middleware returns 401 Unauthorized
 Given alice is impersonating bob (UserSessionEntity X)
 When superadmin "root" POSTs /admin/impersonation/revoke { sessionId: X }
 Then within ≤5s, any subsequent request bearing session X's cookie returns 401
-  And audit_outbox has 1 row (action="ImpersonationRevoked", user_id=root, impersonated_user_id=alice)  // <- root revoking alice's impersonate of bob
+  And audit_outbox has 1 row (action="ImpersonationRevoked", user_id=alice, impersonated_user_id=root)
+    // D-S2-3 convention: user_id = the user the command acts upon (alice — her impersonate
+    // authority is being revoked); impersonated_user_id = the acting admin (root, the superadmin
+    // invoking the kill-switch). Resource = Session, resource_id = X. Note: root is NOT in an
+    // impersonate session — the `impersonated_user_id` column is reused as the actor-pairing
+    // field for any audit row whose command targets/affects a different user than the caller.
   And the original UserSessionEntity X has RevokedAt set
 ```
 

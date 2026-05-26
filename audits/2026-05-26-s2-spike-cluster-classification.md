@@ -99,7 +99,7 @@ These are admin command IDs and log-statement subjects that must reflect the **r
 | `Routing/RagExecutionAdminEndpoints.cs:63,160` | log | Admin |
 | `Routing/RagDashboardEndpoints.cs:156,181` | `UserId =` in admin command | Admin |
 
-**Cluster A total: ~58 lines.**
+**Cluster A total: 64 lines.**
 
 ### Cluster B — Authorization (privilege gate) → **EffectiveActor**
 
@@ -154,20 +154,22 @@ Quotas apply to the user being acted-as. An impersonator must NOT bypass their t
 | `Routing/AuthenticationEndpoints.cs:42` | Comment only | N/A — purely documentation. |
 | `Routing/Admin/AdminUserBulkEndpoints.cs:244,273` | Comments only | N/A. |
 
-**Special total: 4 lines (only #1 is functional).**
+**Special total: 5 lines (2 functional — AuditLoggingBehavior:302-303; the other 3 are comments/docstrings).**
 
 ### Tally
 
-| Cluster | Lines | Wave 1 codemod target | Wave 2 disambiguation |
-|---------|-------|----------------------|----------------------|
-| A — Audit/log attribution | 58 | `session.User` → `session.Principal.Subject` (intermediate state) | → `session.Principal.EffectiveActor` |
+| Cluster | Functional lines | Wave 1 codemod target | Wave 2 disambiguation |
+|---------|------------------|----------------------|----------------------|
+| A — Audit/log attribution | 64 | `session.User` → `session.Principal.Subject` (intermediate state) | → `session.Principal.EffectiveActor` |
 | B — Authorization | 5 | (same as A intermediate) | → `session.Principal.EffectiveActor` |
 | C — Resource ownership | 22 | (same as A intermediate) | (none — Subject is correct semantics) |
 | D — Rate-limit/quota | 6 | (same as A intermediate) | (none — Subject is correct) |
-| Special | 4 | Audit behavior: stays Subject (already correct intent) | (none) |
-| **Total** | **95** functional lines | 100% mechanical | **63 lines** need Wave 2 actor disambiguation |
+| Special | 2 | Audit behavior: stays Subject (already correct intent) | (none) |
+| **Total** | **99** functional lines | 100% mechanical | **69 lines** need Wave 2 actor disambiguation |
 
-Plus the **~294 pattern-of-extraction** occurrences (null checks, pattern matching, type references), all handled by Wave 1's mechanical rename only.
+Plus the **~290 pattern-of-extraction** occurrences (null checks, pattern matching, type references) — all handled by Wave 1's mechanical rename only.
+
+> **Note on counting:** the grep over `session\.User\.(Id|Role|Email|Tier|DisplayName|IsAdmin)` returned 100 lines, of which 1 is a pure-comment line (`AuthenticationEndpoints.cs:42`) — net 99 functional. An earlier draft of this spike under-counted Cluster A by 6 (manual aggregation error); corrected on 2026-05-26 during review.
 
 ---
 
@@ -241,7 +243,7 @@ var command = new CreateAbTestCommand(CreatedBy: session.Principal.EffectiveActo
 - ✅ §5 Risks and edge cases for the refactor
 - ✅ Kickoff doc + plan amended in same commit (PR-internal coherence)
 
-**T0 conclusion:** the refactor is well-bounded. Wave 1 is mechanical (low risk, high blast radius — protected by the 17k+ regression suite). Wave 2 is human-reviewable (63 lines, clear cluster annotations). Wave 3 is the meat — the legacy handler dismantling — and it's contained to 4 files in the Administration BC.
+**T0 conclusion:** the refactor is well-bounded. Wave 1 is mechanical (low risk, high blast radius — protected by the 17k+ regression suite). Wave 2 is human-reviewable (69 lines, clear cluster annotations). Wave 3 is the meat — the legacy handler dismantling — and it's contained to 4 files in the Administration BC.
 
 Effort revised: **3-5 giorni** (incluso codemod) — unchanged from the kickoff doc estimate.
 

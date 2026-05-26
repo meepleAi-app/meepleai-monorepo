@@ -342,7 +342,32 @@
   5. `target.IsDemoAccount == false` else `target_account_ineligible` — **nuovo**
   6. `target.Status != "Banned"` else `target_account_ineligible` — **nuovo** (check `UserEntity.Status` introdotto da Epic #4068)
 
-  **Dismantle manuale audit:** rimuovi le 2 `_auditLogRepository.AddAsync` (linee 140-141 del legacy). Il `[AuditableAction]` via `AuditLoggingBehavior` scrive l'outbox row con `user_id=target (subject)`, `impersonated_user_id=requester (actor)`, action `"ImpersonationStarted"`.
+  **Dismantle manuale audit:** rimuovi le 2 `_auditLogRepository.AddAsync` (linee 140-141 del legacy). Il `[AuditableAction]` via `AuditLoggingBehavior` scrive l'outbox row con action `"ImpersonationStarted"`.
+
+  > ⚠ **Open issue — actor mapping for management commands** (review carry-forward, 2026-05-26):
+  > For "normal" audited commands executed DURING an impersonate session, the behavior reads
+  > `session.Principal.Subject.Id` → `user_id` and `session.Principal.Actor.Id` → `impersonated_user_id`
+  > (the impersonation context is already in the session).
+  >
+  > But for the MANAGEMENT commands themselves (`ImpersonationStartCommand`, `EndImpersonationCommand`,
+  > `RevokeImpersonationCommand`, `ImpersonationAutoEnded` from middleware) the caller IS NOT
+  > yet/anymore in an impersonate session — `session.Principal.Actor` is null. Yet the desired
+  > audit row pairing is `user_id = target/affected user`, `impersonated_user_id = acting admin`.
+  >
+  > Resolution options to choose in T3 step 4 (pick one and document):
+  > (a) Override at command level: `[AuditableAction(..., UserIdSource="ResourceId")]` parameter
+  >     telling the behavior to copy `ResourceId` (the target) into `user_id` and the
+  >     `session.Principal.Subject.Id` (the admin) into `impersonated_user_id` for THIS command.
+  > (b) Custom audit override in the handler: handler explicitly invokes
+  >     `IAuditService.EnqueueAuditAtomicAsync(...)` with the correct fields, bypassing the
+  >     behavior's default user_id mapping for this specific command.
+  > (c) Two-step pattern: behavior writes a "callee-attributed" row (user_id=admin), and the
+  >     handler enqueues a second "target-attributed" mirror row. Doubles the audit volume.
+  >
+  > Recommendation: (a) — the cleanest and most reusable, and the closest analog to the existing
+  > `[AuditableAction(action, resource, Level)]` shape. Implementation: behavior reads the
+  > attribute, falls back to the default if `UserIdSource` is unset. Effort: small (~30 LOC in
+  > the behavior + the attribute property).
 
   Crea `UserSessionEntity` (NUOVO — sostituisce il `CreateSessionCommand` legacy con `IpAddress="impersonated"` hack):
   ```csharp

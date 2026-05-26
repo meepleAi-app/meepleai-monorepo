@@ -166,6 +166,15 @@ These limitations account for **most of the residual 33 eligible findings** (16 
   - `mockup_dest`: `sp4-player-detail.html`
   - `component_hrefs`: `[]`
 
+### Route `/players/[id]`
+
+- **[AUDIT 2026-05-26 #1485 PR #1544]** Conformity check applied to all 5 shipped components (`PlayerHero`, `PlayerStatsGrid`, `PlayerLeaderboardCard`, `FavoriteAgentCard`, `AchievementBadgeGrid`) + orchestrator + 4 FSM states. Drift ratio 2/20 ≈ 10% (excellent — vs pilot 37.5% on `/games/[id]`).
+  - `audit_pr`: `#1544`
+  - `gap_report`: `admin-mockups/design_handoff/players-detail-gap-report.md`
+  - `findings`: 2 missing cards (`PlayerTopGamesCard` ❌ S, `PlayerTrendCard` ❌ L); 1 a11y polish (`aria-live` on ErrorShell/NotFoundShell, XS); 5 deferred-by-design items (subroute content, guest variant, demo nav, Compare/Edit/Share CTAs, layout delegation); 3 schema gaps tracked in #1540/#1541/#1542
+  - `pre_audit_fixes`: 3 bugs (i18n keys C1, statsLabels copy-paste I1, aria-label generic-div I2) shipped in PR #1539
+  - `verdict`: production-ready MVP
+
 ### Route `/sessions`
 
 - **[CRITICAL]** `ConnectionChipStripFooter.tsx, EmptySessions.tsx, OutcomeBadge.tsx, ScoringInline.tsx, SessionCardGrid.tsx, SessionCardList.tsx, SessionsFilters.tsx, SessionsHero.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)

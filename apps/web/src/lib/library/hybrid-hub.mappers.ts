@@ -17,7 +17,27 @@
 import type { AgentDto } from '@/lib/api/schemas/agents.schemas';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 
-import type { AgentHubItem, GameHubItem } from './hybrid-hub.types';
+import type { AgentHubItem, GameHubItem, KbHubItem } from './hybrid-hub.types';
+
+/**
+ * KbDoc — greenfield FE interface for the cross-game user KB listing.
+ *
+ * This shape will be replaced by an inferred Zod schema in
+ * `lib/api/schemas/kb-docs.schemas.ts` when BE-1 #1588 ships the
+ * `GET /kb-docs?userId` endpoint. The fields here mirror what we expect from
+ * `PdfDocumentEntity` filtered by `UploadedByUserId` (see issue #1588 body).
+ * Keep this stable: replacing the type later should be a zero-touch swap.
+ */
+export interface KbDoc {
+  readonly id: string;
+  readonly gameId: string | null;
+  readonly gameName: string | null;
+  readonly fileName: string;
+  readonly processingState: string;
+  readonly pageCount?: number | null;
+  readonly processedAt: string | null;
+  readonly updatedAt: string;
+}
 
 export function libraryEntryToHubItem(entry: UserLibraryEntry): GameHubItem {
   return {
@@ -45,5 +65,19 @@ export function agentToHubItem(agent: AgentDto): AgentHubItem {
     gameName: agent.gameName ?? undefined,
     agentType: agent.type,
     isActive: agent.isActive,
+  };
+}
+
+export function kbDocToHubItem(doc: KbDoc): KbHubItem {
+  return {
+    id: doc.id,
+    entity: 'kb',
+    title: doc.fileName,
+    subtitle: doc.gameName ?? undefined,
+    updatedAt: doc.updatedAt,
+    href: `/knowledge-base/${doc.id}`,
+    gameName: doc.gameName ?? undefined,
+    processingState: doc.processingState,
+    pageCount: doc.pageCount ?? undefined,
   };
 }

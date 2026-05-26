@@ -3,7 +3,12 @@ import { describe, expect, it } from 'vitest';
 import type { AgentDto } from '@/lib/api/schemas/agents.schemas';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 
-import { agentToHubItem, libraryEntryToHubItem } from '../hybrid-hub.mappers';
+import {
+  agentToHubItem,
+  kbDocToHubItem,
+  libraryEntryToHubItem,
+  type KbDoc,
+} from '../hybrid-hub.mappers';
 
 const baseEntry: UserLibraryEntry = {
   id: '00000000-0000-0000-0000-000000000001',
@@ -134,5 +139,42 @@ describe('agentToHubItem', () => {
     const result = agentToHubItem({ ...baseAgent, gameName: null, gameId: null });
     expect(result.gameName).toBeUndefined();
     expect(result.subtitle).toBeUndefined();
+  });
+});
+
+const baseKbDoc: KbDoc = {
+  id: '00000000-0000-0000-0000-0000000000c1',
+  gameId: '00000000-0000-0000-0000-0000000000aa',
+  gameName: 'Catan',
+  fileName: 'catan-rulebook-en.pdf',
+  processingState: 'Ready',
+  pageCount: 24,
+  processedAt: '2026-02-15T11:20:00Z',
+  updatedAt: '2026-02-15T11:20:00Z',
+};
+
+describe('kbDocToHubItem', () => {
+  it('maps a KbDoc to a KbHubItem with entity="kb"', () => {
+    const result = kbDocToHubItem(baseKbDoc);
+    expect(result.entity).toBe('kb');
+    expect(result.id).toBe(baseKbDoc.id);
+    expect(result.title).toBe('catan-rulebook-en.pdf');
+    expect(result.subtitle).toBe('Catan');
+    expect(result.gameName).toBe('Catan');
+    expect(result.processingState).toBe('Ready');
+    expect(result.pageCount).toBe(24);
+    expect(result.updatedAt).toBe('2026-02-15T11:20:00Z');
+    expect(result.href).toBe(`/knowledge-base/${baseKbDoc.id}`);
+  });
+
+  it('returns undefined gameName/subtitle when the doc is not game-attached', () => {
+    const result = kbDocToHubItem({ ...baseKbDoc, gameName: null, gameId: null });
+    expect(result.gameName).toBeUndefined();
+    expect(result.subtitle).toBeUndefined();
+  });
+
+  it('returns undefined pageCount when the field is absent', () => {
+    const result = kbDocToHubItem({ ...baseKbDoc, pageCount: null });
+    expect(result.pageCount).toBeUndefined();
   });
 });

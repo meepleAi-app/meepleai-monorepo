@@ -46,10 +46,30 @@ on:
           - warn
           - fail
 
-# Only one staging deployment at a time
+# Only one staging deployment at a time.
+#
+# cancel-in-progress: true (changed from false, issue #1573).
+# Rationale: on 2026-05-26 the Deploy job orphaned in the self-hosted runner
+# queue (runner=None, never picked) while the run stayed "completed/failure".
+# With cancel-in-progress: false, every subsequent `gh workflow run` / push
+# queued *behind* that zombie and 500'd — the lock was unbreakable without an
+# in-place SSH deploy (see audits/2026-05-26-disk-cleanup-1575.md + #1573).
+#
+# Switching to true makes a fresh trigger CANCEL the stuck run and start clean,
+# so the pipeline is self-healing. This is safe because every stage is
+# idempotent and re-runnable:
+#   - migrate-db: `dotnet ef migrations script --idempotent` (each migration
+#     wrapped in IF NOT EXISTS vs __EFMigrationsHistory) → re-run is a no-op.
+#   - deploy: `docker compose up --force-recreate` converges to the target
+#     image regardless of partial prior state.
+# A mid-flight cancel therefore can't corrupt staging; the next run re-converges.
+#
+# NOTE: this is the quick mitigation. The deeper rework (split migrate-db out
+# of the deploy critical path; add a queue-time watchdog for self-hosted jobs)
+# stays tracked in #1573.
 concurrency:
   group: deploy-staging
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: read

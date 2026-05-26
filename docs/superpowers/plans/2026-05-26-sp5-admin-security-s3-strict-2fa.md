@@ -186,15 +186,17 @@
 
 ## Task 6: Admin sweep endpoint `GET /admin/users/no-2fa`
 
-- [ ] **Step 1: TDD — integration test (superadmin auth gate)**
+> **DONE** — public path `GET /api/v1/admin/users/no-2fa`, superadmin-gated, IMediator-only (CQRS).
 
-- [ ] **Step 2: `GetAdminsWithoutTwoFactorQuery` + handler** — filtra `IsTwoFactorEnabled=false AND Role IN ('admin','superadmin')`.
+- [x] **Step 1: TDD — integration test** — `GetAdminsWithoutTwoFactorQueryIntegrationTests` (2/2) exercises the real `UserRepository` against Postgres (Testcontainers), RED→GREEN. The test surfaced that the entity→domain mapping (`UserRepository.MapToDomain`) only restores `IsTwoFactorEnabled` when BOTH the flag AND an encrypted secret are present (mirroring `Enable2FA`); the fixture seeds a secret accordingly. HTTP gate E2E (403 for non-superadmin) deferred to T8 acceptance, mirroring S2 T6.
 
-- [ ] **Step 3: Endpoint in `AdminTwoFactorComplianceEndpoints.cs`** con `RequireSuperAdmin` gate.
+- [x] **Step 2: `GetAdminsWithoutTwoFactorQuery` + handler** — reuses `IUserRepository.GetAdminUsersAsync` (already scopes Role to admin/superadmin) + `!IsTwoFactorEnabled` filter; maps to `UserDto`.
 
-- [ ] **Step 4: Test PASS**
+- [x] **Step 3: Endpoint in `AdminTwoFactorComplianceEndpoints.cs`** — `RequireSuperAdminSession()` + `.RequireAuthorization("RequireSuperAdmin")`; registered in `Program.cs`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 4: Test PASS** — 2/2 integration.
+
+- [x] **Step 5: Commit**
 
 ---
 

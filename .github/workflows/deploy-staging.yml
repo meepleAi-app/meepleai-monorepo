@@ -571,11 +571,15 @@ jobs:
         with:
           ref: ${{ env.DEPLOY_SHA }}  # Spec R2: pin to actual deploy SHA
           # sparse-checkout: apps/api/ needed for dotnet ef gen below.
-          # excludes data/ (1.3GB PDFs) — runner disk is limited
+          # data/rulebook/golden/ (~52K) IS included: Api.csproj embeds these
+          # JSON fixtures as resources (ADR-051). Without it, dotnet build
+          # fails with CS1566 (Error reading resource ...golden-claims.json).
+          # Excludes the rest of data/ (1.3GB PDFs) — runner disk is limited.
           sparse-checkout: |
             apps/api/
             infra/
             .github/
+            data/rulebook/golden/
           sparse-checkout-cone-mode: true
 
       # Issue #1573: migration gen + apply moved here (inline) from the removed

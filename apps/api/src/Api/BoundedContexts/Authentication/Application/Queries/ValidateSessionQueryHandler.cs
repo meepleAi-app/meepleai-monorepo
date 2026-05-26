@@ -42,7 +42,7 @@ internal class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery,
         }
         catch
         {
-            return new SessionStatusDto(IsValid: false, User: null, ExpiresAt: null, LastSeenAt: null);
+            return new SessionStatusDto(IsValid: false, Principal: null, ExpiresAt: null, LastSeenAt: null);
         }
 
         // Find session by token hash
@@ -52,7 +52,7 @@ internal class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery,
         {
             return new SessionStatusDto(
                 IsValid: false,
-                User: null,
+                Principal: null,
                 ExpiresAt: null,
                 LastSeenAt: null
             );
@@ -63,7 +63,7 @@ internal class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery,
         {
             return new SessionStatusDto(
                 IsValid: false,
-                User: null,
+                Principal: null,
                 ExpiresAt: session.ExpiresAt,
                 LastSeenAt: session.LastSeenAt
             );
@@ -74,24 +74,30 @@ internal class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery,
         var lastSeenAt = session.LastSeenAt ?? _timeProvider.GetUtcNow().UtcDateTime;
         await _sessionRepository.UpdateLastSeenAsync(session.Id, lastSeenAt, cancellationToken).ConfigureAwait(false);
 
-        // Get user information
+        // Get user information (the SUBJECT of the session — for regular login this IS the user;
+        // for impersonate sessions this is the impersonated target, NOT the admin actor).
         var user = await _userRepository.GetByIdAsync(session.UserId, cancellationToken).ConfigureAwait(false);
 
         if (user == null)
         {
             return new SessionStatusDto(
                 IsValid: false,
-                User: null,
+                Principal: null,
                 ExpiresAt: null,
                 LastSeenAt: null
             );
         }
 
-        var userDto = MapToUserDto(user);
+        var subjectDto = MapToUserDto(user);
+
+        // SP5 Admin Security S2 T1: Actor remains null in this commit (regular login behavior).
+        // T4 populates Actor by loading the admin (session.ImpersonatedByUserId) when non-null.
+        // Until then, all sessions are mono-principal: Principal.Subject = user, Principal.Actor = null.
+        var principal = new Principal(subjectDto, Actor: null);
 
         return new SessionStatusDto(
             IsValid: true,
-            User: userDto,
+            Principal: principal,
             ExpiresAt: session.ExpiresAt,
             LastSeenAt: session.LastSeenAt,
             SessionId: session.Id

@@ -23,5 +23,16 @@ internal class UserSessionEntityConfiguration : IEntityTypeConfiguration<UserSes
         builder.HasIndex(e => e.TokenHash).IsUnique();
         builder.HasIndex(e => e.UserId);
         builder.HasIndex(e => new { e.UserId, e.DeviceFingerprint }); // Issue #3677: Device tracking queries
+
+        // SP5 Admin Security S2 — D-S2-2: dual-principal impersonation columns
+        builder.Property(e => e.ImpersonatedByUserId).HasColumnName("impersonated_by_user_id");
+        builder.Property(e => e.ImpersonatedUntil).HasColumnName("impersonated_until");
+
+        // Partial index supports GetActiveImpersonationsQuery (T6) without scanning the whole
+        // sessions table. PostgreSQL filtered index applies WHERE clause at write time so the
+        // index only contains the (typically small) set of active impersonations.
+        builder.HasIndex(e => e.ImpersonatedByUserId)
+            .HasDatabaseName("ix_user_sessions_impersonated_by_user_id")
+            .HasFilter("\"impersonated_by_user_id\" IS NOT NULL");
     }
 }

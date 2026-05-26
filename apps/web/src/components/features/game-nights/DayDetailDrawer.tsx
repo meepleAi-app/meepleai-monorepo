@@ -138,7 +138,7 @@ export function DayDetailDrawer({
           </button>
         </header>
 
-        <div className="flex flex-col gap-2.5 p-4 pt-3.5">
+        <section aria-label={labels.title} className="flex flex-col gap-2.5 p-4 pt-3.5">
           {events.map(vm => (
             <GameNightListCard
               key={vm.id}
@@ -159,7 +159,7 @@ export function DayDetailDrawer({
               {labels.addOnDay}
             </button>
           )}
-        </div>
+        </section>
       </aside>
     </div>
   );

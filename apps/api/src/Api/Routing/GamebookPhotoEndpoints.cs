@@ -3,8 +3,9 @@ using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
-using Api.BoundedContexts.SessionTracking.Domain.Enums;
+using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.Extensions;
+using Api.Middleware.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -30,6 +31,7 @@ internal static class GamebookPhotoEndpoints
         MapGetGlossaryEndpoint(group);
         MapBootstrapGlossaryEndpoint(group);
         MapUpsertGlossaryEntryEndpoint(group);
+        MapEncounterParseEndpoint(group);
 
         return group;
     }
@@ -39,7 +41,7 @@ internal static class GamebookPhotoEndpoints
         group.MapPost("/gamebook/campaigns/{campaignId:guid}/photos", async (
             Guid campaignId,
             IFormFile file,
-            [FromForm] string pageType,
+            [FromForm] Guid gameBookId,
             IMediator mediator,
             HttpContext context,
             CancellationToken ct) =>
@@ -49,14 +51,14 @@ internal static class GamebookPhotoEndpoints
             if (!TryGetUserId(context, session, out var userId)) return Results.Unauthorized();
             if (file is null || file.Length == 0)
                 return Results.BadRequest(new { error = "file is required" });
-            if (!Enum.TryParse<GamebookPageType>(pageType, ignoreCase: true, out var parsedPageType))
-                return Results.BadRequest(new { error = $"invalid pageType '{pageType}'" });
+            if (gameBookId == Guid.Empty)
+                return Results.BadRequest(new { error = "gameBookId is required" });
 
             var stream = file.OpenReadStream();
             await using (stream.ConfigureAwait(false))
             {
                 var dto = await mediator.Send(
-                    new UploadGamebookPhotoCommand(campaignId, userId, stream, file.ContentType, parsedPageType),
+                    new UploadGamebookPhotoCommand(campaignId, gameBookId, userId, stream, file.ContentType),
                     ct).ConfigureAwait(false);
 
                 return Results.Created($"/api/v1/gamebook/campaigns/{campaignId}/photos/{dto.Id}", dto);
@@ -67,6 +69,7 @@ internal static class GamebookPhotoEndpoints
         .Produces<GamebookPhotoArtifactDto>(StatusCodes.Status201Created)
         .Produces(StatusCodes.Status400BadRequest)
         .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
         .Produces(StatusCodes.Status404NotFound)
         .WithTags("Gamebook")
         .WithSummary("Upload a photo of a gamebook page")
@@ -96,6 +99,7 @@ internal static class GamebookPhotoEndpoints
         .RequireAuthenticatedUser()
         .Produces<GamebookPhotoArtifactDto>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
         .Produces(StatusCodes.Status404NotFound)
         .WithTags("Gamebook")
         .WithSummary("Trigger OCR segmentation on an uploaded photo")
@@ -103,13 +107,38 @@ internal static class GamebookPhotoEndpoints
         .WithOpenApi();
     }
 
+    /// <summary>
+    /// SSE endpoint for streaming paragraph translations. Issue #1415: implements a
+    /// 5-branch exception priority chain that translates domain exceptions into either
+    /// proper HTTP status codes (when headers have not yet been flushed) or typed SSE
+    /// events with explicit <c>code</c> fields (when headers have already been flushed).
+    /// </summary>
+    /// <remarks>
+    /// Branch priority (any new domain exception added to TranslateGamebookSegmentQueryHandler
+    /// MUST be classified explicitly here — do NOT rely on the fallback <c>catch (Exception)</c>,
+    /// which exists only as a safety net for genuinely unknown errors):
+    /// <list type="number">
+    /// <item><c>OperationCanceledException</c> (client disconnect) → log Info, silent return.</item>
+    /// <item><c>ForbiddenException</c> pre-flush → rethrow → middleware HTTP 403.</item>
+    /// <item><c>NotFoundException</c> pre-flush → rethrow → middleware HTTP 404.</item>
+    /// <item>Same exceptions post-flush → emit typed SSE event <c>{code:"FORBIDDEN" | "NOT_FOUND"}</c>.</item>
+    /// <item>Unknown <c>Exception</c> → log Error, emit <c>{code:"INTERNAL_ERROR"}</c>.</item>
+    /// </list>
+    /// <para>
+    /// Pre-flight ownership check via <see cref="ICampaignOwnershipGuard"/> runs BEFORE any
+    /// SSE header is written so that 401/403/404/504 (preflight DB timeout) can be returned
+    /// as proper HTTP errors by <c>ApiExceptionHandlerMiddleware</c>.
+    /// </para>
+    /// </remarks>
     private static void MapTranslateStreamEndpoint(RouteGroupBuilder group)
     {
         group.MapGet("/gamebook/campaigns/{campaignId:guid}/photos/translate", async (
             Guid campaignId,
             [FromQuery] Guid photoId,
             [FromQuery] int paragraphNumber,
+            [FromQuery] Guid gameBookId,
             IMediator mediator,
+            ICampaignOwnershipGuard ownershipGuard,
             HttpContext context,
             ILogger<Program> logger,
             CancellationToken ct) =>
@@ -118,11 +147,17 @@ internal static class GamebookPhotoEndpoints
             if (!authenticated) return error!;
             if (!TryGetUserId(context, session, out var userId)) return Results.Unauthorized();
 
+            // Issue #1415: pre-flight ownership check BEFORE writing SSE headers so middleware
+            // can translate ForbiddenException/NotFoundException into proper HTTP 403/404.
+            // TimeoutException (DB preflight timeout) → HTTP 504 by middleware default mapping.
+            await ownershipGuard.AssertOwnedByAsync(campaignId, userId, ct).ConfigureAwait(false);
+
             context.Response.Headers["Content-Type"] = "text/event-stream";
             context.Response.Headers["Cache-Control"] = "no-cache";
             context.Response.Headers["Connection"] = "keep-alive";
 
-            var query = new TranslateGamebookSegmentQuery(campaignId, photoId, paragraphNumber, userId);
+            // C2 (2026-05-19): gameBookId scopes the per-book progress update.
+            var query = new TranslateGamebookSegmentQuery(campaignId, photoId, paragraphNumber, userId, gameBookId);
 
             try
             {
@@ -135,32 +170,90 @@ internal static class GamebookPhotoEndpoints
             }
             catch (OperationCanceledException ex)
             {
+                // Branch 1: client disconnect — log Info, no metric increment
                 logger.LogInformation(ex,
                     "Gamebook translate stream cancelled for campaign {CampaignId} paragraph {Paragraph}",
                     campaignId, paragraphNumber);
             }
+            catch (ForbiddenException) when (!context.Response.HasStarted)
+            {
+                // Branch 2: pre-flush — let middleware → HTTP 403
+                throw;
+            }
+            catch (NotFoundException) when (!context.Response.HasStarted)
+            {
+                // Branch 3: pre-flush — let middleware → HTTP 404
+                throw;
+            }
+            catch (ForbiddenException ex)
+            {
+                // Branch 4a: post-flush — emit typed SSE event
+                logger.LogWarning(ex,
+                    "Forbidden mid-stream for campaign {CampaignId} (headers already flushed)",
+                    campaignId);
+                await EmitSseErrorAsync(context, code: "FORBIDDEN", message: ex.Message).ConfigureAwait(false);
+            }
+            catch (NotFoundException ex)
+            {
+                // Branch 4b: post-flush — emit typed SSE event
+                logger.LogWarning(ex,
+                    "NotFound mid-stream for campaign {CampaignId} (headers already flushed)",
+                    campaignId);
+                await EmitSseErrorAsync(context, code: "NOT_FOUND", message: ex.Message).ConfigureAwait(false);
+            }
 #pragma warning disable CA1031
             catch (Exception ex)
             {
+                // Branch 5: unknown — log Error, preserve current SSE error event shape
                 logger.LogError(ex, "Error in gamebook translate stream campaign {CampaignId}", campaignId);
-                try
-                {
-                    var errorJson = System.Text.Json.JsonSerializer.Serialize(
-                        new { error = ex.Message, code = "INTERNAL_ERROR" }, SseJsonOptions);
-                    await context.Response.WriteAsync($"data: {errorJson}\n\n", ct).ConfigureAwait(false);
-                    await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
-                }
-                catch { /* client disconnected */ }
+                await EmitSseErrorAsync(context, code: "INTERNAL_ERROR", message: ex.Message).ConfigureAwait(false);
             }
 #pragma warning restore CA1031
 
             return Results.Empty;
         })
         .RequireAuthenticatedUser()
+        .Produces(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
+        .Produces(StatusCodes.Status404NotFound)
+        .Produces(StatusCodes.Status504GatewayTimeout)
         .WithTags("Gamebook")
         .WithSummary("Stream paragraph translation as SSE")
-        .WithDescription("Server-Sent Events stream of TranslateChunk events. Must be GET for EventSource compatibility. Pass photoId and paragraphNumber as query params. Final chunk has IsComplete=true with ParagraphId.")
+        .WithDescription("Server-Sent Events stream of TranslateChunk events. Must be GET for EventSource compatibility. Pass photoId and paragraphNumber as query params. Final chunk has IsComplete=true with ParagraphId. Non-owner callers receive HTTP 403 BEFORE the stream opens (Issue #1415).")
         .WithOpenApi();
+    }
+
+    /// <summary>
+    /// Emits a typed SSE error event with the shape <c>{ error, code }</c> and flushes.
+    /// Issue #1415: used by Branch 4a/4b/5 of <see cref="MapTranslateStreamEndpoint"/>
+    /// when an exception is caught AFTER the SSE headers have been flushed (so the
+    /// middleware can no longer rewrite the HTTP status code). Swallows any nested
+    /// I/O exception that arises from the client having disconnected mid-write.
+    /// </summary>
+    /// <remarks>
+    /// Intentionally uses <see cref="CancellationToken.None"/> for the write: we are
+    /// already in an error path emitted as a best-effort to the client; honoring the
+    /// caller's (possibly cancelled) token would throw <see cref="OperationCanceledException"/>
+    /// before any byte is written, which would be swallowed by the bare <c>catch</c>
+    /// below and silently drop the error event. Best-effort write semantics give the
+    /// client a chance to see the error code if its connection is still alive.
+    /// </remarks>
+    private static async Task EmitSseErrorAsync(HttpContext context, string code, string message)
+    {
+        try
+        {
+            var errorJson = System.Text.Json.JsonSerializer.Serialize(
+                new { error = message, code }, SseJsonOptions);
+            await context.Response.WriteAsync($"data: {errorJson}\n\n", CancellationToken.None).ConfigureAwait(false);
+            await context.Response.Body.FlushAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        catch
+        {
+            // client already disconnected — nothing to do
+        }
+#pragma warning restore CA1031
     }
 
     private static void MapGetHistoryEndpoint(RouteGroupBuilder group)
@@ -183,6 +276,7 @@ internal static class GamebookPhotoEndpoints
         .RequireAuthenticatedUser()
         .Produces<IReadOnlyList<TranslatedParagraphDto>>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
         .Produces(StatusCodes.Status404NotFound)
         .WithTags("Gamebook")
         .WithSummary("List translated paragraphs for a campaign")
@@ -210,6 +304,7 @@ internal static class GamebookPhotoEndpoints
         .RequireAuthenticatedUser()
         .Produces<IReadOnlyList<GamebookGlossaryEntryDto>>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
         .Produces(StatusCodes.Status404NotFound)
         .WithTags("Gamebook")
         .WithSummary("List glossary entries for a campaign")
@@ -237,6 +332,7 @@ internal static class GamebookPhotoEndpoints
         .RequireAuthenticatedUser()
         .Produces<IReadOnlyList<GamebookGlossaryEntryDto>>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
         .Produces(StatusCodes.Status404NotFound)
         .WithTags("Gamebook")
         .WithSummary("Bootstrap glossary entries via LLM for a campaign")
@@ -273,10 +369,61 @@ internal static class GamebookPhotoEndpoints
         .Produces<GamebookGlossaryEntryDto>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status400BadRequest)
         .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
         .Produces(StatusCodes.Status404NotFound)
         .WithTags("Gamebook")
         .WithSummary("Create or update a glossary entry")
         .WithDescription("If the entry with the given id does not exist, creates a new manual entry. If it exists, updates the Italian translation and sets Source to Manual. Note: TermEn is immutable on update; to rename a term, delete and recreate.")
+        .WithOpenApi();
+    }
+
+    /// <summary>
+    /// Issue #1520 — synchronous, ephemeral encounter cheatsheet parse.
+    /// Unlike the SSE translate flow, this returns a fully-formed
+    /// <see cref="EncounterCheatsheetDto"/> in a single response and persists
+    /// nothing (per §9.1 Encounter Book privacy: card is session-scoped only).
+    /// </summary>
+    private static void MapEncounterParseEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/gamebook/campaigns/{campaignId:guid}/photos/{photoId:guid}/encounter-parse", async (
+            Guid campaignId,
+            Guid photoId,
+            [FromBody] ParseEncounterRequest body,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+            if (!TryGetUserId(context, session, out var userId)) return Results.Unauthorized();
+
+            if (body is null)
+                return Results.BadRequest(new { error = "request body is required" });
+            if (body.ParagraphNumber <= 0)
+                return Results.BadRequest(new { error = "paragraphNumber must be a positive integer" });
+            if (body.GameBookId == Guid.Empty)
+                return Results.BadRequest(new { error = "gameBookId is required" });
+
+            var dto = await mediator.Send(
+                new ParseEncounterQuery(campaignId, photoId, body.ParagraphNumber, userId, body.GameBookId),
+                ct).ConfigureAwait(false);
+
+            return Results.Ok(dto);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<EncounterCheatsheetDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
+        .Produces(StatusCodes.Status404NotFound)
+        .Produces(StatusCodes.Status409Conflict)
+        .WithTags("Gamebook")
+        .WithSummary("Parse an encounter cheatsheet from a gamebook photo segment")
+        .WithDescription(
+            "Extracts a structured cheatsheet (enemies, options, win/loss conditions) " +
+            "from a previously segmented photo's paragraph. Synchronous, ephemeral — " +
+            "no server-side persistence per Encounter Book privacy (§9.1). Returns 409 " +
+            "if the LLM cannot extract a usable structured payload.")
         .WithOpenApi();
     }
 

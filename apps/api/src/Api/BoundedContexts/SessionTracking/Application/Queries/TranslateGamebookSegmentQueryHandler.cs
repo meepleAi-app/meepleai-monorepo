@@ -1,8 +1,10 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
+using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Middleware.Exceptions;
@@ -21,7 +23,9 @@ internal sealed class TranslateGamebookSegmentQueryHandler
     private readonly IGamebookPhotoArtifactRepository _photos;
     private readonly ITranslatedParagraphRepository _paragraphs;
     private readonly IGamebookGlossaryRepository _glossary;
+    private readonly ISessionBookProgressRepository _progress;
     private readonly ILlmService _llm;
+    private readonly ICampaignOwnershipGuard _ownershipGuard;
     private readonly ILogger<TranslateGamebookSegmentQueryHandler> _logger;
 
     public TranslateGamebookSegmentQueryHandler(
@@ -29,15 +33,27 @@ internal sealed class TranslateGamebookSegmentQueryHandler
         IGamebookPhotoArtifactRepository photos,
         ITranslatedParagraphRepository paragraphs,
         IGamebookGlossaryRepository glossary,
+        ISessionBookProgressRepository progress,
         ILlmService llm,
+        ICampaignOwnershipGuard ownershipGuard,
         ILogger<TranslateGamebookSegmentQueryHandler> logger)
     {
-        _campaigns = campaigns ?? throw new ArgumentNullException(nameof(campaigns));
-        _photos = photos ?? throw new ArgumentNullException(nameof(photos));
-        _paragraphs = paragraphs ?? throw new ArgumentNullException(nameof(paragraphs));
-        _glossary = glossary ?? throw new ArgumentNullException(nameof(glossary));
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(campaigns);
+        ArgumentNullException.ThrowIfNull(photos);
+        ArgumentNullException.ThrowIfNull(paragraphs);
+        ArgumentNullException.ThrowIfNull(glossary);
+        ArgumentNullException.ThrowIfNull(progress);
+        ArgumentNullException.ThrowIfNull(llm);
+        ArgumentNullException.ThrowIfNull(ownershipGuard);
+        ArgumentNullException.ThrowIfNull(logger);
+        _campaigns = campaigns;
+        _photos = photos;
+        _paragraphs = paragraphs;
+        _glossary = glossary;
+        _progress = progress;
+        _llm = llm;
+        _ownershipGuard = ownershipGuard;
+        _logger = logger;
     }
 
     public async IAsyncEnumerable<TranslateChunk> Handle(
@@ -56,11 +72,16 @@ internal sealed class TranslateGamebookSegmentQueryHandler
 
         try
         {
+            // Issue #1415: ownership/existence verified via shared guard (single source of
+            // truth across SSE pre-flight + handler). Guard caches positive outcomes in
+            // HttpContext.Items so the subsequent _campaigns.GetByIdAsync below does not
+            // cause a double DB roundtrip on the happy path within the same request.
+            await _ownershipGuard
+                .AssertOwnedByAsync(query.CampaignId, query.CallerUserId, cancellationToken)
+                .ConfigureAwait(false);
+
             var campaign = await _campaigns.GetByIdAsync(query.CampaignId, cancellationToken).ConfigureAwait(false)
                 ?? throw new NotFoundException($"Campaign {query.CampaignId} not found");
-
-            if (campaign.OwnerUserId != query.CallerUserId)
-                throw new ConflictException("Forbidden");
 
             var artifact = await _photos.GetByIdAsync(query.PhotoId, cancellationToken).ConfigureAwait(false)
                 ?? throw new NotFoundException($"Photo {query.PhotoId} not found");
@@ -128,14 +149,31 @@ internal sealed class TranslateGamebookSegmentQueryHandler
                 .ToList();
 
             var paragraph = TranslatedParagraph.Create(
-                query.CampaignId, query.PhotoId, query.ParagraphNumber, artifact.PageType,
+                query.CampaignId, query.GameBookId, query.PhotoId, query.ParagraphNumber,
                 segment.SourceText, translatedIt, appliedTerms, query.CallerUserId);
 
             await _paragraphs.AddAsync(paragraph, cancellationToken).ConfigureAwait(false);
             await _paragraphs.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-            // Advance current paragraph in campaign
-            campaign.UpdateProgress(query.ParagraphNumber);
+            // C2 (2026-05-19): advance per-book progress via SessionBookProgress.
+            // LastLocation format follows the "§N" paragraph-marker convention.
+            var location = string.Create(
+                CultureInfo.InvariantCulture,
+                $"§{query.ParagraphNumber}");
+            var existingProgress = await _progress
+                .GetByCampaignAndBookAsync(query.CampaignId, query.GameBookId, cancellationToken)
+                .ConfigureAwait(false);
+            if (existingProgress is null)
+            {
+                var fresh = SessionBookProgress.Create(query.CampaignId, query.GameBookId, location);
+                await _progress.AddAsync(fresh, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                existingProgress.UpdateLocation(location);
+                await _progress.UpdateAsync(existingProgress, cancellationToken).ConfigureAwait(false);
+            }
+            campaign.Touch(query.CallerUserId);
             await _campaigns.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             yield return new TranslateChunk(string.Empty, IsComplete: true, paragraph.Id, appliedTerms);

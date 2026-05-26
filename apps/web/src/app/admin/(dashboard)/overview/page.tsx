@@ -116,13 +116,16 @@ export default function OverviewPage() {
   if (isLoading) {
     return (
       <div className="space-y-8">
-        <div>
-          <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
-            Dashboard
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Centro operativo: richieste, libreria e gestione utenti
-          </p>
+        <div
+          className="flex items-start justify-between gap-4 pb-2 border-b border-border"
+          data-testid="overview-topbar"
+        >
+          <div>
+            <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
+              Overview sistema
+            </h1>
+            <p className="text-xs text-muted-foreground mt-1 font-mono">Admin · Overview</p>
+          </div>
         </div>
         <div className="grid grid-cols-3 gap-4">
           {[1, 2, 3].map(i => (
@@ -139,13 +142,23 @@ export default function OverviewPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
-          Dashboard
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Centro operativo: richieste, libreria e gestione utenti
-        </p>
+      <div
+        className="flex items-start justify-between gap-4 pb-2 border-b border-border"
+        data-testid="overview-topbar"
+      >
+        <div>
+          <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
+            Overview sistema
+          </h1>
+          <p className="text-xs text-muted-foreground mt-1 font-mono">
+            Admin · Overview
+            {data?.stats ? ` · ultimo refresh ${new Date().toLocaleTimeString('it-IT')}` : ''}
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => refetch()}>
+          <RefreshCwIcon className="h-3.5 w-3.5 mr-1.5" />
+          Refresh
+        </Button>
       </div>
 
       {isError && (
@@ -161,40 +174,45 @@ export default function OverviewPage() {
         </div>
       )}
 
-      <KPIStatsRow
-        totalGames={data?.stats?.totalGames ?? 0}
-        totalUsers={data?.stats?.totalUsers ?? 0}
-        activeUsers={data?.stats?.activeUsers}
-        pendingApprovals={data?.stats?.pendingApprovals ?? 0}
-        recentSubmissions={data?.stats?.recentSubmissions}
-      />
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px] gap-6">
+        <div className="flex flex-col gap-6">
+          <KPIStatsRow
+            totalGames={data?.stats?.totalGames ?? 0}
+            totalUsers={data?.stats?.totalUsers ?? 0}
+            activeUsers={data?.stats?.activeUsers}
+            pendingApprovals={data?.stats?.pendingApprovals ?? 0}
+            recentSubmissions={data?.stats?.recentSubmissions}
+          />
 
-      <PendingRequestsBanner
-        requests={data?.pendingRequests.items ?? []}
-        totalCount={data?.pendingRequests.totalCount ?? 0}
-      />
+          <PendingRequestsBanner
+            requests={data?.pendingRequests.items ?? []}
+            totalCount={data?.pendingRequests.totalCount ?? 0}
+          />
 
-      <ProcessingQueueWidget />
+          <ProcessingQueueWidget />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <LibrarySummaryCard
-          totalGames={data?.stats?.totalGames ?? 0}
-          recentGames={data?.recentGames ?? []}
-        />
-        <UsersSummaryCard
-          totalUsers={data?.stats?.totalUsers ?? 0}
-          activeUsers={data?.stats?.activeUsers ?? 0}
-          pendingInvitations={data?.pendingInvitationCount ?? 0}
-          recentUsers={data?.recentUsers ?? []}
-        />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <LibrarySummaryCard
+              totalGames={data?.stats?.totalGames ?? 0}
+              recentGames={data?.recentGames ?? []}
+            />
+            <UsersSummaryCard
+              totalUsers={data?.stats?.totalUsers ?? 0}
+              activeUsers={data?.stats?.activeUsers ?? 0}
+              pendingInvitations={data?.pendingInvitationCount ?? 0}
+              recentUsers={data?.recentUsers ?? []}
+            />
+          </div>
+        </div>
+
+        <aside className="flex flex-col gap-4" data-testid="overview-sidebar">
+          <h2 className="font-quicksand text-sm font-semibold uppercase tracking-wider text-muted-foreground px-3">
+            Azioni rapide
+          </h2>
+          <QuickActionsGrid variant="sidebar" />
+          <TechActionsBar />
+        </aside>
       </div>
-
-      <div>
-        <h2 className="font-quicksand text-lg font-semibold text-foreground mb-4">Azioni Rapide</h2>
-        <QuickActionsGrid />
-      </div>
-
-      <TechActionsBar />
     </div>
   );
 }

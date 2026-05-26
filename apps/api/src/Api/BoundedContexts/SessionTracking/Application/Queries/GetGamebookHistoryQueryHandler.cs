@@ -26,7 +26,7 @@ internal sealed class GetGamebookHistoryQueryHandler
             ?? throw new NotFoundException($"Campaign {query.CampaignId} not found");
 
         if (campaign.OwnerUserId != query.CallerUserId)
-            throw new ConflictException("Forbidden");
+            throw new ForbiddenException("Forbidden");
 
         var paragraphs = await _paragraphs.ListByCampaignAsync(query.CampaignId, cancellationToken).ConfigureAwait(false);
 
@@ -34,7 +34,6 @@ internal sealed class GetGamebookHistoryQueryHandler
             .Select(p => new TranslatedParagraphDto(
                 p.Id,
                 p.ParagraphNumber,
-                p.PageType.ToString(),
                 p.SourceTextEn,
                 p.TranslatedTextIt,
                 p.AppliedGlossaryTerms,

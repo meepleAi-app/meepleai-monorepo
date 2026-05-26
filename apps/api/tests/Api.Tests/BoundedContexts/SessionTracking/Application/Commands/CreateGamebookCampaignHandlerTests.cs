@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
+using Api.SharedKernel.Domain.ValueObjects;
 using FluentAssertions;
 using MediatR;
 using Moq;
@@ -47,10 +48,15 @@ public sealed class CreateGamebookCampaignHandlerTests
 
         // Assert
         dto.Title.Should().Be("My Campaign");
-        dto.GameId.Should().Be(gameId);
         dto.OwnerUserId.Should().Be(userId);
         dto.CurrentParagraph.Should().Be(0);
         dto.Id.Should().NotBeEmpty();
+        // Issue #1392: DTO must expose GameRef discriminator so FE can
+        // distinguish shared vs private campaigns without hardcoding Shared.
+        // Issue #1405: legacy GameId alias removed; gameRefId is the canonical
+        // ref identifier.
+        dto.GameRefId.Should().Be(gameId);
+        dto.GameRefKind.Should().Be((int)GameRefKind.Shared);
         repo.Store.Should().HaveCount(1);
     }
 

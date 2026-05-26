@@ -33,10 +33,6 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     timeout-minutes: 25
-    # SOFT-LAUNCH: do NOT block PR merge while infra stabilizes.
-    # Remove this after 30 scenarios green in CI for 2 consecutive weeks.
-    # See issue #910 DoD checklist.
-    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4
@@ -86,7 +82,7 @@ jobs:
             exec -T postgres psql -U meepleai -d meepleai_staging
 
       - name: Setup Node 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
 

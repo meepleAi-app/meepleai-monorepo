@@ -1,10 +1,10 @@
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
-using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Domain.ValueObjects;
 using FluentAssertions;
 using Xunit;
 
@@ -75,7 +75,7 @@ public sealed class UploadGamebookPhotoHandlerTests
     }
 
     private static GamebookCampaignSession BuildCampaign(Guid ownerId) =>
-        GamebookCampaignSession.Create(Guid.NewGuid(), ownerId, "Test Campaign");
+        GamebookCampaignSession.Create(GameRef.Shared(Guid.NewGuid()), ownerId, "Test Campaign");
 
     // ── Tests ─────────────────────────────────────────────────────────────────
 
@@ -90,10 +90,10 @@ public sealed class UploadGamebookPhotoHandlerTests
 
         var cmd = new UploadGamebookPhotoCommand(
             campaign.Id,
+            Guid.NewGuid(),
             ownerId,
             new MemoryStream(new byte[] { 0xFF, 0xD8 }), // fake JPEG bytes
-            "image/jpeg",
-            GamebookPageType.Storybook);
+            "image/jpeg");
 
         // Act
         var dto = await handler.Handle(cmd, CancellationToken.None);
@@ -107,7 +107,6 @@ public sealed class UploadGamebookPhotoHandlerTests
 
         dto.Id.Should().Be(artifact.Id);
         dto.CampaignId.Should().Be(campaign.Id);
-        dto.PageType.Should().Be("Storybook");
         dto.Status.Should().Be("Uploaded");
         dto.Segments.Should().BeEmpty();
     }
@@ -120,9 +119,9 @@ public sealed class UploadGamebookPhotoHandlerTests
         var cmd = new UploadGamebookPhotoCommand(
             Guid.NewGuid(),
             Guid.NewGuid(),
+            Guid.NewGuid(),
             new MemoryStream(),
-            "image/jpeg",
-            GamebookPageType.Encounter);
+            "image/jpeg");
 
         // Act
         Func<Task> act = () => handler.Handle(cmd, CancellationToken.None);
@@ -132,9 +131,9 @@ public sealed class UploadGamebookPhotoHandlerTests
     }
 
     [Fact]
-    public async Task Handle_CallerNotOwner_ThrowsConflictException()
+    public async Task Handle_CallerNotOwner_ThrowsForbiddenException()
     {
-        // Arrange
+        // Issue #1404: ownership failures must map to HTTP 403, not 409.
         var (handler, campaignRepo, _, _) = BuildSut();
         var ownerId = Guid.NewGuid();
         var differentCallerId = Guid.NewGuid();
@@ -143,15 +142,15 @@ public sealed class UploadGamebookPhotoHandlerTests
 
         var cmd = new UploadGamebookPhotoCommand(
             campaign.Id,
+            Guid.NewGuid(),
             differentCallerId,
             new MemoryStream(),
-            "image/jpeg",
-            GamebookPageType.Storybook);
+            "image/jpeg");
 
         // Act
         Func<Task> act = () => handler.Handle(cmd, CancellationToken.None);
 
         // Assert
-        await act.Should().ThrowAsync<ConflictException>();
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 }

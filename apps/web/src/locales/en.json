@@ -1133,7 +1133,7 @@
         "q5": {
           "question": "Can I add a game that is not in the catalog?",
           "short": "During the alpha only admins can add games. Suggest new games via /contact.",
-          "long": "During the **private alpha**, adding new games to the catalog is restricted to admins to ensure KB quality.\n\nYou can **suggest a game** via `/contact`: send title, publisher, year and BoardGameGeek link. We review requests weekly. Post-alpha, users will be able to propose games self-service with moderated approval."
+          "long": "During the **private alpha**, adding new games to the catalog is restricted to admins to ensure KB quality.\n\nYou can **suggest a game** via `/contact`: send title, publisher, year, and a link to a reference game database. We review requests weekly. Post-alpha, users will be able to propose games self-service with moderated approval."
         },
         "q6": {
           "question": "How does my personal library work?",
@@ -1652,6 +1652,146 @@
           "subtitle": "Something went wrong. Please try again in a moment.",
           "cta": "Retry"
         }
+      },
+      "gameDetail": {
+        "kb": {
+          "metadata": {
+            "title": "{gameTitle} · Knowledge Base — MeepleAI",
+            "description": "Manage PDFs, indexing and RAPTOR for the {gameTitle} knowledge base."
+          },
+          "header": {
+            "titleSuffix": "Knowledge Base",
+            "uploadCta": "+ Upload PDF",
+            "reindexAllCta": "⟳ Re-index all"
+          },
+          "stats": {
+            "docs": "{count, plural, =0 {No documents} =1 {1 document} other {# documents}}",
+            "docsLabel": "Documents",
+            "chunksLabel": "Chunks",
+            "chunksTemplate": "{count} chunks",
+            "embeddingsLabel": "Embeddings",
+            "embeddingsTemplate": "{count} embeddings",
+            "lastReindexLabel": "Last idx.",
+            "lastReindexTemplate": "last reindex {relative}",
+            "raptorLabel": "RAPTOR last",
+            "coverageLabel": "Coverage",
+            "coverageStripLabel": "Coverage: {level}",
+            "coverage": {
+              "None": "None",
+              "Basic": "Basic",
+              "Standard": "Standard",
+              "Complete": "Complete"
+            },
+            "cardTitle": "KB Coverage Stats",
+            "cardSubtitle": "Indexing metrics",
+            "lifetimeCostLabel": "Lifetime token cost",
+            "sparklineLabel": "Token usage · last 7 days",
+            "sparklineStart": "-7d",
+            "sparklineEnd": "today",
+            "columnHeaders": {
+              "document": "Document",
+              "status": "Status",
+              "uploaded": "Uploaded"
+            }
+          },
+          "empty": {
+            "title": "No PDFs indexed yet",
+            "description": "Upload the first PDF document to index the rules of {gameTitle} and enable AI agent RAG chat.",
+            "ctaLabel": "Upload first document",
+            "supportedFormats": "Supported formats: PDF · Max 200 MB per file"
+          },
+          "pdfRow": {
+            "openCta": "Open detail",
+            "openAria": "Open detail {pdfName}",
+            "chunksTemplate": "{count} chunks",
+            "status": {
+              "ready": "Ready",
+              "indexing": "Indexing",
+              "stale": "Stale",
+              "failed": "Failed"
+            }
+          },
+          "actionsMenu": {
+            "headerSubtitle": "{size} · {date}",
+            "open": {
+              "label": "Open detail",
+              "description": "View chunks and preview",
+              "icon": "↗"
+            },
+            "reindex": {
+              "label": "Re-index",
+              "description": "Re-embed PDF",
+              "icon": "⟳"
+            },
+            "cost": {
+              "label": "Cost stats",
+              "description": "Tokens consumed and cost",
+              "icon": "📋"
+            },
+            "move": {
+              "label": "Move to other game",
+              "description": "Move to another KB",
+              "icon": "📦"
+            },
+            "delete": {
+              "label": "Delete",
+              "description": "Remove PDF and cleanup",
+              "icon": "🗑"
+            }
+          },
+          "reindexModal": {
+            "title": "Re-index full KB",
+            "subtitle": "{gameTitle} · {docCount} documents",
+            "costHeader": "Operation cost estimate",
+            "description": "This operation re-processes all chunks and regenerates embeddings. Existing chats will keep working during the process.",
+            "reindexCta": "⟳ Re-index",
+            "cancelCta": "Cancel",
+            "runningTitle": "Re-indexing…",
+            "jobIdLabel": "Job ID",
+            "progressTemplate": "{processed} / {total} chunks",
+            "doneTitle": "Re-index complete",
+            "doneSummaryTemplate": "{chunks} chunks · {embeddings} embeddings · actual cost {cost}",
+            "closeCta": "Close",
+            "costRows": {
+              "chunksToReembed": "Chunks to re-embed",
+              "tokensPerChunk": "Tokens per chunk (avg)",
+              "tokensTotal": "Total tokens (estimated)",
+              "costPer1M": "Cost per 1M tokens",
+              "estimatedCost": "Estimated cost",
+              "estimatedDuration": "Estimated duration"
+            }
+          },
+          "raptor": {
+            "title": "RAPTOR Rebuild",
+            "description": "Recursive Abstractive Processing Tree Of Retrieval",
+            "lockedBadge": "🔒 PRO",
+            "activeBadge": "PRO ✓",
+            "lockedNote": "RAPTOR requires Pro plan. Enables hierarchical clustering for advanced Q&A retrieval.",
+            "upgradeCta": "🔒 Rebuild RAPTOR — Upgrade to Pro",
+            "upgradeLink": "Discover Pro plan",
+            "rebuildCta": "🦅 Rebuild RAPTOR",
+            "metrics": {
+              "lastRebuild": "Last rebuild",
+              "summaries": "Summaries generated"
+            },
+            "estimateLabel": "Operation estimate",
+            "estimateDescription": "~{chunks} chunks → hierarchical summaries"
+          },
+          "delete": {
+            "title": "Confirm PDF deletion?",
+            "subtitlePrefix": "PDF:",
+            "listHeader": "Will be permanently deleted:",
+            "warning": "Irreversible operation — no backup available",
+            "deleteCta": "🗑 Delete permanently",
+            "cancelCta": "Cancel"
+          },
+          "errors": {
+            "loadFailed": "Unable to load knowledge base. Please retry.",
+            "reindexFailed": "Re-index failed. Please try again in a moment.",
+            "raptorFailed": "RAPTOR rebuild failed.",
+            "deleteFailed": "Unable to delete PDF."
+          }
+        }
       }
     },
     "discover": {
@@ -1784,6 +1924,32 @@
         "emptyBody": "The community has not published any toolkits yet."
       }
     },
+    "toolkitsHub": {
+      "eyebrow": "Hub · /toolkits",
+      "heroStats": {
+        "toolkits": "Toolkits",
+        "installs": "Installs",
+        "featured": "Featured",
+        "totalTools": "Total tools"
+      },
+      "searchClearAriaLabel": "Clear search",
+      "statusTablistAriaLabel": "Filter toolkits by status",
+      "sortLabel": "Sort",
+      "sortOptions": {
+        "popular": "Popularity",
+        "rating": "Rating",
+        "title": "Title A-Z",
+        "uses": "Uses"
+      },
+      "countTemplate": "{count} toolkits",
+      "gameRefFallback": "Universal (multi-game)",
+      "installAriaLabel": "Install {title}",
+      "toolsLabel": "Tools:",
+      "usesLabel": "Uses:",
+      "resetFilters": "Reset filters",
+      "resetFiltersAriaLabel": "Reset all search filters",
+      "retryAriaLabel": "Retry loading the catalog"
+    },
     "dashboard": {
       "hero": {
         "guestName": "friend",
@@ -1815,6 +1981,7 @@
           "viewAll": "All",
           "statusActive": "Active",
           "statusIdle": "Idle",
+          "callsTemplate": "{count} call",
           "emptyTitle": "No active AI agents.",
           "emptyCta": "Explore /hub/agents"
         },
@@ -1840,6 +2007,11 @@
           "emptyTitle": "No game nights planned.",
           "emptyCta": "+ Plan a night"
         }
+      },
+      "error": {
+        "title": "Unable to load dashboard",
+        "message": "A network error occurred. Check your connection and try again.",
+        "retry": "Retry"
       }
     },
     "toolkitDetail": {
@@ -2073,16 +2245,22 @@
       },
       "sections": {
         "stats": {
-          "title": "Statistics"
+          "title": "Statistics",
+          "sessions": "Sessions",
+          "wins": "Wins",
+          "winRate": "Win rate",
+          "achievements": "Achievements"
         },
         "leaderboard": {
           "title": "Leaderboard",
           "rank": "Rank #{rank}",
-          "ariaLabel": "Leaderboard position: {rank}"
+          "ariaLabel": "Leaderboard position: {rank}",
+          "noRank": "Not ranked yet"
         },
         "favoriteAgent": {
           "title": "Favourite Agent",
-          "none": "No agent used yet"
+          "none": "No agent used yet",
+          "ariaLabel": "Open {agentName}"
         },
         "achievements": {
           "title": "Achievements",
@@ -2276,7 +2454,7 @@
         "metaPlayersSingle": "{count} players",
         "metaDuration": "{minutes} min",
         "metaWeight": "Complexity {value}/5",
-        "metaRating": "BGG {value}",
+        "metaRating": "Community {value}",
         "ctaPlay": "Play now",
         "ctaEdit": "Edit",
         "ctaShare": "Share",
@@ -2315,7 +2493,12 @@
         "specsAge": "Age",
         "specsCategories": "Categories",
         "specsMechanics": "Mechanics",
-        "specsBgg": "BGG ID",
+        "specsBgg": "Catalog ID",
+        "specsPlayers": "Players",
+        "specsDuration": "Duration",
+        "specsComplexity": "Complexity",
+        "specsRatingBgg": "BGG Rating",
+        "specsMinutesUnit": "min",
         "noDescription": "No description available for this game."
       },
       "faqs": {
@@ -2952,6 +3135,38 @@
         "overwrite": "Overwrite",
         "changeTranslation": "Change translation",
         "sidePanelLabel": "Conflicting entry"
+      }
+    },
+    "encounter": {
+      "meta": {
+        "title": "Encounter Book | MeepleAI",
+        "description": "On-demand Encounter Book cheatsheet for the gamebook session"
+      },
+      "entryStoryMeta": "Storybook · last paragraph read",
+      "entryRefTitle": "→ Encounter {paragraph}",
+      "entryRefHint": "You need stats and options — photograph the Encounter Book",
+      "entryCta": "Photograph Encounter {paragraph}",
+      "entryCtaHint": "card ready in seconds · nothing saved long-term",
+      "loadingTitle": "Analyzing the encounter",
+      "loadingHint": "Extracting enemy name, combat stats and options",
+      "cancel": "Cancel",
+      "optionsTitle": "Your options",
+      "conditionsWin": "🏆 Victory",
+      "conditionsLoss": "💀 Defeat",
+      "parseConfidence": "parse",
+      "lowConfidenceHint": "Low confidence on some fields — verify manually against the Encounter Book.",
+      "ephemeralNote": "Temporary card (this session only) — the Encounter Book is not saved.",
+      "retake": "🔄 Retake photo",
+      "glossary": "📒 Glossary",
+      "resolve": "✓ Resolve →",
+      "errorParseFailed": "I couldn't read the encounter from the photo. Retry or retake the page.",
+      "errorNotFound": "Photo or paragraph not found. Retake the Encounter Book page.",
+      "errorGeneric": "Something went wrong during analysis. Please retry.",
+      "retry": "Retry",
+      "confidence": {
+        "high": "High confidence",
+        "medium": "Medium confidence",
+        "low": "Low confidence"
       }
     },
     "play": {

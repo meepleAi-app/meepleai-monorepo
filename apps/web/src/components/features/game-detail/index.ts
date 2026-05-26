@@ -1,7 +1,7 @@
 /**
  * Wave C.1 (Issue #581) — `/games/[id]` v2 component family barrel.
  *
- * Centralised re-exports so `GameDetailViewV2` (Task 3) and downstream
+ * Centralised re-exports so `GameDetailView` (Task 3) and downstream
  * page-clients can import from `@/components/features/game-detail` without churning
  * deep paths.
  */
@@ -67,3 +67,34 @@ export type {
   GameDetailKbDocListProps,
   GameDetailKbStatus,
 } from '@/components/features/game-detail/GameDetailKbDocList';
+
+export { GameDetailSpecsCard } from '@/components/features/game-detail/GameDetailSpecsCard';
+export type {
+  GameDetailSpecsCardProps,
+  GameDetailSpecsItem,
+} from '@/components/features/game-detail/GameDetailSpecsCard';
+
+export { buildSpecsItems } from '@/components/features/game-detail/buildSpecsItems';
+
+export { GameDetailLeaderboard } from '@/components/features/game-detail/GameDetailLeaderboard';
+export type {
+  GameDetailLeaderboardLabels,
+  GameDetailLeaderboardProps,
+} from '@/components/features/game-detail/GameDetailLeaderboard';
+
+export { GameDetailCommunityGate } from '@/components/features/game-detail/GameDetailCommunityGate';
+export type { GameDetailCommunityGateProps } from '@/components/features/game-detail/GameDetailCommunityGate';
+
+export { GameDetailHouseRulesList } from '@/components/features/game-detail/GameDetailHouseRulesList';
+export type {
+  GameDetailHouseRulesListLabels,
+  GameDetailHouseRulesListProps,
+} from '@/components/features/game-detail/GameDetailHouseRulesList';
+
+export { GameDetailChatTab } from '@/components/features/game-detail/GameDetailChatTab';
+export type {
+  GameDetailChatPreviewMessage,
+  GameDetailChatRole,
+  GameDetailChatTabLabels,
+  GameDetailChatTabProps,
+} from '@/components/features/game-detail/GameDetailChatTab';

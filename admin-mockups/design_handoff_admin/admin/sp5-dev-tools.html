@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SP5 B8 · Dev Tools · /dev</title>
+<!-- @v2 DevSidebar · ScenarioPicker · AuthRoleSwitcher · FlagRuntimeToggle · StoreInspector -->
+<!-- NB: dev-only, tree-shaken in prod bundle -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/><link rel="stylesheet" href="components.css"/><link rel="stylesheet" href="admin-base.css"/>
+<style>
+  .dev-shell { display: grid; grid-template-columns: 200px 1fr; gap: 14px; min-height: calc(100vh - 60px); }
+  .dev-side {
+    background: var(--bg-card); border: 1px solid var(--border-light);
+    border-radius: 10px; padding: 8px 0;
+    position: sticky; top: 76px; max-height: calc(100vh - 100px); overflow-y: auto;
+  }
+  .dev-side-grp { padding: 8px 12px 4px; font-family: var(--f-mono); font-size: 9.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+  .dev-side-item { padding: 7px 14px; font-family: var(--f-mono); font-size: 11.5px; font-weight: 700; color: var(--text-sec); cursor: pointer; display: flex; align-items: center; gap: 8px; border-left: 2px solid transparent; }
+  .dev-side-item:hover { background: var(--bg-muted); color: var(--text); }
+  .dev-side-item.active { background: hsl(var(--c-toolkit) / .1); color: hsl(var(--c-toolkit)); border-left-color: hsl(var(--c-toolkit)); }
+  .dev-side-foot { padding: 10px 14px; border-top: 1px solid var(--border-light); margin-top: 8px; font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); line-height: 1.5; }
+
+  .dev-panel { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 10px; overflow: hidden; margin-bottom: 14px; }
+  .scenario-row { padding: 10px 14px; border-bottom: 1px solid var(--border-light); display: grid; grid-template-columns: 22px 1fr 90px 70px; gap: 10px; align-items: center; font-size: 12px; cursor: pointer; }
+  .scenario-row:hover { background: var(--bg-muted); }
+  .scenario-row.active { background: hsl(var(--c-toolkit) / .08); }
+  .scenario-row .radio { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); display: grid; place-items: center; }
+  .scenario-row.active .radio { border-color: hsl(var(--c-toolkit)); }
+  .scenario-row.active .radio::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: hsl(var(--c-toolkit)); }
+  .scenario-row .name { font-family: var(--f-display); font-weight: 700; }
+  .scenario-row .meta { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); }
+
+  .role-pill { padding: 6px 14px; border-radius: 999px; background: var(--bg-muted); border: 1px solid var(--border); font-family: var(--f-mono); font-size: 11px; font-weight: 700; cursor: pointer; }
+  .role-pill.active { background: hsl(var(--c-event) / .14); border-color: hsl(var(--c-event)); color: hsl(var(--c-event)); }
+
+  .json-inspect { font-family: var(--f-mono); font-size: 11px; background: var(--bg-sunken); padding: 12px 14px; border-radius: 6px; max-height: 280px; overflow-y: auto; line-height: 1.6; }
+  .json-inspect .key { color: hsl(var(--c-agent)); }
+  .json-inspect .str { color: hsl(var(--c-kb)); }
+  .json-inspect .num { color: hsl(var(--c-event)); }
+  .json-inspect .bool { color: hsl(var(--c-chat)); }
+  .json-inspect .null { color: var(--text-muted); }
+</style>
+</head>
+<body class="admin-page">
+<div class="admin-mobile-fallback"><span class="em">🖥️</span><h2>Console solo desktop</h2></div>
+<div class="admin-shell">
+  <div data-admin-nav-mount></div>
+  <main>
+    <header class="admin-top">
+      <div><h1>Dev Tools <span class="role-chip" style="background: hsl(var(--c-event) / .14); color: hsl(var(--c-event)); margin-left: 8px">DEV ONLY</span></h1><div class="crumbs">Tools · Dev panel · NODE_ENV=development · NOT in prod bundle</div></div>
+      <div class="spacer"></div>
+      <div class="admin-top-actions">
+        <button class="btn-admin">📚 Open Storybook ↗</button>
+        <button class="btn-admin danger">⚠ Reset all state</button>
+      </div>
+    </header>
+
+    <div class="admin-body">
+      <div class="dev-shell">
+
+        <aside class="dev-side">
+          <div class="dev-side-grp">Mock data</div>
+          <div class="dev-side-item active">🎭 Scenarios</div>
+          <div class="dev-side-item">👤 Auth</div>
+          <div class="dev-side-item">🚩 Flags</div>
+
+          <div class="dev-side-grp">Inspect</div>
+          <div class="dev-side-item">🔌 API replay</div>
+          <div class="dev-side-item">🧠 Memory store</div>
+          <div class="dev-side-item">💾 Cache</div>
+
+          <div class="dev-side-grp">Danger</div>
+          <div class="dev-side-item" style="color: hsl(var(--c-event))">🔄 Reset</div>
+
+          <div class="dev-side-foot">
+            <strong style="color: hsl(var(--c-toolkit))">env: development</strong><br/>
+            build: <code>web-2026.05.24-a8f3c</code><br/>
+            commit: <code>e3f7a1c</code><br/>
+            <br/>
+            <a href="#" style="color: hsl(var(--c-chat)); text-decoration: none">📚 Storybook ↗</a><br/>
+            <a href="#" style="color: hsl(var(--c-chat)); text-decoration: none">🐛 GitHub issue ↗</a>
+          </div>
+        </aside>
+
+        <div>
+
+          <!-- Active: Scenarios -->
+          <div class="dev-panel">
+            <div class="admin-panel-head"><h3>🎭 MSW Scenarios</h3><span class="meta" style="margin-left: auto">handler attivo: <code>small-library-marco</code></span></div>
+            <div>
+              <div class="scenario-row">
+                <div class="radio"></div>
+                <div><div class="name">empty</div><div class="meta">Stato nuovo utente · 0 games · 0 sessions · 0 agents</div></div>
+                <div style="font-family: var(--f-mono); font-size: 10px">12 handlers</div>
+                <button class="btn-admin sm">▶ Load</button>
+              </div>
+              <div class="scenario-row active">
+                <div class="radio"></div>
+                <div><div class="name">small-library-marco</div><div class="meta">Marco · 8 games · 214 sessions · 7 agents · 12 KB docs</div></div>
+                <div style="font-family: var(--f-mono); font-size: 10px">38 handlers</div>
+                <button class="btn-admin sm">▶ Reload</button>
+              </div>
+              <div class="scenario-row">
+                <div class="radio"></div>
+                <div><div class="name">power-user-aaron</div><div class="meta">Aaron · 24 games · 487 sessions · 42 agents · 247 KB docs · 14 toolkit</div></div>
+                <div style="font-family: var(--f-mono); font-size: 10px">112 handlers</div>
+                <button class="btn-admin sm">▶ Load</button>
+              </div>
+              <div class="scenario-row">
+                <div class="radio"></div>
+                <div><div class="name">alpha-features-on</div><div class="meta">Tutti i feature flag alpha attivi · librogame · agent v2 · hybrid RAG</div></div>
+                <div style="font-family: var(--f-mono); font-size: 10px">84 handlers</div>
+                <button class="btn-admin sm">▶ Load</button>
+              </div>
+              <div class="scenario-row">
+                <div class="radio"></div>
+                <div><div class="name">degraded-api</div><div class="meta">Tutti gli endpoint con latency artificiale 2-8s + 30% error rate</div></div>
+                <div style="font-family: var(--f-mono); font-size: 10px">38 handlers</div>
+                <button class="btn-admin sm">▶ Load</button>
+              </div>
+              <div class="scenario-row">
+                <div class="radio"></div>
+                <div><div class="name">offline-mode</div><div class="meta">Tutto offline · network errors · cache-only responses</div></div>
+                <div style="font-family: var(--f-mono); font-size: 10px">0 handlers (bypass)</div>
+                <button class="btn-admin sm">▶ Load</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Auth role switcher -->
+          <div class="dev-panel">
+            <div class="admin-panel-head"><h3>👤 Auth · role switcher</h3><span class="meta" style="margin-left: auto">requires page reload</span></div>
+            <div style="padding: 14px">
+              <div style="display: flex; gap: 8px; flex-wrap: wrap">
+                <button class="role-pill">👻 guest</button>
+                <button class="role-pill">👤 user</button>
+                <button class="role-pill">⭐ premium</button>
+                <button class="role-pill">🛡 admin</button>
+                <button class="role-pill active">👑 superadmin</button>
+              </div>
+              <div style="margin-top: 14px; padding: 10px 12px; background: var(--bg-muted); border-radius: 6px; font-family: var(--f-mono); font-size: 11px">
+                <div style="color: var(--text-muted); font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px">Mock JWT payload</div>
+                <pre class="json-inspect" style="margin: 0; padding: 8px 10px; max-height: 160px"><span class="key">"sub"</span>: <span class="str">"u-aaron"</span>,
+<span class="key">"email"</span>: <span class="str">"badsworm@gmail.com"</span>,
+<span class="key">"role"</span>: <span class="str">"superadmin"</span>,
+<span class="key">"premium"</span>: <span class="bool">true</span>,
+<span class="key">"impersonate"</span>: <span class="null">null</span>,
+<span class="key">"exp"</span>: <span class="num">1735689600</span>,
+<span class="key">"iat"</span>: <span class="num">1716543210</span>,
+<span class="key">"features"</span>: [<span class="str">"alpha"</span>, <span class="str">"dev-tools"</span>]</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Runtime flags -->
+          <div class="dev-panel">
+            <div class="admin-panel-head"><h3>🚩 Runtime feature flags</h3><span class="meta" style="margin-left: auto">localStorage persisted</span></div>
+            <div style="padding: 14px; display: flex; flex-direction: column; gap: 10px">
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 12.5px"><div class="admin-toggle on"></div><span style="font-family: var(--f-mono); font-weight: 700">flag.alphaMode</span><span style="color: var(--text-muted); font-size: 11px; flex: 1">Sblocca UI alpha</span><span class="status-chip info" style="font-size: 10px">on</span></div>
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 12.5px"><div class="admin-toggle on"></div><span style="font-family: var(--f-mono); font-weight: 700">flag.devTools</span><span style="color: var(--text-muted); font-size: 11px; flex: 1">Sidebar dev visibile in nav</span><span class="status-chip info" style="font-size: 10px">on</span></div>
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 12.5px"><div class="admin-toggle"></div><span style="font-family: var(--f-mono); font-weight: 700">flag.useReactQueryDevtools</span><span style="color: var(--text-muted); font-size: 11px; flex: 1">RQ inspector overlay</span><span class="status-chip muted" style="font-size: 10px">off</span></div>
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 12.5px"><div class="admin-toggle on"></div><span style="font-family: var(--f-mono); font-weight: 700">flag.mockSSE</span><span style="color: var(--text-muted); font-size: 11px; flex: 1">SSE streams da mock JSON</span><span class="status-chip info" style="font-size: 10px">on</span></div>
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 12.5px"><div class="admin-toggle"></div><span style="font-family: var(--f-mono); font-weight: 700">flag.slowMotion</span><span style="color: var(--text-muted); font-size: 11px; flex: 1">Animation ×10 slower (debug)</span><span class="status-chip muted" style="font-size: 10px">off</span></div>
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 12.5px"><div class="admin-toggle on"></div><span style="font-family: var(--f-mono); font-weight: 700">flag.showCommentAnchors</span><span style="color: var(--text-muted); font-size: 11px; flex: 1">Highlight data-comment-anchor in DOM</span><span class="status-chip info" style="font-size: 10px">on</span></div>
+            </div>
+          </div>
+
+          <!-- Memory store / React Query cache (compact) -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px">
+            <div class="dev-panel">
+              <div class="admin-panel-head"><h3>🧠 Zustand store</h3><span class="meta" style="margin-left: auto">12 stores · 247 keys</span></div>
+              <div style="padding: 14px">
+                <pre class="json-inspect"><span style="color: var(--text-muted)">// cascadeNavigationStore</span>
+<span class="key">"stack"</span>: [
+  { <span class="key">"id"</span>: <span class="str">"day-drawer-22mar"</span>, <span class="key">"open"</span>: <span class="bool">true</span> }
+],
+<span class="key">"history"</span>: [<span class="num">3</span> entries],
+
+<span style="color: var(--text-muted)">// uiPreferencesStore</span>
+<span class="key">"theme"</span>: <span class="str">"dark"</span>,
+<span class="key">"sidebarCollapsed"</span>: <span class="bool">false</span>,
+<span class="key">"density"</span>: <span class="str">"compact"</span>,
+
+<span style="color: var(--text-muted)">// recentsStore</span>
+<span class="key">"recents"</span>: [
+  { <span class="key">"type"</span>: <span class="str">"game"</span>, <span class="key">"id"</span>: <span class="str">"g-wingspan"</span> },
+  { <span class="key">"type"</span>: <span class="str">"session"</span>, <span class="key">"id"</span>: <span class="str">"s-spirit-3"</span> }
+]</pre>
+                <div style="margin-top: 10px; display: flex; gap: 6px"><button class="btn-admin sm">⤓ Snapshot</button><button class="btn-admin sm">↻ Replay</button></div>
+              </div>
+            </div>
+
+            <div class="dev-panel">
+              <div class="admin-panel-head"><h3>💾 React Query cache</h3><span class="meta" style="margin-left: auto">42 queries · 3 stale</span></div>
+              <div style="padding: 14px; font-family: var(--f-mono); font-size: 11.5px">
+                <div style="display: flex; flex-direction: column; gap: 4px">
+                  <div style="display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 4px"><span class="status-chip healthy" style="font-size: 9px">fresh</span><span>[games, "g-wingspan"]</span><span style="margin-left: auto; color: var(--text-muted); font-size: 10px">2.1KB</span></div>
+                  <div style="display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 4px"><span class="status-chip healthy" style="font-size: 9px">fresh</span><span>[library, {filters: {...}}]</span><span style="margin-left: auto; color: var(--text-muted); font-size: 10px">14KB</span></div>
+                  <div style="display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 4px"><span class="status-chip warning" style="font-size: 9px">stale</span><span>[agents, "a-wingspan-rules"]</span><span style="margin-left: auto; color: var(--text-muted); font-size: 10px">3.4KB</span></div>
+                  <div style="display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 4px"><span class="status-chip healthy" style="font-size: 9px">fresh</span><span>[notifications, {since}]</span><span style="margin-left: auto; color: var(--text-muted); font-size: 10px">8.2KB</span></div>
+                  <div style="display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 4px"><span class="status-chip warning" style="font-size: 9px">stale</span><span>[sessions, "s-spirit-3", "events"]</span><span style="margin-left: auto; color: var(--text-muted); font-size: 10px">42KB</span></div>
+                  <div style="display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 4px"><span class="status-chip warning" style="font-size: 9px">stale</span><span>[kb-globale, q="predator"]</span><span style="margin-left: auto; color: var(--text-muted); font-size: 10px">1.8KB</span></div>
+                </div>
+                <div style="margin-top: 10px; display: flex; gap: 6px"><button class="btn-admin sm">🗑 Invalidate all</button><button class="btn-admin sm">🗑 Invalidate stale</button></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reset -->
+          <div class="dev-panel" style="border-color: hsl(var(--c-event) / .4); background: hsl(var(--c-event) / .04)">
+            <div class="admin-panel-head" style="background: transparent"><h3 style="color: hsl(var(--c-event))">⚠ Reset state (DEV)</h3></div>
+            <div style="padding: 14px; display: flex; gap: 8px; flex-wrap: wrap">
+              <button class="btn-admin sm danger">🗑 localStorage</button>
+              <button class="btn-admin sm danger">🗑 sessionStorage</button>
+              <button class="btn-admin sm danger">🗑 IndexedDB</button>
+              <button class="btn-admin sm danger">🗑 Cookies (mock auth)</button>
+              <button class="btn-admin sm danger">🗑 Zustand all stores</button>
+              <button class="btn-admin sm danger">🗑 RQ cache</button>
+              <button class="btn-admin sm danger">🔄 Nuke all + reload</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="admin-nav.js"></script><script>renderAdminNav('dev-tools');</script>
+</body></html>

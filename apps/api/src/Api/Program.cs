@@ -586,6 +586,13 @@ using (var scope = app.Services.CreateScope())
     MeepleAiMetrics.RegisterAutoSaveHealthGauge(tracker);
 }
 
+// SP5 Admin Security S1 T4b: register audit_outbox health gauges (pending, oldest age, failed).
+{
+    var auditOutboxTracker = app.Services
+        .GetRequiredService<Api.BoundedContexts.Administration.Infrastructure.Health.IAuditOutboxHealthTracker>();
+    MeepleAiMetrics.RegisterAuditOutboxGauges(auditOutboxTracker);
+}
+
 // Configure middleware pipeline
 app.ConfigureMiddlewarePipeline(forwardedHeadersEnabled);
 
@@ -789,7 +796,6 @@ v1Api.MapRuleConflictFaqEndpoints(); // ISSUE-3966: Rule conflict FAQ management
 v1Api.MapVisionSnapshotEndpoints(); // Session Vision AI: board photo snapshots + game state extraction
 v1Api.MapSessionTrackingEndpoints(); // GST-003: Session tracking real-time collaboration
 v1Api.MapSessionStatisticsEndpoints(); // P4: Session analytics dashboard
-v1Api.MapProposalMigrationEndpoints(); // Proposal migrations (Issue #3666)
 
 // Shared Game Catalog
 v1Api.MapSharedGameCatalogEndpoints(); // ISSUE-2371: Shared game catalog Phase 2
@@ -869,6 +875,7 @@ v1Api.MapUserHandEndpoints();          // My Hand quick-access slots (La Mia Man
 v1Api.MapAchievementEndpoints();       // Achievement system (Issue #3922)
 v1Api.MapGamebookCampaignEndpoints();  // Iter 1.A — Libro Game gamebook campaigns
 v1Api.MapGamebookPhotoEndpoints();    // Iter 1.B — Libro Game photo translate pipeline
+v1Api.MapGameBookEndpoints();          // Phase E1 — GameBook catalog (multi-book generalization)
 
 // Audit & Analytics
 v1Api.MapAuditEndpoints();             // Audit log retrieval & search
@@ -877,6 +884,7 @@ v1Api.MapUserActivityEndpoints();      // Issue #4652: User activity log for Adm
 v1Api.MapAdminAgentAnalyticsEndpoints(); // Issue #4653: Agents analytics for Admin Dashboard
 v1Api.MapAdminAnalyticsEndpoints();      // Admin analytics: overview, chat, PDF, model performance, MAU
 v1Api.MapAdminOperationsEndpoints();   // Issue #3696: Operations - Service Control Panel
+v1Api.MapAdminCategoriesEndpoints();   // Issue #1440: SharedGame categories CRUD
 v1Api.MapAdminInfrastructureEndpoints(); // AI Infrastructure Dashboard: service status, config, restart
 v1Api.MapDatabaseSyncEndpoints();     // Database sync admin panel
 v1Api.MapAdminDockerEndpoints();       // Issue #139: Docker container management (Phase 3)

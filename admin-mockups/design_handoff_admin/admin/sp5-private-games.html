@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SP5 B7 · Private Games · /private-games</title>
+<!-- @v2 PrivateGameCard · PublishChecklist -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/><link rel="stylesheet" href="components.css"/><link rel="stylesheet" href="admin-base.css"/>
+<style>
+  .pg-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .pg-card {
+    background: var(--bg-card); border: 1px solid var(--border-light);
+    border-radius: 12px; overflow: hidden;
+    position: relative; cursor: pointer;
+    transition: transform var(--dur-sm) var(--ease-out), border-color var(--dur-sm);
+  }
+  .pg-card:hover { transform: translateY(-2px); border-color: hsl(var(--c-game) / .5); }
+  .pg-cover { height: 140px; background: linear-gradient(135deg, hsl(var(--c-game)), hsl(var(--c-event))); display: grid; place-items: center; font-size: 56px; position: relative; }
+  .pg-cover .lock { position: absolute; top: 10px; right: 10px; padding: 4px 8px; background: rgba(0,0,0,.5); color: #fff; font-family: var(--f-mono); font-size: 9px; font-weight: 700; border-radius: 4px; backdrop-filter: blur(4px); }
+  .pg-body { padding: 12px 14px; }
+  .pg-name { font-family: var(--f-display); font-weight: 800; font-size: 14px; margin-bottom: 3px; }
+  .pg-meta { font-family: var(--f-mono); font-size: 10.5px; color: var(--text-muted); margin-bottom: 8px; }
+  .pg-status { display: inline-flex; padding: 2px 8px; border-radius: 999px; font-family: var(--f-mono); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+  .pg-status.draft { background: hsl(38 90% 56% / .14); color: hsl(38 90% 50%); }
+  .pg-status.ready { background: hsl(var(--c-chat) / .14); color: hsl(var(--c-chat)); }
+  .pg-status.beta { background: hsl(var(--c-event) / .14); color: hsl(var(--c-event)); }
+  .pg-status.published { background: hsl(var(--c-toolkit) / .14); color: hsl(var(--c-toolkit)); }
+  .pg-stats { display: flex; gap: 12px; font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); }
+
+  .new-card {
+    background: var(--bg);
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    min-height: 260px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    cursor: pointer; color: var(--text-muted);
+  }
+  .new-card:hover { border-color: hsl(var(--c-game)); color: hsl(var(--c-game)); }
+  .new-card .em { font-size: 36px; }
+
+  .publish-card {
+    background: linear-gradient(135deg, hsl(var(--c-toolkit) / .12), hsl(var(--c-game) / .08));
+    border: 1px solid hsl(var(--c-toolkit) / .35);
+    border-radius: 12px;
+    padding: 20px 24px;
+  }
+  .publish-card h3 { margin: 0 0 6px; font-family: var(--f-display); font-size: 18px; font-weight: 800; }
+  .check-row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border-light); font-size: 12.5px; }
+  .check-row:last-child { border-bottom: 0; }
+  .check-row .cb { width: 20px; height: 20px; border-radius: 4px; border: 2px solid var(--border); display: grid; place-items: center; flex-shrink: 0; font-size: 12px; }
+  .check-row.done .cb { background: hsl(var(--c-toolkit)); border-color: hsl(var(--c-toolkit)); color: #fff; }
+  .check-row.todo .cb { color: var(--text-muted); }
+</style>
+</head>
+<body class="admin-page">
+<div class="admin-mobile-fallback"><span class="em">🖥️</span><h2>Console solo desktop</h2></div>
+<div class="admin-shell">
+  <div data-admin-nav-mount></div>
+  <main>
+    <header class="admin-top">
+      <div><h1>Miei giochi privati</h1><div class="crumbs">Tools · Private games · 7 in design · 2 in review · 1 published</div></div>
+      <div class="spacer"></div>
+      <div class="admin-top-actions">
+        <span class="filter-chip active">Status: tutti <span class="x">▾</span></span>
+        <button class="btn-admin primary">+ Nuovo gioco</button>
+      </div>
+    </header>
+
+    <div class="admin-body" style="display: flex; flex-direction: column; gap: 18px">
+
+      <!-- Publish review highlight -->
+      <div class="publish-card">
+        <div style="display: grid; grid-template-columns: 1fr 280px; gap: 24px; align-items: center">
+          <div>
+            <h3>🎲 "Ant Wars" pronto per la review pubblica</h3>
+            <div style="font-size: 13px; color: var(--text-sec); margin-bottom: 14px">Il tuo gioco soddisfa 7/9 requisiti per il publishing community. Completa gli ultimi 2 per inviarlo alla moderation queue.</div>
+
+            <div>
+              <div class="check-row done"><div class="cb">✓</div><div><strong>Regole base scritte</strong> · 14 capitoli · 8.4k parole · ultimo update 4gg fa</div></div>
+              <div class="check-row done"><div class="cb">✓</div><div><strong>Setup chiaro</strong> · diagrammi 1-4 player · 6 immagini caricate</div></div>
+              <div class="check-row done"><div class="cb">✓</div><div><strong>Punti finali specificati</strong> · 4 condizioni vittoria definite</div></div>
+              <div class="check-row done"><div class="cb">✓</div><div><strong>Almeno 5 partite test</strong> · 12 sessioni registrate · feedback positivo</div></div>
+              <div class="check-row done"><div class="cb">✓</div><div><strong>Glossary termini</strong> · 38 termini · esempi per ognuno</div></div>
+              <div class="check-row done"><div class="cb">✓</div><div><strong>Cover art (min 600x800)</strong> · uploaded 2gg fa</div></div>
+              <div class="check-row done"><div class="cb">✓</div><div><strong>Designer note</strong> · introduzione 200+ parole</div></div>
+              <div class="check-row todo"><div class="cb"></div><div><strong>FAQ minimo 10 domande</strong> · 7/10 al momento <span style="color: hsl(38 90% 50%); font-family: var(--f-mono); font-size: 10px">3 mancanti</span></div></div>
+              <div class="check-row todo"><div class="cb"></div><div><strong>Lingua secondaria</strong> · traduzione EN richiesta per community release <span style="color: hsl(38 90% 50%); font-family: var(--f-mono); font-size: 10px">0% completata</span></div></div>
+            </div>
+          </div>
+          <div>
+            <div style="background: var(--bg-card); border-radius: 10px; padding: 14px; text-align: center">
+              <div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em">Completamento</div>
+              <div style="font-family: var(--f-display); font-size: 36px; font-weight: 800; line-height: 1; margin: 6px 0; color: hsl(var(--c-toolkit))">78%</div>
+              <div style="height: 6px; background: var(--bg-muted); border-radius: 999px; overflow: hidden"><div style="height: 100%; width: 78%; background: hsl(var(--c-toolkit))"></div></div>
+              <button class="btn-admin primary" style="width: 100%; margin-top: 14px" disabled>📤 Submit (2 mancano)</button>
+              <button class="btn-admin" style="width: 100%; margin-top: 6px">👁 Anteprima pubblica</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pg-grid">
+        <div class="pg-card">
+          <div class="pg-cover" style="background: linear-gradient(135deg, hsl(28, 84%, 45%), hsl(348, 78%, 42%))"><span>🐜</span><span class="lock">🔒 PRIVATO</span></div>
+          <div class="pg-body">
+            <div class="pg-name">Ant Wars</div>
+            <div class="pg-meta">2-4p · 60-90min · medium</div>
+            <span class="pg-status ready">Ready for review</span>
+            <div class="pg-stats"><span>v0.4</span><span>·</span><span>12 partite test</span><span>·</span><span>updated 4gg fa</span></div>
+          </div>
+        </div>
+
+        <div class="pg-card">
+          <div class="pg-cover" style="background: linear-gradient(135deg, hsl(235, 64%, 56%), hsl(220, 80%, 35%))"><span>🌌</span><span class="lock">🔒 PRIVATO</span></div>
+          <div class="pg-body">
+            <div class="pg-name">Stellar Cartographers</div>
+            <div class="pg-meta">3-5p · 90-120min · heavy</div>
+            <span class="pg-status beta">In playtest</span>
+            <div class="pg-stats"><span>v0.6</span><span>·</span><span>24 partite</span><span>·</span><span>updated 2gg fa</span></div>
+          </div>
+        </div>
+
+        <div class="pg-card">
+          <div class="pg-cover" style="background: linear-gradient(135deg, hsl(168, 60%, 38%), hsl(142, 54%, 32%))"><span>🌿</span><span class="lock">🔒 PRIVATO</span></div>
+          <div class="pg-body">
+            <div class="pg-name">Garden Keepers</div>
+            <div class="pg-meta">1-4p · 45-60min · light</div>
+            <span class="pg-status draft">Draft</span>
+            <div class="pg-stats"><span>v0.2</span><span>·</span><span>3 partite</span><span>·</span><span>updated 12gg fa</span></div>
+          </div>
+        </div>
+
+        <div class="pg-card">
+          <div class="pg-cover" style="background: linear-gradient(135deg, hsl(262, 83%, 58%), hsl(290, 75%, 50%))"><span>🃏</span><span class="lock">🔒 PRIVATO</span></div>
+          <div class="pg-body">
+            <div class="pg-name">Diceforge: Padova</div>
+            <div class="pg-meta">2-4p · 30-45min · light-medium</div>
+            <span class="pg-status draft">Draft</span>
+            <div class="pg-stats"><span>v0.1</span><span>·</span><span>1 partita</span><span>·</span><span>updated 18gg fa</span></div>
+          </div>
+        </div>
+
+        <div class="pg-card">
+          <div class="pg-cover" style="background: linear-gradient(135deg, hsl(348, 78%, 52%), hsl(28, 84%, 45%))"><span>🔥</span><span class="lock">🔒 PRIVATO</span></div>
+          <div class="pg-body">
+            <div class="pg-name">Magma Forge</div>
+            <div class="pg-meta">2-3p · 60min · medium</div>
+            <span class="pg-status beta">In playtest</span>
+            <div class="pg-stats"><span>v0.5</span><span>·</span><span>18 partite</span><span>·</span><span>updated 6gg fa</span></div>
+          </div>
+        </div>
+
+        <div class="pg-card">
+          <div class="pg-cover" style="background: linear-gradient(135deg, hsl(38, 90%, 56%), hsl(28, 84%, 45%))"><span>🏜️</span><span class="lock">🔒 PRIVATO</span></div>
+          <div class="pg-body">
+            <div class="pg-name">Desert Caravan</div>
+            <div class="pg-meta">2-6p · 45min · medium</div>
+            <span class="pg-status ready">Ready for review</span>
+            <div class="pg-stats"><span>v0.3</span><span>·</span><span>8 partite</span><span>·</span><span>updated 14gg fa</span></div>
+          </div>
+        </div>
+
+        <div class="pg-card">
+          <div class="pg-cover" style="background: linear-gradient(135deg, hsl(142, 54%, 42%), hsl(168, 60%, 38%))"><span>🏆</span></div>
+          <div class="pg-body">
+            <div class="pg-name">Boardgame Bistro</div>
+            <div class="pg-meta">2-4p · 30min · light</div>
+            <span class="pg-status published">Published 🎉</span>
+            <div class="pg-stats"><span>v1.2 stable</span><span>·</span><span>247 install</span><span>·</span><span>★ 4.6</span></div>
+          </div>
+        </div>
+
+        <div class="new-card">
+          <span class="em">+</span>
+          <div style="font-family: var(--f-display); font-weight: 800; font-size: 14px">Nuovo gioco privato</div>
+          <div style="font-size: 11px; max-width: 200px; text-align: center; line-height: 1.4">Wizard 7 step · template ready · auto-save</div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+<script src="admin-nav.js"></script><script>renderAdminNav('private-games');</script>
+</body></html>

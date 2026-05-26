@@ -1,0 +1,1020 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MeepleAI — State Matrix · 8 route × 5 stati</title>
+<!--
+  Mockup: state-matrix
+  Type:   dev-fixture (companion a 01-screens.html)
+  Scope:  cross-route state coverage per i 3 segmenti attivi
+          (Aaron libro-game + boardgamer + casual browser)
+  Spec:   docs/superpowers/specs/2026-05-23-mockup-refinement-aaron-core-design.md sezione 3 (B18)
+  Audit:  docs/for-developers/audits/2026-05-22-mockup-gaps.md § P3 state matrix
+
+  Grid: 8 route × 5 stati = 40 cell (35 effettive + 5 skip).
+  Permission-denied applicato SOLO a 3 route (translate, chat, sessions/live).
+  Mobile-only viewport 375 (come 01-screens.html). Light + dark inline toggle.
+
+  ROUTE MAPPING (segmento + entity color):
+  - /library/[gameId]/play/[campaignId]/translate  Aaron CORE     --c-game (orange)
+  - /library/[gameId]/play                          Aaron resume   --c-game (orange)
+  - /chat/[threadId]                                Aaron+boardg   --c-agent (purple)
+  - /game-nights                                    boardgamer     --c-session (indigo)
+  - /sessions/live/[sessionId]                      boardgamer     --c-session (indigo)
+  - /shared-games                                   browser        --c-toolkit (teal)
+  - /discover                                       browser cross  --c-toolkit (teal)
+  - /notifications                                  cross-cutting  --c-kb (blue)
+
+  PATTERN SOURCES (reuse trace):
+  - Empty:      pattern stand-alone (icon 96px + tagline + CTA)
+  - Error:      see librogame-runthrough-error-states.html (icon + message + retry)
+  - Loading:    see librogame-runthrough-translate-viewer.html (Task 2 sez 1b 4-step skeleton)
+  - Permission: tier-locked pattern (future B13 /pricing — link dead-end finché B13 ships)
+  - Offline:    pattern stand-alone (banner top persistent + cache 80% opacity)
+
+  ILLUSTRATION ECONOMY (~5 unique tematici):
+  - "book"     translate + play
+  - "speak"    chat + notifications
+  - "calendar" game-nights + sessions-live
+  - "compass"  shared-games + discover
+
+  CROSS-REFS:
+  - 01-screens.html (companion dev-fixture, 24 mobile happy-path screens)
+  - librogame-runthrough-error-states.html (Task 1, 10 error sub-states)
+  - librogame-runthrough-translate-viewer.html (Task 2 + 4, loading + reader-mode + multi-lang)
+  - chat-fullscreen.html (Task 5, B11b #491)
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+
+<style>
+  body { background: var(--bg); color: var(--text); font-family: var(--f-body); margin: 0; }
+
+  .top {
+    position: sticky; top: 0; z-index: var(--z-sticky);
+    backdrop-filter: blur(12px); background: var(--glass-bg);
+    border-bottom: 1px solid var(--border);
+    padding: var(--s-4) var(--s-6);
+    display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap;
+  }
+  .top h1 { font-family: var(--f-display); font-size: var(--fs-lg); margin: 0; font-weight: var(--fw-bold); }
+  .top .meta { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); padding: 2px var(--s-2); border-radius: var(--r-sm); background: var(--bg-muted); }
+  .top .spacer { flex: 1; }
+  .top button {
+    background: var(--bg-card); border: 1px solid var(--border); color: var(--text);
+    border-radius: var(--r-pill); padding: var(--s-1) var(--s-3);
+    font-family: var(--f-mono); font-size: var(--fs-xs); cursor: pointer;
+  }
+
+  .stage { padding: var(--s-7) var(--s-6); max-width: 1700px; margin: 0 auto; }
+
+  /* Matrix grid 8 rows × 6 cols (1 header + 5 stati) */
+  .matrix {
+    display: grid;
+    grid-template-columns: 200px repeat(5, minmax(220px, 1fr));
+    gap: var(--s-4);
+    align-items: start;
+  }
+  .matrix .hdr-state {
+    position: sticky; top: 72px; z-index: 9;
+    background: var(--bg);
+    padding: var(--s-3) var(--s-2);
+    font-family: var(--f-display); font-weight: var(--fw-bold);
+    font-size: var(--fs-md); color: var(--text);
+    text-align: center;
+    border-bottom: 2px solid var(--border-strong);
+  }
+  .matrix .hdr-state .ico { font-size: var(--fs-lg); display: block; margin-bottom: 2px; }
+  .matrix .hdr-corner { background: var(--bg); border-bottom: 2px solid var(--border-strong); }
+
+  .matrix .hdr-route {
+    padding: var(--s-3) var(--s-3);
+    display: flex; flex-direction: column; gap: var(--s-2);
+    border-right: 2px solid var(--border-strong);
+    position: sticky; left: 0; z-index: 5;
+    background: var(--bg);
+  }
+  .matrix .hdr-route .path {
+    font-family: var(--f-mono); font-size: 11px; color: var(--text);
+    font-weight: var(--fw-bold); line-height: 1.3;
+    word-break: break-all;
+  }
+  .matrix .hdr-route .seg {
+    font-family: var(--f-mono); font-size: 10px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .matrix .hdr-route .entity-dot {
+    width: 12px; height: 12px; border-radius: 50%;
+    display: inline-block; margin-right: var(--s-1);
+  }
+
+  /* Phone mini frame: 220×440 vs 375×740 standard */
+  .frame {
+    width: 220px; min-height: 440px;
+    background: var(--bg); border-radius: 22px;
+    border: 1px solid var(--border-strong); box-shadow: var(--shadow-md);
+    overflow: hidden; display: flex; flex-direction: column;
+    position: relative; margin: 0 auto;
+  }
+  .frame.skip {
+    background: var(--bg-muted); border-style: dashed;
+    align-items: center; justify-content: center;
+    min-height: 200px; padding: var(--s-4); text-align: center;
+  }
+  .frame.skip .skip-msg {
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .frame .sbar {
+    height: 22px; flex-shrink: 0;
+    padding: 4px 14px 0;
+    display: flex; justify-content: space-between;
+    font-size: 9px; font-weight: var(--fw-bold); color: var(--text-sec);
+  }
+  .frame .app-bar {
+    height: 32px; padding: 0 var(--s-3); flex-shrink: 0;
+    display: flex; align-items: center; gap: var(--s-2);
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-card);
+  }
+  .frame .app-bar .back { font-size: 14px; color: var(--text-sec); }
+  .frame .app-bar .title { font-size: 11px; font-weight: var(--fw-bold); color: var(--text); flex: 1; }
+  .frame .body {
+    flex: 1; padding: var(--s-3);
+    display: flex; flex-direction: column; gap: var(--s-3);
+    overflow: hidden;
+  }
+
+  /* --- Empty state pattern (centered icon + tagline + CTA) --- */
+  .empty {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: var(--s-3); padding: var(--s-3); text-align: center;
+  }
+  .empty .icon {
+    font-size: 48px; line-height: 1;
+    width: 80px; height: 80px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    background: var(--entity-grad, hsl(var(--c-kb) / 0.12));
+  }
+  .empty .title {
+    font-family: var(--f-display); font-weight: var(--fw-bold);
+    font-size: 13px; color: var(--text); line-height: 1.3;
+  }
+  .empty .desc {
+    font-size: 10px; color: var(--text-sec); line-height: 1.4;
+  }
+  .empty .cta {
+    margin-top: var(--s-2);
+    padding: 6px 14px; border-radius: var(--r-pill);
+    background: var(--entity-color, hsl(var(--c-kb)));
+    color: #fff; font-weight: var(--fw-bold); font-size: 10px;
+    border: none; cursor: pointer;
+  }
+
+  /* --- Error state pattern (banner + retry) --- */
+  .err-banner {
+    background: hsl(var(--c-danger) / 0.08);
+    border: 1px solid hsl(var(--c-danger) / 0.25);
+    border-radius: var(--r-md);
+    padding: var(--s-3);
+    display: flex; flex-direction: column; gap: var(--s-2);
+  }
+  .err-banner .head {
+    display: flex; align-items: center; gap: var(--s-2);
+    font-size: 11px; font-weight: var(--fw-bold); color: hsl(var(--c-danger));
+  }
+  .err-banner .msg {
+    font-size: 10px; color: var(--text-sec); line-height: 1.4;
+  }
+  .err-banner .actions {
+    display: flex; gap: var(--s-2);
+  }
+  .err-banner .actions button {
+    flex: 1; padding: 4px 8px; border-radius: var(--r-sm);
+    font-size: 10px; font-weight: var(--fw-bold);
+    border: 1px solid hsl(var(--c-danger) / 0.4);
+    background: var(--bg-card); color: hsl(var(--c-danger));
+    cursor: pointer;
+  }
+  .err-banner .actions .primary {
+    background: hsl(var(--c-danger));
+    color: #fff; border-color: hsl(var(--c-danger));
+  }
+  .err-banner .actions .secondary {
+    background: transparent; color: var(--text-muted); border-color: var(--border);
+  }
+  .ref-note {
+    font-size: 9px; color: var(--text-muted); font-family: var(--f-mono);
+    margin-top: var(--s-2); padding-top: var(--s-2);
+    border-top: 1px dashed var(--border);
+  }
+
+  /* --- Loading skeleton + shimmer --- */
+  .skeleton { background: var(--bg-muted); border-radius: var(--r-sm); position: relative; overflow: hidden; }
+  .skeleton::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.4), transparent);
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+  @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton::after { animation: none; background: var(--bg-muted); }
+  }
+  .skeleton-card { height: 60px; }
+  .skeleton-line { height: 12px; margin-bottom: var(--s-2); }
+  .skeleton-line.w70 { width: 70%; }
+  .skeleton-line.w50 { width: 50%; }
+  .skeleton-line.w85 { width: 85%; }
+
+  /* --- Loading 4-step pattern (Task 2 sez 1b ref) --- */
+  .load-steps {
+    display: flex; flex-direction: column; gap: var(--s-2);
+  }
+  .load-steps .step {
+    display: flex; align-items: center; gap: var(--s-2);
+    font-size: 10px; color: var(--text-sec);
+    padding: 4px 8px; border-radius: var(--r-sm);
+  }
+  .load-steps .step.active {
+    background: hsl(var(--c-game) / 0.08);
+    color: hsl(var(--c-game)); font-weight: var(--fw-bold);
+  }
+  .load-steps .step .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--border-strong);
+  }
+  .load-steps .step.active .dot {
+    background: hsl(var(--c-game)); animation: pulse 1s ease-in-out infinite;
+  }
+  .load-steps .step.done .dot { background: hsl(var(--c-success)); }
+  @keyframes pulse { 50% { transform: scale(1.3); } }
+  @media (prefers-reduced-motion: reduce) {
+    .load-steps .step.active .dot { animation: none; }
+  }
+
+  /* --- Permission-denied pattern (tier-locked) --- */
+  .perm-locked {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: var(--s-3); padding: var(--s-3); text-align: center;
+  }
+  .perm-locked .lock {
+    font-size: 36px; line-height: 1;
+    color: hsl(var(--c-warning));
+  }
+  .perm-locked .tier-badge {
+    display: inline-block;
+    padding: 3px 10px; border-radius: var(--r-pill);
+    background: hsl(var(--c-warning) / 0.18);
+    color: hsl(var(--c-warning));
+    font-family: var(--f-mono); font-size: 10px; font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .perm-locked .title {
+    font-family: var(--f-display); font-weight: var(--fw-bold);
+    font-size: 12px; color: var(--text); line-height: 1.3;
+  }
+  .perm-locked .desc {
+    font-size: 10px; color: var(--text-sec); line-height: 1.4;
+  }
+  .perm-locked .cta-row {
+    display: flex; flex-direction: column; gap: var(--s-2); margin-top: var(--s-2); width: 100%;
+  }
+  .perm-locked .cta-primary {
+    padding: 6px 14px; border-radius: var(--r-pill);
+    background: hsl(var(--c-warning)); color: #fff;
+    font-weight: var(--fw-bold); font-size: 10px; border: none; cursor: pointer;
+  }
+  .perm-locked .cta-secondary {
+    padding: 4px 12px; border-radius: var(--r-sm);
+    background: transparent; color: var(--text-muted);
+    font-size: 10px; border: 1px solid var(--border); cursor: pointer;
+  }
+
+  /* --- Offline banner + cache-stale --- */
+  .offline-banner {
+    background: hsl(var(--c-info) / 0.12);
+    border: 1px solid hsl(var(--c-info) / 0.3);
+    border-radius: var(--r-md);
+    padding: var(--s-2) var(--s-3);
+    font-size: 10px; color: hsl(var(--c-info));
+    display: flex; align-items: center; gap: var(--s-2);
+    font-weight: var(--fw-bold);
+  }
+  .offline-banner .retry {
+    margin-left: auto; padding: 2px 8px; border-radius: var(--r-sm);
+    background: hsl(var(--c-info)); color: #fff;
+    font-size: 9px; border: none; cursor: pointer;
+  }
+  .cached-data {
+    opacity: 0.8;
+    display: flex; flex-direction: column; gap: var(--s-2);
+    flex: 1;
+  }
+  .cached-data .cached-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--r-sm); padding: var(--s-2);
+    font-size: 10px; color: var(--text);
+  }
+  .cached-data .cached-card .meta { font-size: 9px; color: var(--text-muted); margin-top: 2px; }
+
+  /* Entity color presets (CSS class for empty bg) */
+  .ec-game { --entity-color: hsl(var(--c-game)); --entity-grad: linear-gradient(135deg, hsl(var(--c-game) / 0.18), hsl(var(--c-game) / 0.06)); }
+  .ec-agent { --entity-color: hsl(var(--c-agent)); --entity-grad: linear-gradient(135deg, hsl(var(--c-agent) / 0.18), hsl(var(--c-agent) / 0.06)); }
+  .ec-session { --entity-color: hsl(var(--c-session)); --entity-grad: linear-gradient(135deg, hsl(var(--c-session) / 0.18), hsl(var(--c-session) / 0.06)); }
+  .ec-toolkit { --entity-color: hsl(var(--c-toolkit)); --entity-grad: linear-gradient(135deg, hsl(var(--c-toolkit) / 0.18), hsl(var(--c-toolkit) / 0.06)); }
+  .ec-kb { --entity-color: hsl(var(--c-kb)); --entity-grad: linear-gradient(135deg, hsl(var(--c-kb) / 0.18), hsl(var(--c-kb) / 0.06)); }
+
+  /* Misc inline elements */
+  .typing-dots { display: inline-flex; gap: 3px; }
+  .typing-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); animation: typing 1.4s infinite; }
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typing { 0%, 60%, 100% { opacity: 0.3; } 30% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .typing-dots span { animation: none; } }
+
+  .calendar-mini {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+    font-size: 9px; color: var(--text-sec);
+  }
+  .calendar-mini .cd { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; background: var(--bg-muted); border-radius: var(--r-sm); }
+  .calendar-mini .cd.has { background: hsl(var(--c-session) / 0.2); color: hsl(var(--c-session)); font-weight: var(--fw-bold); }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>🎯 State Matrix</h1>
+  <span class="meta">dev-fixture · 8 route × 5 stati · mobile 375</span>
+  <span class="spacer"></span>
+  <span class="meta">Spec: 2026-05-23 § B18</span>
+  <button onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'">☀/☾ toggle</button>
+</header>
+
+<main class="stage">
+
+  <p style="font-size: 13px; color: var(--text-sec); margin: 0 0 var(--s-6); max-width: 70ch;">
+    Matrix di coverage 8 route critiche × 5 stati canonici (Empty · Error · Loading · Permission · Offline).
+    Permission-denied applicato solo a 3 route tier-locked (translate · chat · sessions/live).
+    Le cell con <code>—</code> sono universally accessible (no permission gate). Ogni stato ha pattern documentato
+    riusabile, con reuse trace nei commenti HTML head. Foundation per Phase 2-3 raffinamenti.
+  </p>
+
+  <div class="matrix">
+    <!-- Header row -->
+    <div class="hdr-corner"></div>
+    <div class="hdr-state"><span class="ico">⊘</span>Empty</div>
+    <div class="hdr-state"><span class="ico">⚠</span>Error</div>
+    <div class="hdr-state"><span class="ico">⏳</span>Loading</div>
+    <div class="hdr-state"><span class="ico">🔒</span>Permission</div>
+    <div class="hdr-state"><span class="ico">📡</span>Offline</div>
+
+    <!-- ════════ ROUTE A: /library/[gameId]/play/[campaignId]/translate ════════ -->
+    <div class="hdr-route">
+      <span class="entity-dot" style="background: hsl(var(--c-game))"></span>
+      <span class="seg">Aaron CORE</span>
+      <span class="path">/library/[gameId]/play/[campaignId]/translate</span>
+    </div>
+
+    <!-- A1 translate Empty -->
+    <div class="frame ec-game">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Sera con i ragazzi · §</span></div>
+      <div class="body">
+        <div class="empty">
+          <div class="icon">📷</div>
+          <div class="title">Fotografa una pagina</div>
+          <div class="desc">Inquadra il libro fisico per tradurre il paragrafo corrente.</div>
+          <button class="cta">Apri camera</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- A2 translate Error -->
+    <!-- pattern: see librogame-runthrough-error-states.html state-B ocr-fail -->
+    <div class="frame ec-game">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Sera · OCR errore</span></div>
+      <div class="body">
+        <div class="err-banner">
+          <div class="head"><span>📷</span><span>OCR illeggibile</span></div>
+          <div class="msg">Confidence 0.18 — testo troppo sfocato per essere letto.</div>
+          <div class="actions">
+            <button class="primary">Rifotografa</button>
+            <button class="secondary">Manuale</button>
+          </div>
+          <div class="ref-note">💰 0 token consumati · ref state-B</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- A3 translate Loading -->
+    <!-- pattern: see librogame-runthrough-translate-viewer.html Task 2 sez 1b 4-step -->
+    <div class="frame ec-game">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Sera · §147 traduco</span></div>
+      <div class="body">
+        <div class="load-steps">
+          <div class="step done"><span class="dot"></span><span>Caricamento foto…</span></div>
+          <div class="step done"><span class="dot"></span><span>Sto leggendo il libro…</span></div>
+          <div class="step active"><span class="dot"></span><span>Sto traducendo…</span></div>
+          <div class="step"><span class="dot"></span><span>Cerco parole nel glossario…</span></div>
+        </div>
+        <div class="skeleton skeleton-line w85"></div>
+        <div class="skeleton skeleton-line w70"></div>
+        <div class="skeleton skeleton-line w50"></div>
+      </div>
+    </div>
+
+    <!-- A4 translate Permission -->
+    <div class="frame ec-game">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Sera · quota</span></div>
+      <div class="body">
+        <div class="perm-locked">
+          <div class="lock">🔒</div>
+          <div class="tier-badge">Pro</div>
+          <div class="title">Quota OCR esaurita</div>
+          <div class="desc">Hai usato 50/50 traduzioni questo mese. Passa a Pro per illimitate.</div>
+          <div class="cta-row">
+            <button class="cta-primary">Esplora piani →</button>
+            <button class="cta-secondary">Torna indietro</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- A5 translate Offline -->
+    <div class="frame ec-game">
+      <div class="sbar"><span>22:14</span><span>📵 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Sera · §147</span></div>
+      <div class="body">
+        <div class="offline-banner">📡 Offline — dati salvati<button class="retry">Riprova</button></div>
+        <div class="cached-data">
+          <div class="cached-card">
+            <div><strong>§ 147 · last cached</strong></div>
+            <div style="margin-top: 4px;">"Il guardiano della soglia ti osserva con occhi ferrigni…"</div>
+            <div class="meta">cached 18 min fa · tradotto IT</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ ROUTE B: /library/[gameId]/play ════════ -->
+    <div class="hdr-route">
+      <span class="entity-dot" style="background: hsl(var(--c-game))"></span>
+      <span class="seg">Aaron resume</span>
+      <span class="path">/library/[gameId]/play</span>
+    </div>
+
+    <!-- B1 play Empty -->
+    <div class="frame ec-game">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Press Start · campagne</span></div>
+      <div class="body">
+        <div class="empty">
+          <div class="icon">📖</div>
+          <div class="title">Nessuna campagna</div>
+          <div class="desc">Inizia un libro-game per creare la tua prima sessione.</div>
+          <button class="cta">Sfoglia libreria</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- B2 play Error -->
+    <!-- pattern: see librogame-runthrough-error-states.html -->
+    <div class="frame ec-game">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Press Start</span></div>
+      <div class="body">
+        <div class="err-banner">
+          <div class="head"><span>⚠</span><span>Errore caricamento</span></div>
+          <div class="msg">Non riesco a caricare le tue campagne. Verifica la connessione.</div>
+          <div class="actions">
+            <button class="primary">Riprova</button>
+            <button class="secondary">Segnala</button>
+          </div>
+          <div class="ref-note">ref error-states pattern</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B3 play Loading -->
+    <div class="frame ec-game">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Press Start</span></div>
+      <div class="body">
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>
+      </div>
+    </div>
+
+    <!-- B4 skip — universally accessible -->
+    <div class="frame skip" role="img" aria-label="Skip: universally accessible">
+      <div class="skip-msg">— <br>Universally<br>accessible</div>
+    </div>
+
+    <!-- B5 play Offline -->
+    <div class="frame ec-game">
+      <div class="sbar"><span>22:14</span><span>📵 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Press Start</span></div>
+      <div class="body">
+        <div class="offline-banner">📡 Offline<button class="retry">Riprova</button></div>
+        <div class="cached-data">
+          <div class="cached-card">
+            <strong>Sera con i ragazzi</strong>
+            <div style="margin-top: 4px;">§ 147 · resume</div>
+            <div class="meta">last sync 24h fa</div>
+          </div>
+          <div class="cached-card">
+            <strong>Run solo</strong>
+            <div style="margin-top: 4px;">§ 38 · resume</div>
+            <div class="meta">last sync 3g fa</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ ROUTE C: /chat/[threadId] ════════ -->
+    <div class="hdr-route">
+      <span class="entity-dot" style="background: hsl(var(--c-agent))"></span>
+      <span class="seg">Aaron + boardgamer</span>
+      <span class="path">/chat/[threadId]</span>
+    </div>
+
+    <!-- C1 chat Empty (riusa quick-starter Aaron variant) -->
+    <!-- pattern: see chat-fullscreen.html B11b-3 -->
+    <div class="frame ec-agent">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Nuova chat</span></div>
+      <div class="body">
+        <div class="empty">
+          <div class="icon">💬</div>
+          <div class="title">Inizia una conversazione</div>
+          <div class="desc">Chiedi al tuo agent una regola, una strategia o un riassunto.</div>
+          <button class="cta">Quali sono le regole di Press Start?</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- C2 chat Error -->
+    <!-- pattern: see chat-fullscreen.html stream-error state -->
+    <div class="frame ec-agent">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Sera · chat</span></div>
+      <div class="body">
+        <div class="err-banner">
+          <div class="head"><span>⚠</span><span>Errore stream</span></div>
+          <div class="msg">La risposta è stata interrotta. Il tuo messaggio è preservato.</div>
+          <div class="actions">
+            <button class="primary">Riprova</button>
+            <button class="secondary">Cambia agent</button>
+          </div>
+          <div class="ref-note">last user msg in composer</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- C3 chat Loading (typing indicator + skeleton bubble) -->
+    <div class="frame ec-agent">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Sera · chat</span></div>
+      <div class="body">
+        <div style="background: hsl(var(--c-agent) / 0.08); border-radius: var(--r-md); padding: var(--s-3); font-size: 10px; color: var(--text-sec); align-self: flex-start; max-width: 80%;">
+          <div style="display: flex; align-items: center; gap: var(--s-2);">
+            <span class="typing-dots"><span></span><span></span><span></span></span>
+            <span style="font-size: 9px; color: var(--text-muted);">Sto pensando…</span>
+          </div>
+        </div>
+        <div class="skeleton skeleton-line w85"></div>
+        <div class="skeleton skeleton-line w70"></div>
+      </div>
+    </div>
+
+    <!-- C4 chat Permission -->
+    <div class="frame ec-agent">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">chat · quota</span></div>
+      <div class="body">
+        <div class="perm-locked">
+          <div class="lock">🔒</div>
+          <div class="tier-badge">Pro</div>
+          <div class="title">Quota chat esaurita</div>
+          <div class="desc">100/100 messaggi questo mese. Passa a Pro per illimitate.</div>
+          <div class="cta-row">
+            <button class="cta-primary">Esplora piani →</button>
+            <button class="cta-secondary">Torna indietro</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- C5 chat Offline -->
+    <div class="frame ec-agent">
+      <div class="sbar"><span>22:14</span><span>📵 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Sera · chat</span></div>
+      <div class="body">
+        <div class="offline-banner">📡 Offline — msg history cached<button class="retry">Sync</button></div>
+        <div class="cached-data">
+          <div class="cached-card">
+            <strong>Aaron:</strong> Come si risolve §147?
+            <div class="meta">22:08 · synced</div>
+          </div>
+          <div class="cached-card">
+            <strong>Agent:</strong> "Il guardiano richiede la Runa…"
+            <div class="meta">22:08 · synced</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ ROUTE D: /game-nights ════════ -->
+    <div class="hdr-route">
+      <span class="entity-dot" style="background: hsl(var(--c-session))"></span>
+      <span class="seg">boardgamer</span>
+      <span class="path">/game-nights</span>
+    </div>
+
+    <!-- D1 game-nights Empty -->
+    <div class="frame ec-session">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Serate</span></div>
+      <div class="body">
+        <div class="empty">
+          <div class="icon">🎲</div>
+          <div class="title">Crea la prima serata</div>
+          <div class="desc">Pianifica una serata, invita amici, scegli i giochi.</div>
+          <button class="cta">+ Nuova serata</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- D2 game-nights Error -->
+    <div class="frame ec-session">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Serate</span></div>
+      <div class="body">
+        <div class="err-banner">
+          <div class="head"><span>⚠</span><span>Calendar non disponibile</span></div>
+          <div class="msg">Non riesco a caricare il calendario serate.</div>
+          <div class="actions">
+            <button class="primary">Riprova</button>
+            <button class="secondary">Segnala</button>
+          </div>
+          <div class="ref-note">ref error-states pattern</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- D3 game-nights Loading (calendar skeleton 7-day) -->
+    <div class="frame ec-session">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Serate</span></div>
+      <div class="body">
+        <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 4px;">Maggio 2026</div>
+        <div class="calendar-mini">
+          <div class="cd skeleton">L</div><div class="cd skeleton">M</div><div class="cd skeleton">M</div><div class="cd skeleton">G</div><div class="cd skeleton">V</div><div class="cd skeleton">S</div><div class="cd skeleton">D</div>
+          <div class="cd skeleton"></div><div class="cd skeleton"></div><div class="cd skeleton"></div><div class="cd skeleton"></div><div class="cd skeleton"></div><div class="cd skeleton"></div><div class="cd skeleton"></div>
+        </div>
+        <div class="skeleton skeleton-card" style="margin-top: var(--s-3);"></div>
+      </div>
+    </div>
+
+    <!-- D4 skip — universally accessible -->
+    <div class="frame skip">
+      <div class="skip-msg">— <br>Universally<br>accessible</div>
+    </div>
+
+    <!-- D5 game-nights Offline -->
+    <div class="frame ec-session">
+      <div class="sbar"><span>22:14</span><span>📵 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Serate</span></div>
+      <div class="body">
+        <div class="offline-banner">📡 Offline<button class="retry">Sync</button></div>
+        <div class="cached-data">
+          <div class="cached-card">
+            <strong>Sab 18 Mag · Casa Marco</strong>
+            <div style="margin-top: 4px;">Wingspan + Carcassonne · 4 pax</div>
+            <div class="meta">RSVP confermati: 3/4</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ ROUTE E: /sessions/live/[sessionId] ════════ -->
+    <div class="hdr-route">
+      <span class="entity-dot" style="background: hsl(var(--c-session))"></span>
+      <span class="seg">boardgamer</span>
+      <span class="path">/sessions/live/[sessionId]</span>
+    </div>
+
+    <!-- E1 sessions-live Empty -->
+    <div class="frame ec-session">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Sessione live</span></div>
+      <div class="body">
+        <div class="empty">
+          <div class="icon">⏳</div>
+          <div class="title">Aspetta che host inizi</div>
+          <div class="desc">L'host non ha ancora avviato la sessione. Riceverai una notifica.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- E2 sessions-live Error (SSE disconnect) -->
+    <div class="frame ec-session">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Sessione live</span></div>
+      <div class="body">
+        <div class="err-banner">
+          <div class="head"><span>📡</span><span>Connessione persa</span></div>
+          <div class="msg">SSE disconnesso. Riconnessione automatica in corso…</div>
+          <div class="actions">
+            <button class="primary">Riconnetti ora</button>
+            <button class="secondary">Modalità local</button>
+          </div>
+          <div class="ref-note">retry exponential backoff · 3 tentativi</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- E3 sessions-live Loading -->
+    <div class="frame ec-session">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Sessione live</span></div>
+      <div class="body">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: var(--s-3); flex: 1; justify-content: center;">
+          <div style="width: 80px; height: 100px; background: var(--bg-muted); border-radius: var(--r-md); border: 1px solid var(--border);"></div>
+          <div class="typing-dots"><span></span><span></span><span></span></div>
+          <div style="font-size: 10px; color: var(--text-muted);">Inizializzo sessione…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- E4 sessions-live Permission (host-only) -->
+    <div class="frame ec-session">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">live · host-only</span></div>
+      <div class="body">
+        <div class="perm-locked">
+          <div class="lock">🔒</div>
+          <div class="tier-badge">Host-only</div>
+          <div class="title">Solo l'host può iniziare</div>
+          <div class="desc">Aspetta che la sessione si attivi. Marco (host) verrà notificato.</div>
+          <div class="cta-row">
+            <button class="cta-secondary">Torna alla serata</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- E5 sessions-live Offline (local-only mode) -->
+    <div class="frame ec-session">
+      <div class="sbar"><span>22:14</span><span>📵 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">live · local</span></div>
+      <div class="body">
+        <div class="offline-banner">📡 Offline — local-only<button class="retry">Sync</button></div>
+        <div class="cached-data">
+          <div class="cached-card">
+            <strong>Wingspan · Turn 4</strong>
+            <div style="margin-top: 4px;">Aaron: 12 pt · Marco: 18 pt</div>
+            <div class="meta">salvataggio locale · sync on reconnect</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ ROUTE F: /shared-games ════════ -->
+    <div class="hdr-route">
+      <span class="entity-dot" style="background: hsl(var(--c-toolkit))"></span>
+      <span class="seg">browser</span>
+      <span class="path">/shared-games</span>
+    </div>
+
+    <!-- F1 shared-games Empty (improbabile) -->
+    <div class="frame ec-toolkit">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Catalogo</span></div>
+      <div class="body">
+        <div class="empty">
+          <div class="icon">📚</div>
+          <div class="title">Catalog vuoto</div>
+          <div class="desc">Riprova fra qualche minuto — stiamo importando.</div>
+          <button class="cta">Riprova</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- F2 shared-games Error -->
+    <div class="frame ec-toolkit">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Catalogo</span></div>
+      <div class="body">
+        <div class="err-banner">
+          <div class="head"><span>⚠</span><span>Catalogo non disponibile</span></div>
+          <div class="msg">Non riesco a caricare i giochi condivisi.</div>
+          <div class="actions">
+            <button class="primary">Riprova</button>
+            <button class="secondary">Segnala</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- F3 shared-games Loading (card-grid 6-skeleton) -->
+    <div class="frame ec-toolkit">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Catalogo</span></div>
+      <div class="body">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2);">
+          <div class="skeleton" style="aspect-ratio: 3/4;"></div>
+          <div class="skeleton" style="aspect-ratio: 3/4;"></div>
+          <div class="skeleton" style="aspect-ratio: 3/4;"></div>
+          <div class="skeleton" style="aspect-ratio: 3/4;"></div>
+          <div class="skeleton" style="aspect-ratio: 3/4;"></div>
+          <div class="skeleton" style="aspect-ratio: 3/4;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- F4 skip — universally accessible (public catalog) -->
+    <div class="frame skip">
+      <div class="skip-msg">— <br>Public<br>catalog</div>
+    </div>
+
+    <!-- F5 shared-games Offline -->
+    <div class="frame ec-toolkit">
+      <div class="sbar"><span>22:14</span><span>📵 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Catalogo</span></div>
+      <div class="body">
+        <div class="offline-banner">📡 Offline · cached<button class="retry">Sync</button></div>
+        <div class="cached-data">
+          <div class="cached-card"><strong>Wingspan</strong><div class="meta">1-5p · 40min · cached</div></div>
+          <div class="cached-card"><strong>Carcassonne</strong><div class="meta">2-5p · 30min · cached</div></div>
+          <div class="cached-card"><strong>Press Start</strong><div class="meta">solo · 90min · cached</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ ROUTE G: /discover ════════ -->
+    <div class="hdr-route">
+      <span class="entity-dot" style="background: hsl(var(--c-toolkit))"></span>
+      <span class="seg">browser cross</span>
+      <span class="path">/discover</span>
+    </div>
+
+    <!-- G1 discover Empty -->
+    <div class="frame ec-toolkit">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Scopri</span></div>
+      <div class="body">
+        <div class="empty">
+          <div class="icon">🧭</div>
+          <div class="title">Nessun consiglio ora</div>
+          <div class="desc">Stiamo lavorando ai tuoi suggerimenti — torna fra poco.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- G2 discover Error -->
+    <div class="frame ec-toolkit">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Scopri</span></div>
+      <div class="body">
+        <div class="err-banner">
+          <div class="head"><span>⚠</span><span>Discovery offline</span></div>
+          <div class="msg">Il motore di raccomandazione non risponde.</div>
+          <div class="actions">
+            <button class="primary">Riprova</button>
+            <button class="secondary">Segnala</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- G3 discover Loading (rail skeleton 3-row) -->
+    <div class="frame ec-toolkit">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Scopri</span></div>
+      <div class="body">
+        <div class="skeleton skeleton-line w50"></div>
+        <div style="display: flex; gap: var(--s-2);">
+          <div class="skeleton" style="width: 60px; aspect-ratio: 3/4;"></div>
+          <div class="skeleton" style="width: 60px; aspect-ratio: 3/4;"></div>
+          <div class="skeleton" style="width: 60px; aspect-ratio: 3/4;"></div>
+        </div>
+        <div class="skeleton skeleton-line w50" style="margin-top: var(--s-2);"></div>
+        <div style="display: flex; gap: var(--s-2);">
+          <div class="skeleton" style="width: 60px; aspect-ratio: 3/4;"></div>
+          <div class="skeleton" style="width: 60px; aspect-ratio: 3/4;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- G4 skip — universally accessible -->
+    <div class="frame skip">
+      <div class="skip-msg">— <br>Universally<br>accessible</div>
+    </div>
+
+    <!-- G5 discover Offline -->
+    <div class="frame ec-toolkit">
+      <div class="sbar"><span>22:14</span><span>📵 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Scopri</span></div>
+      <div class="body">
+        <div class="offline-banner">📡 Offline · cached<button class="retry">Sync</button></div>
+        <div class="cached-data">
+          <div class="cached-card"><strong>📍 Per te (cached)</strong><div class="meta">Press Start · Brass · Wingspan</div></div>
+          <div class="cached-card"><strong>📍 Nuovi (cached)</strong><div class="meta">3 nuovi titoli · 24h fa</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ ROUTE H: /notifications ════════ -->
+    <div class="hdr-route">
+      <span class="entity-dot" style="background: hsl(var(--c-kb))"></span>
+      <span class="seg">cross-cutting</span>
+      <span class="path">/notifications</span>
+    </div>
+
+    <!-- H1 notifications Empty -->
+    <div class="frame ec-kb">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Notifiche</span></div>
+      <div class="body">
+        <div class="empty">
+          <div class="icon">🎉</div>
+          <div class="title">Sei in pari!</div>
+          <div class="desc">Nessuna notifica nuova. Goditi la pace.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- H2 notifications Error -->
+    <div class="frame ec-kb">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Notifiche</span></div>
+      <div class="body">
+        <div class="err-banner">
+          <div class="head"><span>⚠</span><span>Errore caricamento</span></div>
+          <div class="msg">Non riesco a caricare le notifiche.</div>
+          <div class="actions">
+            <button class="primary">Riprova</button>
+            <button class="secondary">Segnala</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- H3 notifications Loading -->
+    <div class="frame ec-kb">
+      <div class="sbar"><span>22:14</span><span>📶 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Notifiche</span></div>
+      <div class="body">
+        <div class="skeleton skeleton-card" style="height: 50px;"></div>
+        <div class="skeleton skeleton-card" style="height: 50px;"></div>
+        <div class="skeleton skeleton-card" style="height: 50px;"></div>
+      </div>
+    </div>
+
+    <!-- H4 skip — universally accessible -->
+    <div class="frame skip">
+      <div class="skip-msg">— <br>Universally<br>accessible</div>
+    </div>
+
+    <!-- H5 notifications Offline -->
+    <div class="frame ec-kb">
+      <div class="sbar"><span>22:14</span><span>📵 🔋 72%</span></div>
+      <div class="app-bar"><span class="back">←</span><span class="title">Notifiche</span></div>
+      <div class="body">
+        <div class="offline-banner">📡 Offline · cached<button class="retry">Sync</button></div>
+        <div class="cached-data">
+          <div class="cached-card"><strong>Marco ti invita</strong><div class="meta">Sera 18 Mag · cached</div></div>
+          <div class="cached-card"><strong>Press Start §147 tradotto</strong><div class="meta">2h fa · cached</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer style="margin-top: var(--s-10); padding-top: var(--s-6); border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted);">
+    <p><strong>Cross-references:</strong>
+      <code>librogame-runthrough-error-states.html</code> (Task 1, 10 error sub-states) ·
+      <code>librogame-runthrough-translate-viewer.html</code> (Task 2+4, loading + multi-lang) ·
+      <code>chat-fullscreen.html</code> (Task 5, B11b chiusura #491) ·
+      <code>01-screens.html</code> (companion dev-fixture happy-path).
+    </p>
+    <p><strong>Permission-denied scope:</strong> applicato solo a 3 route tier-locked (translate · chat · sessions/live). Le altre 5 route (play, game-nights, shared-games, discover, notifications) sono universally accessible.</p>
+    <p><strong>Future:</strong> il CTA "Esplora piani" punta a <code>/pricing</code> (route esistente ma senza mockup canonico — vedi audit gap, B13 future).</p>
+  </footer>
+
+</main>
+
+</body>
+</html>

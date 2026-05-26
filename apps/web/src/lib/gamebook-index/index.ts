@@ -2,7 +2,7 @@
  * Barrel re-exports for `/gamebook` index lib (SP6 Phase B Task 1).
  *
  * Consumed by:
- *   - 5 v2 components in `apps/web/src/components/v2/gamebook/` (Task 2)
+ *   - 5 feature components in `apps/web/src/components/features/gamebook/` (Task 2)
  *   - Orchestrator `GamebookIndexView.tsx` (Task 3)
  *   - E2E specs in `apps/web/e2e/` (Task 4)
  */

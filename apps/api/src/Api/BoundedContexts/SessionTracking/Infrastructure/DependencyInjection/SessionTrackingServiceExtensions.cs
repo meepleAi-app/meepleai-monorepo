@@ -39,6 +39,7 @@ internal static class SessionTrackingServiceExtensions
         services.AddScoped<IGamebookPhotoArtifactRepository, GamebookPhotoArtifactRepository>(); // Iter 1.B
         services.AddScoped<ITranslatedParagraphRepository, TranslatedParagraphRepository>(); // Iter 1.B
         services.AddScoped<IGamebookGlossaryRepository, GamebookGlossaryRepository>(); // Iter 1.B
+        services.AddScoped<ISessionBookProgressRepository, SessionBookProgressRepository>(); // Task C1 — gamebook multi-book generalization
 
         // Register Unit of Work
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
@@ -72,6 +73,9 @@ internal static class SessionTrackingServiceExtensions
 
         // Iter 1.B — Libro Game photo storage (EXIF strip adapter over IBlobStorageService)
         services.AddScoped<IGamebookPhotoStorage, GamebookPhotoStorageService>(); // Iter 1.B
+
+        // Issue #1415 — Campaign ownership guard for SSE pre-flight + handler ownership checks
+        services.AddScoped<ICampaignOwnershipGuard, CampaignOwnershipGuard>();
 
         // Iter 1.B — Tesseract OCR engine (singleton: engine is thread-safe, pages are per-call)
         services.AddSingleton<IOcrService, TesseractOcrService>(); // Iter 1.B

@@ -61,4 +61,19 @@ public class PgVectorEmbeddingEntity
     [Required]
     [Column("is_translation")]
     public bool IsTranslation { get; set; } = false;
+
+    /// <summary>
+    /// Issue #1391: denormalized copy of <c>text_chunks.role_tags</c> so semantic-mode
+    /// pgvector queries can apply the role-match boost without joining the parent table.
+    /// Sync invariant: SHOULD equal <c>text_chunks.role_tags</c> for the row identified by
+    /// <see cref="SourceChunkId"/>. Maintained at write time by the ingestion pipeline and
+    /// once globally by the AddRoleTagsToPgVectorEmbeddings migration backfill. There is
+    /// no DB-level constraint nor event handler that propagates re-classifications, so
+    /// late calls to <c>TextChunk.AssignRoleTags</c> after pgvector ingestion will leave
+    /// this column stale until the next re-embed (VectorReembeddingService) runs. Tracked
+    /// for a future <c>TextChunkRoleReclassifiedDomainEvent</c> follow-up.
+    /// </summary>
+    [Required]
+    [Column("role_tags")]
+    public int RoleTags { get; set; } = 0;
 }

@@ -1,0 +1,146 @@
+name: Release-gate Comment
+
+# Auto-classifies CI failures on release PRs (main-dev → main-staging)
+# and posts/edits a single bot comment with severity + owner + override path.
+#
+# Implementation: scripts/release-gate/comment.mjs
+# Classification table: .github/release-gates.yml
+# Spec: docs/for-developers/specs/2026-05-22-release-gate-spreadsheet.md (issue #1016)
+
+on:
+  pull_request:
+    branches:
+      - main-staging
+      - main
+    types: [opened, synchronize, reopened]
+  check_suite:
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to classify (manual dispatch)"
+        required: true
+        type: string
+
+# Concurrency: key on PR number (when available) OR on the head SHA (check_suite).
+# Using head_sha (not head_branch) is critical: two concurrent check_suite.completed
+# events on the same commit (e.g. CodeQL + GitGuardian apps finishing within ms of
+# each other) must share the same concurrency slot, so `cancel-in-progress: true`
+# eliminates the TOCTOU race before two `createComment` calls can fire.
+concurrency:
+  group: release-gate-comment-${{ github.event.pull_request.number || github.event.check_suite.head_sha || github.event.inputs.pr_number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  pull-requests: write
+  issues: write
+  # Phase 2a (#1444): `checks: write` is needed by publishVerdict() to create
+  # the synthesized 'Release-Gate Verdict' check-run on the PR head SHA.
+  # Phase 1 only needed `checks: read` for listForRef().
+  checks: write
+  contents: read
+
+jobs:
+  classify:
+    name: Classify release-PR failures
+    runs-on: ubuntu-latest
+    # Restrict to release PRs (main-staging target) + manual dispatch.
+    # check_suite events fire on every push; filter to release branches only.
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && (github.base_ref == 'main-staging' || github.base_ref == 'main')) ||
+      (github.event_name == 'check_suite' && (github.event.check_suite.head_branch == 'main-staging' || startsWith(github.event.check_suite.head_branch, 'release/')))
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa  # v4
+        with:
+          version: 9
+
+      - name: Install release-gate deps
+        working-directory: scripts/release-gate
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate .github/release-gates.yml schema
+        working-directory: scripts/release-gate
+        run: node validate.mjs
+
+      - name: Resolve PR number
+        id: pr
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER_PR_EVENT: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA_PR_EVENT: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER_DISPATCH: ${{ github.event.inputs.pr_number }}
+          CHECK_SUITE_HEAD_SHA: ${{ github.event.check_suite.head_sha }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_SLUG: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          case "$EVENT_NAME" in
+            pull_request)
+              echo "pr_number=$PR_NUMBER_PR_EVENT" >> "$GITHUB_OUTPUT"
+              echo "head_sha=$PR_HEAD_SHA_PR_EVENT" >> "$GITHUB_OUTPUT"
+              ;;
+            workflow_dispatch)
+              # Validate dispatched PR number is a positive integer before using in API path.
+              # Without this guard, `gh api repos/.../pulls/$PR_NUMBER_DISPATCH` could be
+              # tricked into resolving an unintended path (e.g. "1234/../../...") on the
+              # GitHub API surface, given the bot token has pull-requests:write.
+              if ! [[ "$PR_NUMBER_DISPATCH" =~ ^[0-9]+$ ]]; then
+                echo "::error::pr_number must be a positive integer, got: $PR_NUMBER_DISPATCH"
+                exit 1
+              fi
+              echo "pr_number=$PR_NUMBER_DISPATCH" >> "$GITHUB_OUTPUT"
+              # Resolve head SHA for the dispatched PR
+              SHA=$(gh api "repos/$REPO_SLUG/pulls/$PR_NUMBER_DISPATCH" --jq '.head.sha')
+              echo "head_sha=$SHA" >> "$GITHUB_OUTPUT"
+              ;;
+            check_suite)
+              # Look up the PR(s) associated with this check_suite's head SHA.
+              # If none, skip gracefully (check_suite ran on a non-PR commit).
+              PR_NUM=$(gh api "repos/$REPO_SLUG/commits/$CHECK_SUITE_HEAD_SHA/pulls" \
+                --jq '.[] | select(.base.ref == "main-staging" or .base.ref == "main") | .number' \
+                | head -n1 || echo "")
+              if [ -z "$PR_NUM" ]; then
+                echo "No release PR associated with $CHECK_SUITE_HEAD_SHA — skipping."
+                echo "skip=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "pr_number=$PR_NUM" >> "$GITHUB_OUTPUT"
+                echo "head_sha=$CHECK_SUITE_HEAD_SHA" >> "$GITHUB_OUTPUT"
+              fi
+              ;;
+          esac
+
+      - name: Classify and post/edit comment
+        id: classify
+        if: steps.pr.outputs.skip != 'true'
+        working-directory: scripts/release-gate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SHA: ${{ steps.pr.outputs.head_sha }}
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
+          # GITHUB_STEP_SUMMARY is set by GH Actions automatically.
+        run: node comment.mjs
+        # IMPORTANT: continue-on-error means the workflow does NOT fail when the
+        # bot crashes — the fallback comment posted by comment.mjs is the visible
+        # signal (AC-5). The spec mentions "neutral conclusion", but GitHub
+        # Actions does not expose `neutral` at the job level for normal `run:`
+        # steps; the closest behavior is `continue-on-error: true` which yields
+        # `success` on the job summary while still posting the fallback comment
+        # via the bot script itself. Branch protection must NOT include this
+        # workflow as a required status check until a future PR adds a custom
+        # check-run that explicitly sets `conclusion=neutral` via the Checks API.
+        continue-on-error: true

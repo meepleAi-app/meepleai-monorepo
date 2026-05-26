@@ -71,6 +71,13 @@ interface UserWizardClientProps {
    * Used by AddGameDrawer after a successful catalog selection.
    */
   startAtPdf?: boolean;
+  /**
+   * Compact mode: completes immediately after game creation, skipping PDF and
+   * Agent steps. PDF + Agent setup happen later via CTAs on the detail page.
+   * Step indicator shows only the "create game" step.
+   * Used by AddGameDrawer (manual flow) for a 1-step add experience.
+   */
+  compactMode?: boolean;
 }
 
 export function UserWizardClient({
@@ -79,6 +86,7 @@ export function UserWizardClient({
   gameId: initialGameId,
   gameName: initialGameName,
   startAtPdf = false,
+  compactMode = false,
 }: UserWizardClientProps = {}) {
   const router = useRouter();
   const { t } = useTranslation();
@@ -116,9 +124,22 @@ export function UserWizardClient({
   const [showProcessing, setShowProcessing] = useState(false);
 
   // Step 1: Game created (manual flow — gameId is a PrivateGame ID)
-  const handleGameCreated = useCallback((gameId: string, gameName: string) => {
-    setState(prev => ({ ...prev, gameId, gameName, currentStep: 'pdf', isCatalogGame: false }));
-  }, []);
+  const handleGameCreated = useCallback(
+    (gameId: string, gameName: string) => {
+      // Compact mode: skip PDF + Agent steps entirely; PDF/Agent are setup later
+      // via CTAs on the detail page. This is the simplified add-from-drawer flow.
+      if (compactMode) {
+        toast.success(`Gioco "${gameName}" aggiunto alla tua libreria!`);
+        if (onComplete) {
+          onComplete();
+        }
+        router.push(`/library/${gameId}`);
+        return;
+      }
+      setState(prev => ({ ...prev, gameId, gameName, currentStep: 'pdf', isCatalogGame: false }));
+    },
+    [compactMode, onComplete, router]
+  );
 
   // Step 1: Skip PDF (go directly to complete)
   const handleSkipPdf = useCallback(() => {
@@ -203,10 +224,14 @@ export function UserWizardClient({
 
   const currentStepIndex = STEPS.findIndex(s => s.id === state.currentStep);
 
-  // Filter visible steps (hide agent if no PDF and not on agent step)
-  const visibleSteps = STEPS.filter(
-    step => !(step.id === 'agent' && !state.pdfId && state.currentStep !== 'agent')
-  );
+  // Filter visible steps:
+  // - compact mode: show only "create game" step
+  // - normal: hide agent if no PDF and not on agent step
+  const visibleSteps = compactMode
+    ? STEPS.filter(s => s.id === 'game')
+    : STEPS.filter(
+        step => !(step.id === 'agent' && !state.pdfId && state.currentStep !== 'agent')
+      );
 
   return (
     <div

@@ -138,21 +138,19 @@ public sealed class GetSharedGameByIdQueryHandlerCrossBcTests : IAsyncLifetime
         await _repository.AddAsync(sharedGame, TestContext.Current.CancellationToken);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        // 3) GameManagement — SharedGameEntity linked to SharedGame, ApprovalStatus=Approved(2).
-        //    NOTE: IsPublished is a computed column — must NOT be set by seeder.
-        var game = new SharedGameEntity
-        {
-            Id = Guid.NewGuid(),
-            Title = "Catan",
-            CreatedAt = DateTime.UtcNow,
-            Status = 1, 
-        };
-        _dbContext.SharedGames.Add(game);
+        // 3) GameManagement — post-Phase 2d (issue #1320/#1345) the standalone
+        //    GameEntity is gone: SharedGame.Create() above already persisted the
+        //    canonical shared_games row (via _repository.AddAsync). The cross-BC
+        //    fan-outs (toolkits, agent _gameId, PDFs) must therefore link to
+        //    sharedGame.Id directly. A second SharedGameEntity with a fresh GUID
+        //    used to stand in for the old GameEntity, but that made the handler —
+        //    which queries by sharedGame.Id — count 0 toolkits/agents.
+        var gameId = sharedGame.Id;
 
         // 4) GameToolkit — 2 non-default Toolkits with DISTINCT owners
         //    (uq_toolkits_game_owner unique index on (GameId, OwnerUserId)).
-        var toolkitA = Toolkit.CreateDefault(game.Id).Override(TestUserA);
-        var toolkitB = Toolkit.CreateDefault(game.Id).Override(TestUserB);
+        var toolkitA = Toolkit.CreateDefault(gameId).Override(TestUserA);
+        var toolkitB = Toolkit.CreateDefault(gameId).Override(TestUserB);
         _dbContext.Toolkits.AddRange(toolkitA, toolkitB);
 
         // 5) KnowledgeBase — AgentDefinition (Draft is fine — handler has no Status filter)
@@ -197,7 +195,7 @@ public sealed class GetSharedGameByIdQueryHandlerCrossBcTests : IAsyncLifetime
 
         // 8) AgentDefinition._gameId is a shadow property mapped to game_id column.
         //    Set via change tracker after the entity is attached, then save again.
-        _dbContext.Entry(agent).Property("_gameId").CurrentValue = game.Id;
+        _dbContext.Entry(agent).Property("_gameId").CurrentValue = gameId;
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // ---------------------------------------------------------------------

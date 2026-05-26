@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
@@ -102,8 +103,9 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
             "vector" => await PerformVectorSearchAsync(
                 query.GameId, queryVector, query.TopK, query.MinScore, query.DocumentIds, cancellationToken).ConfigureAwait(false),
 
+            // Phase D (D6): forward QueryRoleHint to the hybrid search re-ranker.
             "hybrid" => await PerformHybridSearchAsync(
-                query.GameId, queryVector, query.Query, query.TopK, query.MinScore, query.DocumentIds, cancellationToken).ConfigureAwait(false),
+                query.GameId, queryVector, query.Query, query.TopK, query.MinScore, query.DocumentIds, query.QueryRoleHint, cancellationToken).ConfigureAwait(false),
 
             _ => throw new ArgumentException($"Invalid search mode: {query.SearchMode}", nameof(query))
         } ?? new List<Domain.Entities.SearchResult>();
@@ -186,6 +188,7 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         int topK,
         double minScore,
         IReadOnlyList<Guid>? documentIds,
+        GameBookRole queryRoleHint,
         CancellationToken cancellationToken)
     {
         // Vector search
@@ -195,6 +198,7 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         // Keyword search (use HybridSearchService with Keyword mode)
         // Issue #423: Pass keywordMinScore to filter low-relevance keyword matches (e.g., ToC entries)
         // ts_rank_cd scores are typically 0-0.3; threshold of 0.01 filters noise while keeping real matches
+        // Phase D (D6): queryRoleHint enables role-match boost in the re-ranker.
         const double KeywordMinScore = 0.01;
         var hybridSearchResults = await _hybridSearchService.SearchAsync(
             query,
@@ -203,6 +207,7 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
             topK,
             documentIds?.ToList(), // Issue #2051: Pass document filter
             keywordMinScore: KeywordMinScore,
+            queryRoleHint: queryRoleHint,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         // Map keyword results to domain entities

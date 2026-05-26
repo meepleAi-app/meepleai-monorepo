@@ -55,9 +55,15 @@ export interface GameSearchBarProps {
   readonly isPending?: boolean;
   readonly labels: GameSearchBarLabels;
   readonly className?: string;
+  /**
+   * When true, renders the BGG tab. Default false (admin-only flow per spec
+   * docs/superpowers/specs/2026-05-22-hide-bgg-user-facing-phase-2-design.md).
+   */
+  readonly showBggTab?: boolean;
 }
 
-const TAB_ORDER: ReadonlyArray<GameSearchTab> = ['catalog', 'bgg'];
+const FULL_TAB_ORDER: ReadonlyArray<GameSearchTab> = ['catalog', 'bgg'];
+const CATALOG_ONLY_TAB_ORDER: ReadonlyArray<GameSearchTab> = ['catalog'];
 
 // game + kb entity colours replaced with Tailwind entity-token classes (P2 #807 Task 6+7+8)
 
@@ -69,8 +75,12 @@ export function GameSearchBar({
   isPending,
   labels,
   className,
+  showBggTab = false,
 }: GameSearchBarProps): ReactElement {
-  const orderedKeys = useMemo<ReadonlyArray<GameSearchTab>>(() => TAB_ORDER, []);
+  const orderedKeys = useMemo<ReadonlyArray<GameSearchTab>>(
+    () => (showBggTab ? FULL_TAB_ORDER : CATALOG_ONLY_TAB_ORDER),
+    [showBggTab]
+  );
 
   const { tabRefs, handleKeyDown } = useTablistKeyboardNav<GameSearchTab>({
     orderedKeys,
@@ -88,14 +98,26 @@ export function GameSearchBar({
     readonly key: GameSearchTab;
     readonly label: string;
     readonly activeCls: string;
-  }> = [
-    {
-      key: 'catalog',
-      label: labels.tabsCatalog,
-      activeCls: 'border-entity-game text-entity-game-text',
-    },
-    { key: 'bgg', label: labels.tabsBgg, activeCls: 'border-entity-document text-entity-document' },
-  ];
+  }> = showBggTab
+    ? [
+        {
+          key: 'catalog',
+          label: labels.tabsCatalog,
+          activeCls: 'border-entity-game text-entity-game-text',
+        },
+        {
+          key: 'bgg',
+          label: labels.tabsBgg,
+          activeCls: 'border-entity-document text-entity-document',
+        },
+      ]
+    : [
+        {
+          key: 'catalog',
+          label: labels.tabsCatalog,
+          activeCls: 'border-entity-game text-entity-game-text',
+        },
+      ];
 
   return (
     <div

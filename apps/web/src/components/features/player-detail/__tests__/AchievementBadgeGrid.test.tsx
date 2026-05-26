@@ -9,6 +9,7 @@
  */
 
 import { render, screen } from '@testing-library/react';
+import { axe } from 'jest-axe';
 import { describe, it, expect } from 'vitest';
 
 import { AchievementBadgeGrid } from '../AchievementBadgeGrid';
@@ -52,5 +53,17 @@ describe('AchievementBadgeGrid', () => {
     expect(
       container.querySelector('[data-slot="player-detail-achievement-grid"]')
     ).toBeInTheDocument();
+  });
+
+  it('passes axe a11y scan with badges and empty state', async () => {
+    const withBadges = render(
+      <AchievementBadgeGrid count={5} viewAllHref="/players/p-sara/achievements" labels={labels} />
+    );
+    expect(await axe(withBadges.container)).toHaveNoViolations();
+
+    const emptyState = render(
+      <AchievementBadgeGrid count={0} viewAllHref="/players/p-sara/achievements" labels={labels} />
+    );
+    expect(await axe(emptyState.container)).toHaveNoViolations();
   });
 });

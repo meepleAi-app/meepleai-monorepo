@@ -1,5 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
@@ -39,6 +41,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     private readonly IFeatureFlagService? _featureFlagService;
     private readonly ILanguageDetector _languageDetector;
     private readonly IChunkTranslationService _chunkTranslationService;
+    // Phase D4 (gamebook multi-book): optional role classifier for tagging chunks at ingest.
+    // Optional so unit tests that pre-date Phase D continue to compile without updates.
+    private readonly IRoleClassifierService? _roleClassifier;
 
     public PdfProcessingPipelineService(
         MeepleAiDbContext db,
@@ -55,7 +60,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         IRaptorIndexer? raptorIndexer = null,
         IEntityExtractor? entityExtractor = null,
         IVectorStoreAdapter? vectorStore = null,
-        IFeatureFlagService? featureFlagService = null)
+        IFeatureFlagService? featureFlagService = null,
+        IRoleClassifierService? roleClassifier = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _pdfClaimService = pdfClaimService ?? throw new ArgumentNullException(nameof(pdfClaimService));
@@ -72,6 +78,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         _entityExtractor = entityExtractor;
         _vectorStore = vectorStore;
         _featureFlagService = featureFlagService;
+        _roleClassifier = roleClassifier;
     }
 
     public async Task ProcessAsync(
@@ -578,10 +585,22 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             await _vectorStore.DeleteByVectorDocumentIdAsync(vectorDoc.Id, cancellationToken)
                 .ConfigureAwait(false);
 
-            // Build Embedding domain objects and bulk-insert via pgvector COPY
+            // Build Embedding domain objects and bulk-insert via pgvector COPY.
+            // Issue #1391: text_chunks rows were saved earlier in the pipeline with role_tags
+            // populated by TextChunkRoleClassifier. We load them now (one query) to denormalize
+            // role_tags + source_chunk_id into pgvector_embeddings so semantic-mode searches
+            // can apply the role-match boost without joining the parent table.
+            var textChunkLookup = await _db.TextChunks
+                .Where(tc => tc.PdfDocumentId == pdfDoc.Id)
+                .Select(tc => new { tc.Id, tc.ChunkIndex, tc.RoleTags })
+                .ToDictionaryAsync(tc => tc.ChunkIndex, cancellationToken)
+                .ConfigureAwait(false);
+
             var modelName = _embeddingService.GetModelName();
             var embeddingEntities = translatedChunks.Select((item, i) =>
-                new KbEntities.Embedding(
+            {
+                textChunkLookup.TryGetValue(i, out var tc);
+                return new KbEntities.Embedding(
                     id: Guid.NewGuid(),
                     vectorDocumentId: vectorDoc.Id,
                     textContent: item.chunk.Text,
@@ -590,8 +609,10 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                     chunkIndex: i,
                     pageNumber: Math.Max(1, item.chunk.Page),
                     language: item.lang,
-                    isTranslation: item.isTranslation))
-                .ToList();
+                    sourceChunkId: tc?.Id,
+                    isTranslation: item.isTranslation,
+                    roleTags: (int)(tc?.RoleTags ?? GameBookRole.None));
+            }).ToList();
 
             await _vectorStore.IndexBatchAsync(embeddingEntities, cancellationToken)
                 .ConfigureAwait(false);
@@ -643,6 +664,12 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 ElementType = chunk.ElementType
             })
             .ToList();
+
+        // Phase D4: classify chunks by GameBookRole (Tutorial/RulesReference/Narrative/etc.)
+        // before persistence so the role_tags column is populated on insert.
+        await TextChunkRoleClassifier.AssignRoleTagsAsync(
+            _roleClassifier, textChunkEntities, chunks, _logger, cancellationToken)
+            .ConfigureAwait(false);
 
         _db.TextChunks.AddRange(textChunkEntities);
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

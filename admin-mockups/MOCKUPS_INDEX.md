@@ -6,7 +6,7 @@
 >
 > **Audience**: developers looking for "which mockup file do I need for route X?".
 >
-> **Last updated**: 2026-05-18. Keep in sync with
+> **Last updated**: 2026-05-23. Keep in sync with
 > [`docs/for-developers/frontend/v2-migration-matrix.md`](../docs/for-developers/frontend/v2-migration-matrix.md)
 > Route Index section.
 
@@ -36,6 +36,7 @@
 | `data.js` | dev-fixture | Fake dataset, 9 cross-referenced entities |
 | `mobile-app.jsx` | dev-fixture | Full mobile-app React prototype (~870 lines) |
 | `tokens.css` | dev-fixture | **Source of truth for design tokens** (port first) |
+| `state-matrix.html` | dev-fixture | State matrix cross-route (8 route × 5 stati = 40 cell) — riusabile per Phase 2/3 |
 
 ## Auth & onboarding
 
@@ -109,6 +110,12 @@
 | `sp7-game-night-transition.html` | component-mock | Modal opened from `/game-nights/[id]/live` (issue #487 screen #5) |
 | `sp7-game-night-summary.html` | page-mock | `/game-nights/[id]/summary` (issue #487 screen #6) |
 
+## Chat
+
+| File | Type | Mapped routes |
+|------|------|---------------|
+| `chat-fullscreen.html` | page-mock | `/chat/[threadId]`, `/chat/new` (empty state) |
+
 ## Nanolith — Runthrough storyboard (Aaron Iter 1)
 
 | File | Type | Mapped routes |
@@ -117,28 +124,28 @@
 | `nanolith-nav-bottom-mobile.html` | component-mock | Mobile bottom-nav primitive (global) |
 | `nanolith-nav-chat-panel.html` | component-mock | Chat slide-over panel (used globally via `useChatPanel`) |
 | `nanolith-nav-topbar.html` | component-mock | Top-bar primitive (global) |
-| `nanolith-runthrough-encounter-cheatsheet.html` | page-mock | `/library/[gameId]/play/[campaignId]/encounter` (gap-coverage 2026-05-12, PR #1056) |
-| `nanolith-runthrough-error-states.html` | component-mock | Trasversale: chat (N1/N2) · translate (N3) · encounter — stream-timeout / OCR-fail / LLM-503 / segmentation-fail (PR #1056) |
-| `nanolith-runthrough-game-detail.html` | page-mock | `/library/[gameId]` (libro variant, PR #1037) |
-| `nanolith-runthrough-game-onboarding.html` | page-mock | `/library/[gameId]` (libro variant — prereq gate, gap-coverage 2026-05-12, PR #1056) |
-| `nanolith-runthrough-glossary-editor.html` | component-mock | Glossary editor (mirror of sp6 jsx) |
-| `nanolith-runthrough-library-search.html` | component-mock | In-library search overlay (not page-level) |
-| `nanolith-runthrough-play-session.html` | page-mock | `/library/[gameId]/play/[campaignId]` |
-| `nanolith-runthrough-quota-credits.html` | component-mock | Quota/credits overlay (global) |
-| `nanolith-runthrough-resume-picker.html` | page-mock | `/library/[gameId]/play` |
-| `nanolith-runthrough-session-end.html` | page-mock | `/sessions/live/[sessionId]` (end-state) |
-| `nanolith-runthrough-setup-chat.html` | page-mock | `/chat/new`, `/chat/[threadId]` (setup variant) |
-| `nanolith-runthrough-setup-wizard.html` | page-mock | `/sessions/new`, `/library/[gameId]` campaign-setup drawer (PR #1037) |
-| `nanolith-runthrough-translate-viewer.html` | page-mock | `/library/[gameId]/play/[campaignId]/translate` |
+| `librogame-runthrough-encounter-cheatsheet.html` | page-mock | `/library/[gameId]/play/[campaignId]/encounter` (gap-coverage 2026-05-12, PR #1056) |
+| `librogame-runthrough-error-states.html` | component-mock | Trasversale: chat (N1/N2) · translate (N3) · encounter — stream-timeout / OCR-fail / LLM-503 / segmentation-fail (PR #1056) |
+| `librogame-runthrough-game-detail.html` | page-mock | `/library/[gameId]` (libro variant, PR #1037) |
+| `librogame-runthrough-game-onboarding.html` | page-mock | `/library/[gameId]` (libro variant — prereq gate, gap-coverage 2026-05-12, PR #1056) |
+| `librogame-runthrough-glossary-editor.html` | component-mock | Glossary editor (mirror of sp6 jsx) |
+| `librogame-runthrough-library-search.html` | component-mock | In-library search overlay (not page-level) |
+| `librogame-runthrough-play-session.html` | page-mock | `/library/[gameId]/play/[campaignId]` |
+| `librogame-runthrough-quota-credits.html` | component-mock | Quota/credits overlay (global) |
+| `librogame-runthrough-resume-picker.html` | page-mock | `/library/[gameId]/play` |
+| `librogame-runthrough-session-end.html` | page-mock | `/sessions/live/[sessionId]` (end-state) |
+| `librogame-runthrough-setup-chat.html` | page-mock | `/chat/new`, `/chat/[threadId]` (setup variant) |
+| `librogame-runthrough-setup-wizard.html` | page-mock | `/sessions/new`, `/library/[gameId]` campaign-setup drawer (PR #1037) |
+| `librogame-runthrough-translate-viewer.html` | page-mock | `/library/[gameId]/play/[campaignId]/translate` |
 
 ## Summary
 
 | Type | Count |
 |------|------:|
-| page-mock | 48 |
+| page-mock | 49 |
 | component-mock | 16 |
-| dev-fixture | 10 |
-| **Total** | **74** |
+| dev-fixture | 11 |
+| **Total** | **76** |
 
 > The `*.jsx` twins of `*.html` files are not double-counted (the JSX is the
 > implementation companion of the HTML reference). Listing them separately

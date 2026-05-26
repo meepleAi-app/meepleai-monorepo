@@ -1,4 +1,4 @@
-
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 
 #pragma warning disable MA0048 // File name must match type name - Contains Service with Configuration classes
 namespace Api.Services;
@@ -21,6 +21,7 @@ internal interface IHybridSearchService
     /// <param name="vectorWeight">Weight for vector search scores (default: 0.7)</param>
     /// <param name="keywordWeight">Weight for keyword search scores (default: 0.3)</param>
     /// <param name="keywordMinScore">Minimum ts_rank_cd score for keyword results to filter low-relevance matches like ToC entries (default: 0.0)</param>
+    /// <param name="queryRoleHint">Phase D (D6): user intent role hint; chunks whose RoleTags overlap receive a fixed RRF score boost (default: None = no-op)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Hybrid search results with RRF-fused scores</returns>
     Task<List<HybridSearchResult>> SearchAsync(
@@ -32,6 +33,7 @@ internal interface IHybridSearchService
         float vectorWeight = 0.7f,
         float keywordWeight = 0.3f,
         double keywordMinScore = 0.0,
+        GameBookRole queryRoleHint = GameBookRole.None,
         CancellationToken cancellationToken = default);
 }
 
@@ -112,4 +114,11 @@ internal record HybridSearchResult
     /// Search mode used to produce this result.
     /// </summary>
     public required SearchMode Mode { get; init; }
+
+    /// <summary>
+    /// Phase D (D6): role classification of the underlying text chunk (multi-label bitflag).
+    /// Sourced from text_chunks.role_tags. <see cref="GameBookRole.None"/> when unclassified
+    /// or when the result came from the vector path (pgvector_embeddings table lacks role_tags).
+    /// </summary>
+    public GameBookRole RoleTags { get; init; } = GameBookRole.None;
 }

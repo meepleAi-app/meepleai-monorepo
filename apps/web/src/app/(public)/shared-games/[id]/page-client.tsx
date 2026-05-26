@@ -1,5 +1,5 @@
 /**
- * /shared-games/[id] — client body (V2, Wave A.4, Issue #603).
+ * /shared-games/[id] — client body (Issue #603).
  *
  * Owns:
  *   - i18n resolution (single `useTranslation()` call → all labels resolved upfront)
@@ -41,7 +41,7 @@ import {
 import { useSharedGameDetail } from '@/hooks/useSharedGameDetail';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useUrlHashState } from '@/hooks/useUrlHashState';
-import { type SharedGameDetailV2, type TopContributor } from '@/lib/api/shared-games';
+import { type SharedGameDetail, type TopContributor } from '@/lib/api/shared-games';
 
 const VALID_TAB_KEYS: ReadonlySet<TabKey> = new Set(TAB_KEYS);
 
@@ -91,7 +91,7 @@ function parseStateOverride(raw: string | null): DetailStateOverride | undefined
 
 export interface SharedGameDetailPageClientProps {
   readonly id: string;
-  readonly detail: SharedGameDetailV2;
+  readonly detail: SharedGameDetail;
   readonly contributors: readonly TopContributor[];
 }
 
@@ -117,7 +117,7 @@ export function SharedGameDetailPageClient({
 
   // SSR seed guarantees `data` is defined on first paint, but TanStack Query
   // can briefly undefine it during refetch. Fall back to the SSR `detail` prop.
-  const game: SharedGameDetailV2 = data ?? detail;
+  const game: SharedGameDetail = data ?? detail;
 
   // Override `empty-tab` clears nested arrays so EmptyState renders unobstructed.
   const toolkits = stateOverride === 'empty-tab' ? [] : (game.toolkits ?? []);

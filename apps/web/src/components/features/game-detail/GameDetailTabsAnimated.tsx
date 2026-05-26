@@ -36,7 +36,7 @@ import clsx from 'clsx';
 
 import { useTablistKeyboardNav } from '@/hooks/useTablistKeyboardNav';
 
-export type TabKey = 'info' | 'rules' | 'faqs' | 'sessions' | 'agents' | 'documents';
+export type TabKey = 'info' | 'rules' | 'faqs' | 'sessions' | 'stats' | 'agents' | 'documents';
 
 export interface GameDetailTabConfig<TKey extends string = string> {
   readonly key: TKey;

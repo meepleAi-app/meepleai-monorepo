@@ -23,7 +23,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import {
   searchSharedGames,
-  type PagedSharedGamesV2,
+  type PagedSharedGames,
   type SearchSharedGamesArgs,
 } from '@/lib/api/shared-games';
 import { type ChipKey, type SortKey, sortKeyToBackendParams } from '@/lib/shared-games/filters';
@@ -40,14 +40,14 @@ export interface UseSharedGamesArgs {
   readonly categoryIds: readonly string[];
   readonly sort: SortKey;
   /** SSR seed; passed through to React Query as `initialData`. */
-  readonly initialData?: PagedSharedGamesV2;
+  readonly initialData?: PagedSharedGames;
   /** Pagination — defaults to single page of 100. */
   readonly pageNumber?: number;
   readonly pageSize?: number;
 }
 
 export interface UseSharedGamesResult {
-  readonly data: PagedSharedGamesV2 | undefined;
+  readonly data: PagedSharedGames | undefined;
   readonly isLoading: boolean;
   readonly isFetching: boolean;
   readonly isError: boolean;
@@ -99,7 +99,7 @@ export function useSharedGames(args: UseSharedGamesArgs): UseSharedGamesResult {
     },
   ] as const;
 
-  const result = useQuery<PagedSharedGamesV2, Error>({
+  const result = useQuery<PagedSharedGames, Error>({
     queryKey,
     queryFn: () =>
       searchSharedGames({

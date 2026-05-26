@@ -8,21 +8,35 @@ namespace Api.BoundedContexts.SessionTracking.Application.Queries;
 
 public class GetGamebookCampaignHandler : IRequestHandler<GetGamebookCampaignQuery, GamebookCampaignDto>
 {
-    private readonly IGamebookCampaignSessionRepository _repo;
+    private readonly IGamebookCampaignSessionRepository _campaigns;
+    private readonly ISessionBookProgressRepository _progress;
 
-    public GetGamebookCampaignHandler(IGamebookCampaignSessionRepository repo)
+    public GetGamebookCampaignHandler(
+        IGamebookCampaignSessionRepository campaigns,
+        ISessionBookProgressRepository progress)
     {
-        _repo = repo ?? throw new ArgumentNullException(nameof(repo));
+        ArgumentNullException.ThrowIfNull(campaigns);
+        ArgumentNullException.ThrowIfNull(progress);
+        _campaigns = campaigns;
+        _progress = progress;
     }
 
-    public async Task<GamebookCampaignDto> Handle(GetGamebookCampaignQuery q, CancellationToken cancellationToken)
+    public async Task<GamebookCampaignDto> Handle(GetGamebookCampaignQuery request, CancellationToken cancellationToken)
     {
-        var session = await _repo.GetByIdAsync(q.CampaignId, cancellationToken).ConfigureAwait(false)
-            ?? throw new NotFoundException($"Campaign {q.CampaignId} not found");
+        ArgumentNullException.ThrowIfNull(request);
 
-        if (session.OwnerUserId != q.CallerUserId)
-            throw new ConflictException("Forbidden");
+        var session = await _campaigns.GetByIdAsync(request.CampaignId, cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException($"Campaign {request.CampaignId} not found");
 
-        return CreateGamebookCampaignHandler.MapToDto(session);
+        if (session.OwnerUserId != request.CallerUserId)
+            throw new ForbiddenException("Forbidden");
+
+        // Load the most-recently-visited per-book progress row so resume returns the
+        // user's last reading position (regression fix for PR #1362 code review).
+        var progress = await _progress
+            .GetMostRecentByCampaignAsync(session.Id, cancellationToken)
+            .ConfigureAwait(false);
+
+        return CreateGamebookCampaignHandler.MapToDto(session, progress);
     }
 }

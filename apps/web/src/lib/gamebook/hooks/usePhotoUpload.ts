@@ -5,9 +5,15 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { uploadPhoto, type GamebookPhotoArtifact } from '@/lib/api/gamebook-photos';
 import { stripExif } from '@/lib/gamebook/clientExifStripper';
 
+/**
+ * C4 (multi-book generalization 2026-05-19): photo uploads are now scoped by
+ * `gameBookId` instead of the old `pageType` discriminator. Callers must
+ * resolve the book id via `useGameBooks` + `BookPicker` before triggering
+ * the upload.
+ */
 export interface UploadPhotoArgs {
   file: File;
-  pageType: 'Storybook' | 'Encounter';
+  gameBookId: string;
 }
 
 /**
@@ -33,12 +39,12 @@ export class PhotoUploadStripError extends Error {
 export function usePhotoUpload(campaignId: string) {
   const qc = useQueryClient();
   return useMutation<GamebookPhotoArtifact, Error, UploadPhotoArgs>({
-    mutationFn: async ({ file, pageType }) => {
+    mutationFn: async ({ file, gameBookId }) => {
       const stripped = await stripExif(file);
       switch (stripped.kind) {
         case 'success':
         case 'fallback-no-exif':
-          return uploadPhoto(campaignId, stripped.file, pageType);
+          return uploadPhoto(campaignId, stripped.file, gameBookId);
         case 'error-unsupported':
           throw new PhotoUploadStripError('error-unsupported', stripped.format);
         case 'error-corrupted':

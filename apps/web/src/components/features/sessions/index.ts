@@ -1,5 +1,5 @@
 /**
- * Barrel export for /sessions v2 components (Wave D.1, Issue #735).
+ * Barrel export for /sessions feature components (Wave D.1, Issue #735).
  *
  * Single import point for the orchestrator SessionsLibraryView and E2E specs.
  * All components are pure (no useTranslation) — labels injected by orchestrator.

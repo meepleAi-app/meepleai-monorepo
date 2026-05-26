@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SP5 A5 · Admin Knowledge Base · /admin/knowledge-base</title>
+<!-- @v2 KBTree · DocumentViewer · IngestionLog · ChunkTable -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/><link rel="stylesheet" href="components.css"/><link rel="stylesheet" href="admin-base.css"/>
+<style>
+  .kb-grid { display: grid; grid-template-columns: 300px 1fr; gap: 16px; align-items: start; min-height: calc(100vh - 80px); }
+  .kb-tree {
+    background: var(--bg-card); border: 1px solid var(--border-light);
+    border-radius: 10px; padding: 8px; overflow-y: auto; max-height: calc(100vh - 100px);
+    position: sticky; top: 76px;
+  }
+  .kb-tree-search { padding: 6px 8px; }
+  .kb-tree-game { padding: 6px 8px; border-radius: 6px; font-family: var(--f-display); font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+  .kb-tree-game:hover { background: var(--bg-muted); }
+  .kb-tree-game .em { font-size: 14px; }
+  .kb-tree-game .count { margin-left: auto; font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); font-weight: 600; padding: 1px 6px; border-radius: 999px; background: var(--bg-muted); }
+  .kb-tree-doc { padding: 5px 8px 5px 30px; font-size: 12px; cursor: pointer; border-radius: 6px; display: flex; align-items: center; gap: 6px; color: var(--text-sec); }
+  .kb-tree-doc:hover { background: var(--bg-muted); color: var(--text); }
+  .kb-tree-doc.selected { background: hsl(var(--c-kb) / .12); color: hsl(var(--c-kb)); }
+  .kb-tree-doc .em { font-size: 11px; }
+  .kb-tree-doc .ind { font-family: var(--f-mono); font-size: 9px; margin-left: auto; }
+  .kb-tree-doc.failed .ind { color: hsl(var(--c-event)); }
+  .kb-tree-doc.pending .ind { color: hsl(38 90% 50%); }
+  .kb-tree-doc.indexed .ind { color: hsl(var(--c-toolkit)); }
+
+  .doc-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 10px; overflow: hidden; }
+  .doc-hero { padding: 16px 20px; border-bottom: 1px solid var(--border-light); background: linear-gradient(180deg, hsl(var(--c-kb) / .08), transparent); }
+  .doc-hero .head { display: flex; align-items: flex-start; gap: 14px; }
+  .doc-hero h2 { margin: 0; font-family: var(--f-display); font-size: 19px; font-weight: 800; }
+  .doc-hero .meta { font-family: var(--f-mono); font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+  .doc-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 14px; }
+  .doc-stats .s { background: var(--bg); border: 1px solid var(--border-light); border-radius: 8px; padding: 8px 10px; }
+  .doc-stats .s-lb { font-family: var(--f-mono); font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+  .doc-stats .s-vl { font-family: var(--f-display); font-size: 18px; font-weight: 800; }
+
+  .pdf-preview {
+    background: linear-gradient(180deg, var(--bg-muted), var(--bg-sunken));
+    border: 1px solid var(--border-light); border-radius: 8px;
+    padding: 24px; min-height: 320px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+    color: var(--text-muted);
+  }
+  .pdf-preview .doc-mock {
+    width: 320px; padding: 20px; background: #fff; color: #1a1612;
+    border-radius: 4px; box-shadow: var(--shadow-lg);
+    font-family: 'Georgia', serif; font-size: 9px; line-height: 1.6;
+  }
+  .pdf-preview .doc-mock h3 { font-family: 'Georgia', serif; font-size: 13px; margin: 0 0 8px; color: #000; }
+  .pdf-preview .doc-mock .l { background: #1a1612; opacity: .8; height: 4px; border-radius: 2px; margin-bottom: 3px; }
+  .pdf-preview .doc-mock .l.w70 { width: 70%; } .pdf-preview .doc-mock .l.w50 { width: 50%; } .pdf-preview .doc-mock .l.w90 { width: 90%; }
+  .pdf-preview .doc-mock .l.highlight { background: hsl(var(--c-kb)); opacity: 1; height: 5px; }
+
+  .chunk-table-row { display: grid; grid-template-columns: 60px 1fr 60px 70px 30px; gap: 10px; padding: 7px 12px; border-bottom: 1px solid var(--border-light); font-size: 11.5px; align-items: center; }
+  .chunk-table-row code { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); }
+  .chunk-table-row .preview { color: var(--text-sec); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chunk-table-row .score { text-align: right; font-family: var(--f-mono); font-weight: 700; }
+  .chunk-table-row .score.hi { color: hsl(var(--c-kb)); }
+  .chunk-table-row .score.md { color: hsl(38 90% 50%); }
+
+  .ingestion-log { font-family: var(--f-mono); font-size: 11px; background: var(--bg-sunken); color: var(--text-sec); padding: 12px 14px; border-radius: 6px; line-height: 1.7; max-height: 200px; overflow-y: auto; }
+  .ingestion-log .t { color: var(--text-muted); }
+  .ingestion-log .ok { color: hsl(var(--c-toolkit)); }
+  .ingestion-log .err { color: hsl(var(--c-event)); }
+  .ingestion-log .warn { color: hsl(38 90% 50%); }
+</style>
+</head>
+<body class="admin-page">
+
+<div class="admin-mobile-fallback"><span class="em">🖥️</span><h2>Console solo desktop</h2><p>Knowledge Base management richiede schermo wide.</p></div>
+
+<div class="admin-shell">
+  <div data-admin-nav-mount></div>
+
+  <main>
+    <header class="admin-top">
+      <div><h1>Knowledge Base</h1><div class="crumbs">Admin · KB · 247 docs · 18.487 chunks · 2.4TB</div></div>
+      <div class="spacer"></div>
+      <div class="admin-top-actions">
+        <div class="admin-search"><span>🔍</span><input placeholder="Search docs, chunks, games…" value=""><kbd>⌘K</kbd></div>
+        <a href="sp5-kb-upload-flow.html" class="btn-admin primary">+ Upload PDF</a>
+      </div>
+    </header>
+
+    <div class="admin-body">
+      <div class="kb-grid">
+
+        <!-- Left: tree ────────────────────────────────────── -->
+        <div class="kb-tree">
+          <div class="kb-tree-search">
+            <div class="admin-search" style="width: 100%"><span>🔍</span><input placeholder="Filtra tree…"></div>
+          </div>
+          <div style="padding: 4px 8px; font-family: var(--f-mono); font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em">8 giochi · 247 docs</div>
+
+          <div class="kb-tree-game"><span>▾</span> <span class="em">🎲</span> Wingspan <span class="count">12</span></div>
+          <div class="kb-tree-doc indexed">📄 Wingspan-Asia-EN.pdf <span class="ind">347ch</span></div>
+          <div class="kb-tree-doc indexed selected">📄 Wingspan-Oceania-EN.pdf <span class="ind">412ch</span></div>
+          <div class="kb-tree-doc indexed">📄 Wingspan-Europa-EN.pdf <span class="ind">298ch</span></div>
+          <div class="kb-tree-doc pending">📄 Wingspan-FAQ.txt <span class="ind">indexing…</span></div>
+          <div class="kb-tree-doc indexed">📄 wingspan-bgg-faq.txt <span class="ind">84ch</span></div>
+          <div class="kb-tree-doc indexed">📄 Errata-2024.pdf <span class="ind">12ch</span></div>
+
+          <div class="kb-tree-game"><span>▾</span> <span class="em">🎲</span> Brass: Birmingham <span class="count">8</span></div>
+          <div class="kb-tree-doc indexed">📄 Brass-Birmingham-Rulebook.pdf <span class="ind">524ch</span></div>
+          <div class="kb-tree-doc failed">📄 brass-faq-thread.txt <span class="ind">⚠ failed</span></div>
+          <div class="kb-tree-doc indexed">📄 Brass-Lancashire-conv.pdf <span class="ind">187ch</span></div>
+
+          <div class="kb-tree-game"><span>▾</span> <span class="em">🎲</span> Tainted Grail <span class="count">14</span></div>
+          <div class="kb-tree-doc indexed">📄 TG-Fall-of-Avalon-IT.pdf <span class="ind">812ch</span></div>
+          <div class="kb-tree-doc indexed">📄 TG-Chapter-Book-Vol1.pdf <span class="ind">2.4kch</span></div>
+          <div class="kb-tree-doc indexed">📄 TG-Chapter-Book-Vol2.pdf <span class="ind">2.8kch</span></div>
+          <div class="kb-tree-doc indexed">📄 TG-Encounters-Cards.pdf <span class="ind">421ch</span></div>
+
+          <div class="kb-tree-game"><span>▸</span> <span class="em">🎲</span> Spirit Island <span class="count">9</span></div>
+          <div class="kb-tree-game"><span>▸</span> <span class="em">🎲</span> Ark Nova <span class="count">11</span></div>
+          <div class="kb-tree-game"><span>▸</span> <span class="em">🎲</span> ISS Vanguard <span class="count">22</span></div>
+          <div class="kb-tree-game"><span>▸</span> <span class="em">🎲</span> Lancaster <span class="count">5</span></div>
+          <div class="kb-tree-game"><span>▸</span> <span class="em">🎲</span> Gloomhaven <span class="count">31</span></div>
+        </div>
+
+        <!-- Right: doc panel ──────────────────────────────── -->
+        <div class="doc-card">
+          <div class="doc-hero">
+            <div class="head">
+              <span style="font-size: 36px">📄</span>
+              <div style="flex: 1">
+                <h2>Wingspan-Oceania-EN.pdf</h2>
+                <div class="meta">EntityChip: <span class="role-chip" style="background: hsl(var(--c-game) / .14); color: hsl(var(--c-game))">🎲 Wingspan</span> · uploaded by Aaron · 2024-12-08 14:22 · indexer v2024.11.18</div>
+              </div>
+              <div style="display: flex; gap: 6px;">
+                <button class="btn-admin sm">⟳ Re-index</button>
+                <button class="btn-admin sm">⤓ Download</button>
+                <button class="btn-admin sm danger">🗑 Delete</button>
+              </div>
+            </div>
+
+            <div class="doc-stats">
+              <div class="s"><div class="s-lb">Pagine</div><div class="s-vl">42</div></div>
+              <div class="s"><div class="s-lb">Chunks</div><div class="s-vl">412</div></div>
+              <div class="s"><div class="s-lb">Avg confidence</div><div class="s-vl" style="color: hsl(var(--c-toolkit))">0.87</div></div>
+              <div class="s"><div class="s-lb">Size</div><div class="s-vl">8.4<span style="font-size:12px;color:var(--text-muted)">MB</span></div></div>
+              <div class="s"><div class="s-lb">Status</div><div class="s-vl"><span class="status-chip healthy" style="font-size: 11px">Indicizzato</span></div></div>
+            </div>
+
+            <div style="margin-top: 14px; display: flex; gap: 4px; align-items: center; font-family: var(--f-mono); font-size: 11px; color: var(--text-muted)">
+              <span>🌐 EN</span> · <span>📐 OCR no</span> · <span>🧱 chunk 512 tok</span> · <span>🔄 last reindex 8gg fa</span>
+            </div>
+          </div>
+
+          <div style="padding: 0 20px">
+            <div class="admin-tabs" style="margin-bottom: 0">
+              <button class="admin-tab">Preview</button>
+              <button class="admin-tab active">Chunks <span class="count">412</span></button>
+              <button class="admin-tab">Ingestion log</button>
+              <button class="admin-tab">Used by <span class="count">8</span></button>
+            </div>
+          </div>
+
+          <div style="padding: 16px 20px;">
+
+            <!-- Active tab: Chunks ──────────────────────── -->
+            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 10px">
+              <div class="admin-search" style="width: 320px"><span>🔍</span><input placeholder="Cerca in chunks… (similarity match)" value="predator activation"></div>
+              <span class="filter-chip active">Score ≥ 0.7 <span class="x">▾</span></span>
+              <span class="filter-chip">Capitolo: tutti <span class="x">▾</span></span>
+              <div style="margin-left: auto; font-family: var(--f-mono); font-size: 11px; color: var(--text-muted)">12 risultati / 412 totali</div>
+            </div>
+
+            <div style="border: 1px solid var(--border-light); border-radius: 8px; overflow: hidden">
+              <div class="chunk-table-row" style="background: var(--bg); font-family: var(--f-mono); font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 700">
+                <div>Chunk ID</div><div>Preview</div><div>Pagina</div><div>Score ↓</div><div></div>
+              </div>
+              <div class="chunk-table-row" style="background: hsl(var(--c-kb) / .04)">
+                <code>c-0218</code>
+                <div class="preview">"Quando più uccelli predatori sono attivati nello stesso turno, l'attivazione segue l'ordine di piazzamento da sinistra a destra…"</div>
+                <code>p.22 §3</code>
+                <div class="score hi">0.84</div>
+                <div>›</div>
+              </div>
+              <div class="chunk-table-row">
+                <code>c-0217</code>
+                <div class="preview">"Un cibo non disponibile sulla mappa cibo viene preso dal banco. Se ci sono più predatori in competizione, il giocatore decide…"</div>
+                <code>p.22 §2</code>
+                <div class="score hi">0.72</div>
+                <div>›</div>
+              </div>
+              <div class="chunk-table-row">
+                <code>c-0142</code>
+                <div class="preview">"Power di tipo predator si attiva su trigger 'when activated'. In espansione Oceania, l'ordine è importante per i power…"</div>
+                <code>p.14 §5</code>
+                <div class="score hi">0.58</div>
+                <div>›</div>
+              </div>
+              <div class="chunk-table-row">
+                <code>c-0086</code>
+                <div class="preview">"Carte uccello con keyword predator hanno priorità sull'attivazione fine round se viene innescato il trigger group…"</div>
+                <code>p.9 §2</code>
+                <div class="score md">0.51</div>
+                <div>›</div>
+              </div>
+              <div class="chunk-table-row">
+                <code>c-0312</code>
+                <div class="preview">"Tabella riepilogativa dei power per habitat: foresta (predator activation), prateria (egg lay), zona umida…"</div>
+                <code>p.31 tbl</code>
+                <div class="score md">0.46</div>
+                <div>›</div>
+              </div>
+              <div class="chunk-table-row">
+                <code>c-0398</code>
+                <div class="preview">"FAQ: caso simultaneo di esaurimento cibo durante attivazione predatori (non trattato nella prima stampa, vedi errata)…"</div>
+                <code>p.40 §1</code>
+                <div class="score md">0.42</div>
+                <div>›</div>
+              </div>
+            </div>
+
+            <!-- Ingestion log (collapsed under tabs) -->
+            <h4 style="margin: 18px 0 6px; font-family: var(--f-mono); font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em">Ingestion log (snippet)</h4>
+            <pre class="ingestion-log">
+<span class="t">[14:22:01]</span> <span class="ok">▸ Started</span> Wingspan-Oceania-EN.pdf · 8.4MB · 42 pages
+<span class="t">[14:22:03]</span> <span class="ok">✓ Unstructured.io</span> parsed in 2.18s · 1.247 elements
+<span class="t">[14:22:06]</span> <span class="ok">✓ SmolDocling</span> doc-layout in 2.94s · 86 tables · 12 figures
+<span class="t">[14:22:08]</span> <span class="ok">✓ Chunker</span> 412 chunks @ 512 tok · avg 387
+<span class="t">[14:22:12]</span> <span class="warn">⚠ Embedder</span> retry 1 (rate-limit) → ok in 4.21s
+<span class="t">[14:22:14]</span> <span class="ok">✓ Indexer</span> Pinecone wingspan-v3 · 412 vectors
+<span class="t">[14:22:14]</span> <span class="ok">✓ Done</span> total 13.4s · cost $0.087</pre>
+
+            <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-light); display: flex; flex-wrap: wrap; gap: 6px">
+              <button class="btn-admin">⟳ Re-index with v2024.12 indexer</button>
+              <button class="btn-admin">📋 View embeddings</button>
+              <button class="btn-admin">⤓ Export chunks JSON</button>
+              <button class="btn-admin">🔬 Quality eval</button>
+              <button class="btn-admin">🤖 Used by 7 agents</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="admin-nav.js"></script><script>renderAdminNav('kb');</script>
+</body></html>

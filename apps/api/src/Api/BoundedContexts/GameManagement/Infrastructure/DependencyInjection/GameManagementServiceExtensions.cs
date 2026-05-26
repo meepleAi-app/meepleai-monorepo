@@ -9,6 +9,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities.WhiteboardState;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.Services;
 using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
+using Api.BoundedContexts.GameManagement.Infrastructure.Repositories;
 using Api.BoundedContexts.GameManagement.Infrastructure.Scheduling;
 using Api.BoundedContexts.GameManagement.Infrastructure.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -47,6 +48,7 @@ internal static class GameManagementServiceExtensions
         services.AddScoped<IGameNightInvitationRepository, GameNightInvitationRepository>(); // Issue #607: Token-based public RSVP invitations
         services.AddScoped<IRuleDisputeRepository, RuleDisputeRepository>(); // Structured rule dispute persistence
         services.AddScoped<IGamePhaseTemplateRepository, GamePhaseTemplateRepository>(); // Game phase templates for session setup
+        services.AddScoped<IGameBookRepository, GameBookRepository>(); // Gamebook multi-book generalization (2026-05-19) Phase A5
         services.AddScoped<IPhaseRulesSearchService, PhaseRulesSearchService>(); // Phase rules keyword search via TextChunks
 
         // Register Unit of Work (shared across bounded contexts)

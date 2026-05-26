@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
+using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
@@ -7,6 +8,7 @@ using Api.BoundedContexts.SessionTracking.Domain.ValueObjects;
 using Api.Models;
 using Api.Services;
 using Api.Services.LlmClients;
+using Api.SharedKernel.Domain.ValueObjects;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -57,6 +59,39 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
 
         public Task AddAsync(TranslatedParagraph paragraph, CancellationToken cancellationToken = default) { Store.Add(paragraph); return Task.CompletedTask; }
         public Task SaveChangesAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
+
+    private sealed class FakeProgressRepo : ISessionBookProgressRepository
+    {
+        public List<SessionBookProgress> Store { get; } = new();
+
+        public Task<SessionBookProgress?> GetByCampaignAndBookAsync(Guid campaignSessionId, Guid gameBookId, CancellationToken cancellationToken)
+            => Task.FromResult(Store.FirstOrDefault(p =>
+                p.CampaignSessionId == campaignSessionId && p.GameBookId == gameBookId));
+
+        public Task<IReadOnlyList<SessionBookProgress>> ListByCampaignAsync(Guid campaignSessionId, CancellationToken cancellationToken)
+            => Task.FromResult<IReadOnlyList<SessionBookProgress>>(
+                Store.Where(p => p.CampaignSessionId == campaignSessionId).ToList());
+
+        public Task<SessionBookProgress?> GetMostRecentByCampaignAsync(Guid campaignSessionId, CancellationToken cancellationToken)
+            => Task.FromResult(Store
+                .Where(p => p.CampaignSessionId == campaignSessionId)
+                .OrderByDescending(p => p.LastVisitedAt)
+                .FirstOrDefault());
+
+        public Task AddAsync(SessionBookProgress progress, CancellationToken cancellationToken)
+        {
+            Store.Add(progress);
+            return Task.CompletedTask;
+        }
+
+        public Task UpdateAsync(SessionBookProgress progress, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task DeleteByCampaignAsync(Guid campaignSessionId, CancellationToken cancellationToken)
+        {
+            Store.RemoveAll(p => p.CampaignSessionId == campaignSessionId);
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeGlossaryRepo : IGamebookGlossaryRepository
@@ -129,6 +164,18 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
             => Task.FromResult(LlmCompletionResult.CreateSuccess(string.Empty));
     }
 
+    /// <summary>
+    /// Fake guard that always confirms ownership. The handler delegates ownership
+    /// enforcement to this collaborator after Issue #1415, so unit tests for the
+    /// handler's translation/persistence path use a no-op guard. Authorization
+    /// semantics are covered by CampaignOwnershipGuardTests + integration tests.
+    /// </summary>
+    private sealed class AlwaysOwnedGuard : ICampaignOwnershipGuard
+    {
+        public Task AssertOwnedByAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken)
+            => Task.CompletedTask;
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static TranslateGamebookSegmentQueryHandler BuildHandler(
@@ -136,13 +183,17 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
         FakeArtifactRepo artifactRepo,
         FakeParagraphRepo paragraphRepo,
         FakeGlossaryRepo glossaryRepo,
-        ILlmService? llm = null) =>
+        FakeProgressRepo progressRepo,
+        ILlmService? llm = null,
+        ICampaignOwnershipGuard? ownershipGuard = null) =>
         new(
             campaignRepo,
             artifactRepo,
             paragraphRepo,
             glossaryRepo,
+            progressRepo,
             llm ?? new FakeLlmService(),
+            ownershipGuard ?? new AlwaysOwnedGuard(),
             NullLogger<TranslateGamebookSegmentQueryHandler>.Instance);
 
     // ── Tests ─────────────────────────────────────────────────────────────────
@@ -155,13 +206,16 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
         var artifactRepo = new FakeArtifactRepo();
         var paragraphRepo = new FakeParagraphRepo();
         var glossaryRepo = new FakeGlossaryRepo();
+        var progressRepo = new FakeProgressRepo();
 
         var ownerId = Guid.NewGuid();
-        var campaign = GamebookCampaignSession.Create(Guid.NewGuid(), ownerId, "Nanolith Campaign");
+        var campaign = GamebookCampaignSession.Create(GameRef.Shared(Guid.NewGuid()), ownerId, "Nanolith Campaign");
         campaignRepo.Store.Add(campaign);
 
+        var bookId = Guid.NewGuid();
+
         // Build artifact in Segmented state with §47
-        var artifact = GamebookPhotoArtifact.Create(campaign.Id, $"gamebook-photos/{campaign.Id}/photo1", GamebookPageType.Storybook);
+        var artifact = GamebookPhotoArtifact.Create(campaign.Id, bookId, $"gamebook-photos/{campaign.Id}/photo1");
         artifact.RecordSegments(
             new[] { GamebookSegment.Create(47, "The Hive awakens.", null) },
             "The Hive awakens.");
@@ -171,9 +225,9 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
         var glossaryEntry = GamebookGlossaryEntry.Create(campaign.Id, "Hive", "Alveare", GlossarySource.AutoBootstrap, ownerId);
         glossaryRepo.Store.Add(glossaryEntry);
 
-        var handler = BuildHandler(campaignRepo, artifactRepo, paragraphRepo, glossaryRepo);
+        var handler = BuildHandler(campaignRepo, artifactRepo, paragraphRepo, glossaryRepo, progressRepo);
 
-        var query = new TranslateGamebookSegmentQuery(campaign.Id, artifact.Id, 47, ownerId);
+        var query = new TranslateGamebookSegmentQuery(campaign.Id, artifact.Id, 47, ownerId, bookId);
 
         // Act — collect all streamed chunks
         var chunks = new List<TranslateChunk>();
@@ -200,13 +254,18 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
         paragraphRepo.Store.Should().HaveCount(1, "one TranslatedParagraph should be persisted");
         var persisted = paragraphRepo.Store[0];
         persisted.CampaignId.Should().Be(campaign.Id);
+        persisted.GameBookId.Should().Be(bookId);
         persisted.PhotoArtifactId.Should().Be(artifact.Id);
         persisted.ParagraphNumber.Should().Be(47);
         persisted.SourceTextEn.Should().Be("The Hive awakens.");
         persisted.TranslatedTextIt.Should().Be("L'Alveare si risveglia.");
         persisted.AppliedGlossaryTerms.Should().Contain("Hive");
 
-        // Assert campaign progress advanced
-        campaign.Progress.CurrentParagraph.Should().Be(47);
+        // C2 (2026-05-19): per-book progress advanced via SessionBookProgress.
+        progressRepo.Store.Should().HaveCount(1);
+        var progressRow = progressRepo.Store[0];
+        progressRow.CampaignSessionId.Should().Be(campaign.Id);
+        progressRow.GameBookId.Should().Be(bookId);
+        progressRow.LastLocation.Should().Be("§47");
     }
 }

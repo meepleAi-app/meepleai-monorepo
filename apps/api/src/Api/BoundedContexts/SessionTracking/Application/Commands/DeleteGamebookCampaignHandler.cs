@@ -15,11 +15,16 @@ namespace Api.BoundedContexts.SessionTracking.Application.Commands;
 public class DeleteGamebookCampaignHandler : IRequestHandler<DeleteGamebookCampaignCommand>
 {
     private readonly IGamebookCampaignSessionRepository _repo;
+    private readonly ISessionBookProgressRepository _progress;
     private readonly IMediator _mediator;
 
-    public DeleteGamebookCampaignHandler(IGamebookCampaignSessionRepository repo, IMediator mediator)
+    public DeleteGamebookCampaignHandler(
+        IGamebookCampaignSessionRepository repo,
+        ISessionBookProgressRepository progress,
+        IMediator mediator)
     {
         _repo = repo ?? throw new ArgumentNullException(nameof(repo));
+        _progress = progress ?? throw new ArgumentNullException(nameof(progress));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
     }
 
@@ -29,7 +34,13 @@ public class DeleteGamebookCampaignHandler : IRequestHandler<DeleteGamebookCampa
             ?? throw new NotFoundException($"Campaign {cmd.CampaignId} not found");
 
         if (session.OwnerUserId != cmd.CallerUserId)
-            throw new ConflictException("Only owner can delete campaign");
+            throw new ForbiddenException("Only owner can delete campaign");
+
+        // Issue #1394: SessionBookProgress rows have no FK cascade to the campaign,
+        // so we must explicitly purge orphans before the unit-of-work flush. The
+        // shared DbContext means SaveChangesAsync persists both the soft-delete
+        // and the orphan removal atomically.
+        await _progress.DeleteByCampaignAsync(session.Id, cancellationToken).ConfigureAwait(false);
 
         session.SoftDelete(cmd.CallerUserId);
         await _repo.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -37,7 +48,7 @@ public class DeleteGamebookCampaignHandler : IRequestHandler<DeleteGamebookCampa
         // Issue #1292 (AC-6.2): notify gamebook index cache so the deleted
         // campaign disappears from next GET /api/v1/gamebooks within 500ms.
         await _mediator.Publish(
-            new GamebookCampaignDeletedDomainEvent(session.Id, session.GameId, session.OwnerUserId),
+            new GamebookCampaignDeletedDomainEvent(session.Id, session.GameRef.Id, session.OwnerUserId),
             cancellationToken).ConfigureAwait(false);
     }
 }

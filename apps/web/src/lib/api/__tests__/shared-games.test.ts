@@ -1,16 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  GameCategoryV2Schema,
-  PagedSharedGamesV2Schema,
-  SharedGameV2Schema,
+  GameCategorySchema,
+  PagedSharedGamesSchema,
+  SharedGameSchema,
   TopContributorSchema,
   getCategories,
   getTopContributors,
   searchSharedGames,
 } from '../shared-games';
 
-describe('SharedGameV2Schema', () => {
+describe('SharedGameSchema', () => {
   it('accepts a minimal payload with all Wave A.3a defaults', () => {
     const minimal = {
       id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
@@ -30,7 +30,7 @@ describe('SharedGameV2Schema', () => {
       createdAt: '2026-04-01T00:00:00Z',
       modifiedAt: null,
     };
-    const parsed = SharedGameV2Schema.parse(minimal);
+    const parsed = SharedGameSchema.parse(minimal);
     // All A.3a defaults applied:
     expect(parsed.toolkitsCount).toBe(0);
     expect(parsed.agentsCount).toBe(0);
@@ -71,7 +71,7 @@ describe('SharedGameV2Schema', () => {
       isTopRated: true,
       isNew: false,
     };
-    const parsed = SharedGameV2Schema.parse(full);
+    const parsed = SharedGameSchema.parse(full);
     expect(parsed.toolkitsCount).toBe(5);
     expect(parsed.agentsCount).toBe(3);
     expect(parsed.kbsCount).toBe(2);
@@ -80,9 +80,9 @@ describe('SharedGameV2Schema', () => {
   });
 });
 
-describe('PagedSharedGamesV2Schema', () => {
+describe('PagedSharedGamesSchema', () => {
   it('accepts an empty page', () => {
-    const parsed = PagedSharedGamesV2Schema.parse({
+    const parsed = PagedSharedGamesSchema.parse({
       items: [],
       total: 0,
       page: 1,
@@ -108,9 +108,9 @@ describe('TopContributorSchema', () => {
   });
 });
 
-describe('GameCategoryV2Schema', () => {
+describe('GameCategorySchema', () => {
   it('parses a category', () => {
-    const parsed = GameCategoryV2Schema.parse({
+    const parsed = GameCategorySchema.parse({
       id: '12345678-90ab-4cde-9abc-fedcba987654',
       name: 'Strategy',
       slug: 'strategy',

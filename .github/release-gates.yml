@@ -1,0 +1,326 @@
+# Release-gate Classification — main-dev → main-staging PRs
+#
+# Authoritative mapping of CI check names to severity + owner + override-path.
+# Bot script: scripts/release-gate-comment.mjs (auto-classifies failures on release PRs)
+# Validator:  scripts/release-gate-validate.mjs (CI lint, `pnpm release-gate:validate`)
+#
+# Schema version: 1
+# Issue: https://github.com/meepleAi-app/meepleai-monorepo/issues/1016
+# Design doc: docs/for-developers/specs/2026-05-22-release-gate-spreadsheet.md
+#
+# ─── Schema evolution policy (AC-9) ───────────────────────────────────────────
+# - When a workflow is renamed:
+#     1. Keep the old `check_name` entry in this file for at least 2 release cycles
+#        as a grace period (covers in-flight PRs whose check_runs reference the old name).
+#     2. Add the new `check_name` entry alongside; both classify identically.
+#     3. Remove the old entry after the grace period expires.
+# - Fallback regex (handled by bot script): if `check_name` is not found in the
+#   `checks:` list, the bot performs a prefix-match against `fallback_patterns:`
+#   below (e.g. `dev-async/*` matches `dev-async/test-1`, `dev-async/test-2`).
+# - Unknown checks (no exact match, no pattern match) default to severity=warning,
+#   owner=unknown, override_path=exception-comment + footer
+#   "🆕 N new checks detected — please update .github/release-gates.yml".
+#
+# ─── Severity rubric ──────────────────────────────────────────────────────────
+# - blocker:       Must be fixed before merge. Real regression or new CVE.
+# - warning:       Known pre-existing debt or flake. Manual triage acceptable.
+# - informational: Non-blocking signal. Auto-pass.
+#
+# ─── Owner rubric ─────────────────────────────────────────────────────────────
+# - backend-dev:   apps/api, EF Core migrations, .NET tests, CodeQL csharp
+# - frontend-dev:  apps/web, Vitest, Playwright, Lighthouse
+# - qa:            A11y, visual regression, manual QA gates
+# - devops:        GitHub Actions infra, branch protection, secrets, runners,
+#                  source-branch validation, link checks, dependency audits
+# - unknown:       Fallback when no rule matches (bot footer requests update)
+#
+# ─── Override path rubric ─────────────────────────────────────────────────────
+# - fix-forward:        Fix the issue in this PR or a follow-up before merge.
+# - revert:             Revert the offending commit (last resort, security only).
+# - exception-comment:  PR description comments justifying the bypass.
+# - baseline-update:    Update the test baseline / snapshot / accepted violations.
+
+version: 1
+
+# Last refreshed: 2026-05-22 (snapshot from PRs #1353, #1359, #1361, #1375)
+# Refresh policy: after every 5 release PRs OR when bot reports "🆕 N new checks" for 2+ runs.
+
+checks:
+  # ─── Backend (apps/api) ─────────────────────────────────────────────────────
+  - check_name: "Backend - Unit Tests"
+    severity: blocker
+    owner: backend-dev
+    override_path: fix-forward
+    pre_existing_in_main_dev: false
+    notes: "xUnit unit suite. Failure indicates code regression."
+
+  - check_name: "Backend - Integration (Core)"
+    severity: blocker
+    owner: backend-dev
+    override_path: fix-forward
+    pre_existing_in_main_dev: false
+    notes: "Testcontainers + EF Core. Failure indicates DB/migration regression."
+
+  - check_name: "Backend - Integration (Games)"
+    severity: blocker
+    owner: backend-dev
+    override_path: fix-forward
+    pre_existing_in_main_dev: false
+    notes: "GameManagement BC integration. SharedGameId/PdfDocument fixture-sensitive (see #1422)."
+
+  - check_name: "Backend - Integration (KnowledgeBase)"
+    severity: blocker
+    owner: backend-dev
+    override_path: fix-forward
+    pre_existing_in_main_dev: false
+    notes: "KB + RAG integration. pgvector + embedding service dependency."
+
+  - check_name: "Backend Integration (Testcontainers)"
+    severity: blocker
+    owner: backend-dev
+    override_path: fix-forward
+    pre_existing_in_main_dev: false
+    notes: "Aggregate Testcontainers gate. Often CANCELLED upstream of Core/Games/KB failures."
+
+  - check_name: "Backend Fast"
+    severity: warning
+    owner: backend-dev
+    override_path: exception-comment
+    pre_existing_in_main_dev: true
+    notes: "Documented flaky baseline ~3 failures (see CLAUDE.md Known Flaky Tests). Non-required."
+
+  # ─── Frontend (apps/web) ────────────────────────────────────────────────────
+  # DEPRECATED 2026-05-25 (PR #1530): the monolithic 'frontend' job was split
+  # into frontend-lint + frontend-typecheck + frontend-test (3-shard matrix).
+  # Per AC-9, this entry is kept for ≥2 release cycles as a grace period for
+  # in-flight PRs whose check_runs still reference the old name. Remove after
+  # the grace window. The replacements are listed immediately below.
+  - check_name: "Frontend - Build & Test"
+    severity: blocker
+    owner: frontend-dev
+    override_path: fix-forward
+    pre_existing_in_main_dev: false
+    notes: "DEPRECATED (split into Lint/Typecheck/Unit Tests by #1530). Grace period until ~2026-07."
+
+  - check_name: "Frontend - Lint"
+    severity: blocker
+    owner: frontend-dev
+    override_path: fix-forward
+    pre_existing_in_main_dev: false
+    notes: "ESLint (--max-warnings=15) + token-vocabulary inventory. Split from 'Frontend - Build & Test' (#1530)."
+
+  - check_name: "Frontend - Typecheck"
+    severity: blocker
+    owner: frontend-dev
+    override_path: fix-forward
+    pre_existing_in_main_dev: false
+    notes: "tsc --noEmit. Split from 'Frontend - Build & Test' (#1530)."
+
+  - check_name: "Frontend - Unit Tests (shard 1/3)"
+    severity: blocker
+    owner: frontend-dev
+    override_path: fix-forward
+    pre_existing_in_main_dev: false
+    notes: "Vitest shard 1/3. Split from 'Frontend - Build & Test' (#1530). Also covered by ^Frontend -  fallback."
+
+  - check_name: "Frontend - Unit Tests (shard 2/3)"
+    severity: blocker
+    owner: frontend-dev
+    override_path: fix-forward
+    pre_existing_in_main_dev: false
+    notes: "Vitest shard 2/3. Split from 'Frontend - Build & Test' (#1530)."
+
+  - check_name: "Frontend - Unit Tests (shard 3/3)"
+    severity: blocker
+    owner: frontend-dev
+    override_path: fix-forward
+    pre_existing_in_main_dev: false
+    notes: "Vitest shard 3/3. Split from 'Frontend - Build & Test' (#1530)."
+
+  - check_name: "Frontend - A11y E2E"
+    severity: warning
+    owner: qa
+    override_path: baseline-update
+    pre_existing_in_main_dev: true
+    notes: "~159 known violations tracked in #1094 (Phase A→D plan). Advisory until Phase D ships."
+
+  - check_name: "A11y unit smoke (Vitest accessibility specs)"
+    severity: warning
+    owner: qa
+    override_path: baseline-update
+    pre_existing_in_main_dev: true
+    notes: "Companion to Frontend - A11y E2E. Same baseline #1094."
+
+  - check_name: "Lighthouse CI"
+    severity: warning
+    owner: frontend-dev
+    override_path: exception-comment
+    pre_existing_in_main_dev: true
+    notes: "Performance budget. Flake-prone on busy runners; retry before reverting."
+
+  - check_name: "K6 Performance Tests"
+    severity: warning
+    owner: frontend-dev
+    override_path: exception-comment
+    pre_existing_in_main_dev: true
+    notes: "Load test. Frequently CANCELLED on parallel matrix; treat CANCELLED as inconclusive."
+
+  # ─── Security ───────────────────────────────────────────────────────────────
+  - check_name: "CodeQL"
+    severity: blocker
+    owner: backend-dev
+    override_path: fix-forward
+    pre_existing_in_main_dev: false
+    notes: "Static security analysis (csharp + javascript). New finding requires triage."
+
+  - check_name: "GitGuardian Security Checks"
+    severity: blocker
+    owner: devops
+    override_path: revert
+    pre_existing_in_main_dev: false
+    notes: "Required check on main-dev. Secret-leak detection. Revert + rotate immediately."
+
+  # ─── DevOps / Infrastructure ────────────────────────────────────────────────
+  - check_name: "validate-source-branch"
+    severity: blocker
+    owner: devops
+    override_path: fix-forward
+    pre_existing_in_main_dev: false
+    notes: "Enforces feature branches target their parent (main-dev / main-staging / main)."
+
+  - check_name: "State Matrix Sync + Enforcement"
+    severity: warning
+    owner: devops
+    override_path: fix-forward
+    pre_existing_in_main_dev: false
+    notes: "Verifies v2-migration-matrix.md consistency. Failure indicates row drift vs implementation."
+
+  - check_name: "codecov/patch"
+    severity: warning
+    owner: devops
+    override_path: baseline-update
+    pre_existing_in_main_dev: true
+    notes: "Patch coverage threshold. Tolerated drops require updated baseline."
+
+  - check_name: "CI Success"
+    severity: warning
+    owner: devops
+    override_path: exception-comment
+    pre_existing_in_main_dev: false
+    notes: "Aggregate of upstream jobs. Failure mirrors one of the per-job failures above."
+
+  # ─── External / advisory ────────────────────────────────────────────────────
+  - check_name: "Lychee Link Check"
+    severity: informational
+    owner: devops
+    override_path: exception-comment
+    pre_existing_in_main_dev: true
+    notes: "External link rot. Non-blocking unless docs-critical (see #1014)."
+
+  - check_name: "Conformity gate"
+    severity: informational
+    owner: qa
+    override_path: exception-comment
+    pre_existing_in_main_dev: true
+    notes: "Removed 2026-05-20 (#1066/#1069 closure). Kept here for stale PR coverage; remove after 2026-06-30."
+
+  - check_name: "api-smoke"
+    severity: warning
+    owner: backend-dev
+    override_path: exception-comment
+    pre_existing_in_main_dev: false
+    notes: "#943 Phase B — draft, awaiting next release PR. Currently non-required (gating flip pending)."
+
+# ─── Fallback regex patterns (AC-9) ──────────────────────────────────────────
+# Applied when `check_name` is not found in the `checks:` list above.
+# First match wins. If no pattern matches, default classification kicks in
+# (severity=warning, owner=unknown, override_path=exception-comment).
+
+fallback_patterns:
+  - pattern: "^Backend - "
+    severity: blocker
+    owner: backend-dev
+    override_path: fix-forward
+    notes: "Catch-all for new Backend integration suites."
+
+  - pattern: "^Backend "
+    severity: warning
+    owner: backend-dev
+    override_path: exception-comment
+    notes: "Catch-all for non-Integration backend jobs."
+
+  - pattern: "^Frontend - "
+    severity: blocker
+    owner: frontend-dev
+    override_path: fix-forward
+    notes: "Catch-all for new Frontend gates."
+
+  - pattern: "^Frontend "
+    severity: warning
+    owner: frontend-dev
+    override_path: exception-comment
+    notes: "Catch-all for non-gate frontend jobs."
+
+  - pattern: "^A11y"
+    severity: warning
+    owner: qa
+    override_path: baseline-update
+    notes: "Catch-all for accessibility gates."
+
+  - pattern: "(?i)security|codeql|gitguardian|dependabot"
+    severity: blocker
+    owner: devops
+    override_path: revert
+    notes: "Catch-all for security tooling. Default to revert/triage."
+
+  - pattern: "(?i)lychee|linkcheck|link-check"
+    severity: informational
+    owner: devops
+    override_path: exception-comment
+    notes: "Catch-all for external link validators."
+
+# ─── Bot configuration ───────────────────────────────────────────────────────
+# Read by scripts/release-gate-comment.mjs at runtime.
+
+bot:
+  signature_header: "<!-- release-gate-bot:v1 -->"
+  verdict_emoji:
+    blocker: "❌"
+    warning: "⚠️"
+    informational: "ℹ️"
+    unknown: "🆕"
+  fallback_unknown:
+    severity: warning
+    owner: unknown
+    override_path: exception-comment
+
+  # Phase 2a (#1444) — synthesize a single 'Release-Gate Verdict' check on
+  # release PRs. Read by scripts/release-gate/lib/conclusion-override.mjs +
+  # comment.mjs::publishVerdict(). When enabled, the bot posts the comment
+  # AND publishes a check-run via the Checks API:
+  #   - conclusion=success when no blocker/warning failures (informational
+  #     auto-bypassed)
+  #   - conclusion=neutral when warning-only failures
+  #   - conclusion=failure when ≥1 blocker
+  # Reviewers gate on this single check instead of N per-row noise.
+  #
+  # Dispatch gate: stays `false` until Phase 2c (#1446) accumulates 14 days
+  # of clean telemetry — see docs/for-developers/specs/2026-05-22-release-gate-phase2-overview.md.
+  # Earliest enable: 2026-06-08. Flip to `true` then; no code changes needed.
+  #
+  # Default-true semantics: when this sub-key is missing or `enabled` is
+  # absent, the bot defaults to publishing the verdict. We pin `false`
+  # explicitly here to honor the dispatch gate.
+  phase2a:
+    enabled: false
+
+  # Phase 2c (#1446) — weekly Slack digest of warning-tier classifications.
+  # Read by scripts/release-gate/build-digest.mjs + lib/digest-builder.mjs.
+  phase2c:
+    enabled: true
+    # Number of consecutive weeks the same `warning`-tier check must appear
+    # before the digest flags it with `:warning:` "suggest reclassify to blocker".
+    escalation_threshold_weeks: 4
+    # Name of the env var bound to the Slack incoming webhook URL. The CLI
+    # reads from `process.env[<this value>]`. Kept indirect for portability.
+    slack_webhook_env: SLACK_GITNOTIFY_WEBHOOK_URL

@@ -6,6 +6,8 @@ namespace Api.BoundedContexts.SessionTracking.Domain.Entities;
 /// A per-campaign EN→IT glossary entry used to apply consistent term translations.
 /// Can be auto-bootstrapped from existing translations or created/edited manually.
 /// Iter 1.B — Libro Game Nanolith dogfood demo.
+/// C6 (2026-05-19): <see cref="FirstSeenBookId"/> records the book where a term
+/// first appeared (nullable — may be unknown when bootstrapped or created manually).
 /// </summary>
 public sealed class GamebookGlossaryEntry
 {
@@ -14,6 +16,7 @@ public sealed class GamebookGlossaryEntry
     public string TermEn { get; private set; } = default!;
     public string TermIt { get; private set; } = default!;
     public GlossarySource Source { get; private set; }
+    public Guid? FirstSeenBookId { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
     public Guid CreatedBy { get; private set; }
@@ -27,7 +30,8 @@ public sealed class GamebookGlossaryEntry
         string termEn,
         string termIt,
         GlossarySource source,
-        Guid createdBy)
+        Guid createdBy,
+        Guid? firstSeenBookId = null)
     {
         if (campaignId == Guid.Empty)
             throw new ArgumentException("campaignId required", nameof(campaignId));
@@ -37,6 +41,8 @@ public sealed class GamebookGlossaryEntry
             throw new ArgumentException("termIt required", nameof(termIt));
         if (createdBy == Guid.Empty)
             throw new ArgumentException("createdBy required", nameof(createdBy));
+        if (firstSeenBookId.HasValue && firstSeenBookId.Value == Guid.Empty)
+            throw new ArgumentException("firstSeenBookId cannot be Guid.Empty when set", nameof(firstSeenBookId));
 
         var now = DateTimeOffset.UtcNow;
         return new GamebookGlossaryEntry
@@ -46,6 +52,7 @@ public sealed class GamebookGlossaryEntry
             TermEn = termEn.Trim(),
             TermIt = termIt.Trim(),
             Source = source,
+            FirstSeenBookId = firstSeenBookId,
             CreatedAt = now,
             UpdatedAt = now,
             CreatedBy = createdBy,

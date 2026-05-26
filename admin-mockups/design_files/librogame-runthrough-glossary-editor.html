@@ -8,15 +8,98 @@
           play-session quando Aaron tappa una glossary pill nel testo.
           Migrato da sp6-libro-game-glossary-editor.html (persona Sara → Aaron,
           route /gamebook/* → /library/*/play, issue #871 chiusa).
-  Stati:  state-01-edit-pristine    — Voidstone → Pietra del Vuoto, Salva disabled
-          state-02-edited           — input dirty → "Pietra del Caos", Salva enabled
-          state-03-save-error       — banner amber + Retry, value preservato
-          state-04-collision        — banner red, [Sovrascrivi] + [Cambia traduzione]
-          state-01-desktop          — modal centered 480px
-          state-04-desktop-conflict — modal centered + pannello laterale "Goblin → Razziatore"
+
+  Narrative cluster: "Sera con i ragazzi · Runa di Ardenel · §147" (coerente
+                     con Task 1 error-states + Task 2 translate-viewer).
+                     Termini esempio: sentinel, ferrigni, runa, threshold.
+                     Books esempio: Press Start + Rules Game.
+
+  Stati base:  state-01-edit-pristine    — Sentinel → soldato di guardia, Salva disabled
+               state-02-edited           — input dirty → "punto di osservazione strategica"
+               state-03-save-error       — banner amber + Retry, value preservato
+               state-04-collision        — banner red, [Sovrascrivi] + [Cambia traduzione]
+               state-01-desktop          — modal centered 480px
+               state-04-desktop-conflict — modal centered + pannello laterale "Ferrigni → Razziatori"
+
+  ─────────────────────────────────────────────────────────────────────
+  NUOVI sub-screen (spec sezione 1c — context-aware glossary):
+  ─────────────────────────────────────────────────────────────────────
+    state-05-conflict-dialog       — Modal: parola già nel glossario con
+                                     context_similarity < 0.85.
+                                     Body: definizione esistente vs nuova
+                                     side-by-side. 3 CTA radio:
+                                       ① "Mantieni esistente" (default soft-CTA)
+                                       ② "Sostituisci"
+                                       ③ "Aggiungi variante per [book name]"
+                                     Footer: [Conferma] / [Annulla].
+
+    state-06-bulk-import-card      — Inline card sotto traduzione quando
+                                     OCR trova ≥3 parole nuove non-glossario
+                                     in un paragrafo. Title "N nuove parole
+                                     rilevate" + chip preview termini.
+                                     2 CTA: ["Aggiungi tutte" 1-click] /
+                                     ["Rivedi" → modal multi-select w/
+                                     checkbox + edit definition inline].
+
+    state-07-variant-expansion     — Glossary index row con contexts.length > 1.
+                                     Default collapsed. Click → expand mostra
+                                     N varianti, ognuna con:
+                                       · book badge "📖 Press Start" / "📖 Rules Game"
+                                       · definition specifica (o "(usa base)"
+                                         se context.definition is null)
+                                       · first_seen link "Vedi paragrafo originale"
+                                       · delete variant button
+                                     ChevronDown icon ruota su expand.
+
+    state-08-filter-strip          — Header glossary index sempre visibile:
+                                       · search input "Cerca per termine,
+                                         definizione, libro…"
+                                       · filter by book chip multi-select
+                                       · filter toggle "Solo con varianti"
+                                     Ogni term row mostra context badges
+                                     inline (📖 Press Start + 📖 Rules Game)
+                                     accanto al term name.
+
+  ─────────────────────────────────────────────────────────────────────
+  Modello dati GlossaryEntry (proposto, implica schema migration backend):
+  ─────────────────────────────────────────────────────────────────────
+    GlossaryEntry {
+      term: "sentinel",
+      base_definition: "soldato di guardia",          ← primary
+      contexts: [
+        { book_id: "press-start",
+          definition: null,                            ← uses base
+          first_seen: paragraph_id_X },
+        { book_id: "rules-game",
+          definition: "punto di osservazione strategica",  ← variant
+          first_seen: paragraph_id_Y }
+      ]
+    }
+
+  Pattern decisions (sezione 1c — Fowler/Adzic):
+    · context_similarity threshold: 0.85 (server-side via embedding cosine,
+      riusa IEmbeddingService). Auto-keep silenzioso se ≥ 0.85; mostra
+      conflict-dialog solo se < 0.85.
+    · bulk-import trigger: ≥3 parole (NON ≥1, evita card-fatigue su
+      paragrafi corti).
+    · default conflict resolution: "Mantieni esistente" (soft CTA, no
+      destructive default — protegge da double-tap accidentali).
+    · variant deletion: utente può eliminare singola variante; se elimina
+      l'ultima variante non-base, term torna single-context (no orphan).
+
+  Decisione architetturale incidentale (Fowler):
+    Il modello GlossaryEntry con `contexts[]` richiede schema migration
+    backend su tabella `glossary_entries` (oggi single-context). Il mockup
+    propone il modello; la spec backend è separata (issue/spec a parte,
+    non in questo mockup).
+
   UI:     entityHsl() o var(--c-toolkit) tokens. MeepleCard + ManaPips compatibili.
-  Persona: Aaron (badsworm@gmail.com), durante sessione gruppo A.
-  Issue:  #952 (FE implementation pending).
+  A11y:   role="dialog" + aria-modal su conflict-dialog · role="radiogroup"
+          per 3 CTA · role="listbox" + aria-multiselectable per bulk modal
+          multi-select · aria-expanded su variant-expansion chevron.
+  Persona: Aaron (badsworm@gmail.com), durante sessione "Sera con i ragazzi".
+  Issue:  #952 (FE implementation pending). Spec: 2026-05-23-mockup-refinement
+          -aaron-core-design.md sezione 1c.
   ===================================================================
 -->
 <html lang="it" data-theme="light">
@@ -209,22 +292,29 @@
 <div class="gl-stage">
   <div class="gl-wrap">
     <div class="gl-head">
-      <h1>SP6 · H · Glossary editor — Libro game</h1>
+      <h1>SP6 · H · Glossary editor — Libro game · context-aware</h1>
       <p class="lead">
         Modale che si apre SOPRA il viewer D <code>translation-viewer</code>
         quando Aaron tappa una glossary pill cliccabile inline al testo.
-        Persona <strong>Aaron (badsworm@gmail.com)</strong> in dogfooding.
-        4 stati mobile (fullscreen sheet) + 2 desktop variants (centered overlay 480px).
-        Coverage scenario <strong>N3.5</strong> del design doc 2026-05-07.
+        Persona <strong>Aaron (badsworm@gmail.com)</strong> in dogfooding,
+        narrative <em>"Sera con i ragazzi · Runa di Ardenel · §147"</em>.
+        4 stati base (modal edit) + 4 NUOVI sub-screen <em>context-aware</em>:
+        conflict-dialog · bulk-import-card · variant-expansion · filter-strip.
+        Coverage scenario <strong>N3.5</strong> + spec <strong>sezione 1c</strong>
+        (modello <code>GlossaryEntry.contexts[]</code>, threshold
+        <code>context_similarity 0.85</code>, bulk threshold <code>≥3</code>).
       </p>
       <div class="meta-row">
         <span class="tag">@N3.5 inline pill edit</span>
+        <span class="tag">@1c context-aware</span>
         <span class="tag kb">entity=kb (glossary domain)</span>
         <span class="tag warn">var(--c-warning) save error</span>
         <span class="tag danger">var(--c-event) collision</span>
+        <span class="tag muted">conflict-dialog (sim &lt; 0.85)</span>
+        <span class="tag muted">bulk-import-card (≥3 nuove)</span>
+        <span class="tag muted">variant-expansion (contexts.length &gt; 1)</span>
+        <span class="tag muted">filter-strip + context-badges</span>
         <span class="tag muted">FREEZE v2 #807/#808 compliant</span>
-        <span class="tag muted">.gl-phone fullscreen sheet</span>
-        <span class="tag muted">desktop modal 480px</span>
       </div>
     </div>
 
@@ -249,6 +339,10 @@
       <option value="state-02">02 Edited</option>
       <option value="state-03">03 Save error</option>
       <option value="state-04">04 Collision</option>
+      <option value="state-05">05 Conflict dialog (sim &lt; 0.85)</option>
+      <option value="state-06">06 Bulk import card (≥3 nuove)</option>
+      <option value="state-07">07 Variant expansion</option>
+      <option value="state-08">08 Filter strip + context badges</option>
     </select>
   </label>
   <label>

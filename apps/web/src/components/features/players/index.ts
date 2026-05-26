@@ -1,5 +1,5 @@
 /**
- * Barrel exports for /players v2 components (Wave 4 D1, Issue #682).
+ * Barrel exports for /players feature components (Wave 4 D1, Issue #682).
  *
  * 4 pure presentation components — orchestrator (PlayersView) imports from here.
  * Orphan stubs are not re-exported until they are in-scope for a wave.

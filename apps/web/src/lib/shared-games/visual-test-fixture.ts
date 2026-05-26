@@ -9,7 +9,7 @@
  * **Contract**: when env var `NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED === '1'`
  * is baked into the build, navigating to `/shared-games/<VISUAL_TEST_FIXTURE_ID>`
  * short-circuits the SSR fetch and returns a deterministic, statically-defined
- * `SharedGameDetailV2` shape that exercises the v2 surface (hero + 5 tabs +
+ * `SharedGameDetail` shape that exercises the v2 surface (hero + 5 tabs +
  * non-empty toolkit/agent/kb lists + community strip).
  *
  * **Production safety**: Production builds do NOT set the env var. The constant
@@ -22,7 +22,7 @@
  *   - `apps/web/e2e/v2-states/shared-game-detail.spec.ts`
  */
 
-import type { SharedGameDetailV2, TopContributor } from '@/lib/api/shared-games';
+import type { SharedGameDetail, TopContributor } from '@/lib/api/shared-games';
 
 /**
  * Deterministic UUIDv4-shaped sentinel encoding issue #603 in the last group
@@ -41,7 +41,7 @@ export const VISUAL_TEST_FIXTURE_ID = '00000000-0000-4000-8000-000000000603' as 
  */
 export const IS_VISUAL_TEST_BUILD = process.env.NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED === '1';
 
-const FIXTURE_DETAIL: SharedGameDetailV2 = {
+const FIXTURE_DETAIL: SharedGameDetail = {
   id: VISUAL_TEST_FIXTURE_ID,
   bggId: 174430,
   title: 'Gloomhaven',
@@ -56,9 +56,18 @@ const FIXTURE_DETAIL: SharedGameDetailV2 = {
   averageRating: 8.7,
   imageUrl: '',
   thumbnailUrl: '',
-  status: 'Approved',
+  status: 'Published',
+  rules: null,
+  createdBy: '00000000-0000-4000-8000-0000000000fb',
+  modifiedBy: null,
   createdAt: '2026-01-15T10:00:00.000Z',
   modifiedAt: '2026-04-20T10:00:00.000Z',
+  faqs: [],
+  erratas: [],
+  designers: [],
+  publishers: [],
+  categories: [],
+  mechanics: [],
   toolkits: [
     {
       id: '11111111-1111-4000-8000-000000000001',
@@ -168,7 +177,7 @@ const FIXTURE_CONTRIBUTORS: readonly TopContributor[] = [
  * to the real backend fetch.
  */
 export function tryLoadVisualTestFixture(id: string): {
-  readonly detail: SharedGameDetailV2;
+  readonly detail: SharedGameDetail;
   readonly contributors: readonly TopContributor[];
 } | null {
   if (!IS_VISUAL_TEST_BUILD) return null;

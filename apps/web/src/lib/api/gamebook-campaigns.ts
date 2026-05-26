@@ -18,7 +18,32 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 export const GamebookCampaignSchema = z.object({
   id: z.string().uuid(),
-  gameId: z.string().uuid(),
+  /** Issue #1392: discriminator-aware ref id (SharedGame or PrivateGame, see `gameRefKind`). */
+  gameRefId: z.string().uuid(),
+  /**
+   * Issue #1392 + #1406: discriminator mirroring backend `GameRefKind`. Known
+   * values are 0 = Shared, 1 = Private. The schema is intentionally widened to
+   * accept any nonnegative integer so that a BE-side enum extension (e.g. a
+   * future 2 = Hybrid) does not hard-break the play page with a generic Zod
+   * error. Unknown values fall back to Shared (0) and emit a one-shot warning
+   * so the schema drift surfaces in production logs — the FE then renders the
+   * conservative shared-catalog flow rather than crashing.
+   */
+  gameRefKind: z
+    .number()
+    .int()
+    .nonnegative()
+    .transform(value => {
+      if (value !== 0 && value !== 1) {
+        if (typeof console !== 'undefined') {
+          console.warn(
+            `[gamebook-campaigns] unknown GameRefKind=${value}; falling back to Shared (0). FE schema may need updating.`
+          );
+        }
+        return 0;
+      }
+      return value;
+    }),
   ownerUserId: z.string().uuid(),
   title: z.string().min(1).max(200),
   currentParagraph: z.number().int().min(0),
@@ -78,8 +103,19 @@ export async function listMyCampaigns(gameId?: string): Promise<GamebookCampaign
   return parseJson(res, z.array(GamebookCampaignSchema));
 }
 
+/**
+ * Update the current paragraph progress for a campaign, scoped to a specific
+ * GameBook (multi-book generalization, C2).
+ *
+ * The backend persists progress in `SessionBookProgress` indexed by
+ * `(campaignId, gameBookId)`, so the caller MUST identify which book this
+ * update belongs to. When a campaign has only one book the FE can default
+ * `gameBookId` to that single book id; the picker is only shown when 2+
+ * books exist.
+ */
 export async function updateProgress(
   id: string,
+  gameBookId: string,
   currentParagraph: number
 ): Promise<GamebookCampaign> {
   const res = await fetch(
@@ -87,11 +123,33 @@ export async function updateProgress(
     {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ currentParagraph }),
+      body: JSON.stringify({ gameBookId, currentParagraph }),
       credentials: 'include',
     }
   );
   return parseJson(res, GamebookCampaignSchema);
+}
+
+/**
+ * Issue #1388: per-book progress rows for the ResumeBooksList on the play page.
+ * Sorted server-side by most recent visit first. Orphan rows (book deleted)
+ * are filtered out by the BE handler.
+ */
+export const SessionBookProgressSchema = z.object({
+  bookId: z.string().uuid(),
+  bookName: z.string(),
+  lastLocation: z.string(),
+  lastVisitedAt: z.string().datetime({ offset: true }),
+});
+
+export type SessionBookProgressRow = z.infer<typeof SessionBookProgressSchema>;
+
+export async function getCampaignProgress(id: string): Promise<SessionBookProgressRow[]> {
+  const res = await fetch(
+    `${API_BASE}/api/v1/gamebook/campaigns/${encodeURIComponent(id)}/progress`,
+    { credentials: 'include' }
+  );
+  return parseJson(res, z.array(SessionBookProgressSchema));
 }
 
 export async function renameCampaign(id: string, title: string): Promise<GamebookCampaign> {
@@ -116,8 +174,6 @@ export async function deleteCampaign(id: string): Promise<void> {
     } catch {
       /* ignore */
     }
-    throw new Error(
-      `Gamebook campaigns API error ${res.status}: ${detail || res.statusText}`
-    );
+    throw new Error(`Gamebook campaigns API error ${res.status}: ${detail || res.statusText}`);
   }
 }

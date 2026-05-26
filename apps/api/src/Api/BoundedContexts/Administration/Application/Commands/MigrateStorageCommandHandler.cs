@@ -148,7 +148,16 @@ internal sealed class MigrateStorageCommandHandler : IRequestHandler<MigrateStor
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 var relativePath = Path.GetRelativePath(localPath, filePath);
-                errors.Add($"Error migrating {relativePath}: {ex.Message}");
+                // SECURITY (test-guarded): expose only the exception TYPE in the per-file error.
+                // Never include `ex.Message` — S3/cloud-provider exception messages routinely
+                // carry bucket names, credential fragments, request IDs, and other internal
+                // infrastructure details that would leak through MigrateStorageResult.Errors
+                // (returned to admin API callers AND propagated into log shipping pipelines).
+                // The full message + stack trace are preserved server-side by the LogWarning
+                // call below. The unit test
+                // MigrateStorageCommandHandlerTests.Handle_WhenStorageServiceThrows_ShouldNotIncludeRawExceptionMessageInError
+                // enforces this contract.
+                errors.Add($"Error migrating {relativePath} ({ex.GetType().Name})");
                 failed++;
                 _logger.LogWarning(ex, "Failed to migrate file {Path}", filePath);
             }

@@ -1,4 +1,12 @@
-"""Patches JSX files in place with onClick navigation, idempotent."""
+"""Patches JSX files in place with onClick navigation, idempotent.
+
+Limitation: the attrs regex `_OPEN_TAG_RE` handles up to 2 levels of brace
+nesting in JSX expressions (e.g., `style={{ key: val }}`). Snippets with 3+
+levels of nesting (e.g., `onClick={(e) => { setState({k: v}); }}`) cause the
+match to fail; in that case, `_apply_patch` logs a warning and returns None,
+and `patch_jsx_element` returns False. This is acceptable for the current
+mockup corpus but should be revisited if new mockups use deeper nesting.
+"""
 from __future__ import annotations
 from pathlib import Path
 import re
@@ -42,6 +50,10 @@ def _apply_patch(snippet: str, destination: str) -> str | None:
     """Inject or wrap onClick on the first opening tag of the snippet."""
     m = _OPEN_TAG_RE.match(snippet)
     if not m:
+        # 3-deep brace handlers (e.g., onClick={(e) => { setState({k: v}); }})
+        # are not parseable by our 2-deep regex. Skip with warning.
+        snippet_preview = snippet[:80].replace("\n", " ")
+        print(f"[jsx_patcher] WARN: skipped snippet (regex parse failed): {snippet_preview!r}")
         return None
     attrs = m.group("attrs")
     tag = m.group("tag")

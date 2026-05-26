@@ -1,5 +1,5 @@
 /**
- * /shared-games/[id] — public detail page (V2, Wave A.4, Issue #603).
+ * /shared-games/[id] — public detail page (Issue #603).
  *
  * Server component shell:
  *   - ISR `revalidate = 60` (aligned with backend HybridCache TTL — Wave A.3a §3.6)
@@ -21,7 +21,7 @@ import {
   getSharedGameDetail,
   getTopContributors,
   SharedGamesApiError,
-  type SharedGameDetailV2,
+  type SharedGameDetail,
   type TopContributor,
 } from '@/lib/api/shared-games';
 import { getSsrMessages } from '@/lib/i18n/ssr';
@@ -50,7 +50,7 @@ interface SharedGameDetailPageProps {
 }
 
 interface SsrInitialData {
-  readonly detail: SharedGameDetailV2 | null;
+  readonly detail: SharedGameDetail | null;
   readonly contributors: readonly TopContributor[];
 }
 
@@ -66,7 +66,7 @@ async function loadInitialData(id: string): Promise<SsrInitialData> {
     return { detail: fixture.detail, contributors: fixture.contributors };
   }
 
-  let detail: SharedGameDetailV2 | null = null;
+  let detail: SharedGameDetail | null = null;
   let contributors: readonly TopContributor[] = [];
 
   // SSR timeout cap: the public page must not hang the Next.js render
@@ -110,7 +110,7 @@ export async function generateMetadata({ params }: SharedGameDetailPageProps): P
   // Same fixture short-circuit as `loadInitialData` — keeps SEO metadata
   // in sync during visual-regression bootstrap (and dead in production).
   const fixture = tryLoadVisualTestFixture(id);
-  let detail: SharedGameDetailV2 | null = fixture?.detail ?? null;
+  let detail: SharedGameDetail | null = fixture?.detail ?? null;
   if (!detail) {
     try {
       detail = await getSharedGameDetail(id, {

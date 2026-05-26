@@ -13,7 +13,8 @@ vi.mock('@/lib/api/gamebook-campaigns');
 // Using arbitrary strings is fine here since getCampaign is fully mocked.
 const fakeCampaign = {
   id: 'abc',
-  gameId: 'g',
+  gameRefId: 'g',
+  gameRefKind: 0,
   ownerUserId: 'o',
   title: 'C1',
   currentParagraph: 47,

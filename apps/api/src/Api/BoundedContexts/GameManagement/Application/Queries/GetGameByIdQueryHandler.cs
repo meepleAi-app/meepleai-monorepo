@@ -25,6 +25,11 @@ internal class GetGameByIdQueryHandler : IQueryHandler<GetGameByIdQuery, GameDto
     {
         ArgumentNullException.ThrowIfNull(query);
 
+        if (query.GameId == Guid.Empty)
+        {
+            return null;
+        }
+
         var coreData = await _gameCoreData
             .GetCoreDataAsync(GameRef.Shared(query.GameId), cancellationToken)
             .ConfigureAwait(false);

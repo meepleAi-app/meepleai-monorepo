@@ -185,8 +185,11 @@ public sealed class MechanicAnalysisEndpointsIntegrationTests : IAsyncLifetime
     public async Task Generate_PdfNotLinkedToGame_Returns404()
     {
         // Arrange — SharedGame exists, PDF exists, but no SharedGameDocument row linking them.
+        // The PDF still needs a valid SharedGameId FK (post-Phase 2d); the "not linked"
+        // condition under test is the absence of the SharedGameDocument approval row,
+        // not a dangling PdfDocument.SharedGameId.
         var sharedGameId = await SeedSharedGameAsync();
-        var pdfDocumentId = await SeedPdfDocumentAsync(chunkCount: 3);
+        var pdfDocumentId = await SeedPdfDocumentAsync(chunkCount: 3, sharedGameId);
 
         var body = new GenerateBody(sharedGameId, pdfDocumentId, CostCapUsd: 1.00m);
 
@@ -429,7 +432,7 @@ public sealed class MechanicAnalysisEndpointsIntegrationTests : IAsyncLifetime
     private async Task<(Guid SharedGameId, Guid PdfDocumentId)> SeedHappyPathAsync(int chunkCount)
     {
         var sharedGameId = await SeedSharedGameAsync();
-        var pdfDocumentId = await SeedPdfDocumentAsync(chunkCount);
+        var pdfDocumentId = await SeedPdfDocumentAsync(chunkCount, sharedGameId);
         await SeedSharedGameDocumentLinkAsync(sharedGameId, pdfDocumentId);
         return (sharedGameId, pdfDocumentId);
     }
@@ -458,7 +461,7 @@ public sealed class MechanicAnalysisEndpointsIntegrationTests : IAsyncLifetime
         return gameId;
     }
 
-    private async Task<Guid> SeedPdfDocumentAsync(int chunkCount)
+    private async Task<Guid> SeedPdfDocumentAsync(int chunkCount, Guid sharedGameId)
     {
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -467,6 +470,7 @@ public sealed class MechanicAnalysisEndpointsIntegrationTests : IAsyncLifetime
         var pdf = new PdfDocumentEntity
         {
             Id = pdfId,
+            SharedGameId = sharedGameId, // FK_pdf_documents_shared_games_SharedGameId (post-Phase 2d)
             FileName = "rulebook.pdf",
             FilePath = $"/tmp/tests/{pdfId}.pdf",
             FileSizeBytes = 1024,
@@ -510,6 +514,7 @@ public sealed class MechanicAnalysisEndpointsIntegrationTests : IAsyncLifetime
         var link = new SharedGameDocumentEntity
         {
             Id = Guid.NewGuid(),
+            SharedGameId = sharedGameId, // FK_shared_game_documents_shared_games_shared_game_id
             PdfDocumentId = pdfDocumentId,
             DocumentType = 0, // Rulebook
             Version = "1.0",

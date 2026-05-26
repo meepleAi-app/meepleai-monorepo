@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SP5 B6 · Versions · /versions</title>
+<!-- @v2 VersionTimeline · VersionDiffViewer · CompareSelector -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/><link rel="stylesheet" href="components.css"/><link rel="stylesheet" href="admin-base.css"/>
+<style>
+  .v-grid { display: grid; grid-template-columns: 280px 1fr; gap: 14px; align-items: start; }
+  .art-row { padding: 10px 14px; border-bottom: 1px solid var(--border-light); cursor: pointer; }
+  .art-row:hover { background: var(--bg-muted); }
+  .art-row.selected { background: hsl(var(--c-toolkit) / .08); border-left: 3px solid hsl(var(--c-toolkit)); padding-left: 11px; }
+  .art-row .name { font-family: var(--f-display); font-weight: 700; font-size: 12.5px; display: flex; align-items: center; gap: 6px; }
+  .art-row .meta { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+  .v-timeline { padding: 14px; }
+  .v-row { display: grid; grid-template-columns: 80px 1fr 100px 80px 28px; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-light); align-items: center; }
+  .v-row .vtag { font-family: var(--f-mono); font-size: 11px; font-weight: 800; padding: 4px 8px; border-radius: 6px; background: var(--bg-muted); display: inline-block; text-align: center; }
+  .v-row .vtag.published { background: hsl(var(--c-toolkit) / .14); color: hsl(var(--c-toolkit)); }
+  .v-row .vtag.draft { background: hsl(38 90% 56% / .14); color: hsl(38 90% 50%); }
+  .v-row .commit { font-family: var(--f-display); font-weight: 700; font-size: 13px; }
+  .v-row .commit-meta { font-family: var(--f-mono); font-size: 10.5px; color: var(--text-muted); margin-top: 2px; }
+  .v-row .compare-checkbox { display: flex; gap: 4px; align-items: center; font-family: var(--f-mono); font-size: 10px; }
+
+  .diff-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 10px; overflow: hidden; }
+  .diff-head { padding: 12px 14px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: 12px; background: var(--bg); }
+  .diff-versions { display: flex; align-items: center; gap: 8px; font-family: var(--f-mono); font-size: 12px; }
+  .diff-versions .v1 { color: hsl(var(--c-event)); font-weight: 800; }
+  .diff-versions .v2 { color: hsl(var(--c-toolkit)); font-weight: 800; }
+  .diff-body { display: grid; grid-template-columns: 1fr 1fr; }
+  .diff-side { padding: 12px; font-family: var(--f-mono); font-size: 11.5px; line-height: 1.6; overflow-x: auto; min-height: 320px; }
+  .diff-side.left { border-right: 1px solid var(--border-light); }
+  .diff-line { padding: 2px 8px; border-radius: 3px; white-space: pre-wrap; }
+  .diff-line.add { background: hsl(var(--c-toolkit) / .14); color: hsl(var(--c-toolkit)); }
+  .diff-line.del { background: hsl(var(--c-event) / .14); color: hsl(var(--c-event)); }
+  .diff-line.neutral { color: var(--text-sec); }
+  .diff-line .lno { display: inline-block; width: 24px; color: var(--text-muted); text-align: right; margin-right: 8px; user-select: none; }
+</style>
+</head>
+<body class="admin-page">
+<div class="admin-mobile-fallback"><span class="em">🖥️</span><h2>Console solo desktop</h2></div>
+<div class="admin-shell">
+  <div data-admin-nav-mount></div>
+  <main>
+    <header class="admin-top">
+      <div><h1>Versioning</h1><div class="crumbs">Tools · Versions · 312 artefatti · 4.8k versions</div></div>
+      <div class="spacer"></div>
+      <div class="admin-top-actions">
+        <span class="filter-chip active">Tipo: tutti <span class="x">▾</span></span>
+        <button class="btn-admin">⤓ Export</button>
+      </div>
+    </header>
+
+    <div class="admin-body">
+      <div class="v-grid">
+
+        <div class="admin-panel" style="position: sticky; top: 76px; max-height: calc(100vh - 100px); display: flex; flex-direction: column">
+          <div class="admin-panel-head"><h3>Artefatti</h3><span class="meta" style="margin-left: auto">312 totali</span></div>
+          <div class="admin-search" style="margin: 8px 12px"><span>🔍</span><input placeholder="Filtra…"></div>
+          <div style="overflow-y: auto; flex: 1">
+            <div class="art-row selected">
+              <div class="name">🧰 ocr-pdf-toolkit</div>
+              <div class="meta">v2.1.0 published · 18 versions · last edit 38m fa</div>
+            </div>
+            <div class="art-row">
+              <div class="name">🧰 wingspan-rules-agent</div>
+              <div class="meta">v3.2.4 published · 24 versions · 2gg fa</div>
+            </div>
+            <div class="art-row">
+              <div class="name">📚 brass-birmingham-rulebook</div>
+              <div class="meta">v1.4 published · 12 versions · 5gg fa</div>
+            </div>
+            <div class="art-row">
+              <div class="name">🧰 hybrid-retriever-pipeline</div>
+              <div class="meta">v3.0-rc draft · 38 versions · 14m fa</div>
+            </div>
+            <div class="art-row">
+              <div class="name">📚 spirit-island-encyclopedia</div>
+              <div class="meta">v2.0 published · 8 versions · 18gg fa</div>
+            </div>
+            <div class="art-row">
+              <div class="name">🧰 prompt-template-house-rule</div>
+              <div class="meta">v1.2 published · 6 versions · 12gg fa</div>
+            </div>
+            <div class="art-row">
+              <div class="name">📚 tainted-grail-glossary</div>
+              <div class="meta">v1.0.3 published · 22 versions · 28gg fa</div>
+            </div>
+            <div class="art-row">
+              <div class="name">🧰 ocr-fallback-tesseract</div>
+              <div class="meta">v0.4 beta · 4 versions · 32gg fa</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 14px">
+
+          <div class="admin-panel">
+            <div class="admin-panel-head">
+              <h3>🧰 ocr-pdf-toolkit · timeline versioni</h3>
+              <div style="display: flex; gap: 6px; align-items: center; margin-left: auto">
+                <span style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">Compare:</span>
+                <span class="filter-chip active" style="color: hsl(var(--c-event))">v2.0.0</span>
+                <span style="color: var(--text-muted)">↔</span>
+                <span class="filter-chip active" style="color: hsl(var(--c-toolkit))">v2.1.0</span>
+                <button class="btn-admin sm">📑 View diff</button>
+              </div>
+            </div>
+            <div class="v-timeline">
+              <div class="v-row">
+                <div class="vtag draft">v2.2-rc</div>
+                <div><div class="commit">Sperimentale: Tesseract fallback per scan low-res</div><div class="commit-meta">commit a8f3c91 · 38m fa · by Aaron · ⚠ BREAKING (config field renamed)</div></div>
+                <div style="font-family: var(--f-mono); font-size: 11px"><span class="status-chip warning" style="font-size: 10px">draft</span></div>
+                <div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">14 changes</div>
+                <div><input type="checkbox" class="compare-checkbox"></div>
+              </div>
+
+              <div class="v-row" style="background: hsl(var(--c-toolkit) / .04); padding: 14px 12px; margin: 0 -12px; border-radius: 6px">
+                <div class="vtag published">v2.1.0</div>
+                <div><div class="commit" style="display: flex; align-items: center; gap: 6px">Improved table extraction in SmolDocling pipeline <span class="status-chip healthy" style="font-size: 10px">PUBLISHED</span></div><div class="commit-meta">commit e3f7a1c · 2026-05-22 · by Marco · 87 install · ratings 4.6 (24)</div></div>
+                <div style="font-family: var(--f-mono); font-size: 11px">prod</div>
+                <div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">+18 -3</div>
+                <div><input type="checkbox" checked class="compare-checkbox"></div>
+              </div>
+
+              <div class="v-row">
+                <div class="vtag">v2.0.0</div>
+                <div><div class="commit">SmolDocling primary parser (replaces unstructured-only)</div><div class="commit-meta">commit b1d4e02 · 2026-05-12 · by Marco · 142 install</div></div>
+                <div style="font-family: var(--f-mono); font-size: 11px">archived</div>
+                <div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">+84 -52</div>
+                <div><input type="checkbox" checked class="compare-checkbox"></div>
+              </div>
+
+              <div class="v-row">
+                <div class="vtag">v1.4.2</div>
+                <div><div class="commit">Fix encoding UTF-8 in italian PDFs</div><div class="commit-meta">commit f9c2d8a · 2026-04-28 · by Aaron · hotfix</div></div>
+                <div style="font-family: var(--f-mono); font-size: 11px">archived</div>
+                <div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">+6 -2</div>
+                <div><input type="checkbox" class="compare-checkbox"></div>
+              </div>
+
+              <div class="v-row">
+                <div class="vtag">v1.4.0</div>
+                <div><div class="commit">Initial SmolDocling support (opt-in flag)</div><div class="commit-meta">commit c8b2e91 · 2026-04-12 · by Marco</div></div>
+                <div style="font-family: var(--f-mono); font-size: 11px">archived</div>
+                <div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">+24 -8</div>
+                <div><input type="checkbox" class="compare-checkbox"></div>
+              </div>
+
+              <div class="v-row" style="border-bottom: 0">
+                <div class="vtag">v1.0.0</div>
+                <div><div class="commit">Initial release · Unstructured.io parser</div><div class="commit-meta">commit a1c4f78 · 2026-01-08 · by Marco</div></div>
+                <div style="font-family: var(--f-mono); font-size: 11px">init</div>
+                <div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">init</div>
+                <div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Diff viewer -->
+          <div class="diff-card">
+            <div class="diff-head">
+              <strong style="font-family: var(--f-display); font-size: 14px">📑 Diff viewer</strong>
+              <div class="diff-versions"><span class="v1">v2.0.0</span> → <span class="v2">v2.1.0</span></div>
+              <div style="margin-left: auto; font-family: var(--f-mono); font-size: 11px; color: var(--text-muted)">config/pipeline.yaml · +18 -3</div>
+              <button class="btn-admin sm">⤓ Patch .diff</button>
+              <button class="btn-admin sm">↩ Restore v2.0.0</button>
+            </div>
+            <div class="diff-body">
+              <div class="diff-side left">
+                <div class="diff-line neutral"><span class="lno">14</span>pipeline:</div>
+                <div class="diff-line neutral"><span class="lno">15</span>  parsers:</div>
+                <div class="diff-line del"><span class="lno">16</span>- - unstructured</div>
+                <div class="diff-line del"><span class="lno">17</span>-   version: ^0.18.0</div>
+                <div class="diff-line neutral"><span class="lno">18</span>  layout:</div>
+                <div class="diff-line del"><span class="lno">19</span>- engine: tesseract-only</div>
+                <div class="diff-line neutral"><span class="lno">20</span>  chunker:</div>
+                <div class="diff-line neutral"><span class="lno">21</span>    size: 512</div>
+                <div class="diff-line neutral"><span class="lno">22</span>    overlap: 64</div>
+              </div>
+              <div class="diff-side">
+                <div class="diff-line neutral"><span class="lno">14</span>pipeline:</div>
+                <div class="diff-line neutral"><span class="lno">15</span>  parsers:</div>
+                <div class="diff-line add"><span class="lno">16</span>+ - smol-docling</div>
+                <div class="diff-line add"><span class="lno">17</span>+   version: ^1.2.0</div>
+                <div class="diff-line add"><span class="lno">18</span>+   table_extract: aggressive</div>
+                <div class="diff-line add"><span class="lno">19</span>+ - unstructured</div>
+                <div class="diff-line add"><span class="lno">20</span>+   version: ^0.18.3</div>
+                <div class="diff-line neutral"><span class="lno">21</span>  layout:</div>
+                <div class="diff-line add"><span class="lno">22</span>+ engine: smol-docling</div>
+                <div class="diff-line add"><span class="lno">23</span>+ fallback: tesseract</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="admin-nav.js"></script><script>renderAdminNav('versions');</script>
+</body></html>

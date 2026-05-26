@@ -24,11 +24,11 @@ public class RenameGamebookCampaignHandler : IRequestHandler<RenameGamebookCampa
             ?? throw new NotFoundException($"Campaign {cmd.CampaignId} not found");
 
         if (session.OwnerUserId != cmd.CallerUserId)
-            throw new ConflictException("Only owner can rename campaign");
+            throw new ForbiddenException("Only owner can rename campaign");
 
         session.Rename(cmd.Title, cmd.CallerUserId);
         await _repo.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return CreateGamebookCampaignHandler.MapToDto(session);
+        return CreateGamebookCampaignHandler.MapToDto(session, progress: null);
     }
 }

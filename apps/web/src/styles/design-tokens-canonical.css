@@ -59,7 +59,14 @@
   /* ─── Typography ─── */
   --f-display: 'Quicksand', system-ui, sans-serif;
   --f-body:    'Nunito', system-ui, sans-serif;
-  --f-mono:    'JetBrains Mono', ui-monospace, monospace;
+  /* Post DS-step 2a (2026-05-24): JetBrains Mono loaded via next/font/google
+   * in app/layout.tsx exposes the `--font-jetbrains-mono` CSS variable.
+   * Bridge it into the canonical `--f-mono` token to make the dependency
+   * explicit (mirrors `--font-quicksand` -> `--f-display` / `--font-nunito`
+   * -> `--f-body` pattern intent). Falls back to ui-monospace if the variable
+   * is not set (e.g. in unit-test setups without next/font hydration).
+   */
+  --f-mono:    var(--font-jetbrains-mono), 'JetBrains Mono', ui-monospace, monospace;
 
   --fs-xs:   11px;
   --fs-sm:   12px;
@@ -155,7 +162,11 @@
 }
 
 /* ─── DARK THEME ─── */
-:root[data-theme="dark"] {
+/* DS: dark tokens apply both on :root (global theme) AND on any container
+   carrying data-theme="dark" (e.g. AdminShell), enabling per-section dark scope
+   without touching <html>. See SP5 F0c plan. */
+:root[data-theme="dark"],
+[data-theme="dark"] {
   --bg:        #14100a;
   --bg-card:   #1e1710;
   --bg-muted:  #241c13;

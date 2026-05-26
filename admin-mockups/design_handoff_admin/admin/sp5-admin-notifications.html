@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SP5 A9 · Admin Notifications · /admin/notifications</title>
+<!-- @v2 TemplateEditor · TemplatePreviewFrame · VariableHelper -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/><link rel="stylesheet" href="components.css"/><link rel="stylesheet" href="admin-base.css"/>
+<style>
+  .nf-grid { display: grid; grid-template-columns: 280px 1fr; gap: 14px; align-items: start; }
+  .tpl-list { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 10px; overflow: hidden; max-height: calc(100vh - 110px); display: flex; flex-direction: column; position: sticky; top: 76px; }
+  .tpl-row { padding: 10px 14px; border-bottom: 1px solid var(--border-light); cursor: pointer; }
+  .tpl-row:hover { background: var(--bg-muted); }
+  .tpl-row.active { background: hsl(var(--c-event) / .08); border-left: 3px solid hsl(var(--c-event)); padding-left: 11px; }
+  .tpl-row .tname { font-family: var(--f-display); font-weight: 700; font-size: 12.5px; display: flex; align-items: center; gap: 6px; }
+  .tpl-row .tmeta { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+  .channel-chip { padding: 1px 5px; border-radius: 3px; font-family: var(--f-mono); font-size: 9px; font-weight: 700; }
+  .channel-chip.email { background: hsl(var(--c-chat) / .14); color: hsl(var(--c-chat)); }
+  .channel-chip.push { background: hsl(var(--c-event) / .14); color: hsl(var(--c-event)); }
+  .channel-chip.inapp { background: hsl(var(--c-agent) / .14); color: hsl(var(--c-agent)); }
+  .variant-chip { padding: 1px 5px; border-radius: 3px; font-family: var(--f-mono); font-size: 9px; font-weight: 700; background: var(--bg-muted); color: var(--text-muted); }
+
+  .editor-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 10px; overflow: hidden; }
+  .preview-frame {
+    width: 380px;
+    margin: 0 auto;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    background: #fff;
+    color: #1a1612;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+  }
+  .preview-frame .ph-h { background: linear-gradient(135deg, hsl(var(--c-game)), hsl(var(--c-event))); padding: 28px 24px; color: #fff; }
+  .preview-frame .ph-h .logo { display: flex; align-items: center; gap: 8px; font-family: var(--f-display); font-weight: 800; font-size: 18px; }
+  .preview-frame .ph-h h1 { font-family: var(--f-display); font-size: 22px; margin: 14px 0 0; }
+  .preview-frame .ph-body { padding: 24px; }
+  .preview-frame .ph-body p { margin: 0 0 12px; font-size: 14px; line-height: 1.55; }
+  .preview-frame .ph-body .var { background: hsl(var(--c-game) / .14); color: hsl(var(--c-game)); padding: 0 4px; border-radius: 3px; font-family: var(--f-mono); font-size: 13px; font-weight: 700; }
+  .preview-frame .ph-cta { display: block; background: hsl(var(--c-game)); color: #fff; text-decoration: none; padding: 12px; text-align: center; border-radius: 6px; font-family: var(--f-display); font-weight: 700; }
+  .preview-frame .ph-foot { background: #f5f0e6; padding: 18px 24px; font-size: 11px; color: #6b5a45; }
+</style>
+</head>
+<body class="admin-page">
+<div class="admin-mobile-fallback"><span class="em">🖥️</span><h2>Console solo desktop</h2></div>
+<div class="admin-shell">
+  <div data-admin-nav-mount></div>
+  <main>
+    <header class="admin-top">
+      <div><h1>Notifications</h1><div class="crumbs">Admin · Templates · 47 attivi · 12 transactional · 8 marketing</div></div>
+      <div class="spacer"></div>
+      <div class="admin-top-actions">
+        <div class="admin-search"><span>🔍</span><input placeholder="Cerca template…"></div>
+        <button class="btn-admin primary">+ Nuovo template</button>
+      </div>
+    </header>
+
+    <div class="admin-body">
+      <div class="nf-grid">
+
+        <div class="tpl-list">
+          <div style="padding: 10px 14px; border-bottom: 1px solid var(--border-light); display: flex; gap: 4px">
+            <button class="filter-chip active">Tutti</button>
+            <button class="filter-chip">📧 Email</button>
+            <button class="filter-chip">🔔 Push</button>
+            <button class="filter-chip">📨 In-app</button>
+          </div>
+
+          <div style="overflow-y: auto; flex: 1">
+            <div class="tpl-row active">
+              <div class="tname">🎲 game-night-invite <span class="channel-chip email">EMAIL</span></div>
+              <div class="tmeta">"Marco ti ha invitato a una serata" · transactional · last edit 12gg fa</div>
+            </div>
+            <div class="tpl-row">
+              <div class="tname">✅ rsvp-confirmed <span class="channel-chip email">EMAIL</span> <span class="channel-chip inapp">INAPP</span></div>
+              <div class="tmeta">Confirmation RSVP · transactional</div>
+            </div>
+            <div class="tpl-row">
+              <div class="tname">⏰ session-reminder <span class="channel-chip push">PUSH</span></div>
+              <div class="tmeta">1h prima della partita · transactional</div>
+            </div>
+            <div class="tpl-row">
+              <div class="tname">🤖 agent-low-confidence <span class="channel-chip inapp">INAPP</span></div>
+              <div class="tmeta">"Vuoi definire una house rule?" · system</div>
+            </div>
+            <div class="tpl-row">
+              <div class="tname">📚 kb-indexed <span class="channel-chip push">PUSH</span></div>
+              <div class="tmeta">PDF indicizzato · transactional</div>
+            </div>
+            <div class="tpl-row">
+              <div class="tname">🆕 weekly-digest <span class="channel-chip email">EMAIL</span></div>
+              <div class="tmeta">Riepilogo settimanale · marketing</div>
+            </div>
+            <div class="tpl-row">
+              <div class="tname">🎉 new-feature-launch <span class="channel-chip email">EMAIL</span> <span class="channel-chip inapp">INAPP</span></div>
+              <div class="tmeta">Annunci nuove feature · marketing</div>
+            </div>
+            <div class="tpl-row">
+              <div class="tname">💳 billing-receipt <span class="channel-chip email">EMAIL</span></div>
+              <div class="tmeta">Ricevuta pagamento · transactional</div>
+            </div>
+            <div class="tpl-row">
+              <div class="tname">⚠️ password-reset <span class="channel-chip email">EMAIL</span></div>
+              <div class="tmeta">Reset password · security</div>
+            </div>
+            <div class="tpl-row">
+              <div class="tname">🚨 security-alert <span class="channel-chip email">EMAIL</span> <span class="channel-chip push">PUSH</span></div>
+              <div class="tmeta">Login da nuovo device · security</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="editor-card">
+          <div style="padding: 14px 18px; border-bottom: 1px solid var(--border-light); background: linear-gradient(180deg, hsl(var(--c-event) / .08), transparent)">
+            <div style="display: flex; align-items: center; gap: 10px">
+              <span style="font-size: 22px">🎲</span>
+              <div style="flex: 1">
+                <div style="font-family: var(--f-display); font-size: 17px; font-weight: 800">game-night-invite</div>
+                <div style="font-family: var(--f-mono); font-size: 11px; color: var(--text-muted); margin-top: 2px">id: <code>tpl-gn-invite-v3</code> · variant: <span class="variant-chip">transactional</span> · v3.2 · last edit 12gg fa by Aaron</div>
+              </div>
+              <div style="display: flex; gap: 6px">
+                <button class="btn-admin sm">⤓ Export</button>
+                <button class="btn-admin sm">📋 Duplicate</button>
+                <button class="btn-admin sm primary">💾 Save</button>
+              </div>
+            </div>
+
+            <div class="admin-tabs" style="margin-top: 14px; margin-bottom: -1px">
+              <button class="admin-tab">📝 Edit</button>
+              <button class="admin-tab active">👁 Preview</button>
+              <button class="admin-tab">📨 Test send</button>
+              <button class="admin-tab">📜 History <span class="count">18</span></button>
+            </div>
+          </div>
+
+          <div style="padding: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start">
+            <div>
+              <div style="margin-bottom: 14px">
+                <span class="sf-label" style="font-family: var(--f-mono); font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; display: block; margin-bottom: 5px">Subject</span>
+                <input class="admin-input" value="🎲 {{user.firstName}}, sei invitato alla serata di {{host.firstName}}!" style="font-family: var(--f-body); max-width: none">
+              </div>
+
+              <div>
+                <span class="sf-label" style="font-family: var(--f-mono); font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; display: block; margin-bottom: 5px">Body (markdown)</span>
+                <textarea class="admin-textarea" rows="12" style="font-family: var(--f-mono); font-size: 11.5px; max-width: none; line-height: 1.6">Ciao **{{user.firstName}}**,
+
+**{{host.firstName}}** ti ha invitato alla serata "{{gameNight.title}}"
+in programma **{{gameNight.dateFormatted}}** alle **{{gameNight.timeFormatted}}**
+a {{gameNight.location}}.
+
+Giochi proposti:
+{{#each gameNight.games}}
+- {{title}} ({{minPlayers}}-{{maxPlayers}}p · {{duration}}min)
+{{/each}}
+
+Conferma la tua presenza entro **{{gameNight.rsvpDeadline}}**.
+
+[**Conferma RSVP**]({{rsvpUrl}})
+
+A presto! 🎲
+Il team MeepleAI</textarea>
+              </div>
+
+              <div style="margin-top: 14px; padding: 10px 12px; background: var(--bg-muted); border-radius: 6px; font-family: var(--f-mono); font-size: 11px">
+                <div style="color: var(--text-muted); margin-bottom: 6px; font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: .06em">📌 Variabili disponibili</div>
+                <div style="display: flex; flex-wrap: wrap; gap: 4px">
+                  <span style="background: var(--bg); padding: 2px 5px; border-radius: 3px; color: hsl(var(--c-game))">{{user.firstName}}</span>
+                  <span style="background: var(--bg); padding: 2px 5px; border-radius: 3px; color: hsl(var(--c-game))">{{host.firstName}}</span>
+                  <span style="background: var(--bg); padding: 2px 5px; border-radius: 3px; color: hsl(var(--c-game))">{{gameNight.title}}</span>
+                  <span style="background: var(--bg); padding: 2px 5px; border-radius: 3px; color: hsl(var(--c-game))">{{gameNight.dateFormatted}}</span>
+                  <span style="background: var(--bg); padding: 2px 5px; border-radius: 3px; color: hsl(var(--c-game))">{{gameNight.games}}</span>
+                  <span style="background: var(--bg); padding: 2px 5px; border-radius: 3px; color: hsl(var(--c-game))">{{rsvpUrl}}</span>
+                  <span style="color: var(--text-muted)">+ 14 altre…</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div style="display: flex; gap: 6px; margin-bottom: 10px">
+                <button class="filter-chip active">📧 Email</button>
+                <button class="filter-chip">📱 Mobile</button>
+                <button class="filter-chip">🖥️ Desktop</button>
+                <span style="margin-left: auto; display: flex; gap: 6px">
+                  <button class="filter-chip">☀ Light</button>
+                  <button class="filter-chip active">🌙 Dark</button>
+                </span>
+              </div>
+
+              <div class="preview-frame">
+                <div class="ph-h">
+                  <div class="logo">🎲 MeepleAI</div>
+                  <h1>Sei invitato!</h1>
+                </div>
+                <div class="ph-body">
+                  <p>Ciao <span class="var">Davide</span>,</p>
+                  <p><strong>Marco</strong> ti ha invitato alla serata <strong>"Sabato boardgame con i Padovani"</strong> in programma <strong>sabato 25 maggio</strong> alle <strong>20:30</strong> a casa di Marco (Padova).</p>
+                  <p style="margin-top: 16px; font-weight: 700">Giochi proposti:</p>
+                  <ul style="margin: 6px 0 16px; padding-left: 18px; font-size: 14px; line-height: 1.7">
+                    <li>Twilight Imperium 4E (3-6p · 240min)</li>
+                    <li>Brass: Birmingham (2-4p · 120min)</li>
+                    <li>Wingspan (1-5p · 60min)</li>
+                  </ul>
+                  <p>Conferma la tua presenza entro <strong>venerdì 24 alle 18:00</strong>.</p>
+                  <a href="#" class="ph-cta">Conferma RSVP</a>
+                  <p style="margin-top: 20px; font-size: 12.5px; color: #6b5a45">A presto! 🎲<br/>Il team MeepleAI</p>
+                </div>
+                <div class="ph-foot">
+                  Hai ricevuto questa email perché Marco ti ha aggiunto al gruppo Padovani Boardgame. <a href="#" style="color: hsl(var(--c-game))">Disiscriviti</a> · MeepleAI · Padova IT
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+<script src="admin-nav.js"></script><script>renderAdminNav('notifications');</script>
+</body></html>

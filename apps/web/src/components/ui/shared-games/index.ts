@@ -1,5 +1,5 @@
 /**
- * Barrel for /shared-games v2 components — Wave A.3b (Issue #596).
+ * Barrel for /shared-games feature components — Wave A.3b (Issue #596).
  *
  * Components: 8 files + 1 barrel. Tests live alongside (`*.test.tsx`).
  */

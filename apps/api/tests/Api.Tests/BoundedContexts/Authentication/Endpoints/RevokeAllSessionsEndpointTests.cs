@@ -133,15 +133,35 @@ public sealed class RevokeAllSessionsEndpointTests : IAsyncLifetime
 
     private async Task<string> RegisterAsync(string email, string password)
     {
-        var response = await _client.PostAsJsonAsync("/api/v1/auth/register", new
+        // Bypass POST /api/v1/auth/register (invite-only by default in fresh test DBs —
+        // RegistrationMode public defaults to false, so register returns 403). Seed the
+        // user directly with a real PasswordHash so the subsequent /auth/login calls
+        // succeed, then mint the first session via login (mirrors what register would
+        // have returned). This test needs two distinct sessions for the same user.
+        using (var scope = _factory.Services.CreateScope())
         {
-            Email = email,
-            Password = password,
-            DisplayName = $"User {email.Split('@')[0]}"
-        });
-        response.EnsureSuccessStatusCode();
-        return ExtractSessionCookieValue(response)
-            ?? throw new InvalidOperationException("Register did not set meepleai_session cookie.");
+            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            if (!await dbContext.Set<Api.Infrastructure.Entities.UserEntity>()
+                    .AnyAsync(u => u.Email == email))
+            {
+                dbContext.Set<Api.Infrastructure.Entities.UserEntity>().Add(
+                    new Api.Infrastructure.Entities.UserEntity
+                    {
+                        Id = Guid.NewGuid(),
+                        Email = email,
+                        DisplayName = $"User {email.Split('@')[0]}",
+                        Role = "user",
+                        PasswordHash = Api.BoundedContexts.Authentication.Domain.ValueObjects.PasswordHash
+                            .Create(password).Value,
+                        Tier = "free",
+                        EmailVerified = true, // bypass EmailVerificationMiddleware
+                        CreatedAt = DateTime.UtcNow
+                    });
+                await dbContext.SaveChangesAsync();
+            }
+        }
+
+        return await LoginAsync(email, password);
     }
 
     private async Task<string> LoginAsync(string email, string password)

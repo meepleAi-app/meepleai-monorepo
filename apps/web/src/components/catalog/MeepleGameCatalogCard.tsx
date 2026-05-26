@@ -191,9 +191,6 @@ export function MeepleGameCatalogCard({
   if (game.yearPublished) {
     subtitleParts.push(String(game.yearPublished));
   }
-  if (game.bggId) {
-    subtitleParts.push(`ID: ${game.bggId}`);
-  }
   const subtitle = subtitleParts.length > 0 ? subtitleParts.join(' · ') : 'N/A';
 
   // Loading state: only show loading if fetching individually (no batch status provided)

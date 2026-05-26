@@ -51,7 +51,7 @@ import {
  *       (Gherkin G2.1 stadio 2, G2.2 mobile)
  */
 
-test.describe("@demo-runthrough Nanolith caso d'uso end-to-end", () => {
+test.describe("@demo-runthrough @gamebook-multi-config Nanolith caso d'uso end-to-end", () => {
   // 120s budget per il flow [1]-[6] reale: login (3s) + library (5s) + game (5s) +
   // CTA (5s) + chat SSE first chunk (15s) + photo upload + segmentation (30s) +
   // translate SSE first chunk (15s) + buffer 40s. Override locale via

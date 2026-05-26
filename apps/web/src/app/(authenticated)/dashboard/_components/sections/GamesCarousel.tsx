@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { Game } from '@/lib/api/schemas/games.schemas';
 
 import { DashboardSection } from './DashboardSection';
+import { EmptySection } from './EmptySection';
 
 export interface GamesCarouselLabels {
   readonly title: string;
@@ -23,6 +24,15 @@ export interface GamesCarouselProps {
   readonly onEmptyCtaClick?: (sectionId: string, ctaHref: string) => void;
 }
 
+/** Deterministic gradient cover from a game id (matches mockup `grad(h,s)`). */
+function coverGradient(seed: string): string {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) % 360;
+  const h2 = (h + 340) % 360;
+  const h3 = (h + 30) % 360;
+  return `linear-gradient(135deg, hsl(${h}, 70%, 55%), hsl(${h2}, 50%, 30%) 60%, hsl(${h3}, 60%, 40%))`;
+}
+
 export function GamesCarousel({
   games,
   totalCount,
@@ -35,6 +45,7 @@ export function GamesCarousel({
   return (
     <DashboardSection
       sectionId="games"
+      entity="game"
       icon="🎲"
       title={labels.title}
       count={totalCount}
@@ -43,44 +54,61 @@ export function GamesCarousel({
       onViewAllClick={onViewAllClick}
     >
       {top.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-3 py-6 text-center">
-          <span aria-hidden="true" className="text-3xl">
-            🎲
-          </span>
-          <p className="text-sm text-muted-foreground">{labels.emptyTitle}</p>
-          <Link
-            href={labels.emptyCtaHref}
-            onClick={() => onEmptyCtaClick?.('games', labels.emptyCtaHref)}
-            className="mt-1 inline-flex items-center rounded-lg bg-foreground px-3 py-1.5 font-bold font-[Quicksand] text-xs text-background"
-          >
-            {labels.emptyCta}
-          </Link>
-        </div>
+        <EmptySection
+          entity="game"
+          icon="🎲"
+          message={labels.emptyTitle}
+          cta={labels.emptyCta}
+          ctaHref={labels.emptyCtaHref}
+          onCtaClick={() => onEmptyCtaClick?.('games', labels.emptyCtaHref)}
+        />
       ) : (
-        <div className="grid grid-cols-3 gap-2">
-          {top.map(g => (
-            <Link
-              key={g.id}
-              href={`/library/${g.id}`}
-              data-slot="dashboard-game-card"
-              className="group flex flex-col overflow-hidden rounded-lg border border-border bg-card hover:border-border-strong"
-            >
-              <div
-                aria-hidden="true"
-                className="flex h-16 items-center justify-center bg-gradient-to-br from-muted to-muted/40 text-2xl"
+        <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
+          {top.map(g => {
+            const cover = g.imageUrl ?? g.iconUrl ?? null;
+            return (
+              <Link
+                key={g.id}
+                href={`/library/${g.id}`}
+                data-slot="dashboard-game-card"
+                className="flex flex-col gap-1.5 overflow-hidden rounded-[10px] border border-border bg-background transition-colors hover:border-border-strong"
               >
-                🎲
-              </div>
-              <div className="flex flex-col gap-0.5 p-2">
-                <div className="line-clamp-1 font-bold font-[Quicksand] text-xs text-foreground">
-                  {g.title}
+                <div
+                  aria-hidden="true"
+                  className="relative flex items-center justify-center overflow-hidden"
+                  style={{
+                    aspectRatio: '5 / 3',
+                    background: coverGradient(g.id),
+                  }}
+                >
+                  {cover ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- avoid Next/Image domain config for community-provided BGG URLs
+                    <img
+                      src={cover}
+                      alt=""
+                      loading="lazy"
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span
+                      className="text-[36px]"
+                      style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.35))' }}
+                    >
+                      🎲
+                    </span>
+                  )}
                 </div>
-                <div className="font-mono text-[9px] text-muted-foreground">
-                  {g.yearPublished ?? '—'}
+                <div className="px-2 pb-2 pt-0.5">
+                  <div className="line-clamp-1 font-quicksand text-xs font-extrabold text-foreground">
+                    {g.title}
+                  </div>
+                  <div className="font-mono text-[9px] font-semibold text-muted-foreground">
+                    {g.yearPublished ?? '—'}
+                  </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       )}
     </DashboardSection>

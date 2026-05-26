@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.SharedKernel.Application.Interfaces;
 
@@ -9,6 +10,9 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// Issue #563: Optional <see cref="QueryVector"/> lets callers pass a pre-computed
 /// embedding to skip the duplicate embedding call inside <c>SearchQueryHandler</c>.
 /// When null, the handler computes the embedding itself (legacy/default path).
+/// Phase D (D6): Optional <see cref="QueryRoleHint"/> lets the retrieval layer bias the
+/// re-ranker toward chunks whose <c>role_tags</c> overlap with the user's classified intent.
+/// Default <see cref="GameBookRole.None"/> = no-op (back-compat).
 /// </summary>
 internal record SearchQuery(
     Guid GameId,
@@ -23,5 +27,9 @@ internal record SearchQuery(
     // Issue #563: Pre-computed query embedding to avoid duplicate generation.
     // Caller is responsible for ensuring the vector matches Query + Language and was produced
     // by the same embedding model the search handler would use. Null = handler computes its own.
-    IReadOnlyList<float>? QueryVector = null
+    IReadOnlyList<float>? QueryVector = null,
+    // Phase D — RAG role-aware (D6): user intent classification routed to retrieval re-ranker.
+    // Chunks whose role_tags overlap with this hint receive a fixed score boost during RRF fusion.
+    // None = legacy/no-op behavior.
+    GameBookRole QueryRoleHint = GameBookRole.None
 ) : IQuery<List<SearchResultDto>>;

@@ -1,14 +1,26 @@
+using Api.Infrastructure.Persistence;
+
 namespace Api.Infrastructure.Entities;
 
 /// <summary>
 /// User entity - persistence model.
 /// DDD-PHASE2: Converted to Guid IDs and string Role for domain alignment.
 /// </summary>
+/// <remarks>
+/// SP5 Admin Security S1: marked <see cref="AuditableAttribute"/> so that
+/// <see cref="AuditingSaveChangesInterceptor"/> captures before/after snapshots on every
+/// mutation of this entity. Credential scalar properties are marked
+/// <see cref="SensitiveDataAttribute"/> so their values are redacted to
+/// <see cref="AuditingSaveChangesInterceptor.RedactedPlaceholder"/> ("***REDACTED***") in the snapshot.
+/// </remarks>
+[Auditable]
 public class UserEntity
 {
     required public Guid Id { get; set; }
     required public string Email { get; set; }
     public string? DisplayName { get; set; }
+
+    [SensitiveData]
     public string? PasswordHash { get; set; } // Nullable for OAuth-only users
     public string Role { get; set; } = "user"; // DDD-PHASE2: Changed from enum to string
     public string Tier { get; set; } = "free"; // User subscription tier (free, normal, premium)
@@ -22,6 +34,7 @@ public class UserEntity
     public int DataRetentionDays { get; set; } = 90;
 
     // Two-Factor Authentication
+    [SensitiveData]
     public string? TotpSecretEncrypted { get; set; }
     public bool IsTwoFactorEnabled { get; set; }
     public DateTime? TwoFactorEnabledAt { get; set; }

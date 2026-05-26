@@ -7,7 +7,6 @@ Usage:
 Categories:
   OUT_OF_SCOPE   – element is not really navigable (icon-only, decorative, action stays on page)
   <destination>  – plausible destination mockup filename
-  TODO           – genuinely ambiguous; kept as-is (goal: ≤50 remaining)
 """
 from __future__ import annotations
 
@@ -235,7 +234,7 @@ def _get_file_default_dest(filename: str) -> str | None:
 
 
 def classify_row(filename: str, selector: str, text: str) -> str:
-    """Return classification: OUT_OF_SCOPE | <dest>.html | TODO"""
+    """Return classification: OUT_OF_SCOPE | <dest>.html"""
     stripped = text.strip()
 
     # --- OUT_OF_SCOPE: empty text ---
@@ -310,7 +309,6 @@ def process(content: str, apply: bool = False) -> tuple[str, dict]:
         "total_todo": 0,
         "classified_out_of_scope": 0,
         "classified_destination": 0,
-        "remaining_todo": 0,
         "auto_resolved": 0,
     }
 
@@ -340,9 +338,6 @@ def process(content: str, apply: bool = False) -> tuple[str, dict]:
         if result == "OUT_OF_SCOPE":
             counts["classified_out_of_scope"] += 1
             new_dest = "`OUT_OF_SCOPE`"
-        elif result == "TODO":
-            counts["remaining_todo"] += 1
-            new_dest = "`TODO`"
         else:
             counts["classified_destination"] += 1
             new_dest = f"`{result}`"
@@ -378,7 +373,6 @@ def main() -> None:
         "\n## Classification summary\n\n"
         f"- OUT_OF_SCOPE (auto): {counts['classified_out_of_scope']}\n"
         f"- Plausible destination (auto): {counts['classified_destination']}\n"
-        f"- Remaining TODO: {counts['remaining_todo']}\n"
         f"- Auto-resolved by rule engine: {counts['auto_resolved']}\n"
     )
 
@@ -392,13 +386,6 @@ def main() -> None:
         print("[classify_todos] DRY RUN — pass --apply to write changes.")
 
     print(summary)
-    if counts["remaining_todo"] > 50:
-        print(
-            f"WARNING: {counts['remaining_todo']} TODO rows remain "
-            f"(goal is ≤50)."
-        )
-    else:
-        print(f"Goal met: {counts['remaining_todo']} remaining TODOs <= 50.")
 
 
 if __name__ == "__main__":

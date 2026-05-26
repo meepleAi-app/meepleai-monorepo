@@ -117,30 +117,14 @@ public sealed class CreateChatThreadCommandHandlerTests
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact]
-    public async Task Handle_WithSharedGameId_ResolvesToActualGameId()
-    {
-        // Arrange: game exists with a SharedGameId link
-        var actualGameId = Guid.NewGuid();
-        var sharedGameId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
-
-        _db.SharedGames.Add(new SharedGameEntity { Id = actualGameId, Title = "Puerto Rico" });
-        await _db.SaveChangesAsync();
-
-        // Frontend passes sharedGameId (from user_library_entries.shared_game_id)
-        var command = new CreateChatThreadCommand(UserId: userId, GameId: sharedGameId, Title: "Chat about Puerto Rico");
-
-        // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
-
-        // Assert: the thread should use the actual games.Id, not the sharedGameId
-        result.Should().NotBeNull();
-        result.GameId.Should().Be(actualGameId);
-        _mockRepo.Verify(r => r.AddAsync(
-            It.Is<ChatThread>(t => t.GameId == actualGameId),
-            It.IsAny<CancellationToken>()), Times.Once);
-    }
+    // Test 'Handle_WithSharedGameId_ResolvesToActualGameId' removed in #1422:
+    // Post-Phase 2d (PR #1345/#1347, 2026-05-20), GameEntity is dropped and
+    // SharedGameEntity.Id is authoritative. The handler's resolver step
+    // (CreateChatThreadCommandHandler.cs:46-54) is now a degenerate identity
+    // lookup against shared_games — no cross-table resolution exists anymore,
+    // so this test verified a behavior that is structurally impossible.
+    // 'Handle_WithDirectGameId_DoesNotResolve' below covers the surviving
+    // contract (the Id is passed through when it matches a SharedGame row).
 
     [Fact]
     public async Task Handle_WithDirectGameId_DoesNotResolve()

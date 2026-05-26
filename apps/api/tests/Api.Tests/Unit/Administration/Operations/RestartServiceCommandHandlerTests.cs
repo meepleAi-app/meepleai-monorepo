@@ -84,9 +84,11 @@ public sealed class RestartServiceCommandHandlerTests
     [Fact]
     [Trait("Category", "Unit")]
     [Trait("BoundedContext", "Administration")]
-    public async Task Handle_NonSuperAdmin_ThrowsConflictException()
+    public async Task Handle_NonSuperAdmin_ThrowsForbiddenException()
     {
-        // Arrange
+        // Issue #1416: role-based authorization failures must map to HTTP 403,
+        // not 409, so external clients can distinguish authorization failures
+        // from real conflicts.
         var adminId = Guid.NewGuid();
         var command = new RestartServiceCommand("API", adminId);
 
@@ -98,7 +100,7 @@ public sealed class RestartServiceCommandHandlerTests
 
         // Act & Assert
         var act = () => _handler.Handle(command, CancellationToken.None);
-        var exception = (await act.Should().ThrowAsync<ConflictException>()).Which;
+        var exception = (await act.Should().ThrowAsync<ForbiddenException>()).Which;
 
         exception.Message.Should().Be("Only SuperAdmin can restart services");
 

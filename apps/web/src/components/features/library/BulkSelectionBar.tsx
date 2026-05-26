@@ -5,7 +5,7 @@
  * (BulkSelectionBar). Spec: docs/superpowers/specs/2026-04-30-v2-migration-wave-b-3-library.md
  * §3.2 + AC-6.
  *
- * Mounted/unmounted by `LibraryHubV2` orchestrator based on
+ * Mounted/unmounted by `LibraryHub` orchestrator based on
  * `selectionMode === 'select'` (mounted even at `selectedCount === 0`
  * to provide explicit Annulla affordance and avoid layout flash).
  *
@@ -16,7 +16,7 @@
  *
  * Pure component (mirror Wave B.1 GamesEmptyState + B.2 EmptyAgents):
  *   labels resolved via prop — no `useTranslation` import. Parent
- *   (`LibraryHubV2`) owns i18n resolution and re-interpolates `counter`
+ *   (`LibraryHub`) owns i18n resolution and re-interpolates `counter`
  *   + `confirmTitle` per `selectedCount` change.
  *
  * Slide-in animation gated by `motion-safe:transition` Tailwind class

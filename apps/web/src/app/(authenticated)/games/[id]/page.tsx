@@ -2,7 +2,7 @@
  * Game Detail Page — /games/[id]
  *
  * Thin shell: normalizes `params.id` to `string | null` at the page boundary
- * and delegates all rendering to `GameDetailViewV2`.
+ * and delegates all rendering to `GameDetailView`.
  *
  * Phase 0.5 contract (docs/frontend/contracts/games-id-hooks.md sez. 2.1):
  *   - rawId comes from useParams, may be undefined pre-hydration
@@ -17,7 +17,7 @@
 
 import { useParams } from 'next/navigation';
 
-import { GameDetailViewV2 } from './_components/GameDetailViewV2';
+import { GameDetailView } from './_components/GameDetailView';
 
 export default function GameDetailPage() {
   const params = useParams<{ id: string }>();
@@ -25,5 +25,5 @@ export default function GameDetailPage() {
   // ⚠️ Phase 0.5 sez. 2.1: normalize FIRST, NEVER pass undefined downstream
   const gameId = typeof rawId === 'string' && rawId.length > 0 ? rawId : null;
 
-  return <GameDetailViewV2 gameId={gameId} />;
+  return <GameDetailView gameId={gameId} />;
 }

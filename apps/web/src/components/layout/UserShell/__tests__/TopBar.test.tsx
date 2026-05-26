@@ -1,46 +1,66 @@
-import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 
-import { TopBar } from '../TopBar';
-
-vi.mock('next/navigation', () => ({
-  usePathname: () => '/',
-}));
-
-vi.mock('@/hooks/useChatPanel', () => ({
-  useChatPanel: () => ({
-    isOpen: false,
-    gameContext: null,
-    open: vi.fn(),
-    close: vi.fn(),
-    setGameContext: vi.fn(),
-  }),
-}));
-
-// Mock the notification bell (existing component with runtime deps)
-vi.mock('@/components/notifications', () => ({
-  NotificationBell: () => <button aria-label="Notifications">🔔</button>,
+vi.mock('next/link', () => ({
+  default: ({ children, href, ...props }: any) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
 }));
 
 vi.mock('@/components/layout/UserMenuDropdown', () => ({
-  UserMenuDropdown: () => <button aria-label="User menu">MR</button>,
+  UserMenuDropdown: () => <div data-testid="user-menu">Avatar</div>,
 }));
 
+import { TopBar } from '@/components/layout/UserShell/TopBar';
+
 describe('TopBar', () => {
-  it('renders logo, nav links, search, chat button, and user menu', () => {
-    render(<TopBar />);
-    expect(screen.getByRole('link', { name: /meepleai home/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /search/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /chat agente/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /notifications/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /user menu/i })).toBeInTheDocument();
+  it('renders hamburger button', () => {
+    render(<TopBar onHamburgerClick={vi.fn()} />);
+    const btn = screen.getByRole('button', { name: /menu/i });
+    expect(btn).toBeDefined();
   });
 
-  it('is 64px tall and sticky', () => {
-    const { container } = render(<TopBar />);
-    const header = container.querySelector('header');
-    expect(header).toHaveClass('h-16');
-    expect(header).toHaveClass('sticky');
+  it('renders logo linking to /dashboard', () => {
+    render(<TopBar onHamburgerClick={vi.fn()} />);
+    const link = screen.getByRole('link', { name: /meepleai/i });
+    expect(link).toBeDefined();
+    expect(link.getAttribute('href')).toBe('/dashboard');
+  });
+
+  it('renders search button', () => {
+    render(<TopBar onHamburgerClick={vi.fn()} />);
+    const btn = screen.getByRole('button', { name: /cerca/i });
+    expect(btn).toBeDefined();
+  });
+
+  it('renders user menu', () => {
+    render(<TopBar onHamburgerClick={vi.fn()} />);
+    expect(screen.getByTestId('user-menu')).toBeDefined();
+  });
+
+  it('calls onHamburgerClick when hamburger is pressed', () => {
+    const onHamburgerClick = vi.fn();
+    render(<TopBar onHamburgerClick={onHamburgerClick} />);
+    fireEvent.click(screen.getByRole('button', { name: /menu/i }));
+    expect(onHamburgerClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onSearchClick when search button is pressed', () => {
+    const onSearchClick = vi.fn();
+    render(<TopBar onHamburgerClick={vi.fn()} onSearchClick={onSearchClick} />);
+    fireEvent.click(screen.getByRole('button', { name: /cerca/i }));
+    expect(onSearchClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not show Admin badge when adminMode is not set', () => {
+    render(<TopBar onHamburgerClick={vi.fn()} />);
+    expect(screen.queryByText('Admin')).toBeNull();
+  });
+
+  it('shows Admin badge when adminMode is true', () => {
+    render(<TopBar onHamburgerClick={vi.fn()} adminMode />);
+    expect(screen.getByText('Admin')).toBeDefined();
   });
 });

@@ -9,6 +9,7 @@
  */
 
 import { render, screen } from '@testing-library/react';
+import { axe } from 'jest-axe';
 import { describe, it, expect } from 'vitest';
 
 import { PlayerStatsGrid } from '../PlayerStatsGrid';
@@ -78,5 +79,19 @@ describe('PlayerStatsGrid', () => {
       />
     );
     expect(container.querySelector('[data-slot="player-detail-stats-grid"]')).toBeInTheDocument();
+  });
+
+  it('passes axe a11y scan', async () => {
+    const { container } = render(
+      <PlayerStatsGrid
+        totalSessions={42}
+        totalWins={28}
+        winRate={0.67}
+        achievementCount={5}
+        labels={labels}
+      />
+    );
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

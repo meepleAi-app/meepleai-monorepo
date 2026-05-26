@@ -153,27 +153,28 @@ public sealed class SessionExtendEndpointTests : IAsyncLifetime
     // -----------------------------------------------------------------------
 
     /// <summary>
-    /// Registers a fresh user and returns the session token plus its initial expiration.
+    /// Provisions a user + session directly in the database and returns the raw
+    /// token plus its initial expiration. We bypass POST /api/v1/auth/register
+    /// because the runtime registration mode defaults to PublicRegistrationEnabled=false
+    /// (Issue: Invite-only registration / RegistrationMode) so the HTTP endpoint
+    /// would return 403 in a freshly-created test DB. TestSessionHelper writes
+    /// the user/session rows the way the production handlers would.
     /// </summary>
     private async Task<(string SessionToken, DateTime ExpiresAt)> RegisterAndCaptureSessionAsync()
     {
-        var registerPayload = new
-        {
-            Email = $"extend-{Guid.NewGuid():N}@test.local",
-            Password = "ValidUnusualPwd123!",
-            DisplayName = "Session Extend Tester"
-        };
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        var registerResponse = await _client.PostAsJsonAsync("/api/v1/auth/register", registerPayload);
-        registerResponse.EnsureSuccessStatusCode();
+        var (userId, rawToken) = await global::Api.Tests.TestHelpers.TestSessionHelper.CreateUserSessionAsync(dbContext);
 
-        var sessionToken = ExtractSessionCookieValue(registerResponse)
-            ?? throw new InvalidOperationException("Register endpoint did not set meepleai_session cookie.");
+        // Re-load the session row to expose its real ExpiresAt (TestSessionHelper persists
+        // with the standard sliding-expiration so the extend response can be compared to it).
+        var hash = SessionTokenHasher.HashFromCookie(rawToken);
+        var session = await dbContext.Set<UserSessionEntity>()
+            .AsNoTracking()
+            .FirstAsync(s => s.TokenHash == hash);
 
-        var body = await registerResponse.Content.ReadFromJsonAsync<JsonElement>();
-        var expiresAt = body.GetProperty("expiresAt").GetDateTime();
-
-        return (sessionToken, expiresAt);
+        return (rawToken, session.ExpiresAt);
     }
 
     private static HttpRequestMessage BuildAuthenticatedRequest(HttpMethod method, string url, string sessionToken)

@@ -45,9 +45,20 @@ public sealed class PhotoBatchUpload : AggregateRoot<Guid>
     /// <summary>Gets the human-readable reason for failure, if the batch failed.</summary>
     public string? FailureReason { get; private set; }
 
-    /// <summary>EF Core optimistic concurrency token.</summary>
-    [Timestamp]
-    public byte[] RowVersion { get; private set; } = null!;
+    /// <summary>EF Core optimistic concurrency token.
+    /// Configured exclusively via <c>PhotoBatchUploadEntityConfiguration.IsRowVersion()</c>;
+    /// the previous <c>[Timestamp]</c> data annotation combined with
+    /// <c>.IsRowVersion()</c> produced a double-mapping that, under the Npgsql
+    /// provider, made EF send an explicit NULL on INSERT and violate the NOT-NULL
+    /// constraint on <c>row_version bytea</c>. The pattern aligned here mirrors
+    /// <see cref="Api.Infrastructure.Entities.UserLibrary.UserLibraryEntryEntity"/>
+    /// which works correctly without the annotation. Migration
+    /// <c>20260524190307_FixPhotoBatchUploadRowVersionNullable</c> makes the
+    /// underlying column nullable so the Npgsql provider can omit it from the
+    /// INSERT statement and rely on optimistic concurrency on UPDATE.
+    /// Setter omitted: EF Core populates the value via reflection.
+    /// </summary>
+    public byte[]? RowVersion { get; }
 
     private readonly List<PhotoBatchPage> _pages = [];
 

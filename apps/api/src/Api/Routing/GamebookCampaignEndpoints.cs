@@ -20,6 +20,7 @@ internal static class GamebookCampaignEndpoints
         MapCreateCampaignEndpoint(group);
         MapListCampaignsEndpoint(group);
         MapGetCampaignEndpoint(group);
+        MapGetCampaignProgressEndpoint(group);
         MapUpdateProgressEndpoint(group);
         MapRenameCampaignEndpoint(group);
         MapDeleteCampaignEndpoint(group);
@@ -115,10 +116,45 @@ internal static class GamebookCampaignEndpoints
         .RequireAuthenticatedUser()
         .Produces<GamebookCampaignDto>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
         .Produces(StatusCodes.Status404NotFound)
         .WithTags("Gamebook")
         .WithSummary("Get a gamebook campaign by ID")
         .WithDescription("Returns the gamebook campaign with the specified ID, if it belongs to the authenticated user.")
+        .WithOpenApi();
+    }
+
+    private static void MapGetCampaignProgressEndpoint(RouteGroupBuilder group)
+    {
+        // Issue #1388: per-book progress for the ResumeBooksList on the FE play page.
+        group.MapGet("/gamebook/campaigns/{id:guid}/progress", async (
+            Guid id,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var rows = await mediator.Send(
+                new GetCampaignProgressQuery(id, userId), ct
+            ).ConfigureAwait(false);
+
+            return Results.Ok(rows);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<IReadOnlyList<SessionBookProgressDto>>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
+        .Produces(StatusCodes.Status404NotFound)
+        .WithTags("Gamebook")
+        .WithSummary("Get per-book progress rows for a gamebook campaign")
+        .WithDescription("Returns one entry per book the authenticated owner has engaged with, sorted by most recent visit first. Orphan progress rows (book deleted) are filtered out.")
         .WithOpenApi();
     }
 
@@ -140,7 +176,7 @@ internal static class GamebookCampaignEndpoints
             }
 
             var dto = await mediator.Send(
-                new UpdateGamebookProgressCommand(id, userId, body.CurrentParagraph), ct
+                new UpdateGamebookProgressCommand(id, userId, body.GameBookId, body.CurrentParagraph), ct
             ).ConfigureAwait(false);
 
             return Results.Ok(dto);
@@ -149,6 +185,7 @@ internal static class GamebookCampaignEndpoints
         .Produces<GamebookCampaignDto>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status400BadRequest)
         .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
         .Produces(StatusCodes.Status404NotFound)
         .WithTags("Gamebook")
         .WithSummary("Update the current paragraph progress for a gamebook campaign")
@@ -183,8 +220,8 @@ internal static class GamebookCampaignEndpoints
         .Produces<GamebookCampaignDto>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status400BadRequest)
         .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
         .Produces(StatusCodes.Status404NotFound)
-        .Produces(StatusCodes.Status409Conflict)
         .WithTags("Gamebook")
         .WithSummary("Rename a gamebook campaign")
         .WithDescription("Updates the title of the campaign. Only the owner may rename.")
@@ -213,8 +250,8 @@ internal static class GamebookCampaignEndpoints
         .RequireAuthenticatedUser()
         .Produces(StatusCodes.Status204NoContent)
         .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
         .Produces(StatusCodes.Status404NotFound)
-        .Produces(StatusCodes.Status409Conflict)
         .WithTags("Gamebook")
         .WithSummary("Soft-delete a gamebook campaign")
         .WithDescription("Marks the campaign as deleted (IsDeleted=true). Only the owner may delete. Photos and glossary entries are retained for audit but become unreachable.")
@@ -243,8 +280,12 @@ internal static class GamebookCampaignEndpoints
 /// <summary>Request body for creating a new gamebook campaign.</summary>
 public sealed record CreateGamebookCampaignRequest(Guid GameId, string Title);
 
-/// <summary>Request body for updating the current paragraph progress.</summary>
-public sealed record UpdateGamebookProgressRequest(int CurrentParagraph);
+/// <summary>
+/// Request body for updating the current paragraph progress for a specific book.
+/// C2 (2026-05-19): <paramref name="GameBookId"/> added to scope progress per-book
+/// in support of multi-book campaigns (see <c>SessionBookProgress</c>).
+/// </summary>
+public sealed record UpdateGamebookProgressRequest(Guid GameBookId, int CurrentParagraph);
 
 /// <summary>Request body for renaming a gamebook campaign.</summary>
 public sealed record RenameGamebookCampaignRequest(string Title);

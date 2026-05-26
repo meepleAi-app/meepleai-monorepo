@@ -1,5 +1,7 @@
+using Api.BoundedContexts.Administration.Application.Behaviors;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Infrastructure.Persistence;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.SharedKernel.Services;
@@ -37,12 +39,20 @@ internal static class IntegrationServiceCollectionBuilder
         // Logging
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
 
-        // DbContext with pgvector support
-        services.AddDbContext<MeepleAiDbContext>(options =>
+        // SP5 Admin Security S1 T3: register the audit snapshot sink + interceptor so that
+        // AuditLoggingBehavior can resolve ScopedAuditSnapshotSink and the interceptor is wired
+        // into the DbContext for all integration tests that exercise [AuditableAction] commands.
+        services.AddScoped<ScopedAuditSnapshotSink>();
+        services.AddScoped<IAuditSnapshotSink>(sp => sp.GetRequiredService<ScopedAuditSnapshotSink>());
+        services.AddScoped<AuditingSaveChangesInterceptor>();
+
+        // DbContext with pgvector support + audit interceptor
+        services.AddDbContext<MeepleAiDbContext>((sp, options) =>
         {
             options.UseNpgsql(connectionString, o => o.UseVector());
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+            options.AddInterceptors(sp.GetRequiredService<AuditingSaveChangesInterceptor>());
         });
 
         // Core infrastructure

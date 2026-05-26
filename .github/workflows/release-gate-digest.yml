@@ -1,0 +1,83 @@
+name: Release-gate Digest
+
+# Weekly Slack digest of `warning`-tier classifications across recent release PRs.
+# Implementation: scripts/release-gate/build-digest.mjs
+# Issue: #1446 (Phase 2c of #1016)
+# Design doc: docs/for-developers/specs/2026-05-22-release-gate-phase2-overview.md
+
+on:
+  schedule:
+    # Monday 08:00 UTC = 09:00 Europe/Rome (winter) or 10:00 Europe/Rome (summer DST).
+    # Per spec AC-1: target is Monday 09:00 Europe/Rome — exact local time varies
+    # with DST. Cron is UTC so we anchor at 08:00 UTC which is the winter-time
+    # equivalent. Summer-time will fire at 10:00 local; acceptable per spec
+    # ("Monday 09:00 Europe/Rome ±1h depending on DST").
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "If true, print Slack payload to stdout and skip state PR"
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: release-gate-digest
+  cancel-in-progress: false
+
+# Default to least-privilege at the workflow level; the digest job re-declares
+# the write permissions it needs (contents:write for the state-branch commit,
+# pull-requests:write for the state PR, issues:write for failure-issue
+# creation). Validate-only steps therefore inherit read-only credentials.
+permissions:
+  contents: read
+
+jobs:
+  digest:
+    name: Build and post weekly digest
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write       # for state-file commit on side branch
+      pull-requests: write  # for state PR creation
+      issues: write         # for failure-issue creation
+      checks: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa  # v4
+        with:
+          version: 9
+
+      - name: Install release-gate deps
+        working-directory: scripts/release-gate
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate .github/release-gates.yml schema
+        working-directory: scripts/release-gate
+        run: node validate.mjs
+
+      - name: Build and post digest
+        id: digest
+        working-directory: scripts/release-gate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          SLACK_GITNOTIFY_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true' && '1' || '' }}
+          # GITHUB_STEP_SUMMARY is set by GH Actions automatically.
+        run: node build-digest.mjs
+        # On Slack POST failure, the CLI opens a [release-gate-digest][YYYY-Www]
+        # FAILED issue and exits 1. The job is then marked failed (visible in
+        # the run history) but does NOT auto-retry — the next cron tick is the
+        # natural retry. No continue-on-error here: failure must be visible.

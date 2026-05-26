@@ -53,6 +53,17 @@ public sealed class PhotoBatchUploadRepositoryIntegrationTests : IAsyncLifetime
 
         _userId = Guid.NewGuid();
 
+        // Seed the user row required by FK_photo_batch_uploads_users_user_id (Restrict delete).
+        _dbContext.Users.Add(new Api.Infrastructure.Entities.UserEntity
+        {
+            Id = _userId,
+            Email = $"photobatch-{_userId:N}@test.local",
+            DisplayName = "PhotoBatch Test User",
+            Role = "User",
+            CreatedAt = DateTime.UtcNow,
+        });
+        await _dbContext.SaveChangesAsync(Token);
+
         var mockCollector = new Mock<IDomainEventCollector>();
         mockCollector
             .Setup(e => e.GetAndClearEvents())

@@ -4,7 +4,7 @@
  * Spec §3.2 + AC-6:
  *   - Mounted iff parent decides (selectionMode === 'select'). Component itself
  *     is unconditionally rendered when JSX-mounted; mount/unmount lifecycle
- *     ownership lives in `LibraryHubV2` orchestrator (Commit 3).
+ *     ownership lives in `LibraryHub` orchestrator (Commit 3).
  *   - selectedCount=0 still mounts (no count-conditional unmount, avoids
  *     layout flash on Annulla click).
  *   - Annulla button → onExitSelectMode().
@@ -20,7 +20,7 @@
  *     (collapse a 0.01ms sotto `prefers-reduced-motion: reduce`).
  *
  * Pure component: labels resolved via prop (mirror Wave B.1 GamesEmptyState +
- * B.2 EmptyAgents). Parent (LibraryHubV2) owns `useTranslation()`.
+ * B.2 EmptyAgents). Parent (LibraryHub) owns `useTranslation()`.
  */
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';

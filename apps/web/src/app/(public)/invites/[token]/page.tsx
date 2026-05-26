@@ -1,5 +1,5 @@
 /**
- * /invites/[token] — public RSVP page (V2, Wave A.5b, Issue #611).
+ * /invites/[token] — public RSVP page (Issue #611).
  *
  * Server component shell:
  *   - `dynamic = 'force-dynamic'` — invite lifecycle is short (≤14d), no ISR.

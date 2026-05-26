@@ -33,6 +33,9 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
     private readonly ILogger<IndexPdfCommandHandler> _logger;
     private readonly TimeProvider _timeProvider;
     private readonly ISemanticResponseCache _semanticCache;
+    // Phase D4 (gamebook multi-book): optional role classifier for tagging chunks at ingest.
+    // Optional so unit tests that pre-date Phase D continue to compile without updates.
+    private readonly IRoleClassifierService? _roleClassifier;
 
     public IndexPdfCommandHandler(
         MeepleAiDbContext db,
@@ -41,7 +44,8 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         ILogger<IndexPdfCommandHandler> logger,
         IOptions<IndexingSettings> indexingSettings,
         ISemanticResponseCache semanticCache,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        IRoleClassifierService? roleClassifier = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _chunkingService = chunkingService ?? throw new ArgumentNullException(nameof(chunkingService));
@@ -50,6 +54,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         _indexingSettings = indexingSettings?.Value ?? throw new ArgumentNullException(nameof(indexingSettings));
         _semanticCache = semanticCache ?? throw new ArgumentNullException(nameof(semanticCache));
         _timeProvider = timeProvider ?? TimeProvider.System;
+        _roleClassifier = roleClassifier;
     }
 
     public async Task<IndexingResultDto> Handle(IndexPdfCommand command, CancellationToken cancellationToken)
@@ -406,6 +411,12 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                 ElementType = chunk.ElementType
             })
             .ToList();
+
+        // Phase D4: classify chunks by GameBookRole before persistence so
+        // text_chunks.role_tags is populated on insert.
+        await TextChunkRoleClassifier.AssignRoleTagsAsync(
+            _roleClassifier, textChunkEntities, documentChunks, _logger, cancellationToken)
+            .ConfigureAwait(false);
 
         _db.TextChunks.AddRange(textChunkEntities);
         _logger.LogInformation("Saved {ChunkCount} text chunks to PostgreSQL for hybrid search (PDF {PdfId})",

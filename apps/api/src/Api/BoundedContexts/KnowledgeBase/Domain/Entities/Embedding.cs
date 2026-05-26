@@ -21,6 +21,15 @@ internal sealed class Embedding : Entity<Guid>
     public bool IsTranslation { get; private set; }
 
     /// <summary>
+    /// Issue #1391: bitwise <c>GameBookRole</c> set copied from the parent
+    /// <c>TextChunk.RoleTags</c> so semantic-mode pgvector queries can apply the
+    /// role-match boost without joining. Stored as <c>int</c> on the wire to keep
+    /// the COPY pipeline neutral. Defaults to 0 (no roles) when the source chunk
+    /// is missing or the ingestion path predates the role classifier.
+    /// </summary>
+    public int RoleTags { get; private set; }
+
+    /// <summary>
     /// Private constructor for EF Core.
     /// </summary>
 #pragma warning disable CS8618
@@ -42,7 +51,8 @@ internal sealed class Embedding : Entity<Guid>
         int pageNumber,
         string language = "en",
         Guid? sourceChunkId = null,
-        bool isTranslation = false) : base(id)
+        bool isTranslation = false,
+        int roleTags = 0) : base(id)
     {
         if (string.IsNullOrWhiteSpace(textContent))
             throw new ArgumentException("Text content cannot be empty", nameof(textContent));
@@ -66,6 +76,7 @@ internal sealed class Embedding : Entity<Guid>
         Language = language ?? "en";
         SourceChunkId = sourceChunkId;
         IsTranslation = isTranslation;
+        RoleTags = roleTags;
     }
 
     /// <summary>

@@ -1,12 +1,14 @@
 /**
- * Wave B.1 (Issue #633) — `/games?tab=library` v2 component barrel.
+ * Wave B.1 (Issue #633) — library-view v2 component barrel.
  *
- * Re-exports the 4 v2 components introduced in Commit 2 plus their public
- * type contracts. Consumed by Commit 3's `GamesLibraryView` orchestrator
- * and `app/(authenticated)/games/page.tsx` wiring.
+ * Re-exports the 5 feature components implementing the `sp4-games-index` library
+ * mockup, plus their public type contracts.
  *
- * NOTE: `AdvancedFiltersDrawer` remains a Phase 0 stub (Issue #573 backlog) —
- * not part of Wave B.1 scope (BLOCKER #1 spec §10: filters inline, no drawer).
+ * NOTE (Issue #1521): these components were originally wired into the
+ * `/games?tab=library` orchestrator (`GamesLibraryView`), which was removed when
+ * `/games` was consolidated into a redirect to `/library`. They are currently
+ * shelf-ready (tested, mockup-faithful) awaiting a follow-up that wires them into
+ * `/library` (LibraryHub) in place of its older implementation.
  */
 
 export { GamesHero } from '@/components/features/games/GamesHero';

@@ -29,14 +29,14 @@ internal sealed class UploadGamebookPhotoCommandHandler : IRequestHandler<Upload
             ?? throw new NotFoundException($"Campaign {cmd.CampaignId} not found");
 
         if (campaign.OwnerUserId != cmd.CallerUserId)
-            throw new ConflictException("Caller is not the campaign owner");
+            throw new ForbiddenException("Caller is not the campaign owner");
 
         // Pre-compute a photoId for use as the storage path component
         var photoId = Guid.NewGuid();
         var storageKey = await _storage.UploadAsync(
             cmd.PhotoStream, cmd.ContentType, cmd.CampaignId, photoId, cancellationToken).ConfigureAwait(false);
 
-        var artifact = GamebookPhotoArtifact.Create(cmd.CampaignId, storageKey, cmd.PageType);
+        var artifact = GamebookPhotoArtifact.Create(cmd.CampaignId, cmd.GameBookId, storageKey);
 
         await _photos.AddAsync(artifact, cancellationToken).ConfigureAwait(false);
         await _photos.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -47,7 +47,6 @@ internal sealed class UploadGamebookPhotoCommandHandler : IRequestHandler<Upload
     internal static GamebookPhotoArtifactDto MapToDto(GamebookPhotoArtifact a) => new(
         a.Id,
         a.CampaignId,
-        a.PageType.ToString(),
         a.Status.ToString(),
         a.OcrFullText,
         a.Segments.Select(s => new GamebookSegmentDto(s.ParagraphNumber, s.SourceText, s.BoundingBox)).ToList().AsReadOnly(),

@@ -41,7 +41,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
 
@@ -59,7 +59,7 @@ jobs:
         # also invalidate. AC-7: `vars.CACHE_VERSION` is the global
         # emergency-invalidation knob: `gh variable set CACHE_VERSION --body v2`
         # flushes all caches at once.
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ env.STORE_PATH }}
           key: pnpm-${{ vars.CACHE_VERSION || 'v1' }}-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', '.npmrc') }}

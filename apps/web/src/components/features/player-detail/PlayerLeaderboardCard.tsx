@@ -70,15 +70,24 @@ export function PlayerLeaderboardCard({
 
       {/* Rank or no-rank */}
       {rank !== null ? (
-        <div
-          data-slot="player-detail-leaderboard-rank"
-          aria-label={interpolateRank(labels.rankAriaLabel, rank)}
-          className="flex items-baseline gap-1"
-        >
-          <span className="font-display text-4xl font-extrabold leading-none tabular-nums tracking-tight text-amber-700 dark:text-amber-400">
+        <div data-slot="player-detail-leaderboard-rank" className="flex items-baseline gap-1">
+          {/*
+           * Accessible name in a visually-hidden span: ARIA 1.2 prohibits naming
+           * attributes (aria-label) on the generic role of a plain <div>, so the
+           * previous `aria-label` was silently ignored by assistive technology.
+           * The visual spans are aria-hidden to avoid duplicate "3 Rank 3" reads.
+           */}
+          <span className="sr-only">{interpolateRank(labels.rankAriaLabel, rank)}</span>
+          <span
+            aria-hidden="true"
+            className="font-display text-4xl font-extrabold leading-none tabular-nums tracking-tight text-amber-700 dark:text-amber-400"
+          >
             #{rank}
           </span>
-          <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+          <span
+            aria-hidden="true"
+            className="font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground"
+          >
             {interpolateRank(labels.rank, rank)}
           </span>
         </div>

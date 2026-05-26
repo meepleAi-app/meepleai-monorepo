@@ -1,0 +1,373 @@
+{
+  "matrix_path": "docs\\for-developers\\frontend\\v2-migration-matrix.md",
+  "total_rows": 70,
+  "valid_rows": 70,
+  "skipped_done_rows": [
+    "\u00b7 (extension G3) \u00b7 `GamesRecentRail` \u00b7 `apps/web/src/components/features/games/GamesRecentRail.tsx` \u00b7 `/games?tab=*` \u00b7 d",
+    "\u00b7 `sp4-game-chat-tab.html` (G1+G5) \u00b7 `GameChatTabV2 + 11 game-chat components` \u00b7 `apps/web/src/components/features/game-",
+    "\u00b7 `sp4-agent-detail.jsx` \u00b7 `AgentHero` *(was AgentCharacterSheet stub \u2014 renamed per mockup)* \u00b7 `apps/web/src/components/",
+    "\u00b7 `sp4-session-live.jsx` \u00b7 `PauseOverlay` (lazy) \u00b7 `apps/web/src/components/features/session-live/PauseOverlay.tsx` \u00b7 `/",
+    "\u00b7 `sp4-session-live.jsx` \u00b7 `EndgameDialog` (lazy) \u00b7 `apps/web/src/components/features/session-live/EndgameDialog.tsx` \u00b7 ",
+    "\u00b7 `nanolith-runthrough-game-detail.html` \u00b7 `LibroGameDetailView` \u00b7 `apps/web/src/components/v2/gamebook/LibroGameDetailV",
+    "\u00b7 `nanolith-runthrough-setup-wizard.html` \u00b7 `CampaignSetupDrawer` \u00b7 `apps/web/src/components/v2/gamebook/CampaignSetupDr",
+    "\u00b7 `sp6-libro-game-quota-credits.jsx` \u00b7 `CheckoutModal` (4 step) + `SoftWarningCredits` (toast/modal) \u00b7 `apps/web/src/com",
+    "\u00b7 `sp7-game-night-detail-rsvp.jsx` \u00b7 `GameNightRsvpRow` \u00b7 `apps/web/src/components/features/game-night-detail/GameNightR",
+    "\u00b7 `sp7-game-night-detail-rsvp.jsx` \u00b7 `GameNightRsvpActionBar` \u00b7 `apps/web/src/components/features/game-night-detail/Game",
+    "\u00b7 `sp7-game-night-detail-rsvp.jsx` \u00b7 `GameNightDetailHero` \u00b7 `apps/web/src/components/features/game-night-detail/GameNig",
+    "\u00b7 `sp7-game-night-join-public.jsx` \u00b7 `PublicJoinEventView` (orchestrator) \u00b7 `apps/web/src/app/(public)/join/event/[code]"
+  ],
+  "skipped_done_count": 12,
+  "drift": [],
+  "audited_components": [
+    {
+      "component": "GameDetailHero",
+      "route": "/games/[id]",
+      "path": "apps/web/src/components/features/game-detail/GameDetailHero.tsx"
+    },
+    {
+      "component": "GameDetailTabsAnimated",
+      "route": "/games/[id]",
+      "path": "apps/web/src/components/features/game-detail/GameDetailTabsAnimated.tsx"
+    },
+    {
+      "component": "GameDetailKpiCards",
+      "route": "/games/[id]",
+      "path": "apps/web/src/components/features/game-detail/GameDetailKpiCards.tsx"
+    },
+    {
+      "component": "GameDetailFaqList",
+      "route": "/games/[id]",
+      "path": "apps/web/src/components/features/game-detail/GameDetailFaqList.tsx"
+    },
+    {
+      "component": "GameDetailRulesAccordion",
+      "route": "/games/[id]",
+      "path": "apps/web/src/components/features/game-detail/GameDetailRulesAccordion.tsx"
+    },
+    {
+      "component": "GameDetailSessionsRail",
+      "route": "/games/[id]",
+      "path": "apps/web/src/components/features/game-detail/GameDetailSessionsRail.tsx"
+    },
+    {
+      "component": "GameDetailAgentsList",
+      "route": "/games/[id]",
+      "path": "apps/web/src/components/features/game-detail/GameDetailAgentsList.tsx"
+    },
+    {
+      "component": "GameDetailKbDocList",
+      "route": "/games/[id]",
+      "path": "apps/web/src/components/features/game-detail/GameDetailKbDocList.tsx"
+    },
+    {
+      "component": "PersonaCard",
+      "route": "/agents/[id]",
+      "path": "apps/web/src/components/features/agent-detail/PersonaCard.tsx"
+    },
+    {
+      "component": "SystemPromptViewer",
+      "route": "/agents/[id]",
+      "path": "apps/web/src/components/features/agent-detail/SystemPromptViewer.tsx"
+    },
+    {
+      "component": "KbDocList",
+      "route": "/agents/[id]",
+      "path": "apps/web/src/components/features/agent-detail/KbDocList.tsx"
+    },
+    {
+      "component": "ChatHistoryTimeline",
+      "route": "/agents/[id]",
+      "path": "apps/web/src/components/features/agent-detail/ChatHistoryTimeline.tsx"
+    },
+    {
+      "component": "AgentSettingsForm",
+      "route": "/agents/[id]",
+      "path": "apps/web/src/components/features/agent-detail/AgentSettingsForm.tsx"
+    },
+    {
+      "component": "AgentDangerZone",
+      "route": "/agents/[id]",
+      "path": "apps/web/src/components/features/agent-detail/AgentDangerZone.tsx"
+    },
+    {
+      "component": "LibraryHeroDesktop",
+      "route": "/library",
+      "path": "apps/web/src/components/features/library/LibraryHeroDesktop.tsx"
+    },
+    {
+      "component": "LibraryTabs",
+      "route": "/library",
+      "path": "apps/web/src/components/features/library/LibraryTabs.tsx"
+    },
+    {
+      "component": "LibraryHybridGrid",
+      "route": "/library",
+      "path": "apps/web/src/components/features/library/LibraryHybridGrid.tsx"
+    },
+    {
+      "component": "BulkSelectionBar",
+      "route": "/library",
+      "path": "apps/web/src/components/features/library/BulkSelectionBar.tsx"
+    },
+    {
+      "component": "RecentActivityRail",
+      "route": "/library",
+      "path": "apps/web/src/components/features/library/RecentActivityRail.tsx"
+    },
+    {
+      "component": "SessionsHero",
+      "route": "/sessions",
+      "path": "apps/web/src/components/features/sessions/SessionsHero.tsx"
+    },
+    {
+      "component": "SessionsFilters",
+      "route": "/sessions",
+      "path": "apps/web/src/components/features/sessions/SessionsFilters.tsx"
+    },
+    {
+      "component": "SessionCardList",
+      "route": "/sessions",
+      "path": "apps/web/src/components/features/sessions/SessionCardList.tsx"
+    },
+    {
+      "component": "SessionCardGrid",
+      "route": "/sessions",
+      "path": "apps/web/src/components/features/sessions/SessionCardGrid.tsx"
+    },
+    {
+      "component": "EmptySessions",
+      "route": "/sessions",
+      "path": "apps/web/src/components/features/sessions/EmptySessions.tsx"
+    },
+    {
+      "component": "OutcomeBadge",
+      "route": "/sessions",
+      "path": "apps/web/src/components/features/sessions/OutcomeBadge.tsx"
+    },
+    {
+      "component": "ScoringInline",
+      "route": "/sessions",
+      "path": "apps/web/src/components/features/sessions/ScoringInline.tsx"
+    },
+    {
+      "component": "ConnectionChipStripFooter",
+      "route": "/sessions",
+      "path": "apps/web/src/components/features/sessions/ConnectionChipStripFooter.tsx"
+    },
+    {
+      "component": "LiveTopBar",
+      "route": "/sessions/[id]/live",
+      "path": "apps/web/src/components/features/session-live/LiveTopBar.tsx"
+    },
+    {
+      "component": "TurnIndicator",
+      "route": "/sessions/[id]/live",
+      "path": "apps/web/src/components/features/session-live/TurnIndicator.tsx"
+    },
+    {
+      "component": "PlayerRosterLive",
+      "route": "/sessions/[id]/live",
+      "path": "apps/web/src/components/features/session-live/PlayerRosterLive.tsx"
+    },
+    {
+      "component": "LiveScoringPanel",
+      "route": "/sessions/[id]/live",
+      "path": "apps/web/src/components/features/session-live/LiveScoringPanel.tsx"
+    },
+    {
+      "component": "ActionLogTimeline",
+      "route": "/sessions/[id]/live",
+      "path": "apps/web/src/components/features/session-live/ActionLogTimeline.tsx"
+    },
+    {
+      "component": "DesktopBody",
+      "route": "/sessions/[id]/live",
+      "path": "apps/web/src/components/features/session-live/DesktopBody.tsx"
+    },
+    {
+      "component": "MobileBody",
+      "route": "/sessions/[id]/live",
+      "path": "apps/web/src/components/features/session-live/MobileBody.tsx"
+    },
+    {
+      "component": "SessionToolsRail",
+      "route": "/sessions/[id]/live",
+      "path": "apps/web/src/components/features/session-live/SessionToolsRail.tsx"
+    },
+    {
+      "component": "LiveAgentChat",
+      "route": "/sessions/[id]/live",
+      "path": "apps/web/src/components/features/session-live/LiveAgentChat.tsx"
+    },
+    {
+      "component": "LiveSessionNotes",
+      "route": "/sessions/[id]/live",
+      "path": "apps/web/src/components/features/session-live/LiveSessionNotes.tsx"
+    },
+    {
+      "component": "RightColumnTabs",
+      "route": "/sessions/[id]/live",
+      "path": "apps/web/src/components/features/session-live/RightColumnTabs.tsx"
+    },
+    {
+      "component": "ConnectionLostBanner",
+      "route": "/sessions/[id]/live",
+      "path": "apps/web/src/components/features/session-live/ConnectionLostBanner.tsx"
+    },
+    {
+      "component": "SessionSummaryHero",
+      "route": "/sessions/[id]",
+      "path": "apps/web/src/components/features/session-summary/SessionSummaryHero.tsx"
+    },
+    {
+      "component": "SessionKpiGrid",
+      "route": "/sessions/[id]",
+      "path": "apps/web/src/components/features/session-summary/SessionKpiGrid.tsx"
+    },
+    {
+      "component": "ScoringBreakdownTable",
+      "route": "/sessions/[id]",
+      "path": "apps/web/src/components/features/session-summary/ScoringBreakdownTable.tsx"
+    },
+    {
+      "component": "ConnectionBar",
+      "route": "/sessions/[id]",
+      "path": "apps/web/src/components/features/session-summary/ConnectionBar.tsx"
+    },
+    {
+      "component": "AchievementsCarousel",
+      "route": "/sessions/[id]",
+      "path": "apps/web/src/components/features/session-summary/AchievementsCarousel.tsx"
+    },
+    {
+      "component": "SessionDiaryTimeline",
+      "route": "/sessions/[id]",
+      "path": "apps/web/src/components/features/session-summary/SessionDiaryTimeline.tsx"
+    },
+    {
+      "component": "PhotosGallery",
+      "route": "/sessions/[id]",
+      "path": "apps/web/src/components/features/session-summary/PhotosGallery.tsx"
+    },
+    {
+      "component": "ChatHighlights",
+      "route": "/sessions/[id]",
+      "path": "apps/web/src/components/features/session-summary/ChatHighlights.tsx"
+    },
+    {
+      "component": "SessionShareCard",
+      "route": "/sessions/[id]",
+      "path": "apps/web/src/components/features/session-summary/SessionShareCard.tsx"
+    },
+    {
+      "component": "PlayAgainCta",
+      "route": "/sessions/[id]",
+      "path": "apps/web/src/components/features/session-summary/PlayAgainCta.tsx"
+    },
+    {
+      "component": "Confetti",
+      "route": "/sessions/[id]",
+      "path": "apps/web/src/components/features/session-summary/Confetti.tsx"
+    },
+    {
+      "component": "GameNightsHeader",
+      "route": "/game-nights",
+      "path": "apps/web/src/components/features/game-nights/GameNightsHeader.tsx"
+    },
+    {
+      "component": "CalendarMonthGrid",
+      "route": "/game-nights",
+      "path": "apps/web/src/components/features/game-nights/CalendarMonthGrid.tsx"
+    },
+    {
+      "component": "CalendarDayCell",
+      "route": "/game-nights",
+      "path": "apps/web/src/components/features/game-nights/CalendarDayCell.tsx"
+    },
+    {
+      "component": "GameNightListCard",
+      "route": "/game-nights",
+      "path": "apps/web/src/components/features/game-nights/GameNightListCard.tsx"
+    },
+    {
+      "component": "DayDetailDrawer",
+      "route": "/game-nights",
+      "path": "apps/web/src/components/features/game-nights/DayDetailDrawer.tsx"
+    },
+    {
+      "component": "FilterPillBar",
+      "route": "/game-nights",
+      "path": "apps/web/src/components/features/game-nights/FilterPillBar.tsx"
+    },
+    {
+      "component": "StatusPill",
+      "route": "/game-nights",
+      "path": "apps/web/src/components/features/game-nights/StatusPill.tsx"
+    },
+    {
+      "component": "PlayerAvatars",
+      "route": "/game-nights",
+      "path": "apps/web/src/components/features/game-nights/PlayerAvatars.tsx"
+    },
+    {
+      "component": "PlayersHero",
+      "route": "/players",
+      "path": "apps/web/src/components/features/players/PlayersHero.tsx"
+    },
+    {
+      "component": "PlayersFiltersInline",
+      "route": "/players",
+      "path": "apps/web/src/components/features/players/PlayersFiltersInline.tsx"
+    },
+    {
+      "component": "PlayersResultsGrid",
+      "route": "/players",
+      "path": "apps/web/src/components/features/players/PlayersResultsGrid.tsx"
+    },
+    {
+      "component": "EmptyPlayers",
+      "route": "/players",
+      "path": "apps/web/src/components/features/players/EmptyPlayers.tsx"
+    },
+    {
+      "component": "GameNightAvatar",
+      "route": "/game-nights/[id]",
+      "path": "apps/web/src/components/features/game-night-detail/GameNightAvatar.tsx"
+    },
+    {
+      "component": "GameNightStatusBadge",
+      "route": "/game-nights/[id]",
+      "path": "apps/web/src/components/features/game-night-detail/GameNightStatusBadge.tsx"
+    },
+    {
+      "component": "GameNightCancelledBanner",
+      "route": "/game-nights/[id]",
+      "path": "apps/web/src/components/features/game-night-detail/GameNightCancelledBanner.tsx"
+    },
+    {
+      "component": "PublicRsvpForm",
+      "route": "/join/event/[code]",
+      "path": "apps/web/src/components/features/game-night-detail/PublicRsvpForm.tsx"
+    },
+    {
+      "component": "InvalidTokenError",
+      "route": "/join/event/[code]",
+      "path": "apps/web/src/components/features/game-night-detail/error-states/InvalidTokenError.tsx"
+    },
+    {
+      "component": "ExpiredOrCancelledError",
+      "route": "/join/event/[code]",
+      "path": "apps/web/src/components/features/game-night-detail/error-states/ExpiredOrCancelledError.tsx"
+    },
+    {
+      "component": "RateLimitedError",
+      "route": "/join/event/[code]",
+      "path": "apps/web/src/components/features/game-night-detail/error-states/RateLimitedError.tsx"
+    },
+    {
+      "component": "GenericError",
+      "route": "/join/event/[code]",
+      "path": "apps/web/src/components/features/game-night-detail/error-states/GenericError.tsx"
+    }
+  ]
+}

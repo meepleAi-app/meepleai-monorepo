@@ -57,6 +57,9 @@ internal sealed class KnowledgeBaseIngestService(
         }
 
         // Map ACL DTOs → internal Embedding domain entities.
+        // Issue #1391: photo-batch chunks have no parent TextChunk row → RoleTags
+        // defaults to 0 (no role-match boost in semantic-mode search). When/if photo
+        // ingestion adopts role classification, propagate the classifier output here.
         var embeddings = requests
             .Select(r => new Embedding(
                 id: Guid.NewGuid(),

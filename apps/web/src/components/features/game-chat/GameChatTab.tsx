@@ -1,5 +1,5 @@
 /**
- * GameChatTabV2 — orchestrator del chat-in-game V2.
+ * GameChatTab — orchestrator del chat-in-game.
  *
  * Compone gli 11 sotto-componenti del barrel game-chat. Wraps useGameChat.
  * Renderizza FSM in base ai campi della response:
@@ -42,7 +42,7 @@ import { TypingIndicator } from '@/components/features/game-chat/TypingIndicator
 import { useGameChat, type ChatMessage } from '@/hooks/queries/useGameChat';
 import type { Citation } from '@/types';
 
-export interface GameChatTabV2Props {
+export interface GameChatTabProps {
   readonly gameId: string;
   readonly initialAgent?: AgentKind;
   readonly gameTitle?: string;
@@ -59,12 +59,12 @@ const SUGGESTED_DEFAULT: ReadonlyArray<Omit<SuggestedPrompt, 'onClick'>> = [
   { category: 'F', text: 'Edge case raro' },
 ];
 
-export function GameChatTabV2({
+export function GameChatTab({
   gameId,
   initialAgent = 'tutor',
   gameTitle = 'Gioco',
   gameIcon = '🎲',
-}: GameChatTabV2Props): ReactElement {
+}: GameChatTabProps): ReactElement {
   const chat = useGameChat(gameId, initialAgent);
   const [inputValue, setInputValue] = useState('');
   const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
@@ -100,7 +100,11 @@ export function GameChatTabV2({
       msg.isLowQuality && !showOoc
         ? [
             { label: 'Verifica nel manuale', kind: 'kb' },
-            { label: 'Cerca su BGG', kind: 'external', url: 'https://boardgamegeek.com/' },
+            {
+              label: 'Cerca online',
+              kind: 'external',
+              url: `https://www.google.com/search?q=${encodeURIComponent(`${gameTitle} regole`)}`,
+            },
           ]
         : [];
 

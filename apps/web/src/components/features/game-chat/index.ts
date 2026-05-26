@@ -59,8 +59,8 @@ export type {
   ChatHistoryItem,
 } from '@/components/features/game-chat/GameChatSidebar';
 
-export { GameChatTabV2 } from '@/components/features/game-chat/GameChatTab';
-export type { GameChatTabV2Props } from '@/components/features/game-chat/GameChatTab';
+export { GameChatTab } from '@/components/features/game-chat/GameChatTab';
+export type { GameChatTabProps } from '@/components/features/game-chat/GameChatTab';
 
 // G2 fast-resume components
 export { ChatBubbleSkeleton } from '@/components/features/game-chat/ChatBubbleSkeleton';

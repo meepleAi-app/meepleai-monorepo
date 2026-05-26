@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SP5 A2 · Admin Users · /admin/users</title>
+<!--
+  @route /admin/users
+  @pattern Sidebar-detail: tabella utenti sx (60%) + drill-down dx (40%)
+  @v2 components: AdminDataTable · BulkActionsBar · AdminUserDetail · AuditLogTimeline
+  @keyboard ⌘K search · g+u nav · j/k row up/down · Enter open detail
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+<link rel="stylesheet" href="components.css"/>
+<link rel="stylesheet" href="admin-base.css"/>
+<style>
+  .users-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) 460px; gap: 16px; align-items: start; }
+  .users-table-wrap { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 10px; overflow: hidden; }
+  .users-toolbar {
+    padding: 10px 12px;
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid var(--border-light);
+    flex-wrap: wrap;
+  }
+  .filter-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 8px; border-radius: 999px;
+    background: var(--bg-muted); color: var(--text-sec);
+    font-family: var(--f-display); font-size: 11px; font-weight: 600;
+    border: 1px solid var(--border-light);
+    cursor: pointer; white-space: nowrap;
+  }
+  .filter-chip.active {
+    background: hsl(var(--c-event) / .12);
+    color: hsl(var(--c-event));
+    border-color: hsl(var(--c-event) / .3);
+  }
+  .filter-chip .x { opacity: .6; }
+
+  .user-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: grid; place-items: center;
+    color: #fff; font-family: var(--f-display); font-weight: 700; font-size: 11px;
+    flex-shrink: 0;
+  }
+  .user-cell {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .user-cell .name {
+    font-family: var(--f-display); font-weight: 700; font-size: 12.5px;
+  }
+  .user-cell .em {
+    font-family: var(--f-mono); font-size: 10.5px; color: var(--text-muted);
+  }
+
+  /* Detail panel */
+  .detail-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    overflow: hidden;
+    position: sticky; top: 76px;
+    max-height: calc(100vh - 100px);
+    display: flex; flex-direction: column;
+  }
+  .detail-hero {
+    padding: 16px;
+    border-bottom: 1px solid var(--border-light);
+    display: flex; align-items: center; gap: 14px;
+    background: linear-gradient(180deg, hsl(var(--c-player) / .08), transparent);
+  }
+  .detail-hero .avatar-lg {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: linear-gradient(135deg, hsl(var(--c-player)), hsl(var(--c-chat)));
+    display: grid; place-items: center;
+    color: #fff; font-family: var(--f-display); font-weight: 800; font-size: 22px;
+  }
+  .detail-hero h2 {
+    margin: 0; font-family: var(--f-display); font-size: 17px; font-weight: 800;
+  }
+  .detail-hero .meta { font-family: var(--f-mono); font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  .detail-body { padding: 14px 16px; overflow-y: auto; flex: 1; }
+
+  .detail-section { margin-bottom: 18px; }
+  .detail-section h4 {
+    margin: 0 0 8px;
+    font-family: var(--f-mono); font-size: 10px; font-weight: 700;
+    color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em;
+  }
+
+  .kv-grid {
+    display: grid; grid-template-columns: 100px 1fr; gap: 4px 10px;
+    font-size: 12px;
+  }
+  .kv-grid dt { color: var(--text-muted); }
+  .kv-grid dd { margin: 0; font-family: var(--f-mono); color: var(--text); }
+
+  .timeline {
+    display: flex; flex-direction: column;
+    border-left: 2px solid var(--border-light);
+    padding-left: 12px; margin-left: 5px;
+  }
+  .tl-item {
+    position: relative;
+    padding: 4px 0 10px 8px;
+    font-size: 12px;
+  }
+  .tl-item::before {
+    content: '';
+    position: absolute; left: -19px; top: 8px;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--bg-card);
+    border: 2px solid var(--text-muted);
+  }
+  .tl-item.danger::before { border-color: hsl(var(--c-event)); }
+  .tl-item.warn::before   { border-color: hsl(38 90% 50%); }
+  .tl-item.ok::before     { border-color: hsl(var(--c-toolkit)); }
+  .tl-item .ts {
+    font-family: var(--f-mono); font-size: 10px; color: var(--text-muted);
+  }
+
+  .danger-zone {
+    padding: 12px;
+    border: 1px solid hsl(var(--c-event) / .35);
+    border-radius: 8px;
+    background: hsl(var(--c-event) / .04);
+  }
+  .danger-zone .title { color: hsl(var(--c-event)); font-family: var(--f-display); font-weight: 700; font-size: 12px; margin-bottom: 4px; }
+  .danger-zone .desc { font-size: 11.5px; color: var(--text-sec); margin-bottom: 10px; line-height: 1.4; }
+</style>
+</head>
+<body class="admin-page">
+
+<div class="admin-mobile-fallback">
+  <span class="em">🖥️</span>
+  <h2>Console solo desktop</h2>
+  <p>Apri dal computer per gestire gli utenti.</p>
+</div>
+
+<div class="admin-shell">
+  <div data-admin-nav-mount></div>
+
+  <main>
+    <header class="admin-top">
+      <div>
+        <h1>Utenti</h1>
+        <div class="crumbs">Admin · Users · 12.487 totali · 8.412 attivi 30gg</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="admin-top-actions">
+        <div class="admin-search">
+          <span aria-hidden="true">🔍</span>
+          <input type="search" placeholder="Cerca per email, nome, ID…" value="marco">
+          <kbd>⌘K</kbd>
+        </div>
+        <button class="btn-admin">⤓ Export CSV</button>
+        <button class="btn-admin primary">+ Invita utente</button>
+      </div>
+    </header>
+
+    <div class="admin-body">
+
+      <div class="users-grid">
+
+        <!-- Left: table ────────────────────────────────── -->
+        <div>
+          <!-- Bulk actions (visible when selected) -->
+          <div class="bulk-bar">
+            <input type="checkbox" checked>
+            <span><span class="count">3 utenti</span> selezionati</span>
+            <div class="actions">
+              <button class="btn-admin sm">✏️ Cambia ruolo</button>
+              <button class="btn-admin sm">⏸ Sospendi</button>
+              <button class="btn-admin sm">⤓ Export</button>
+              <button class="btn-admin sm danger">🗑 Elimina</button>
+              <button class="btn-admin sm ghost">✕</button>
+            </div>
+          </div>
+
+          <div class="users-table-wrap">
+            <div class="users-toolbar">
+              <span class="filter-chip active">Ruolo: tutti <span class="x">▾</span></span>
+              <span class="filter-chip active">Status: tutti <span class="x">▾</span></span>
+              <span class="filter-chip">Last-seen: 30gg <span class="x">▾</span></span>
+              <span class="filter-chip">Plan: tutti <span class="x">▾</span></span>
+              <span class="filter-chip">+ Aggiungi filtro</span>
+              <div style="margin-left:auto; display:flex; gap:6px; align-items:center;">
+                <span style="font-family: var(--f-mono); font-size: 11px; color: var(--text-muted)">487 risultati</span>
+                <button class="btn-admin sm">⚙ Colonne</button>
+              </div>
+            </div>
+
+            <div style="max-height: calc(100vh - 240px); overflow-y: auto;">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th class="checkbox"><input type="checkbox"></th>
+                    <th class="sort-desc">Utente</th>
+                    <th>Ruolo</th>
+                    <th>Joined</th>
+                    <th>Last active</th>
+                    <th>Status</th>
+                    <th class="menu"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="selected">
+                    <td class="checkbox"><input type="checkbox" checked></td>
+                    <td>
+                      <div class="user-cell">
+                        <div class="user-avatar" style="background: linear-gradient(135deg, hsl(262, 83%, 58%), hsl(290, 75%, 50%))">MR</div>
+                        <div>
+                          <div class="name">Marco Rossi</div>
+                          <div class="em">marco.rossi@padovani.it · <code>u-marco</code></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td><span class="role-chip premium">Premium</span></td>
+                    <td><span style="font-family: var(--f-mono); font-size: 11px">2024-09-12</span></td>
+                    <td><span style="font-family: var(--f-mono); font-size: 11px">3m fa</span></td>
+                    <td><span class="status-chip healthy">Attivo</span></td>
+                    <td class="menu"><button>⋮</button></td>
+                  </tr>
+                  <tr>
+                    <td class="checkbox"><input type="checkbox" checked></td>
+                    <td>
+                      <div class="user-cell">
+                        <div class="user-avatar" style="background: linear-gradient(135deg, hsl(220, 80%, 55%), hsl(195, 80%, 50%))">DC</div>
+                        <div>
+                          <div class="name">Davide Conte</div>
+                          <div class="em">davide.conte@gmail.com · <code>u-davide</code></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td><span class="role-chip user">User</span></td>
+                    <td><span style="font-family: var(--f-mono); font-size: 11px">2025-02-04</span></td>
+                    <td><span style="font-family: var(--f-mono); font-size: 11px">2h fa</span></td>
+                    <td><span class="status-chip healthy">Attivo</span></td>
+                    <td class="menu"><button>⋮</button></td>
+                  </tr>
+                  <tr>
+                    <td class="checkbox"><input type="checkbox" checked></td>
+                    <td>
+                      <div class="user-cell">
+                        <div class="user-avatar" style="background: linear-gradient(135deg, hsl(348, 78%, 52%), hsl(28, 84%, 55%))">GB</div>
+                        <div>
+                          <div class="name">Giulia Bianchi</div>
+                          <div class="em">giulia.b@studio.io · <code>u-giulia</code></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td><span class="role-chip admin">Admin</span></td>
+                    <td><span style="font-family: var(--f-mono); font-size: 11px">2024-06-22</span></td>
+                    <td><span style="font-family: var(--f-mono); font-size: 11px">12m fa</span></td>
+                    <td><span class="status-chip healthy">Attivo</span></td>
+                    <td class="menu"><button>⋮</button></td>
+                  </tr>
+                  <tr>
+                    <td class="checkbox"><input type="checkbox"></td>
+                    <td>
+                      <div class="user-cell">
+                        <div class="user-avatar" style="background: linear-gradient(135deg, hsl(168, 60%, 38%), hsl(142, 54%, 42%))">LM</div>
+                        <div>
+                          <div class="name">Luca Mancini</div>
+                          <div class="em">luca.mancini@outlook.com · <code>u-luca</code></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td><span class="role-chip user">User</span></td>
+                    <td><span style="font-family: var(--f-mono); font-size: 11px">2025-04-18</span></td>
+                    <td><span style="font-family: var(--f-mono); font-size: 11px">3gg fa</span></td>
+                    <td><span class="status-chip warning">Trial</span></td>
+                    <td class="menu"><button>⋮</button></td>
+                  </tr>
+                  <tr>
+                    <td class="checkbox"><input type="checkbox"></td>
+                    <td>
+                      <div class="user-cell">
+                        <div class="user-avatar" style="background: linear-gradient(135deg, hsl(38, 90%, 56%), hsl(28, 84%, 55%))">A_</div>
+                        <div>
+                          <div class="name">Aaron <span style="font-family: var(--f-mono); color: hsl(var(--c-event)); font-size: 10px; padding: 1px 5px; border-radius: 4px; background: hsl(var(--c-event) / .14); margin-left:4px">YOU</span></div>
+                          <div class="em">badsworm@gmail.com · <code>u-aaron</code></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td><span class="role-chip superadmin">SuperAdmin</span></td>
+                    <td><span style="font-family: var(--f-mono); font-size: 11px">2024-01-08</span></td>
+                    <td><span style="font-family: var(--f-mono); font-size: 11px; color: hsl(var(--c-toolkit)); font-weight: 700">ora</span></td>
+                    <td><span class="status-chip healthy">Attivo</span></td>
+                    <td class="menu"><button>⋮</button></td>
+                  </tr>
+                  <tr>
+                    <td class="checkbox"><input type="checkbox"></td>
+                    <td>
+                      <div class="user-cell">
+                        <div class="user-avatar" style="background: linear-gradient(135deg, hsl(200, 78%, 52%), hsl(220, 80%, 55%))">SF</div>
+                        <div>
+                          <div class="name">Sara Ferrari</div>
+                          <div class="em">sara.ferrari@libero.it · <code>u-sara</code></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td><span class="role-chip user">User</span></td>
+                    <td><span style="font-family: var(--f-mono); font-size: 11px">2025-01-20</span></td>
+                    <td><span style="font-family: var(--f-mono); font-size: 11px">28gg fa</span></td>
+                    <td><span class="status-chip muted">Inattivo</span></td>
+                    <td class="menu"><button>⋮</button></td>
+                  </tr>
+                  <tr>
+                    <td class="checkbox"><input type="checkbox"></td>
+                    <td>
+                      <div class="user-cell">
+                        <div class="user-avatar" style="background: linear-gradient(135deg, hsl(28, 84%, 55%), hsl(348, 78%, 52%))">EP</div>
+                        <div>
+                          <div class="name">Elena Parisi</div>
+                          <div class="em">elena.parisi@meeple.io · <code>u-elena</code></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td><span class="role-chip premium">Premium</span></td>
+                    <td><span style="font-family: var(--f-mono); font-size: 11px">2024-11-03</span></td>
+                    <td><span style="font-family: var(--f-mono); font-size: 11px">1h fa</span></td>
+                    <td><span class="status-chip danger">Suspended</span></td>
+                    <td class="menu"><button>⋮</button></td>
+                  </tr>
+                  <tr>
+                    <td class="checkbox"><input type="checkbox"></td>
+                    <td>
+                      <div class="user-cell">
+                        <div class="user-avatar" style="background: linear-gradient(135deg, hsl(142, 54%, 42%), hsl(168, 60%, 38%))">+8</div>
+                        <div>
+                          <div class="name" style="color: var(--text-muted)">+ 8 risultati con "marco"</div>
+                          <div class="em">scroll per caricare altri</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td colspan="4"></td>
+                    <td class="menu"></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div style="padding: 8px 14px; border-top: 1px solid var(--border-light); display: flex; align-items: center; gap: 12px; font-family: var(--f-mono); font-size: 11px; color: var(--text-muted)">
+              <span>Mostrati 1-15 di 487</span>
+              <div style="margin-left:auto; display:flex; gap:6px; align-items:center">
+                <button class="btn-admin sm ghost">‹ Prev</button>
+                <span>1 di 33</span>
+                <button class="btn-admin sm ghost">Next ›</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: detail panel ─────────────────────── -->
+        <aside class="detail-card" aria-label="Dettaglio utente">
+          <div class="detail-hero">
+            <div class="avatar-lg">MR</div>
+            <div style="flex: 1; min-width: 0">
+              <h2>Marco Rossi <span class="role-chip premium" style="margin-left: 6px">Premium</span></h2>
+              <div class="meta">marco.rossi@padovani.it · joined 2024-09-12</div>
+              <div style="margin-top:6px; display:flex; gap:6px; flex-wrap: wrap">
+                <span class="status-chip healthy">Attivo</span>
+                <span style="font-family: var(--f-mono); font-size: 10px; padding: 2px 6px; border-radius: 999px; background: var(--bg-muted); color: var(--text-sec)">🇮🇹 Padova</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="padding: 0 16px; border-bottom: 1px solid var(--border-light)">
+            <div class="admin-tabs" style="margin-bottom: 0">
+              <button class="admin-tab active">Profilo</button>
+              <button class="admin-tab">Sessioni <span class="count">214</span></button>
+              <button class="admin-tab">Agenti <span class="count">7</span></button>
+              <button class="admin-tab">Audit <span class="count">38</span></button>
+              <button class="admin-tab">Billing</button>
+            </div>
+          </div>
+
+          <div class="detail-body">
+            <div class="detail-section">
+              <h4>Anagrafica</h4>
+              <dl class="kv-grid">
+                <dt>User ID</dt><dd>u-marco</dd>
+                <dt>Nome</dt><dd>Marco Rossi</dd>
+                <dt>Email</dt><dd>marco.rossi@padovani.it</dd>
+                <dt>Telefono</dt><dd>+39 348 ••• ••42</dd>
+                <dt>Gruppo</dt><dd>Padovani Boardgame</dd>
+                <dt>Locale</dt><dd>it-IT · Europe/Rome</dd>
+                <dt>Browser</dt><dd>Chrome 124 · macOS</dd>
+              </dl>
+            </div>
+
+            <div class="detail-section">
+              <h4>Account & sicurezza</h4>
+              <dl class="kv-grid">
+                <dt>Plan</dt><dd>Premium · $9.99/mo · renewal 2026-09-12</dd>
+                <dt>Verified</dt><dd style="color: hsl(var(--c-toolkit))">✓ email verified</dd>
+                <dt>2FA</dt><dd style="color: hsl(38 90% 50%)">⚠ non attivo</dd>
+                <dt>Sessions</dt><dd>3 attive · 1 Mac · 2 iPhone</dd>
+                <dt>API keys</dt><dd>2 attive</dd>
+                <dt>Last login</dt><dd>2026-05-24 14:22 · Padova</dd>
+              </dl>
+            </div>
+
+            <div class="detail-section">
+              <h4>Audit log · ultimi eventi</h4>
+              <div class="timeline">
+                <div class="tl-item ok">
+                  <div><strong>Cambio password</strong> · da app web</div>
+                  <div class="ts">2026-05-22 18:14</div>
+                </div>
+                <div class="tl-item warn">
+                  <div><strong>Login da nuovo device</strong> · iPhone 15 · Padova IT</div>
+                  <div class="ts">2026-05-20 09:02</div>
+                </div>
+                <div class="tl-item ok">
+                  <div><strong>Promosso a Premium</strong> da Aaron (superadmin)</div>
+                  <div class="ts">2026-05-18 11:30</div>
+                </div>
+                <div class="tl-item ok">
+                  <div><strong>Aggiunto Davide Conte</strong> al gruppo Padovani</div>
+                  <div class="ts">2026-05-15 19:48</div>
+                </div>
+                <div class="tl-item danger">
+                  <div><strong>Tentativo login fallito x4</strong> · IP 82.84.211.17 (bloccato)</div>
+                  <div class="ts">2026-05-12 02:14</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="detail-section">
+              <h4>Azioni</h4>
+              <div style="display: flex; flex-wrap: wrap; gap: 6px">
+                <button class="btn-admin sm">🎭 Impersonate</button>
+                <button class="btn-admin sm">📧 Invia magic-link</button>
+                <button class="btn-admin sm">🔑 Reset password</button>
+                <button class="btn-admin sm">⏸ Sospendi</button>
+                <button class="btn-admin sm">⤓ Export dati GDPR</button>
+              </div>
+            </div>
+
+            <div class="detail-section">
+              <h4 style="color: hsl(var(--c-event))">Danger zone</h4>
+              <div class="danger-zone">
+                <div class="title">Forza logout da tutti i device</div>
+                <div class="desc">Invalida tutte le sessioni attive. Marco dovrà ri-loggarsi su web + 2 iPhone.</div>
+                <button class="btn-admin sm danger">Esegui logout</button>
+              </div>
+              <div class="danger-zone" style="margin-top: 8px">
+                <div class="title">Elimina account</div>
+                <div class="desc">Cancella permanentemente l'account, 214 sessioni e 12 agenti personali. GDPR Article 17. Non reversibile.</div>
+                <button class="btn-admin sm danger">Elimina account</button>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="admin-nav.js"></script>
+<script>renderAdminNav('users');</script>
+</body>
+</html>

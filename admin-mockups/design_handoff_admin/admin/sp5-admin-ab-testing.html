@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>A/B Testing Agenti · MeepleAI Admin</title>
+<!-- D3 · AI Tooling & Data Quality → 'ab-testing' (NAV_ID non ancora presente in admin-nav.js;
+     verrà aggiunto nel gruppo "AI Tooling & Data Quality"). -->
+<!-- @v1 ABTestTable · VariantChip · LiftCell · SignificanceChip · ComparisonChart · DetailDrawer
+     · PromoteWinnerCTA reuse
+     Endpoints: GET/POST /api/v1/admin/ab-tests
+                POST /api/v1/admin/ab-tests/{id}/{promote|stop}
+     Role: admin -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+
+<!-- ═══════════════════ INLINED DS (tokens + components + admin-base) ═══════════════════ -->
+<style>
+/* ── tokens.css ─────────────────────────────────────────────────── */
+:root{
+  --c-game:25 95% 45%;--c-player:262 83% 58%;--c-session:240 60% 55%;--c-agent:38 92% 50%;
+  --c-kb:174 60% 40%;--c-chat:220 80% 55%;--c-event:350 89% 60%;--c-toolkit:142 70% 45%;--c-tool:195 80% 50%;
+  --c-success:142 70% 45%;--c-warning:38 92% 50%;--c-danger:350 89% 60%;--c-info:220 80% 55%;
+  --f-display:'Quicksand',system-ui,sans-serif;--f-body:'Nunito',system-ui,sans-serif;--f-mono:'JetBrains Mono',ui-monospace,monospace;
+  --r-xs:4px;--r-sm:6px;--r-md:10px;--r-lg:14px;--r-pill:9999px;
+  --ease-out:cubic-bezier(.16,1,.3,1);--dur-sm:180ms;
+}
+:root,:root[data-theme="light"]{
+  --bg:#f7f3ee;--bg-card:#fff;--bg-muted:#efe6d9;--bg-sunken:#ede2d0;
+  --text:#2b1f12;--text-sec:#5a4a38;--text-muted:#9a8870;
+  --border:rgba(180,130,80,.18);--border-light:rgba(180,130,80,.1);--border-strong:rgba(180,130,80,.32);
+  color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --bg:#14100a;--bg-card:#1e1710;--bg-muted:#241c13;--bg-sunken:#0f0c08;
+  --text:#f0e4d2;--text-sec:#c8b896;--text-muted:#8a7860;
+  --border:rgba(224,180,110,.14);--border-light:rgba(224,180,110,.08);--border-strong:rgba(224,180,110,.28);
+  --c-game:28 95% 58%;--c-player:262 75% 70%;--c-session:235 70% 70%;--c-agent:38 92% 62%;--c-kb:174 60% 55%;
+  --c-chat:218 80% 68%;--c-event:350 85% 70%;--c-toolkit:142 60% 58%;--c-tool:195 75% 62%;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}html,body{margin:0;padding:0}
+body{font-family:var(--f-body);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:var(--f-display);font-weight:700;letter-spacing:-.01em;margin:0;line-height:1.2}
+button{font-family:inherit;cursor:pointer}a{color:inherit;text-decoration:none}
+code,kbd{font-family:var(--f-mono);font-size:.9em}
+.e-game{--e:var(--c-game)}.e-player{--e:var(--c-player)}.e-session{--e:var(--c-session)}.e-agent{--e:var(--c-agent)}
+.e-kb{--e:var(--c-kb)}.e-chat{--e:var(--c-chat)}.e-event{--e:var(--c-event)}.e-toolkit{--e:var(--c-toolkit)}.e-tool{--e:var(--c-tool)}
+.e-fg{color:hsl(var(--e))}.e-tint{background:hsl(var(--e)/.1);color:hsl(var(--e))}
+.spark{stroke:currentColor;stroke-width:1.5;fill:none}.spark-fill{fill:currentColor;opacity:.14}
+
+/* ── admin-base.css ─────────────────────────────────────────────── */
+.admin-page{background:var(--bg);color:var(--text);min-height:100vh;font-family:var(--f-body);font-size:12px;line-height:1.5}
+.admin-shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+.admin-nav{background:var(--bg-card);border-right:1px solid var(--border);padding:16px 0;display:flex;flex-direction:column;gap:2px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.admin-nav-brand{padding:4px 16px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border-light);margin-bottom:12px}
+.admin-nav-brand-mark{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,hsl(var(--c-game)),hsl(var(--c-event)));color:#fff;display:grid;place-items:center;font-family:var(--f-display);font-weight:900;font-size:14px}
+.admin-nav-brand-name{font-family:var(--f-display);font-weight:800;font-size:14px}
+.admin-nav-brand-tag{font-family:var(--f-mono);font-size:9px;font-weight:700;color:hsl(var(--c-event));text-transform:uppercase;letter-spacing:.08em;padding:2px 6px;border-radius:4px;background:hsl(var(--c-event)/.12);margin-left:auto}
+.admin-nav-group{padding:10px 16px 4px;font-family:var(--f-mono);font-size:9.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em}
+.admin-nav-item{display:flex;align-items:center;gap:10px;padding:7px 16px;color:var(--text-sec);font-family:var(--f-display);font-size:13px;font-weight:600;cursor:pointer;border-left:2px solid transparent}
+.admin-nav-item:hover{background:var(--bg-muted);color:var(--text)}
+.admin-nav-item.active{background:hsl(var(--c-event)/.08);color:hsl(var(--c-event));border-left-color:hsl(var(--c-event))}
+.admin-nav-item .em{font-size:14px}
+.admin-nav-item .count{margin-left:auto;font-family:var(--f-mono);font-size:10px;color:var(--text-muted);font-weight:700}
+.admin-nav-foot{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border-light);font-family:var(--f-mono);font-size:10px;color:var(--text-muted)}
+.admin-top{background:var(--bg);border-bottom:1px solid var(--border-light);padding:12px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:50;backdrop-filter:blur(12px)}
+.admin-top h1{font-family:var(--f-display);font-size:20px;font-weight:800}
+.admin-top .crumbs{font-family:var(--f-mono);font-size:11px;color:var(--text-muted);margin-top:2px}
+.admin-top .spacer{flex:1}.admin-top-actions{display:flex;gap:8px;align-items:center}
+.admin-search{display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;width:280px;font-size:12px}
+.admin-search input{flex:1;border:0;background:transparent;color:var(--text);font-family:var(--f-body);font-size:12.5px;outline:0}
+.admin-search kbd{padding:1px 5px;border-radius:4px;background:var(--bg-muted);border:1px solid var(--border);font-family:var(--f-mono);font-size:9px;color:var(--text-muted)}
+.btn-admin{padding:6px 12px;border-radius:6px;font-family:var(--f-display);font-size:12.5px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--bg-card);color:var(--text);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-admin:hover{background:var(--bg-muted)}
+.btn-admin.primary{background:hsl(var(--c-event));border-color:hsl(var(--c-event));color:#fff;box-shadow:0 2px 6px hsl(var(--c-event)/.3)}
+.btn-admin.primary:hover{filter:brightness(1.08)}
+.btn-admin.danger{background:var(--bg-card);border-color:hsl(var(--c-event)/.5);color:hsl(var(--c-event))}
+.btn-admin.danger:hover{background:hsl(var(--c-event)/.08)}
+.btn-admin.success{background:hsl(var(--c-toolkit));border-color:hsl(var(--c-toolkit));color:#fff;box-shadow:0 2px 6px hsl(var(--c-toolkit)/.3)}
+.btn-admin.success:hover{filter:brightness(1.08)}
+.btn-admin.ghost{background:transparent;border-color:transparent}
+.btn-admin.icon{padding:6px;width:28px;height:28px;justify-content:center}
+.btn-admin.sm{padding:3px 8px;font-size:11px}
+.btn-admin kbd{padding:1px 4px;border-radius:3px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);font-family:var(--f-mono);font-size:9px;margin-left:4px}
+.admin-kpi{background:var(--bg-card);border:1px solid var(--border-light);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-height:88px;position:relative}
+.admin-kpi-label{font-family:var(--f-mono);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em}
+.admin-kpi-value{font-family:var(--f-display);font-size:28px;font-weight:800;color:var(--text);line-height:1.1;font-variant-numeric:tabular-nums}
+.admin-kpi-trend{font-family:var(--f-mono);font-size:11px;font-weight:600}
+.admin-kpi-trend.up{color:hsl(var(--c-toolkit))}.admin-kpi-trend.down{color:hsl(var(--c-event))}.admin-kpi-trend.flat{color:var(--text-muted)}
+.admin-kpi-spark{position:absolute;right:12px;top:12px;width:70px;height:28px;opacity:.85}
+.admin-kpi.e-tool{border-left:3px solid hsl(var(--c-tool))}
+.admin-kpi.e-toolkit{border-left:3px solid hsl(var(--c-toolkit))}
+.admin-kpi.e-chat{border-left:3px solid hsl(var(--c-chat))}
+.admin-kpi.e-agent{border-left:3px solid hsl(var(--c-agent))}
+.admin-panel{background:var(--bg-card);border:1px solid var(--border-light);border-radius:10px;overflow:hidden}
+.admin-panel-head{padding:10px 14px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:10px;background:var(--bg)}
+.admin-panel-head h3{margin:0;font-family:var(--f-display);font-size:13px;font-weight:800}
+.admin-panel-head .meta{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);margin-left:auto}
+.admin-panel-body{padding:14px}
+.admin-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.admin-table th{text-align:left;padding:8px 12px;font-family:var(--f-mono);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border-light);background:var(--bg);position:sticky;top:0;white-space:nowrap}
+.admin-table td{padding:9px 12px;border-bottom:1px solid var(--border-light);vertical-align:middle}
+.admin-table tr:hover td{background:var(--bg-muted)}
+.admin-table tr.selected td{background:hsl(var(--c-event)/.07)}
+.admin-table tr.selected td:first-child{box-shadow:inset 3px 0 0 hsl(var(--c-event))}
+.status-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-family:var(--f-mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.status-chip::before{content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.status-chip.healthy{background:hsl(var(--c-toolkit)/.12);color:hsl(var(--c-toolkit))}
+.status-chip.healthy::before{background:hsl(var(--c-toolkit));box-shadow:0 0 0 3px hsl(var(--c-toolkit)/.25)}
+.status-chip.warning{background:hsl(38 90% 56%/.14);color:hsl(38 90% 50%)}
+.status-chip.warning::before{background:hsl(38 90% 50%)}
+.status-chip.danger{background:hsl(var(--c-event)/.12);color:hsl(var(--c-event))}
+.status-chip.danger::before{background:hsl(var(--c-event))}
+.status-chip.muted{background:var(--bg-muted);color:var(--text-muted)}
+.status-chip.muted::before{background:var(--text-muted)}
+.status-chip.info{background:hsl(var(--c-chat)/.12);color:hsl(var(--c-chat))}
+.status-chip.info::before{background:hsl(var(--c-chat))}
+.status-chip.running{background:hsl(var(--c-toolkit)/.12);color:hsl(var(--c-toolkit))}
+.status-chip.running::before{background:hsl(var(--c-toolkit));animation:admin-pulse 1.4s ease-in-out infinite}
+@keyframes admin-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.5}}
+@media (max-width:880px){
+  .admin-mobile-fallback{display:flex !important;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px;text-align:center;gap:16px}
+  .admin-mobile-fallback .em{font-size:56px}
+  .admin-mobile-fallback h2{margin:0;font-family:var(--f-display);font-size:20px}
+  .admin-mobile-fallback p{color:var(--text-sec);max-width:320px;margin:0}
+  .admin-shell{display:none}
+}
+.admin-mobile-fallback{display:none}
+.admin-body{padding:20px 24px}
+
+/* ── Page-specific ──────────────────────────────────────────────── */
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.head-cluster{display:inline-flex;align-items:center;gap:10px;margin-left:auto}
+.head-cluster .sep{width:1px;height:14px;background:var(--border-light)}
+
+/* Variant chips A/B */
+.variant-pair{display:inline-flex;align-items:center;gap:6px}
+.var-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:6px;font-family:var(--f-display);font-weight:800;font-size:11.5px;border:1px solid hsl(var(--e)/.3);background:hsl(var(--e)/.1);color:hsl(var(--e));white-space:nowrap}
+.var-chip .tag{font-family:var(--f-mono);font-weight:800;font-size:9px;letter-spacing:.04em;background:hsl(var(--e));color:#14100a;padding:1px 5px;border-radius:3px;text-transform:uppercase}
+.vs{font-family:var(--f-mono);font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;padding:0 2px}
+
+/* Experiment name cell */
+.exp-cell{display:flex;align-items:center;gap:10px}
+.exp-mark{width:28px;height:28px;border-radius:7px;background:hsl(var(--e)/.12);color:hsl(var(--e));display:grid;place-items:center;font-size:14px;flex-shrink:0;border:1px solid hsl(var(--e)/.25)}
+.exp-info{display:flex;flex-direction:column;line-height:1.2;min-width:0}
+.exp-name{font-family:var(--f-display);font-weight:800;font-size:13px;color:var(--text)}
+.exp-id{font-family:var(--f-mono);font-size:9.5px;color:var(--text-muted);font-weight:700;margin-top:1px;letter-spacing:.02em}
+
+.metric-chip{font-family:var(--f-mono);font-size:11px;color:var(--text);background:var(--bg-sunken,var(--bg));padding:2px 7px;border-radius:5px;border:1px solid var(--border-light);font-weight:600;display:inline-block}
+.metric-chip .ns{color:var(--text-muted)}
+
+.sample-cell{font-family:var(--f-mono);font-size:11.5px;color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+.sample-cell .sep{color:var(--text-muted);margin:0 3px}
+.sample-cell .total{color:var(--text-muted);font-size:9.5px;display:block;margin-top:1px;font-weight:500}
+
+.lift-cell{display:inline-flex;align-items:baseline;gap:4px;font-family:var(--f-mono);font-weight:800;font-size:13px;font-variant-numeric:tabular-nums}
+.lift-cell.up{color:hsl(var(--c-toolkit))}
+.lift-cell.down{color:hsl(var(--c-event))}
+.lift-cell.flat{color:var(--text-muted)}
+.lift-cell .arr{font-size:11px}
+
+.row-actions{display:flex;gap:4px;justify-content:flex-end;align-items:center}
+.row-actions .btn-admin.sm{padding:3px 7px;font-size:10.5px}
+
+/* ── Layout split row ───────────────────────────────────────────── */
+.split-grid{display:grid;grid-template-columns:1fr 380px;gap:14px;align-items:stretch}
+
+/* ── Comparison chart panel ─────────────────────────────────────── */
+.chart-body{padding:16px 18px 14px;display:flex;flex-direction:column;gap:10px}
+.chart-context{display:flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:10.5px;color:var(--text-muted)}
+.chart-context .k{text-transform:uppercase;letter-spacing:.06em;font-weight:700;font-size:9.5px}
+.chart-context .v{color:var(--text);font-weight:700}
+.chart-context .pill{padding:2px 7px;border-radius:4px;background:var(--bg-muted);border:1px solid var(--border-light);font-weight:700}
+
+.chart-frame{position:relative;width:100%;height:260px;background:linear-gradient(180deg, var(--bg-sunken,var(--bg)) 0%, var(--bg) 100%);border:1px solid var(--border-light);border-radius:10px;overflow:hidden}
+.chart-frame svg{display:block;width:100%;height:100%}
+.chart-frame .y-axis{position:absolute;left:0;top:0;bottom:18px;width:44px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;padding:6px 6px 0 0;font-family:var(--f-mono);font-size:9.5px;color:var(--text-muted);pointer-events:none}
+.chart-frame .x-axis{position:absolute;left:44px;right:8px;bottom:0;height:18px;display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:9.5px;color:var(--text-muted);padding-top:2px;pointer-events:none}
+.chart-frame .grid-line{stroke:hsl(var(--border-strong));stroke-width:.5;opacity:.4;stroke-dasharray:2 4}
+.chart-frame .start-line{stroke:hsl(var(--c-event));stroke-width:1;stroke-dasharray:4 3;opacity:.6}
+.chart-frame .start-lbl{font-family:var(--f-mono);font-size:9.5px;fill:hsl(var(--c-event));font-weight:700}
+.chart-frame .significance-marker{font-family:var(--f-mono);font-size:9px;fill:hsl(var(--c-toolkit));font-weight:700}
+
+.chart-legend{display:flex;align-items:center;gap:16px;flex-wrap:wrap;font-family:var(--f-mono);font-size:11px}
+.chart-legend .item{display:inline-flex;align-items:center;gap:6px;color:var(--text-sec)}
+.chart-legend .item .sw{width:14px;height:3px;border-radius:2px;background:hsl(var(--e));position:relative}
+.chart-legend .item .sw::after{content:'';position:absolute;top:-3px;bottom:-3px;left:0;right:0;border-radius:99px;background:hsl(var(--e)/.18)}
+.chart-legend .item .nm{font-family:var(--f-display);color:var(--text);font-weight:800;font-size:12px}
+.chart-legend .item .val{color:var(--text);font-weight:700;margin-left:2px}
+.chart-legend .item .sub{color:var(--text-muted)}
+.chart-legend .sep{width:1px;height:14px;background:var(--border-light)}
+.chart-legend .ci-note{display:inline-flex;align-items:center;gap:6px;color:var(--text-muted);font-size:10px;margin-left:auto}
+.chart-legend .ci-note .band{width:14px;height:8px;border-radius:3px;background:repeating-linear-gradient(45deg,hsl(var(--c-chat)/.16),hsl(var(--c-chat)/.16) 3px,transparent 3px,transparent 6px);border:1px solid hsl(var(--c-chat)/.3)}
+
+/* ── Detail drawer ──────────────────────────────────────────────── */
+.detail-panel{display:flex;flex-direction:column;overflow:hidden}
+.detail-hero{padding:14px 16px;border-bottom:1px solid var(--border-light);display:flex;flex-direction:column;gap:8px;background:linear-gradient(180deg, hsl(var(--c-event)/.06), transparent 80%)}
+.detail-hero .title{display:flex;align-items:center;gap:10px}
+.detail-hero h2{font-family:var(--f-display);font-size:16px;font-weight:800;line-height:1.2}
+.detail-hero .sub{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);font-weight:700}
+.detail-hero .chips{display:flex;gap:5px;flex-wrap:wrap}
+
+.variant-versus{padding:14px;display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:stretch;border-bottom:1px solid var(--border-light)}
+.v-card{background:var(--bg);border:1px solid hsl(var(--e)/.3);border-left:3px solid hsl(var(--e));border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:5px;min-height:148px;position:relative}
+.v-card.winner{background:hsl(var(--c-toolkit)/.06);border-color:hsl(var(--c-toolkit)/.45);border-left-color:hsl(var(--c-toolkit))}
+.v-card .v-tag{font-family:var(--f-mono);font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:4px;color:#14100a;background:hsl(var(--e));align-self:flex-start}
+.v-card.winner .v-tag{background:hsl(var(--c-toolkit));color:#0f0c08}
+.v-card .v-name{font-family:var(--f-display);font-weight:800;font-size:12.5px;color:var(--text);line-height:1.25}
+.v-card .v-sub{font-family:var(--f-mono);font-size:9.5px;color:var(--text-muted);font-weight:700}
+.v-card .v-metric{font-family:var(--f-display);font-weight:800;font-size:26px;color:var(--text);line-height:1;margin-top:6px;font-variant-numeric:tabular-nums}
+.v-card.winner .v-metric{color:hsl(var(--c-toolkit))}
+.v-card .v-metric .unit{font-size:13px;color:var(--text-muted);font-weight:700;margin-left:2px}
+.v-card .v-sample{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);font-weight:700;display:flex;justify-content:space-between;margin-top:auto;padding-top:6px;border-top:1px dashed var(--border-light)}
+.v-card .v-sample .v{color:var(--text);font-weight:700}
+.v-card .crown{position:absolute;top:8px;right:10px;font-size:14px}
+
+.versus-pill{align-self:center;font-family:var(--f-mono);font-size:10px;font-weight:800;color:var(--text-muted);background:var(--bg-card);border:1px solid var(--border);border-radius:99px;padding:3px 8px;text-transform:uppercase;letter-spacing:.04em}
+
+.stats-grid{padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px;border-bottom:1px solid var(--border-light)}
+.stat-cell{background:var(--bg);border:1px solid var(--border-light);border-radius:7px;padding:8px 10px}
+.stat-cell .lbl{font-family:var(--f-mono);font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em}
+.stat-cell .v{font-family:var(--f-mono);font-size:14px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;margin-top:2px}
+.stat-cell .v.good{color:hsl(var(--c-toolkit))}
+.stat-cell .v.bad{color:hsl(var(--c-event))}
+.stat-cell .sub{font-family:var(--f-mono);font-size:9px;color:var(--text-muted);margin-top:1px;font-weight:600}
+
+.reco{padding:14px;display:flex;flex-direction:column;gap:10px;background:hsl(var(--c-toolkit)/.04);border-bottom:1px solid var(--border-light)}
+.reco .reco-head{display:flex;align-items:center;gap:8px}
+.reco .reco-head .em{font-size:18px}
+.reco .reco-head .title{font-family:var(--f-display);font-weight:800;font-size:13px;color:hsl(var(--c-toolkit))}
+.reco .reco-text{font-size:12px;color:var(--text);line-height:1.5}
+.reco .reco-text strong{font-weight:800}
+.reco .reco-text .v-mono{font-family:var(--f-mono);background:var(--bg-muted);padding:1px 5px;border-radius:4px;font-size:11px}
+
+.detail-actions{padding:12px 14px;display:flex;flex-direction:column;gap:6px;background:var(--bg)}
+.detail-actions .btn-admin{width:100%;justify-content:center;font-size:13px;padding:8px 12px}
+.detail-actions .helper{font-family:var(--f-mono);font-size:9.5px;color:var(--text-muted);display:flex;align-items:center;gap:4px;padding:2px 4px}
+.detail-actions .helper .lock{color:hsl(var(--c-event))}
+.detail-actions .row{display:flex;gap:6px}
+.detail-actions .row .btn-admin{flex:1}
+
+/* Pre-formatted secondary value cell for table */
+.no-arr{color:var(--text-muted)}
+</style>
+</head>
+<body class="admin-page">
+
+  <div class="admin-mobile-fallback">
+    <div class="em">🖥️</div>
+    <h2>Console solo desktop</h2>
+    <p>La console admin è ottimizzata per schermi ≥ 880px. Aprila da desktop.</p>
+  </div>
+
+  <div class="admin-shell">
+    <div data-admin-nav-mount></div>
+
+    <main>
+      <header class="admin-top">
+        <div>
+          <h1>A/B Testing Agenti</h1>
+          <div class="crumbs">Admin › AI Tooling &amp; Data Quality › A/B Testing · 4 esperimenti · aggiornato 14:23:08</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="admin-top-actions">
+          <div class="admin-search"><span>🔍</span><input placeholder="Cerca esperimento, variante…"/><kbd>⌘K</kbd></div>
+          <button class="btn-admin">⟳ Refresh <kbd>R</kbd></button>
+          <button class="btn-admin">📊 Significance calc</button>
+          <button class="btn-admin primary">＋ Nuovo esperimento</button>
+          <button class="btn-admin icon" title="Tema">🌗</button>
+        </div>
+      </header>
+
+      <div class="admin-body" style="display:flex;flex-direction:column;gap:14px">
+
+        <!-- ────────── 1) KPI strip ────────── -->
+        <section class="kpi-strip">
+          <div class="admin-kpi e-tool">
+            <div class="admin-kpi-label">Test attivi</div>
+            <div class="admin-kpi-value">4<span style="font-size:14px;color:var(--text-muted);font-weight:600"> · 1 pronto promote</span></div>
+            <div class="admin-kpi-trend flat">▬ 3 running · 1 inconclusive</div>
+            <svg class="admin-kpi-spark e-tool" viewBox="0 0 70 28">
+              <path class="spark-fill e-fg" d="M0,18 L8,18 L16,16 L24,14 L32,14 L40,12 L48,10 L56,10 L64,8 L70,8 L70,28 L0,28 Z"/>
+              <path class="spark e-fg" d="M0,18 L8,18 L16,16 L24,14 L32,14 L40,12 L48,10 L56,10 L64,8 L70,8"/>
+            </svg>
+          </div>
+
+          <div class="admin-kpi e-agent">
+            <div class="admin-kpi-label">Esperimenti totali</div>
+            <div class="admin-kpi-value">38<span style="font-size:14px;color:var(--text-muted);font-weight:600"> · 30g</span></div>
+            <div class="admin-kpi-trend up">▲ 22 promote · 8 stop · 8 attivi</div>
+            <svg class="admin-kpi-spark e-agent" viewBox="0 0 70 28">
+              <path class="spark-fill e-fg" d="M0,22 L8,20 L16,18 L24,15 L32,12 L40,11 L48,9 L56,7 L64,5 L70,4 L70,28 L0,28 Z"/>
+              <path class="spark e-fg" d="M0,22 L8,20 L16,18 L24,15 L32,12 L40,11 L48,9 L56,7 L64,5 L70,4"/>
+            </svg>
+          </div>
+
+          <div class="admin-kpi e-toolkit">
+            <div class="admin-kpi-label">Lift medio (promoted)</div>
+            <div class="admin-kpi-value">+6.4<span style="font-size:14px;color:var(--text-muted);font-weight:600">%</span></div>
+            <div class="admin-kpi-trend up">▲ vs 30g precedenti · 22 promoted</div>
+            <svg class="admin-kpi-spark e-toolkit" viewBox="0 0 70 28">
+              <path class="spark-fill e-fg" d="M0,20 L8,18 L16,17 L24,14 L32,12 L40,10 L48,9 L56,7 L64,6 L70,5 L70,28 L0,28 Z"/>
+              <path class="spark e-fg" d="M0,20 L8,18 L16,17 L24,14 L32,12 L40,10 L48,9 L56,7 L64,6 L70,5"/>
+            </svg>
+          </div>
+
+          <div class="admin-kpi e-chat">
+            <div class="admin-kpi-label">Campione totale</div>
+            <div class="admin-kpi-value">14.2<span style="font-size:14px;color:var(--text-muted);font-weight:600">k esposizioni</span></div>
+            <div class="admin-kpi-trend up">▲ +2.4k 7g · split 50/50</div>
+            <svg class="admin-kpi-spark e-chat" viewBox="0 0 70 28">
+              <path class="spark-fill e-fg" d="M0,22 L8,21 L16,19 L24,17 L32,15 L40,13 L48,11 L56,9 L64,7 L70,6 L70,28 L0,28 Z"/>
+              <path class="spark e-fg" d="M0,22 L8,21 L16,19 L24,17 L32,15 L40,13 L48,11 L56,9 L64,7 L70,6"/>
+            </svg>
+          </div>
+        </section>
+
+        <!-- ────────── 2) Esperimenti table ────────── -->
+        <section class="admin-panel">
+          <div class="admin-panel-head">
+            <h3>Esperimenti A/B</h3>
+            <span class="status-chip running">3 running</span>
+            <span class="status-chip healthy">1 significant</span>
+            <span class="status-chip warning">1 inconclusive</span>
+            <div class="head-cluster">
+              <span class="meta">significance test · Welch t-test · α=0.05 · power 0.80</span>
+              <button class="btn-admin sm ghost">⤓ Export</button>
+            </div>
+          </div>
+
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th style="width:22%">Esperimento</th>
+                <th style="width:24%">Varianti</th>
+                <th style="width:13%">Metrica</th>
+                <th style="width:11%">Campione</th>
+                <th style="width:8%;text-align:right">Lift</th>
+                <th style="width:12%">Significatività</th>
+                <th style="width:9%">Stato</th>
+                <th style="width:160px;text-align:right">Azioni</th>
+              </tr>
+            </thead>
+            <tbody>
+
+              <tr class="selected">
+                <td>
+                  <div class="exp-cell e-event">
+                    <div class="exp-mark">✎</div>
+                    <div class="exp-info"><span class="exp-name">Prompt v2.4 vs v2.5</span><span class="exp-id">abt_prompt_84a1 · Wingspan</span></div>
+                  </div>
+                </td>
+                <td>
+                  <div class="variant-pair">
+                    <span class="var-chip e-chat"><span class="tag">A</span>prompt v2.4</span>
+                    <span class="vs">vs</span>
+                    <span class="var-chip e-agent"><span class="tag">B</span>prompt v2.5</span>
+                  </div>
+                </td>
+                <td><span class="metric-chip"><span class="ns">rag.</span>answer_rating</span></td>
+                <td class="sample-cell">1 240<span class="sep">/</span>1 198<span class="total">tot 2 438 · 50/50</span></td>
+                <td><span class="lift-cell up"><span class="arr">▲</span>+8.2%</span></td>
+                <td><span class="status-chip healthy">significant · p=0.03</span></td>
+                <td><span class="status-chip running">running · 6g</span></td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn-admin sm ghost">↗ Dettagli</button>
+                    <button class="btn-admin sm success" title="ConfirmModal">👑 Promote</button>
+                    <button class="btn-admin sm danger" title="ConfirmModal">⏹ Stop</button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr>
+                <td>
+                  <div class="exp-cell e-agent">
+                    <div class="exp-mark">⚡</div>
+                    <div class="exp-info"><span class="exp-name">deepseek vs gpt-4o-mini</span><span class="exp-id">abt_model_84a2 · cross-game</span></div>
+                  </div>
+                </td>
+                <td>
+                  <div class="variant-pair">
+                    <span class="var-chip e-chat"><span class="tag">A</span>deepseek-chat</span>
+                    <span class="vs">vs</span>
+                    <span class="var-chip e-agent"><span class="tag">B</span>gpt-4o-mini</span>
+                  </div>
+                </td>
+                <td><span class="metric-chip"><span class="ns">cost.</span>per_session_usd</span></td>
+                <td class="sample-cell">4 120<span class="sep">/</span>4 088<span class="total">tot 8 208 · 50/50</span></td>
+                <td><span class="lift-cell down"><span class="arr">▼</span>−12.0%</span></td>
+                <td><span class="status-chip healthy">significant · p=0.001</span></td>
+                <td><span class="status-chip running">running · 14g</span></td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn-admin sm ghost">↗ Dettagli</button>
+                    <button class="btn-admin sm success">👑 Promote</button>
+                    <button class="btn-admin sm danger">⏹ Stop</button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr>
+                <td>
+                  <div class="exp-cell e-tool">
+                    <div class="exp-mark">🎯</div>
+                    <div class="exp-info"><span class="exp-name">Rerank on/off</span><span class="exp-id">abt_rerank_84a3 · Catan + Wingspan</span></div>
+                  </div>
+                </td>
+                <td>
+                  <div class="variant-pair">
+                    <span class="var-chip e-chat"><span class="tag">A</span>rerank ON · top-5</span>
+                    <span class="vs">vs</span>
+                    <span class="var-chip e-agent"><span class="tag">B</span>rerank OFF · top-8</span>
+                  </div>
+                </td>
+                <td><span class="metric-chip"><span class="ns">rag.</span>recall_at_5</span></td>
+                <td class="sample-cell">612<span class="sep">/</span>608<span class="total">tot 1 220 · 50/50</span></td>
+                <td><span class="lift-cell up"><span class="arr">▲</span>+3.0%</span></td>
+                <td><span class="status-chip warning">inconclusive · p=0.21</span></td>
+                <td><span class="status-chip warning">running · 9g</span></td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn-admin sm ghost">↗ Dettagli</button>
+                    <button class="btn-admin sm ghost" style="opacity:.5;cursor:not-allowed" title="serve più campione">👑 Promote</button>
+                    <button class="btn-admin sm danger">⏹ Stop</button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr>
+                <td>
+                  <div class="exp-cell e-kb">
+                    <div class="exp-mark">📦</div>
+                    <div class="exp-info"><span class="exp-name">Chunk 512 vs 1024</span><span class="exp-id">abt_chunk_84a4 · KB embedding</span></div>
+                  </div>
+                </td>
+                <td>
+                  <div class="variant-pair">
+                    <span class="var-chip e-chat"><span class="tag">A</span>chunk 512 tok</span>
+                    <span class="vs">vs</span>
+                    <span class="var-chip e-agent"><span class="tag">B</span>chunk 1024 tok</span>
+                  </div>
+                </td>
+                <td><span class="metric-chip"><span class="ns">rag.</span>faithfulness</span></td>
+                <td class="sample-cell">142<span class="sep">/</span>138<span class="total">tot 280 · 50/50</span></td>
+                <td><span class="lift-cell flat no-arr">—</span></td>
+                <td><span class="status-chip info">running · in raccolta</span></td>
+                <td><span class="status-chip running">running · 2g</span></td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn-admin sm ghost">↗ Dettagli</button>
+                    <button class="btn-admin sm ghost" style="opacity:.5;cursor:not-allowed">👑 Promote</button>
+                    <button class="btn-admin sm danger">⏹ Stop</button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr style="opacity:.7">
+                <td>
+                  <div class="exp-cell e-toolkit">
+                    <div class="exp-mark">📐</div>
+                    <div class="exp-info"><span class="exp-name">Temperatura 0.1 vs 0.4</span><span class="exp-id">abt_temp_84a0 · completed</span></div>
+                  </div>
+                </td>
+                <td>
+                  <div class="variant-pair">
+                    <span class="var-chip e-chat"><span class="tag">A</span>temp 0.10</span>
+                    <span class="vs">vs</span>
+                    <span class="var-chip e-agent"><span class="tag">B</span>temp 0.40</span>
+                  </div>
+                </td>
+                <td><span class="metric-chip"><span class="ns">rag.</span>answer_rating</span></td>
+                <td class="sample-cell">2 040<span class="sep">/</span>2 002<span class="total">tot 4 042 · final</span></td>
+                <td><span class="lift-cell down"><span class="arr">▼</span>−2.1%</span></td>
+                <td><span class="status-chip healthy">significant · p=0.01</span></td>
+                <td><span class="status-chip muted">completed · A win</span></td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn-admin sm ghost">↗ Dettagli</button>
+                    <button class="btn-admin sm ghost" title="già promoted">✓ promoted</button>
+                  </div>
+                </td>
+              </tr>
+
+            </tbody>
+          </table>
+        </section>
+
+        <!-- ────────── 3) Split: chart sx + detail dx ────────── -->
+        <div class="split-grid">
+
+          <!-- ░ Comparison chart -->
+          <section class="admin-panel">
+            <div class="admin-panel-head">
+              <h3>Confronto · andamento metrica</h3>
+              <span class="status-chip info">answer_rating · 7g</span>
+              <div class="head-cluster">
+                <span class="meta">esperimento abt_prompt_84a1 · Welch t-test · n 2 438</span>
+                <button class="btn-admin sm ghost">⤓ ndjson</button>
+              </div>
+            </div>
+
+            <div class="chart-body">
+
+              <div class="chart-context">
+                <span class="pill"><span class="k">Metrica</span> <span class="v">rag.answer_rating</span></span>
+                <span class="pill"><span class="k">Asse</span> <span class="v">media giornaliera · scala 1–5</span></span>
+                <span class="pill"><span class="k">Banda</span> <span class="v">95% CI</span></span>
+              </div>
+
+              <div class="chart-frame">
+                <!-- Y axis labels -->
+                <div class="y-axis"><span>5.0</span><span>4.5</span><span>4.0</span><span>3.5</span><span>3.0</span></div>
+                <!-- X axis labels -->
+                <div class="x-axis"><span>giorno 1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>oggi</span></div>
+
+                <!-- viewBox 700x240, padding L44 R8 T6 B18 -> inner: x[44..692], y[6..222] = 216px tall
+                     Metric range 3.0..5.0 (2 units), so 1 unit = 108px; rating 4.5 -> y = 222 - (4.5-3.0)*108 = 222 - 162 = 60
+                     A (v2.4) values per day: 4.18, 4.22, 4.20, 4.19, 4.22, 4.21, 4.20 → y around 100
+                     B (v2.5) values per day: 4.20, 4.32, 4.40, 4.45, 4.48, 4.50, 4.52 → y descending
+                -->
+                <svg viewBox="0 0 700 240" preserveAspectRatio="none">
+                  <!-- gridlines -->
+                  <line class="grid-line" x1="44" y1="60" x2="692" y2="60"/>
+                  <line class="grid-line" x1="44" y1="114" x2="692" y2="114"/>
+                  <line class="grid-line" x1="44" y1="168" x2="692" y2="168"/>
+                  <line class="grid-line" x1="44" y1="222" x2="692" y2="222"/>
+
+                  <!-- start line (where experiment started) -->
+                  <line class="start-line" x1="44" y1="6" x2="44" y2="222"/>
+                  <text class="start-lbl" x="50" y="16">start · v2.5 deploy</text>
+
+                  <!-- B confidence band (95% CI shaded around B line) -->
+                  <!-- B y points: 92, 80, 71, 65, 62, 60, 58; CI ±0.06 → ±6.5px -->
+                  <path d="M44,98 L152,86 L260,77 L368,71 L476,68 L584,66 L692,64 L692,52 L584,54 L476,56 L368,59 L260,65 L152,74 L44,86 Z"
+                        fill="hsl(var(--c-agent) / .18)"/>
+
+                  <!-- A confidence band -->
+                  <!-- A y points: 100, 96, 98, 99, 96, 97, 98; CI ±0.04 → ±4px -->
+                  <path d="M44,104 L152,100 L260,102 L368,103 L476,100 L584,101 L692,102 L692,94 L584,93 L476,92 L368,95 L260,94 L152,92 L44,96 Z"
+                        fill="hsl(var(--c-chat) / .15)"/>
+
+                  <!-- A line (v2.4) -->
+                  <path class="spark e-chat e-fg" stroke-width="2"
+                        d="M44,100 L152,96 L260,98 L368,99 L476,96 L584,97 L692,98"/>
+                  <!-- A points -->
+                  <g fill="hsl(var(--c-chat))">
+                    <circle cx="44" cy="100" r="3"/><circle cx="152" cy="96" r="3"/><circle cx="260" cy="98" r="3"/>
+                    <circle cx="368" cy="99" r="3"/><circle cx="476" cy="96" r="3"/><circle cx="584" cy="97" r="3"/>
+                    <circle cx="692" cy="98" r="4" stroke="var(--bg)" stroke-width="2"/>
+                  </g>
+
+                  <!-- B line (v2.5) -->
+                  <path class="spark e-agent e-fg" stroke-width="2"
+                        d="M44,92 L152,80 L260,71 L368,65 L476,62 L584,60 L692,58"/>
+                  <!-- B points -->
+                  <g fill="hsl(var(--c-agent))">
+                    <circle cx="44" cy="92" r="3"/><circle cx="152" cy="80" r="3"/><circle cx="260" cy="71" r="3"/>
+                    <circle cx="368" cy="65" r="3"/><circle cx="476" cy="62" r="3"/><circle cx="584" cy="60" r="3"/>
+                    <circle cx="692" cy="58" r="4" stroke="var(--bg)" stroke-width="2"/>
+                  </g>
+
+                  <!-- Significance crossing annotation: ~giorno 4 (x=368), midway -->
+                  <line x1="368" y1="6" x2="368" y2="222" stroke="hsl(var(--c-toolkit) / .35)" stroke-width="1" stroke-dasharray="3 3"/>
+                  <text class="significance-marker" x="372" y="22">▲ significance reached · giorno 4 · p=0.04</text>
+
+                  <!-- End labels -->
+                  <text x="688" y="56" text-anchor="end" font-family="var(--f-mono)" font-size="11" font-weight="700" fill="hsl(var(--c-agent))">4.50 · B</text>
+                  <text x="688" y="96" text-anchor="end" font-family="var(--f-mono)" font-size="11" font-weight="700" fill="hsl(var(--c-chat))">4.18 · A</text>
+                </svg>
+              </div>
+
+              <div class="chart-legend">
+                <span class="item e-chat"><span class="sw"></span><span class="nm">A · prompt v2.4</span> <span class="val">4.18</span> <span class="sub">· baseline</span></span>
+                <span class="sep"></span>
+                <span class="item e-agent"><span class="sw"></span><span class="nm">B · prompt v2.5</span> <span class="val">4.50</span> <span class="sub">· +8.2%</span></span>
+                <span class="ci-note"><span class="band"></span>banda = 95% CI · Welch t-test · α=0.05</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- ░ Detail drawer -->
+          <aside class="admin-panel detail-panel">
+            <div class="detail-hero">
+              <div class="title">
+                <h2 style="flex:1">Prompt v2.4 vs v2.5</h2>
+                <span class="status-chip running">running · 6g</span>
+              </div>
+              <div class="sub">abt_prompt_84a1 · Wingspan Rules Bot · metric: <strong style="color:var(--text)">rag.answer_rating</strong></div>
+              <div class="chips">
+                <span class="status-chip healthy">significant · p=0.03</span>
+                <span class="status-chip info">n=2 438</span>
+                <span class="status-chip muted">split 50/50</span>
+              </div>
+            </div>
+
+            <div class="variant-versus">
+              <div class="v-card e-chat">
+                <span class="v-tag">A</span>
+                <span class="v-name">prompt v2.4</span>
+                <span class="v-sub">baseline · prod</span>
+                <span class="v-metric">4.2<span class="unit">/5</span></span>
+                <div class="v-sample"><span>campione</span><span class="v">1 240</span></div>
+              </div>
+              <span class="versus-pill">vs</span>
+              <div class="v-card e-agent winner">
+                <span class="crown">👑</span>
+                <span class="v-tag">B</span>
+                <span class="v-name">prompt v2.5</span>
+                <span class="v-sub">draft · sandbox</span>
+                <span class="v-metric">4.5<span class="unit">/5</span></span>
+                <div class="v-sample"><span>campione</span><span class="v">1 198</span></div>
+              </div>
+            </div>
+
+            <div class="stats-grid">
+              <div class="stat-cell">
+                <div class="lbl">Lift</div>
+                <div class="v good">+8.2%</div>
+                <div class="sub">B − A · effetto</div>
+              </div>
+              <div class="stat-cell">
+                <div class="lbl">p-value</div>
+                <div class="v good">0.03</div>
+                <div class="sub">soglia 0.05 · Welch t</div>
+              </div>
+              <div class="stat-cell">
+                <div class="lbl">95% CI</div>
+                <div class="v">[+0.18; +0.46]</div>
+                <div class="sub">non include 0</div>
+              </div>
+              <div class="stat-cell">
+                <div class="lbl">Power</div>
+                <div class="v">0.84</div>
+                <div class="sub">target 0.80 · raggiunto</div>
+              </div>
+              <div class="stat-cell">
+                <div class="lbl">Durata</div>
+                <div class="v">6g 02h</div>
+                <div class="sub">min 5g · ok</div>
+              </div>
+              <div class="stat-cell">
+                <div class="lbl">Δ costo</div>
+                <div class="v bad">+$0.001</div>
+                <div class="sub">per sessione · trascurabile</div>
+              </div>
+            </div>
+
+            <div class="reco">
+              <div class="reco-head"><span class="em">🏆</span><span class="title">Variante B vince</span></div>
+              <div class="reco-text">
+                Lift di <strong>+8.2%</strong> sulla metrica <span class="v-mono">answer_rating</span> con <strong>p=0.03</strong> e CI <span class="v-mono">[+0.18; +0.46]</span>. Power <strong>0.84</strong>, oltre il target <strong>0.80</strong>. Durata <strong>6g</strong> ≥ minimo richiesto. Promote <strong>v2.5</strong> in produzione: il rollout aggiornerà <span class="v-mono">prompt_id</span> negli agenti che usano il template Wingspan Rules Bot.
+              </div>
+            </div>
+
+            <div class="detail-actions">
+              <button class="btn-admin success">👑 Promote winner · variante B</button>
+              <span class="helper"><span class="lock">🔒</span> ConfirmModal · sostituisce prompt_id in 1 agente · revert da history</span>
+              <div class="row">
+                <button class="btn-admin danger">⏹ Stop esperimento</button>
+                <button class="btn-admin ghost">⏸ Pausa</button>
+              </div>
+            </div>
+          </aside>
+
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="admin-nav.js"></script>
+  <script>renderAdminNav('ab-testing');</script>
+</body>
+</html>

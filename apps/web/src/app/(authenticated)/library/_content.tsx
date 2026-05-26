@@ -15,7 +15,7 @@ import { useEffect } from 'react';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useRecentsStore } from '@/stores/use-recents';
 
-import { LibraryHubV2 } from './_components/LibraryHubV2';
+import { LibraryHub } from './_components/LibraryHub';
 import { AddGameDrawerController } from './AddGameDrawer';
 
 // ── Loading skeleton ──────────────────────────────────────────────────────────
@@ -46,7 +46,7 @@ export function LibraryContent() {
 
   return (
     <>
-      <LibraryHubV2 />
+      <LibraryHub />
       {/* AddGameDrawer — driven by ?action=add URL param (Issue #5168) */}
       <AddGameDrawerController />
     </>

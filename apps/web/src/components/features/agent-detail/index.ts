@@ -1,8 +1,8 @@
 /**
- * agent-detail v2 components barrel — Wave C.2 (Issue #581)
+ * agent-detail feature components barrel — Wave C.2 (Issue #581)
  *
  * All 7 pure presentation components for /agents/[id] route.
- * Orchestrator (AgentDetailViewV2) imports from here.
+ * Orchestrator (AgentDetailView) imports from here.
  */
 
 // AgentHero — variant matrix (active/draft/archived) CTA + banners

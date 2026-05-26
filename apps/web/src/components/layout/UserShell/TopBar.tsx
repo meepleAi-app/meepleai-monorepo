@@ -1,47 +1,63 @@
 'use client';
 
-import { UserMenuDropdown } from '@/components/layout/UserMenuDropdown';
-import { NotificationBell } from '@/components/notifications';
-import { useChatPanel } from '@/hooks/useChatPanel';
+import { Menu, Search } from 'lucide-react';
+import Link from 'next/link';
 
-import { TopBarChatButton } from './TopBarChatButton';
-import { TopBarLogo } from './TopBarLogo';
-import { TopBarNavLinks } from './TopBarNavLinks';
-import { TopBarSearchPill } from './TopBarSearchPill';
+import { UserMenuDropdown } from '@/components/layout/UserMenuDropdown';
+import { ThemeToggle } from '@/components/ui/navigation/ThemeToggle';
+import { Button } from '@/components/ui/primitives/button';
 
 interface TopBarProps {
-  onOpenChat?: () => void;
-  onOpenSearch?: () => void;
+  onHamburgerClick: () => void;
+  onSearchClick?: () => void;
+  adminMode?: boolean;
 }
 
-/**
- * Small wrapper that subscribes to the chat panel store.
- * Extracted so the subscription doesn't cause TopBar itself to re-render
- * on every chat open/close.
- */
-function TopBarChatButtonConnected() {
-  const { open } = useChatPanel();
-  return <TopBarChatButton onOpen={open} />;
-}
-
-/**
- * New 64px top bar for the UX redesign (Phase 1).
- * Composes: Logo + NavLinks + SearchPill + ChatButton + Notifications + UserMenu
- * Sticky positioning, backdrop-blur, border-bottom.
- */
-export function TopBar({ onOpenChat, onOpenSearch }: TopBarProps) {
+export function TopBar({ onHamburgerClick, onSearchClick, adminMode }: TopBarProps) {
   return (
     <header
       data-testid="top-bar"
-      className="sticky top-0 z-40 h-16 flex items-center gap-4 px-6 border-b border-[var(--glass-border)] backdrop-blur-[16px]"
-      style={{ background: 'color-mix(in srgb, var(--bg-card) 95%, transparent)' }}
+      className="sticky top-0 z-40 h-12 flex items-center justify-between px-3"
+      style={{
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        backgroundColor: 'color-mix(in srgb, var(--bg) 80%, transparent)',
+        borderBottom: '1px solid color-mix(in srgb, var(--border) 50%, transparent)',
+      }}
     >
-      <TopBarLogo />
-      <TopBarNavLinks />
-      <TopBarSearchPill onOpen={onOpenSearch} />
-      <div className="flex items-center gap-2.5 shrink-0">
-        {onOpenChat ? <TopBarChatButton onOpen={onOpenChat} /> : <TopBarChatButtonConnected />}
-        <NotificationBell />
+      {/* Left side */}
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Menu navigazione"
+          onClick={onHamburgerClick}
+          className="shrink-0"
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+
+        <Link href="/dashboard" aria-label="MeepleAI" className="flex items-center gap-1.5">
+          <span aria-hidden="true">🎲</span>
+          <span className="font-semibold text-sm font-[family-name:var(--font-quicksand)]">
+            MeepleAI
+          </span>
+          {adminMode && (
+            <span className="ml-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-destructive/10 text-destructive leading-none">
+              Admin
+            </span>
+          )}
+        </Link>
+      </div>
+
+      {/* Right side */}
+      <div className="flex items-center gap-1">
+        <Button variant="ghost" size="icon" aria-label="Cerca" onClick={onSearchClick}>
+          <Search className="h-5 w-5" />
+        </Button>
+
+        <ThemeToggle size="sm" />
+
         <UserMenuDropdown />
       </div>
     </header>

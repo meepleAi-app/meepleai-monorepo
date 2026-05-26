@@ -184,7 +184,7 @@
 
 /* Wave D.3 — Session Summary confetti (Issue #756).
  * CSS-only celebratory animation. Used by
- * `apps/web/src/components/v2/session-summary/Confetti.tsx` which renders
+ * `apps/web/src/components/features/session-summary/Confetti.tsx` which renders
  * `<span class="mai-confetti-piece">` children with inline position/color/
  * delay style props. Honors prefers-reduced-motion (WCAG 2.3.3). */
 @keyframes mai-confetti-fall {

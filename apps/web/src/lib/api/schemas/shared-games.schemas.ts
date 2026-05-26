@@ -182,9 +182,73 @@ export const SharedGameSchema = z.object({
   hasKnowledgeBase: z.boolean().default(false), // S2 — true when game has indexed KB (AI-ready)
   createdAt: z.string(), // Accept any datetime format from .NET serialization
   modifiedAt: z.string().nullable(),
+  // Wave A.3a aggregate counts (Issue #593) — backend SharedGameDto extension
+  toolkitsCount: z.number().int().nonnegative().default(0),
+  agentsCount: z.number().int().nonnegative().default(0),
+  kbsCount: z.number().int().nonnegative().default(0),
+  newThisWeekCount: z.number().int().nonnegative().default(0),
+  contributorsCount: z.number().int().nonnegative().default(0),
+  isTopRated: z.boolean().default(false),
+  isNew: z.boolean().default(false),
 });
 
 export type SharedGame = z.infer<typeof SharedGameSchema>;
+
+// ========== Top Contributors (Wave A.3 — Issue #596) ==========
+
+/**
+ * Top contributor preview DTO (community catalog leaderboard).
+ */
+export const TopContributorSchema = z.object({
+  userId: z.string().uuid(),
+  displayName: z.string().min(1),
+  avatarUrl: z.string().nullable(),
+  totalSessions: z.number().int().nonnegative(),
+  totalWins: z.number().int().nonnegative(),
+  score: z.number().int().nonnegative(),
+});
+
+export type TopContributor = z.infer<typeof TopContributorSchema>;
+
+// ========== Published Previews (Wave A.4 — Issue #603) ==========
+
+/**
+ * Published toolkit preview nested in SharedGameDetail.
+ * Excludes default toolkits per BR-02 Issue #5144.
+ */
+export const PublishedToolkitPreviewSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1),
+  ownerId: z.string().uuid(),
+  ownerName: z.string().min(1),
+  lastUpdatedAt: z.string(),
+});
+
+export type PublishedToolkitPreview = z.infer<typeof PublishedToolkitPreviewSchema>;
+
+/**
+ * Published agent definition preview nested in SharedGameDetail.
+ */
+export const PublishedAgentPreviewSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1),
+  invocationCount: z.number().int().nonnegative(),
+  lastUpdatedAt: z.string(),
+});
+
+export type PublishedAgentPreview = z.infer<typeof PublishedAgentPreviewSchema>;
+
+/**
+ * Published KB document preview nested in SharedGameDetail.
+ */
+export const PublishedKbPreviewSchema = z.object({
+  id: z.string().uuid(),
+  language: z.string(),
+  totalChunks: z.number().int().nonnegative(),
+  indexedAt: z.string(),
+});
+
+export type PublishedKbPreview = z.infer<typeof PublishedKbPreviewSchema>;
 
 /**
  * Shared game detail DTO (single game view with full info)
@@ -217,6 +281,29 @@ export const SharedGameDetailSchema = z.object({
   publishers: z.array(GamePublisherSchema),
   categories: z.array(GameCategorySchema),
   mechanics: z.array(GameMechanicSchema),
+  // Wave A.4 published previews + aggregates (Issue #603)
+  toolkits: z
+    .array(PublishedToolkitPreviewSchema)
+    .nullable()
+    .default([])
+    .transform(v => v ?? []),
+  agents: z
+    .array(PublishedAgentPreviewSchema)
+    .nullable()
+    .default([])
+    .transform(v => v ?? []),
+  kbs: z
+    .array(PublishedKbPreviewSchema)
+    .nullable()
+    .default([])
+    .transform(v => v ?? []),
+  toolkitsCount: z.number().int().nonnegative().default(0),
+  agentsCount: z.number().int().nonnegative().default(0),
+  kbsCount: z.number().int().nonnegative().default(0),
+  contributorsCount: z.number().int().nonnegative().default(0),
+  hasKnowledgeBase: z.boolean().default(false),
+  isTopRated: z.boolean().default(false),
+  isNew: z.boolean().default(false),
 });
 
 export type SharedGameDetail = z.infer<typeof SharedGameDetailSchema>;

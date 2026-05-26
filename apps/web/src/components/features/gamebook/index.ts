@@ -1,5 +1,5 @@
 /**
- * Barrel export for /gamebook v2 components (SP6 Phase B Task 2, Issue #788).
+ * Barrel export for /gamebook feature components (SP6 Phase B Task 2, Issue #788).
  *
  * Single import point for the orchestrator GamebookIndexView (Task 3) and
  * E2E specs. All Phase B Task 2 components are pure (no useTranslation) —
@@ -144,3 +144,13 @@ export type {
 // Issue #952 — Glossary editor modal (4 in-scope states; state-04 collision deferred to #952-followup)
 export { GlossaryEditorModal } from '@/components/features/gamebook/GlossaryEditorModal';
 export type { GlossaryEditorModalProps } from '@/components/features/gamebook/GlossaryEditorModal';
+
+// Issue #1484 — Encounter Book cheatsheet (parse-centric MVP, consumes BE #1520)
+export { EncounterCheatsheetView } from '@/components/features/gamebook/EncounterCheatsheetView';
+export type {
+  EncounterCheatsheetViewProps,
+  EncounterCheatsheetLabels,
+  EncounterStoryContext,
+  EncounterStatus,
+  EncounterErrorKind,
+} from '@/components/features/gamebook/EncounterCheatsheetView';

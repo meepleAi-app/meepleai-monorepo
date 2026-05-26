@@ -12,6 +12,7 @@ import {
   AgentDtoSchema,
   EditorLockSchema,
   GameFAQSchema,
+  GameLeaderboardResponseSchema,
   GameSchema,
   GameSessionDtoSchema,
   GameReviewDtoSchema,
@@ -30,6 +31,7 @@ import {
   type EditorLock,
   type Game,
   type GameFAQ,
+  type GameLeaderboardResponse,
   type GameReviewDto,
   type GameSessionDto,
   type GetGameFAQsResult,
@@ -285,6 +287,27 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
       const url = `/api/v1/games/${encodeURIComponent(gameId)}/sessions${queryString}`;
       const response = await httpClient.get(url, z.array(GameSessionDtoSchema));
       return response ?? [];
+    },
+
+    /**
+     * Get the social leaderboard for a game (Issue #1467)
+     * GET /api/v1/games/{gameId}/leaderboard?since=&limit=
+     *
+     * Returns the top registered players ranked by wins across the play records
+     * visible to the caller (own records plus records of the caller's groups).
+     * @param gameId Game ID (GUID format)
+     * @param options Optional `since` (ISO date) and `limit` (1..50, default 10)
+     */
+    async getLeaderboard(
+      gameId: string,
+      options?: { since?: string; limit?: number }
+    ): Promise<GameLeaderboardResponse | null> {
+      const params = new URLSearchParams();
+      if (options?.since) params.append('since', options.since);
+      if (options?.limit) params.append('limit', options.limit.toString());
+      const queryString = params.toString() ? `?${params.toString()}` : '';
+      const url = `/api/v1/games/${encodeURIComponent(gameId)}/leaderboard${queryString}`;
+      return httpClient.get(url, GameLeaderboardResponseSchema);
     },
 
     /**

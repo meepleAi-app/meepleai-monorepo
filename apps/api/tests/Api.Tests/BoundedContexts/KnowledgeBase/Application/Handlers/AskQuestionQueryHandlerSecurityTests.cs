@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Translation;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
@@ -104,6 +105,7 @@ public class AskQuestionQueryHandlerSecurityTests
                 It.IsAny<float>(),
                 It.IsAny<float>(),
                 It.IsAny<double>(),
+                It.IsAny<GameBookRole>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>());
 
@@ -230,6 +232,8 @@ public class AskQuestionQueryHandlerSecurityTests
             CreatePermissiveHouseRuleMatcherMock(),
             CreatePermissivePricingEngineMock(),
             CreateNoOpTranslationServiceMock(),
+            // D7: use the real classifier (pure, stateless, no dependencies).
+            new IntentClassifierService(),
             routingOptionsMonitor.Object,
             _mockLogger.Object);
     }

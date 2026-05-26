@@ -48,4 +48,40 @@ public class GamebookGlossaryEntryTests
         actEmptyEn.Should().Throw<ArgumentException>().WithParameterName("termEn");
         actEmptyIt.Should().Throw<ArgumentException>().WithParameterName("termIt");
     }
+
+    [Fact]
+    public void Create_WithFirstSeenBookId_SetsField()
+    {
+        var bookId = Guid.NewGuid();
+
+        var entry = GamebookGlossaryEntry.Create(
+            CampaignId, "Voidstone", "Pietra del Vuoto",
+            GlossarySource.AutoBootstrap, UserId,
+            firstSeenBookId: bookId);
+
+        entry.FirstSeenBookId.Should().Be(bookId);
+    }
+
+    [Fact]
+    public void Create_WithNullFirstSeenBookId_AllowsNull()
+    {
+        var entry = GamebookGlossaryEntry.Create(
+            CampaignId, "Voidstone", "Pietra del Vuoto",
+            GlossarySource.AutoBootstrap, UserId,
+            firstSeenBookId: null);
+
+        entry.FirstSeenBookId.Should().BeNull();
+    }
+
+    [Fact]
+    public void Create_WithEmptyFirstSeenBookId_Throws()
+    {
+        Action act = () => GamebookGlossaryEntry.Create(
+            CampaignId, "Voidstone", "Pietra del Vuoto",
+            GlossarySource.AutoBootstrap, UserId,
+            firstSeenBookId: Guid.Empty);
+
+        act.Should().Throw<ArgumentException>()
+            .WithParameterName("firstSeenBookId");
+    }
 }

@@ -5,7 +5,7 @@
  * (`?fixture=`) and renders the `/gamebook` index 6-cell FSM
  * (loading | error | empty | default | quota-soft | quota-hard).
  *
- * v2 brownfield route — pre-Phase-B the path `/gamebook` had no index page
+ * brownfield route — pre-Phase-B the path `/gamebook` had no index page
  * (only `/gamebook/[gameId]` and `/gamebook/upload` existed). This is the
  * first index orchestrator landing under that prefix.
  *

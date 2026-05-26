@@ -365,6 +365,12 @@ jobs:
         id: web-tag
         run: echo "tag=$(echo '${{ steps.meta-web.outputs.tags }}' | head -1)" >> $GITHUB_OUTPUT
 
+      # ARM64 native cross-compile (2026-05-25, Onda B): the Dockerfiles pin
+      # their build stages to $BUILDPLATFORM (x64 runner) and cross-compile to
+      # arm64. buildx auto-populates $BUILDPLATFORM/$TARGETARCH from the
+      # `platforms:` value below. setup-qemu-action (above) is still required
+      # for the lightweight runtime stage (apt-get/apk). Heavy build steps now
+      # run native — see docs/for-developers/specs/2026-05-25-ci-arm64-crosscompile-design.md
       - name: Build and Push API Image
         if: needs.detect-changes.outputs.deploy_api == 'true'
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7.1.0
@@ -638,6 +644,18 @@ jobs:
             set -a
             for f in secrets/*.secret; do source "$f" 2>/dev/null; done
             set +a
+
+            # Issue #1399-C: compose.staging.yml uses ${API_IMAGE:?...} and
+            # ${WEB_IMAGE:?...} guards on both services. When only ONE service
+            # is rebuilt this run, the other env var would be unset and the
+            # whole `docker compose up` aborts (even though we pass --no-deps
+            # and only target the changed service). Default both vars to the
+            # staging-latest tag the build job always promotes (lines ~346,
+            # ~356) so the unchanged service keeps pointing at its previous
+            # deploy. The rebuilt service then overrides its var below with
+            # the freshly-pushed digest.
+            export API_IMAGE="${{ env.API_IMAGE }}:staging-latest"
+            export WEB_IMAGE="${{ env.WEB_IMAGE }}:staging-latest"
 
             SERVICES=""
 

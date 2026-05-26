@@ -162,9 +162,9 @@ public sealed class UserLibraryE2ETests : E2ETestBase
         // Add game
         await Client.PostAsJsonAsync($"/api/v1/library/games/{_testGameId}", new { });
 
-        // Act - Update status
-        var statusPayload = new { status = "Owned" };
-        var response = await Client.PutAsJsonAsync($"/api/v1/library/games/{_testGameId}/state", statusPayload);
+        // Act - Update status (consolidated under PATCH /library/games/{id})
+        var statusPayload = new { newState = "Owned" };
+        var response = await Client.PatchAsJsonAsync($"/api/v1/library/games/{_testGameId}", statusPayload);
 
         // Assert - Skip if endpoint has missing dependencies in test environment
         if (response.StatusCode == HttpStatusCode.InternalServerError)

@@ -51,6 +51,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<UserEntity> Users => Set<UserEntity>();
     public DbSet<UserSessionEntity> UserSessions => Set<UserSessionEntity>();
     public DbSet<OAuthAccountEntity> OAuthAccounts => Set<OAuthAccountEntity>(); // AUTH-06
+    public DbSet<BoundedContexts.GameManagement.Domain.Entities.GameBook> GameBooks => Set<BoundedContexts.GameManagement.Domain.Entities.GameBook>(); // Gamebook multi-book generalization (2026-05-19)
     public DbSet<GameSessionEntity> GameSessions => Set<GameSessionEntity>(); // DDD-PHASE2: GameSession aggregate
     public DbSet<PlayRecordEntity> PlayRecords => Set<PlayRecordEntity>(); // ISSUE-3888: Play history tracking
     public DbSet<RecordPlayerEntity> RecordPlayers => Set<RecordPlayerEntity>(); // ISSUE-3888: Play record players
@@ -68,6 +69,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<BoundedContexts.SessionTracking.Domain.Entities.GamebookPhotoArtifact> GamebookPhotoArtifacts => Set<BoundedContexts.SessionTracking.Domain.Entities.GamebookPhotoArtifact>(); // Iter 1.B — photo upload artifacts (24h retention)
     public DbSet<BoundedContexts.SessionTracking.Domain.Entities.TranslatedParagraph> TranslatedParagraphs => Set<BoundedContexts.SessionTracking.Domain.Entities.TranslatedParagraph>(); // Iter 1.B — translated paragraph history
     public DbSet<BoundedContexts.SessionTracking.Domain.Entities.GamebookGlossaryEntry> GamebookGlossaryEntries => Set<BoundedContexts.SessionTracking.Domain.Entities.GamebookGlossaryEntry>(); // Iter 1.B — per-campaign glossary
+    public DbSet<BoundedContexts.SessionTracking.Domain.Entities.SessionBookProgress> SessionBookProgresses => Set<BoundedContexts.SessionTracking.Domain.Entities.SessionBookProgress>(); // Task C1 — per-campaign, per-book progress marker (gamebook multi-book generalization)
     public DbSet<SessionParticipantEntity> SessionParticipants => Set<SessionParticipantEntity>(); // Game Night: Multi-device session participants
     public DbSet<SessionInviteEntity> SessionInvites => Set<SessionInviteEntity>(); // E3-1: Session invite links/PINs
     public DbSet<SessionPlayerEntity> SessionPlayers => Set<SessionPlayerEntity>(); // ISSUE-4750: Live session players
@@ -94,6 +96,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.UserBudget> UserBudgets => Set<BoundedContexts.BusinessSimulations.Domain.Entities.UserBudget>(); // Phase 6: Budget/tier projection
     public DbSet<BoundedContexts.SystemConfiguration.Domain.Entities.UserPreferences> UserPreferences => Set<BoundedContexts.SystemConfiguration.Domain.Entities.UserPreferences>(); // Phase 6: User preferences projection
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
+    public DbSet<AuditOutboxEntity> AuditOutbox => Set<AuditOutboxEntity>(); // SP5 Admin Security S1: audit outbox pattern
     // Issue #661: append-only domain-event durability log (atomic with aggregate save)
     public DbSet<Api.Infrastructure.Entities.DomainEventLog.DomainEventLogEntity> DomainEventLogs
         => Set<Api.Infrastructure.Entities.DomainEventLog.DomainEventLogEntity>();

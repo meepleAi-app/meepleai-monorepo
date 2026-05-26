@@ -14,8 +14,63 @@
           D · translating     (streaming primo token IT, progress)
           E · fullscreen-viewer (testo IT 26px line-height 1.6 max-width 60ch + glossary pill)
           F · low-confidence  (banner amber + 3 azioni Rifotografa/Numero § manuale/Procedi)
+          G · loading-4step   (Caricamento foto → OCR → Traduzione → Glossario, abort CTA, skeleton+shimmer)  ← Task 2 (spec 1b.A)
+          H · reader-mode     (toggle 16pt↔24pt, localStorage 'reader-mode-enabled', split-view)              ← Task 2 (spec 1b.B)
+          I · wake-lock       (badge sticky bottom-right, 3 stati: attivo/disabilitato/non-supportato)        ← Task 2 (spec 1b.C)
+          J · contrasto-aaa   (paragrafo tradotto ≥7:1 contrast, max-width 65ch centrato)                     ← Task 2 (spec 1b.D)
+          K · lang-detection-badge (header pill post OCR, 3 variants confidence >0.8 / 0.5-0.8 / <0.5)        ← Task 4 (spec 1d)
+          L · lang-override-modal  (modal radio group 5 lingue EN·FR·DE·ES·IT + CTA Conferma e ritraduci)     ← Task 4 (spec 1d)
+          M · manual-input-mode    (textarea fallback, ?mode=manual, no foto, max 2000 char + counter)        ← Task 4 (spec 1d)
   Vincolo: SMART N3 — segmentation accuracy ≥ 90%, OCR confidence ≥ 0.7, latency P95 < 8s end-to-end.
-  Mobile-first 375px CANONICAL (Aaron al tavolo). Desktop full parity.
+  Latency targets (sequenza loading 4-step Aaron):
+          step1 (Caricamento foto)        < 2s   (0-2s,  upload + EXIF strip)
+          step2 (OCR — Sto leggendo)      < 5s   (2-7s,  smoldocling extraction)
+          step3 (Sto traducendo)          < 10s  (7-15s, AI translation token-by-token streaming)
+          step4 (Cerco parole glossario)  < 2s   (15-17s, glossary check + badge ⊕ progressive highlight)
+          total                           < 17s
+          hard timeout                    20s    → trigger state-G `translation-timeout` in librogame-runthrough-error-states.html
+  Reader mode:    localStorage key `reader-mode-enabled` (boolean). Persistito cross-session, applicato a skeleton + paragrafo finale.
+  Wake-lock:      Web Wake Lock API (Safari < 16.4 fallback "Non supportato"). Override manuale via badge click.
+  Contrasto AAA:  paragrafo tradotto usa `--c-text-high-contrast` (≥7:1 vs background), centrato, max-width 65ch.
+
+  ─── Task 4 · Sezione 1d — Multi-language source + Manual input fallback ───
+  Source language model:
+    - Auto-detected dal LLM sul risultato OCR (stessa call AI translation, no overhead extra).
+    - confidence > 0.8 → badge informativo "Sorgente: EN" (no friction, dismissable).
+    - confidence 0.5-0.8 → badge tap-to-confirm "Sorgente: EN · Conferma o cambia" PRIMA di translate (blocking).
+    - confidence < 0.5 → trigger state-H `source-lang-unknown` in librogame-runthrough-error-states.html (forza override).
+  Lingue supportate v1: 5 sorgenti EN · FR · DE · ES · IT — copre ~95% libri-game europei.
+    Bandiere: 🇬🇧 English (EN) · 🇫🇷 Français (FR) · 🇩🇪 Deutsch (DE) · 🇪🇸 Español (ES) · 🇮🇹 Italiano (IT).
+  Target lingua: IT fisso v1 (derivato da setting profilo utente). Multi-target out-of-scope v1.
+    Target dropdown NON visibile nella UI v1.
+  Override re-translate behavior:
+    - Lang change da badge/modal preserva OCR result (cache hit) → re-translate solo step 3 (AI translation).
+    - NO re-OCR cost (smoldocling cache key `(photo_hash, page)` invariante).
+  Manual input mode (state M):
+    - Trigger via query param `?mode=manual` (UI-only, NO sub-route backend distinta).
+    - Triple-entry discoverability (3 punti di ingresso):
+        1. CTA "Digita manualmente" in error state `photo-blur-pre-ocr` (sezione 1a, state-F di error-states.html)
+        2. Kebab menu ⋮ del camera step (sp6-libro-game-photo-upload.html, top-right + voce "Digita manualmente")
+        3. Empty state quando /translate aperto senza foto: card "Libro non a portata? Digita il paragrafo"
+    - Layout: header sticky ("Inserimento manuale" + back + lang dropdown pre-filled last-used)
+              + textarea multiline (max 2000 char + counter visibile bottom-right + auto-shrink hint)
+              + book ref pre-filled (read-only chip current campaign book)
+              + CTA submit "Traduci" → skip step 2 OCR, va a step 3 (AI translation) della loading sequence (state-G)
+    - Parity: stessi step 3-4 della loading sequence Task 2 (vedere state-G); unica differenza = step 2 OCR
+              sostituito da textarea content come `source_text` direttamente.
+  Stato tracking:
+    - `source_method: "ocr" | "manual"` campo nello state della sessione (commento backend).
+      Distingue analytics + glossary edge cases (manual = no OCR confidence, no auto retake CTA).
+    - `source_lang: "en" | "fr" | "de" | "es" | "it"` (locked dopo conferma utente).
+    - `lang_detection_confidence: 0.0-1.0` (solo per source_method=ocr).
+  Cross-ref:
+    - state-H `source-lang-unknown` in librogame-runthrough-error-states.html (sez 1a Task 1) — confidence < 0.5
+    - state-F `photo-blur-pre-ocr` in librogame-runthrough-error-states.html — entry-point CTA "Digita manualmente"
+    - state-G loading 4-step (sez 1b Task 2) — manual input riusa step 3-4
+    - sp6-libro-game-photo-upload.html — kebab ⋮ "Digita manualmente" (sez 1d Task 4)
+
+  Mobile-first 375px CANONICAL (Aaron al tavolo). Desktop full parity (1280px breakpoint).
+  Narrative coherent: "Sera con i ragazzi · Runa di Ardenel · §147" — same campaign as librogame-runthrough-error-states.html (Task 1).
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -402,9 +457,609 @@
     color: rgba(255,255,255,0.6); font-family: var(--f-mono); font-size: var(--fs-xs);
   }
 
+  /* ═══════════════════════════════════════════════════════════
+     STATI G/H/I/J · Task 2 — Loading 4-step + Reader + Wake-lock + AAA
+     ═══════════════════════════════════════════════════════════ */
+
+  /* Fallback CSS variable per contrasto AAA-target (≥7:1).
+     Definito locale se non presente in tokens.css. In light mode usa quasi-nero,
+     in dark mode bianco pieno. Compatibile con bg cream `--bg` mockup. */
+  :root {
+    --c-text-high-contrast: #0f0a05;   /* light: quasi-nero vs cream bg = ~15:1 */
+  }
+  [data-theme="dark"] {
+    --c-text-high-contrast: #ffffff;   /* dark: bianco pieno vs dark bg = ~18:1 */
+  }
+
+  /* ─── G: Loading 4-step shell ─── */
+  .loading-4step {
+    flex: 1; display: flex; flex-direction: column; padding: var(--s-5);
+    gap: var(--s-4); overflow-y: auto;
+  }
+  .loading-4step .step-thumbnail {
+    width: 96px; aspect-ratio: 3/4; flex-shrink: 0;
+    border-radius: var(--r-md); overflow: hidden;
+    background:
+      repeating-linear-gradient(0deg, transparent, transparent 8px, rgba(0,0,0,0.04) 8px, rgba(0,0,0,0.04) 9px),
+      linear-gradient(135deg, #f4ead7, #e9dcc1);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--f-mono); font-size: 9px; color: var(--text-muted);
+    text-align: center;
+  }
+  .loading-4step .step-thumb-row {
+    display: flex; align-items: center; gap: var(--s-3);
+    padding: var(--s-3); background: var(--bg-card);
+    border: 1px solid var(--border-light); border-radius: var(--r-md);
+  }
+  .loading-4step .step-thumb-row .info { flex: 1; min-width: 0; }
+  .loading-4step .step-thumb-row .info .v { font-family: var(--f-display); font-weight: var(--fw-semi); font-size: var(--fs-sm); }
+  .loading-4step .step-thumb-row .info .s { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px; }
+
+  /* Step list mobile = verticale stack | desktop = orizzontale breadcrumb (vedi .step-list-h) */
+  .step-list-v {
+    display: flex; flex-direction: column; gap: var(--s-2);
+  }
+  .step-list-h {
+    display: flex; flex-direction: row; gap: var(--s-2); align-items: center;
+    padding: var(--s-3) var(--s-4); background: var(--bg-card);
+    border-radius: var(--r-md); border: 1px solid var(--border-light);
+    overflow-x: auto;
+  }
+  .step-list-h .step-pill {
+    display: inline-flex; align-items: center; gap: var(--s-2);
+    padding: var(--s-1) var(--s-3); border-radius: var(--r-pill);
+    background: var(--bg-muted); flex-shrink: 0;
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted);
+  }
+  .step-list-h .step-pill.done { background: hsl(var(--c-success) / 0.12); color: hsl(var(--c-success)); }
+  .step-list-h .step-pill.active { background: hsl(var(--c-kb) / 0.15); color: hsl(var(--c-kb)); font-weight: var(--fw-bold); }
+  .step-list-h .arrow { color: var(--text-muted); font-size: 12px; flex-shrink: 0; }
+
+  /* Linear progress bar (step 1 — upload %) */
+  .linear-progress {
+    width: 100%; height: 6px; background: var(--bg-muted);
+    border-radius: var(--r-pill); overflow: hidden; position: relative;
+  }
+  .linear-progress .fill-pct {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: linear-gradient(90deg, hsl(var(--c-kb)), hsl(var(--c-game)));
+    border-radius: var(--r-pill);
+  }
+  .pct-label {
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted);
+    font-variant-numeric: tabular-nums; margin-top: var(--s-1);
+  }
+
+  /* Skeleton paragraph (step 2 — OCR) — 3 righe + shimmer-sweep gradient */
+  .skeleton-paragraph {
+    display: flex; flex-direction: column; gap: var(--s-2);
+    padding: var(--s-4); background: var(--bg-card);
+    border: 1px solid var(--border-light); border-radius: var(--r-md);
+  }
+  .skeleton-line {
+    height: 18px; border-radius: var(--r-sm);
+    background: linear-gradient(
+      90deg,
+      var(--bg-muted) 0%,
+      hsl(var(--c-kb) / 0.08) 50%,
+      var(--bg-muted) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer-sweep 1.8s ease-in-out infinite;
+  }
+  .skeleton-line.w-100 { width: 100%; }
+  .skeleton-line.w-92 { width: 92%; }
+  .skeleton-line.w-65 { width: 65%; }
+  @keyframes shimmer-sweep {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Step 3 — paragrafo OCR 60% opacity SOPRA + traduzione token-by-token SOTTO */
+  .ocr-overlay {
+    padding: var(--s-3); border-radius: var(--r-md);
+    background: hsl(var(--c-kb) / 0.04); border: 1px dashed hsl(var(--c-kb) / 0.25);
+    font-family: 'Georgia', serif; font-style: italic; font-size: var(--fs-sm);
+    color: var(--text-sec); opacity: 0.6; line-height: var(--lh-body);
+  }
+  .ocr-overlay .badge-en {
+    display: inline-block; padding: 1px var(--s-2); border-radius: var(--r-sm);
+    background: var(--bg-muted); color: var(--text-muted); margin-right: var(--s-2);
+    font-family: var(--f-mono); font-size: 10px; font-style: normal; font-weight: var(--fw-bold);
+  }
+  .translation-stream {
+    padding: var(--s-4); border-radius: var(--r-md);
+    background: var(--bg-card); border: 1px solid hsl(var(--c-game) / 0.3);
+    font-family: var(--f-body); font-size: 18px; line-height: 1.55; color: var(--text);
+  }
+  .translation-stream .token { animation: token-in 0.18s ease-out; display: inline; }
+  @keyframes token-in {
+    from { opacity: 0; transform: translateY(2px); }
+    to { opacity: 1; transform: none; }
+  }
+  .translation-stream .cursor {
+    display: inline-block; width: 8px; height: 18px;
+    background: hsl(var(--c-game)); margin-left: 3px; vertical-align: text-bottom;
+    animation: blink 0.9s step-end infinite;
+  }
+
+  /* Step 4 — Highlight progressivo parole nuove (badge ⊕) */
+  .glossary-check {
+    padding: var(--s-4); border-radius: var(--r-md);
+    background: hsl(var(--c-agent) / 0.05); border: 1px solid hsl(var(--c-agent) / 0.25);
+    font-family: var(--f-body); font-size: 16px; line-height: 1.55;
+  }
+  .glossary-check .new-word {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 1px var(--s-2); border-radius: var(--r-pill);
+    background: hsl(var(--c-agent) / 0.18); color: hsl(var(--c-agent));
+    font-weight: var(--fw-semi); animation: glossary-pop 0.4s ease-out;
+  }
+  .glossary-check .new-word::after { content: "⊕"; font-size: 11px; margin-left: 2px; }
+  @keyframes glossary-pop {
+    0% { transform: scale(0.8); opacity: 0; }
+    60% { transform: scale(1.08); opacity: 1; }
+    100% { transform: scale(1); }
+  }
+
+  /* Abort CTA (step 2+) */
+  .abort-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--s-3); padding: var(--s-3); margin-top: var(--s-2);
+    background: var(--bg-muted); border-radius: var(--r-md);
+    border: 1px solid var(--border-light);
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted);
+  }
+  .abort-bar .abort-btn {
+    padding: var(--s-2) var(--s-4); border-radius: var(--r-md);
+    background: var(--bg-card); border: 1px solid var(--border);
+    color: var(--text); font-family: var(--f-display); font-weight: var(--fw-semi);
+    font-size: var(--fs-sm); cursor: pointer;
+  }
+  .abort-bar .abort-btn:hover { background: hsl(var(--c-warning) / 0.08); border-color: hsl(var(--c-warning) / 0.4); color: hsl(var(--c-warning)); }
+  .abort-fab {
+    position: absolute; right: var(--s-4); bottom: var(--s-7);
+    width: 52px; height: 52px; border-radius: 50%;
+    background: hsl(var(--c-warning)); color: #fff; border: 0;
+    box-shadow: var(--shadow-lg); cursor: pointer; font-size: 22px;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 5;
+  }
+
+  /* Cost transparency banner inline per ogni step */
+  .cost-inline {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px var(--s-2); border-radius: var(--r-pill);
+    background: hsl(var(--c-success) / 0.12); color: hsl(var(--c-success));
+    font-family: var(--f-mono); font-size: 10px; font-weight: var(--fw-bold);
+  }
+  .cost-inline.paid { background: hsl(var(--c-kb) / 0.12); color: hsl(var(--c-kb)); }
+
+  /* Telemetry footer per phone frame */
+  .telemetry-footer {
+    padding: var(--s-2) var(--s-3); border-top: 1px solid var(--border-light);
+    background: var(--bg-muted); flex-shrink: 0;
+    font-family: var(--f-mono); font-size: 10px; color: var(--text-muted);
+    display: flex; align-items: center; justify-content: space-between; gap: var(--s-2);
+  }
+
+  /* ─── H: Reader Mode toggle classes ─── */
+  /* Default mode = 16pt | Reader mode = 24pt + line-height 1.7 + padding aumentato + max-width 65ch */
+  .reader-mode-content {
+    font-family: var(--f-body); font-size: 16px; line-height: 1.55;
+    color: var(--text); padding: var(--s-3); max-width: 60ch;
+  }
+  .reader-mode-content.reader-mode {
+    font-size: 24px; line-height: 1.7; padding: var(--s-6);
+    max-width: 65ch; margin: 0 auto;
+  }
+  .reader-mode-toggle {
+    display: inline-flex; align-items: center; gap: var(--s-2);
+    padding: var(--s-1) var(--s-3); border-radius: var(--r-pill);
+    background: var(--bg-card); border: 1px solid var(--border);
+    color: var(--text); font-family: var(--f-mono); font-size: var(--fs-xs);
+    cursor: pointer;
+  }
+  .reader-mode-toggle.active {
+    background: hsl(var(--c-kb) / 0.15); border-color: hsl(var(--c-kb)); color: hsl(var(--c-kb));
+    font-weight: var(--fw-bold);
+  }
+  .reader-mode-toggle .ico { font-size: 14px; }
+
+  /* Quando reader mode è attivo, lo skeleton si ridimensiona di pari passo */
+  .skeleton-paragraph.reader-mode .skeleton-line { height: 26px; }
+
+  /* Demo split-view per mostrare default vs reader side-by-side */
+  .reader-split-view {
+    display: flex; gap: var(--s-4); align-items: flex-start;
+  }
+  .reader-split-view > * { flex: 1; min-width: 0; }
+  .reader-split-view .variant-label {
+    display: inline-block; padding: var(--s-1) var(--s-3); border-radius: var(--r-pill);
+    background: var(--bg-muted); color: var(--text-sec);
+    font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-bold);
+    margin-bottom: var(--s-2);
+  }
+  .reader-split-view .variant-label.reader { background: hsl(var(--c-kb) / 0.15); color: hsl(var(--c-kb)); }
+
+  /* ─── I: Wake-Lock sticky badge ─── */
+  .wake-lock-indicator {
+    position: absolute; right: var(--s-3); bottom: 70px;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: var(--s-1) var(--s-3); border-radius: var(--r-pill);
+    background: rgba(0,0,0,0.65); color: rgba(255,255,255,0.85);
+    backdrop-filter: blur(8px); font-family: var(--f-mono); font-size: 11px;
+    cursor: pointer; box-shadow: var(--shadow-md);
+    z-index: 4;
+  }
+  .wake-lock-indicator.disabled {
+    background: rgba(0,0,0,0.45); color: rgba(255,255,255,0.55);
+  }
+  .wake-lock-indicator.unsupported {
+    background: hsl(var(--c-warning) / 0.85); color: #fff;
+  }
+  .wake-lock-indicator .ico { font-size: 14px; }
+  .wake-lock-toast {
+    position: absolute; left: 50%; bottom: 130px; transform: translateX(-50%);
+    padding: var(--s-2) var(--s-4); border-radius: var(--r-md);
+    background: rgba(0,0,0,0.8); color: #fff;
+    font-family: var(--f-display); font-size: var(--fs-sm); font-weight: var(--fw-semi);
+    box-shadow: var(--shadow-lg); z-index: 5;
+  }
+
+  /* ─── J: Contrasto AAA (≥7:1) ─── */
+  .viewer-text.aaa {
+    color: var(--c-text-high-contrast);
+    max-width: 65ch; margin: 0 auto;
+    text-align: left;
+  }
+  .viewer-text.aaa em {
+    color: var(--c-text-high-contrast); opacity: 0.92;
+    font-style: italic;
+  }
+  .contrast-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px var(--s-2); border-radius: var(--r-pill);
+    background: hsl(var(--c-success) / 0.15); color: hsl(var(--c-success));
+    font-family: var(--f-mono); font-size: 10px; font-weight: var(--fw-bold);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     STATI K/L/M · Task 4 — Multi-language source + Manual input
+     ═══════════════════════════════════════════════════════════ */
+
+  /* ─── K: Lang detection badge (pill nell'header) ─── */
+  .lang-detect-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: var(--s-1) var(--s-3); border-radius: var(--r-pill);
+    background: hsl(var(--c-info, var(--c-kb)) / 0.15);
+    color: hsl(var(--c-info, var(--c-kb)));
+    font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-semi);
+    cursor: pointer; border: 1px solid hsl(var(--c-info, var(--c-kb)) / 0.3);
+    transition: background var(--dur-sm) var(--ease-out);
+    white-space: nowrap;
+  }
+  .lang-detect-badge:hover { background: hsl(var(--c-info, var(--c-kb)) / 0.25); }
+  .lang-detect-badge .flag { font-size: 14px; }
+  .lang-detect-badge .conf {
+    padding: 0 4px; border-radius: var(--r-sm);
+    background: var(--bg-card); color: var(--text-sec);
+    font-size: 10px; font-variant-numeric: tabular-nums;
+  }
+  .lang-detect-badge .hint { font-style: italic; color: var(--text-sec); }
+
+  /* Variant: high confidence (>0.8) — informativo, no friction */
+  .lang-detect-badge.high {
+    background: hsl(var(--c-success) / 0.12); color: hsl(var(--c-success));
+    border-color: hsl(var(--c-success) / 0.3);
+  }
+  .lang-detect-badge.high:hover { background: hsl(var(--c-success) / 0.2); }
+
+  /* Variant: medium confidence (0.5-0.8) — tap-to-confirm */
+  .lang-detect-badge.medium {
+    background: hsl(var(--c-warning) / 0.15); color: hsl(var(--c-warning));
+    border-color: hsl(var(--c-warning) / 0.4);
+  }
+  .lang-detect-badge.medium:hover { background: hsl(var(--c-warning) / 0.25); }
+  .lang-detect-badge.medium::after {
+    content: "·  Conferma o cambia";
+    font-weight: var(--fw-reg); margin-left: 2px;
+  }
+
+  /* Variant: low confidence (<0.5) — error/critical, cross-link state-H */
+  .lang-detect-badge.low {
+    background: hsl(var(--c-danger, 0 70% 50%) / 0.15);
+    color: hsl(var(--c-danger, 0 70% 50%));
+    border-color: hsl(var(--c-danger, 0 70% 50%) / 0.4);
+    animation: pulse-low 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse-low {
+    0%, 100% { box-shadow: 0 0 0 0 hsl(var(--c-danger, 0 70% 50%) / 0.0); }
+    50%      { box-shadow: 0 0 0 4px hsl(var(--c-danger, 0 70% 50%) / 0.15); }
+  }
+
+  /* ─── L: Lang override modal ─── */
+  .lang-modal-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(15, 10, 5, 0.55);
+    backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    padding: var(--s-4); z-index: 10;
+  }
+  .lang-modal {
+    width: 100%; max-width: 360px;
+    background: var(--bg-card); border-radius: var(--r-lg);
+    border: 1px solid var(--border); box-shadow: var(--shadow-lg);
+    overflow: hidden;
+  }
+  .lang-modal-head {
+    padding: var(--s-4) var(--s-5) var(--s-3);
+    border-bottom: 1px solid var(--border-light);
+  }
+  .lang-modal-head h3 {
+    font-family: var(--f-display); font-weight: var(--fw-bold);
+    font-size: var(--fs-lg); margin: 0 0 var(--s-1);
+  }
+  .lang-modal-head p {
+    font-family: var(--f-mono); font-size: var(--fs-xs);
+    color: var(--text-muted); margin: 0;
+  }
+  .lang-modal-body { padding: var(--s-3) var(--s-4); }
+  .lang-radio-list {
+    display: flex; flex-direction: column; gap: var(--s-1);
+    list-style: none; padding: 0; margin: 0;
+  }
+  .lang-radio-item {
+    display: flex; align-items: center; gap: var(--s-3);
+    padding: var(--s-3); border-radius: var(--r-md);
+    background: var(--bg); border: 1px solid var(--border-light);
+    cursor: pointer; transition: background var(--dur-sm) var(--ease-out);
+  }
+  .lang-radio-item:hover { background: var(--bg-hover); border-color: hsl(var(--c-kb) / 0.4); }
+  .lang-radio-item.selected {
+    background: hsl(var(--c-kb) / 0.08);
+    border-color: hsl(var(--c-kb));
+    box-shadow: 0 0 0 2px hsl(var(--c-kb) / 0.15);
+  }
+  .lang-radio-item .flag { font-size: 22px; flex-shrink: 0; }
+  .lang-radio-item .l { flex: 1; min-width: 0; }
+  .lang-radio-item .l .v {
+    font-family: var(--f-display); font-weight: var(--fw-semi);
+    font-size: var(--fs-md); display: block;
+  }
+  .lang-radio-item .l .s {
+    font-family: var(--f-mono); font-size: var(--fs-xs);
+    color: var(--text-muted); margin-top: 1px; display: block;
+  }
+  .lang-radio-item .radio {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 2px solid var(--border); flex-shrink: 0; position: relative;
+  }
+  .lang-radio-item.selected .radio { border-color: hsl(var(--c-kb)); }
+  .lang-radio-item.selected .radio::after {
+    content: ""; position: absolute; inset: 3px;
+    background: hsl(var(--c-kb)); border-radius: 50%;
+  }
+  .lang-radio-item .auto-tag {
+    padding: 1px var(--s-2); border-radius: var(--r-sm);
+    background: hsl(var(--c-agent) / 0.15); color: hsl(var(--c-agent));
+    font-family: var(--f-mono); font-size: 9px; font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .lang-modal-foot {
+    padding: var(--s-3) var(--s-4) var(--s-4);
+    display: flex; gap: var(--s-2); flex-direction: column;
+    border-top: 1px solid var(--border-light); background: var(--bg-muted);
+  }
+  .lang-modal-foot .cta-primary {
+    padding: var(--s-3) var(--s-4); border-radius: var(--r-md);
+    background: hsl(var(--c-kb)); color: #fff; border: 0;
+    font-family: var(--f-display); font-weight: var(--fw-bold);
+    font-size: var(--fs-md); cursor: pointer;
+  }
+  .lang-modal-foot .cta-secondary {
+    padding: var(--s-2) var(--s-4); border-radius: var(--r-md);
+    background: transparent; color: var(--text-sec);
+    border: 1px solid var(--border);
+    font-family: var(--f-display); font-weight: var(--fw-semi);
+    font-size: var(--fs-sm); cursor: pointer;
+  }
+  .lang-modal-foot .cache-hint {
+    font-family: var(--f-mono); font-size: 10px;
+    color: var(--text-muted); text-align: center; margin: 0;
+  }
+  .lang-modal-foot .cache-hint strong { color: hsl(var(--c-success)); }
+
+  /* ─── M: Manual input mode (textarea fallback, no foto) ─── */
+  .manual-input-shell {
+    flex: 1; display: flex; flex-direction: column;
+    overflow-y: auto;
+  }
+  .manual-input-head {
+    padding: var(--s-4) var(--s-4) var(--s-3);
+    border-bottom: 1px solid var(--border-light);
+    background: var(--bg);
+    display: flex; flex-direction: column; gap: var(--s-2);
+    position: sticky; top: 0; z-index: 2;
+  }
+  .manual-input-head .title-row {
+    display: flex; align-items: center; gap: var(--s-2);
+  }
+  .manual-input-head h2 {
+    font-family: var(--f-display); font-weight: var(--fw-bold);
+    font-size: var(--fs-lg); margin: 0; flex: 1;
+  }
+  .manual-input-head .badge-manual {
+    padding: 2px var(--s-2); border-radius: var(--r-pill);
+    background: hsl(var(--c-agent) / 0.15); color: hsl(var(--c-agent));
+    font-family: var(--f-mono); font-size: 9px; font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .manual-input-head .meta-row {
+    display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap;
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted);
+  }
+  .manual-lang-dropdown {
+    display: inline-flex; align-items: center; gap: var(--s-2);
+    padding: 4px var(--s-2); border-radius: var(--r-pill);
+    background: var(--bg-card); border: 1px solid var(--border);
+    cursor: pointer;
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text);
+  }
+  .manual-lang-dropdown .flag { font-size: 13px; }
+  .manual-lang-dropdown .chevron { color: var(--text-muted); font-size: 10px; }
+  .book-ref-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px var(--s-2); border-radius: var(--r-sm);
+    background: hsl(var(--c-game) / 0.1); color: hsl(var(--c-game));
+    font-family: var(--f-mono); font-size: 10px; font-weight: var(--fw-bold);
+  }
+  .book-ref-chip .lock { font-size: 9px; opacity: 0.7; }
+
+  .manual-input-body {
+    flex: 1; padding: var(--s-4);
+    display: flex; flex-direction: column; gap: var(--s-3);
+  }
+  .manual-textarea-shell {
+    position: relative;
+    border-radius: var(--r-md);
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    transition: border-color var(--dur-sm) var(--ease-out);
+  }
+  .manual-textarea-shell:focus-within {
+    border-color: hsl(var(--c-kb));
+    box-shadow: 0 0 0 3px hsl(var(--c-kb) / 0.15);
+  }
+  .manual-textarea {
+    width: 100%; min-height: 200px;
+    padding: var(--s-3) var(--s-4) var(--s-7);
+    border: 0; background: transparent; resize: vertical;
+    font-family: 'Georgia', serif; font-size: 15px; line-height: 1.55;
+    color: var(--text); outline: none;
+    box-sizing: border-box;
+  }
+  .manual-textarea::placeholder {
+    color: var(--text-muted); font-style: italic;
+  }
+  .manual-char-counter {
+    position: absolute; right: var(--s-3); bottom: var(--s-2);
+    padding: 2px var(--s-2); border-radius: var(--r-sm);
+    background: var(--bg-muted); color: var(--text-muted);
+    font-family: var(--f-mono); font-size: 10px; font-weight: var(--fw-semi);
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+  }
+  .manual-char-counter.warn { color: hsl(var(--c-warning)); }
+  .manual-char-counter.over { color: hsl(var(--c-danger, 0 70% 50%)); background: hsl(var(--c-danger, 0 70% 50%) / 0.1); }
+  .manual-char-counter .max { color: var(--text-muted); font-weight: var(--fw-reg); }
+
+  .manual-hint {
+    padding: var(--s-2) var(--s-3); border-radius: var(--r-md);
+    background: hsl(var(--c-info, var(--c-kb)) / 0.06);
+    border: 1px dashed hsl(var(--c-info, var(--c-kb)) / 0.25);
+    font-family: var(--f-mono); font-size: var(--fs-xs);
+    color: var(--text-sec); line-height: 1.5;
+  }
+  .manual-hint strong { color: hsl(var(--c-info, var(--c-kb))); }
+
+  .manual-input-foot {
+    padding: var(--s-3) var(--s-4) var(--s-5);
+    border-top: 1px solid var(--border-light);
+    background: var(--bg-muted);
+    display: flex; flex-direction: column; gap: var(--s-2);
+  }
+  .manual-cta-primary {
+    padding: var(--s-3) var(--s-5); border-radius: var(--r-md);
+    background: hsl(var(--c-kb)); border: 0; color: #fff;
+    font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-md);
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: var(--s-2);
+  }
+  .manual-cta-primary:disabled {
+    background: var(--border); cursor: not-allowed; opacity: 0.55;
+  }
+  .manual-cta-primary .arrow { font-size: 16px; }
+  .manual-flow-note {
+    font-family: var(--f-mono); font-size: 10px; color: var(--text-muted);
+    text-align: center; margin: 0;
+  }
+  .manual-flow-note strong { color: hsl(var(--c-success)); }
+
+  /* Empty state entry-point card (terzo punto triple-entry) */
+  .manual-empty-card {
+    margin: var(--s-4); padding: var(--s-4);
+    border-radius: var(--r-lg);
+    background: hsl(var(--c-agent) / 0.06);
+    border: 1px dashed hsl(var(--c-agent) / 0.35);
+    display: flex; align-items: center; gap: var(--s-3);
+    cursor: pointer; transition: background var(--dur-sm) var(--ease-out);
+  }
+  .manual-empty-card:hover { background: hsl(var(--c-agent) / 0.12); }
+  .manual-empty-card .icon { font-size: 26px; flex-shrink: 0; }
+  .manual-empty-card .l { flex: 1; }
+  .manual-empty-card .l .v {
+    font-family: var(--f-display); font-weight: var(--fw-bold);
+    font-size: var(--fs-md); display: block; color: var(--text);
+  }
+  .manual-empty-card .l .s {
+    font-family: var(--f-mono); font-size: var(--fs-xs);
+    color: var(--text-muted); margin-top: 2px; display: block;
+  }
+  .manual-empty-card .arrow {
+    color: hsl(var(--c-agent)); font-weight: var(--fw-bold); font-size: 18px;
+  }
+
+  /* Discovery diagram for triple-entry visualization (docs only) */
+  .triple-entry-diagram {
+    margin: var(--s-4) 0;
+    padding: var(--s-5);
+    border-radius: var(--r-lg);
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: var(--s-4);
+  }
+  .triple-entry-diagram .entry {
+    padding: var(--s-3); border-radius: var(--r-md);
+    background: var(--bg); border: 1px solid var(--border-light);
+    display: flex; flex-direction: column; gap: var(--s-1);
+    text-align: center;
+  }
+  .triple-entry-diagram .entry .num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: hsl(var(--c-agent)); color: #fff;
+    font-family: var(--f-display); font-weight: var(--fw-bold);
+    font-size: var(--fs-md); margin: 0 auto;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .triple-entry-diagram .entry .where {
+    font-family: var(--f-display); font-weight: var(--fw-bold);
+    font-size: var(--fs-sm); color: var(--text);
+  }
+  .triple-entry-diagram .entry .file {
+    font-family: var(--f-mono); font-size: 10px;
+    color: var(--text-muted);
+  }
+  @media (max-width: 720px) {
+    .triple-entry-diagram { grid-template-columns: 1fr; }
+  }
+
   *:focus-visible { outline: 2px solid hsl(var(--c-kb)); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) {
-    .photo-preview .scan, .stream-text .cursor, .translation-progress .bar .fill { animation: none; }
+    .photo-preview .scan,
+    .stream-text .cursor,
+    .translation-progress .bar .fill,
+    .skeleton-line,
+    .translation-stream .token,
+    .translation-stream .cursor,
+    .glossary-check .new-word,
+    .lang-detect-badge.low { animation: none; }
+    /* prefers-reduced-motion: skeleton statico (no shimmer-sweep) */
+    .skeleton-line {
+      background: var(--bg-muted);
+    }
   }
 </style>
 </head>
@@ -739,6 +1394,1099 @@
             </div>
           </div>
           <button class="nav-btn primary">Letto, vai a §148 →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO G · LOADING MULTI-STEP (4 step nominati con label IT)
+       Task 2 spec 1b.A — sequence Caricamento foto → OCR → Traduzione → Glossario
+       Latency targets: step1<2s, step2<5s, step3<10s, step4<2s, total<17s, timeout 20s
+       Abort CTA visibile da step 2 in poi → retake con foto preservata
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" aria-labelledby="sg">
+    <span class="label">Stato G · Loading 4-step</span>
+    <h2 id="sg">Sequenza loading multi-step — Aaron vede ogni passaggio</h2>
+    <p class="desc">4 step nominati in italiano: <strong>Caricamento foto</strong> (0-2s, %) → <strong>Sto leggendo il libro</strong> (2-7s, skeleton+shimmer) → <strong>Sto traducendo</strong> (7-15s, token-by-token con OCR overlay 60%) → <strong>Cerco parole nel glossario</strong> (15-17s, badge ⊕ progressivo). Hard timeout 20s → trigger `translation-timeout` (vedi librogame-runthrough-error-states.html). Mobile: step list verticale + abort FAB. Desktop: step list orizzontale breadcrumb + abort inline.</p>
+
+    <!-- ───── STEP 1 · Caricamento foto (0-2s) ───── -->
+    <h3 style="font-family: var(--f-display); font-size: var(--fs-lg); margin: var(--s-7) 0 var(--s-3); color: var(--text-sec);">Step 1 / 4 · "Caricamento foto…" (0-2s)</h3>
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – step 1 upload" aria-busy="true">
+        <span class="frame-label">Mobile · 375px · step 1</span>
+        <div class="phone-sbar"><span>21:34</span><span>📶 🔋 78%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Sera con i ragazzi</strong> · Runa di Ardenel · §147</span>
+        </div>
+        <div class="loading-4step">
+          <div class="step-list-v" role="status" aria-live="polite">
+            <div class="stage-row active">
+              <span class="ico">⏳</span><span class="lbl">Caricamento foto…</span><span class="meta">0.8s / 2s</span>
+            </div>
+            <div class="stage-row"><span class="ico" style="opacity: 0.4;">○</span><span class="lbl" style="opacity: 0.5;">Sto leggendo il libro…</span><span class="meta">in attesa</span></div>
+            <div class="stage-row"><span class="ico" style="opacity: 0.4;">○</span><span class="lbl" style="opacity: 0.5;">Sto traducendo…</span><span class="meta">in attesa</span></div>
+            <div class="stage-row"><span class="ico" style="opacity: 0.4;">○</span><span class="lbl" style="opacity: 0.5;">Cerco parole nel glossario…</span><span class="meta">in attesa</span></div>
+          </div>
+          <div class="step-thumb-row">
+            <div class="step-thumbnail">📷<br/>photo-1234.jpg</div>
+            <div class="info">
+              <div class="v">photo-1234.jpg</div>
+              <div class="s">320 KB · upload in corso</div>
+              <div class="linear-progress" style="margin-top: 6px;"><div class="fill-pct" style="width: 42%;"></div></div>
+              <div class="pct-label">42% · ETA 1.2s</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: var(--s-2); margin-top: var(--s-2);">
+            <span class="cost-inline">🆓 0 € · upload free</span>
+            <span style="font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted);">EXIF GPS verrà rimosso</span>
+          </div>
+        </div>
+        <div class="telemetry-footer">
+          <span>step=upload · t=0.8s</span>
+          <span>budget 2s · 40% used</span>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – step 1 upload" aria-busy="true">
+        <span class="frame-label">Desktop · 1280px · step 1 (breadcrumb)</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234/translate</span></div>
+        <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Sera con i ragazzi</strong> · Runa di Ardenel · §147 · Elaborazione</span></div>
+        <div style="flex: 1; padding: var(--s-7); display: flex; flex-direction: column; gap: var(--s-5);">
+          <!-- Step list orizzontale breadcrumb -->
+          <div class="step-list-h" role="status" aria-live="polite">
+            <span class="step-pill active"><span>⏳</span>1 · Caricamento foto…</span>
+            <span class="arrow">→</span>
+            <span class="step-pill"><span>○</span>2 · Sto leggendo</span>
+            <span class="arrow">→</span>
+            <span class="step-pill"><span>○</span>3 · Sto traducendo</span>
+            <span class="arrow">→</span>
+            <span class="step-pill"><span>○</span>4 · Glossario</span>
+          </div>
+          <div style="display: flex; gap: var(--s-7); align-items: flex-start;">
+            <div class="step-thumbnail" style="width: 200px; height: 260px;">📷<br/>photo-1234.jpg<br/>320 KB</div>
+            <div style="flex: 1;">
+              <h3 style="font-family: var(--f-display); font-size: var(--fs-xl); font-weight: var(--fw-bold); margin: 0 0 var(--s-2);">Caricamento foto…</h3>
+              <p style="color: var(--text-sec); margin: 0 0 var(--s-4); font-size: var(--fs-md);">Sto caricando la foto sul server. EXIF GPS viene rimosso automaticamente per privacy.</p>
+              <div class="linear-progress"><div class="fill-pct" style="width: 42%;"></div></div>
+              <div class="pct-label">42% · ETA 1.2s · budget 2s</div>
+              <div style="margin-top: var(--s-4);"><span class="cost-inline">🆓 0 € · upload free</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ───── STEP 2 · OCR (2-7s) ───── -->
+    <h3 style="font-family: var(--f-display); font-size: var(--fs-lg); margin: var(--s-7) 0 var(--s-3); color: var(--text-sec);">Step 2 / 4 · "Sto leggendo il libro…" (2-7s · skeleton+shimmer, abort CTA da qui)</h3>
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – step 2 OCR" aria-busy="true">
+        <span class="frame-label">Mobile · 375px · step 2 + abort FAB</span>
+        <div class="phone-sbar"><span>21:34</span><span>📶 🔋 78%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>§147</strong> · Sto leggendo il libro…</span>
+        </div>
+        <div class="loading-4step">
+          <div class="step-list-v" role="status" aria-live="polite">
+            <div class="stage-row done"><span class="ico">✓</span><span class="lbl">Caricamento foto</span><span class="meta">1.6s</span></div>
+            <div class="stage-row active"><span class="ico">⏳</span><span class="lbl">Sto leggendo il libro…</span><span class="meta">3.2s / 5s</span></div>
+            <div class="stage-row"><span class="ico" style="opacity: 0.4;">○</span><span class="lbl" style="opacity: 0.5;">Sto traducendo…</span><span class="meta">in attesa</span></div>
+            <div class="stage-row"><span class="ico" style="opacity: 0.4;">○</span><span class="lbl" style="opacity: 0.5;">Cerco parole nel glossario…</span><span class="meta">in attesa</span></div>
+          </div>
+          <!-- Skeleton paragraph 3 righe + shimmer-sweep gradient -->
+          <div class="skeleton-paragraph" aria-hidden="true">
+            <div class="skeleton-line w-100"></div>
+            <div class="skeleton-line w-92"></div>
+            <div class="skeleton-line w-65"></div>
+          </div>
+          <div style="margin-top: var(--s-2);"><span class="cost-inline">🆓 0 € · OCR local</span></div>
+        </div>
+        <!-- Abort FAB bottom-right (mobile only) -->
+        <button class="abort-fab" type="button" aria-label="Annulla elaborazione e torna alla camera con foto preservata">✕</button>
+        <div class="telemetry-footer">
+          <span>step=ocr · t=3.2s</span>
+          <span>smoldocling · cum 4.8s</span>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – step 2 OCR" aria-busy="true">
+        <span class="frame-label">Desktop · 1280px · step 2 + abort inline</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234/translate</span></div>
+        <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>§147</strong> · Sto leggendo il libro…</span></div>
+        <div style="flex: 1; padding: var(--s-7); display: flex; flex-direction: column; gap: var(--s-5);">
+          <div class="step-list-h" role="status" aria-live="polite">
+            <span class="step-pill done"><span>✓</span>1 · Caricato</span><span class="arrow">→</span>
+            <span class="step-pill active"><span>⏳</span>2 · Sto leggendo</span><span class="arrow">→</span>
+            <span class="step-pill"><span>○</span>3 · Sto traducendo</span><span class="arrow">→</span>
+            <span class="step-pill"><span>○</span>4 · Glossario</span>
+          </div>
+          <div style="display: flex; gap: var(--s-7); align-items: flex-start;">
+            <div class="step-thumbnail" style="width: 200px; height: 260px;">📷<br/>photo-1234.jpg<br/>OCR in corso</div>
+            <div style="flex: 1;">
+              <h3 style="font-family: var(--f-display); font-size: var(--fs-xl); font-weight: var(--fw-bold); margin: 0 0 var(--s-2);">Sto leggendo il libro…</h3>
+              <p style="color: var(--text-sec); margin: 0 0 var(--s-4); font-size: var(--fs-md);">smoldocling sta estraendo il testo. Budget 5s.</p>
+              <div class="skeleton-paragraph" aria-hidden="true">
+                <div class="skeleton-line w-100"></div>
+                <div class="skeleton-line w-92"></div>
+                <div class="skeleton-line w-65"></div>
+              </div>
+              <div class="abort-bar" style="margin-top: var(--s-4);">
+                <span>⏱ 3.2s / 5s budget · cum 4.8s</span>
+                <button class="abort-btn" type="button" aria-label="Annulla elaborazione">✕ Annulla</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ───── STEP 3 · AI Translation streaming (7-15s) ───── -->
+    <h3 style="font-family: var(--f-display); font-size: var(--fs-lg); margin: var(--s-7) 0 var(--s-3); color: var(--text-sec);">Step 3 / 4 · "Sto traducendo…" (7-15s · OCR overlay 60% sopra + token-by-token sotto)</h3>
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – step 3 AI translation" aria-busy="true">
+        <span class="frame-label">Mobile · 375px · step 3 streaming</span>
+        <div class="phone-sbar"><span>21:34</span><span>📶 🔋 78%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>§147</strong> · Sto traducendo…</span>
+        </div>
+        <div class="loading-4step">
+          <div class="step-list-v" role="status" aria-live="polite">
+            <div class="stage-row done"><span class="ico">✓</span><span class="lbl">Caricamento foto</span><span class="meta">1.6s</span></div>
+            <div class="stage-row done"><span class="ico">✓</span><span class="lbl">Sto leggendo il libro</span><span class="meta">4.8s</span></div>
+            <div class="stage-row active"><span class="ico">⏳</span><span class="lbl">Sto traducendo…</span><span class="meta">3.1s / 10s</span></div>
+            <div class="stage-row"><span class="ico" style="opacity: 0.4;">○</span><span class="lbl" style="opacity: 0.5;">Cerco parole nel glossario…</span><span class="meta">in attesa</span></div>
+          </div>
+          <!-- OCR text sopra (60% opacity) -->
+          <div class="ocr-overlay" aria-hidden="true">
+            <span class="badge-en">EN · OCR</span>"As Niamh approached the altar, the air grew thick with whispers. The Goblin guards drew their blades, eyes gleaming with bloodlust…"
+          </div>
+          <!-- Traduzione token-by-token streaming -->
+          <div class="translation-stream" aria-live="polite">
+            <span class="token">Mentre</span> <span class="token">Niamh</span> <span class="token">si</span> <span class="token">avvicinava</span> <span class="token">all'altare,</span> <span class="token">l'aria</span> <span class="token">si</span> <span class="token">fece</span> <span class="token">densa</span> <span class="token">di</span> <span class="token">sussurri.</span> <span class="token">Le</span> <span class="token">guardie</span><span class="cursor" aria-hidden="true"></span>
+          </div>
+          <div style="margin-top: var(--s-2); display: flex; gap: var(--s-2); align-items: center;">
+            <span class="cost-inline paid">💰 ~0,01 € · DeepSeek AI</span>
+            <span style="font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted);">SSE stream · 35%</span>
+          </div>
+        </div>
+        <button class="abort-fab" type="button" aria-label="Annulla traduzione">✕</button>
+        <div class="telemetry-footer">
+          <span>step=ai-translate · t=3.1s</span>
+          <span>deepseek · cum 7.9s</span>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – step 3 AI translation" aria-busy="true">
+        <span class="frame-label">Desktop · 1280px · step 3 streaming</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234/translate</span></div>
+        <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>§147</strong> · Sto traducendo…</span></div>
+        <div style="flex: 1; padding: var(--s-7); display: flex; flex-direction: column; gap: var(--s-5);">
+          <div class="step-list-h" role="status" aria-live="polite">
+            <span class="step-pill done"><span>✓</span>1 · Caricato</span><span class="arrow">→</span>
+            <span class="step-pill done"><span>✓</span>2 · Letto</span><span class="arrow">→</span>
+            <span class="step-pill active"><span>⏳</span>3 · Sto traducendo</span><span class="arrow">→</span>
+            <span class="step-pill"><span>○</span>4 · Glossario</span>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5);">
+            <div>
+              <h4 style="font-family: var(--f-display); font-weight: var(--fw-bold); margin: 0 0 var(--s-2); color: var(--text-muted); font-size: var(--fs-sm);">📖 Testo originale (OCR)</h4>
+              <div class="ocr-overlay" aria-hidden="true">
+                <span class="badge-en">EN · OCR</span>"As Niamh approached the altar, the air grew thick with whispers. The Goblin guards drew their blades, eyes gleaming with bloodlust…"
+              </div>
+            </div>
+            <div>
+              <h4 style="font-family: var(--f-display); font-weight: var(--fw-bold); margin: 0 0 var(--s-2); color: hsl(var(--c-game)); font-size: var(--fs-sm);">🌍 Traduzione IT (streaming token-by-token)</h4>
+              <div class="translation-stream" aria-live="polite">
+                <span class="token">Mentre</span> <span class="token">Niamh</span> <span class="token">si</span> <span class="token">avvicinava</span> <span class="token">all'altare,</span> <span class="token">l'aria</span> <span class="token">si</span> <span class="token">fece</span> <span class="token">densa</span> <span class="token">di</span> <span class="token">sussurri.</span> <span class="token">Le</span> <span class="token">guardie</span> <span class="token">Goblin</span> <span class="token">sguainarono</span><span class="cursor"></span>
+              </div>
+            </div>
+          </div>
+          <div class="abort-bar">
+            <span>⏱ 3.1s / 10s budget · cum 7.9s · 💰 ~0,01 € DeepSeek</span>
+            <button class="abort-btn" type="button">✕ Annulla traduzione</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ───── STEP 4 · Glossary check (15-17s) ───── -->
+    <h3 style="font-family: var(--f-display); font-size: var(--fs-lg); margin: var(--s-7) 0 var(--s-3); color: var(--text-sec);">Step 4 / 4 · "Cerco parole nel glossario…" (15-17s · badge ⊕ progressive highlight)</h3>
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – step 4 glossary check" aria-busy="true">
+        <span class="frame-label">Mobile · 375px · step 4 glossario</span>
+        <div class="phone-sbar"><span>21:34</span><span>📶 🔋 78%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>§147</strong> · Cerco parole nel glossario…</span>
+        </div>
+        <div class="loading-4step">
+          <div class="step-list-v" role="status" aria-live="polite">
+            <div class="stage-row done"><span class="ico">✓</span><span class="lbl">Caricamento foto</span><span class="meta">1.6s</span></div>
+            <div class="stage-row done"><span class="ico">✓</span><span class="lbl">Sto leggendo il libro</span><span class="meta">4.8s</span></div>
+            <div class="stage-row done"><span class="ico">✓</span><span class="lbl">Sto traducendo</span><span class="meta">9.4s</span></div>
+            <div class="stage-row active"><span class="ico">⏳</span><span class="lbl">Cerco parole nel glossario…</span><span class="meta">0.8s / 2s</span></div>
+          </div>
+          <!-- Highlight progressivo parole nuove con badge ⊕ -->
+          <div class="glossary-check" aria-live="polite">
+            Mentre <span class="new-word">Niamh</span> si avvicinava all'altare, l'aria si fece densa di sussurri. Le guardie <span class="new-word">Goblin</span> sguainarono le lame, gli occhi che brillavano di sete di sangue, mentre la <span class="new-word">Pietra del Vuoto</span> pulsava di una luce malata.
+          </div>
+          <div style="margin-top: var(--s-2); display: flex; gap: var(--s-2); align-items: center; flex-wrap: wrap;">
+            <span class="cost-inline">🆓 0 € · lookup KB</span>
+            <span style="font-family: var(--f-mono); font-size: var(--fs-xs); color: hsl(var(--c-agent));">3 termini trovati</span>
+          </div>
+        </div>
+        <button class="abort-fab" type="button" aria-label="Annulla">✕</button>
+        <div class="telemetry-footer">
+          <span>step=glossary · t=0.8s</span>
+          <span>cum 16.6s / 17s budget</span>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – step 4 glossary check" aria-busy="true">
+        <span class="frame-label">Desktop · 1280px · step 4 glossario</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234/translate</span></div>
+        <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>§147</strong> · Cerco parole nel glossario…</span></div>
+        <div style="flex: 1; padding: var(--s-7); display: flex; flex-direction: column; gap: var(--s-5);">
+          <div class="step-list-h" role="status" aria-live="polite">
+            <span class="step-pill done"><span>✓</span>1 · Caricato</span><span class="arrow">→</span>
+            <span class="step-pill done"><span>✓</span>2 · Letto</span><span class="arrow">→</span>
+            <span class="step-pill done"><span>✓</span>3 · Tradotto</span><span class="arrow">→</span>
+            <span class="step-pill active"><span>⏳</span>4 · Cerco glossario</span>
+          </div>
+          <div style="display: flex; gap: var(--s-7); align-items: flex-start;">
+            <div style="flex: 1;">
+              <h3 style="font-family: var(--f-display); font-size: var(--fs-xl); font-weight: var(--fw-bold); margin: 0 0 var(--s-2);">Cerco parole nel glossario…</h3>
+              <p style="color: var(--text-sec); margin: 0 0 var(--s-4); font-size: var(--fs-md);">Identifico nomi propri, termini di gioco e parole già nel tuo glossario.</p>
+              <div class="glossary-check" aria-live="polite">
+                Mentre <span class="new-word">Niamh</span> si avvicinava all'altare, l'aria si fece densa di sussurri. Le guardie <span class="new-word">Goblin</span> sguainarono le lame, gli occhi che brillavano di sete di sangue, mentre la <span class="new-word">Pietra del Vuoto</span> pulsava di una luce malata sulla pietra dell'altare.
+              </div>
+              <div class="abort-bar" style="margin-top: var(--s-4);">
+                <span>⏱ 0.8s / 2s budget · cum 16.6s / 17s · 3 termini glossario</span>
+                <button class="abort-btn" type="button">✕ Annulla</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO H · READER MODE TOGGLE (16pt ↔ 24pt, persistito localStorage)
+       Task 2 spec 1b.B — passive co-player Aaron variant
+       localStorage key: `reader-mode-enabled` (boolean)
+       Quando attivo: font 24pt + line-height 1.7 + padding maggiore + max-width 65ch + centrato
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" aria-labelledby="sh">
+    <span class="label">Stato H · Reader Mode</span>
+    <h2 id="sh">Toggle 📖 Reader Mode — Aaron passa la app a Marco co-player</h2>
+    <p class="desc">Button <strong>📖</strong> nell'header (top-right). Click → font body 16pt → 24pt + line-height +30% + padding maggiore sul container + max-width 65ch centrato. Stato persistito in <code>localStorage</code> con key <code>reader-mode-enabled</code> (boolean). Applicato sia allo skeleton (step 2 loading) che al paragrafo finale.</p>
+
+    <h3 style="font-family: var(--f-display); font-size: var(--fs-lg); margin: var(--s-7) 0 var(--s-3); color: var(--text-sec);">Default mode vs Reader mode · side-by-side comparison</h3>
+    <div class="reader-split-view">
+      <!-- VARIANT 1 · Default mode (16pt) -->
+      <div class="phone" role="region" aria-label="Mobile – default mode 16pt">
+        <span class="frame-label">Default · body 16pt</span>
+        <div class="phone-sbar"><span>21:42</span><span>📶 🔋 76%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs">§147 · traduzione</span>
+          <button class="reader-mode-toggle" type="button" aria-pressed="false" aria-label="Attiva Reader Mode">
+            <span class="ico">📖</span><span>Reader</span>
+          </button>
+        </div>
+        <div class="viewer-page" role="main">
+          <header class="viewer-header">
+            <div class="ch">Capitolo 4 — Runa di Ardenel</div>
+            <div class="pn-big">§147</div>
+          </header>
+          <div class="reader-mode-content" aria-live="polite">
+            <span class="variant-label">Default mode (16pt · line-height 1.55)</span>
+            <p>Mentre Niamh si avvicinava all'altare, l'aria si fece densa di sussurri. Le guardie Goblin sguainarono le lame, gli occhi che brillavano di sete di sangue, mentre la Pietra del Vuoto pulsava di una luce malata sulla pietra.</p>
+            <p><em>«Tornate indietro, mortali» sibilò il capitano.</em></p>
+          </div>
+        </div>
+        <div class="telemetry-footer">
+          <span>reader-mode: false</span>
+          <span>font 16pt · width 60ch</span>
+        </div>
+      </div>
+
+      <!-- VARIANT 2 · Reader mode (24pt) -->
+      <div class="phone" role="region" aria-label="Mobile – reader mode 24pt attivo">
+        <span class="frame-label">Reader Mode ON · body 24pt</span>
+        <div class="phone-sbar"><span>21:42</span><span>📶 🔋 76%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs">§147 · traduzione</span>
+          <button class="reader-mode-toggle active" type="button" aria-pressed="true" aria-label="Disattiva Reader Mode">
+            <span class="ico">📖</span><span>Reader ✓</span>
+          </button>
+        </div>
+        <div class="viewer-page" role="main">
+          <header class="viewer-header">
+            <div class="ch">Capitolo 4 — Runa di Ardenel</div>
+            <div class="pn-big">§147</div>
+          </header>
+          <div class="reader-mode-content reader-mode" aria-live="polite">
+            <span class="variant-label reader">Reader mode (24pt · line-height 1.7 · max-width 65ch)</span>
+            <p>Mentre Niamh si avvicinava all'altare, l'aria si fece densa di sussurri. Le guardie Goblin sguainarono le lame, gli occhi che brillavano di sete di sangue.</p>
+          </div>
+        </div>
+        <div class="telemetry-footer">
+          <span>reader-mode: true (localStorage)</span>
+          <span>font 24pt · width 65ch</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Skeleton applicato a reader-mode (step 2 con toggle ON) -->
+    <h3 style="font-family: var(--f-display); font-size: var(--fs-lg); margin: var(--s-7) 0 var(--s-3); color: var(--text-sec);">Reader Mode applicato anche allo skeleton (step 2 loading)</h3>
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – skeleton reader-mode">
+        <span class="frame-label">Mobile · 375px · skeleton reader-mode</span>
+        <div class="phone-sbar"><span>21:42</span><span>📶 🔋 76%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs">§147 · Sto leggendo…</span>
+          <button class="reader-mode-toggle active" type="button" aria-pressed="true"><span class="ico">📖</span><span>Reader ✓</span></button>
+        </div>
+        <div class="loading-4step">
+          <div class="skeleton-paragraph reader-mode" aria-hidden="true">
+            <div class="skeleton-line w-100"></div>
+            <div class="skeleton-line w-92"></div>
+            <div class="skeleton-line w-65"></div>
+          </div>
+          <p style="font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); text-align: center;">Le righe skeleton hanno altezza 26px (vs 18px default) per matchare il font 24pt finale.</p>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – reader mode comparison">
+        <span class="frame-label">Desktop · 1280px · split comparison</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234/translate?p=147</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs">§147 · confronto reader mode</span>
+          <button class="reader-mode-toggle active" type="button" aria-pressed="true"><span class="ico">📖</span><span>Reader ON</span></button>
+        </div>
+        <div style="flex: 1; padding: var(--s-5); display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5); overflow-y: auto;">
+          <div style="border-right: 1px dashed var(--border); padding-right: var(--s-5);">
+            <span class="variant-label">Default · 16pt</span>
+            <div class="reader-mode-content">
+              <p>Mentre Niamh si avvicinava all'altare, l'aria si fece densa di sussurri.</p>
+            </div>
+          </div>
+          <div>
+            <span class="variant-label reader">Reader Mode · 24pt</span>
+            <div class="reader-mode-content reader-mode">
+              <p>Mentre Niamh si avvicinava all'altare, l'aria si fece densa di sussurri.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO I · WAKE-LOCK INDICATOR (badge sticky bottom-right, 3 stati)
+       Task 2 spec 1b.C — passive co-player UX
+       3 variants: 🔆 attivo · 🔅 disabilitato · 🔆 non-supportato (Safari < 16.4)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" aria-labelledby="si">
+    <span class="label">Stato I · Wake-Lock Indicator</span>
+    <h2 id="si">Badge 🔆 sticky bottom-right — override manuale screen-on</h2>
+    <p class="desc">Quando Aaron passa la app a Marco co-player, il telefono non deve bloccarsi durante la lettura. Web Wake Lock API attivo di default → badge <strong>🔆 Schermo attivo</strong> bottom-right. Click → disable wake-lock + toast feedback. Safari &lt; 16.4 → variant <strong>Non supportato</strong> con tooltip.</p>
+
+    <h3 style="font-family: var(--f-display); font-size: var(--fs-lg); margin: var(--s-7) 0 var(--s-3); color: var(--text-sec);">3 stati del badge wake-lock</h3>
+    <div class="frames">
+
+      <!-- VARIANT 1 · Wake-lock ATTIVO (default) -->
+      <div class="phone" role="region" aria-label="Mobile – wake-lock attivo">
+        <span class="frame-label">Stato 1 · Wake-lock ATTIVO (default)</span>
+        <div class="phone-sbar"><span>21:42</span><span>📶 🔋 76%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs">§147 · lettura</span>
+        </div>
+        <div class="viewer-page" role="main">
+          <header class="viewer-header">
+            <div class="ch">Capitolo 4 — Runa di Ardenel</div>
+            <div class="pn-big">§147</div>
+          </header>
+          <div class="viewer-text">
+            <p>Mentre Niamh si avvicinava all'altare, l'aria si fece densa di sussurri.</p>
+            <p><em>«Tornate indietro, mortali» sibilò il capitano.</em></p>
+          </div>
+        </div>
+        <div class="viewer-toolbar">
+          <button class="nav-btn">← §146</button>
+          <button class="nav-btn primary">§148 →</button>
+        </div>
+        <!-- Wake-lock badge ATTIVO -->
+        <button class="wake-lock-indicator" type="button" aria-pressed="true" aria-label="Disattiva blocco schermo">
+          <span class="ico">🔆</span><span>Schermo attivo</span>
+        </button>
+        <div class="telemetry-footer">
+          <span>wake-lock: active</span>
+          <span>API: navigator.wakeLock</span>
+        </div>
+      </div>
+
+      <!-- VARIANT 2 · Wake-lock DISABILITATO (dopo click) -->
+      <div class="phone" role="region" aria-label="Mobile – wake-lock disabilitato">
+        <span class="frame-label">Stato 2 · Disabilitato + toast</span>
+        <div class="phone-sbar"><span>21:43</span><span>📶 🔋 76%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs">§147 · lettura</span>
+        </div>
+        <div class="viewer-page" role="main">
+          <header class="viewer-header">
+            <div class="ch">Capitolo 4 — Runa di Ardenel</div>
+            <div class="pn-big">§147</div>
+          </header>
+          <div class="viewer-text">
+            <p>Mentre Niamh si avvicinava all'altare, l'aria si fece densa di sussurri.</p>
+            <p><em>«Tornate indietro, mortali» sibilò il capitano.</em></p>
+          </div>
+        </div>
+        <div class="viewer-toolbar">
+          <button class="nav-btn">← §146</button>
+          <button class="nav-btn primary">§148 →</button>
+        </div>
+        <!-- Toast feedback dopo click -->
+        <div class="wake-lock-toast" role="status" aria-live="polite">Schermo torna alla normalità</div>
+        <!-- Wake-lock badge DISABILITATO -->
+        <button class="wake-lock-indicator disabled" type="button" aria-pressed="false" aria-label="Riattiva blocco schermo">
+          <span class="ico">🔅</span><span>Auto-blocco attivo</span>
+        </button>
+        <div class="telemetry-footer">
+          <span>wake-lock: released</span>
+          <span>release() called</span>
+        </div>
+      </div>
+
+      <!-- VARIANT 3 · NON SUPPORTATO (Safari < 16.4) -->
+      <div class="phone" role="region" aria-label="Mobile – wake-lock non supportato">
+        <span class="frame-label">Stato 3 · Non supportato (Safari &lt; 16.4)</span>
+        <div class="phone-sbar"><span>21:44</span><span>📶 🔋 76%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs">§147 · lettura</span>
+        </div>
+        <div class="viewer-page" role="main">
+          <header class="viewer-header">
+            <div class="ch">Capitolo 4 — Runa di Ardenel</div>
+            <div class="pn-big">§147</div>
+          </header>
+          <div class="viewer-text">
+            <p>Mentre Niamh si avvicinava all'altare, l'aria si fece densa di sussurri.</p>
+            <p><em>«Tornate indietro, mortali» sibilò il capitano.</em></p>
+          </div>
+        </div>
+        <div class="viewer-toolbar">
+          <button class="nav-btn">← §146</button>
+          <button class="nav-btn primary">§148 →</button>
+        </div>
+        <!-- Badge unsupported con tooltip -->
+        <button class="wake-lock-indicator unsupported" type="button" aria-label="Web Wake Lock non supportato — disattiva auto-blocco nelle impostazioni del telefono"
+                title="Disattiva auto-blocco nelle impostazioni del telefono">
+          <span class="ico">🔆</span><span>Non supportato</span>
+        </button>
+        <div class="telemetry-footer">
+          <span>wake-lock: unavailable</span>
+          <span>Safari &lt; 16.4 fallback</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO J · CONTRASTO AAA (paragrafo tradotto ≥7:1)
+       Task 2 spec 1b.D — readability target WCAG AAA (vs AA 4.5:1)
+       Usa `--c-text-high-contrast` (definito locale come fallback)
+       Centrato, max-width 65ch
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" aria-labelledby="sj">
+    <span class="label">Stato J · Contrasto AAA</span>
+    <h2 id="sj">Paragrafo finale con contrasto ≥7:1 — readability massima</h2>
+    <p class="desc">Il paragrafo tradotto usa <code>--c-text-high-contrast</code> (light: <code>#0f0a05</code> quasi-nero vs cream bg ≈15:1; dark: <code>#ffffff</code> bianco pieno vs dark bg ≈18:1). Centrato con <code>max-width 65ch</code> per ottimal line-length. Supera lo standard WCAG AAA di 7:1 con margine confortevole.</p>
+
+    <div class="frames">
+      <!-- Mobile · AAA contrast -->
+      <div class="phone" role="region" aria-label="Mobile – AAA contrast">
+        <span class="frame-label">Mobile · 375px · contrasto AAA</span>
+        <div class="phone-sbar"><span>21:42</span><span>📶 🔋 76%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs">§147 · traduzione</span>
+          <button class="right-tool" aria-label="Menu">⋯</button>
+        </div>
+        <div class="viewer-page" role="main">
+          <header class="viewer-header">
+            <div class="ch">Capitolo 4 — Runa di Ardenel</div>
+            <div class="pn-big">§147</div>
+            <span class="contrast-badge" style="margin-top: var(--s-2);">✓ AAA ≥7:1</span>
+          </header>
+          <!-- Paragrafo con classe .aaa -->
+          <div class="viewer-text aaa" aria-live="polite">
+            <p>Mentre Niamh si avvicinava all'altare, l'aria si fece densa di sussurri. Le guardie Goblin sguainarono le lame, gli occhi che brillavano di sete di sangue, mentre la <span class="glossary-pill" role="button" tabindex="0">📒 Pietra del Vuoto</span> pulsava di una luce malata sulla pietra.</p>
+            <p><em>«Tornate indietro, mortali» sibilò il capitano. «Questo luogo non è per voi.»</em></p>
+          </div>
+          <div class="glossary-footnote"><strong>📒 Glossario:</strong> Pietra del Vuoto · Niamh · Goblin</div>
+        </div>
+        <div class="viewer-toolbar">
+          <button class="nav-btn">← §146</button>
+          <button class="nav-btn primary">§148 →</button>
+        </div>
+        <div class="telemetry-footer">
+          <span>contrast: ≥15:1 (light)</span>
+          <span>WCAG AAA · max-width 65ch</span>
+        </div>
+      </div>
+
+      <!-- Desktop · AAA contrast con misurazione esplicita -->
+      <div class="desktop" role="region" aria-label="Desktop – AAA contrast detailed">
+        <span class="frame-label">Desktop · 1280px · contrasto AAA + misurazione</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234/translate?p=147&amp;contrast=aaa</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs">§147 · traduzione · readability AAA</span>
+          <button class="right-tool" aria-label="Menu">⋯</button>
+        </div>
+        <div class="viewer-page" style="padding: var(--s-7);">
+          <header class="viewer-header">
+            <div class="ch">Capitolo 4 — Runa di Ardenel</div>
+            <div class="pn-big" style="font-size: 56px;">§147</div>
+            <div style="display: flex; gap: var(--s-2); justify-content: center; margin-top: var(--s-2);">
+              <span class="contrast-badge">✓ AAA ≥7:1</span>
+              <span class="contrast-badge" style="background: hsl(var(--c-kb) / 0.15); color: hsl(var(--c-kb));">📏 65ch line-length</span>
+              <span class="contrast-badge" style="background: hsl(var(--c-agent) / 0.15); color: hsl(var(--c-agent));">📖 reader optimal</span>
+            </div>
+          </header>
+          <div class="viewer-text aaa">
+            <p>Mentre Niamh si avvicinava all'altare, l'aria si fece densa di sussurri. Le guardie Goblin sguainarono le lame, gli occhi che brillavano di sete di sangue, mentre la <span class="glossary-pill" role="button" tabindex="0">📒 Pietra del Vuoto</span> pulsava di una luce malata sulla pietra.</p>
+            <p><em>«Tornate indietro, mortali» sibilò il capitano. «Questo luogo non è per voi.»</em></p>
+            <p>Niamh strinse l'elsa della spada, sentendo l'eco di antichi giuramenti vibrare nell'acciaio.</p>
+          </div>
+          <div class="glossary-footnote"><strong>📒 Glossario applicato:</strong> Pietra del Vuoto · Niamh · Goblin</div>
+        </div>
+        <div class="viewer-toolbar">
+          <button class="nav-btn">← §146</button>
+          <div style="display: flex; gap: var(--s-2); align-items: center;">
+            <span style="font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted);">contrast: <strong style="color: hsl(var(--c-success));">15:1 ✓ AAA</strong> · width <strong>65ch</strong> · font 26px</span>
+            <div class="a11y-tools">
+              <button class="a11y-btn">A−</button><button class="a11y-btn">A</button><button class="a11y-btn">A+</button>
+              <button class="a11y-btn" aria-label="Tema">🌗</button>
+            </div>
+          </div>
+          <button class="nav-btn primary">§148 →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO K · LANG DETECTION BADGE (header pill post OCR)
+       Task 4 spec 1d — multi-language source EN·FR·DE·ES·IT
+       3 variants confidence-driven:
+         · high   (>0.8)   → badge informativo (no friction)
+         · medium (0.5-0.8)→ tap-to-confirm prima di translate (blocking)
+         · low    (<0.5)   → cross-link state-H source-lang-unknown in librogame-runthrough-error-states.html
+       Click → apre lang-override-modal (stato L)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" aria-labelledby="sk">
+    <span class="label">Stato K · Lang Detection Badge</span>
+    <h2 id="sk">Badge sorgente lingua nell'header — 3 variants confidence-driven</h2>
+    <p class="desc">Post step 2 OCR (sequenza loading 4-step Task 2 sez 1b), LLM auto-detect lingua sorgente con stessa call AI translation (no overhead). Pill nel header top-right "Sorgente: EN · 🌐". Click → apre <strong>lang-override-modal</strong> (stato L). Cross-ref: <code>&lt;0.5</code> trigger <code>source-lang-unknown</code> in <code>librogame-runthrough-error-states.html</code>.</p>
+
+    <h3 style="font-family: var(--f-display); font-size: var(--fs-lg); margin: var(--s-7) 0 var(--s-3); color: var(--text-sec);">3 variants del badge · side-by-side</h3>
+    <div class="frames">
+
+      <!-- VARIANT 1 · High confidence (>0.8) — informativo -->
+      <div class="phone" role="region" aria-label="Mobile – lang-detection high confidence">
+        <span class="frame-label">Stato K.1 · confidence 0.92 (high · informativo)</span>
+        <div class="phone-sbar"><span>21:36</span><span>📶 🔋 77%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>§147</strong> · post OCR</span>
+          <!-- Badge high confidence — no friction, dismissable -->
+          <button class="lang-detect-badge high" type="button" aria-label="Sorgente rilevata: English (alta affidabilità) — tap per cambiare">
+            <span class="flag">🇬🇧</span><span>EN</span><span class="conf">0.92</span>
+          </button>
+        </div>
+        <div class="viewer-page" role="main">
+          <header class="viewer-header">
+            <div class="ch">Capitolo 4 — Runa di Ardenel</div>
+            <div class="pn-big">§147</div>
+          </header>
+          <div class="viewer-text" aria-live="polite">
+            <p>Mentre Niamh si avvicinava all'altare, l'aria si fece densa di sussurri. Le guardie Goblin sguainarono le lame, gli occhi che brillavano di sete di sangue.</p>
+            <p><em>«Tornate indietro, mortali» sibilò il capitano.</em></p>
+          </div>
+        </div>
+        <div class="telemetry-footer">
+          <span>source_method: ocr</span>
+          <span>source_lang: en · conf 0.92</span>
+        </div>
+      </div>
+
+      <!-- VARIANT 2 · Medium confidence (0.5-0.8) — tap-to-confirm blocking -->
+      <div class="phone" role="region" aria-label="Mobile – lang-detection medium confidence">
+        <span class="frame-label">Stato K.2 · confidence 0.67 (medium · tap-to-confirm)</span>
+        <div class="phone-sbar"><span>21:36</span><span>📶 🔋 77%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>§147</strong> · conferma lingua</span>
+          <!-- Badge medium — tap-to-confirm blocking PRIMA di translate -->
+          <button class="lang-detect-badge medium" type="button" aria-label="Sorgente probabile: French — conferma o cambia prima di tradurre">
+            <span class="flag">🇫🇷</span><span>FR</span><span class="conf">0.67</span>
+          </button>
+        </div>
+        <div class="viewer-page" role="main">
+          <header class="viewer-header">
+            <div class="ch">⏸ Traduzione in pausa</div>
+            <div class="pn-big" style="font-size: 32px;">Conferma lingua</div>
+          </header>
+          <div style="padding: var(--s-4); text-align: center;">
+            <p style="font-family: var(--f-body); font-size: var(--fs-md); color: var(--text-sec); line-height: 1.55; margin: 0 0 var(--s-3);">
+              Non sono sicuro al 100% che la sorgente sia <strong style="color: hsl(var(--c-warning));">Francese</strong>. Tappa il badge sopra per confermare o cambiare prima di procedere.
+            </p>
+            <p style="font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); margin: 0;">
+              confidence 0.67 · soglia tap-to-confirm 0.5-0.8
+            </p>
+          </div>
+        </div>
+        <div class="telemetry-footer">
+          <span>source_method: ocr · BLOCKED</span>
+          <span>requires user confirm</span>
+        </div>
+      </div>
+
+      <!-- VARIANT 3 · Low confidence (<0.5) — cross-link a state-H source-lang-unknown -->
+      <div class="phone" role="region" aria-label="Mobile – lang-detection low confidence cross-link">
+        <span class="frame-label">Stato K.3 · confidence 0.31 (low · cross-link state-H)</span>
+        <div class="phone-sbar"><span>21:37</span><span>📶 🔋 77%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>§147</strong> · lingua sconosciuta</span>
+          <!-- Badge low — forza override, animazione pulse -->
+          <button class="lang-detect-badge low" type="button" aria-label="Lingua non riconosciuta — scegli manualmente"
+                  onclick="window.location.href='librogame-runthrough-error-states.html#state-H'" /* DEMO-NAV: cross-ref */>
+            <span class="flag">⚠️</span><span>?</span><span class="conf">0.31</span>
+          </button>
+        </div>
+        <div class="viewer-page" role="main">
+          <header class="viewer-header">
+            <div class="ch" style="color: hsl(var(--c-danger, 0 70% 50%));">⚠️ Lingua non riconosciuta</div>
+          </header>
+          <div style="padding: var(--s-4); text-align: center;">
+            <p style="font-family: var(--f-body); font-size: var(--fs-md); color: var(--text); line-height: 1.55; margin: 0 0 var(--s-3);">
+              Non riesco a determinare in che lingua è scritto il libro. Devi scegliere manualmente prima di procedere.
+            </p>
+            <p style="font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); margin: 0 0 var(--s-3);">
+              confidence 0.31 · trigger <code>source-lang-unknown</code>
+            </p>
+            <p style="font-family: var(--f-mono); font-size: var(--fs-xs); color: hsl(var(--c-kb));">
+              → Vedi <strong>state-H</strong> in <code>librogame-runthrough-error-states.html</code>
+            </p>
+          </div>
+        </div>
+        <div class="telemetry-footer">
+          <span>source_method: ocr · UNKNOWN</span>
+          <span>→ state-H cross-link</span>
+        </div>
+      </div>
+
+      <!-- Desktop · varianti badge in header -->
+      <div class="desktop" role="region" aria-label="Desktop – lang detection badge variants">
+        <span class="frame-label">Desktop · 1280px · 3 variants in toolbar</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234/translate?p=147&amp;source=auto</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>§147</strong> · post OCR · lingua sorgente</span>
+          <button class="lang-detect-badge high" type="button"><span class="flag">🇬🇧</span><span>EN</span><span class="conf">0.92</span></button>
+        </div>
+        <div style="flex: 1; padding: var(--s-7); display: flex; flex-direction: column; gap: var(--s-5);">
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--s-5);">
+            <div style="padding: var(--s-4); border: 1px dashed var(--border); border-radius: var(--r-md); text-align: center;">
+              <p style="font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); margin: 0 0 var(--s-2);">High (&gt;0.8) · informativo</p>
+              <button class="lang-detect-badge high" type="button"><span class="flag">🇬🇧</span><span>EN</span><span class="conf">0.92</span></button>
+              <p style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); margin: var(--s-2) 0 0;">no friction · auto-proceed</p>
+            </div>
+            <div style="padding: var(--s-4); border: 1px dashed var(--border); border-radius: var(--r-md); text-align: center;">
+              <p style="font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); margin: 0 0 var(--s-2);">Medium (0.5-0.8) · tap-to-confirm</p>
+              <button class="lang-detect-badge medium" type="button"><span class="flag">🇫🇷</span><span>FR</span><span class="conf">0.67</span></button>
+              <p style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); margin: var(--s-2) 0 0;">blocking · user confirm</p>
+            </div>
+            <div style="padding: var(--s-4); border: 1px dashed var(--border); border-radius: var(--r-md); text-align: center;">
+              <p style="font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); margin: 0 0 var(--s-2);">Low (&lt;0.5) · forza override</p>
+              <button class="lang-detect-badge low" type="button"><span class="flag">⚠️</span><span>?</span><span class="conf">0.31</span></button>
+              <p style="font-family: var(--f-mono); font-size: 10px; color: hsl(var(--c-kb)); margin: var(--s-2) 0 0;">→ state-H error-states.html</p>
+            </div>
+          </div>
+          <div style="padding: var(--s-3); background: var(--bg-muted); border-radius: var(--r-md); font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-sec);">
+            <strong>Lingue v1:</strong> 🇬🇧 EN (English) · 🇫🇷 FR (Français) · 🇩🇪 DE (Deutsch) · 🇪🇸 ES (Español) · 🇮🇹 IT (Italiano) — copertura ~95% libri-game europei. Target IT fisso (derivato da setting profilo). Multi-target out-of-scope v1.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO L · LANG OVERRIDE MODAL (5 lingue radio + CTA ritraduci)
+       Task 4 spec 1d — re-trigger AI translation, skip step 2 OCR (cache hit)
+       Pre-selected: lingua auto-detected dal badge K
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" aria-labelledby="sl">
+    <span class="label">Stato L · Lang Override Modal</span>
+    <h2 id="sl">Modal "Lingua sorgente del libro" — radio group 5 lingue v1</h2>
+    <p class="desc">Aaron tappa il badge K (qualunque variant). Modal con title "Lingua sorgente del libro" + radio group 5 lingue (🇬🇧 EN · 🇫🇷 FR · 🇩🇪 DE · 🇪🇸 ES · 🇮🇹 IT) + CTA primary "Conferma e ritraduci" + secondary "Annulla". Pre-selected: lingua auto-detected. Override behavior: <strong>OCR result preservato</strong> (cache hit, smoldocling key <code>(photo_hash, page)</code>); re-trigger solo step 3 AI translation della loading sequence (state-G).</p>
+
+    <div class="frames">
+      <!-- Mobile · modal con FR pre-selected (from badge K.2) -->
+      <div class="phone" role="region" aria-label="Mobile – lang override modal">
+        <span class="frame-label">Mobile · 375px · modal FR pre-selected</span>
+        <div class="phone-sbar"><span>21:36</span><span>📶 🔋 77%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>§147</strong> · scegli lingua</span>
+          <button class="lang-detect-badge medium" type="button"><span class="flag">🇫🇷</span><span>FR</span><span class="conf">0.67</span></button>
+        </div>
+        <div class="viewer-page" role="main" aria-hidden="true" style="opacity: 0.45;">
+          <header class="viewer-header">
+            <div class="ch">Capitolo 4</div>
+            <div class="pn-big">§147</div>
+          </header>
+        </div>
+        <!-- Modal backdrop + content -->
+        <div class="lang-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="lang-modal-title">
+          <div class="lang-modal">
+            <div class="lang-modal-head">
+              <h3 id="lang-modal-title">Lingua sorgente del libro</h3>
+              <p>5 lingue v1 supportate · target IT fisso</p>
+            </div>
+            <div class="lang-modal-body">
+              <ul class="lang-radio-list">
+                <li class="lang-radio-item" role="button" tabindex="0">
+                  <span class="flag">🇬🇧</span>
+                  <span class="l"><span class="v">English</span><span class="s">EN · uk · us</span></span>
+                  <span class="radio" aria-hidden="true"></span>
+                </li>
+                <li class="lang-radio-item selected" role="button" tabindex="0" aria-current="true">
+                  <span class="flag">🇫🇷</span>
+                  <span class="l"><span class="v">Français</span><span class="s">FR · fr · be · ca</span></span>
+                  <span class="auto-tag">Auto</span>
+                  <span class="radio" aria-hidden="true"></span>
+                </li>
+                <li class="lang-radio-item" role="button" tabindex="0">
+                  <span class="flag">🇩🇪</span>
+                  <span class="l"><span class="v">Deutsch</span><span class="s">DE · de · at · ch</span></span>
+                  <span class="radio" aria-hidden="true"></span>
+                </li>
+                <li class="lang-radio-item" role="button" tabindex="0">
+                  <span class="flag">🇪🇸</span>
+                  <span class="l"><span class="v">Español</span><span class="s">ES · es · mx · ar</span></span>
+                  <span class="radio" aria-hidden="true"></span>
+                </li>
+                <li class="lang-radio-item" role="button" tabindex="0">
+                  <span class="flag">🇮🇹</span>
+                  <span class="l"><span class="v">Italiano</span><span class="s">IT · it · ch · sm</span></span>
+                  <span class="radio" aria-hidden="true"></span>
+                </li>
+              </ul>
+            </div>
+            <div class="lang-modal-foot">
+              <button class="cta-primary" type="button" autofocus>Conferma e ritraduci</button>
+              <button class="cta-secondary" type="button">Annulla</button>
+              <p class="cache-hint">
+                <strong>✓ OCR preservato</strong> · re-translate solo step 3 (skip OCR cache hit)
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desktop · modal centrato + side info -->
+      <div class="desktop" role="region" aria-label="Desktop – lang override modal">
+        <span class="frame-label">Desktop · 1280px · modal + info pannello</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234/translate?p=147&amp;override-lang=open</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>§147</strong> · override lingua sorgente</span>
+          <button class="lang-detect-badge medium" type="button"><span class="flag">🇫🇷</span><span>FR</span><span class="conf">0.67</span></button>
+        </div>
+        <div style="flex: 1; position: relative; padding: var(--s-7);">
+          <!-- Faded viewer content sotto -->
+          <div style="opacity: 0.3; pointer-events: none;">
+            <div class="viewer-text">
+              <p>Mentre Niamh si avvicinava all'altare, l'aria si fece densa di sussurri.</p>
+            </div>
+          </div>
+          <!-- Modal centrato sopra -->
+          <div class="lang-modal-backdrop" style="position: absolute;">
+            <div class="lang-modal" style="max-width: 480px;">
+              <div class="lang-modal-head">
+                <h3>Lingua sorgente del libro</h3>
+                <p>5 lingue v1 · 🇬🇧 EN · 🇫🇷 FR · 🇩🇪 DE · 🇪🇸 ES · 🇮🇹 IT — target IT fisso</p>
+              </div>
+              <div class="lang-modal-body">
+                <ul class="lang-radio-list">
+                  <li class="lang-radio-item" role="button" tabindex="0"><span class="flag">🇬🇧</span><span class="l"><span class="v">English (EN)</span></span><span class="radio"></span></li>
+                  <li class="lang-radio-item selected" role="button" tabindex="0"><span class="flag">🇫🇷</span><span class="l"><span class="v">Français (FR)</span></span><span class="auto-tag">Auto</span><span class="radio"></span></li>
+                  <li class="lang-radio-item" role="button" tabindex="0"><span class="flag">🇩🇪</span><span class="l"><span class="v">Deutsch (DE)</span></span><span class="radio"></span></li>
+                  <li class="lang-radio-item" role="button" tabindex="0"><span class="flag">🇪🇸</span><span class="l"><span class="v">Español (ES)</span></span><span class="radio"></span></li>
+                  <li class="lang-radio-item" role="button" tabindex="0"><span class="flag">🇮🇹</span><span class="l"><span class="v">Italiano (IT)</span></span><span class="radio"></span></li>
+                </ul>
+              </div>
+              <div class="lang-modal-foot" style="flex-direction: row;">
+                <button class="cta-secondary" type="button" style="flex: 1;">Annulla</button>
+                <button class="cta-primary" type="button" style="flex: 2;">Conferma e ritraduci →</button>
+              </div>
+              <div style="padding: var(--s-2) var(--s-4) var(--s-3); border-top: 1px dashed var(--border); background: var(--bg);">
+                <p class="cache-hint" style="text-align: left;">
+                  <strong>✓ OCR result preservato</strong> (smoldocling cache key invariante)<br/>
+                  → re-trigger solo step 3 AI translation (vedi state-G loading 4-step Task 2)<br/>
+                  → cost: solo DeepSeek (~0,01 €), no smoldocling recompute
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO M · MANUAL INPUT MODE (textarea fallback, no foto)
+       Task 4 spec 1d — ?mode=manual query param
+       Triple-entry discoverability (3 punti di ingresso visualizzati)
+       Layout: header sticky + textarea (max 2000 char + counter) + book ref chip + CTA Traduci
+       Skip step 2 OCR, va a step 3 (AI translation) della loading sequence Task 2
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" aria-labelledby="sm">
+    <span class="label">Stato M · Manual Input Mode</span>
+    <h2 id="sm">Inserimento manuale — fallback senza foto (<code>?mode=manual</code>)</h2>
+    <p class="desc">Aaron non ha il libro a portata (es. Marco ce l'ha) o foto sfocata. Trigger via query param <code>?mode=manual</code> (UI-only, NO sub-route backend). Layout senza foto: header sticky + textarea multiline (max 2000 char + counter visibile) + lang dropdown pre-filled (last-used) + book ref chip pre-filled (current campaign book). CTA "Traduci" → skip step 2 OCR, va direttamente a step 3 (AI translation) della loading sequence Task 2 (state-G). Parity: stessi step 3-4; differenza = step 2 sostituito da textarea content come <code>source_text</code>. <code>source_method: "manual"</code> nello state.</p>
+
+    <h3 style="font-family: var(--f-display); font-size: var(--fs-lg); margin: var(--s-7) 0 var(--s-3); color: var(--text-sec);">Triple-entry discoverability (3 punti di ingresso)</h3>
+    <div class="triple-entry-diagram" role="figure" aria-label="3 punti di ingresso a manual-input-mode">
+      <div class="entry">
+        <span class="num">1</span>
+        <span class="where">CTA "Digita manualmente"</span>
+        <span class="file">in state-F <code>photo-blur-pre-ocr</code><br/>(librogame-runthrough-error-states.html sez 1a)</span>
+      </div>
+      <div class="entry">
+        <span class="num">2</span>
+        <span class="where">Kebab menu ⋮ del camera step</span>
+        <span class="file">in <code>sp6-libro-game-photo-upload.html</code><br/>(top-right + voce "Digita manualmente")</span>
+      </div>
+      <div class="entry">
+        <span class="num">3</span>
+        <span class="where">Empty state card</span>
+        <span class="file">card "Libro non a portata? Digita il paragrafo"<br/>(quando /translate aperto senza foto)</span>
+      </div>
+    </div>
+
+    <h3 style="font-family: var(--f-display); font-size: var(--fs-lg); margin: var(--s-7) 0 var(--s-3); color: var(--text-sec);">Layout manual-input-mode · phone + desktop</h3>
+    <div class="frames">
+
+      <!-- Mobile · manual-input-mode (state principale) -->
+      <div class="phone" role="region" aria-label="Mobile – manual input mode">
+        <span class="frame-label">Mobile · 375px · ?mode=manual · 247/2000 char</span>
+        <!-- Browser URL frame mostra il query param -->
+        <div style="padding: 4px var(--s-3); background: var(--bg-muted); font-family: var(--f-mono); font-size: 9px; color: var(--text-muted); border-bottom: 1px solid var(--border-light); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          🌐 /play/cmp-1234/translate<strong style="color: hsl(var(--c-agent));">?mode=manual</strong>
+        </div>
+        <div class="phone-sbar"><span>21:38</span><span>📶 🔋 76%</span></div>
+        <div class="manual-input-shell">
+          <!-- Header sticky -->
+          <div class="manual-input-head">
+            <div class="title-row">
+              <button class="back" aria-label="Indietro">←</button>
+              <h2>Inserimento manuale</h2>
+              <span class="badge-manual">Manual</span>
+            </div>
+            <div class="meta-row">
+              <!-- Lang dropdown pre-filled last-used -->
+              <button class="manual-lang-dropdown" type="button" aria-label="Lingua sorgente — cambia">
+                <span class="flag">🇬🇧</span><span>EN</span><span class="chevron">▾</span>
+              </button>
+              <!-- Book ref chip pre-filled -->
+              <span class="book-ref-chip" aria-label="Libro corrente — Runa di Ardenel">
+                <span class="lock">🔒</span>📕 Runa di Ardenel
+              </span>
+            </div>
+          </div>
+
+          <!-- Body: textarea + counter + hint -->
+          <div class="manual-input-body">
+            <div class="manual-textarea-shell">
+              <textarea class="manual-textarea" placeholder="Incolla o digita il paragrafo del libro…&#10;&#10;Es: «As Niamh approached the altar, the air grew thick with whispers…»" aria-label="Testo paragrafo da tradurre" maxlength="2000">As Niamh approached the altar, the air grew thick with whispers. The Goblin guards drew their blades, eyes gleaming with bloodlust, while the Voidstone pulsed with sickly light upon the dais.</textarea>
+              <!-- Counter visibile bottom-right -->
+              <span class="manual-char-counter" aria-live="polite" aria-label="247 caratteri su 2000 massimi">
+                247 <span class="max">/ 2000</span>
+              </span>
+            </div>
+            <div class="manual-hint">
+              <strong>💡 Suggerimento:</strong> Incolla esattamente il paragrafo dal libro. Salta step 2 OCR e va direttamente alla traduzione. Glossario applicato in step 4.
+            </div>
+          </div>
+
+          <!-- Footer sticky con CTA -->
+          <div class="manual-input-foot">
+            <button class="manual-cta-primary" type="button" aria-label="Traduci il testo manuale">
+              <span>Traduci</span><span class="arrow">→</span>
+            </button>
+            <p class="manual-flow-note">
+              <strong>→ step 3 streaming</strong> (skip OCR) · ~10s · 💰 ~0,01 €
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile · counter warning state (over limit) -->
+      <div class="phone" role="region" aria-label="Mobile – manual input warning over-limit">
+        <span class="frame-label">Mobile · 375px · 1856/2000 (warn) e disabled state</span>
+        <div style="padding: 4px var(--s-3); background: var(--bg-muted); font-family: var(--f-mono); font-size: 9px; color: var(--text-muted); border-bottom: 1px solid var(--border-light); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          🌐 /play/cmp-1234/translate<strong style="color: hsl(var(--c-agent));">?mode=manual</strong>
+        </div>
+        <div class="phone-sbar"><span>21:38</span><span>📶 🔋 76%</span></div>
+        <div class="manual-input-shell">
+          <div class="manual-input-head">
+            <div class="title-row">
+              <button class="back" aria-label="Indietro">←</button>
+              <h2>Inserimento manuale</h2>
+              <span class="badge-manual">Manual</span>
+            </div>
+            <div class="meta-row">
+              <button class="manual-lang-dropdown" type="button"><span class="flag">🇩🇪</span><span>DE</span><span class="chevron">▾</span></button>
+              <span class="book-ref-chip"><span class="lock">🔒</span>📕 Runa di Ardenel</span>
+            </div>
+          </div>
+          <div class="manual-input-body">
+            <div class="manual-textarea-shell">
+              <textarea class="manual-textarea" maxlength="2000" placeholder="Incolla o digita il paragrafo…">Als Niamh sich dem Altar näherte, wurde die Luft dicht von Geflüster. Die Goblin-Wachen zogen ihre Klingen, die Augen funkelten vor Blutlust, während der Leerenstein mit krankem Licht auf dem Podest pulsierte. Niamh umklammerte den Schwertgriff fester und fühlte das Echo alter Eide im Stahl schwingen. Sie hatte zwei Möglichkeiten zur Wahl... [paragrafo lungo continua per altre 1400+ caratteri inclusi dettagli combattimento, descrizioni ambientali, e dialogo del capitano Goblin che minaccia la compagnia di avventurieri]</textarea>
+              <span class="manual-char-counter warn" aria-live="polite">
+                1856 <span class="max">/ 2000</span>
+              </span>
+            </div>
+            <div class="manual-hint" style="background: hsl(var(--c-warning) / 0.08); border-color: hsl(var(--c-warning) / 0.3);">
+              <strong style="color: hsl(var(--c-warning));">⚠️ Quasi al limite:</strong> 144 caratteri rimanenti. Paragrafi più lunghi vanno divisi in due richieste.
+            </div>
+          </div>
+          <div class="manual-input-foot">
+            <button class="manual-cta-primary" type="button">
+              <span>Traduci 1856 caratteri</span><span class="arrow">→</span>
+            </button>
+            <p class="manual-flow-note">paragrafo lungo · ~12s stimati</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desktop · manual-input-mode full layout -->
+      <div class="desktop" role="region" aria-label="Desktop – manual input mode">
+        <span class="frame-label">Desktop · 1280px · ?mode=manual · layout esteso</span>
+        <div class="titlebar">
+          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+          <span class="url">meepleai.app/library/librogame/play/cmp-1234/translate<strong style="color: hsl(var(--c-agent));">?mode=manual</strong></span>
+        </div>
+        <div class="manual-input-shell" style="flex-direction: column;">
+          <div class="manual-input-head" style="padding: var(--s-5) var(--s-7) var(--s-4);">
+            <div class="title-row">
+              <button class="back" aria-label="Indietro">←</button>
+              <h2 style="font-size: var(--fs-xl);">Inserimento manuale</h2>
+              <span class="badge-manual">Manual · skip OCR</span>
+            </div>
+            <div class="meta-row">
+              <button class="manual-lang-dropdown" type="button" aria-label="Lingua sorgente — 5 lingue v1: EN · FR · DE · ES · IT">
+                <span class="flag">🇬🇧</span><span>English (EN)</span><span class="chevron">▾</span>
+              </button>
+              <span class="book-ref-chip"><span class="lock">🔒</span>📕 Runa di Ardenel · Sera con i ragazzi</span>
+              <span style="margin-left: auto; font-family: var(--f-mono); font-size: 10px; color: var(--text-muted);">
+                Target lingua: <strong style="color: hsl(var(--c-game));">🇮🇹 IT</strong> (da profilo · v1 fixed)
+              </span>
+            </div>
+          </div>
+          <div class="manual-input-body" style="padding: var(--s-7); flex-direction: row; gap: var(--s-7);">
+            <!-- Col sinistra: textarea + counter -->
+            <div style="flex: 2;">
+              <div class="manual-textarea-shell" style="min-height: 280px;">
+                <textarea class="manual-textarea" maxlength="2000" style="min-height: 280px; font-size: 17px;" placeholder="Incolla o digita il paragrafo dal libro…">As Niamh approached the altar, the air grew thick with whispers. The Goblin guards drew their blades, eyes gleaming with bloodlust, while the Voidstone pulsed with sickly light upon the dais.
+
+"Turn back, mortals" hissed the captain. "This place is not for you."
+
+Niamh tightened her grip on the sword's hilt, feeling the echo of ancient oaths thrumming in the steel. She had two choices.</textarea>
+                <span class="manual-char-counter" aria-live="polite">412 <span class="max">/ 2000</span></span>
+              </div>
+            </div>
+            <!-- Col destra: hints + flow note -->
+            <div style="flex: 1; display: flex; flex-direction: column; gap: var(--s-3);">
+              <div class="manual-hint">
+                <strong>💡 Quando usare:</strong>
+                <ul style="margin: var(--s-2) 0 0; padding-left: var(--s-4); font-size: 11px; line-height: 1.5;">
+                  <li>Libro non a portata di mano</li>
+                  <li>Foto sfocata o luce bassa (state-F)</li>
+                  <li>Vuoi correggere errori OCR</li>
+                </ul>
+              </div>
+              <div class="manual-hint" style="background: hsl(var(--c-success) / 0.06); border-color: hsl(var(--c-success) / 0.3);">
+                <strong style="color: hsl(var(--c-success));">✓ Parity flow:</strong>
+                <p style="margin: var(--s-1) 0 0; font-size: 11px; line-height: 1.5;">Step 3 (AI translate) + step 4 (glossario) identici alla loading sequence Task 2. Solo step 2 OCR sostituito da textarea content.</p>
+              </div>
+              <div class="manual-hint" style="background: var(--bg-card); border-color: var(--border); border-style: solid;">
+                <strong>🧾 Cost:</strong>
+                <p style="margin: var(--s-1) 0 0; font-size: 11px; font-family: var(--f-mono);">~0,01 € (DeepSeek)<br/>Latency: ~10s (skip OCR ~5s)</p>
+              </div>
+            </div>
+          </div>
+          <div class="manual-input-foot" style="padding: var(--s-4) var(--s-7) var(--s-5); flex-direction: row; align-items: center; gap: var(--s-4);">
+            <p class="manual-flow-note" style="text-align: left; flex: 1; margin: 0;">
+              <strong>→ step 3 streaming</strong> (skip OCR cache hit) · source_method: <code>manual</code> · source_lang: <code>en</code>
+            </p>
+            <button class="manual-cta-primary" type="button" style="min-width: 220px;">
+              <span>Traduci</span><span class="arrow">→</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile · empty state card (terzo punto triple-entry) -->
+      <div class="phone" role="region" aria-label="Mobile – empty state /translate senza foto">
+        <span class="frame-label">Stato M.3 · empty state (entry-point 3 di 3)</span>
+        <div style="padding: 4px var(--s-3); background: var(--bg-muted); font-family: var(--f-mono); font-size: 9px; color: var(--text-muted); border-bottom: 1px solid var(--border-light); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          🌐 /play/cmp-1234/translate <em>(no foto)</em>
+        </div>
+        <div class="phone-sbar"><span>21:34</span><span>📶 🔋 78%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Sera con i ragazzi</strong> · §147</span>
+        </div>
+        <!-- Empty state principale: camera CTA + manual entry card -->
+        <div style="flex: 1; padding: var(--s-4); display: flex; flex-direction: column; gap: var(--s-3);">
+          <div style="text-align: center; padding: var(--s-5) var(--s-3);">
+            <div style="font-size: 56px; opacity: 0.4; margin-bottom: var(--s-2);">📷</div>
+            <h3 style="font-family: var(--f-display); font-size: var(--fs-lg); font-weight: var(--fw-bold); margin: 0 0 var(--s-2);">Fotografa il paragrafo</h3>
+            <p style="color: var(--text-sec); margin: 0 0 var(--s-4); font-size: var(--fs-sm);">Inquadra il numero del paragrafo (es. §147) e il testo. OCR + traduzione automatica.</p>
+            <button class="btn-sm-fill" style="padding: var(--s-3) var(--s-5);">📷 Apri fotocamera</button>
+          </div>
+          <!-- Manual entry card (terzo punto triple-entry) -->
+          <div class="manual-empty-card" role="button" tabindex="0"
+               aria-label="Libro non a portata? Digita il paragrafo manualmente"
+               onclick="window.location.href='librogame-runthrough-translate-viewer.html?mode=manual'" /* DEMO-NAV: triple-entry #3 */>
+            <span class="icon">⌨️</span>
+            <div class="l">
+              <span class="v">Libro non a portata?</span>
+              <span class="s">Digita manualmente il paragrafo · skip foto</span>
+            </div>
+            <span class="arrow">›</span>
+          </div>
+          <p style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); text-align: center; margin: 0;">
+            Entry-point 3 di 3 · vedi anche state-F error-states + kebab ⋮ camera step
+          </p>
         </div>
       </div>
     </div>

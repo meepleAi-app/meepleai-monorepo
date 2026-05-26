@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * ActionLogTimeline — Wave D.2 Foundation sub-PR (Issue #746).
  *
@@ -89,7 +88,7 @@ export function ActionLogTimeline({
 }: ActionLogTimelineProps): ReactElement {
   return (
     <div data-slot="action-log-timeline" className="flex flex-col gap-2">
-      {!compact && <h3 className="text-sm font-semibold text-slate-200">{labels.title}</h3>}
+      {!compact && <h3 className="text-sm font-semibold text-foreground">{labels.title}</h3>}
 
       {entries.length === 0 ? (
         <p className="text-xs text-muted-foreground">{labels.emptyLabel}</p>
@@ -110,7 +109,7 @@ export function ActionLogTimeline({
 
               {/* Content */}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-xs text-slate-200">{entry.content}</p>
+                <p className="truncate text-xs text-foreground">{entry.content}</p>
                 <p className="text-xs text-muted-foreground">{entry.authorName}</p>
               </div>
 

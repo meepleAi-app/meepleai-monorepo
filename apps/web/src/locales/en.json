@@ -1924,6 +1924,32 @@
         "emptyBody": "The community has not published any toolkits yet."
       }
     },
+    "toolkitsHub": {
+      "eyebrow": "Hub · /toolkits",
+      "heroStats": {
+        "toolkits": "Toolkits",
+        "installs": "Installs",
+        "featured": "Featured",
+        "totalTools": "Total tools"
+      },
+      "searchClearAriaLabel": "Clear search",
+      "statusTablistAriaLabel": "Filter toolkits by status",
+      "sortLabel": "Sort",
+      "sortOptions": {
+        "popular": "Popularity",
+        "rating": "Rating",
+        "title": "Title A-Z",
+        "uses": "Uses"
+      },
+      "countTemplate": "{count} toolkits",
+      "gameRefFallback": "Universal (multi-game)",
+      "installAriaLabel": "Install {title}",
+      "toolsLabel": "Tools:",
+      "usesLabel": "Uses:",
+      "resetFilters": "Reset filters",
+      "resetFiltersAriaLabel": "Reset all search filters",
+      "retryAriaLabel": "Retry loading the catalog"
+    },
     "dashboard": {
       "hero": {
         "guestName": "friend",

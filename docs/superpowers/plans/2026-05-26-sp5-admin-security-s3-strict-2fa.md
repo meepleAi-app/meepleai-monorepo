@@ -202,18 +202,19 @@
 
 ## Task 7: Wire format spec `docs/api/2fa-step-up-protocol.md`
 
-- [ ] **Step 1: Documenta endpoint contract**
+> **DONE** — documents the REAL implementation (Option A), not the contract this plan hypothesized
+> (Option B). The divergence (Flow B uses `two_factor_failed`/`two_factor_locked_out` 429 instead of
+> `two_factor_required`+subcode; no 503) is tracked in doc §7–8 as an open decision for T8.
+> spec-panel critique applied: Wiegers (per-command MaxAge table), Newman/Nygard (replay-guard +
+> 5xx FE rule), Adzic (curl example).
 
-  - Request: `POST /api/v1/auth/2fa/step-up { code: string }`
-  - Response 200: `SessionStatusResponse` (riusa shape S2) con `lastTotpVerifiedAt` rinfrescato
-  - Response 401: `{ error: "two_factor_required", subcode: "invalid_code" | "locked_out" }`
-  - Response 503: `{ error: "two_factor_unavailable" }`
+- [x] **Step 1: Endpoint contract** — request `{ code }`; 200 `{ success, lastTotpVerifiedAt }` (minimal, not full SessionStatusResponse); 401 `two_factor_failed`; 429 `two_factor_locked_out`. Divergence from the hypothesized contract noted in doc §8.
 
-- [ ] **Step 2: Documenta `subcode` semantics** — quando il FE deve mostrare modale step-up vs redirect-to-login vs enroll prompt.
+- [x] **Step 2: `subcode` semantics** — Flow A (enforcement) `step_up_required` / `enroll_required` / `locked_out` → FE-action table; `WWW-Authenticate: TOTP-StepUp` header distinguishes the 2FA-block 401 from a session-expired 401.
 
-- [ ] **Step 3: Cross-link** dal commit message e dalla PR description per FE handoff.
+- [x] **Step 3: Cross-link** — doc footer references the plan + audit (D-S3-2/4/4b/5); commit message links the doc.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ---
 

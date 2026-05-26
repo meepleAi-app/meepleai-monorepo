@@ -223,15 +223,26 @@
 
 ## Task 8: 8 acceptance scenarios — gate DoD
 
-> Mirror S2 T8.
+> **DONE — 8/8 PASS** (`S3AcceptanceScenariosTests.cs`, Integration-GroupD, ~3m22s).
+> All scenarios exercise the REAL pipeline (Testcontainers Postgres + WebApplicationFactory + real
+> HTTP + real `TotpService` + Redis-counter simulation), never building `SessionStatusDto` by hand
+> (lesson S2). Endpoints exercised: `POST /admin/impersonation/start` (MaxAge=5),
+> `DELETE /admin/users/{id}` (default MaxAge=30), `POST /auth/2fa/step-up`,
+> `GET /auth/me` (regression). TOTP codes minted with `OtpNet` against the encrypted secret returned
+> by `TotpService.GenerateSetupAsync`.
 
-- [ ] **Step 1-8**: implementa S3-1, S3-2, S3-3, S3-4, S3-5, S3-6, S3-7, S3-8 in `S3AcceptanceScenariosTests.cs`.
+- [x] **S3-1 happy path** — fresh TOTP + strict ON → 201 on `/impersonation/start`.
+- [x] **S3-2 stale → step_up_required** — 1h-stale → 401 `two_factor_required`/`step_up_required` + `WWW-Authenticate` header.
+- [x] **S3-3 not enrolled → enroll_required** — superadmin without 2FA → 401 `enroll_required`.
+- [x] **S3-4 step-up + retry loop** — blocked → POST `/auth/2fa/step-up` with valid OtpNet-minted code → 200 refreshes `LastTotpVerifiedAt` (verified directly on the row) → retry → 201.
+- [x] **S3-5 5 fails → lockout** — Redis counter mocked with `ConcurrentDictionary` (pattern from `TwoFactorSecurityPenetrationTests`); 5×`invalid_code` then 6th → 401 `locked_out` + `retryAfterSeconds=900`.
+- [x] **S3-6 impersonation context** — alice → bob; impersonate session inherits alice's recency at start; setting that to -10min keeps `DeleteUser` (MaxAge=30) green ⇒ the gate reads the EffectiveActor's recency, not the subject's.
+- [x] **S3-7 non-decorated regression guard** — `GET /auth/me` in strict mode → 200 (no enforcement on commands missing `[RequireTwoFactor]`).
+- [x] **S3-8 per-command MaxAge** — same 10min recency: stricter `ImpersonationStart` MaxAge=5 → 401 `step_up_required`; lenient `DeleteUser` MaxAge=30 → 204.
 
-  **CRITICAL** (lezione S2): tutti gli scenari DEVONO esercitare la pipeline reale via `ValidateSessionQueryHandler` + `TwoFactorEnforcementBehavior`, NON costruire `SessionStatusDto` manualmente. Vedi [[feedback_acceptance_tests_must_exercise_real_pipeline]].
+- [x] **Step 9: Run all 8 — 8/8 PASS gate** — verified in iter 6 (3m22s).
 
-- [ ] **Step 9: Run all 8 — 8/8 PASS gate**
-
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ---
 

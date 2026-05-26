@@ -37,11 +37,8 @@ export type {
 } from '@/components/features/library/LibraryHybridGrid';
 
 export { LibraryTabs } from '@/components/features/library/LibraryTabs';
-export type {
-  LibraryEntityKey,
-  LibraryTabConfig,
-  LibraryTabsProps,
-} from '@/components/features/library/LibraryTabs';
+export type { LibraryTabConfig, LibraryTabsProps } from '@/components/features/library/LibraryTabs';
+export type { LibraryEntityKey } from '@/lib/library/library-filters';
 
 export { RecentActivityRail } from '@/components/features/library/RecentActivityRail';
 export type {

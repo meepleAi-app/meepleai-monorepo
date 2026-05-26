@@ -29,8 +29,9 @@ import { useMemo, type ReactElement } from 'react';
 import clsx from 'clsx';
 
 import { useTablistKeyboardNav } from '@/hooks/useTablistKeyboardNav';
+import type { LibraryEntityKey } from '@/lib/library/library-filters';
 
-export type LibraryEntityKey = 'all' | 'kb' | 'loaned';
+export type { LibraryEntityKey };
 
 export interface LibraryTabConfig {
   readonly key: LibraryEntityKey;
@@ -93,9 +94,7 @@ export function LibraryTabs({ tabs, active, onChange, className }: LibraryTabsPr
               data-slot="library-tab-count"
               className={clsx(
                 'inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1.5 text-xs tabular-nums',
-                isActive
-                  ? 'bg-primary/10 text-entity-game-text'
-                  : 'bg-muted text-muted-foreground'
+                isActive ? 'bg-primary/10 text-entity-game-text' : 'bg-muted text-muted-foreground'
               )}
             >
               {tab.count}

@@ -180,6 +180,17 @@ These limitations account for **most of the residual 33 eligible findings** (16 
   - `root_cause`: Phase A shipped 2026-05 under original scope; Aaron CORE refinement spec landed 2026-05-23; Phase A.1 impl plan never opened
   - `verdict`: ⚠️ NOT production-ready against current mockup; production-ready against original Phase A scope only. Not a regression (shipped code internally correct); mockup advanced beyond implementation.
 
+### Route `/agents`
+
+- **[AUDIT 2026-05-26 #1522 PR #1568]** Conformity check applied to 4 shipped components (`AgentsHero`, `AgentFilters`, `AgentsResultsGrid`, `EmptyAgents`) + `AgentsLibraryView` orchestrator (5-state FSM) shipped Wave B.2 PR #634/#637. Drift ratio **0/17 = 0%** — ties libro-detail #1486 for best alignment.
+  - `audit_pr`: `#1568`
+  - `gap_report`: `admin-mockups/design_handoff/agents-index-gap-report.md`
+  - `findings`: 17/17 mockup sections matched; 29/29 i18n keys present in en+it (verified live — no #1485-C1-class raw-key-path bug); `AgentsResultsGrid` uses `<Link>` (no #1480-class keyboard-nav gap); `/hub/agents` is a distinct community surface (`PopularAgent`), NOT a duplication
+  - `p79`: issue premise ("replace page.tsx with mockup structure") was a misreading — `/agents` was ALREADY single-view mockup-wired (opposite of #1521 where /games was genuinely multi-tab)
+  - `follow_ups`: 1 issue (jest-axe automated coverage, P4 — a11y manually verified correct)
+  - `verdict`: ✅ production-ready, 0% drift, no routing change needed
+  - `routing_trio`: #1480 implement /toolkits · #1521 redirect /games→/library · #1522 already-done /agents — three siblings, three correct resolutions driven by P72/P97 code-state verification
+
 ### Route `/players`
 
 - **[CRITICAL]** `EmptyPlayers.tsx, PlayersFiltersInline.tsx, PlayersHero.tsx, PlayersResultsGrid.tsx` (nav): Missing Link to /player/[id] (mockup: sp4-player-detail.html)

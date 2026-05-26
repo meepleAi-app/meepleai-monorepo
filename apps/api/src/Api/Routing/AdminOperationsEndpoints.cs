@@ -122,10 +122,10 @@ internal static class AdminOperationsEndpoints
             var (authorized, session, error) = context.RequireSuperAdminSession();
             if (!authorized) return error!;
 
-            var command = new ImpersonateUserCommand(
+            var command = new ImpersonationStartCommand(
                 TargetUserId: request.TargetUserId,
-                AdminUserId: session!.Principal!.Subject.Id,
-                Reason: "Operations panel impersonation"
+                RequestingUserId: session!.Principal!.Subject.Id,
+                Reason: "Operations panel impersonation request"
             );
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -136,7 +136,7 @@ internal static class AdminOperationsEndpoints
             ConfirmationLevel.Level2,
             "Impersonate User",
             "You will gain full access to this user's account. All actions will be audited."))
-        .Produces<ImpersonateUserResponseDto>(StatusCodes.Status200OK)
+        .Produces<ImpersonationStartResponseDto>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status403Forbidden)
         .Produces(StatusCodes.Status404NotFound)

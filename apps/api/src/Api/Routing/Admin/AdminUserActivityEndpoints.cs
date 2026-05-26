@@ -234,7 +234,7 @@ internal static class AdminUserActivityEndpoints
 **Use Case**: Debug user-specific issues, test permissions
 
 **Issue**: #2890 - User Detail Modal/Page")
-            .Produces<ImpersonateUserResponseDto>(StatusCodes.Status200OK)
+            .Produces<ImpersonationStartResponseDto>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status404NotFound);
@@ -636,10 +636,10 @@ internal static class AdminUserActivityEndpoints
 
         try
         {
-            var command = new ImpersonateUserCommand(
-                userId,
-                session.Principal!.EffectiveActor.Id,
-                request.Reason.Trim());
+            var command = new ImpersonationStartCommand(
+                TargetUserId: userId,
+                RequestingUserId: session.Principal!.EffectiveActor.Id,
+                Reason: request.Reason.Trim());
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 

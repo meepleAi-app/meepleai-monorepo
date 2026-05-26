@@ -69,6 +69,13 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to deserialize manifest at {Path}", manifestPath);
+            // SECURITY (test-guarded): expose only the exception TYPE in the returned
+            // payload. JsonException.Message includes "Path: $.<property> | LineNumber:
+            // N | BytePositionInLine: N" — leaking the manifest schema and file layout
+            // to admin API callers and log shipping pipelines. The full message + stack
+            // trace are preserved server-side by LogError above. The unit test
+            // ImportRagDataCommandHandlerTests.Handle_WhenManifestDeserializationFails_ShouldNotIncludeRawExceptionMessageInError
+            // enforces this contract.
             return new ImportRagDataResult(
                 TotalDocuments: 0,
                 Imported: 0,
@@ -76,7 +83,7 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
                 Failed: 0,
                 ReEmbedded: 0,
                 Warnings: warnings,
-                Errors: [$"Failed to deserialize manifest: {ex.Message}"]);
+                Errors: [$"Failed to deserialize manifest ({ex.GetType().Name})"]);
         }
 
         _logger.LogInformation(
@@ -277,7 +284,13 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                errors.Add($"Error importing document {entry.PdfDocumentId}: {ex.Message}");
+                // SECURITY (test-guarded): never embed ex.Message in the per-document
+                // error. EF Core / storage exceptions routinely carry SQL fragments,
+                // parameter values, and backend-internal details (bucket names, request
+                // IDs, etc.). Surface only the exception type; full diagnostic detail
+                // is preserved by the LogWarning below. Enforced by
+                // ImportRagDataCommandHandlerTests.Handle_WhenStorageReadDuringImportThrows_ShouldNotIncludeRawExceptionMessageInError.
+                errors.Add($"Error importing document {entry.PdfDocumentId} ({ex.GetType().Name})");
                 failed++;
                 _logger.LogWarning(ex, "ImportRagData: failed to import document {PdfDocumentId}", entry.PdfDocumentId);
                 // Clear any partially-tracked entities so they do not corrupt the next iteration.

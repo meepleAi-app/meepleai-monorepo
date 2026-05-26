@@ -233,6 +233,8 @@
 
 > Mirror S2 T9.
 
+> **Issue linking (deciso 2026-05-26):** nessuna issue dedicata — pattern S2 (PR #1555 `closingIssuesReferences: []`). La PR NON usa `Closes #N`; il body cita questo piano three-amigos + l'origine concettuale #186 (Q2 Security Review, voce P1.1 — CLOSED) come contesto, e menziona le correlate **#1533** (2FA BackupCodes wipe on role/suspend), **#1534**/**#1535** (audit tech-debt) per verifica d'interazione.
+
 - [ ] **Step 1**: per ognuno dei 10 criteri DoD, esegui verifica + annota evidenza
 - [ ] **Step 2**: compila DoD log in `audits/2026-05-26-s3-three-amigos-kickoff.md` (sezione "DoD verification log")
 - [ ] **Step 3**: commit DoD log

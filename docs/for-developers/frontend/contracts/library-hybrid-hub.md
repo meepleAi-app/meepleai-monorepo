@@ -84,6 +84,36 @@ type HybridHubItem = GameHubItem | AgentHubItem | KbHubItem | SessionHubItem | C
 - `sessionToHubItem(s: GameSessionDto): SessionHubItem`
 - `chatToHubItem(c: ChatSession): ChatHubItem`
 
+### `LibraryEntityKey`: single SSOT + axis change (NOT an additive 3→6)
+
+**SSOT** — today `LibraryEntityKey` is declared **twice** (two independent
+`export type`, same literal): in `lib/library/library-filters.ts` (next to
+`filterByEntity`) and in `components/features/library/LibraryTabs.tsx` (re-exported
+by the barrel `index.ts`, which is where `LibraryHub` imports it). Two distinct
+types that *coincidentally* share a value → expanding one and not the other drifts
+silently (TS can't catch it, they are not the same type). **Resolution**: the
+domain module `lib/library/library-filters.ts` is the single SSOT; `LibraryTabs.tsx`
+**drops** its own `export type` and imports it. The domain defines the entity
+categories; the UI consumes them.
+
+**Axis change** — the current 3 keys are *filters over games* (one entity kind,
+three filters; all operate on `UserLibraryEntry[]`), not entity types. The 6 keys
+are *entity types*. So "3→6" is a change of categorization **axis**, and two keys
+change meaning under the same name:
+
+| Key | Before (filter-over-games) | After (entity-type tab) |
+|---|---|---|
+| `all` | all library games | merged set of all entities |
+| `kb` | games *with* a PDF (`isKbEntry`) | KB documents (`KbHubItem`) — **re-semanticized** |
+| `loaned` | games on loan (`InPrestito`) | **removed as a tab** → becomes a STATO filter inside `games` |
+| `games`/`agents`/`sessions`/`chat` | — | new entity-type tabs |
+
+**`filterByEntity` splits in two**: (a) `deriveHybridItems` filters the union by
+`item.entity` (new); (b) the game-state filters (ex-`loaned`, ex-`with-KB`) survive
+as chips inside the `games` tab (`CrossEntityFilters` STATO chip), **reusing** the
+existing `isKbEntry` + `currentState === 'InPrestito'` logic — nothing is thrown
+away, the state filters just move from tabs to chips.
+
 ## §4. Hook composition matrix
 
 ### Reuse vs greenfield (all verified via discovery 2026-05-26)
@@ -115,14 +145,25 @@ LibraryHub
 ```
 6 parallel queries (TanStack dedupes/caches). No aggregated BE endpoint in v1 (Q2).
 
+**Unwrap**: paginated sources (`useLibrary` → `PaginatedLibraryResponse`,
+`useActiveSessions` → `PaginatedSessionsResponse`) are unwrapped to `.items` by the
+mappers/orchestration before merge; array sources (`useAgents`,
+`useRecentChatSessions`) pass through directly.
+
+**Merge cardinality (v1)**: the 5 sources have heterogeneous cardinality
+(paginated / fixed `limit` / all). In the `all` tab each source contributes at
+most ~20 items, merged by recency — `all` is a cross-entity **dashboard**. Full
+pagination/scroll lives in the single-entity tabs (the **complete** view). No
+client-side global pagination (it would require the Q2 aggregated endpoint).
+
 ## §5. Component specs (brief)
 
 | Component | Change | Notes |
 |---|---|---|
 | `LibraryTabs` | adapt prop `LibraryEntityKey` 3→6; sliding indicator already a11y-wired | counts per entity from merged list |
-| `LibraryHybridGrid` | accept `HybridHubItem[]` (was `UserLibraryEntry[]`); render `MeepleCard entity={item.entity}` | grid/list/compact preserved |
+| `LibraryHybridGrid` | accept `HybridHubItem[]` (was `UserLibraryEntry[]`); render `MeepleCard entity={item.entity}` | grid/list/compact preserved; **`selectionMode='select'` is game-scoped** — `LibraryHub` forces `browse` when `tab !== 'games'` |
 | `LibraryHeroDesktop` | add badge pill + subtitle + 4 stat chips (games/agents/docs/chats) + Importa BGG + Esporta buttons | stats from merged counts |
-| `CrossEntityFilters` | **greenfield**: chip-dropdown row (STATO/STATS/ORD + "Più filtri N") | between tabs + toolbar |
+| `CrossEntityFilters` | **greenfield**: chip-dropdown row (STATO/STATS/ORD + "Più filtri N") | between tabs + toolbar; in `games` the STATO chip carries the ex-`loaned`/ex-`kb` state filters (`Owned/Wishlist/InPrestito` + `isKbEntry`) |
 | `AdvancedFiltersDrawer` | **greenfield, standalone reusable**: `{open,onClose,sections[],activeFilters,onApply,entityScope}` | reusable for /games, /agents future |
 | `RecentActivityRail` | populate cross-entity (Q3) + Shortcuts section | currently library-only activity |
 
@@ -134,13 +175,16 @@ LibraryHub
    greenfield `useUserKbDocs` + BE cross-game query. ⛔ blocks the `kb` tab.
 2. **Aggregated endpoint** — client-side 6-query fan-out (zero BE, 6 round-trips,
    TanStack-cached) vs new `GET /library/hub` (1 payload, BE CQRS work). v1 =
-   client-side; measure, add endpoint only if perf demands.
+   client-side with per-source cap (~20) in `all` + full pagination in the single
+   tabs (see §4 merge cardinality); measure, add the endpoint only if perf demands
+   or global cross-entity pagination becomes a requirement.
 3. **Activity feed scope** — `useLibraryActivity` emits library events only
    (added/state-changed/removed/session-recorded). Cross-entity timeline (agent
    created, chat started) needs BE `domain_event_logs` projection extension, or
    keep library-scoped for v1?
-4. **CrossEntityFilters facets** — which dimensions per entity? Games have
-   state/rating/players; agents have type/active; sessions have status. A shared
+4. **CrossEntityFilters facets** — which dimensions per entity? Games have state
+   (`Owned/Wishlist/InPrestito` + `with-KB`, inherited from the ex-`loaned`/`kb`
+   tabs)/rating/players; agents have type/active; sessions have status. A shared
    facet set vs entity-conditional facets (drives `AdvancedFiltersDrawer` sections).
 5. **RBAC / visibility** — any entity-type the user shouldn't see in their own
    hub? (Assumed no — all owned by the user — but confirm for shared/loaned games.)
@@ -169,3 +213,5 @@ drawer chunk ≤ +60KB loaded on demand.
 - AC6 — 5-state FSM (default/loading/empty/filtered-empty/error) preserved.
 - AC7 — i18n it+en for all new copy; jest-axe clean per state.
 - AC8 — no regression to `/library/wishlist` or MiniNav shell config.
+- AC9 — bulk-selection (archive) available only in the `games` tab; all other tabs
+  (incl. `all`) are always `browse` (no `BulkSelectionBar` mounted).

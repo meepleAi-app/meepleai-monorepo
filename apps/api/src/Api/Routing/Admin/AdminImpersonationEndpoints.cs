@@ -34,7 +34,7 @@ internal static class AdminImpersonationEndpoints
 
             var command = new ImpersonationStartCommand(
                 TargetUserId: request.TargetUserId,
-                RequestingUserId: session!.Principal!.Subject.Id,
+                RequestingUserId: session!.Principal!.EffectiveActor.Id,
                 Reason: request.Reason,
                 DurationMinutes: request.DurationMinutes ?? 15);
 
@@ -61,7 +61,7 @@ internal static class AdminImpersonationEndpoints
 
             var command = new ImpersonationEndCommand(
                 SessionId: request.SessionId,
-                RequestingUserId: session!.Principal!.Subject.Id);
+                RequestingUserId: session!.Principal!.EffectiveActor.Id);
 
             var success = await mediator.Send(command, ct).ConfigureAwait(false);
             return success
@@ -86,7 +86,7 @@ internal static class AdminImpersonationEndpoints
 
             var command = new RevokeImpersonationCommand(
                 SessionId: request.SessionId,
-                RequestingUserId: session!.Principal!.Subject.Id);
+                RequestingUserId: session!.Principal!.EffectiveActor.Id);
 
             var success = await mediator.Send(command, ct).ConfigureAwait(false);
             return success

@@ -99,10 +99,24 @@ internal class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery,
 
         var subjectDto = MapToUserDto(user);
 
-        // SP5 Admin Security S2 T1: Actor remains null in this commit (regular login behavior).
-        // T4 populates Actor by loading the admin (session.ImpersonatedByUserId) when non-null.
-        // Until then, all sessions are mono-principal: Principal.Subject = user, Principal.Actor = null.
-        var principal = new Principal(subjectDto, Actor: null);
+        // SP5 Admin Security S2 D-S2-2 (Option B dual-principal): when the session carries an
+        // impersonation marker, project the acting admin as Principal.Actor. AuditLoggingBehavior
+        // reads this via ExtractImpersonationActorId() to wire audit_logs.impersonated_user_id,
+        // and EffectiveActor-based authz (Actor ?? Subject) restores the admin's privileges so
+        // they can call /admin/impersonation/end on their own session. If the impersonating admin
+        // has been deleted between session creation and now, degrade to Actor=null + subject-only
+        // attribution rather than failing the whole session.
+        UserDto? actorDto = null;
+        if (session.ImpersonatedByUserId is { } actorId)
+        {
+            var actor = await _userRepository.GetByIdAsync(actorId, cancellationToken).ConfigureAwait(false);
+            if (actor is not null)
+            {
+                actorDto = MapToUserDto(actor);
+            }
+        }
+
+        var principal = new Principal(subjectDto, Actor: actorDto);
 
         return new SessionStatusDto(
             IsValid: true,

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MeepleCard Component Summary - Visual Reference — file-architecture</title>
+<!-- SPLIT-GEN: source=mockup/meeple-card-summary-render.html mode=per-component variant=file-architecture regenerated=2026-05-26T08:45:41Z -->
+<!-- DO NOT EDIT — regenerate via `python -m scripts.mockup_demo.split_presentation` -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="../design_files/tokens.css"/>
+<link rel="stylesheet" href="../design_files/components.css"/>
+<style>
+/* ── Standalone viewport (overrides poster body chrome) ───────────────── */
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body.standalone-viewport{background:#f7f3ee !important;align-items:flex-start !important;justify-content:flex-start !important;
+  font-family:'Nunito',system-ui,sans-serif;
+  background:#1a1612;
+  color:var(--text,#2b1f12);
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  gap:32px;
+  padding:32px 24px;
+}
+body.standalone-viewport > .phone{
+  flex-shrink:0;
+}
+h1,h2,h3,h4,h5{font-family:'Quicksand',sans-serif}
+
+/* ── Inherited page styles from poster (chrome stripped) ──────────────── */
+:root {
+  --bg: #f8f6f3;
+  --bg-card: rgba(255,255,255,0.90);
+  --text: #1a1a2e;
+  --text-sec: #64748b;
+  --text-muted: #94a3b8;
+  --border: rgba(0,0,0,0.06);
+  --shadow-sm: 0 2px 8px rgba(120,80,40,0.06);
+  --shadow-md: 0 4px 20px rgba(120,80,40,0.08);
+  --shadow-lg: 0 8px 32px rgba(120,80,40,0.12);
+  --shadow-xl: 0 12px 48px rgba(120,80,40,0.16);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+h1,h2,h3 { font-family:'Quicksand',sans-serif; }
+.page-title { text-align:center; margin-bottom:8px; font-size:2rem; }
+.page-subtitle { text-align:center; color:var(--text-sec); margin-bottom:48px; font-size:0.95rem; }
+/* Section */
+.section { margin-bottom:56px; }
+.section-title { font-size:1.3rem; font-weight:700; margin-bottom:6px; display:flex; align-items:center; gap:10px; }
+.section-title .num { width:28px; height:28px; border-radius:50%; background:hsl(25,95%,45%); color:white; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; }
+.section-desc { color:var(--text-sec); font-size:0.85rem; margin-bottom:20px; }
+/* Grid */
+.card-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:20px; }
+.card-grid-3 { display:grid; grid-template-columns:repeat(3, 1fr); gap:20px; }
+/* ── MeepleCard ── */
+.mc {
+  position:relative; border-radius:16px; overflow:hidden;
+  background:var(--bg-card); backdrop-filter:blur(12px) saturate(180%);
+  border:1px solid var(--border);
+  box-shadow:var(--shadow-sm);
+  transition:transform 0.35s cubic-bezier(0.4,0,0.2,1), box-shadow 0.35s, outline 0.35s;
+  outline:2px solid transparent; outline-offset:2px;
+  cursor:pointer;
+}
+.mc:hover { transform:translateY(-6px); box-shadow:var(--shadow-xl); }
+/* Entity Glow on hover */
+.mc.e-game:hover    { outline-color:hsla(25,95%,45%,0.4); }
+.mc.e-player:hover  { outline-color:hsla(262,83%,58%,0.4); }
+.mc.e-session:hover { outline-color:hsla(240,60%,55%,0.4); }
+.mc.e-agent:hover   { outline-color:hsla(38,92%,50%,0.4); }
+.mc.e-doc:hover     { outline-color:hsla(210,40%,55%,0.4); }
+.mc.e-chat:hover    { outline-color:hsla(220,80%,55%,0.4); }
+.mc.e-event:hover   { outline-color:hsla(350,89%,60%,0.4); }
+/* Left border accent */
+.mc .accent {
+  position:absolute; left:0; top:0; bottom:0; width:4px;
+  transition:width 0.25s;
+}
+.mc:hover .accent { width:6px; }
+/* Cover */
+.mc .cover {
+  position:relative; overflow:hidden;
+  aspect-ratio:7/10;
+}
+.mc .cover img {
+  width:100%; height:100%; object-fit:cover;
+  transition:transform 0.5s;
+}
+.mc:hover .cover img { transform:scale(1.06); }
+/* Shimmer */
+.mc .cover .shimmer {
+  position:absolute; inset:0;
+  background:linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.25) 50%, transparent 60%);
+  transform:translateX(-100%);
+  pointer-events:none;
+}
+.mc:hover .cover .shimmer { animation:shimmer 0.8s ease-out forwards; }
+@keyframes shimmer { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
+/* Gradient overlay */
+.mc .cover .gradient {
+  position:absolute; inset:0; pointer-events:none;
+}
+/* Entity badge */
+.mc .entity-badge {
+  position:absolute; top:8px; left:10px; z-index:5;
+  padding:2px 8px; border-radius:6px;
+  font-family:'Quicksand',sans-serif; font-weight:800;
+  font-size:9px; text-transform:uppercase; letter-spacing:0.04em;
+  color:white; box-shadow:0 1px 3px rgba(0,0,0,0.2);
+}
+/* Content */
+.mc .content { padding:10px 14px 14px; display:flex; flex-direction:column; gap:4px; }
+.mc .title { font-family:'Quicksand',sans-serif; font-weight:700; font-size:0.95rem; line-height:1.3; }
+.mc .subtitle { font-size:0.78rem; color:var(--text-sec); line-height:1.3; }
+/* Rating */
+.mc .rating { display:flex; align-items:center; gap:2px; margin-top:2px; }
+.mc .rating .star { font-size:0.78rem; }
+.mc .rating .star.full { color:#f59e0b; }
+.mc .rating .star.half { color:rgba(245,158,11,0.5); }
+.mc .rating .star.empty { color:rgba(0,0,0,0.12); }
+.mc .rating .val { font-size:0.7rem; font-weight:600; color:var(--text-sec); margin-left:4px; }
+/* Metadata chips */
+.mc .meta { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+.mc .meta .chip {
+  font-size:10px; color:var(--text-sec);
+  background:#f1f5f9; padding:2px 8px; border-radius:6px;
+  display:flex; align-items:center; gap:3px;
+}
+/* Quick actions (hover reveal) */
+.mc .quick-actions {
+  position:absolute; top:8px; right:8px; z-index:10;
+  display:flex; flex-direction:column; gap:6px;
+  opacity:0; transition:opacity 0.3s;
+}
+.mc:hover .quick-actions { opacity:1; }
+.mc .quick-actions .qa-btn {
+  width:30px; height:30px; border-radius:50%;
+  background:rgba(255,255,255,0.85); backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,0.6);
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; cursor:pointer;
+  transition:transform 0.3s, box-shadow 0.3s;
+}
+.mc .quick-actions .qa-btn:hover { transform:scale(1.1); box-shadow:var(--shadow-md); }
+/* Placeholder gradient */
+.mc .placeholder {
+  aspect-ratio:7/10; display:flex; align-items:center; justify-content:center;
+  font-size:3rem; opacity:0.5;
+}
+/* ── LIST VARIANT ── */
+.mc-list {
+  display:flex; flex-direction:row; align-items:center; gap:14px;
+  padding:12px 14px; border-radius:12px;
+  background:var(--bg-card); backdrop-filter:blur(12px);
+  border:1px solid var(--border); box-shadow:var(--shadow-sm);
+  transition:transform 0.3s, box-shadow 0.3s;
+  cursor:pointer;
+}
+.mc-list:hover { transform:translateX(4px); box-shadow:var(--shadow-md); }
+.mc-list .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.mc-list .thumb { width:56px; height:56px; border-radius:10px; overflow:hidden; flex-shrink:0; }
+.mc-list .thumb img { width:100%; height:100%; object-fit:cover; }
+.mc-list .info { flex:1; min-width:0; }
+.mc-list .info .title { font-family:'Quicksand',sans-serif; font-weight:700; font-size:0.9rem; }
+.mc-list .info .subtitle { font-size:0.78rem; color:var(--text-sec); }
+/* ── COMPACT VARIANT ── */
+.mc-compact {
+  display:flex; flex-direction:row; align-items:center; gap:8px;
+  padding:8px 12px; border-radius:8px;
+  background:rgba(255,255,255,0.8); border:1px solid rgba(0,0,0,0.04);
+  cursor:pointer; transition:background 0.2s;
+}
+.mc-compact:hover { background:var(--bg-card); }
+.mc-compact .dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.mc-compact .title { font-family:'Quicksand',sans-serif; font-weight:600; font-size:0.85rem; }
+.mc-compact .subtitle { font-size:0.75rem; color:var(--text-sec); }
+/* ── HERO VARIANT ── */
+.mc-hero {
+  position:relative; border-radius:24px; overflow:hidden;
+  min-height:280px; box-shadow:var(--shadow-xl);
+  transition:transform 0.35s, box-shadow 0.35s;
+  cursor:pointer;
+}
+.mc-hero:hover { transform:scale(1.01); box-shadow:0 16px 64px rgba(120,80,40,0.2); }
+.mc-hero img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.mc-hero .ribbon {
+  position:absolute; top:16px; right:-32px; z-index:5;
+  padding:4px 40px; font-family:'Quicksand',sans-serif;
+  font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em;
+  color:white; transform:rotate(45deg); box-shadow:0 2px 6px rgba(0,0,0,0.3);
+}
+.mc-hero .hero-content {
+  position:relative; z-index:2;
+  display:flex; flex-direction:column; justify-content:flex-end;
+  min-height:280px; padding:24px;
+}
+.mc-hero .hero-content .title {
+  font-family:'Quicksand',sans-serif; font-weight:700; font-size:1.6rem;
+  color:white; text-shadow:0 2px 8px rgba(0,0,0,0.3);
+}
+.mc-hero .hero-content .subtitle {
+  font-size:0.9rem; color:rgba(255,255,255,0.85); margin-top:4px;
+}
+.mc-hero .hero-content .meta { margin-top:8px; }
+.mc-hero .hero-content .meta .chip { background:rgba(255,255,255,0.2); color:white; }
+/* Featured */
+.mc-featured .cover { aspect-ratio:16/9; }
+/* Nav Footer */
+.mc .nav-footer {
+  display:flex; gap:4px; padding:6px 14px 10px; border-top:1px solid var(--border);
+}
+.mc .nav-footer .nav-icon {
+  width:28px; height:28px; border-radius:50%; background:#f1f5f9;
+  display:flex; align-items:center; justify-content:center;
+  font-size:12px; cursor:pointer; transition:background 0.2s;
+}
+.mc .nav-footer .nav-icon:hover { background:#e2e8f0; }
+/* Info */
+.info-table { width:100%; border-collapse:collapse; font-size:0.85rem; }
+.info-table td { padding:6px 12px; border-bottom:1px solid var(--border); vertical-align:top; }
+.info-table td:first-child { font-weight:600; width:140px; color:var(--text-sec); }
+.info-table code { background:#f1f5f9; padding:2px 6px; border-radius:4px; font-size:0.8rem; }
+/* Color swatches */
+.swatches { display:flex; gap:12px; flex-wrap:wrap; }
+.swatch { text-align:center; }
+.swatch .circle { width:48px; height:48px; border-radius:50%; margin:0 auto 6px; box-shadow:var(--shadow-sm); }
+.swatch .label { font-size:0.7rem; font-weight:600; }
+.swatch .hsl { font-size:0.65rem; color:var(--text-muted); }
+/* Status badges */
+.status-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:700; }
+.sb-owned { background:#dcfce7; color:#166534; }
+.sb-wishlisted { background:#fef3c7; color:#92400e; }
+.sb-played { background:#dbeafe; color:#1e40af; }
+</style>
+</head>
+<body class="standalone-viewport">
+  <div class="section" data-component="file-architecture">
+  <div class="section-title"><span class="num">7</span> File Architecture</div>
+  <p class="section-desc">Component is split across multiple files for maintainability.</p>
+  <table class="info-table">
+    <tr><td>Core</td><td><code>meeple-card.tsx</code> (main component, ~560 lines) &middot; <code>meeple-card-styles.ts</code> (CVA variants) &middot; <code>meeple-card-parts.tsx</code> (visual subcomponents)</td></tr>
+    <tr><td>Actions</td><td><code>meeple-card-quick-actions.tsx</code> &middot; <code>meeple-card-info-button.tsx</code></td></tr>
+    <tr><td>Compound</td><td><code>meeple-card-compound.tsx</code> (MeepleCards.Game, .Player, etc.)</td></tr>
+    <tr><td>Features (32 files)</td><td>FlipCard, TagStrip, TagBadge, StatusBadge, WishlistButton, DragHandle, BulkSelectCheckbox, HoverPreview, QuickActionsMenu, CardNavigationFooter, CardAgentAction, NavigationIcons, SessionStatusBadge, SessionActionButtons, SessionBackContent, SessionScoreTable, SessionTurnSequence, SessionPlayerPopup, SessionScoreModal, SnapshotHistorySlider, TimeTravelOverlay, AgentStatusBadge, AgentModelInfo, AgentStatsDisplay, ChatStatusBadge, ChatAgentInfo, ChatGameContext, ChatStatsDisplay, ChatUnreadBadge, DocumentStatusBadge, GameBackContent, TagOverflow</td></tr>
+    <tr><td>Extra Drawer</td><td><code>extra-meeple-card/</code> &mdash; ExtraMeepleCard, ExtraMeepleCardDrawer, tabs (Overview, AI, History, Media, Scoreboard, Toolkit)</td></tr>
+    <tr><td>Tests</td><td>22+ test files covering unit, a11y, snapshots, contexts, permissions, compound, drawer, agent, chat</td></tr>
+    <tr><td>Docs</td><td><code>meeple-card.md</code> &middot; <code>meeple-card-v2-design-tokens.md</code> &middot; <code>meeple-card-v2-migration.md</code> &middot; <code>MEEPLE_CARD_USAGE.md</code></td></tr>
+  </table>
+</div>
+</body>
+</html>

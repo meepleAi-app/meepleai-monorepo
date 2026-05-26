@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MeepleCard Component Summary - Visual Reference</title>
+<!-- Split annotation: see docs/for-developers/specs/2026-05-26-mockup-poster-split.md -->
+<meta name="mockup-split-mode" content="per-component">
+<meta name="mockup-output-prefix" content="meeple-card-summary">
 <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -242,7 +245,7 @@ h1,h2,h3 { font-family:'Quicksand',sans-serif; }
 <!-- ═══════════════════════════════════════════════════════════════════════════
      SECTION 1: ENTITY COLORS
      ═══════════════════════════════════════════════════════════════════════════ -->
-<div class="section">
+<div class="section" data-component="color-system">
   <div class="section-title"><span class="num">1</span> Entity Color System (10 types)</div>
   <p class="section-desc">Each entity type has a unique HSL color used for border accent, badge, glow ring, gradient overlays, and flip card header.</p>
   <div class="swatches">
@@ -262,7 +265,7 @@ h1,h2,h3 { font-family:'Quicksand',sans-serif; }
 <!-- ═══════════════════════════════════════════════════════════════════════════
      SECTION 2: GRID VARIANT (all entities)
      ═══════════════════════════════════════════════════════════════════════════ -->
-<div class="section">
+<div class="section" data-component="grid-variant">
   <div class="section-title"><span class="num">2</span> Grid Variant &mdash; All Entity Types</div>
   <p class="section-desc">Default variant with 7:10 cover, left border accent, entity badge, glassmorphism, warm shadows, shimmer on hover, entity glow ring.</p>
   <div class="card-grid">
@@ -402,7 +405,7 @@ h1,h2,h3 { font-family:'Quicksand',sans-serif; }
 <!-- ═══════════════════════════════════════════════════════════════════════════
      SECTION 3: LIST + COMPACT VARIANTS
      ═══════════════════════════════════════════════════════════════════════════ -->
-<div class="section">
+<div class="section" data-component="list-compact-variants">
   <div class="section-title"><span class="num">3</span> List &amp; Compact Variants</div>
   <p class="section-desc">List: horizontal with 56px thumbnail, slides right on hover. Compact: minimal footprint, dot indicator.</p>
   <div style="display:grid; grid-template-columns:1fr 1fr; gap:32px;">
@@ -457,7 +460,7 @@ h1,h2,h3 { font-family:'Quicksand',sans-serif; }
 <!-- ═══════════════════════════════════════════════════════════════════════════
      SECTION 4: HERO VARIANT
      ═══════════════════════════════════════════════════════════════════════════ -->
-<div class="section">
+<div class="section" data-component="hero-variant">
   <div class="section-title"><span class="num">4</span> Hero Variant</div>
   <p class="section-desc">Full-bleed background, ribbon entity indicator, rich gradient overlay, min-height 320px, scale(1.01) hover.</p>
   <div class="mc-hero e-game">
@@ -478,7 +481,7 @@ h1,h2,h3 { font-family:'Quicksand',sans-serif; }
 <!-- ═══════════════════════════════════════════════════════════════════════════
      SECTION 5: FEATURES MATRIX
      ═══════════════════════════════════════════════════════════════════════════ -->
-<div class="section">
+<div class="section" data-component="feature-matrix">
   <div class="section-title"><span class="num">5</span> Feature Matrix</div>
   <p class="section-desc">All opt-in features available on MeepleCard. Features are additive and composable.</p>
   <table class="info-table">
@@ -511,7 +514,7 @@ h1,h2,h3 { font-family:'Quicksand',sans-serif; }
 <!-- ═══════════════════════════════════════════════════════════════════════════
      SECTION 6: ADAPTER COMPONENTS
      ═══════════════════════════════════════════════════════════════════════════ -->
-<div class="section">
+<div class="section" data-component="adapter-components">
   <div class="section-title"><span class="num">6</span> Adapter Components</div>
   <p class="section-desc">Domain-specific wrappers that map API data to MeepleCard props.</p>
   <table class="info-table">
@@ -532,7 +535,7 @@ h1,h2,h3 { font-family:'Quicksand',sans-serif; }
 <!-- ═══════════════════════════════════════════════════════════════════════════
      SECTION 7: FILE ARCHITECTURE
      ═══════════════════════════════════════════════════════════════════════════ -->
-<div class="section">
+<div class="section" data-component="file-architecture">
   <div class="section-title"><span class="num">7</span> File Architecture</div>
   <p class="section-desc">Component is split across multiple files for maintainability.</p>
   <table class="info-table">

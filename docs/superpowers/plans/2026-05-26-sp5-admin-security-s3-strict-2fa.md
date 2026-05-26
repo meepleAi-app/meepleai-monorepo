@@ -176,7 +176,7 @@
 
 - [x] ~~**Step 4: `TwoFactorStepUpRateLimiter`**~~ — **CANCELED post-T0**: riuso rate-limit/lockout di `VerifyCodeAsync`.
 
-- [x] **Step 5: Endpoint** — `POST /auth/2fa/step-up` (group prefix; path pubblico finale da confermare in T7 wire-doc), `IMediator.Send` only (CQRS), `EffectiveActor`-gated, mapping Success→200 / InvalidCode→401 / LockedOut→429.
+- [x] **Step 5: Endpoint** — public path **`POST /api/v1/auth/2fa/step-up`** (registrato `/auth/2fa/step-up` sul group `v1Api` con prefix `/api/v1`, `Program.cs:714`+`717` → `AuthenticationEndpoints.cs:58` → `TwoFactorEndpoints.cs`) — allineato al contratto D-S3-4. `IMediator.Send` only (CQRS), `EffectiveActor`-gated, mapping Success→200 / InvalidCode→401 / LockedOut→429.
 
 - [x] **Step 6: Test PASS** — 11/11.
 

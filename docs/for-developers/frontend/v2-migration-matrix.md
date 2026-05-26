@@ -157,16 +157,17 @@ the PR review.
 
 ## Wave 1 — 29 components
 
-### Games index — `/games` — 6 components — **Tier S**
+### Games index — `/games` → redirect `/library` (#1521) — 5 shelf-ready components — **Tier S**
+
+> **Routing decision (#1521, PR pending)**: `/games` was a multi-tab hub (library/catalog/kb). The `sp4-games-index` mockup IS the **library** view, and `/library` (LibraryHub) is the canonical route for it. `/games` now **redirects to `/library`** (mirrors #1480 `/hub/toolkits` → `/toolkits`); the multi-tab orchestrator `GamesLibraryView` + `AdvancedFiltersDrawer` stub were removed. The 5 mockup components below are **shelf-ready** (tested, mockup-faithful) awaiting a follow-up that wires them into LibraryHub in place of its older implementation.
 
 | Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
 |--------|-----------|------|-------|--------|----|----|----------|
-| `sp4-games-index.jsx` | `GamesHero` | `apps/web/src/components/features/games/GamesHero.tsx` | `/games` | pending | — | T A M V | — |
-| `sp4-games-index.jsx` | `GamesFiltersInline` | `apps/web/src/components/features/games/GamesFiltersInline.tsx` | `/games` | pending | — | T A V | — |
-| `sp4-games-index.jsx` | `AdvancedFiltersDrawer` | `apps/web/src/components/features/games/AdvancedFiltersDrawer.tsx` | `/games` | pending | — | T A M V | — |
-| `sp4-games-index.jsx` | `GamesResultsGrid` | `apps/web/src/components/features/games/GamesResultsGrid.tsx` | `/games` | pending | — | T A V | — |
-| `sp4-games-index.jsx` | `GamesEmptyState` | `apps/web/src/components/features/games/GamesEmptyState.tsx` | `/games` | pending | — | T A V | — |
-| (extension G3) | `GamesRecentRail` | `apps/web/src/components/features/games/GamesRecentRail.tsx` | `/games?tab=*` | done | #907 | T A V |
+| `sp4-games-index.jsx` | `GamesHero` | `apps/web/src/components/features/games/GamesHero.tsx` | `/library` (shelf-ready) | shelf-ready | #635 | T A M V | — |
+| `sp4-games-index.jsx` | `GamesFiltersInline` | `apps/web/src/components/features/games/GamesFiltersInline.tsx` | `/library` (shelf-ready) | shelf-ready | #635 | T A V | — |
+| `sp4-games-index.jsx` | `GamesResultsGrid` | `apps/web/src/components/features/games/GamesResultsGrid.tsx` | `/library` (shelf-ready) | shelf-ready | #635 | T A V | — |
+| `sp4-games-index.jsx` | `GamesEmptyState` | `apps/web/src/components/features/games/GamesEmptyState.tsx` | `/library` (shelf-ready) | shelf-ready | #635 | T A V | — |
+| (extension G3) | `GamesRecentRail` | `apps/web/src/components/features/games/GamesRecentRail.tsx` | `/library` (shelf-ready) | shelf-ready | #907 | T A V | — |
 
 ### Game detail — `/games/[id]` — 8 components — **Tier L** ⚠️ Phase 0.5 required
 
@@ -665,7 +666,7 @@ instead.
 
 | Route | Mockup | Note |
 |-------|--------|------|
-| `/games` | `sp4-games-index.html` | — |
+| `/games` | `sp4-games-index.html` | redirect → `/library` (#1521); mockup = library view, 5 components shelf-ready for LibraryHub wiring |
 | `/games/[id]` | `sp4-game-detail.html` | Tier L done (PR #702) |
 | `/games/[id]/faqs` | `sp3-faq-enhanced.html` ↻ | Reuse |
 | `/games/[id]/reviews` · `/strategies` · `/rules` | — | gap (sub-tab) |

@@ -58,15 +58,19 @@ on:
 # Switching to true makes a fresh trigger CANCEL the stuck run and start clean,
 # so the pipeline is self-healing. This is safe because every stage is
 # idempotent and re-runnable:
-#   - migrate-db: `dotnet ef migrations script --idempotent` (each migration
-#     wrapped in IF NOT EXISTS vs __EFMigrationsHistory) → re-run is a no-op.
-#   - deploy: `docker compose up --force-recreate` converges to the target
-#     image regardless of partial prior state.
+#   - generate-migration-sql: produces an idempotent SQL script (every
+#     migration wrapped in IF NOT EXISTS vs __EFMigrationsHistory). Re-running
+#     re-uploads the same artifact — no DB side effects.
+#   - deploy: the "Apply migrations on staging" step uses that idempotent SQL,
+#     so re-applying is a no-op. `docker compose up --force-recreate` then
+#     converges to the target image regardless of partial prior state.
 # A mid-flight cancel therefore can't corrupt staging; the next run re-converges.
 #
-# NOTE: this is the quick mitigation. The deeper rework (split migrate-db out
-# of the deploy critical path; add a queue-time watchdog for self-hosted jobs)
-# stays tracked in #1573.
+# Architectural rework (also tracked in #1573, NOW SHIPPED with this commit):
+#   - migrate-db job split: SQL generation on ubuntu-latest, apply moved as a
+#     step INSIDE the deploy job. If the deploy is never picked by the runner,
+#     the migration is never applied — atomicity is now job-level.
+# Still deferred: queue-time watchdog for self-hosted jobs (#1573 P1).
 concurrency:
   group: deploy-staging
   cancel-in-progress: true
@@ -120,7 +124,7 @@ jobs:
       commit_sha: ${{ github.event.workflow_run.head_sha || github.sha }}
       commit_message: ${{ github.event.workflow_run.head_commit.message || github.event.head_commit.message || 'Manual trigger' }}
       run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      job_list: '["detect-changes", "pre-deploy-check", "build", "migrate-db", "snapshot-baseline", "deploy", "validate", "e2e-staging"]'
+      job_list: '["detect-changes", "pre-deploy-check", "build", "generate-migration-sql", "snapshot-baseline", "deploy", "validate", "e2e-staging"]'
       caller_workflow_id: ${{ github.workflow_id }}
     secrets:
       SLACK_GITNOTIFY_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}
@@ -486,55 +490,58 @@ jobs:
           echo "  API built: ${{ needs.detect-changes.outputs.deploy_api }}"
           echo "  Web built: ${{ needs.detect-changes.outputs.deploy_web }}"
 
-  # Run database migrations BEFORE deploying new code
+  # Generate the idempotent migration SQL script on a cloud runner.
   #
-  # Strategy (fix for historical bug where this job only did `docker pull`):
-  #   1. Generate an idempotent SQL migration script via `dotnet ef migrations script --idempotent`
-  #   2. SCP the SQL to the staging server
-  #   3. Create a pre-migration DB backup (pg_dump | gzip) for rollback safety
-  #   4. Apply the SQL via `docker exec postgres psql -v ON_ERROR_STOP=1 -f ...`
-  #   5. Verify __EFMigrationsHistory reflects the latest migration
-  #   6. Pull new API image (for the downstream deploy job)
+  # ISSUE #1573 — atomicity rework
+  # ============================================
+  # The previous design ran a separate `migrate-db` job that did BOTH:
+  #   (a) generate the idempotent SQL via dotnet-ef
+  #   (b) apply it to staging via SSH
+  # ...BEFORE the `deploy` job ran. On 2026-05-26 the `deploy` job orphaned
+  # in the self-hosted runner queue (runner=None, never picked), so the
+  # migration had already been applied while the containers kept running
+  # pre-merge code. Result: 1h45m of schema/code drift on staging, including
+  # 2 destructive migrations (column drops).
+  #
+  # This job is now SPLIT in two halves:
+  #   - generate-migration-sql (this job, ubuntu-latest) — produces the SQL
+  #     artifact. Cloud runner because dotnet SDK + build are expensive and
+  #     don't need staging connectivity.
+  #   - The APPLY step now lives INSIDE the deploy job (see "Apply migrations"
+  #     step below). Same SSH session, same runner pickup as the container
+  #     restart. If the deploy job is never picked, the migration is never
+  #     applied — the DB cannot drift from the deployed code.
   #
   # Idempotent SQL means every migration is wrapped in `IF NOT EXISTS` against
-  # `__EFMigrationsHistory`, so re-running is a no-op if no new migrations.
-  # If psql fails mid-stream, ON_ERROR_STOP=1 aborts the whole script and the
-  # backup created in step 3 can be restored with `pg_restore`.
-  migrate-db:
-    name: Database Migration
-    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
+  # `__EFMigrationsHistory`, so the apply step is a no-op when no new
+  # migrations exist. If psql fails mid-stream during apply, ON_ERROR_STOP=1
+  # aborts the script and the pre-migration backup (created as the first
+  # apply substep) can be restored with `pg_restore`.
+  generate-migration-sql:
+    name: Generate Migration SQL
+    runs-on: ubuntu-latest
     needs: [build]
     if: vars.DEPLOY_METHOD == 'ssh'
+    timeout-minutes: 10
     steps:
       - name: Checkout source at deploy SHA
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ env.DEPLOY_SHA }}
+          # sparse-checkout: only the API project is needed for dotnet-ef
+          sparse-checkout: |
+            apps/api/
+            .github/
+          sparse-checkout-cone-mode: true
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '9.0.x'
 
       - name: Install dotnet-ef tool
-        # Idempotent: use pre-installed tool if present (self-hosted runner may
-        # already have dotnet-ef from a newer SDK). `dotnet tool install` does
-        # not support downgrades, so skipping install when a compatible version
-        # exists avoids exit 1 on runners with ef 10.x already global.
         run: |
-          if dotnet tool list --global | awk '{print $1}' | grep -qx 'dotnet-ef'; then
-            echo "dotnet-ef already installed globally — using existing version:"
-            dotnet tool list --global | grep '^dotnet-ef'
-          else
-            dotnet tool install --global dotnet-ef --version 9.*
-          fi
-          # Self-hosted runners: $HOME/.dotnet/tools is where `dotnet tool
-          # install --global` places binaries, but this directory is NOT
-          # automatically added to PATH between steps. setup-dotnet only
-          # sets DOTNET_ROOT, not the user-global tools dir. Without this
-          # append, the next step's `dotnet ef ...` fails with "dotnet-ef
-          # not found on PATH" even though the tool is installed. Regression
-          # caught on staging deploy run 24779812732.
+          dotnet tool install --global dotnet-ef --version 9.*
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
       - name: Restore and build API project
@@ -550,76 +557,21 @@ jobs:
           # it in the previous step but ef defaults to Debug configuration,
           # so we let it trigger its own build without the flag to avoid
           # Release/Debug path mismatches.
-          dotnet ef migrations script --idempotent -o /tmp/migrations.sql
-          lines=$(wc -l < /tmp/migrations.sql)
-          echo "✅ Generated ${lines} lines of SQL at /tmp/migrations.sql"
+          dotnet ef migrations script --idempotent -o migrations.sql
+          lines=$(wc -l < migrations.sql)
+          echo "✅ Generated ${lines} lines of SQL at apps/api/src/Api/migrations.sql"
           if [ "$lines" -lt 10 ]; then
             echo "❌ SQL output suspiciously small (< 10 lines). Aborting."
             exit 1
           fi
 
-      - name: Apply migrations on staging
-        env:
-          SSH_HOST: ${{ secrets.STAGING_HOST }}
-          SSH_USER: ${{ secrets.STAGING_USER }}
-          SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
-          API_IMAGE: ${{ needs.build.outputs.api_image }}
-        run: |
-          set -euo pipefail
-
-          # Setup SSH key
-          mkdir -p ~/.ssh
-          echo "$SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
-
-          SSH_CMD="ssh -i $HOME/.ssh/deploy_key -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST"
-          SCP_CMD="scp -i $HOME/.ssh/deploy_key -o StrictHostKeyChecking=no"
-
-          # Step 1 — pre-migration backup with integrity check.
-          # pipefail is active in the inner shell so a pg_dump failure stops
-          # the chain; gzip -t then verifies the gz is a complete, valid
-          # archive before we consider the backup usable. If any part fails
-          # we delete the partial file so an operator can't accidentally
-          # restore from a truncated dump later.
-          BACKUP_NAME="pre-migration-$(date -u +%Y%m%dT%H%M%SZ).sql.gz"
-          echo "📦 Creating pre-migration backup: ${BACKUP_NAME}"
-          $SSH_CMD "set -o pipefail; docker exec meepleai-postgres pg_dump -U meepleai -d meepleai_staging --no-owner --no-acl | gzip > /tmp/${BACKUP_NAME} && gzip -t /tmp/${BACKUP_NAME} && ls -lh /tmp/${BACKUP_NAME} || { echo '❌ backup failed — removing partial file'; rm -f /tmp/${BACKUP_NAME}; exit 1; }"
-
-          # Step 2 — upload idempotent SQL to server
-          echo "📤 Uploading migrations.sql to server..."
-          $SCP_CMD /tmp/migrations.sql "$SSH_USER@$SSH_HOST:/tmp/migrations.sql"
-
-          # Step 3 — apply SQL inside postgres container with ON_ERROR_STOP=1.
-          # Use a heredoc to ship a small remote script. psql's exit code is
-          # captured directly into `rc` on the next line; the `tail` (log
-          # output) and cleanup run unconditionally after, and their own
-          # exit codes never mask psql's result. Final `exit $rc` propagates
-          # the real psql outcome back through SSH to the runner.
-          echo "🔧 Applying migrations via psql..."
-          ssh -i "$HOME/.ssh/deploy_key" -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" bash <<'REMOTE_APPLY'
-          set -u
-          docker cp /tmp/migrations.sql meepleai-postgres:/tmp/migrations.sql
-          docker exec meepleai-postgres psql -U meepleai -d meepleai_staging -v ON_ERROR_STOP=1 -f /tmp/migrations.sql > /tmp/migrations.log 2>&1
-          rc=$?
-          echo "--- psql log (tail -20) ---"
-          tail -20 /tmp/migrations.log 2>/dev/null || true
-          echo "--- end log ---"
-          docker exec meepleai-postgres rm -f /tmp/migrations.sql /tmp/migrations.log 2>/dev/null || true
-          rm -f /tmp/migrations.sql /tmp/migrations.log
-          exit $rc
-          REMOTE_APPLY
-
-          # Step 4 — verify migration history
-          echo "🔍 Verifying applied migrations..."
-          $SSH_CMD "docker exec meepleai-postgres psql -U meepleai -d meepleai_staging -c 'SELECT \"MigrationId\" FROM \"__EFMigrationsHistory\" ORDER BY \"MigrationId\" DESC LIMIT 5;'"
-
-          # Step 5 — pull new API image for downstream deploy job
-          echo "📥 Pulling new API image..."
-          $SSH_CMD "docker pull $API_IMAGE && echo '✅ API image pulled'"
-
-          # Cleanup SSH key
-          rm -f ~/.ssh/deploy_key
+      - name: Upload migration SQL artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: migration-sql-${{ github.run_id }}
+          path: apps/api/src/Api/migrations.sql
+          retention-days: 7
+          if-no-files-found: error
 
   # Snapshot previous performance baseline before deploy overwrites DEPLOYMENT.json
   snapshot-baseline:
@@ -663,13 +615,29 @@ jobs:
             echo "baseline=" >> $GITHUB_OUTPUT
           fi
 
-  # Deploy to staging server (only changed services)
+  # Deploy to staging server (only changed services).
+  #
+  # Issue #1573 — atomicity rework
+  # ============================================
+  # The migration APPLY step now lives in this job (the previous separate
+  # `migrate-db` job ran BEFORE deploy and could leave the DB ahead of the
+  # containers if deploy was orphaned in the runner queue — 2026-05-26 incident,
+  # 1h45m of schema/code drift). The sequence inside this job is:
+  #   1. Download migration SQL artifact (built by generate-migration-sql)
+  #   2. Apply migrations via SSH (pre-migration backup + psql ON_ERROR_STOP)
+  #   3. Deploy via SSH (docker pull + compose up + health checks + DEPLOYMENT.json)
+  # Steps 1+2 are gated on vars.DEPLOY_METHOD == 'ssh' so non-SSH deploys skip
+  # them. If this job is never picked by the runner, NO migration is applied —
+  # atomicity is guaranteed by job-level pickup.
   deploy:
     name: Deploy to Staging
     runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
-    timeout-minutes: 15
-    needs: [build, migrate-db, snapshot-baseline]
-    if: always() && needs.build.result == 'success' && (needs.migrate-db.result == 'success' || needs.migrate-db.result == 'skipped') && (needs.snapshot-baseline.result == 'success' || needs.snapshot-baseline.result == 'skipped')
+    # Issue #1573: bumped 15 → 30 to absorb the migration apply step
+    # (pg_dump backup + scp + psql + verify ≈ 5-10 min depending on schema
+    # size). Deploy SSH itself stays under 5 min. Headroom kept conservative.
+    timeout-minutes: 30
+    needs: [build, generate-migration-sql, snapshot-baseline]
+    if: always() && needs.build.result == 'success' && (needs.generate-migration-sql.result == 'success' || needs.generate-migration-sql.result == 'skipped') && (needs.snapshot-baseline.result == 'success' || needs.snapshot-baseline.result == 'skipped')
     environment:
       name: staging
       url: https://meepleai.app
@@ -683,6 +651,73 @@ jobs:
             infra/
             .github/
           sparse-checkout-cone-mode: true
+
+      # Issue #1573: migration apply moved here from the (removed) migrate-db
+      # job. If this job is never picked up by the runner, the migration is
+      # not applied — DB schema cannot drift from deployed code.
+      - name: Download migration SQL artifact
+        if: vars.DEPLOY_METHOD == 'ssh'
+        uses: actions/download-artifact@v8
+        with:
+          name: migration-sql-${{ github.run_id }}
+          path: /tmp/
+
+      - name: Apply migrations on staging
+        if: vars.DEPLOY_METHOD == 'ssh'
+        env:
+          SSH_HOST: ${{ secrets.STAGING_HOST }}
+          SSH_USER: ${{ secrets.STAGING_USER }}
+          SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+
+          # Setup SSH key (Deploy via SSH below uses its own appleboy key)
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          SSH_CMD="ssh -i $HOME/.ssh/deploy_key -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST"
+          SCP_CMD="scp -i $HOME/.ssh/deploy_key -o StrictHostKeyChecking=no"
+
+          # Step 1 — pre-migration backup with integrity check.
+          # pipefail in the inner shell stops the chain on pg_dump failure;
+          # gzip -t verifies the gz archive before we consider the backup
+          # usable. Partial files are deleted so a truncated dump can't be
+          # mistakenly restored later.
+          BACKUP_NAME="pre-migration-$(date -u +%Y%m%dT%H%M%SZ).sql.gz"
+          echo "📦 Creating pre-migration backup: ${BACKUP_NAME}"
+          $SSH_CMD "set -o pipefail; docker exec meepleai-postgres pg_dump -U meepleai -d meepleai_staging --no-owner --no-acl | gzip > /tmp/${BACKUP_NAME} && gzip -t /tmp/${BACKUP_NAME} && ls -lh /tmp/${BACKUP_NAME} || { echo '❌ backup failed — removing partial file'; rm -f /tmp/${BACKUP_NAME}; exit 1; }"
+
+          # Step 2 — upload idempotent SQL to server
+          echo "📤 Uploading migrations.sql to server..."
+          $SCP_CMD /tmp/migrations.sql "$SSH_USER@$SSH_HOST:/tmp/migrations.sql"
+
+          # Step 3 — apply SQL inside postgres container with ON_ERROR_STOP=1.
+          # Heredoc captures psql's exit code into `rc` BEFORE the unconditional
+          # log tail + cleanup, so the final `exit $rc` propagates the real
+          # psql outcome back through SSH to the runner (without log/cleanup
+          # exit codes masking the result).
+          echo "🔧 Applying migrations via psql..."
+          ssh -i "$HOME/.ssh/deploy_key" -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" bash <<'REMOTE_APPLY'
+          set -u
+          docker cp /tmp/migrations.sql meepleai-postgres:/tmp/migrations.sql
+          docker exec meepleai-postgres psql -U meepleai -d meepleai_staging -v ON_ERROR_STOP=1 -f /tmp/migrations.sql > /tmp/migrations.log 2>&1
+          rc=$?
+          echo "--- psql log (tail -20) ---"
+          tail -20 /tmp/migrations.log 2>/dev/null || true
+          echo "--- end log ---"
+          docker exec meepleai-postgres rm -f /tmp/migrations.sql /tmp/migrations.log 2>/dev/null || true
+          rm -f /tmp/migrations.sql /tmp/migrations.log
+          exit $rc
+          REMOTE_APPLY
+
+          # Step 4 — verify migration history
+          echo "🔍 Verifying applied migrations..."
+          $SSH_CMD "docker exec meepleai-postgres psql -U meepleai -d meepleai_staging -c 'SELECT \"MigrationId\" FROM \"__EFMigrationsHistory\" ORDER BY \"MigrationId\" DESC LIMIT 5;'"
+
+          # Cleanup SSH key (Deploy via SSH below uses its own appleboy key)
+          rm -f ~/.ssh/deploy_key
 
       # Option 1: SSH Deploy (VPS/Dedicated Server)
       - name: Deploy via SSH
@@ -1088,7 +1123,7 @@ jobs:
 
   notify-end:
     if: always()
-    needs: [detect-changes, pre-deploy-check, build, migrate-db, snapshot-baseline, deploy, validate, e2e-staging]
+    needs: [detect-changes, pre-deploy-check, build, generate-migration-sql, snapshot-baseline, deploy, validate, e2e-staging]
     uses: ./.github/workflows/notify-slack.yml
     with:
       event: ${{ contains(join(needs.*.result, ','), 'failure') && 'failed' || contains(join(needs.*.result, ','), 'cancelled') && 'cancelled' || 'completed' }}

@@ -1,12 +1,12 @@
 'use client';
 
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/overlays/dialog';
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+} from '@/components/ui/drawer';
 
 import { TwoFactorWizardBody } from './TwoFactorWizardBody';
 
@@ -23,7 +23,7 @@ interface Props {
   readonly onEnabled?: () => void;
 }
 
-export function TwoFactorSetupModal({
+export function TwoFactorBottomSheet({
   open,
   setupData,
   onClose,
@@ -37,21 +37,24 @@ export function TwoFactorSetupModal({
   }
 
   return (
-    <Dialog
+    <Drawer
       open={open}
       onOpenChange={o => {
         if (!o) onClose();
       }}
+      side="mobile-bottom"
     >
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Set up two-factor authentication</DialogTitle>
-          <DialogDescription>
+      <DrawerContent>
+        <DrawerHeader>
+          <DrawerTitle>Set up two-factor authentication</DrawerTitle>
+          <DrawerDescription>
             Complete all three steps to enable 2FA on your account.
-          </DialogDescription>
-        </DialogHeader>
-        <TwoFactorWizardBody setupData={setupData} onEnabled={handleEnabled} resetKey={open} />
-      </DialogContent>
-    </Dialog>
+          </DrawerDescription>
+        </DrawerHeader>
+        <div className="px-4 pb-6">
+          <TwoFactorWizardBody setupData={setupData} onEnabled={handleEnabled} resetKey={open} />
+        </div>
+      </DrawerContent>
+    </Drawer>
   );
 }

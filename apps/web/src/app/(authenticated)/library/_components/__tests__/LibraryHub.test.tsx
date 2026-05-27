@@ -722,4 +722,80 @@ describe('LibraryHub — games tab (#1566)', () => {
     expect(document.querySelector('[data-slot="games-results-grid"]')).not.toBeNull();
     expect(document.querySelector('[data-slot="games-results-grid-link"]')).not.toBeNull();
   });
+
+  it('renders GamesEmptyState kind=empty when library has no entries', async () => {
+    hubMock.mockReturnValue(
+      makeHub({ totalCounts: { games: 0, agents: 0, kb: 0, sessions: 0, chat: 0 } })
+    );
+    seedGamesLibrary([]);
+    renderWithIntl(<LibraryHub />);
+    await userEvent.click(screen.getByRole('tab', { name: /giochi/i }));
+    const el = document.querySelector('[data-slot="games-empty-state"]');
+    expect(el?.getAttribute('data-kind')).toBe('empty');
+  });
+
+  it('renders GamesEmptyState kind=filtered-empty when filter removes all', async () => {
+    hubMock.mockReturnValue(
+      makeHub({ totalCounts: { games: 1, agents: 0, kb: 0, sessions: 0, chat: 0 } })
+    );
+    seedGamesLibrary([libEntry('a', 'Catan')]);
+    renderWithIntl(<LibraryHub />);
+    await userEvent.click(screen.getByRole('tab', { name: /giochi/i }));
+    // Type a non-matching query into the GamesFiltersInline search box.
+    // GamesFiltersInline uses a 300ms trailing debounce; use waitFor so it settles.
+    await userEvent.type(
+      screen.getByRole('searchbox', { name: /cerca giochi nella tua libreria/i }),
+      'xyznotfound'
+    );
+    await waitFor(() => {
+      const el = document.querySelector('[data-slot="games-empty-state"]');
+      expect(el?.getAttribute('data-kind')).toBe('filtered-empty');
+    });
+  });
+
+  it('renders GamesEmptyState kind=error when libraryQuery.isError', async () => {
+    hubMock.mockReturnValue(
+      makeHub({ totalCounts: { games: 0, agents: 0, kb: 0, sessions: 0, chat: 0 } })
+    );
+    libraryMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: new Error('boom'),
+    });
+    renderWithIntl(<LibraryHub />);
+    await userEvent.click(screen.getByRole('tab', { name: /giochi/i }));
+    const el = document.querySelector('[data-slot="games-empty-state"]');
+    expect(el?.getAttribute('data-kind')).toBe('error');
+  });
+
+  it('renders GamesEmptyState kind=loading when libraryQuery.isLoading', async () => {
+    hubMock.mockReturnValue(
+      makeHub({ totalCounts: { games: 0, agents: 0, kb: 0, sessions: 0, chat: 0 } })
+    );
+    libraryMock.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+      error: null,
+    });
+    renderWithIntl(<LibraryHub />);
+    await userEvent.click(screen.getByRole('tab', { name: /giochi/i }));
+    const el = document.querySelector('[data-slot="games-empty-state"]');
+    expect(el?.getAttribute('data-kind')).toBe('loading');
+  });
+
+  it('non-games tabs do not render the games-tab slots (regression guard for #1618)', async () => {
+    // Seed a sessions item so the hybrid grid has content; games slots must be absent.
+    hubMock.mockReturnValue(
+      makeHub({
+        sources: { games: [], agents: [], kb: [], sessions: [sessionItem()], chat: [] },
+        totalCounts: { games: 0, agents: 0, kb: 0, sessions: 1, chat: 0 },
+      })
+    );
+    renderWithIntl(<LibraryHub />);
+    await userEvent.click(screen.getByRole('tab', { name: /sessioni/i }));
+    expect(document.querySelector('[data-slot="games-results-grid"]')).toBeNull();
+    expect(document.querySelector('[data-slot="games-empty-state"]')).toBeNull();
+  });
 });

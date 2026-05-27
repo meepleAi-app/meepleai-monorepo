@@ -123,7 +123,7 @@ Questo brief produce il design del 4° tab "Settings" con sub-section navigation
   - Errore state: "Invalid code. Try again." (color `--c-danger`)
 - Footer: "Back" (text-button) · "Verify and enable" CTA primary
 
-**Stati**: empty input, partial input, validation failed (3 fail consecutivi → "Too many attempts. Please wait 60s." banner + disable submit per 60s), success transition (animation freccia → step 3).
+**Stati**: empty input, partial input, validation failed (**5 fail consecutivi → "Too many failed attempts. Try again in 15 minutes." banner + disable submit per 900s** con countdown mm:ss — allineato al BE `TotpService` Redis bucket 5/5min + lockout 15min, `retryAfterSeconds=900` subcode `locked_out` del wire-doc), success transition (animation freccia → step 3).
 
 **Componenti v2**: `OTPInput6Slot` (riusa quello di `auth-flow.html` se già esiste), `WizardStepBody`.
 
@@ -195,7 +195,7 @@ Questo brief produce il design del 4° tab "Settings" con sub-section navigation
 
 **Sezioni** (schermata base):
 - Header sticky: back-arrow + "Security" titolo + nessuna action right
-- 3 card verticali stack (stesso contenuto D2: 2FA status, sessions, backup codes — ridimensionati mobile)
+- 2 card verticali stack su mobile: **2FA status + Active sessions** (ridimensionati mobile). La card **Recovery codes (disabled)** è omessa su mobile per density — riappare dopo l'enrollment (2FA ON) quando diventa actionable; pre-enrollment è ridondante con la 2FA-status card. Il set completo 3-card resta su desktop (D2).
 - Tap CTA "Set up 2FA" → bottom-sheet drawer apre con step 1
 
 **Bottom-sheet wizard**:

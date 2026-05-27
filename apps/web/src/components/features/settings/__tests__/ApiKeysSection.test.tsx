@@ -69,4 +69,15 @@ describe('ApiKeysSection', () => {
     fireEvent.click(screen.getByRole('button', { name: /revoke/i }));
     await waitFor(() => expect(api.auth.revokeApiKey).toHaveBeenCalledWith('k1'));
   });
+
+  it('clears the plaintext key from the DOM after the dialog is dismissed', async () => {
+    wrap(<ApiKeysSection />);
+    await waitFor(() => screen.getByText('CI token'));
+    fireEvent.change(screen.getByTestId('api-key-name-input'), { target: { value: 'New key' } });
+    fireEvent.click(screen.getByTestId('create-api-key-button'));
+    await waitFor(() => expect(screen.getByTestId('api-key-plaintext')).toBeInTheDocument());
+    // Dismiss the copy-once dialog → plaintext must be wiped from state/DOM.
+    fireEvent.click(screen.getByRole('button', { name: /saved it/i }));
+    await waitFor(() => expect(screen.queryByTestId('api-key-plaintext')).not.toBeInTheDocument());
+  });
 });

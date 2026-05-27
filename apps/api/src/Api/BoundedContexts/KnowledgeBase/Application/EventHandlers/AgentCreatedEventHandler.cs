@@ -22,13 +22,14 @@ internal sealed class AgentCreatedEventHandler : DomainEventHandlerBase<AgentCre
 
     protected override Dictionary<string, object?>? GetAuditMetadata(AgentCreatedEvent domainEvent)
     {
-        return new Dictionary<string, object?>
-(StringComparer.Ordinal)
+        return new Dictionary<string, object?>(StringComparer.Ordinal)
         {
             ["Action"] = "AgentCreated",
-            ["AgentId"] = domainEvent.AgentId,
-            ["Type"] = domainEvent.Type,
-            ["Name"] = domainEvent.Name
+            ["AgentId"] = domainEvent.AggregateId,
+            ["Type"] = domainEvent.AgentType,
+            ["Name"] = domainEvent.AgentName,
+            ["GameId"] = domainEvent.GameId,
+            ["GameName"] = domainEvent.GameName,
         };
     }
 }

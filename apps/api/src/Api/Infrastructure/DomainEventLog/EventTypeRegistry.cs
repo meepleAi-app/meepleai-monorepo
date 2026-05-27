@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.UserLibrary.Domain.Events;
 using Api.SharedKernel.Domain.Interfaces;
 
@@ -33,6 +34,11 @@ public static class EventTypeRegistry
         // Adding a type does NOT change the existing in-memory dispatch behavior.
         [typeof(GameRemovedFromLibraryEvent)] = "library.entry.removed",
         [typeof(GameSessionRecordedEvent)] = "library.session.recorded",
+
+        // BE-3 #1590 — cross-entity activity feed events (user-facing flows only).
+        // H1: agent.created is emitted SOLELY from CreateUserAgentCommand (user flow).
+        //     NOT from CreateAgentDefinitionCommand (admin/AI-Lab path).
+        [typeof(AgentCreatedEvent)] = "agent.created",
     };
 
     /// <summary>

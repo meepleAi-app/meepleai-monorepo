@@ -80,6 +80,11 @@ public sealed class AgentDefinitionRepository : RepositoryBase, IAgentDefinition
         // ADR-056: repository methods mutate the change-tracker only.
         // Callers are responsible for invoking IUnitOfWork.SaveChangesAsync(ct).
         await DbContext.Set<AgentDefinition>().AddAsync(agentDefinition, cancellationToken).ConfigureAwait(false);
+        // Collect domain events raised on the aggregate before or at AddAsync time so that
+        // MeepleAiDbContext.SaveChangesAsync can read them from _eventCollector.PeekEvents()
+        // and write domain_event_logs rows atomically with the agent row.
+        // BE-3 #1590: supports agent.created event raised via RaiseUserCreatedEvent().
+        CollectDomainEvents(agentDefinition);
     }
 
     public Task UpdateAsync(AgentDefinition agentDefinition, CancellationToken cancellationToken = default)

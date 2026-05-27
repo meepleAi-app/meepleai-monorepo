@@ -1,0 +1,174 @@
+name: Monitor Runner Queue (self-hosted job watchdog)
+
+# Issue #1573 follow-up (Hightower spec-panel recommendation):
+# Polls every 10 minutes for self-hosted runner jobs stuck in 'queued' or
+# split-brain in_progress state. Cancels stuck jobs older than the configured
+# threshold (default 10 min) WHEN a self-hosted runner is online — addresses
+# the 2026-05-26 orphaned-job incident where the Deploy to Staging job sat
+# queued for >1h while the runner reported online.
+#
+# Why cancellation (not re-run):
+# The deploy-staging concurrency block has cancel-in-progress: true since
+# PR #1583, so cancelling a stuck run frees the lock and allows the next
+# legitimate trigger (push or workflow_dispatch) to start clean. The runtime
+# steps are idempotent (psql ON_ERROR_STOP + idempotent SQL + docker compose
+# --force-recreate), so cancellation can never leave staging in a corrupted
+# state.
+#
+# Safety guards:
+#   - Skip entirely if no self-hosted runner is online (a legitimately busy
+#     queue is NOT stuck — only the split-brain "runner online but job not
+#     picked" case warrants cancellation).
+#   - Filter on labels containing 'self-hosted' so cloud-runner jobs are
+#     never touched (they have their own GitHub-managed scheduling).
+#   - timeout-minutes: 10 — the watchdog itself can never hang the queue.
+
+on:
+  schedule:
+    # Every 10 minutes. Aligned to the default threshold so a stuck job is
+    # caught within at most ~20 min of becoming stuck (one poll to observe,
+    # one to age past threshold).
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+    inputs:
+      threshold_minutes:
+        description: 'Queue time threshold in minutes before cancellation (default 10)'
+        required: false
+        default: '10'
+        type: string
+      dry_run:
+        description: 'If true, log stuck jobs but do not cancel'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  actions: write  # required for run cancel
+
+concurrency:
+  # Only one watchdog at a time. cancel-in-progress: true so a manual
+  # workflow_dispatch (e.g. tight threshold for emergency response) always
+  # supersedes the previous scheduled run rather than queueing behind it.
+  group: monitor-runner-queue
+  cancel-in-progress: true
+
+jobs:
+  scan:
+    name: Scan and cancel stuck self-hosted jobs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Identify and cancel stuck jobs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          THRESHOLD: ${{ inputs.threshold_minutes || '10' }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: |
+          set -euo pipefail
+
+          NOW=$(date -u +%s)
+          THRESHOLD_S=$((THRESHOLD * 60))
+          REPO="${{ github.repository }}"
+
+          echo "🔍 Threshold: ${THRESHOLD} min (${THRESHOLD_S} s)"
+          echo "🔍 Dry-run: ${DRY_RUN}"
+          echo "🔍 Repo: ${REPO}"
+          echo ""
+
+          # Safety guard #1: at least one self-hosted runner must be online.
+          # A "stuck" job with NO runner online is just a legitimately queued
+          # job waiting for a runner — cancelling it would not help.
+          ONLINE_RUNNERS=$(gh api "repos/${REPO}/actions/runners" --jq '.runners[] | select(.status == "online") | .name' || true)
+          if [ -z "$ONLINE_RUNNERS" ]; then
+            echo "⚠️ No self-hosted runners online — nothing to do."
+            echo "   (A queued job in this state is waiting legitimately; cancelling would not help.)"
+            exit 0
+          fi
+          echo "✅ Self-hosted runners online:"
+          echo "$ONLINE_RUNNERS" | sed 's/^/   - /'
+          echo ""
+
+          # Scan recent runs in queued + in_progress states for stuck jobs.
+          # We check both:
+          #   - status=queued: the obvious case
+          #   - status=in_progress: the 2026-05-26 split-brain case where
+          #     the job appears running but runner_name is null
+          STUCK_COUNT=0
+          CANCELLED_RUNS=""
+
+          for STATUS in queued in_progress; do
+            echo "📋 Scanning runs with status=${STATUS}..."
+            RUN_IDS=$(gh api "repos/${REPO}/actions/runs?status=${STATUS}&per_page=30" --jq '.workflow_runs[].id' || true)
+
+            for RUN_ID in $RUN_IDS; do
+              # Get jobs that are either queued OR in_progress with no runner
+              # assigned, AND labeled self-hosted (cloud-runner jobs are
+              # always healthy from this watchdog's perspective).
+              STUCK_JOBS=$(gh api "repos/${REPO}/actions/runs/${RUN_ID}/jobs" \
+                --jq '.jobs[] | select(.labels | type == "array" and (any(. == "self-hosted"))) | select(.status == "queued" or (.status == "in_progress" and .runner_name == null)) | "\(.id)|\(.name)|\(.started_at)"' \
+                || true)
+
+              if [ -z "$STUCK_JOBS" ]; then
+                continue
+              fi
+
+              while IFS='|' read -r JOB_ID JOB_NAME STARTED_AT; do
+                if [ -z "$STARTED_AT" ] || [ "$STARTED_AT" = "null" ]; then
+                  echo "   ℹ️ Run ${RUN_ID} job '${JOB_NAME}' has no started_at — skipping"
+                  continue
+                fi
+                STARTED_S=$(date -u -d "$STARTED_AT" +%s)
+                AGE_S=$((NOW - STARTED_S))
+                AGE_MIN=$((AGE_S / 60))
+
+                if [ "$AGE_S" -gt "$THRESHOLD_S" ]; then
+                  echo "❌ STUCK: run=${RUN_ID} job='${JOB_NAME}' age=${AGE_MIN}min status=${STATUS}"
+                  STUCK_COUNT=$((STUCK_COUNT + 1))
+
+                  if [ "$DRY_RUN" = "true" ]; then
+                    echo "   🧪 DRY_RUN: would cancel run ${RUN_ID}"
+                  else
+                    # Cancel via GH API. If the run is already terminal,
+                    # the API returns 409 — we log and continue.
+                    if gh api -X POST "repos/${REPO}/actions/runs/${RUN_ID}/cancel" >/dev/null 2>&1; then
+                      echo "   ✅ Cancelled run ${RUN_ID}"
+                      CANCELLED_RUNS="${CANCELLED_RUNS} ${RUN_ID}"
+                    else
+                      # Try force-cancel as fallback (works on some terminal states)
+                      if gh api -X POST "repos/${REPO}/actions/runs/${RUN_ID}/force-cancel" >/dev/null 2>&1; then
+                        echo "   ✅ Force-cancelled run ${RUN_ID}"
+                        CANCELLED_RUNS="${CANCELLED_RUNS} ${RUN_ID}"
+                      else
+                        echo "   ⚠️ Neither cancel nor force-cancel succeeded (run may already be terminal)"
+                      fi
+                    fi
+                  fi
+                else
+                  echo "   ⏳ run=${RUN_ID} job='${JOB_NAME}' age=${AGE_MIN}min (under threshold)"
+                fi
+              done <<< "$STUCK_JOBS"
+            done
+          done
+
+          echo ""
+          echo "=== Summary ==="
+          echo "Stuck jobs detected: ${STUCK_COUNT}"
+          if [ -n "$CANCELLED_RUNS" ]; then
+            echo "Cancelled runs:${CANCELLED_RUNS}"
+          fi
+
+          # Surface to GITHUB_STEP_SUMMARY for visibility on schedule runs
+          {
+            echo "## Runner Queue Watchdog"
+            echo ""
+            echo "- Threshold: ${THRESHOLD} min"
+            echo "- Runners online: $(echo "$ONLINE_RUNNERS" | wc -l)"
+            echo "- Stuck jobs detected: ${STUCK_COUNT}"
+            if [ -n "$CANCELLED_RUNS" ]; then
+              echo "- Cancelled runs:${CANCELLED_RUNS}"
+            fi
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "- ⚠️ Dry-run mode (no actual cancellations)"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

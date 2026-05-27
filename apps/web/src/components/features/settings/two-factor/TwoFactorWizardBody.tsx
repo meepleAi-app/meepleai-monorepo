@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, Loader2 } from 'lucide-react';
-import Image from 'next/image';
+import { QRCodeSVG } from 'qrcode.react';
 
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
@@ -75,14 +75,21 @@ export function TwoFactorWizardBody({ setupData, onEnabled, resetKey }: Props): 
           <p className="text-sm text-muted-foreground">
             Scan this QR code with your authenticator app (Google Authenticator, Authy, ecc.)
           </p>
-          <div className="bg-card p-4 rounded-lg mx-auto w-fit border border-border">
-            <Image
-              data-testid="2fa-qr-code"
-              src={setupData.qrCodeUrl}
-              alt="2FA QR Code"
-              width={192}
-              height={192}
-              unoptimized
+          {/*
+           * BE returns an otpauth:// URI (RFC 6238) — NOT a PNG. We render the QR
+           * client-side via qrcode.react (same pattern as TwoFactorSetup.tsx +
+           * InviteModal). Wrap with data-testid on the div so e2e selectors stay
+           * stable regardless of the underlying SVG markup the lib emits.
+           */}
+          <div
+            data-testid="2fa-qr-code"
+            className="bg-card p-4 rounded-lg mx-auto w-fit border border-border"
+          >
+            <QRCodeSVG
+              value={setupData.qrCodeUrl}
+              size={192}
+              level="M"
+              aria-label="2FA QR code — scan with your authenticator app"
             />
           </div>
           <div>

@@ -26,7 +26,12 @@ beforeEach(() => {
 describe('TwoFactorSetupModal', () => {
   it('renders QR with data-testid="2fa-qr-code" at step 1 (setup)', () => {
     wrap(<TwoFactorSetupModal open setupData={SETUP} onClose={() => {}} onEnabled={() => {}} />);
-    expect(screen.getByTestId('2fa-qr-code')).toBeInTheDocument();
+    const qrWrapper = screen.getByTestId('2fa-qr-code');
+    expect(qrWrapper).toBeInTheDocument();
+    // Regression guard: BE returns an otpauth:// URI, NOT a PNG. The wrapper must contain a
+    // client-rendered <svg> from qrcode.react (not an <img> trying to fetch otpauth://).
+    expect(qrWrapper.querySelector('svg')).not.toBeNull();
+    expect(qrWrapper.querySelector('img')).toBeNull();
   });
 
   it('moves to verify step when Continue clicked', () => {

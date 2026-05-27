@@ -1670,6 +1670,13 @@
           "ready": "Pronto",
           "pending": "In elaborazione",
           "failed": "Errore"
+        },
+        "stato": {
+          "label": "Stato",
+          "owned": "Posseduti",
+          "wishlist": "Wishlist",
+          "loaned": "In prestito",
+          "withKb": "Con Knowledge Base"
         }
       },
       "sort": {

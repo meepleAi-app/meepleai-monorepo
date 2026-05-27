@@ -1620,6 +1620,13 @@
           "ready": "Ready",
           "pending": "Pending",
           "failed": "Failed"
+        },
+        "stato": {
+          "label": "State",
+          "owned": "Owned",
+          "wishlist": "Wishlist",
+          "loaned": "Loaned",
+          "withKb": "With Knowledge Base"
         }
       },
       "sort": {

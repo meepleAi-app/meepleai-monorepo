@@ -497,7 +497,20 @@ jobs:
     # change (e.g. DEPLOY_METHOD=k8s) would still SSH and silently fail (the
     # `|| true` on the BASELINE read swallows errors), wasting a self-hosted
     # runner slot. Aligns with the gating pattern on every other SSH step.
-    if: vars.DEPLOY_METHOD == 'ssh'
+    #
+    # Issue #1602 (PR #1610 + post-review refinement): the explicit `if:`
+    # alone does NOT bypass GHA's implicit `success()` propagation along the
+    # entire `needs` chain. When upstream `pre-deploy-check` is skipped
+    # (workflow_dispatch + skip_tests=true), GHA propagates the skip down to
+    # this job even though `build.result` is `success` (validated by run
+    # 26492568604 post-#1600). We use `!cancelled() &&` rather than `always() &&`:
+    #   - `always()` would also run the job on workflow cancellation, leaking
+    #     SSH sessions and contradicting the cancel-in-progress: true rationale.
+    #   - `!cancelled()` respects cancellation while still suppressing the
+    #     implicit success() chain check.
+    # The explicit `needs.build.result == 'success'` re-adds the upstream
+    # success gate (otherwise a `build` failure would still trigger SSH).
+    if: ${{ !cancelled() && needs.build.result == 'success' && vars.DEPLOY_METHOD == 'ssh' }}
     outputs:
       previous_baseline: ${{ steps.read-baseline.outputs.baseline }}
     steps:
@@ -833,7 +846,11 @@ jobs:
     # validate runs only when deploy actually succeeded — snapshot-baseline
     # may be `skipped` (e.g. first deploy with no prior DEPLOYMENT.json) and
     # validate still proceeds, since the baseline read is informational only.
-    if: always() && needs.deploy.result == 'success'
+    #
+    # PR #1610 post-review refinement: switched from `always() &&` to
+    # `!cancelled() &&` for consistency with snapshot-baseline and
+    # e2e-staging, and to respect workflow cancellation (cancel-in-progress).
+    if: ${{ !cancelled() && needs.deploy.result == 'success' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -1069,7 +1086,14 @@ jobs:
     name: Staging E2E Smoke Tests
     runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}  # Needs browser support (not self-hosted ARM64)
     needs: [validate]
-    if: needs.validate.result == 'success'
+    # Issue #1602 (PR #1610 + post-review refinement): bypass GHA's implicit
+    # success() chain propagation. Without this, the job is skipped under
+    # workflow_dispatch + skip_tests=true even when `validate` succeeds,
+    # because upstream `pre-deploy-check` is skipped (validated by run
+    # 26492568604). We use `!cancelled() &&` instead of `always() &&` so the
+    # job still respects user/concurrency-group cancellation — `always()`
+    # would risk orphaning Playwright browser processes on cancel.
+    if: ${{ !cancelled() && needs.validate.result == 'success' }}
     timeout-minutes: 10
     steps:
       - name: Checkout

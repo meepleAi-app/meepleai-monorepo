@@ -990,8 +990,8 @@ internal static class KnowledgeBaseEndpoints
                 "Use ?state=ready (default) to exclude in-flight or failed docs; ?state=all to include every state. " +
                 "Pagination via ?page= (1-based) and ?pageSize= (1-100, default 20).")
             .Produces<KbDocsListResponse>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized);
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status422UnprocessableEntity);
     }
 
     private static async Task<IResult> HandleListUserKbDocs(

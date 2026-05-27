@@ -1,6 +1,13 @@
 'use client';
 
-import { useCallback, useRef, useState, type ClipboardEvent, type KeyboardEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ClipboardEvent,
+  type KeyboardEvent,
+} from 'react';
 
 import clsx from 'clsx';
 
@@ -21,30 +28,42 @@ export function OTPInput6Slot({
   disabled = false,
 }: Props): React.JSX.Element {
   const [digits, setDigits] = useState<string[]>(() => Array(SLOT_COUNT).fill(''));
+  const [pendingFocus, setPendingFocus] = useState<number | null>(null);
   const refs = useRef<Array<HTMLInputElement | null>>([]);
+
+  // Post-commit side effect: focus the scheduled slot. setState updaters must be pure;
+  // DOM focus runs here so React strict mode + concurrent rendering stay correct.
+  useEffect(() => {
+    if (pendingFocus !== null) {
+      refs.current[pendingFocus]?.focus();
+      setPendingFocus(null);
+    }
+  }, [pendingFocus]);
 
   const setAt = useCallback(
     (index: number, raw: string) => {
       const digit = raw.replace(/\D/g, '').slice(-1);
-      setDigits(prev => {
-        const next = [...prev];
-        next[index] = digit;
-        if (digit && index < SLOT_COUNT - 1) {
-          refs.current[index + 1]?.focus();
-        }
-        if (index === SLOT_COUNT - 1 && digit && next.every(Boolean)) {
-          onComplete(next.join(''));
-        }
-        return next;
-      });
+      // Compute next state inline (no functional updater): user-driven onChange events
+      // produce a single deterministic transition, so we don't need the updater's
+      // batching guarantees. This lets us call onComplete + schedule focus from outside
+      // setState, keeping the updater pure (no side effects).
+      const next = [...digits];
+      next[index] = digit;
+      setDigits(next);
+      if (digit && index < SLOT_COUNT - 1) {
+        setPendingFocus(index + 1);
+      }
+      if (index === SLOT_COUNT - 1 && digit && next.every(Boolean)) {
+        onComplete(next.join(''));
+      }
     },
-    [onComplete]
+    [digits, onComplete]
   );
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLInputElement>, index: number) => {
       if (event.key === 'Backspace' && digits[index] === '' && index > 0) {
-        refs.current[index - 1]?.focus();
+        setPendingFocus(index - 1);
       }
     },
     [digits]
@@ -60,7 +79,7 @@ export function OTPInput6Slot({
       for (let i = 0; i < trimmed.length; i++) next[i] = trimmed[i];
       setDigits(next);
       const lastIdx = Math.min(trimmed.length, SLOT_COUNT) - 1;
-      if (lastIdx >= 0) refs.current[lastIdx]?.focus();
+      if (lastIdx >= 0) setPendingFocus(lastIdx);
       if (trimmed.length === SLOT_COUNT) onComplete(trimmed);
     },
     [onComplete]

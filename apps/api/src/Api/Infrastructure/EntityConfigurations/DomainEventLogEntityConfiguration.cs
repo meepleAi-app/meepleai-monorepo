@@ -31,6 +31,9 @@ internal class DomainEventLogEntityConfiguration : IEntityTypeConfiguration<Doma
             .IsRequired();
         builder.Property(e => e.OccurredAt).IsRequired();
         builder.Property(e => e.LoggedAt).IsRequired();
+        builder.Property(e => e.PayloadVersion)
+            .IsRequired()
+            .HasDefaultValue(1);
 
         // Primary query path: activity feed reads `WHERE UserId = caller AND LoggedAt >= cutoff ORDER BY LoggedAt DESC`.
         builder.HasIndex(e => new { e.UserId, e.LoggedAt })

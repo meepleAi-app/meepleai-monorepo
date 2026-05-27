@@ -48,6 +48,7 @@ public static class DomainEventLogMapper
             AggregateId = aggregateId,
             AggregateType = aggregateType,
             PayloadJson = JsonSerializer.Serialize(domainEvent, domainEvent.GetType(), PayloadJsonOptions),
+            PayloadVersion = 1,
             OccurredAt = domainEvent.OccurredAt,
             LoggedAt = DateTime.UtcNow,
         };

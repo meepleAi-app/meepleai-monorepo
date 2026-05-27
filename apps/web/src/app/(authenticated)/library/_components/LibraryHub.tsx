@@ -393,6 +393,7 @@ export function LibraryHub(): ReactElement {
     setSelected(new Set());
   }, []);
 
+  // #1566: retained for re-wiring (spec §3.5) — unreachable until enter-select-mode is restored.
   const handleBulkDelete = useCallback(async () => {
     const ids = Array.from(selected);
     if (ids.length === 0) return;
@@ -529,9 +530,9 @@ export function LibraryHub(): ReactElement {
                     </button>
                   ))}
                 </div>
-                {/* #1566: enter-select-mode button moved here with games tab; this
-                    else-branch only renders for non-games tabs so the button is
-                    intentionally absent (tab === 'games' is false here). */}
+                {/* #1566: the enter-select-mode button was deleted — it is not in
+                    the games branch (handled by GamesFiltersInline) and not re-added
+                    here. The else-branch exists only for non-games tabs. */}
               </div>
               {effectiveKind === 'default' ? (
                 <LibraryHybridGrid

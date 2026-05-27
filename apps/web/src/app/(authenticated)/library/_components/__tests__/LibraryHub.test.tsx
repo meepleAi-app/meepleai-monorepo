@@ -532,38 +532,30 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
 
   // ─── Click dispatcher: select → toggles Set membership (games tab) ─────
   // #1566: The games tab now renders GamesResultsGrid (no hybrid grid cards).
-  // Select mode via the toolbar enter button is no longer accessible from the
-  // games tab (the button is in the else-branch toolbar which is never shown for
-  // tab=games). This test has been updated to verify select-mode toggling works
-  // in the 'all' tab (where the toolbar still renders), which exercises the same
-  // handleCardClick FSM path.
-  it('in select mode (all tab), clicking a card toggles selection', () => {
+  // #1566: the enter-select-mode button was removed (not moved). There is no
+  // rendered path that shows [data-slot="library-enter-select-mode"]. Confirm
+  // it is absent on the 'all' tab.
+  it('select-mode enter button is absent on the all tab', () => {
     const { container } = renderHub(makeHub());
-    // Still on the 'all' tab — toolbar and enter-select-mode button are visible.
     const enterBtn = container.querySelector(
       '[data-slot="library-enter-select-mode"]'
     ) as HTMLButtonElement;
-    // The enter button requires tab=games in the old condition, which now only
-    // fires when tab !== 'games'. Since the button condition was tab==='games'
-    // AND selectionMode==='browse', and that condition is now dead (in else branch),
-    // the button never appears. Confirm it's absent everywhere.
     expect(enterBtn).toBeNull();
   });
 
   // ─── Select mode is game-scoped ──────────────────────────────────────────
 
-  // #1566: The library-enter-select-mode button was moved to the else-branch
-  // toolbar (rendered when tab !== 'games'). Its inner condition was
-  // `tab === 'games' && selectionMode === 'browse'`, which is now dead code.
-  // The button is therefore permanently absent. Confirm both tabs.
-  it('select-mode enter button is absent on all tabs (button relocated to dead code path)', () => {
+  // #1566: The library-enter-select-mode button was deleted. It is absent from
+  // the games branch (GamesFiltersInline replaces the toolbar) and also absent
+  // from the else-branch toolbar (the button was not re-added there). Confirm all tabs.
+  it('select-mode enter button is absent on all tabs (button deleted by #1566)', () => {
     const { container } = renderHub(makeHub());
     // default tab is 'all' → no enter-select-mode button
     expect(container.querySelector('[data-slot="library-enter-select-mode"]')).toBeNull();
     // switch to games → games branch renders GamesFiltersInline, still no button
     fireEvent.click(container.querySelector('[data-tab-key="games"]') as HTMLButtonElement);
     expect(container.querySelector('[data-slot="library-enter-select-mode"]')).toBeNull();
-    // switch to sessions tab → else branch toolbar, but condition tab===games is false → still absent
+    // switch to sessions tab → else-branch toolbar, button was not re-added → still absent
     fireEvent.click(container.querySelector('[data-tab-key="sessions"]') as HTMLButtonElement);
     expect(container.querySelector('[data-slot="library-enter-select-mode"]')).toBeNull();
   });
@@ -590,12 +582,10 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
   });
 
   // ─── Bulk delete fan-out ────────────────────────────────────────────────
-  // #1566: The games tab now renders the GamesResultsGrid branch; the
-  // library-enter-select-mode button is in the dead else-branch toolbar. Bulk
-  // select is no longer reachable via the rendered games-tab UI. The BulkSelectionBar
+  // #1566: The games tab now renders the GamesResultsGrid branch. The BulkSelectionBar
   // component and handleBulkDelete callback remain in place for future re-wiring;
-  // this test now verifies that BulkSelectionBar is absent on the games tab
-  // (since the enter button path is gone).
+  // this test verifies BulkSelectionBar is absent on the games tab because the
+  // enter-select-mode button was deleted (not moved) by #1566.
   it('bulk-select bar is absent on the games tab (enter-button path removed by #1566)', async () => {
     useRemoveGameFromLibraryMock.mockReturnValue({
       mutateAsync: vi.fn().mockResolvedValue(undefined),

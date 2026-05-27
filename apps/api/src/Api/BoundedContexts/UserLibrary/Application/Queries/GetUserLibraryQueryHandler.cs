@@ -180,7 +180,9 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
                     OwnershipDeclaredAt: entry.OwnershipDeclaredAt,
                     HasRagAccess: isAdmin
                         || (ragPublicFlags.TryGetValue(entry.GameId, out var isPublic) && isPublic)
-                        || entry.OwnershipDeclaredAt != null
+                        || entry.OwnershipDeclaredAt != null,
+                    TimesPlayed: entry.Stats.TimesPlayed,
+                    LastPlayed: entry.Stats.LastPlayed
                 ));
             }
             // Check PrivateGame entries (batch-loaded above)
@@ -212,7 +214,9 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
                     KbProcessingCount: privateKbStats?.KbProcessingCount ?? 0,
                     AgentIsOwned: true, // Always true in library context
                     OwnershipDeclaredAt: entry.OwnershipDeclaredAt,
-                    HasRagAccess: isAdmin || entry.OwnershipDeclaredAt != null
+                    HasRagAccess: isAdmin || entry.OwnershipDeclaredAt != null,
+                    TimesPlayed: entry.Stats.TimesPlayed,
+                    LastPlayed: entry.Stats.LastPlayed
                 ));
             }
         }

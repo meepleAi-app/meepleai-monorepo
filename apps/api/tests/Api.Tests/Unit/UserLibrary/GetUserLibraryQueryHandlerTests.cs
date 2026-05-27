@@ -269,6 +269,78 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
         item.KbProcessingCount.Should().Be(0);
     }
 
+    /// <summary>
+    /// Issue #1566: Verify TimesPlayed and LastPlayed are surfaced on the list DTO.
+    /// The domain entry's Stats are already materialized from DB columns (no migration needed).
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithRecordedSession_SetsTimesPlayedAndLastPlayed()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var entryId = Guid.NewGuid();
+
+        var sharedGame = Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates.SharedGame.Create(
+            title: "Played Game",
+            yearPublished: 2021,
+            description: "A game that has been played",
+            minPlayers: 2,
+            maxPlayers: 4,
+            playingTimeMinutes: 45,
+            minAge: 8,
+            complexityRating: null,
+            averageRating: null,
+            imageUrl: "https://example.com/game.jpg",
+            thumbnailUrl: "https://example.com/game-thumb.jpg",
+            rules: null,
+            createdBy: userId,
+            bggId: 99999);
+
+        var gameId = sharedGame.Id;
+
+        // Build a domain entry with a recorded session so Stats.TimesPlayed > 0
+        var libraryEntry = new UserLibraryEntry(entryId, userId, gameId);
+        var expectedLastPlayed = new DateTime(2026, 5, 20, 14, 0, 0, DateTimeKind.Utc);
+        libraryEntry.RecordGameSession(
+            playedAt: expectedLastPlayed,
+            durationMinutes: 60,
+            didWin: true,
+            players: "Alice, Bob",
+            notes: null);
+
+        _mockLibraryRepo
+            .Setup(r => r.GetUserLibraryPaginatedAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<string?>(),
+                It.IsAny<bool?>(),
+                It.IsAny<string[]?>(),
+                It.IsAny<string?>(),
+                It.IsAny<bool>(),
+                It.IsAny<int>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((new[] { libraryEntry }, 1));
+
+        _mockSharedGameRepo
+            .Setup(r => r.GetByIdsAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates.SharedGame>
+            {
+                [gameId] = sharedGame
+            });
+
+        var query = new GetUserLibraryQuery(userId);
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Items.Should().ContainSingle();
+        var item = result.Items.First();
+        item.TimesPlayed.Should().Be(1, "One session was recorded");
+        item.LastPlayed.Should().Be(expectedLastPlayed, "LastPlayed should equal the session's playedAt");
+    }
+
     public void Dispose()
     {
         _dbContext?.Dispose();

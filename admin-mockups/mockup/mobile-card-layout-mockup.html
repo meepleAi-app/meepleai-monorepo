@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>MeepleAI — Mobile Card Layout Mockup</title>
+<!-- Split annotation: see docs/for-developers/specs/2026-05-26-mockup-poster-split.md -->
+<meta name="mockup-split-mode" content="per-variant">
+<meta name="mockup-output-prefix" content="mobile-card">
 <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 /* ═══════════════════════════════════════════════════════════════
@@ -515,7 +518,7 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
   <!-- ═══════════════════════════════════════════════
        PHONE 1: CARD VIEW (card.jpeg wireframe)
        ═══════════════════════════════════════════════ -->
-  <div class="mockup-col">
+  <div class="mockup-col" data-variant="card-view-focus">
     <span class="mockup-label">Card View — Focus Mode</span>
     <span class="mockup-sublabel">Swipe tra carte, hand stack a sinistra, card-to-card links</span>
 
@@ -594,7 +597,7 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
   <!-- ═══════════════════════════════════════════════
        PHONE 2: DRAWER VIEW (layout.jpeg wireframe)
        ═══════════════════════════════════════════════ -->
-  <div class="mockup-col">
+  <div class="mockup-col" data-variant="drawer-view">
     <span class="mockup-label">Drawer View — Dettagli</span>
     <span class="mockup-sublabel">Drawer scivola dall'alto con tabs ExtraMeepleCard</span>
 

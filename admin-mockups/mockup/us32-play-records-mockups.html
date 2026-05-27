@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>US-32 Play Records — Mockup Mobile</title>
+<!-- Split annotation: see docs/for-developers/specs/2026-05-26-mockup-poster-split.md -->
+<meta name="mockup-split-mode" content="per-variant">
+<meta name="mockup-output-prefix" content="play-records">
 <style>
   :root {
     --bg-base: #0f0f13;
@@ -625,7 +628,7 @@
 ═══════════════════════════════════════════════════ -->
 <div class="page-col">
   <div class="phone-label">① /play-records — Lista</div>
-  <div class="phone">
+  <div class="phone" data-variant="list">
     <div class="mobile-header">
       <div class="back-btn">←</div>
       <div class="title">Partite Giocate</div>
@@ -743,7 +746,7 @@
 ═══════════════════════════════════════════════════ -->
 <div class="page-col">
   <div class="phone-label">② /play-records/new — Step 1: Gioco</div>
-  <div class="phone">
+  <div class="phone" data-variant="new-step1-game">
     <div class="mobile-header">
       <div class="back-btn">←</div>
       <div class="title">Registra Partita</div>
@@ -820,7 +823,7 @@
 <!-- Step 2 -->
 <div class="page-col">
   <div class="phone-label">② /play-records/new — Step 2: Giocatori & Punteggi</div>
-  <div class="phone">
+  <div class="phone" data-variant="new-step2-players">
     <div class="mobile-header">
       <div class="back-btn">←</div>
       <div class="title">Registra Partita</div>
@@ -896,7 +899,7 @@
 <!-- Step 3 -->
 <div class="page-col">
   <div class="phone-label">② /play-records/new — Step 3: Riepilogo</div>
-  <div class="phone">
+  <div class="phone" data-variant="new-step3-summary">
     <div class="mobile-header">
       <div class="back-btn">←</div>
       <div class="title">Registra Partita</div>
@@ -970,7 +973,7 @@
 ═══════════════════════════════════════════════════ -->
 <div class="page-col">
   <div class="phone-label">③ /play-records/[id] — Dettaglio</div>
-  <div class="phone">
+  <div class="phone" data-variant="detail">
     <div class="mobile-header">
       <div class="back-btn">←</div>
       <div class="title">Puerto Rico</div>
@@ -1072,7 +1075,7 @@
 ═══════════════════════════════════════════════════ -->
 <div class="page-col">
   <div class="phone-label">④ /play-records/stats — Statistiche</div>
-  <div class="phone">
+  <div class="phone" data-variant="stats">
     <div class="mobile-header">
       <div class="back-btn">←</div>
       <div class="title">Le mie statistiche</div>

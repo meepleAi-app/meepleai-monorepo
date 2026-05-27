@@ -1,15 +1,38 @@
 <!DOCTYPE html>
 <html lang="it" data-theme="light">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MeepleCard Visual Test - Full Features</title>
-<!-- Split annotation: see docs/for-developers/specs/2026-05-26-mockup-poster-split.md -->
-<meta name="mockup-split-mode" content="per-component">
-<meta name="mockup-output-prefix" content="meeple-card-visual">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MeepleCard Visual Test - Full Features — grid-view</title>
+<!-- SPLIT-GEN: source=mockup/meeple-card-visual-test.html mode=per-component variant=grid-view regenerated=2026-05-26T08:43:33Z -->
+<!-- DO NOT EDIT — regenerate via `python -m scripts.mockup_demo.split_presentation` -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="../design_files/tokens.css"/>
+<link rel="stylesheet" href="../design_files/components.css"/>
 <style>
+/* ── Standalone viewport (overrides poster body chrome) ───────────────── */
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body.standalone-viewport{background:#f7f3ee !important;align-items:flex-start !important;justify-content:flex-start !important;
+  font-family:'Nunito',system-ui,sans-serif;
+  background:#1a1612;
+  color:var(--text,#2b1f12);
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  gap:32px;
+  padding:32px 24px;
+}
+body.standalone-viewport > .phone{
+  flex-shrink:0;
+}
+h1,h2,h3,h4,h5{font-family:'Quicksand',sans-serif}
+
+/* ── Inherited page styles from poster (chrome stripped) ──────────────── */
 /* ============================================================================
    CSS VARIABLES & THEME
    ============================================================================ */
@@ -51,9 +74,7 @@
   --shadow-warm-2xl: 0 16px 64px rgba(0,0,0,0.6);
 }
 * { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:'Nunito',sans-serif; background:var(--bg-primary); color:var(--text-primary); line-height:1.6; }
 h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
-
 /* ============================================================================
    HEADER
    ============================================================================ */
@@ -74,7 +95,6 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
   color:var(--text-primary); backdrop-filter:var(--backdrop-blur); transition:all 0.2s;
 }
 .theme-toggle:hover { box-shadow:var(--shadow-warm); }
-
 /* ============================================================================
    SECTIONS
    ============================================================================ */
@@ -84,7 +104,6 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
 .section-number { width:32px; height:32px; border-radius:50%; background:hsl(var(--e-game-h),var(--e-game-s),var(--e-game-l)); color:white; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; font-family:'Quicksand',sans-serif; }
 .section-title { font-size:1.4rem; font-weight:700; }
 .section-desc { color:var(--text-secondary); font-size:0.85rem; margin-top:-16px; margin-bottom:20px; }
-
 /* ============================================================================
    MEEPLE CARD - FULL FEATURES
    ============================================================================ */
@@ -104,7 +123,6 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
 .mc.e-document:hover { outline-color:hsla(var(--e-document-h),var(--e-document-s),var(--e-document-l),0.4); }
 .mc.e-chat:hover { outline-color:hsla(var(--e-chat-h),var(--e-chat-s),var(--e-chat-l),0.4); }
 .mc.e-player:hover { outline-color:hsla(var(--e-player-h),var(--e-player-s),var(--e-player-l),0.4); }
-
 /* Entity left border indicator */
 .mc::before {
   content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
@@ -117,7 +135,6 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
 .mc.e-document::before { background:hsl(var(--e-document-h),var(--e-document-s),var(--e-document-l)); }
 .mc.e-chat::before { background:hsl(var(--e-chat-h),var(--e-chat-s),var(--e-chat-l)); }
 .mc.e-player::before { background:hsl(var(--e-player-h),var(--e-player-s),var(--e-player-l)); }
-
 /* ---- Cover Image ---- */
 .mc-cover {
   position:relative; width:100%; aspect-ratio:4/3; overflow:hidden;
@@ -125,7 +142,6 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
 }
 .mc-cover img { width:100%; height:100%; object-fit:cover; transition:transform 0.5s ease; }
 .mc:hover .mc-cover img { transform:scale(1.06); }
-
 /* Entity gradient overlay */
 .mc-cover .mc-gradient {
   position:absolute; inset:0; pointer-events:none; z-index:1;
@@ -135,7 +151,6 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
 .mc.e-agent .mc-gradient { background:linear-gradient(to top, hsla(var(--e-agent-h),var(--e-agent-s),var(--e-agent-l),0.15), transparent 60%); }
 .mc.e-document .mc-gradient { background:linear-gradient(to top, hsla(var(--e-document-h),var(--e-document-s),var(--e-document-l),0.15), transparent 60%); }
 .mc.e-chat .mc-gradient { background:linear-gradient(to top, hsla(var(--e-chat-h),var(--e-chat-s),var(--e-chat-l),0.15), transparent 60%); }
-
 /* Shimmer on hover */
 .mc-cover .mc-shimmer {
   position:absolute; top:0; left:-100%; width:50%; height:100%; z-index:2;
@@ -143,12 +158,10 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
   transition:left 0.6s ease; pointer-events:none;
 }
 .mc:hover .mc-shimmer { left:150%; }
-
 /* Placeholder */
 .mc-placeholder {
   display:flex; align-items:center; justify-content:center; width:100%; height:100%;
 }
-
 /* ---- Vertical Tag Stack (top-left, z-10) ---- */
 .mc-tags {
   position:absolute; top:8px; left:10px; z-index:10;
@@ -169,7 +182,6 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
   color:var(--text-primary); border:1px solid var(--border-color);
   font-weight:600;
 }
-
 /* ---- Top-Right Action Buttons (z-15) ---- */
 .mc-actions {
   position:absolute; top:8px; right:10px; z-index:15;
@@ -197,17 +209,14 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
 /* Entity glow on action hover */
 .mc.e-game .mc-action-btn:hover { border-color:hsla(var(--e-game-h),var(--e-game-s),var(--e-game-l),0.5); }
 .mc.e-agent .mc-action-btn:hover { border-color:hsla(var(--e-agent-h),var(--e-agent-s),var(--e-agent-l),0.5); }
-
 [data-theme="dark"] .mc-action-btn {
   background:rgba(30,30,50,0.8); border-color:rgba(255,255,255,0.15);
   color:var(--text-secondary);
 }
-
 /* ---- Content Area ---- */
 .mc-content { padding:12px 14px 8px; }
 .mc-title { font-family:'Quicksand',sans-serif; font-weight:700; font-size:0.95rem; margin-bottom:2px; line-height:1.3; }
 .mc-subtitle { color:var(--text-secondary); font-size:0.78rem; margin-bottom:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
 /* Star rating */
 .mc-stars { display:flex; align-items:center; gap:3px; margin-bottom:4px; }
 .mc-stars .star { font-size:12px; }
@@ -215,7 +224,6 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
 .mc-stars .star.half { color:hsla(38,92%,50%,0.5); }
 .mc-stars .star.empty { color:var(--text-muted); opacity:0.3; }
 .mc-stars .rating-text { font-size:0.72rem; font-weight:600; color:var(--text-secondary); margin-left:4px; }
-
 /* ---- Metadata Footer Bar (grid) ---- */
 .mc-meta-footer {
   display:flex; justify-content:space-evenly; align-items:center;
@@ -228,7 +236,6 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
   font-size:0.7rem; font-weight:600; color:var(--text-primary); opacity:0.65;
 }
 .mc-meta-item svg { width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:1.5; }
-
 /* ---- Agent Action Footer ---- */
 .mc-agent-footer {
   display:flex; align-items:center; justify-content:center;
@@ -255,7 +262,6 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
 }
 [data-theme="dark"] .mc-agent-btn.create { background:hsla(38,80%,20%,0.4); color:hsl(38,80%,70%); }
 [data-theme="dark"] .mc-agent-btn.chat-link { background:hsla(220,80%,20%,0.4); color:hsl(220,80%,70%); }
-
 /* ---- Navigation Footer ---- */
 .mc-nav-footer {
   display:flex; flex-direction:column; padding:7px 10px 9px;
@@ -312,7 +318,6 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
 .mc-nav-item:hover .mc-nav-item-label { opacity:1; }
 .mc-nav-icon.n-document:hover ~ .mc-nav-item-label { color:hsl(var(--e-document-h),var(--e-document-s),var(--e-document-l)); }
 .mc-nav-icon.n-session:hover ~ .mc-nav-item-label { color:hsl(var(--e-session-h),var(--e-session-s),var(--e-session-l)); }
-
 /* ---- Image source label ---- */
 .mc-img-label {
   position:absolute; bottom:8px; left:8px; z-index:3;
@@ -320,12 +325,10 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
   font-size:0.58rem; padding:2px 7px; border-radius:6px;
   font-weight:600; letter-spacing:0.5px;
 }
-
 /* ============================================================================
    GRID LAYOUT
    ============================================================================ */
 .grid-4 { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:24px; }
-
 /* ============================================================================
    LIST LAYOUT
    ============================================================================ */
@@ -347,7 +350,6 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
   width:8px; height:8px; border-radius:50%; flex-shrink:0;
   display:inline-block; margin-right:6px;
 }
-
 /* ============================================================================
    TABLE VIEW
    ============================================================================ */
@@ -384,7 +386,6 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
 .et-badge { display:inline-flex; padding:2px 7px; border-radius:5px; font-size:0.62rem; font-weight:700; text-transform:uppercase; letter-spacing:0.3px; }
 .et-nav-btns { display:flex; gap:3px; justify-content:flex-end; }
 .et-nav-btns .mc-nav-icon { width:26px; height:26px; }
-
 /* ============================================================================
    FLIP CARD
    ============================================================================ */
@@ -402,7 +403,6 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
 .flip-back-content .dv { font-weight:600; font-size:0.78rem; }
 .flip-hint { position:absolute; bottom:6px; right:10px; font-size:0.62rem; color:var(--text-muted); opacity:0; transition:opacity 0.3s; }
 .flip-container:hover .flip-hint { opacity:1; }
-
 /* ============================================================================
    3D CAROUSEL (Real implementation)
    ============================================================================ */
@@ -438,39 +438,24 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
   background:hsl(var(--e-game-h),var(--e-game-s),var(--e-game-l));
   width:32px; /* elongated pill */
 }
-
 /* ============================================================================
    MULTI-ENTITY GRID
    ============================================================================ */
 .multi-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:20px; }
-
 /* ============================================================================
    ANIMATIONS
    ============================================================================ */
 @keyframes fadeInUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
 .anim { animation:fadeInUp 0.5s ease forwards; opacity:0; }
-.d1{animation-delay:.1s} .d2{animation-delay:.2s} .d3{animation-delay:.3s} .d4{animation-delay:.4s} .d5{animation-delay:.5s}
+.d1{animation-delay:.1s}
+.d2{animation-delay:.2s}
+.d3{animation-delay:.3s}
+.d4{animation-delay:.4s}
+.d5{animation-delay:.5s}
 </style>
 </head>
-<body>
-
-<!-- HEADER -->
-<div class="header">
-  <div class="header-left">
-    <svg class="header-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <defs><linearGradient id="mg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#3B82F6"/><stop offset="50%" style="stop-color:#6366F1"/><stop offset="100%" style="stop-color:#8B5CF6"/></linearGradient></defs>
-      <path d="M 50 15 A 12 12 0 1 1 50 39 A 12 12 0 1 1 50 15 M 50 39 L 50 42 L 15 42 L 12 45 L 12 52 L 15 55 L 28 55 L 32 60 L 35 70 L 30 88 L 28 95 L 45 95 L 50 75 L 55 95 L 72 95 L 70 88 L 65 70 L 68 60 L 72 55 L 85 55 L 88 52 L 88 45 L 85 42 L 50 42 Z" fill="url(#mg)"/>
-      <circle cx="50" cy="55" r="4" fill="#10B981" opacity="0.8"/><circle cx="50" cy="55" r="2" fill="white"/>
-    </svg>
-    <h1>Meeple<span>AI</span> Visual Test v2</h1>
-  </div>
-  <button class="theme-toggle" onclick="document.documentElement.dataset.theme=document.documentElement.dataset.theme==='dark'?'light':'dark'">&#9790; / &#9788;</button>
-</div>
-
-<div class="container">
-
-<!-- ===== SECTION 1: GRID VIEW - FULL FEATURES ===== -->
-<div class="section" data-component="grid-view">
+<body class="standalone-viewport">
+  <div class="section" data-component="grid-view">
   <div class="section-header"><div class="section-number">1</div><h2 class="section-title">Grid View - Full MeepleCard Features</h2></div>
   <p class="section-desc">Tags, wishlist, info button, quick actions, entity glow, gradient overlay, shimmer, star rating, metadata footer, agent action, nav footer</p>
   <div class="grid-4">
@@ -567,7 +552,7 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
       <div class="mc-cover" style="background:linear-gradient(135deg,hsl(30,60%,85%),hsl(20,70%,75%));">
         <div class="mc-gradient"></div>
         <div class="mc-placeholder">
-          <svg width="70" height="70" viewBox="0 0 100 100" fill="none"><defs><linearGradient id="pdt" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="hsl(280,65%,75%)"/><stop offset="100%" stop-color="hsl(280,60%,65%)"/></linearGradient><linearGradient id="pdl" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="hsl(280,60%,65%)"/><stop offset="100%" stop-color="hsl(300,55%,55%)"/></linearGradient><linearGradient id="pdr" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="hsl(300,55%,55%)"/><stop offset="100%" stop-color="hsl(320,50%,50%)"/></linearGradient></defs><path d="M50 15L80 30L50 45L20 30Z" fill="url(#pdt)"/><path d="M20 30L50 45L50 85L20 70Z" fill="url(#pdl)"/><path d="M50 45L80 30L80 70L50 85Z" fill="url(#pdr)"/><circle cx="35" cy="28" r="2" fill="white" opacity=".9"/><circle cx="50" cy="30" r="2" fill="white" opacity=".9"/><circle cx="65" cy="32" r="2" fill="white" opacity=".9"/><circle cx="38" cy="36" r="2" fill="white" opacity=".9"/><circle cx="62" cy="39" r="2" fill="white" opacity=".9"/><circle cx="30" cy="52" r="2.5" fill="white" opacity=".85"/><circle cx="40" cy="63" r="2.5" fill="white" opacity=".85"/><circle cx="60" cy="50" r="2.5" fill="white" opacity=".8"/><circle cx="70" cy="55" r="2.5" fill="white" opacity=".8"/><circle cx="60" cy="65" r="2.5" fill="white" opacity=".8"/><circle cx="70" cy="70" r="2.5" fill="white" opacity=".8"/></svg>
+          <svg width="70" height="70" viewBox="0 0 100 100" fill="none"><defs><linearGradient id="pdt" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="hsl(280,65%,75%)"/><stop offset="100%" stop-color="hsl(280,60%,65%)"/></lineargradient><linearGradient id="pdl" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="hsl(280,60%,65%)"/><stop offset="100%" stop-color="hsl(300,55%,55%)"/></lineargradient><linearGradient id="pdr" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="hsl(300,55%,55%)"/><stop offset="100%" stop-color="hsl(320,50%,50%)"/></lineargradient></defs><path d="M50 15L80 30L50 45L20 30Z" fill="url(#pdt)"/><path d="M20 30L50 45L50 85L20 70Z" fill="url(#pdl)"/><path d="M50 45L80 30L80 70L50 85Z" fill="url(#pdr)"/><circle cx="35" cy="28" r="2" fill="white" opacity=".9"/><circle cx="50" cy="30" r="2" fill="white" opacity=".9"/><circle cx="65" cy="32" r="2" fill="white" opacity=".9"/><circle cx="38" cy="36" r="2" fill="white" opacity=".9"/><circle cx="62" cy="39" r="2" fill="white" opacity=".9"/><circle cx="30" cy="52" r="2.5" fill="white" opacity=".85"/><circle cx="40" cy="63" r="2.5" fill="white" opacity=".85"/><circle cx="60" cy="50" r="2.5" fill="white" opacity=".8"/><circle cx="70" cy="55" r="2.5" fill="white" opacity=".8"/><circle cx="60" cy="65" r="2.5" fill="white" opacity=".8"/><circle cx="70" cy="70" r="2.5" fill="white" opacity=".8"/></svg>
         </div>
         <div class="mc-tags">
           <div class="mc-tag" style="background:hsl(var(--e-game-h),var(--e-game-s),var(--e-game-l));">Gioco</div>
@@ -606,7 +591,7 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
     <div class="mc e-game anim d4">
       <div class="mc-cover" style="background:linear-gradient(135deg,hsl(30,60%,85%),hsl(20,70%,75%));">
         <div class="mc-placeholder" style="opacity:0.35;">
-          <svg width="60" height="60" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="mg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#3B82F6"/><stop offset="50%" style="stop-color:#6366F1"/><stop offset="100%" style="stop-color:#8B5CF6"/></linearGradient></defs><path d="M 50 15 A 12 12 0 1 1 50 39 A 12 12 0 1 1 50 15 M 50 39 L 50 42 L 15 42 L 12 45 L 12 52 L 15 55 L 28 55 L 32 60 L 35 70 L 30 88 L 28 95 L 45 95 L 50 75 L 55 95 L 72 95 L 70 88 L 65 70 L 68 60 L 72 55 L 85 55 L 88 52 L 88 45 L 85 42 L 50 42 Z" fill="url(#mg2)"/></svg>
+          <svg width="60" height="60" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="mg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#3B82F6"/><stop offset="50%" style="stop-color:#6366F1"/><stop offset="100%" style="stop-color:#8B5CF6"/></lineargradient></defs><path d="M 50 15 A 12 12 0 1 1 50 39 A 12 12 0 1 1 50 15 M 50 39 L 50 42 L 15 42 L 12 45 L 12 52 L 15 55 L 28 55 L 32 60 L 35 70 L 30 88 L 28 95 L 45 95 L 50 75 L 55 95 L 72 95 L 70 88 L 65 70 L 68 60 L 72 55 L 85 55 L 88 52 L 88 45 L 85 42 L 50 42 Z" fill="url(#mg2)"/></svg>
         </div>
         <div class="mc-tags">
           <div class="mc-tag" style="background:hsl(var(--e-game-h),var(--e-game-s),var(--e-game-l));">Gioco</div>
@@ -635,337 +620,5 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
 
   </div>
 </div>
-
-<!-- ===== SECTION 2: LIST VIEW ===== -->
-<div class="section" data-component="list-view">
-  <div class="section-header"><div class="section-number">2</div><h2 class="section-title">List View - Dot indicator, inline meta</h2></div>
-  <div class="list-layout">
-    <div class="mc mc-list e-game anim d1">
-      <div class="mc-cover">
-        <img src="https://cf.geekdo-images.com/7SrPNGBKg9IIsP4UQpOi8g__imagepage/img/89ViRUkZ_LOFNbSMEJN0GA0cEJo=/fit-in/900x600/filters:no_upscale():strip_icc()/pic4325841.jpg" alt="Terraforming Mars">
-      </div>
-      <div class="mc-list-body">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
-          <span class="mc-dot" style="background:hsl(var(--e-game-h),var(--e-game-s),var(--e-game-l));"></span>
-          <span class="mc-title" style="font-size:0.9rem;">Terraforming Mars</span>
-          <span class="mc-tag status-owned" style="font-size:8px;padding:1px 5px;">Posseduto</span>
-        </div>
-        <div class="mc-subtitle" style="margin-bottom:4px;">Jacob Fryxelius &bull; FryxGames &bull; 1-5 giocatori &bull; 120 min</div>
-        <div class="mc-stars" style="margin:0;">
-          <span class="star full" style="font-size:10px;">&#9733;</span><span class="star full" style="font-size:10px;">&#9733;</span><span class="star full" style="font-size:10px;">&#9733;</span><span class="star full" style="font-size:10px;">&#9733;</span><span class="star half" style="font-size:10px;">&#9733;</span>
-          <span class="rating-text">8.4</span>
-        </div>
-      </div>
-      <div class="mc-list-actions">
-        <div class="mc-nav-icon n-document"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span class="badge">2</span></div>
-        <div class="mc-nav-icon n-session"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span class="badge">3</span></div>
-        <div class="mc-nav-icon n-agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="3"/></svg><span class="badge">1</span></div>
-        <div class="mc-nav-icon n-chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="badge">4</span></div>
-      </div>
-    </div>
-    <div class="mc mc-list e-game anim d2">
-      <div class="mc-cover" style="background:linear-gradient(135deg,hsl(30,60%,85%),hsl(20,70%,75%));">
-        <div class="mc-placeholder"><svg width="40" height="40" viewBox="0 0 100 100" fill="none"><path d="M50 15L80 30L50 45L20 30Z" fill="hsl(280,65%,75%)"/><path d="M20 30L50 45L50 85L20 70Z" fill="hsl(280,60%,65%)"/><path d="M50 45L80 30L80 70L50 85Z" fill="hsl(300,55%,55%)"/><circle cx="50" cy="30" r="3" fill="white" opacity=".85"/></svg></div>
-      </div>
-      <div class="mc-list-body">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
-          <span class="mc-dot" style="background:hsl(var(--e-game-h),var(--e-game-s),var(--e-game-l));"></span>
-          <span class="mc-title" style="font-size:0.9rem;">Pandemic</span>
-        </div>
-        <div class="mc-subtitle">Matt Leacock &bull; Z-Man Games &bull; 2-4 giocatori &bull; 45 min</div>
-      </div>
-      <div class="mc-list-actions">
-        <div class="mc-nav-icon n-document"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span class="plus-overlay" style="color:hsl(var(--e-document-h),var(--e-document-s),var(--e-document-l));">+</span></div>
-        <div class="mc-nav-icon n-session"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span class="plus-overlay" style="color:hsl(var(--e-session-h),var(--e-session-s),var(--e-session-l));">+</span></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== SECTION 3: TABLE VIEW ===== -->
-<div class="section" data-component="table-view">
-  <div class="section-header"><div class="section-number">3</div><h2 class="section-title">Table View - Entity-colored rows</h2></div>
-  <table class="entity-table anim d1">
-    <thead><tr>
-      <th class="sorted">Titolo <span class="sort-icon">&#9650;</span></th>
-      <th>Tipo</th><th>Dettagli</th><th>Rating</th><th>Stato</th><th style="text-align:right;">Nav</th>
-    </tr></thead>
-    <tbody>
-      <tr class="et-game"><td><div class="et-title-cell"><img class="et-thumb" src="https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__imagepage/img/M_3Jc3L2jHL-FwOmPuHeDYOzaYE=/fit-in/900x600/filters:no_upscale():strip_icc()/pic2419375.jpg" alt="Catan"><div><div style="font-weight:700;font-family:'Quicksand',sans-serif;font-size:0.85rem;">I Coloni di Catan</div><div style="font-size:0.68rem;color:var(--text-muted);">Klaus Teuber</div></div></div></td><td><span class="et-badge" style="background:hsla(var(--e-game-h),var(--e-game-s),var(--e-game-l),0.12);color:hsl(var(--e-game-h),var(--e-game-s),var(--e-game-l));">Gioco</span></td><td style="color:var(--text-secondary);">3-4 &bull; 60-120m</td><td><span style="color:hsl(38,92%,50%);">&#9733;</span> 7.1</td><td><span style="color:hsl(160,60%,42%);font-weight:600;font-size:0.78rem;">Posseduto</span></td><td style="text-align:right;"><div class="et-nav-btns"><div class="mc-nav-icon n-document"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span class="badge">3</span></div><div class="mc-nav-icon n-session"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span class="badge">5</span></div><div class="mc-nav-icon n-agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="3"/></svg><span class="badge">1</span></div><div class="mc-nav-icon n-chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="badge">2</span></div></div></td></tr>
-      <tr class="et-session"><td><div class="et-title-cell"><div class="et-thumb-ph" style="background:linear-gradient(135deg,hsl(240,30%,92%),hsl(260,25%,87%));"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(240,60%,55%)" stroke-width="1.5" opacity=".6"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div><div style="font-weight:700;font-family:'Quicksand',sans-serif;font-size:0.85rem;">Serata Catan #5</div><div style="font-size:0.68rem;color:var(--text-muted);">15 Feb 2026</div></div></div></td><td><span class="et-badge" style="background:hsla(var(--e-session-h),var(--e-session-s),var(--e-session-l),0.12);color:hsl(var(--e-session-h),var(--e-session-s),var(--e-session-l));">Sessione</span></td><td style="color:var(--text-secondary);">Catan &bull; 4 giocatori</td><td>&mdash;</td><td><span style="color:hsl(var(--e-session-h),var(--e-session-s),var(--e-session-l));font-weight:600;font-size:0.78rem;">Completata</span></td><td style="text-align:right;"><div class="et-nav-btns"><div class="mc-nav-icon n-game"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v3"/></svg></div><div class="mc-nav-icon n-player"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span class="badge">4</span></div></div></td></tr>
-      <tr class="et-agent"><td><div class="et-title-cell"><div class="et-thumb-ph" style="background:linear-gradient(135deg,hsl(38,40%,92%),hsl(38,35%,85%));"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(38,92%,50%)" stroke-width="1.5" opacity=".6"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="3"/></svg></div><div><div style="font-weight:700;font-family:'Quicksand',sans-serif;font-size:0.85rem;">CatanHelper AI</div><div style="font-size:0.68rem;color:var(--text-muted);">GPT-4o &bull; Hybrid RAG</div></div></div></td><td><span class="et-badge" style="background:hsla(var(--e-agent-h),var(--e-agent-s),var(--e-agent-l),0.12);color:hsl(var(--e-agent-h),var(--e-agent-s),var(--e-agent-l));">Agente</span></td><td style="color:var(--text-secondary);">Catan &bull; 450 chunks</td><td>&mdash;</td><td><span style="color:hsl(142,71%,45%);font-weight:600;font-size:0.78rem;">Attivo</span></td><td style="text-align:right;"><div class="et-nav-btns"><div class="mc-nav-icon n-game"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v3"/></svg></div><div class="mc-nav-icon n-chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="badge">2</span></div><div class="mc-nav-icon n-document"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span class="badge">3</span></div></div></td></tr>
-    </tbody>
-  </table>
-</div>
-
-<!-- ===== SECTION 4: FLIP CARDS ===== -->
-<div class="section" data-component="flip-card">
-  <div class="section-header"><div class="section-number">4</div><h2 class="section-title">Flip Card - Click per girare</h2></div>
-  <div class="grid-4">
-    <div class="flip-container anim d1" onclick="this.classList.toggle('flipped')" style="height:440px;">
-      <div class="flip-inner">
-        <div class="flip-front"><div class="mc e-game" style="height:100%;display:flex;flex-direction:column;">
-          <div class="mc-cover" style="flex:1;">
-            <div class="mc-gradient"></div><div class="mc-shimmer"></div>
-            <img src="https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__imagepage/img/M_3Jc3L2jHL-FwOmPuHeDYOzaYE=/fit-in/900x600/filters:no_upscale():strip_icc()/pic2419375.jpg" alt="Catan">
-            <div class="mc-tags"><div class="mc-tag" style="background:hsl(var(--e-game-h),var(--e-game-s),var(--e-game-l));">Gioco</div><div class="mc-tag status-owned">Posseduto</div></div>
-          </div>
-          <div class="mc-content"><div class="mc-title">I Coloni di Catan</div><div class="mc-subtitle">Klaus Teuber &bull; Kosmos</div><div class="mc-stars"><span class="star full">&#9733;</span><span class="star full">&#9733;</span><span class="star full">&#9733;</span><span class="star half">&#9733;</span><span class="star empty">&#9733;</span><span class="rating-text">7.1</span></div></div>
-          <div class="mc-meta-footer"><div class="mc-meta-item">3-4</div><div class="mc-meta-item">60-120m</div><div class="mc-meta-item">2.3</div></div>
-          <span class="flip-hint">Click per girare</span>
-        </div></div>
-        <div class="flip-back">
-          <div class="flip-back-header" style="background:hsl(var(--e-game-h),var(--e-game-s),var(--e-game-l));">
-            <h3 style="position:relative;z-index:1;">I Coloni di Catan</h3>
-            <div style="position:relative;z-index:1;font-size:0.78rem;opacity:0.9;">Gioco da Tavolo &bull; 1995</div>
-          </div>
-          <div class="flip-back-content">
-            <div class="dr"><span class="dl">Giocatori</span><span class="dv">3-4</span></div>
-            <div class="dr"><span class="dl">Durata</span><span class="dv">60-120 min</span></div>
-            <div class="dr"><span class="dl">Complessita</span><span class="dv">2.32 / 5</span></div>
-            <div class="dr"><span class="dl">Rating</span><span class="dv">7.1 / 10</span></div>
-            <div class="dr"><span class="dl">Documenti KB</span><span class="dv">3 PDF</span></div>
-            <div class="dr"><span class="dl">Sessioni</span><span class="dv">5 giocate</span></div>
-            <div class="dr"><span class="dl">Agente AI</span><span class="dv">CatanHelper</span></div>
-            <div class="dr"><span class="dl">Chat</span><span class="dv">2 conversazioni</span></div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="flip-container anim d2" onclick="this.classList.toggle('flipped')" style="height:440px;">
-      <div class="flip-inner">
-        <div class="flip-front"><div class="mc e-agent" style="height:100%;display:flex;flex-direction:column;">
-          <div class="mc-cover" style="flex:1;background:linear-gradient(135deg,hsl(38,40%,85%),hsl(38,60%,70%));">
-            <div class="mc-placeholder"><svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="hsl(38,92%,50%)" stroke-width="1.5" opacity=".5"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="11"/><circle cx="8" cy="16" r="1" fill="hsl(38,92%,50%)"/><circle cx="16" cy="16" r="1" fill="hsl(38,92%,50%)"/></svg></div>
-            <div class="mc-tags"><div class="mc-tag" style="background:hsl(var(--e-agent-h),var(--e-agent-s),var(--e-agent-l));">Agente</div></div>
-          </div>
-          <div class="mc-content"><div class="mc-title">CatanHelper AI</div><div class="mc-subtitle">Agente Strategico &bull; GPT-4o</div></div>
-          <div class="mc-nav-footer">
-            <div class="mc-nav-label">Naviga verso</div>
-            <div class="mc-nav-row">
-              <div class="mc-nav-item"><div class="mc-nav-icon n-game"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v3"/></svg></div><span class="mc-nav-item-label">Gioco</span></div>
-              <div class="mc-nav-item"><div class="mc-nav-icon n-chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="badge">2</span></div><span class="mc-nav-item-label">Chat</span></div>
-              <div class="mc-nav-item"><div class="mc-nav-icon n-document"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span class="badge">3</span></div><span class="mc-nav-item-label">KB</span></div>
-            </div>
-          </div>
-          <span class="flip-hint">Click per girare</span>
-        </div></div>
-        <div class="flip-back">
-          <div class="flip-back-header" style="background:hsl(var(--e-agent-h),var(--e-agent-s),var(--e-agent-l));">
-            <h3 style="position:relative;z-index:1;">CatanHelper AI</h3>
-            <div style="position:relative;z-index:1;font-size:0.78rem;opacity:0.9;">Agente AI &bull; 10 Feb 2026</div>
-          </div>
-          <div class="flip-back-content">
-            <div class="dr"><span class="dl">Gioco</span><span class="dv">I Coloni di Catan</span></div>
-            <div class="dr"><span class="dl">Modello</span><span class="dv">GPT-4o</span></div>
-            <div class="dr"><span class="dl">Strategia RAG</span><span class="dv">Hybrid Search</span></div>
-            <div class="dr"><span class="dl">Documenti</span><span class="dv">3 PDF (450 chunks)</span></div>
-            <div class="dr"><span class="dl">Chat</span><span class="dv">2 conversazioni</span></div>
-            <div class="dr"><span class="dl">Ultimo uso</span><span class="dv">Oggi, 14:30</span></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== SECTION 5: 3D CAROUSEL (Real transforms) ===== -->
-<div class="section" data-component="carousel-3d">
-  <div class="section-header"><div class="section-number">5</div><h2 class="section-title">3D Carousel - translateX(35%), rotateY(-5deg), blur</h2></div>
-  <p class="section-desc">Prospettiva 1200px. Centro: scale(1.1), opacita 1. Laterali: scale(0.85), opacita 0.6, blur 2px. Lontani: scale(0.5), opacita 0. Fade ai bordi.</p>
-  <div class="carousel-section">
-    <div class="carousel-stage" id="carouselStage">
-      <div class="carousel-fade-l"></div>
-      <div class="carousel-fade-r"></div>
-      <div class="carousel-center" id="carouselCenter"></div>
-      <button class="carousel-nav-btn prev" onclick="moveCarousel(-1)">&#8249;</button>
-      <button class="carousel-nav-btn next" onclick="moveCarousel(1)">&#8250;</button>
-    </div>
-    <div class="carousel-dots" id="carouselDots"></div>
-  </div>
-</div>
-
-<!-- ===== SECTION 6: MULTI-ENTITY GRID ===== -->
-<div class="section" data-component="multi-entity-grid">
-  <div class="section-header"><div class="section-number">6</div><h2 class="section-title">Multi-Entity Grid</h2></div>
-  <div class="multi-grid">
-    <!-- Chat card -->
-    <div class="mc e-chat anim d1">
-      <div class="mc-cover" style="background:linear-gradient(135deg,hsl(220,30%,88%),hsl(220,50%,75%));">
-        <div class="mc-gradient"></div>
-        <div class="mc-placeholder"><svg width="45" height="45" viewBox="0 0 24 24" fill="none" stroke="hsl(220,80%,55%)" stroke-width="1.5" opacity=".5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
-        <div class="mc-tags"><div class="mc-tag" style="background:hsl(var(--e-chat-h),var(--e-chat-s),var(--e-chat-l));">Chat</div></div>
-      </div>
-      <div class="mc-content"><div class="mc-title">Strategie Catan</div><div class="mc-subtitle" style="color:hsl(var(--e-chat-h),var(--e-chat-s),var(--e-chat-l));">12 messaggi &bull; Oggi</div></div>
-      <div class="mc-nav-footer">
-        <div class="mc-nav-label">Naviga verso</div>
-        <div class="mc-nav-row">
-          <div class="mc-nav-item"><div class="mc-nav-icon n-game"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v3"/></svg></div><span class="mc-nav-item-label">Gioco</span></div>
-          <div class="mc-nav-item"><div class="mc-nav-icon n-agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="3"/></svg></div><span class="mc-nav-item-label">Agente</span></div>
-          <div class="mc-nav-item"><div class="mc-nav-icon n-document"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span class="badge">3</span></div><span class="mc-nav-item-label">KB</span></div>
-        </div>
-      </div>
-    </div>
-    <!-- Player card -->
-    <div class="mc e-player anim d2">
-      <div class="mc-cover" style="background:linear-gradient(135deg,hsl(262,30%,85%),hsl(262,50%,75%));">
-        <div class="mc-placeholder"><svg width="45" height="45" viewBox="0 0 24 24" fill="none" stroke="hsl(262,83%,58%)" stroke-width="1.5" opacity=".5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
-        <div class="mc-tags"><div class="mc-tag" style="background:hsl(var(--e-player-h),var(--e-player-s),var(--e-player-l));">Giocatore</div></div>
-      </div>
-      <div class="mc-content"><div class="mc-title">Marco R.</div><div class="mc-subtitle" style="color:hsl(var(--e-player-h),var(--e-player-s),var(--e-player-l));">12 sessioni &bull; 5 vittorie</div></div>
-      <div class="mc-nav-footer">
-        <div class="mc-nav-label">Naviga verso</div>
-        <div class="mc-nav-row">
-          <div class="mc-nav-item"><div class="mc-nav-icon n-session"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span class="badge">12</span></div><span class="mc-nav-item-label">Sessioni</span></div>
-        </div>
-      </div>
-    </div>
-    <!-- Document with game image overlay -->
-    <div class="mc e-document anim d3">
-      <div class="mc-cover">
-        <div class="mc-gradient" style="background:linear-gradient(to top,hsla(var(--e-document-h),var(--e-document-s),var(--e-document-l),0.35),transparent 60%);"></div>
-        <img src="https://cf.geekdo-images.com/7SrPNGBKg9IIsP4UQpOi8g__imagepage/img/89ViRUkZ_LOFNbSMEJN0GA0cEJo=/fit-in/900x600/filters:no_upscale():strip_icc()/pic4325841.jpg" alt="TFM" style="filter:brightness(.85) saturate(.7);">
-        <div class="mc-tags"><div class="mc-tag" style="background:hsl(var(--e-document-h),var(--e-document-s),var(--e-document-l));">Documento</div></div>
-      </div>
-      <div class="mc-content"><div class="mc-title">Regolamento TFM</div><div class="mc-subtitle" style="color:hsl(var(--e-document-h),var(--e-document-s),var(--e-document-l));">PDF &bull; 32 pagine &bull; 200 chunks</div></div>
-      <div class="mc-nav-footer">
-        <div class="mc-nav-label">Naviga verso</div>
-        <div class="mc-nav-row">
-          <div class="mc-nav-item"><div class="mc-nav-icon n-game"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v3"/></svg></div><span class="mc-nav-item-label">Gioco</span></div>
-          <div class="mc-nav-item"><div class="mc-nav-icon n-agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="3"/></svg><span class="badge">1</span></div><span class="mc-nav-item-label">Agente</span></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-</div><!-- /container -->
-
-<script>
-/* ===== 3D CAROUSEL (Real transforms: translateX %, rotateY, blur, scale) ===== */
-var games = [
-  { title:'I Coloni di Catan', sub:'Klaus Teuber', r:'7.1', img:'https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__imagepage/img/M_3Jc3L2jHL-FwOmPuHeDYOzaYE=/fit-in/900x600/filters:no_upscale():strip_icc()/pic2419375.jpg' },
-  { title:'Wingspan', sub:'Elizabeth Hargrave', r:'8.1', img:'https://cf.geekdo-images.com/SoU8p28Sk1s8MSvoM4N8pQ__imagepage/img/qR1EvTSNPjDa-pNPGxU9HY2oKfs=/fit-in/900x600/filters:no_upscale():strip_icc()/pic6293412.jpg' },
-  { title:'Azul', sub:'Michael Kiesling', r:'7.8', img:'' },
-  { title:'Terraforming Mars', sub:'Jacob Fryxelius', r:'8.4', img:'https://cf.geekdo-images.com/7SrPNGBKg9IIsP4UQpOi8g__imagepage/img/89ViRUkZ_LOFNbSMEJN0GA0cEJo=/fit-in/900x600/filters:no_upscale():strip_icc()/pic4325841.jpg' },
-  { title:'Spirit Island', sub:'R. Eric Reuss', r:'8.3', img:'' },
-  { title:'Gloomhaven', sub:'Isaac Childres', r:'8.7', img:'https://cf.geekdo-images.com/6GqH14TJJhza86BX5HCLEQ__imagepage/img/eImUMUWzDaUiHkUBzTuBbcaptL0=/fit-in/900x600/filters:no_upscale():strip_icc()/pic5674958.jpg' }
-];
-var cIdx = 0;
-
-function buildCarousel() {
-  var center = document.getElementById('carouselCenter');
-  var dots = document.getElementById('carouselDots');
-  while (center.firstChild) center.removeChild(center.firstChild);
-  while (dots.firstChild) dots.removeChild(dots.firstChild);
-
-  games.forEach(function(g, i) {
-    var wrapper = document.createElement('div');
-    wrapper.className = 'carousel-card';
-    wrapper.dataset.idx = String(i);
-    wrapper.addEventListener('click', function() {
-      if (parseInt(this.dataset.idx) !== cIdx) { cIdx = parseInt(this.dataset.idx); updateCarousel(); }
-    });
-
-    var card = document.createElement('div');
-    card.className = 'mc e-game';
-    card.style.borderRadius = '16px'; card.style.overflow = 'hidden';
-
-    // Cover
-    var cover = document.createElement('div');
-    cover.className = 'mc-cover';
-    var grad = document.createElement('div'); grad.className = 'mc-gradient'; cover.appendChild(grad);
-    var shimmer = document.createElement('div'); shimmer.className = 'mc-shimmer'; cover.appendChild(shimmer);
-
-    if (g.img) {
-      var img = document.createElement('img'); img.src = g.img; img.alt = g.title; img.loading = 'lazy';
-      cover.appendChild(img);
-    } else {
-      var ph = document.createElement('div'); ph.className = 'mc-placeholder';
-      ph.style.background = 'linear-gradient(135deg,hsl(30,60%,85%),hsl(20,70%,75%))';
-      var ns = 'http://www.w3.org/2000/svg';
-      var svg = document.createElementNS(ns,'svg');
-      svg.setAttribute('width','60'); svg.setAttribute('height','60'); svg.setAttribute('viewBox','0 0 100 100'); svg.setAttribute('fill','none');
-      var p1 = document.createElementNS(ns,'path'); p1.setAttribute('d','M50 15L80 30L50 45L20 30Z'); p1.setAttribute('fill','hsl(280,65%,75%)'); svg.appendChild(p1);
-      var p2 = document.createElementNS(ns,'path'); p2.setAttribute('d','M20 30L50 45L50 85L20 70Z'); p2.setAttribute('fill','hsl(280,60%,65%)'); svg.appendChild(p2);
-      var p3 = document.createElementNS(ns,'path'); p3.setAttribute('d','M50 45L80 30L80 70L50 85Z'); p3.setAttribute('fill','hsl(300,55%,55%)'); svg.appendChild(p3);
-      [[50,30],[35,52],[40,63],[60,55],[70,65]].forEach(function(d) {
-        var c = document.createElementNS(ns,'circle');
-        c.setAttribute('cx',String(d[0])); c.setAttribute('cy',String(d[1]));
-        c.setAttribute('r','2.5'); c.setAttribute('fill','white'); c.setAttribute('opacity','0.85');
-        svg.appendChild(c);
-      });
-      ph.appendChild(svg); cover.appendChild(ph);
-    }
-
-    // Tags
-    var tags = document.createElement('div'); tags.className = 'mc-tags';
-    var tag = document.createElement('div'); tag.className = 'mc-tag';
-    tag.style.background = 'hsl(var(--e-game-h),var(--e-game-s),var(--e-game-l))';
-    tag.textContent = 'Gioco'; tags.appendChild(tag);
-    cover.appendChild(tags);
-
-    card.appendChild(cover);
-
-    // Content
-    var content = document.createElement('div'); content.className = 'mc-content';
-    var title = document.createElement('div'); title.className = 'mc-title'; title.textContent = g.title;
-    var sub = document.createElement('div'); sub.className = 'mc-subtitle'; sub.textContent = g.sub;
-    var stars = document.createElement('div'); stars.className = 'mc-stars';
-    var rVal = parseFloat(g.r); var normalized = rVal / 2;
-    for (var s = 1; s <= 5; s++) {
-      var star = document.createElement('span'); star.className = 'star';
-      if (s <= Math.floor(normalized)) star.classList.add('full');
-      else if (s - 0.5 <= normalized) star.classList.add('half');
-      else star.classList.add('empty');
-      star.textContent = '\u2605'; stars.appendChild(star);
-    }
-    var rt = document.createElement('span'); rt.className = 'rating-text'; rt.textContent = g.r + '/10';
-    stars.appendChild(rt);
-    content.appendChild(title); content.appendChild(sub); content.appendChild(stars);
-    card.appendChild(content);
-
-    wrapper.appendChild(card);
-    center.appendChild(wrapper);
-
-    // Dot
-    var dot = document.createElement('button'); dot.className = 'carousel-dot'; dot.dataset.idx = String(i);
-    dot.addEventListener('click', function(e) { e.stopPropagation(); cIdx = parseInt(this.dataset.idx); updateCarousel(); });
-    dots.appendChild(dot);
-  });
-  updateCarousel();
-}
-
-function updateCarousel() {
-  var cards = document.querySelectorAll('.carousel-card');
-  var dots = document.querySelectorAll('.carousel-dot');
-  cards.forEach(function(el, i) {
-    var offset = i - cIdx;
-    var absOff = Math.abs(offset);
-    var scale = offset === 0 ? 1.1 : (absOff <= 2 ? 0.85 : 0.5);
-    var opacity = offset === 0 ? 1 : (absOff <= 2 ? 0.6 : 0);
-    var blur = absOff * 2;
-    var rotY = offset * -5;
-    var tx = offset * 35;
-    var zIdx = 10 - absOff;
-
-    el.style.transform = 'translateX(' + tx + '%) scale(' + scale + ') rotateY(' + rotY + 'deg)';
-    el.style.opacity = String(opacity);
-    el.style.filter = 'blur(' + blur + 'px)';
-    el.style.zIndex = String(Math.max(zIdx, 0));
-    el.style.pointerEvents = absOff <= 2 ? 'auto' : 'none';
-  });
-  dots.forEach(function(d, i) {
-    if (i === cIdx) { d.classList.add('active'); } else { d.classList.remove('active'); }
-  });
-}
-
-function moveCarousel(dir) {
-  cIdx = (cIdx + dir + games.length) % games.length;
-  updateCarousel();
-}
-
-buildCarousel();
-</script>
 </body>
 </html>

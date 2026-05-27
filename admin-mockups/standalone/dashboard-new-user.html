@@ -1,26 +1,38 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="it" data-theme="light">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MeepleAI — Dashboard New User Empty State Mockup</title>
-<!-- Split annotation: see docs/for-developers/specs/2026-05-26-mockup-poster-split.md -->
-<meta name="mockup-split-mode" content="merge-sections">
-<meta name="mockup-output-name" content="dashboard-new-user">
-<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<!--
-  Static design mockup for internal use only.
-  Spec: US-XX Dashboard New User Experience
-  Scenario: utente nuovo, nessun gioco in libreria, seed catalogo presente.
-
-  Logica priorità KB:
-  - Badge "KB ✓" → regolamento indicizzato (vettori presenti)
-  - Badge "KB –" → gioco nel catalogo, nessun vettore
-  - CTA primaria per ogni game: "＋ Aggiungi"
-  - CTA sezioni vuote: Sessioni → "Crea sessione", Agenti → "Avvia chat"
-  - Toolkit: carousel 3 strumenti (dado, clessidra, scoreboard)
--->
+<!-- SPLIT-GEN: source=mockup/dashboard-new-user-mockup.html mode=merge-sections variant=all-sections regenerated=2026-05-26T08:01:45Z -->
+<!-- DO NOT EDIT — regenerate via `python -m scripts.mockup_demo.split_presentation` -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="../design_files/tokens.css"/>
+<link rel="stylesheet" href="../design_files/components.css"/>
 <style>
+/* ── Standalone viewport (overrides poster body chrome) ───────────────── */
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body.standalone-viewport{
+  font-family:'Nunito',system-ui,sans-serif;
+  background:#1a1612;
+  color:var(--text,#2b1f12);
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  gap:32px;
+  padding:32px 24px;
+}
+body.standalone-viewport > .phone{
+  flex-shrink:0;
+}
+h1,h2,h3,h4,h5{font-family:'Quicksand',sans-serif}
+
+/* ── Inherited page styles from poster (chrome stripped) ──────────────── */
 :root {
   --bg:#faf8f5; --bg-card:rgba(255,255,255,0.92); --bg-muted:#f1ede8;
   --text:#1a1a2e; --text-sec:#64748b; --text-muted:#94a3b8;
@@ -35,25 +47,7 @@
   --kb-yes:#22c55e; --kb-no:#94a3b8;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Nunito',sans-serif;background:#e8e4df;color:var(--text);
-  min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 16px}
 h1,h2,h3,h4,h5{font-family:'Quicksand',sans-serif}
-
-.pg-title{text-align:center;margin-bottom:8px}
-.pg-title h1{font-size:1.3rem;color:var(--text)}
-.pg-title p{color:var(--text-sec);font-size:0.78rem;margin-top:3px;max-width:780px}
-
-.legend{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:20px;
-  background:rgba(255,255,255,.6);padding:8px 16px;border-radius:12px;border:1px solid var(--border)}
-.leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-sec);font-weight:700}
-.leg-badge{padding:1px 6px;border-radius:6px;font-size:9px;font-weight:800}
-
-.mockup-row{display:flex;gap:32px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
-.mockup-col{display:flex;flex-direction:column;align-items:center;gap:8px}
-.mockup-label{font-family:'Quicksand',sans-serif;font-weight:700;font-size:0.72rem;
-  color:var(--text-sec);text-transform:uppercase;letter-spacing:.08em}
-.mockup-sublabel{font-size:0.68rem;color:var(--text-muted);max-width:var(--phone-w);text-align:center}
-
 /* ── Phone frame ─────────────────────────────────────── */
 .phone{
   width:var(--phone-w);height:var(--phone-h);
@@ -62,12 +56,11 @@ h1,h2,h3,h4,h5{font-family:'Quicksand',sans-serif}
   box-shadow:0 30px 80px rgba(0,0,0,.15),0 8px 24px rgba(0,0,0,.1),
              inset 0 0 0 1px rgba(255,255,255,.4);
   overflow:hidden;position:relative;display:flex;flex-direction:column}
-
 /* ── Status bar ───────────────────────────────────────── */
 .sbar{height:44px;display:flex;align-items:flex-end;justify-content:space-between;
   padding:0 28px 6px;font-size:11px;font-weight:600;flex-shrink:0}
-.sbar .t{font-weight:700}.sbar .i{display:flex;gap:3px;font-size:10px}
-
+.sbar .t{font-weight:700}
+.sbar .i{display:flex;gap:3px;font-size:10px}
 /* ── TopBar ──────────────────────────────────────────── */
 .topbar{height:48px;display:flex;align-items:center;padding:0 14px;
   background:var(--bg-card);backdrop-filter:blur(12px) saturate(180%);
@@ -84,7 +77,6 @@ h1,h2,h3,h4,h5{font-family:'Quicksand',sans-serif}
   background:linear-gradient(135deg,hsl(262,83%,58%),hsl(262,60%,35%));
   color:white;display:flex;align-items:center;justify-content:center;
   font-size:10px;font-weight:700;font-family:'Quicksand',sans-serif;border:2px solid white}
-
 /* ── MiniNav ──────────────────────────────────────────── */
 .mininav{height:40px;display:flex;align-items:center;gap:2px;padding:0 14px;
   border-bottom:1px solid var(--border);background:var(--bg);flex-shrink:0}
@@ -95,22 +87,18 @@ h1,h2,h3,h4,h5{font-family:'Quicksand',sans-serif}
 .mininav .mn-tab.active{color:var(--text)}
 .mininav .mn-tab.active::after{content:'';position:absolute;bottom:-8px;left:6px;right:6px;
   height:2px;background:var(--amber);border-radius:1px}
-
 /* ── Page scroll area ─────────────────────────────────── */
 .pgc{flex:1;overflow-y:auto;scrollbar-width:none;padding-bottom:68px}
 .pgc::-webkit-scrollbar{display:none}
-
 /* ── Greeting ─────────────────────────────────────────── */
 .greeting{padding:14px 16px 6px}
 .greeting h2{font-family:'Quicksand',sans-serif;font-weight:800;font-size:1.2rem;color:var(--text)}
 .greeting p{font-size:.75rem;color:var(--text-sec);margin-top:2px}
-
 /* ── Hub block ────────────────────────────────────────── */
 .hub-block{padding:10px 14px 4px}
 .hub-title{font-family:'Quicksand',sans-serif;font-size:.72rem;font-weight:800;
   text-transform:uppercase;letter-spacing:.07em;color:var(--text-sec);margin-bottom:6px;
   display:flex;align-items:center;gap:5px}
-
 /* ── HubLayout toolbar ────────────────────────────────── */
 .hub-toolbar{display:flex;align-items:center;gap:5px;margin-bottom:7px}
 .hub-search{flex:1;height:30px;display:flex;align-items:center;gap:5px;
@@ -123,13 +111,11 @@ h1,h2,h3,h4,h5{font-family:'Quicksand',sans-serif}
   font-size:10px;font-weight:700;border:1px solid var(--border);
   background:var(--bg-card);color:var(--text-sec);cursor:pointer;white-space:nowrap;flex-shrink:0}
 .f-chip.active{background:var(--text);color:white;border-color:transparent}
-
 /* ── Games grid — catalog cards for new user ──────────── */
 .catalog-hint{display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--text-muted);
   background:var(--amber-light);border:1px solid rgba(180,130,80,.18);border-radius:8px;
   padding:5px 10px;margin-bottom:6px;font-weight:600}
 .catalog-hint .hint-icon{font-size:11px}
-
 .games-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
 .game-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;
   box-shadow:var(--shadow-sm);overflow:hidden;display:flex;flex-direction:column;
@@ -140,7 +126,8 @@ h1,h2,h3,h4,h5{font-family:'Quicksand',sans-serif}
 .game-thumb .kb-badge{position:absolute;top:5px;right:5px;
   padding:2px 5px;border-radius:6px;font-size:8px;font-weight:800;
   font-family:'Quicksand',sans-serif;color:white;letter-spacing:.02em}
-.kb-yes{background:var(--kb-yes)}.kb-no{background:var(--kb-no)}
+.kb-yes{background:var(--kb-yes)}
+.kb-no{background:var(--kb-no)}
 .game-info{padding:5px 7px 6px;flex:1}
 .game-info .g-title{font-family:'Quicksand',sans-serif;font-size:.73rem;font-weight:700;
   line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;
@@ -151,7 +138,6 @@ h1,h2,h3,h4,h5{font-family:'Quicksand',sans-serif}
   font-size:10px;font-weight:700;cursor:pointer;
   background:var(--amber);color:white;border:none}
 .game-add-btn span{font-size:12px;line-height:1}
-
 /* ── Empty state (sessions/agents) ───────────────────── */
 .empty-cta{display:flex;flex-direction:column;align-items:center;gap:7px;
   padding:18px 16px;text-align:center;
@@ -165,7 +151,6 @@ h1,h2,h3,h4,h5{font-family:'Quicksand',sans-serif}
   border:none;color:white;background:var(--amber);box-shadow:0 2px 8px rgba(180,100,20,.25)}
 .cta-btn.outline{background:transparent;color:var(--amber);
   border:1.5px solid var(--amber);box-shadow:none}
-
 /* ── Toolkit carousel ─────────────────────────────────── */
 .toolkit-carousel{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
 .toolkit-carousel::-webkit-scrollbar{display:none}
@@ -179,7 +164,6 @@ h1,h2,h3,h4,h5{font-family:'Quicksand',sans-serif}
 .tk-name{font-family:'Quicksand',sans-serif;font-size:.67rem;font-weight:700;
   text-align:center;color:var(--text);line-height:1.2}
 .tk-desc{font-size:.58rem;color:var(--text-muted);text-align:center;line-height:1.3}
-
 /* ── Bottom bar ───────────────────────────────────────── */
 .bbar{height:56px;flex-shrink:0;display:flex;align-items:center;justify-content:space-around;
   padding:0 12px 10px;background:var(--bg-card);
@@ -188,9 +172,7 @@ h1,h2,h3,h4,h5{font-family:'Quicksand',sans-serif}
   font-size:16px;min-width:44px}
 .bb-item .bl{font-size:8px;font-weight:700;color:var(--text-sec);font-family:'Quicksand',sans-serif}
 .bb-item.active .bl{color:var(--amber)}
-
 /* ── Annotations (sticky callouts beside phone) ─────── */
-.anno-wrap{display:flex;gap:20px;align-items:flex-start}
 .anno-list{display:flex;flex-direction:column;gap:10px;padding-top:120px;max-width:180px}
 .anno{display:flex;gap:8px;align-items:flex-start}
 .anno .a-num{width:18px;height:18px;border-radius:50%;background:var(--amber);color:white;
@@ -199,60 +181,9 @@ h1,h2,h3,h4,h5{font-family:'Quicksand',sans-serif}
 .anno strong{color:var(--text)}
 </style>
 </head>
-<body>
-
-<div class="pg-title">
-  <h1>Dashboard — New User Empty State</h1>
-  <p>
-    Scenario: primo avvio, libreria vuota, catalogo seeded.
-    Giochi con <strong style="color:#22c55e">KB ✓</strong> hanno regolamento indicizzato.
-    Giochi con <strong style="color:#94a3b8">KB –</strong> sono nel catalogo ma senza vettori.
-    CTA contestuali per sessioni, agenti e toolkit.
-  </p>
-</div>
-
-<div class="legend">
-  <div class="leg-item">
-    <div class="leg-badge" style="background:#22c55e;color:white">KB ✓</div>
-    Regolamento indicizzato — AI pronta
-  </div>
-  <div class="leg-item">
-    <div class="leg-badge" style="background:#94a3b8;color:white">KB –</div>
-    Senza regolamento — funzioni AI limitate
-  </div>
-  <div class="leg-item">
-    <div class="leg-badge" style="background:hsl(25,95%,45%);color:white">＋ Aggiungi</div>
-    Aggiunge alla libreria personale
-  </div>
-</div>
-
-<div class="mockup-row">
-
-  <!-- ─── PHONE 1: Games section (new user, catalog top games) ─── -->
-  <div class="anno-wrap">
-    <div class="anno-list">
-      <div class="anno">
-        <div class="a-num">1</div>
-        <p><strong>Games block</strong> — libreria vuota: mostra top giochi dal catalogo, ordinati per KB completeness</p>
-      </div>
-      <div class="anno">
-        <div class="a-num">2</div>
-        <p><strong>Badge KB</strong> — verde se vettori indicizzati, grigio se assenti</p>
-      </div>
-      <div class="anno">
-        <div class="a-num">3</div>
-        <p><strong>Hint banner</strong> — spiega la logica di visualizzazione al nuovo utente</p>
-      </div>
-      <div class="anno">
-        <div class="a-num">4</div>
-        <p><strong>CTA ＋ Aggiungi</strong> — aggiunge direttamente il gioco alla libreria</p>
-      </div>
-    </div>
-
-    <div class="mockup-col" data-section="games">
-      <div class="mockup-label">Games Block</div>
-      <div class="mockup-sublabel">Libreria vuota → top catalog con KB priority</div>
-      <div class="phone">
+<body class="standalone-viewport">
+  <!-- section: games -->
+  <div class="phone">
         <!-- Status bar -->
         <div class="sbar">
           <span class="t">9:41</span>
@@ -391,15 +322,9 @@ h1,h2,h3,h4,h5{font-family:'Quicksand',sans-serif}
           <div class="bb-item"><span>🛠️</span><span class="bl">Toolkit</span></div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- ─── PHONE 2: Sessions + Agents empty CTA ─── -->
-  <div class="anno-wrap">
-    <div class="mockup-col" data-section="sessions-agents">
-      <div class="mockup-label">Sessions &amp; Agents CTAs</div>
-      <div class="mockup-sublabel">Sezioni vuote con azione contestuale</div>
-      <div class="phone">
+  <!-- section: sessions-agents -->
+  <div class="phone">
         <div class="sbar">
           <span class="t">9:41</span>
           <div class="i"><span>●●●</span><span>WiFi</span><span>🔋</span></div>
@@ -473,49 +398,9 @@ h1,h2,h3,h4,h5{font-family:'Quicksand',sans-serif}
           <div class="bb-item"><span>🛠️</span><span class="bl">Toolkit</span></div>
         </div>
       </div>
-    </div>
 
-    <div class="anno-list" style="padding-top:80px">
-      <div class="anno">
-        <div class="a-num">5</div>
-        <p><strong>Sessions empty</strong> — CTA singola "Crea sessione" con icona e testo motivazionale</p>
-      </div>
-      <div class="anno">
-        <div class="a-num">6</div>
-        <p><strong>Agents empty</strong> — doppia CTA: "Avvia chat" (primaria) + "Crea agente" (outline)</p>
-      </div>
-      <div class="anno">
-        <div class="a-num">7</div>
-        <p>Il blocco ha sempre <strong>HubLayout toolbar</strong> (search + chips) anche se vuoto — consistency</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- ─── PHONE 3: Toolkit carousel ─── -->
-  <div class="anno-wrap">
-    <div class="anno-list" style="padding-top:100px">
-      <div class="anno">
-        <div class="a-num">8</div>
-        <p><strong>Toolkit carousel</strong> — 3 strumenti base sempre disponibili, scroll orizzontale</p>
-      </div>
-      <div class="anno">
-        <div class="a-num">9</div>
-        <p><strong>Dado</strong> — roller con configurazione facce e gruppi</p>
-      </div>
-      <div class="anno">
-        <div class="a-num">10</div>
-        <p><strong>Clessidra</strong> — timer configurabile per turni</p>
-      </div>
-      <div class="anno">
-        <div class="a-num">11</div>
-        <p><strong>Scoreboard</strong> — tracker punteggi multi-giocatore</p>
-      </div>
-    </div>
-
-    <div class="mockup-col" data-section="toolkit">
-      <div class="mockup-label">Toolkit Carousel</div>
-      <div class="mockup-sublabel">Sempre disponibili — non richiede libreria</div>
-      <div class="phone">
+  <!-- section: toolkit -->
+  <div class="phone">
         <div class="sbar">
           <span class="t">9:41</span>
           <div class="i"><span>●●●</span><span>WiFi</span><span>🔋</span></div>
@@ -609,41 +494,5 @@ h1,h2,h3,h4,h5{font-family:'Quicksand',sans-serif}
           <div class="bb-item"><span>🛠️</span><span class="bl">Toolkit</span></div>
         </div>
       </div>
-    </div>
-  </div>
-
-</div><!-- /mockup-row -->
-
-<!-- ─── Implementation notes ─── -->
-<div style="margin-top:36px;max-width:860px;background:rgba(255,255,255,.7);
-  border:1px solid var(--border);border-radius:14px;padding:18px 22px">
-  <h3 style="font-size:.9rem;margin-bottom:12px;color:var(--text)">📐 Note di implementazione per DashboardClient.tsx</h3>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:.73rem;color:var(--text-sec);line-height:1.5">
-    <div>
-      <strong style="color:var(--text);display:block;margin-bottom:4px">Logica "new user" per Games</strong>
-      <code style="font-size:.68rem;background:#f1ede8;padding:2px 5px;border-radius:4px;display:block;margin-bottom:3px">const isNewUser = !libraryLoading && gameItems.length === 0</code>
-      Se <code>isNewUser</code>: mostra CatalogTopGames (da <code>useGames</code>, ordinati per rating,
-      prioritizzati se <code>hasKbVectors</code>). Altrimenti: mostra libreria normale.
-    </div>
-    <div>
-      <strong style="color:var(--text);display:block;margin-bottom:4px">Badge KB su MeepleCard</strong>
-      Serve un nuovo prop <code>kbStatus: 'indexed' | 'empty' | undefined</code> su MeepleCard,
-      oppure gestire il badge fuori dalla card, wrappando con un overlay relativo.
-      Preferire overlay esterno per non modificare MeepleCard.
-    </div>
-    <div>
-      <strong style="color:var(--text);display:block;margin-bottom:4px">Empty CTA per Sessions/Agents</strong>
-      Creare <code>EmptyCTA</code> component con props: <code>icon, title, sub, actions[]</code>.
-      Sostituisce l'attuale <code>EmptyState</code> quando si è in dashboard (non in hub page).
-    </div>
-    <div>
-      <strong style="color:var(--text);display:block;margin-bottom:4px">Toolkit carousel</strong>
-      Dati statici (non da API). Array <code>TOOLKIT_TOOLS</code> con id/icon/name/desc.
-      Ogni card è un Link a <code>/toolkit?tool=dado</code> etc.
-      Non serve HubLayout wrapper per il toolkit nel dashboard.
-    </div>
-  </div>
-</div>
-
 </body>
 </html>

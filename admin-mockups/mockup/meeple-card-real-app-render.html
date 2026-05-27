@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MeepleCard - Come appaiono DAVVERO nell'app</title>
+<!-- Split annotation: see docs/for-developers/specs/2026-05-26-mockup-poster-split.md -->
+<meta name="mockup-split-mode" content="per-component">
+<meta name="mockup-output-prefix" content="meeple-card-real-app">
 <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 /* ═══════════════════════════════════════════════════════════════
@@ -301,7 +304,7 @@ hr.divider { border:none; border-top:2px solid var(--border); margin:48px 0 40px
 <!-- ═══════════════════════════════════════════════════════════════════
      1. MeepleGameCatalogCard — CATALOGO CONDIVISO
      ═══════════════════════════════════════════════════════════════════ -->
-<div class="section">
+<div class="section" data-component="game-catalog-card">
   <div class="section-head">
     <span class="badge" style="background:hsl(25,95%,45%)">1</span>
     <h2>MeepleGameCatalogCard</h2>
@@ -421,7 +424,7 @@ hr.divider { border:none; border-top:2px solid var(--border); margin:48px 0 40px
 <!-- ═══════════════════════════════════════════════════════════════════
      2. MeepleLibraryGameCard — LIBRERIA PERSONALE
      ═══════════════════════════════════════════════════════════════════ -->
-<div class="section">
+<div class="section" data-component="library-game-card">
   <div class="section-head">
     <span class="badge" style="background:hsl(25,95%,45%)">2</span>
     <h2>MeepleLibraryGameCard</h2>
@@ -523,7 +526,7 @@ hr.divider { border:none; border-top:2px solid var(--border); margin:48px 0 40px
 <!-- ═══════════════════════════════════════════════════════════════════
      3. MeepleSessionCard — SESSIONI DI GIOCO
      ═══════════════════════════════════════════════════════════════════ -->
-<div class="section">
+<div class="section" data-component="session-card">
   <div class="section-head">
     <span class="badge" style="background:hsl(240,60%,55%)">3</span>
     <h2>MeepleSessionCard</h2>
@@ -607,7 +610,7 @@ hr.divider { border:none; border-top:2px solid var(--border); margin:48px 0 40px
 <!-- ═══════════════════════════════════════════════════════════════════
      4. MeepleAgentCard — AGENTI AI
      ═══════════════════════════════════════════════════════════════════ -->
-<div class="section">
+<div class="section" data-component="agent-card">
   <div class="section-head">
     <span class="badge" style="background:hsl(38,92%,50%)">4</span>
     <h2>MeepleAgentCard</h2>
@@ -670,7 +673,7 @@ hr.divider { border:none; border-top:2px solid var(--border); margin:48px 0 40px
 <!-- ═══════════════════════════════════════════════════════════════════
      5. MeepleChatCard — CHAT SESSIONS
      ═══════════════════════════════════════════════════════════════════ -->
-<div class="section">
+<div class="section" data-component="chat-card">
   <div class="section-head">
     <span class="badge" style="background:hsl(220,80%,55%)">5</span>
     <h2>MeepleChatCard</h2>
@@ -731,7 +734,7 @@ hr.divider { border:none; border-top:2px solid var(--border); margin:48px 0 40px
 <!-- ═══════════════════════════════════════════════════════════════════
      6. MeepleKbCard — DOCUMENTI KNOWLEDGE BASE
      ═══════════════════════════════════════════════════════════════════ -->
-<div class="section">
+<div class="section" data-component="kb-card">
   <div class="section-head">
     <span class="badge" style="background:hsl(210,40%,55%)">6</span>
     <h2>MeepleKbCard</h2>
@@ -808,7 +811,7 @@ hr.divider { border:none; border-top:2px solid var(--border); margin:48px 0 40px
 <!-- ═══════════════════════════════════════════════════════════════════
      7. MeeplePlayerCard — GIOCATORI
      ═══════════════════════════════════════════════════════════════════ -->
-<div class="section">
+<div class="section" data-component="player-card">
   <div class="section-head">
     <span class="badge" style="background:hsl(262,83%,58%)">7</span>
     <h2>MeeplePlayerCard</h2>
@@ -858,7 +861,7 @@ hr.divider { border:none; border-top:2px solid var(--border); margin:48px 0 40px
 <!-- ═══════════════════════════════════════════════════════════════════
      8-10. VARIANTI MINORI (list/compact)
      ═══════════════════════════════════════════════════════════════════ -->
-<div class="section">
+<div class="section" data-component="minor-variants">
   <div class="section-head">
     <span class="badge" style="background:var(--text-sec)">+</span>
     <h2>Card Minori &amp; Varianti</h2>
@@ -957,7 +960,7 @@ hr.divider { border:none; border-top:2px solid var(--border); margin:48px 0 40px
 <!-- ═══════════════════════════════════════════════════════════════════
      COMPARISON TABLE
      ═══════════════════════════════════════════════════════════════════ -->
-<div class="section">
+<div class="section" data-component="comparison-matrix">
   <div class="section-head">
     <span class="badge" style="background:var(--text)">≡</span>
     <h2>Matrice Comparativa &mdash; Tutti i 14 Adapter</h2>
@@ -1188,7 +1191,7 @@ hr.divider { border:none; border-top:2px solid var(--border); margin:48px 0 40px
 <!-- ═══════════════════════════════════════════════════════════════════
      FEATURES MAI USATE
      ═══════════════════════════════════════════════════════════════════ -->
-<div class="section">
+<div class="section" data-component="unused-features">
   <div class="section-head">
     <span class="badge" style="background:#dc2626">!</span>
     <h2>Feature del Componente Base MAI Usate in Produzione</h2>

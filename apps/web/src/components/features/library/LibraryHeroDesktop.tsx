@@ -22,7 +22,21 @@ import type { ReactElement } from 'react';
 
 import clsx from 'clsx';
 
-export type LibraryHeroStatKey = 'totalGames' | 'kbReady' | 'wishlist' | 'loaned';
+/**
+ * Stat key discriminator for the hero stat chips. The 4 original game-only keys
+ * (`totalGames|kbReady|wishlist|loaned`) are preserved for backward compatibility
+ * with any code that still surfaces the legacy stats; Phase 2a (#1605) added the
+ * hybrid hub stat keys (`agents|docs|chats`) — `LibraryHub` now passes those
+ * alongside `totalGames` for the 4 cross-entity stat chips.
+ */
+export type LibraryHeroStatKey =
+  | 'totalGames'
+  | 'kbReady'
+  | 'wishlist'
+  | 'loaned'
+  | 'agents'
+  | 'docs'
+  | 'chats';
 
 export interface LibraryHeroDesktopLabels {
   readonly title: string;

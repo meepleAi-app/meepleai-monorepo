@@ -1616,7 +1616,10 @@
           "totalGames": "Giochi totali",
           "kbReady": "Knowledge base",
           "wishlist": "Wishlist",
-          "loaned": "In prestito"
+          "loaned": "In prestito",
+          "agents": "Agenti",
+          "docs": "Documenti",
+          "chats": "Chat"
         },
         "cta": {
           "add": "Aggiungi gioco",
@@ -1629,6 +1632,14 @@
         "kb": "Knowledge base",
         "loaned": "In prestito",
         "count": "{count, plural, =0 {nessuno} =1 {1} other {#}}"
+      },
+      "hubTabs": {
+        "all": "Tutti",
+        "games": "Giochi",
+        "agents": "Agenti",
+        "kb": "KB",
+        "sessions": "Sessioni",
+        "chat": "Chat"
       },
       "selectionMode": {
         "enter": "Seleziona",
@@ -1670,6 +1681,13 @@
           "ready": "Pronto",
           "pending": "In elaborazione",
           "failed": "Errore"
+        },
+        "stato": {
+          "label": "Stato",
+          "owned": "Posseduti",
+          "wishlist": "Wishlist",
+          "loaned": "In prestito",
+          "withKb": "Con Knowledge Base"
         }
       },
       "sort": {

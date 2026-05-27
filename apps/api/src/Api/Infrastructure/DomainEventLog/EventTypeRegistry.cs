@@ -39,6 +39,10 @@ public static class EventTypeRegistry
         // H1: agent.created is emitted SOLELY from CreateUserAgentCommand (user flow).
         //     NOT from CreateAgentDefinitionCommand (admin/AI-Lab path).
         [typeof(AgentCreatedEvent)] = "agent.created",
+
+        // H2: chat.session.created matches the real command name (CreateChatSessionCommand).
+        //     Alias uses "session" not "thread" — the BE has no CreateChatThreadCommand.
+        [typeof(ChatSessionCreatedEvent)] = "chat.session.created",
     };
 
     /// <summary>

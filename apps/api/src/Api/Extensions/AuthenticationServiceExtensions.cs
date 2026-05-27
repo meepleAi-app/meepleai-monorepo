@@ -18,6 +18,9 @@ internal static class AuthenticationServiceExtensions
         services.AddDataProtectionServices(configuration, environment);
         services.AddAuthServices();
         services.AddSessionServices();
+        // Issue #1629: register IEmailSender BEFORE password-reset services so
+        // EmailService can resolve the configured transport (Resend or SMTP).
+        services.AddEmailSender(configuration);
         services.AddPasswordResetServices();
         services.AddRateLimitServices();
         services.AddAlertingServices(configuration);
@@ -141,6 +144,11 @@ internal static class AuthenticationServiceExtensions
     {
         // AUTH-04: Password reset services
         services.AddScoped<IPasswordResetService, PasswordResetService>();
+
+        // Issue #1629: IEmailSender transport (Resend or SMTP) is selected via
+        // EMAIL_PROVIDER env var; see EmailSenderServiceExtensions.AddEmailSender.
+        // EmailService remains the high-level facade that builds templates and
+        // delegates raw transmission to the configured IEmailSender.
         services.AddScoped<IEmailService, EmailService>();
 
         // ISSUE-4416: Push notification service

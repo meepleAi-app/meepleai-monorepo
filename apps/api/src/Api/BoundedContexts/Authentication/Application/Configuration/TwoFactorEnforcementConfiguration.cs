@@ -27,7 +27,8 @@ internal static class TwoFactorConfigurationKeys
 /// <item>compile-time-safe binding to <see cref="TwoFactorConfigurationKeys.StrictMode"/></item>
 /// <item>mockable seam for unit-testing <c>TwoFactorEnforcementBehavior</c> (T4) without
 ///   needing a full <c>IConfigurationService</c> setup</item>
-/// <item>fail-closed semantics (returns the default on any error — matches the existing
+/// <item>fail-safe semantics (returns the default — shadow — on any error, so a config-store
+///   outage NEVER silently flips behavior to strict; matches the existing
 ///   <c>GetRegistrationModeQueryHandler</c> pattern)</item>
 /// </list>
 /// SP5 Admin Security S3 — D-S3-1.
@@ -37,8 +38,8 @@ internal interface ITwoFactorEnforcementConfiguration
     /// <summary>
     /// Reads the strict-mode flag from the dynamic configuration store. Returns
     /// <see cref="TwoFactorConfigurationKeys.StrictModeDefault"/> when the flag is unset
-    /// or the underlying store is unreachable (fail-closed: shadow mode is the safe default
-    /// since it never blocks legitimate admin actions).
+    /// or the underlying store is unreachable (fail-safe: shadow mode is the safe default
+    /// since it never blocks legitimate admin actions, and strict is opt-in by ops).
     /// </summary>
     Task<bool> GetStrictModeAsync(CancellationToken cancellationToken = default);
 }
@@ -63,8 +64,10 @@ internal sealed class TwoFactorEnforcementConfiguration : ITwoFactorEnforcementC
         }
         catch
         {
-            // Fail-closed: shadow mode on any read error. Strict mode is opt-in by ops, so
-            // an unreachable config store must NOT silently flip behavior to strict.
+            // Fail-safe: shadow mode on any read error. Strict mode is opt-in by ops, so an
+            // unreachable config store must NOT silently flip behavior to strict (which would
+            // mass-lock-out admins). "fail-safe" not "fail-closed/fail-secure": the security
+            // gate stays open to legitimate operators when the policy store is unreachable.
             return TwoFactorConfigurationKeys.StrictModeDefault;
         }
     }

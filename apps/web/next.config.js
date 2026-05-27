@@ -235,6 +235,11 @@ const nextConfig = {
         destination: '/profile?tab=settings&section=security',
         permanent: true,
       },
+      {
+        source: '/settings/ai-consent',
+        destination: '/profile?tab=settings&section=ai-consent',
+        permanent: true,
+      },
       { source: '/settings', destination: '/profile?tab=settings', permanent: true },
       {
         source: '/profile/achievements',

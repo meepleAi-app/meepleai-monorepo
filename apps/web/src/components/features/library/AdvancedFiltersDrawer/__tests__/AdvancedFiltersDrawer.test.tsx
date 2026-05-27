@@ -23,11 +23,21 @@ import { IntlProvider } from 'react-intl';
 import { AdvancedFiltersDrawer } from '../AdvancedFiltersDrawer';
 import type { LibraryFilters } from '../types';
 
-// ── i18n messages needed by the skeleton ─────────────────────────────────────
+// ── i18n messages needed by the skeleton + game scope tests ──────────────────
 const messages: Record<string, string> = {
   'pages.library.filters.title': 'Più filtri',
   'pages.library.filters.description': "Filtra la libreria per dimensioni specifiche dell'entità.",
   'common.cancel': 'Annulla',
+  // section labels
+  'pages.library.filters.section.state': 'Stato',
+  'pages.library.filters.section.withKb': 'Solo con Knowledge Base',
+  'pages.library.filters.section.rating': 'Rating minimo',
+  'pages.library.filters.section.players': 'Numero di giocatori',
+  'pages.library.filters.section.year': 'Anno di pubblicazione',
+  // checkbox option labels
+  'pages.library.filters.state.owned': 'Posseduto',
+  'pages.library.filters.state.wishlist': 'Wishlist',
+  'pages.library.filters.state.loaned': 'In prestito',
 };
 
 function renderWithIntl(ui: React.ReactElement) {
@@ -114,5 +124,105 @@ describe('AdvancedFiltersDrawer — skeleton (open/close + Cancel)', () => {
     );
     await user.click(screen.getByRole('button', { name: /annulla/i }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+});
+
+describe('AdvancedFiltersDrawer — game scope rendering', () => {
+  beforeEach(() => {
+    installMatchMedia(true);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('renders 5 sections for game scope (state, withKb, rating, players, year)', () => {
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        entityScope="game"
+        activeFilters={{ scope: 'game' }}
+        onApply={noop}
+        onClear={noop}
+      />
+    );
+    const slots = screen.getAllByTestId(/^advanced-filters-section-/);
+    expect(slots).toHaveLength(5);
+    expect(slots.map(el => el.getAttribute('data-slot'))).toEqual([
+      'advanced-filters-section-states',
+      'advanced-filters-section-withKb',
+      'advanced-filters-section-rating',
+      'advanced-filters-section-players',
+      'advanced-filters-section-year',
+    ]);
+  });
+
+  it('game.states checkbox group renders 3 options with checked state from activeFilters', () => {
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        entityScope="game"
+        activeFilters={{ scope: 'game', states: ['Owned', 'Wishlist'] }}
+        onApply={noop}
+        onClear={noop}
+      />
+    );
+    const owned = screen.getByRole('checkbox', { name: /posseduto/i });
+    const wishlist = screen.getByRole('checkbox', { name: /wishlist/i });
+    const loaned = screen.getByRole('checkbox', { name: /in prestito/i });
+    expect(owned).toBeChecked();
+    expect(wishlist).toBeChecked();
+    expect(loaned).not.toBeChecked();
+  });
+
+  it('toggling a state checkbox updates internal draft (not yet applied — Apply test in Task 7)', async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        entityScope="game"
+        activeFilters={{ scope: 'game' }}
+        onApply={noop}
+        onClear={noop}
+      />
+    );
+    const owned = screen.getByRole('checkbox', { name: /posseduto/i });
+    await user.click(owned);
+    expect(owned).toBeChecked();
+  });
+
+  it('game.withKb renders a toggle with checked state from activeFilters', () => {
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        entityScope="game"
+        activeFilters={{ scope: 'game', withKb: true }}
+        onApply={noop}
+        onClear={noop}
+      />
+    );
+    const toggle = screen.getByRole('switch', { name: /knowledge base/i });
+    expect(toggle).toBeChecked();
+  });
+
+  it('game.rating slider has correct min/max and reflects activeFilters.ratingMin', () => {
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        entityScope="game"
+        activeFilters={{ scope: 'game', ratingMin: 7 }}
+        onApply={noop}
+        onClear={noop}
+      />
+    );
+    const slider = screen.getByRole('slider', { name: /rating/i });
+    expect(slider).toHaveAttribute('aria-valuenow', '7');
+    expect(slider).toHaveAttribute('aria-valuemin', '0');
+    expect(slider).toHaveAttribute('aria-valuemax', '10');
   });
 });

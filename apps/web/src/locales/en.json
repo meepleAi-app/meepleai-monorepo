@@ -1591,6 +1591,33 @@
         "sessions": "Sessions",
         "chat": "Chat"
       },
+      "gamesTab": {
+        "filters": {
+          "search": {
+            "placeholder": "Search by title…",
+            "ariaLabel": "Search games in your library",
+            "clearAriaLabel": "Clear search"
+          },
+          "status": {
+            "label": "Status",
+            "options": { "all": "All", "owned": "Owned", "wishlist": "Wishlist", "played": "Played" }
+          },
+          "sort": {
+            "label": "Sort",
+            "options": { "last-played": "Last played", "rating": "Rating", "title": "Title A-Z", "year": "Year" }
+          },
+          "view": {
+            "label": "View",
+            "options": { "grid": "Grid", "list": "List" }
+          },
+          "resultCount": "{count, plural, one {# game} other {# games}}"
+        },
+        "emptyState": {
+          "empty": { "title": "Add your first game", "subtitle": "Build your library to get started.", "cta": "Add game" },
+          "filteredEmpty": { "title": "No results", "subtitle": "Try widening or clearing the filters.", "cta": "Clear filters" },
+          "error": { "title": "Failed to load", "subtitle": "Could not fetch your library.", "cta": "Retry" }
+        }
+      },
       "selectionMode": {
         "enter": "Select",
         "enterAriaLabel": "Enter multi-select mode",

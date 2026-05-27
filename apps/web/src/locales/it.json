@@ -1641,6 +1641,33 @@
         "sessions": "Sessioni",
         "chat": "Chat"
       },
+      "gamesTab": {
+        "filters": {
+          "search": {
+            "placeholder": "Cerca per titolo…",
+            "ariaLabel": "Cerca giochi nella tua libreria",
+            "clearAriaLabel": "Pulisci ricerca"
+          },
+          "status": {
+            "label": "Stato",
+            "options": { "all": "Tutti", "owned": "Posseduti", "wishlist": "Wishlist", "played": "Giocati" }
+          },
+          "sort": {
+            "label": "Ordina",
+            "options": { "last-played": "Ultima partita", "rating": "Rating", "title": "Titolo A-Z", "year": "Anno" }
+          },
+          "view": {
+            "label": "Vista",
+            "options": { "grid": "Griglia", "list": "Lista" }
+          },
+          "resultCount": "{count, plural, one {# gioco} other {# giochi}}"
+        },
+        "emptyState": {
+          "empty": { "title": "Aggiungi il tuo primo gioco", "subtitle": "Costruisci la tua libreria per iniziare.", "cta": "Aggiungi gioco" },
+          "filteredEmpty": { "title": "Nessun risultato", "subtitle": "Prova ad allargare i filtri o azzerarli.", "cta": "Azzera filtri" },
+          "error": { "title": "Errore di caricamento", "subtitle": "Impossibile recuperare la libreria.", "cta": "Riprova" }
+        }
+      },
       "selectionMode": {
         "enter": "Seleziona",
         "enterAriaLabel": "Attiva la modalità selezione multipla",

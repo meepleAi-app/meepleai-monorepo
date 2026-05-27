@@ -44,6 +44,9 @@ export interface GameHubItem extends HybridHubItemBase {
   readonly rating?: number;
   readonly state?: GameStateType;
   readonly imageUrl?: string;
+  /** True if the game has ≥1 KB doc (mirrors the retired `kb` tab). Optional in the
+   *  type (so test literals stay valid) but always set by `libraryEntryToHubItem`. */
+  readonly hasKb?: boolean;
 }
 
 export interface AgentHubItem extends HybridHubItemBase {

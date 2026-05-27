@@ -46,3 +46,9 @@ export type {
   ActivityKind,
   RecentActivityRailProps,
 } from '@/components/features/library/RecentActivityRail';
+
+export { CrossEntityFilters } from '@/components/features/library/CrossEntityFilters';
+export type {
+  CrossEntityFiltersProps,
+  GameStateFilter,
+} from '@/components/features/library/CrossEntityFilters';

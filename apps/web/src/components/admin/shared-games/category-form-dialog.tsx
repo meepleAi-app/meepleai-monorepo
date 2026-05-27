@@ -32,9 +32,10 @@ export interface CategoryFormDialogProps {
   /** Called when the user dismisses without submitting. */
   readonly onClose: () => void;
   /**
-   * Called with the validated values on submit. Issue #1429: persistence is
-   * the caller's responsibility — Phase 1 keeps a local MOCK_CATEGORIES list;
-   * Phase 2 will swap the caller in for a TanStack mutation.
+   * Called with the validated values on submit. Persistence is the caller's
+   * responsibility (issue #1429) — callers wire `useAdminCategories` TanStack
+   * mutations (create/update, shipped in PR #1440). This dialog stays
+   * presentational so it can be reused outside the categories admin table.
    */
   readonly onSave: (value: CategoryFormValue) => void;
 }
@@ -46,12 +47,12 @@ const DEFAULT_FORM: CategoryFormValue = {
 };
 
 /**
- * Add / Edit category dialog (issue #1429, Phase 1 FE-only stub).
+ * Add / Edit category dialog (issue #1429).
  *
  * Single component handles both add and edit by checking whether `initial`
- * is provided. Validation is intentionally minimal (presence + length); the
- * BE-side schema validation will land alongside Phase 2 once the
- * `/api/v1/admin/categories` endpoints exist.
+ * is provided. Client-side validation is intentionally minimal (presence +
+ * length); authoritative schema validation is enforced server-side via
+ * FluentValidation on the `/api/v1/admin/categories` endpoints (PR #1440).
  */
 export function CategoryFormDialog({ initial, onClose, onSave, open }: CategoryFormDialogProps) {
   const isEdit = initial !== undefined;

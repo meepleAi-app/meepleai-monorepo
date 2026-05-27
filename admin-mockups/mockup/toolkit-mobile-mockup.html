@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>MeepleAI — Toolkit Drawer Mobile Mockup</title>
+<!-- Split annotation: see docs/for-developers/specs/2026-05-26-mockup-poster-split.md -->
+<meta name="mockup-split-mode" content="per-variant">
+<meta name="mockup-output-prefix" content="toolkit-mobile">
 <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!--
   Static design mockup for internal use only.
@@ -216,7 +219,7 @@ h1,h2,h3,h4{font-family:'Quicksand',sans-serif}
   <!-- ═══════════ PHONE 1: DICE BUILD ═══════════ -->
   <div class="mock-col" id="panel-dice-build">
     <div class="mock-label">🎲 Dadi — Pool builder<br>3d6 + modificatore +6</div>
-    <div class="phone">
+    <div class="phone" data-variant="dice-build">
       <div class="sbar"><span class="t">9:41</span><div class="i"><span>▲▲▲</span><span>●●●</span><span>🔋</span></div></div>
       <div class="topbar">
         <div class="logo"><div class="dice-icon">🎲</div>MeepleAI</div>
@@ -306,7 +309,7 @@ h1,h2,h3,h4{font-family:'Quicksand',sans-serif}
   <!-- ═══════════ PHONE 2: DICE RESULT + CTA ═══════════ -->
   <div class="mock-col" id="panel-dice-result">
     <div class="mock-label">🎲 Dadi — Risultato 3d6+6<br>CTA: Ritira / Prossimo giocatore</div>
-    <div class="phone">
+    <div class="phone" data-variant="dice-result">
       <div class="sbar"><span class="t">9:41</span><div class="i"><span>▲▲▲</span><span>●●●</span><span>🔋</span></div></div>
       <div class="topbar">
         <div class="logo"><div class="dice-icon">🎲</div>MeepleAI</div>
@@ -411,7 +414,7 @@ h1,h2,h3,h4{font-family:'Quicksand',sans-serif}
   <!-- ═══════════ PHONE 3: QUICK LOG MANUALE ═══════════ -->
   <div class="mock-col" id="panel-dice-log">
     <div class="mock-label">📋 Quick log manuale<br>Seleziona giocatore + formula + totale</div>
-    <div class="phone">
+    <div class="phone" data-variant="quick-log">
       <div class="sbar"><span class="t">9:41</span><div class="i"><span>▲▲▲</span><span>●●●</span><span>🔋</span></div></div>
       <div class="topbar">
         <div class="logo"><div class="dice-icon">🎲</div>MeepleAI</div>
@@ -503,7 +506,7 @@ h1,h2,h3,h4{font-family:'Quicksand',sans-serif}
   <!-- ═══════════ PHONE 4: WIN TRACKER (Scores tab) ═══════════ -->
   <div class="mock-col" id="panel-scores">
     <div class="mock-label">🏆 Win Tracker<br>Righe = giocatori · Colonne = partite giocate</div>
-    <div class="phone">
+    <div class="phone" data-variant="win-tracker">
       <div class="sbar"><span class="t">9:41</span><div class="i"><span>▲▲▲</span><span>●●●</span><span>🔋</span></div></div>
       <div class="topbar">
         <div class="logo"><div class="dice-icon">🎲</div>MeepleAI</div>

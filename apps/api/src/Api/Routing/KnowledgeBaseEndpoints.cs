@@ -10,6 +10,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunkById;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunks;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbDocumentById;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetRecentKbDocs;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.ListUserKbDocs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.SearchKbChunks;
 using Api.Extensions;
 using Api.Helpers;
@@ -45,6 +46,7 @@ internal static class KnowledgeBaseEndpoints
         MapGameDocumentsEndpoint(group);
         MapLinkKbEndpoint(group);
         MapKbDocumentEndpoints(group);
+        MapUserKbDocsEndpoint(group);
 
         return group;
     }
@@ -973,6 +975,53 @@ internal static class KnowledgeBaseEndpoints
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status403Forbidden);
+    }
+
+    private static void MapUserKbDocsEndpoint(RouteGroupBuilder group)
+    {
+        // BE-1 #1588: paginated cross-game listing of the caller's KB documents.
+        group.MapGet("/kb-docs", HandleListUserKbDocs)
+            .WithName("ListUserKbDocs")
+            .RequireSession()
+            .WithTags("KnowledgeBase")
+            .WithSummary("List the authenticated user's KB documents across all games (paginated).")
+            .WithDescription(
+                "Returns the caller's PDF documents across all games, ordered by ProcessedAt ?? UploadedAt DESC. " +
+                "Use ?state=ready (default) to exclude in-flight or failed docs; ?state=all to include every state. " +
+                "Pagination via ?page= (1-based) and ?pageSize= (1-100, default 20).")
+            .Produces<KbDocsListResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status422UnprocessableEntity);
+    }
+
+    private static async Task<IResult> HandleListUserKbDocs(
+        [FromQuery] int? page,
+        [FromQuery] int? pageSize,
+        [FromQuery] string? sortBy,
+        [FromQuery] string? state,
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var session = context.Items[nameof(SessionStatusDto)] as SessionStatusDto;
+        if (session?.Principal?.Subject?.Id is not Guid userId
+            || userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
+        var safePage = Math.Max(1, page.GetValueOrDefault(1));
+        var safePageSize = Math.Clamp(pageSize.GetValueOrDefault(20), 1, 100);
+
+        var query = new ListUserKbDocsQuery(
+            UserId: userId,
+            Page: safePage,
+            PageSize: safePageSize,
+            SortBy: sortBy,
+            State: state);
+
+        var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
     }
 
     /// <summary>

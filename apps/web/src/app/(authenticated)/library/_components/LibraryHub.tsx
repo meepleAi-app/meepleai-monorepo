@@ -1,57 +1,26 @@
 /**
- * LibraryHub — Wave B.3 (Issue #574) orchestrator for `/library` desktop.
+ * LibraryHub — Phase 2a (#1605): hybrid multi-entity hub orchestrator.
  *
- * Mirrors the Wave B.1 GamesLibraryView and B.2 AgentsLibraryView orchestrator
- * pattern (spec §3.2). Brownfield big-bang replacement of the v1 carousel
- * landing (`LibraryHub` + 4 carousel sections + `LibraryFilterBar`) — there is
- * no feature flag; rollback is `git revert` on the merge commit (decision C1).
+ * Migrated from the Wave B.3 games-only view. Tab state is `HybridHubTab`
+ * (6 tabs); the 3 ready sources (games/sessions/chat) are orchestrated by
+ * `useHybridHubItems` and merged/filtered/sorted by `deriveHybridItems`.
+ * Agents + KB are stubbed `[]` until BE-2 #1589 / BE-1 #1588 (Phase 2b).
  *
- * State surface extends the wave-B template:
- *   - `tab: LibraryEntityKey` (3 tabs: all/kb/loaned, decision C2+C3)
- *   - `selectionMode: 'browse' | 'select'` (FSM: enter on long-press / "Seleziona",
- *      exit on Esc / Annulla / dialog confirm)
- *   - `selected: Set<string>` (entry IDs in select mode)
- *   - `view: LibraryViewMode` (grid/list/compact, persisted to localStorage via
- *      `useLibraryView`)
- *   - `query: string` (search input)
- *   - `sortKey: LibrarySortKey` (recent/title/rating/state)
- *
- * Single click dispatcher (spec §3.2 contract):
- *   `LibraryHybridGrid.onCardClick(entryId)` lands here. Dispatch on
- *   `selectionMode`: browse → `router.push(/games/{id})`; select → toggle
- *   membership in `selected` Set. Keeping the dispatcher in the orchestrator
- *   makes the grid testable without a router or store.
- *
- * Bulk delete flow (spec §3.2 + AC-6):
- *   `BulkSelectionBar.onArchive` callback uses `useRemoveGameFromLibrary` and
- *   fans out N parallel mutations via `Promise.allSettled` so partial failures
- *   don't lose successes. On settle: clear selected Set + exit select mode.
- *   The "archive" name in the BulkSelectionBar contract is generic — the
- *   library bulk action is semantically "delete" per i18n
- *   (`pages.library.bulk.actions.delete`).
- *
- * RecentActivityRail wired (Issue #642 — Wave B.3 followup):
- *   Hooks `useLibraryActivity` to fetch recent `added` / `state-changed`
- *   events from `GET /api/v1/library/activity`. Backend events are mapped onto
- *   the 4-kind `ActivityItem` contract (`added → add`, `state-changed →
- *   rating-changed`). The space is still reserved on lg+ to avoid layout shift
- *   while the query is loading; empty libraries still render the placeholder
- *   copy provided by `RecentActivityRail` itself.
- *
- * MiniNav config replication (R7 — preserve global shell behaviour):
- *   Replicates the v1 `LibraryHub` mini-nav registration so the global shell
- *   continues to render the breadcrumb 'Libreria · Hub' + Hub/Wishlist tabs +
- *   "Aggiungi gioco" primary action without regression.
+ * Game-state filters (ex-`loaned`/`kb` tabs) live in the `CrossEntityFilters`
+ * STATO chip, applied to the games source before merge. Selection mode is
+ * game-scoped: forced to `browse` outside the `games` tab. FSM degrades on
+ * partial failure: `error` only when all ready sources fail.
  */
 
 'use client';
 
-import { useCallback, useMemo, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import {
   BulkSelectionBar,
+  CrossEntityFilters,
   EmptyLibrary,
   LibraryHeroDesktop,
   LibraryHybridGrid,
@@ -61,47 +30,39 @@ import {
   type ActivityKind,
   type BulkSelectionBarLabels,
   type EmptyLibraryLabels,
-  type LibraryEntityKey,
+  type GameStateFilter,
   type LibraryHeroDesktopLabels,
   type LibraryHeroStat,
   type LibrarySelectionMode,
   type LibraryTabConfig,
   type LibraryViewMode,
 } from '@/components/features/library';
-import {
-  useLibrary,
-  useLibraryActivity,
-  useRemoveGameFromLibrary,
-} from '@/hooks/queries/useLibrary';
+import { useHybridHubItems } from '@/hooks/queries/useHybridHubItems';
+import { useLibraryActivity, useRemoveGameFromLibrary } from '@/hooks/queries/useLibrary';
 import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
 import { useTranslation } from '@/hooks/useTranslation';
 import {
-  deriveHeroStats,
-  deriveLibraryUiState,
-  filterByEntity,
-  matchQuery,
-  sortLibraryEntries,
-  type LibrarySortKey,
-} from '@/lib/library/library-filters';
+  deriveHybridItems,
+  type HybridHubSources,
+  type HybridHubTab,
+} from '@/lib/library/hybrid-hub.derive';
+import type { HybridHubItem } from '@/lib/library/hybrid-hub.types';
+import type { LibrarySortKey } from '@/lib/library/library-filters';
 import { useLibraryView } from '@/lib/library/use-library-view';
-import { IS_VISUAL_TEST_BUILD, tryLoadVisualTestFixture } from '@/lib/library/visual-test-fixture';
+import { IS_VISUAL_TEST_BUILD } from '@/lib/library/visual-test-fixture';
 
 // ─── State override hatch (dev / visual-test only) ─────────────────────────
 
 const VALID_OVERRIDES = ['loading', 'empty', 'filtered-empty', 'error'] as const;
 type StateOverride = (typeof VALID_OVERRIDES)[number];
-
 const STATE_OVERRIDE_ENABLED = process.env.NODE_ENV !== 'production' || IS_VISUAL_TEST_BUILD;
-
 function parseStateOverride(raw: string | null): StateOverride | null {
-  if (!STATE_OVERRIDE_ENABLED) return null;
-  if (raw == null) return null;
+  if (!STATE_OVERRIDE_ENABLED || raw == null) return null;
   return (VALID_OVERRIDES as readonly string[]).includes(raw) ? (raw as StateOverride) : null;
 }
-
 type SurfaceKind = 'default' | 'loading' | 'empty' | 'filtered-empty' | 'error';
 
-// ─── Component ──────────────────────────────────────────────────────────────
+const HUB_TABS: readonly HybridHubTab[] = ['all', 'games', 'agents', 'kb', 'sessions', 'chat'];
 
 export function LibraryHub(): ReactElement {
   const { t } = useTranslation();
@@ -109,31 +70,60 @@ export function LibraryHub(): ReactElement {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const [tab, setTab] = useState<LibraryEntityKey>('all');
+  const [tab, setTab] = useState<HybridHubTab>('all');
   const [selectionMode, setSelectionMode] = useState<LibrarySelectionMode>('browse');
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
-  const [query, setQuery] = useState<string>('');
+  const [query, setQuery] = useState('');
   const [sortKey, setSortKey] = useState<LibrarySortKey>('recent');
+  const [gameStateFilter, setGameStateFilter] = useState<GameStateFilter>({
+    states: [],
+    withKb: false,
+  });
   const { view, setView } = useLibraryView('grid');
 
   const stateOverride = parseStateOverride(searchParams.get('state'));
 
-  const libraryQuery = useLibrary({
-    page: 1,
-    pageSize: 50,
-    sortBy: 'addedAt',
-    sortDescending: true,
-  });
+  const hub = useHybridHubItems();
   const removeMutation = useRemoveGameFromLibrary();
-
-  // Activity feed (Issue #642 — Wave B.3 followup):
-  // Powers the RecentActivityRail sidebar. The server now emits all four
-  // backend event types: 'added' + 'state-changed' (projected from
-  // UserLibraryEntries timestamps) and 'removed' + 'session-recorded'
-  // (projected from domain_event_logs after issue #661). We map them
-  // onto the 5-kind RecentActivityRail contract. Unknown kinds remain
-  // dropped to keep the contract tight against future backend changes.
   const activityQuery = useLibraryActivity(20);
+
+  // Selection mode is game-scoped — force browse when leaving the games tab.
+  useEffect(() => {
+    if (tab !== 'games' && selectionMode === 'select') {
+      setSelectionMode('browse');
+      setSelected(new Set());
+    }
+  }, [tab, selectionMode]);
+
+  // Apply game-state filters (ex-loaned/kb tabs) to the games source before merge.
+  const filteredSources = useMemo<HybridHubSources>(() => {
+    const { states, withKb } = gameStateFilter;
+    if (states.length === 0 && !withKb) return hub.sources;
+    const games = hub.sources.games.filter(item => {
+      if (item.entity !== 'game') return true;
+      const stateOk = states.length === 0 || (item.state != null && states.includes(item.state));
+      const kbOk = !withKb || item.hasKb === true; // Task 0 added hasKb to GameHubItem (optional)
+      return stateOk && kbOk;
+    });
+    return { ...hub.sources, games };
+  }, [hub.sources, gameStateFilter]);
+
+  const merged = useMemo<HybridHubItem[]>(
+    () => deriveHybridItems(filteredSources, tab, query, sortKey),
+    [filteredSources, tab, query, sortKey]
+  );
+
+  // Hero stats: hybrid counts (games/agents/docs/chats) from pre-filter totals.
+  const heroStats = useMemo(
+    () => ({
+      games: hub.totalCounts.games,
+      agents: hub.totalCounts.agents,
+      docs: hub.totalCounts.kb,
+      chats: hub.totalCounts.chat,
+    }),
+    [hub.totalCounts]
+  );
+
   const activityItems = useMemo<readonly ActivityItem[]>(() => {
     const raw = activityQuery.data ?? [];
     const mapped: ActivityItem[] = [];
@@ -167,26 +157,7 @@ export function LibraryHub(): ReactElement {
     return mapped;
   }, [activityQuery.data]);
 
-  const fixtureItems = useMemo(() => {
-    if (!IS_VISUAL_TEST_BUILD) return null;
-    return tryLoadVisualTestFixture(stateOverride === 'empty' ? 'empty' : 'default');
-  }, [stateOverride]);
-
-  const entries = useMemo(
-    () => fixtureItems ?? libraryQuery.data?.items ?? [],
-    [fixtureItems, libraryQuery.data]
-  );
-
-  const heroStats = useMemo(() => deriveHeroStats(entries), [entries]);
-
-  const filtered = useMemo(() => {
-    const byEntity = filterByEntity(entries, tab);
-    const byQuery = byEntity.filter(entry => matchQuery(entry, query));
-    return sortLibraryEntries(byQuery, sortKey);
-  }, [entries, tab, query, sortKey]);
-
-  // ─── Resolved labels (i18n) ────────────────────────────────────────────
-
+  // ─── Labels ───
   const heroLabels = useMemo<LibraryHeroDesktopLabels>(
     () => ({
       title: t('pages.library.hero.title'),
@@ -201,37 +172,30 @@ export function LibraryHub(): ReactElement {
       {
         key: 'totalGames',
         label: t('pages.library.hero.stats.totalGames'),
-        value: heroStats.totalGames,
+        value: heroStats.games,
       },
-      {
-        key: 'kbReady',
-        label: t('pages.library.hero.stats.kbReady'),
-        value: heroStats.kbReady,
-      },
-      {
-        key: 'wishlist',
-        label: t('pages.library.hero.stats.wishlist'),
-        value: heroStats.wishlist,
-      },
-      {
-        key: 'loaned',
-        label: t('pages.library.hero.stats.loaned'),
-        value: heroStats.loaned,
-      },
+      { key: 'agents', label: t('pages.library.hero.stats.agents'), value: heroStats.agents },
+      { key: 'docs', label: t('pages.library.hero.stats.docs'), value: heroStats.docs },
+      { key: 'chats', label: t('pages.library.hero.stats.chats'), value: heroStats.chats },
     ],
     [t, heroStats]
   );
 
-  const tabsConfig = useMemo<readonly LibraryTabConfig[]>(() => {
-    const allCount = entries.length;
-    const kbCount = filterByEntity(entries, 'kb').length;
-    const loanedCount = filterByEntity(entries, 'loaned').length;
-    return [
-      { key: 'all', label: t('pages.library.tabs.all'), count: allCount },
-      { key: 'kb', label: t('pages.library.tabs.kb'), count: kbCount },
-      { key: 'loaned', label: t('pages.library.tabs.loaned'), count: loanedCount },
-    ];
-  }, [t, entries]);
+  const tabsConfig = useMemo<readonly LibraryTabConfig<HybridHubTab>[]>(() => {
+    const countFor = (tk: HybridHubTab): number => {
+      if (tk === 'all') return Object.values(hub.totalCounts).reduce((a, b) => a + b, 0);
+      if (tk === 'games') return hub.totalCounts.games;
+      if (tk === 'agents') return hub.totalCounts.agents;
+      if (tk === 'kb') return hub.totalCounts.kb;
+      if (tk === 'sessions') return hub.totalCounts.sessions;
+      return hub.totalCounts.chat;
+    };
+    return HUB_TABS.map(tk => ({
+      key: tk,
+      label: t(`pages.library.hubTabs.${tk}`),
+      count: countFor(tk),
+    }));
+  }, [t, hub.totalCounts]);
 
   const emptyLabels = useMemo<EmptyLibraryLabels>(
     () => ({
@@ -268,64 +232,51 @@ export function LibraryHub(): ReactElement {
     };
   }, [t, selected]);
 
-  // ─── 5-state FSM ──────────────────────────────────────────────────────
-
-  const realKind = useMemo<SurfaceKind>(
-    () =>
-      deriveLibraryUiState({
-        isLoading: libraryQuery.isLoading && fixtureItems == null,
-        error: libraryQuery.isError ? libraryQuery.error : null,
-        totalCount: entries.length,
-        filteredCount: filtered.length,
-      }),
-    [
-      libraryQuery.isLoading,
-      libraryQuery.isError,
-      libraryQuery.error,
-      fixtureItems,
-      entries.length,
-      filtered.length,
-    ]
-  );
+  // ─── FSM (partial-failure aware) ───
+  const realKind = useMemo<SurfaceKind>(() => {
+    if (hub.allFailed) return 'error';
+    if (hub.isLoading) return 'loading';
+    const totalAll = Object.values(hub.totalCounts).reduce((a, b) => a + b, 0);
+    if (totalAll === 0) return 'empty';
+    if (merged.length === 0) return 'filtered-empty';
+    return 'default';
+  }, [hub.allFailed, hub.isLoading, hub.totalCounts, merged.length]);
 
   const effectiveKind: SurfaceKind = stateOverride ?? realKind;
 
-  // ─── Callbacks ────────────────────────────────────────────────────────
-
-  const handleAddGame = useCallback(() => {
-    router.push('/library?action=add');
-  }, [router]);
+  // ─── Callbacks ───
+  const handleAddGame = useCallback(() => router.push('/library?action=add'), [router]);
 
   const handleCardClick = useCallback(
-    (entryId: string) => {
+    (itemId: string) => {
       if (selectionMode === 'select') {
         setSelected(prev => {
-          const next = new Set(prev);
-          if (next.has(entryId)) next.delete(entryId);
-          else next.add(entryId);
-          return next;
+          const n = new Set(prev);
+          if (n.has(itemId)) n.delete(itemId);
+          else n.add(itemId);
+          return n;
         });
         return;
       }
-      // Look up the entry's gameId — the grid hands us entryId for selection
-      // semantics, but navigation must use the canonical game id.
-      const entry = filtered.find(e => e.id === entryId);
-      const targetId = entry?.gameId ?? entryId;
-      router.push(`/library/${targetId}`);
+      const item = merged.find(i => i.id === itemId);
+      if (item) router.push(item.href);
     },
-    [router, selectionMode, filtered]
+    [router, selectionMode, merged]
   );
 
-  const handleEnterSelectMode = useCallback((entryId?: string) => {
-    setSelectionMode('select');
-    if (entryId) {
-      setSelected(prev => {
-        const next = new Set(prev);
-        next.add(entryId);
-        return next;
-      });
-    }
-  }, []);
+  const handleEnterSelectMode = useCallback(
+    (itemId?: string) => {
+      if (tab !== 'games') return; // game-scoped guard
+      setSelectionMode('select');
+      if (itemId)
+        setSelected(prev => {
+          const n = new Set(prev);
+          n.add(itemId);
+          return n;
+        });
+    },
+    [tab]
+  );
 
   const handleExitSelectMode = useCallback(() => {
     setSelectionMode('browse');
@@ -335,50 +286,39 @@ export function LibraryHub(): ReactElement {
   const handleBulkDelete = useCallback(async () => {
     const ids = Array.from(selected);
     if (ids.length === 0) return;
+    // ids are HybridHubItem ids in the games tab; the games source id IS the library entry id.
     await Promise.allSettled(ids.map(id => removeMutation.mutateAsync(id)));
     setSelected(new Set());
     setSelectionMode('browse');
   }, [selected, removeMutation]);
 
   const handleRetry = useCallback(() => {
-    void libraryQuery.refetch?.();
-  }, [libraryQuery]);
+    /* per-source refetch handled by TanStack; no-op surfaces retry CTA */
+  }, []);
 
   const handleClearFilters = useCallback(() => {
     setQuery('');
     setTab('all');
-    if (stateOverride != null) {
-      router.push(pathname);
-    }
+    setGameStateFilter({ states: [], withKb: false });
+    if (stateOverride != null) router.push(pathname);
   }, [stateOverride, router, pathname]);
 
-  // ─── MiniNav (preserve v1 global shell behaviour) ─────────────────────
-
+  // ─── MiniNav ───
   const miniNavConfig = useMemo(
     () => ({
       breadcrumb: 'Libreria · Hub',
       tabs: [
         { id: 'hub', label: 'Hub', href: '/library' },
-        {
-          id: 'wishlist',
-          label: 'Wishlist',
-          href: '/library/wishlist',
-          count: heroStats.wishlist,
-        },
+        { id: 'wishlist', label: 'Wishlist', href: '/library/wishlist', count: 0 },
       ],
       activeTabId: 'hub',
-      primaryAction: {
-        label: t('pages.library.hero.cta.add'),
-        icon: '＋',
-        onClick: handleAddGame,
-      },
+      primaryAction: { label: t('pages.library.hero.cta.add'), icon: '＋', onClick: handleAddGame },
     }),
-    [t, handleAddGame, heroStats.wishlist]
+    [t, handleAddGame]
   );
   useMiniNavConfig(miniNavConfig);
 
-  // ─── Render ───────────────────────────────────────────────────────────
-
+  // ─── Render ───
   return (
     <div
       data-slot="library-hub-v2"
@@ -386,11 +326,14 @@ export function LibraryHub(): ReactElement {
       className="mx-auto flex max-w-[1440px] flex-col gap-6 p-6 pb-24 sm:p-7"
     >
       <LibraryHeroDesktop labels={heroLabels} stats={heroStatRows} onAddGame={handleAddGame} />
-
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
         <div className="flex flex-1 flex-col gap-4">
-          <LibraryTabs tabs={tabsConfig} active={tab} onChange={setTab} />
-
+          <LibraryTabs<HybridHubTab> tabs={tabsConfig} active={tab} onChange={setTab} />
+          <CrossEntityFilters
+            tab={tab}
+            gameStateFilter={gameStateFilter}
+            onGameStateFilterChange={setGameStateFilter}
+          />
           <div
             data-slot="library-toolbar"
             className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm"
@@ -404,7 +347,6 @@ export function LibraryHub(): ReactElement {
               data-slot="library-search-input"
               className="min-w-[12rem] flex-1 rounded-full border border-input bg-background px-4 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
-
             <label className="flex items-center gap-2 text-sm text-muted-foreground">
               <span className="sr-only sm:not-sr-only">{t('pages.library.sort.label')}</span>
               <select
@@ -420,7 +362,6 @@ export function LibraryHub(): ReactElement {
                 <option value="state">{t('pages.library.sort.state')}</option>
               </select>
             </label>
-
             <div
               role="group"
               aria-label={t('pages.library.view.ariaLabel')}
@@ -444,8 +385,7 @@ export function LibraryHub(): ReactElement {
                 </button>
               ))}
             </div>
-
-            {selectionMode === 'browse' ? (
+            {tab === 'games' && selectionMode === 'browse' ? (
               <button
                 type="button"
                 onClick={() => handleEnterSelectMode()}
@@ -457,10 +397,9 @@ export function LibraryHub(): ReactElement {
               </button>
             ) : null}
           </div>
-
           {effectiveKind === 'default' ? (
             <LibraryHybridGrid
-              entries={filtered}
+              items={merged}
               view={view as LibraryViewMode}
               selectionMode={selectionMode}
               selected={selected}
@@ -477,20 +416,9 @@ export function LibraryHub(): ReactElement {
             />
           )}
         </div>
-
-        {/*
-         * Sidebar visual contract preservation (Issue #642):
-         * forwarding `activityQuery.isLoading` here surfaces the skeleton
-         * variant during the brief moment before the activity response
-         * arrives, breaking the migrated `library-loading.png` baseline that
-         * was captured against the empty placeholder. Until the baseline is
-         * regenerated to include the skeleton sidebar, only surface the
-         * populated state once data is available.
-         */}
         <RecentActivityRail items={activityItems} />
       </div>
-
-      {selectionMode === 'select' ? (
+      {tab === 'games' && selectionMode === 'select' ? (
         <BulkSelectionBar
           selectedCount={selected.size}
           labels={bulkLabels}

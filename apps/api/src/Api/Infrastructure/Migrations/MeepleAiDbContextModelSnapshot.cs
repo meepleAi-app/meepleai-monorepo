@@ -8647,8 +8647,6 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("PrivateGameId");
 
-                    b.HasIndex("UploadedByUserId");
-
                     b.HasIndex("CollectionId", "SortOrder");
 
                     b.HasIndex("ContentHash", "PrivateGameId")
@@ -8659,6 +8657,10 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("SharedGameId", "UploadedAt")
                         .HasDatabaseName("IX_pdf_documents_SharedGameId_UploadedAt");
+
+                    b.HasIndex("UploadedByUserId", "ProcessedAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_pdf_documents_uploaded_by_user_id_processed_at_desc");
 
                     b.ToTable("pdf_documents", (string)null);
                 });

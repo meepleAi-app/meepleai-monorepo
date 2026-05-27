@@ -97,6 +97,12 @@ describe('libraryEntryToHubItem', () => {
     const result = libraryEntryToHubItem({ ...baseEntry, averageRating: null });
     expect(result.rating).toBeUndefined();
   });
+
+  it('sets hasKb from isKbEntry (true when hasKb or kbCardCount>0)', () => {
+    expect(libraryEntryToHubItem({ ...baseEntry, hasKb: true, kbCardCount: 0 }).hasKb).toBe(true);
+    expect(libraryEntryToHubItem({ ...baseEntry, hasKb: false, kbCardCount: 2 }).hasKb).toBe(true);
+    expect(libraryEntryToHubItem({ ...baseEntry, hasKb: false, kbCardCount: 0 }).hasKb).toBe(false);
+  });
 });
 
 const baseAgent: AgentDto = {

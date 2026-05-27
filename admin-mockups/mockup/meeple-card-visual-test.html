@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MeepleCard Visual Test - Full Features</title>
+<!-- Split annotation: see docs/for-developers/specs/2026-05-26-mockup-poster-split.md -->
+<meta name="mockup-split-mode" content="per-component">
+<meta name="mockup-output-prefix" content="meeple-card-visual">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -467,7 +470,7 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
 <div class="container">
 
 <!-- ===== SECTION 1: GRID VIEW - FULL FEATURES ===== -->
-<div class="section">
+<div class="section" data-component="grid-view">
   <div class="section-header"><div class="section-number">1</div><h2 class="section-title">Grid View - Full MeepleCard Features</h2></div>
   <p class="section-desc">Tags, wishlist, info button, quick actions, entity glow, gradient overlay, shimmer, star rating, metadata footer, agent action, nav footer</p>
   <div class="grid-4">
@@ -634,7 +637,7 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
 </div>
 
 <!-- ===== SECTION 2: LIST VIEW ===== -->
-<div class="section">
+<div class="section" data-component="list-view">
   <div class="section-header"><div class="section-number">2</div><h2 class="section-title">List View - Dot indicator, inline meta</h2></div>
   <div class="list-layout">
     <div class="mc mc-list e-game anim d1">
@@ -680,7 +683,7 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
 </div>
 
 <!-- ===== SECTION 3: TABLE VIEW ===== -->
-<div class="section">
+<div class="section" data-component="table-view">
   <div class="section-header"><div class="section-number">3</div><h2 class="section-title">Table View - Entity-colored rows</h2></div>
   <table class="entity-table anim d1">
     <thead><tr>
@@ -696,7 +699,7 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
 </div>
 
 <!-- ===== SECTION 4: FLIP CARDS ===== -->
-<div class="section">
+<div class="section" data-component="flip-card">
   <div class="section-header"><div class="section-number">4</div><h2 class="section-title">Flip Card - Click per girare</h2></div>
   <div class="grid-4">
     <div class="flip-container anim d1" onclick="this.classList.toggle('flipped')" style="height:440px;">
@@ -767,7 +770,7 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
 </div>
 
 <!-- ===== SECTION 5: 3D CAROUSEL (Real transforms) ===== -->
-<div class="section">
+<div class="section" data-component="carousel-3d">
   <div class="section-header"><div class="section-number">5</div><h2 class="section-title">3D Carousel - translateX(35%), rotateY(-5deg), blur</h2></div>
   <p class="section-desc">Prospettiva 1200px. Centro: scale(1.1), opacita 1. Laterali: scale(0.85), opacita 0.6, blur 2px. Lontani: scale(0.5), opacita 0. Fade ai bordi.</p>
   <div class="carousel-section">
@@ -783,7 +786,7 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
 </div>
 
 <!-- ===== SECTION 6: MULTI-ENTITY GRID ===== -->
-<div class="section">
+<div class="section" data-component="multi-entity-grid">
   <div class="section-header"><div class="section-number">6</div><h2 class="section-title">Multi-Entity Grid</h2></div>
   <div class="multi-grid">
     <!-- Chat card -->

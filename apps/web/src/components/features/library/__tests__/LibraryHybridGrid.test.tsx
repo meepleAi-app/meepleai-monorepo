@@ -1,17 +1,23 @@
 /**
- * Wave B.3 (Issue #574) — LibraryHybridGrid v2 component tests.
+ * Phase 2a (Issue #1605) — LibraryHybridGrid hybrid-item component tests.
  *
- * Spec §3.2:
- *   - Maps `entries: ReadonlyArray<UserLibraryEntry>` → MeepleCard rendering.
+ * The grid is a pure component over a heterogeneous `items: HybridHubItem[]`
+ * (game/agent/kb/session/chat). Migrated from the Wave B.3 games-only
+ * `UserLibraryEntry[]` shape (#574).
+ *
+ * Contract under test:
+ *   - One MeepleCard per item; `entity`/`title`/`subtitle` come from the base,
+ *     `rating`/`imageUrl` are game-only extras (non-game items render without
+ *     them, no crash).
  *   - View modes: `grid` / `list` / `compact` → distinct layout classes +
  *     MeepleCard variant prop pass-through.
  *   - Selection mode FSM:
  *       browse  → no aria-pressed, native click; data-selection-mode="browse".
  *       select  → aria-pressed reflects selected Set membership;
  *                 data-selection-mode="select"; check overlay slot rendered
- *                 only when selected.has(entry.id).
+ *                 only when selected.has(item.id).
  *   - Click dispatch single-handler contract: orchestrator decides toggle vs
- *     drill-into; component just calls onCardClick(entry.id).
+ *     drill-into; component just calls onCardClick(item.id).
  *
  * MeepleCard is mocked to keep this a focused wrapper-logic unit test
  * (MeepleCard has its own 100+ tests). The mock surfaces `entity`,
@@ -23,7 +29,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { LibraryHybridGrid, type LibraryHybridGridProps } from '../LibraryHybridGrid';
-import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
+import type { HybridHubItem } from '@/lib/library/hybrid-hub.types';
 
 // ---------- MeepleCard mock ---------------------------------------------------
 vi.mock('@/components/ui/data-display/meeple-card', () => ({
@@ -52,73 +58,48 @@ vi.mock('@/components/ui/data-display/meeple-card', () => ({
 }));
 
 // ---------- Fixture helpers ---------------------------------------------------
-const NOW = '2026-04-30T10:00:00.000Z';
-const USER_ID = '00000000-0000-4000-8000-000000000aaa';
-
-function makeEntry(
-  overrides: Partial<UserLibraryEntry> & Pick<UserLibraryEntry, 'id' | 'gameId' | 'gameTitle'>
-): UserLibraryEntry {
-  return {
-    userId: USER_ID,
-    gamePublisher: null,
-    gameYearPublished: null,
-    gameIconUrl: null,
-    gameImageUrl: null,
-    addedAt: NOW,
-    notes: null,
-    isFavorite: false,
-    currentState: 'Owned',
-    stateChangedAt: null,
-    stateNotes: null,
+// Heterogeneous hybrid items: one game (with rating + image), one session, one
+// chat (both without rating/image — the game-only visual extras must be absent).
+const items: HybridHubItem[] = [
+  {
+    id: 'g1',
+    entity: 'game',
+    title: 'Catan',
+    subtitle: 'Kosmos',
+    updatedAt: '2026-01-01T00:00:00Z',
+    href: '/library/game-1',
+    gameId: 'game-1',
+    rating: 7,
+    state: 'Owned',
+    imageUrl: 'https://example.test/catan.jpg',
     hasKb: false,
-    kbCardCount: 0,
-    kbIndexedCount: 0,
-    kbProcessingCount: 0,
-    ownershipDeclaredAt: null,
-    hasRagAccess: false,
-    agentIsOwned: true,
-    minPlayers: null,
-    maxPlayers: null,
-    playingTimeMinutes: null,
-    complexityRating: null,
-    averageRating: null,
-    privateGameId: null,
-    isPrivateGame: false,
-    canProposeToCatalog: false,
-    ...overrides,
-  };
-}
-
-const e1 = makeEntry({
-  id: 'entry-1',
-  gameId: 'game-1',
-  gameTitle: 'Catan',
-  gamePublisher: 'Kosmos',
-  averageRating: 7.2,
-  gameImageUrl: 'https://example.test/catan.png',
-});
-const e2 = makeEntry({
-  id: 'entry-2',
-  gameId: 'game-2',
-  gameTitle: 'Wingspan',
-  gamePublisher: 'Stonemaier Games',
-  averageRating: 8.1,
-});
-const e3 = makeEntry({
-  id: 'entry-3',
-  gameId: 'game-3',
-  gameTitle: 'Brass: Birmingham',
-  // no publisher → subtitle should be empty/undefined
-  averageRating: 8.6,
-  gameIconUrl: 'https://example.test/brass-icon.png',
-});
-const baseEntries: ReadonlyArray<UserLibraryEntry> = [e1, e2, e3];
+  },
+  {
+    id: 's1',
+    entity: 'session',
+    title: 'Session s1',
+    subtitle: 'Alice',
+    updatedAt: '2026-02-01T00:00:00Z',
+    href: '/sessions/s1',
+    status: 'Completed',
+    playerCount: 4,
+  },
+  {
+    id: 'c1',
+    entity: 'chat',
+    title: 'How to play?',
+    subtitle: 'Catan',
+    updatedAt: '2026-03-01T00:00:00Z',
+    href: '/chats/c1',
+    messageCount: 3,
+  },
+];
 
 function renderGrid(overrides: Partial<LibraryHybridGridProps> = {}) {
   const onCardClick = vi.fn();
   const utils = render(
     <LibraryHybridGrid
-      entries={baseEntries}
+      items={items}
       view="grid"
       selectionMode="browse"
       selected={new Set()}
@@ -130,9 +111,9 @@ function renderGrid(overrides: Partial<LibraryHybridGridProps> = {}) {
 }
 
 // ---------- Tests -------------------------------------------------------------
-describe('LibraryHybridGrid (Wave B.3)', () => {
+describe('LibraryHybridGrid (Phase 2a hybrid items)', () => {
   describe('rendering basics', () => {
-    it('renders one card per entry', () => {
+    it('renders one card per item (game/session/chat)', () => {
       const { container } = renderGrid();
       const cards = container.querySelectorAll('[data-slot="library-grid-card"]');
       expect(cards).toHaveLength(3);
@@ -143,26 +124,40 @@ describe('LibraryHybridGrid (Wave B.3)', () => {
       expect(container.querySelector('[data-slot="library-hybrid-grid"]')).not.toBeNull();
     });
 
-    it('passes title + subtitle + imageUrl + rating to MeepleCard', () => {
+    it('passes each item entity through to MeepleCard', () => {
+      const { container } = renderGrid();
+      const cards = container.querySelectorAll('[data-slot="meeple-card-mock"]');
+      expect(cards[0]).toHaveAttribute('data-entity', 'game');
+      expect(cards[1]).toHaveAttribute('data-entity', 'session');
+      expect(cards[2]).toHaveAttribute('data-entity', 'chat');
+    });
+
+    it('passes title + subtitle + imageUrl + rating for a game item', () => {
       const { container } = renderGrid();
       const cards = container.querySelectorAll('[data-slot="meeple-card-mock"]');
       expect(cards[0]).toHaveAttribute('data-title', 'Catan');
       expect(cards[0]).toHaveAttribute('data-subtitle', 'Kosmos');
-      expect(cards[0]).toHaveAttribute('data-image-url', 'https://example.test/catan.png');
-      expect(cards[0]).toHaveAttribute('data-rating', '7.2');
+      expect(cards[0]).toHaveAttribute('data-image-url', 'https://example.test/catan.jpg');
+      expect(cards[0]).toHaveAttribute('data-rating', '7');
       expect(cards[0]).toHaveAttribute('data-rating-max', '10');
-      expect(cards[0]).toHaveAttribute('data-entity', 'game');
     });
 
-    it('falls back to gameIconUrl when gameImageUrl is null', () => {
+    it('renders a non-game item without rating/image (no crash)', () => {
       const { container } = renderGrid();
       const cards = container.querySelectorAll('[data-slot="meeple-card-mock"]');
-      // entry-3 has gameIconUrl but null gameImageUrl
-      expect(cards[2]).toHaveAttribute('data-image-url', 'https://example.test/brass-icon.png');
+      // session card carries title + subtitle but no game-only visual extras
+      expect(cards[1]).toHaveAttribute('data-title', 'Session s1');
+      expect(cards[1]).toHaveAttribute('data-subtitle', 'Alice');
+      expect(cards[1]).toHaveAttribute('data-image-url', '');
+      expect(cards[1]).toHaveAttribute('data-rating', '');
+      // chat card likewise
+      expect(cards[2]).toHaveAttribute('data-title', 'How to play?');
+      expect(cards[2]).toHaveAttribute('data-image-url', '');
+      expect(cards[2]).toHaveAttribute('data-rating', '');
     });
 
-    it('renders empty container when entries=[]', () => {
-      const { container } = renderGrid({ entries: [] });
+    it('renders empty container when items=[]', () => {
+      const { container } = renderGrid({ items: [] });
       const grid = container.querySelector('[data-slot="library-hybrid-grid"]');
       expect(grid).not.toBeNull();
       expect(grid?.querySelectorAll('[data-slot="library-grid-card"]')).toHaveLength(0);
@@ -208,18 +203,18 @@ describe('LibraryHybridGrid (Wave B.3)', () => {
       cards.forEach(c => expect(c).toHaveAttribute('data-selection-mode', 'browse'));
     });
 
-    it('click → onCardClick(entry.id)', () => {
+    it('click → onCardClick(item.id)', () => {
       const { container, onCardClick } = renderGrid({ selectionMode: 'browse' });
       const cards = container.querySelectorAll('[data-slot="library-grid-card"]');
       fireEvent.click(cards[1]);
       expect(onCardClick).toHaveBeenCalledTimes(1);
-      expect(onCardClick).toHaveBeenCalledWith('entry-2');
+      expect(onCardClick).toHaveBeenCalledWith('s1');
     });
 
     it('does NOT render check overlay in browse mode (even if id in selected Set)', () => {
       const { container } = renderGrid({
         selectionMode: 'browse',
-        selected: new Set(['entry-1']),
+        selected: new Set(['g1']),
       });
       const cards = container.querySelectorAll('[data-slot="library-grid-card"]');
       const overlay = within(cards[0] as HTMLElement).queryByTestId('library-grid-card-check');
@@ -231,7 +226,7 @@ describe('LibraryHybridGrid (Wave B.3)', () => {
     it('sets aria-pressed on EVERY card (toggle button pattern)', () => {
       const { container } = renderGrid({
         selectionMode: 'select',
-        selected: new Set(['entry-2']),
+        selected: new Set(['s1']),
       });
       const cards = container.querySelectorAll('[data-slot="library-grid-card"]');
       expect(cards[0]).toHaveAttribute('aria-pressed', 'false');
@@ -248,7 +243,7 @@ describe('LibraryHybridGrid (Wave B.3)', () => {
     it('renders check overlay only on selected cards', () => {
       const { container } = renderGrid({
         selectionMode: 'select',
-        selected: new Set(['entry-1', 'entry-3']),
+        selected: new Set(['g1', 'c1']),
       });
       const cards = container.querySelectorAll('[data-slot="library-grid-card"]');
       expect(
@@ -260,15 +255,15 @@ describe('LibraryHybridGrid (Wave B.3)', () => {
       ).not.toBeNull();
     });
 
-    it('click → onCardClick(entry.id) (orchestrator decides toggle)', () => {
+    it('click → onCardClick(item.id) (orchestrator decides toggle)', () => {
       const { container, onCardClick } = renderGrid({
         selectionMode: 'select',
-        selected: new Set(['entry-1']),
+        selected: new Set(['g1']),
       });
       const cards = container.querySelectorAll('[data-slot="library-grid-card"]');
       fireEvent.click(cards[2]);
       expect(onCardClick).toHaveBeenCalledTimes(1);
-      expect(onCardClick).toHaveBeenCalledWith('entry-3');
+      expect(onCardClick).toHaveBeenCalledWith('c1');
     });
   });
 });

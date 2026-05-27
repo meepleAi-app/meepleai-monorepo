@@ -1566,7 +1566,10 @@
           "totalGames": "Total games",
           "kbReady": "Knowledge bases",
           "wishlist": "Wishlist",
-          "loaned": "On loan"
+          "loaned": "On loan",
+          "agents": "Agents",
+          "docs": "Documents",
+          "chats": "Chats"
         },
         "cta": {
           "add": "Add game",
@@ -1580,6 +1583,14 @@
         "loaned": "On loan",
         "count": "{count, plural, =0 {none} =1 {1} other {#}}"
       },
+      "hubTabs": {
+        "all": "All",
+        "games": "Games",
+        "agents": "Agents",
+        "kb": "KB",
+        "sessions": "Sessions",
+        "chat": "Chat"
+      },
       "selectionMode": {
         "enter": "Select",
         "enterAriaLabel": "Enter multi-select mode",
@@ -1592,6 +1603,41 @@
           "placeholder": "Search by title, publisher or year…",
           "ariaLabel": "Search the library",
           "clearAriaLabel": "Clear search"
+        },
+        "title": "More filters",
+        "description": "Filter the library by entity-specific dimensions.",
+        "apply": "Apply",
+        "clear": "Reset",
+        "section": {
+          "state": "State",
+          "withKb": "With Knowledge Base only",
+          "rating": "Minimum rating",
+          "players": "Player count",
+          "year": "Year published",
+          "agentType": "Agent type",
+          "activeOnly": "Active only",
+          "sessionStatus": "Session status",
+          "sessionType": "Session type",
+          "playerCount": "Players (min)",
+          "processingState": "Processing state",
+          "messageCountMin": "Messages (min)"
+        },
+        "state": {
+          "owned": "Owned",
+          "wishlist": "Wishlist",
+          "loaned": "Loaned"
+        },
+        "kbState": {
+          "ready": "Ready",
+          "pending": "Pending",
+          "failed": "Failed"
+        },
+        "stato": {
+          "label": "State",
+          "owned": "Owned",
+          "wishlist": "Wishlist",
+          "loaned": "Loaned",
+          "withKb": "With Knowledge Base"
         }
       },
       "sort": {

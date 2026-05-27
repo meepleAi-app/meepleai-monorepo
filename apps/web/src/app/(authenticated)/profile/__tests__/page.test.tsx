@@ -10,6 +10,22 @@ import { PROFILE } from '../../../../__tests__/fixtures/test-strings';
 
 import ProfilePage from '../page';
 
+// ─── Mock next/navigation for URL-driven routing (A4) ────────────────────────
+
+const mockReplace = vi.fn();
+const mockSearchParams = { current: new URLSearchParams() };
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => mockSearchParams.current,
+  useRouter: () => ({ replace: mockReplace, push: vi.fn(), back: vi.fn() }),
+  usePathname: () => '/profile',
+}));
+
+// Helper: set the searchParams for a test
+function setSearchParams(qs: string): void {
+  mockSearchParams.current = new URLSearchParams(qs);
+  mockReplace.mockClear();
+}
+
 // ─── Hoisted mocks ────────────────────────────────────────────────────────────
 
 const mockGetStats = vi.hoisted(() => vi.fn());
@@ -35,6 +51,7 @@ vi.mock('@/lib/api', () => ({
     auth: {
       getProfile: mockGetProfile,
       uploadAvatar: mockUploadAvatar,
+      getTwoFactorStatus: vi.fn().mockResolvedValue({ isEnabled: false }),
     },
     library: {
       getStats: mockGetStats,
@@ -64,6 +81,13 @@ vi.mock('@/components/profile/EditProfileSheet', () => ({
 // ActivityFeed usa useActivityFeed internamente — lo stubbiamo per isolare il test
 vi.mock('@/components/profile/ActivityFeed', () => ({
   ActivityFeed: () => <div data-testid="activity-feed">Activity</div>,
+}));
+
+// SettingsTab stub to avoid pulling in heavy settings dependencies
+vi.mock('@/components/features/settings/SettingsTab', () => ({
+  SettingsTab: ({ activeSection }: { activeSection: string }) => (
+    <div data-testid="settings-tab">Settings section: {activeSection}</div>
+  ),
 }));
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -106,6 +130,7 @@ const mockStats = {
 describe('ProfilePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    setSearchParams('');
     mockUseAuth.mockReturnValue({ user: mockUser });
     mockGetStats.mockResolvedValue(mockStats);
     mockGetProfile.mockResolvedValue(mockProfile);
@@ -146,15 +171,17 @@ describe('ProfilePage', () => {
     });
   });
 
-  it('renders tab bar with three tabs', async () => {
+  it('renders tab bar with four tabs including Settings', async () => {
+    setSearchParams('');
     renderWithQuery(<ProfilePage />);
 
     await waitFor(() => {
       expect(screen.getByRole('tab', { name: /Overview/i })).toBeInTheDocument();
     });
 
-    expect(screen.getByRole('tab', { name: /Achievements/i })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /Activity/i })).toBeInTheDocument();
+    ['Overview', 'Achievements', 'Activity', 'Settings'].forEach(name =>
+      expect(screen.getByRole('tab', { name })).toBeInTheDocument()
+    );
   });
 
   it('shows library stats on Overview tab', async () => {
@@ -180,25 +207,23 @@ describe('ProfilePage', () => {
   });
 
   it('switches to Achievements tab and shows achievements grid', async () => {
+    setSearchParams('tab=achievements');
     renderWithQuery(<ProfilePage />);
 
     await waitFor(() => {
       expect(screen.getByRole('tab', { name: /Achievements/i })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('tab', { name: /Achievements/i }));
-
     expect(screen.getByTestId('achievements-grid')).toBeInTheDocument();
   });
 
   it('switches to Activity tab and shows activity feed', async () => {
+    setSearchParams('tab=activity');
     renderWithQuery(<ProfilePage />);
 
     await waitFor(() => {
       expect(screen.getByRole('tab', { name: /Activity/i })).toBeInTheDocument();
     });
-
-    fireEvent.click(screen.getByRole('tab', { name: /Activity/i }));
 
     expect(screen.getByTestId('activity-feed')).toBeInTheDocument();
   });
@@ -222,6 +247,34 @@ describe('ProfilePage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Player')).toBeInTheDocument();
+    });
+  });
+
+  describe('ProfilePage — Settings tab (#1608)', () => {
+    it('activates the Settings tab from ?tab=settings', async () => {
+      setSearchParams('tab=settings&section=security');
+      renderWithQuery(<ProfilePage />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('tab', { name: 'Settings' })).toBeInTheDocument();
+      });
+
+      expect(screen.getByRole('tab', { name: 'Settings' })).toHaveAttribute(
+        'aria-selected',
+        'true'
+      );
+    });
+
+    it('replaces the URL when section param is invalid (G5)', async () => {
+      setSearchParams('tab=settings&section=BOGUS');
+      renderWithQuery(<ProfilePage />);
+
+      await waitFor(() => {
+        expect(mockReplace).toHaveBeenCalledWith(
+          expect.stringMatching(/\/profile\?tab=settings.*section=profile/),
+          expect.objectContaining({ scroll: false })
+        );
+      });
     });
   });
 });

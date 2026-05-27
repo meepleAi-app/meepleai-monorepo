@@ -88,6 +88,13 @@
 | `sp4-toolkit-detail.html` | page-mock | `/toolkit` + sub-routes, `/library/[gameId]/toolbox`, `/library/[gameId]/toolkit`, `/library/private/[id]/toolkit/configure` |
 | `sp4-upload-wizard-extended.html` | page-mock | `/upload`, `/gamebook/upload` (partial) |
 
+## SP5 — Admin & Profile settings
+
+| File | Type | Mapped routes |
+|------|------|---------------|
+| `sp5-profile-settings.html` | page-mock | `/profile?tab=settings`, `/profile?tab=settings&section=<security\|notifications\|preferences\|profile\|api-keys\|services>` (issue #1608, sblocca SP5 S3 cutover) |
+| `sp5-profile-settings.jsx` | component-mock | 8 sub-components per `/profile?tab=settings` consolidation: `ProfileTabBar`, `SettingsTab`, `SettingsSubNav`, `TwoFactorStatusCard`, `TwoFactorSetupModal`, `OTPInput6Slot`, `BackupCodesGrid`, `TwoFactorBottomSheet` |
+
 ## SP6 — Libro-game (Nanolith dogfood Iter 1+4)
 
 | File | Type | Mapped routes |

@@ -28,6 +28,7 @@ export interface SettingsRowProps {
   readonly entity?: EntityType;
   readonly disabled?: boolean;
   readonly className?: string;
+  readonly 'aria-current'?: 'true' | 'false' | 'page' | 'step' | 'location' | 'date' | 'time';
 }
 
 function ChevronRight(): JSX.Element {
@@ -61,6 +62,7 @@ export function SettingsRow({
   entity,
   disabled = false,
   className,
+  'aria-current': ariaCurrent,
 }: SettingsRowProps): JSX.Element {
   const isInteractive = Boolean(onClick || href);
   // onClick wins when both provided
@@ -115,6 +117,7 @@ export function SettingsRow({
           onClick={disabled ? undefined : onClick}
           disabled={disabled}
           aria-disabled={disabled || undefined}
+          aria-current={ariaCurrent}
         >
           {body}
         </button>
@@ -123,11 +126,14 @@ export function SettingsRow({
           href={disabled ? undefined : href}
           className={innerClasses}
           aria-disabled={disabled || undefined}
+          aria-current={ariaCurrent}
         >
           {body}
         </a>
       ) : (
-        <div className={innerClasses}>{body}</div>
+        <div className={innerClasses} aria-current={ariaCurrent}>
+          {body}
+        </div>
       )}
     </li>
   );

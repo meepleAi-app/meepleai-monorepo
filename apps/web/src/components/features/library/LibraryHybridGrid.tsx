@@ -5,11 +5,17 @@
  * (LibraryGrid). Spec: docs/superpowers/specs/2026-04-30-v2-migration-wave-b-3-library.md
  * §3.2.
  *
+ * Phase 2a (#1605): accepts a heterogeneous `items: HybridHubItem[]`
+ * (game/agent/kb/session/chat discriminated union) instead of the games-only
+ * `UserLibraryEntry[]`. `entity`, `title`, `subtitle`, `href` come from the
+ * common base; `rating`/`imageUrl` are game-only visual extras gated by the
+ * discriminant. The `data-entry-id` attribute now carries the hybrid item id.
+ *
  * Single-handler click contract:
  *   The grid never decides toggle vs drill-into. It just calls
- *   `onCardClick(entry.id)` and the orchestrator (`LibraryHub`) dispatches
+ *   `onCardClick(item.id)` and the orchestrator (`LibraryHub`) dispatches
  *   based on `selectionMode`:
- *     - browse → push detail route
+ *     - browse → push detail route (`item.href`)
  *     - select → toggle membership in `selected` Set
  *   Keeping dispatch in the orchestrator keeps this component pure and
  *   testable without router or state-store mocks.
@@ -19,7 +25,7 @@
  *   - select → aria-pressed on EVERY card (ARIA toggle button pattern: the
  *              role advertises a binary state, so every member must expose
  *              the attribute even when false). Check overlay only when
- *              `selected.has(entry.id)`.
+ *              `selected.has(item.id)`.
  *
  * MeepleCard reuse mandate: this is the canonical entity card for the entire
  * app (game/player/agent/kb/...). Wrapping it in a `<button>` with overlay
@@ -37,18 +43,18 @@ import clsx from 'clsx';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
-import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
+import type { HybridHubItem } from '@/lib/library/hybrid-hub.types';
 
 export type LibraryViewMode = 'grid' | 'list' | 'compact';
 export type LibrarySelectionMode = 'browse' | 'select';
 
 export interface LibraryHybridGridProps {
-  readonly entries: ReadonlyArray<UserLibraryEntry>;
+  readonly items: ReadonlyArray<HybridHubItem>;
   readonly view: LibraryViewMode;
   readonly selectionMode: LibrarySelectionMode;
   readonly selected: ReadonlySet<string>;
-  readonly onCardClick: (entryId: string) => void;
-  readonly onLongPressEnter?: (entryId: string) => void;
+  readonly onCardClick: (itemId: string) => void;
+  readonly onLongPressEnter?: (itemId: string) => void;
   readonly className?: string;
 }
 
@@ -64,8 +70,18 @@ const VIEW_TO_LAYOUT: Record<LibraryViewMode, string> = {
   compact: 'grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6',
 };
 
+// Game-only visual extras: rating + cover image are part of the `game` variant
+// only. Non-game items (session/chat/agent/kb) render the same MeepleCard
+// shell without these to keep the grid heterogeneous-safe.
+function itemImageUrl(item: HybridHubItem): string | undefined {
+  return item.entity === 'game' ? item.imageUrl : undefined;
+}
+function itemRating(item: HybridHubItem): number | undefined {
+  return item.entity === 'game' ? item.rating : undefined;
+}
+
 export function LibraryHybridGrid({
-  entries,
+  items,
   view,
   selectionMode,
   selected,
@@ -83,18 +99,17 @@ export function LibraryHybridGrid({
       data-selection-mode={selectionMode}
       className={clsx(layoutClass, className)}
     >
-      {entries.map(entry => {
-        const isSelected = selected.has(entry.id);
-        const imageUrl = entry.gameImageUrl ?? entry.gameIconUrl ?? undefined;
+      {items.map(item => {
+        const isSelected = selected.has(item.id);
         return (
           <button
-            key={entry.id}
+            key={item.id}
             type="button"
             data-slot="library-grid-card"
             data-selection-mode={selectionMode}
-            data-entry-id={entry.id}
+            data-entry-id={item.id}
             aria-pressed={isSelectMode ? isSelected : undefined}
-            onClick={() => onCardClick(entry.id)}
+            onClick={() => onCardClick(item.id)}
             className={clsx(
               'relative block w-full text-left',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-2xl',
@@ -102,12 +117,12 @@ export function LibraryHybridGrid({
             )}
           >
             <MeepleCard
-              entity="game"
+              entity={item.entity}
               variant={variant}
-              title={entry.gameTitle}
-              subtitle={entry.gamePublisher ?? undefined}
-              imageUrl={imageUrl}
-              rating={entry.averageRating ?? undefined}
+              title={item.title}
+              subtitle={item.subtitle}
+              imageUrl={itemImageUrl(item)}
+              rating={itemRating(item)}
               ratingMax={10}
             />
             {isSelectMode && isSelected ? (

@@ -49,12 +49,18 @@ on:
 
 permissions:
   contents: read
-  actions: write       # required for run/job cancel
-  administration: read # required for /repos/{owner}/{repo}/actions/runners listing
-                       # (without this, GITHUB_TOKEN gets HTTP 403 on the runners
-                       # endpoint and the safety guard cannot determine if a
-                       # self-hosted runner is online — runtime falls back to
-                       # dry-run mode in that case to fail safe.)
+  actions: write  # required for run/job cancel
+  # NOTE on runners endpoint access:
+  # /repos/{owner}/{repo}/actions/runners requires the `administration` scope,
+  # which is NOT a valid GITHUB_TOKEN permission for GitHub Actions workflows
+  # (it's only available on PATs / GitHub Apps). Adding `administration: read`
+  # here causes the workflow parser to fail with HTTP 422 (see hotfix that
+  # reverted the attempt). The runtime gracefully degrades via the fail-safe
+  # block in the step below: on HTTP 403, DRY_RUN is forced true so detection
+  # still runs for visibility but no cancellations occur. To get full cancel
+  # capability, configure a repository secret WATCHDOG_RUNNERS_PAT with a
+  # fine-grained PAT scoped `Administration: Read` on this repo, then plumb
+  # it into GH_TOKEN below (out of scope for this initial watchdog).
 
 concurrency:
   # Only one watchdog at a time. cancel-in-progress: true so a manual

@@ -19,6 +19,8 @@ import type { ChatSessionSummaryDto } from '@/lib/api/schemas/chat-sessions.sche
 import type { GameSessionDto } from '@/lib/api/schemas/games.schemas';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 
+import { isKbEntry } from './library-filters';
+
 import type {
   AgentHubItem,
   ChatHubItem,
@@ -59,6 +61,7 @@ export function libraryEntryToHubItem(entry: UserLibraryEntry): GameHubItem {
     rating: entry.averageRating ?? undefined,
     state: entry.currentState,
     imageUrl: entry.gameImageUrl ?? entry.gameIconUrl ?? undefined,
+    hasKb: isKbEntry(entry),
   };
 }
 

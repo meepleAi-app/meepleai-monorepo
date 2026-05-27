@@ -1,29 +1,29 @@
 /**
  * Accessibility tests — /games?tab=library (Wave B.1, Issue #633).
  *
- * Combines:
- *   - axe-core WCAG 2.1 AA scan su default state (results grid populato)
- *   - axe-core WCAG 2.1 AA scan su filtered-empty state (per coprire
- *     CTA + empty-state markup, sezioni che non sono presenti su default)
- *   - prefers-reduced-motion contract: AC-8 spec §5 — verifica che la
- *     route `/games?tab=library` rispetti l'override globale CSS
- *     (`globals.css:388-396` riduce `transition-duration` a 0.01ms !important
- *     sotto `@media (prefers-reduced-motion: reduce)`). Le card hover
- *     transitions su MeepleCard GridCard (default 350ms) devono collassare
- *     a sub-millisecondo durations.
+ * STATUS (2026-05-27, #1612): SKIPPED post-#1567.
  *
- * Comprehensive unit-level coverage degli ARIA tablist contracts su
- * GamesFiltersInline lives in
- * `src/components/v2/games/__tests__/GamesFiltersInline.test.tsx`.
- * This e2e suite verifies the contract holds against the real prod build.
+ * PR #1567 (Issue #1521) replaced `/games/page.tsx` with `redirect('/library')` and
+ * removed `GamesLibraryView` — the orchestrator that hosted `data-slot="games-library-view"`,
+ * `[data-slot="games-results-grid-link"]`, and `[data-slot="games-empty-state"]` consumed
+ * by the assertions below. The 5 `features/games/` mockup components are now shelf-ready
+ * (46 unit tests still green) but orphaned: no page composes them.
  *
- * Auth bypass: `(authenticated)` route renders senza session perché
- * `(authenticated)/layout.tsx` non gate-keepa server-side e
- * `PLAYWRIGHT_AUTH_BYPASS=true` è settato dal webServer di playwright.config.ts.
+ * Follow-up #1566 will wire those components into `LibraryHub` (`/library`). Once that
+ * lands, this suite should be rewritten to scan `/library` (not `/games?tab=library`)
+ * and unskipped. Until then every test here would hit the redirect and fail the
+ * `waitForSelector('[data-slot="games-library-view"]', { timeout: 30_000 })` gate.
  *
- * Visual-test fixture: i test passano contro Next.js prod build con
- * `NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1` in modo che useLibrary venga
- * short-circuitato dal fixture deterministico (5 entries).
+ * Historical context preserved:
+ *   - axe-core WCAG 2.1 AA scan on default state (results grid populated)
+ *   - axe-core WCAG 2.1 AA scan on filtered-empty state (CTA + empty-state markup)
+ *   - prefers-reduced-motion contract (AC-8 §5): card hover transitions collapse to <=50ms
+ *
+ * Comprehensive unit-level coverage of ARIA tablist contracts on GamesFiltersInline
+ * lives in `src/components/v2/games/__tests__/GamesFiltersInline.test.tsx`.
+ *
+ * @see https://github.com/meepleAi-app/meepleai-monorepo/issues/1566
+ * @see https://github.com/meepleAi-app/meepleai-monorepo/issues/1612
  */
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect, type Page } from '@playwright/test';
@@ -41,7 +41,7 @@ async function gotoLibraryReady(page: Page, search = '?tab=library'): Promise<vo
   await page.waitForSelector('[data-slot="games-library-view"]', { timeout: 30_000 });
 }
 
-test.describe('Games library — accessibility @a11y', () => {
+test.describe.skip('Games library — accessibility @a11y (skipped: #1566 follow-up)', () => {
   test('axe-core: no WCAG 2.1 AA violations on default state', async ({ page }) => {
     await gotoLibraryReady(page);
     // Default state expects results grid populato — wait for first card.

@@ -1,29 +1,33 @@
 /**
- * Accessibility tests — /games?tab=library (Wave B.1, Issue #633).
+ * Accessibility tests — games tab of /library (Wave B.1, Issue #633, updated #1566).
  *
- * STATUS (2026-05-27, #1612): SKIPPED post-#1567.
+ * The games surface was previously at /games?tab=library and is now reached by
+ * navigating to /library and clicking the "Giochi" tab (LibraryHub initializes
+ * to the 'all' tab via useState and does NOT read ?tab= from the URL).
  *
- * PR #1567 (Issue #1521) replaced `/games/page.tsx` with `redirect('/library')` and
- * removed `GamesLibraryView` — the orchestrator that hosted `data-slot="games-library-view"`,
- * `[data-slot="games-results-grid-link"]`, and `[data-slot="games-empty-state"]` consumed
- * by the assertions below. The 5 `features/games/` mockup components are now shelf-ready
- * (46 unit tests still green) but orphaned: no page composes them.
+ * Combines:
+ *   - axe-core WCAG 2.1 AA scan su default state (results grid populato)
+ *   - axe-core WCAG 2.1 AA scan su filtered-empty state (per coprire
+ *     CTA + empty-state markup, sezioni che non sono presenti su default)
+ *   - prefers-reduced-motion contract: AC-8 spec §5 — verifica che il
+ *     games tab di `/library` rispetti l'override globale CSS
+ *     (`globals.css:388-396` riduce `transition-duration` a 0.01ms !important
+ *     sotto `@media (prefers-reduced-motion: reduce)`). Le card hover
+ *     transitions su MeepleCard GridCard (default 350ms) devono collassare
+ *     a sub-millisecondo durations.
  *
- * Follow-up #1566 will wire those components into `LibraryHub` (`/library`). Once that
- * lands, this suite should be rewritten to scan `/library` (not `/games?tab=library`)
- * and unskipped. Until then every test here would hit the redirect and fail the
- * `waitForSelector('[data-slot="games-library-view"]', { timeout: 30_000 })` gate.
+ * Comprehensive unit-level coverage degli ARIA tablist contracts su
+ * GamesFiltersInline lives in
+ * `src/components/v2/games/__tests__/GamesFiltersInline.test.tsx`.
+ * This e2e suite verifies the contract holds against the real prod build.
  *
- * Historical context preserved:
- *   - axe-core WCAG 2.1 AA scan on default state (results grid populated)
- *   - axe-core WCAG 2.1 AA scan on filtered-empty state (CTA + empty-state markup)
- *   - prefers-reduced-motion contract (AC-8 §5): card hover transitions collapse to <=50ms
+ * Auth bypass: `(authenticated)` route renders senza session perché
+ * `(authenticated)/layout.tsx` non gate-keepa server-side e
+ * `PLAYWRIGHT_AUTH_BYPASS=true` è settato dal webServer di playwright.config.ts.
  *
- * Comprehensive unit-level coverage of ARIA tablist contracts on GamesFiltersInline
- * lives in `src/components/v2/games/__tests__/GamesFiltersInline.test.tsx`.
- *
- * @see https://github.com/meepleAi-app/meepleai-monorepo/issues/1566
- * @see https://github.com/meepleAi-app/meepleai-monorepo/issues/1612
+ * Visual-test fixture: i test passano contro Next.js prod build con
+ * `NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1` in modo che useLibrary venga
+ * short-circuitato dal fixture deterministico (5 entries).
  */
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect, type Page } from '@playwright/test';
@@ -33,15 +37,25 @@ import { seedCookieConsent } from '../_helpers/seedCookieConsent';
 
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
-async function gotoLibraryReady(page: Page, search = '?tab=library'): Promise<void> {
+async function gotoLibraryReady(page: Page, search = '', waitForGrid = true): Promise<void> {
   await seedAuthSession(page);
   await seedCookieConsent(page);
   await mockAuthEndpoints(page);
-  await page.goto(`/games${search}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('[data-slot="games-library-view"]', { timeout: 30_000 });
+  // LibraryHub does not read ?tab= from the URL; navigate to /library then click
+  // the Giochi tab. The optional `search` (e.g. 'state=filtered-empty') is applied
+  // to the /library URL so the dev/visual-test ?state= override still works.
+  const url = search ? `/library?${search.replace(/^\?/, '')}` : '/library';
+  await page.goto(url, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('[data-slot="library-hub-v2"]', { timeout: 30_000 });
+  await page.getByRole('tab', { name: /giochi/i }).click();
+  if (waitForGrid) {
+    await page.waitForSelector('[data-slot="games-results-grid"]', { timeout: 30_000 });
+  } else {
+    await page.waitForSelector('[data-slot="games-empty-state"]', { timeout: 30_000 });
+  }
 }
 
-test.describe.skip('Games library — accessibility @a11y (skipped: #1566 follow-up)', () => {
+test.describe('Games library — accessibility @a11y', () => {
   test('axe-core: no WCAG 2.1 AA violations on default state', async ({ page }) => {
     await gotoLibraryReady(page);
     // Default state expects results grid populato — wait for first card.
@@ -62,7 +76,7 @@ test.describe.skip('Games library — accessibility @a11y (skipped: #1566 follow
   });
 
   test('axe-core: no WCAG 2.1 AA violations on filtered-empty state', async ({ page }) => {
-    await gotoLibraryReady(page, '?tab=library&state=filtered-empty');
+    await gotoLibraryReady(page, 'state=filtered-empty', false);
     // Filtered-empty state expects EmptyState con clearFilters CTA visible.
     await expect(
       page.locator('[data-slot="games-empty-state"][data-kind="filtered-empty"]')

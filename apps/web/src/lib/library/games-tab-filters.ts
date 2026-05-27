@@ -1,18 +1,18 @@
 /**
  * Pure filter/sort/search helpers for the LibraryHub `games` tab (#1566).
  *
- * No React, no IO — deterministic transforms over `GameDetailDto[]`.
+ * No React, no IO — deterministic transforms over `UserLibraryEntry[]`.
  * Maps the `sp4-games-index` mockup STATUS_OPTS / SORT_OPTS to entry fields.
  * See docs/superpowers/specs/2026-05-27-1566-library-games-tab-wireup-design.md §3.4.
  */
 
-import type { GameDetailDto } from '@/lib/api/schemas/library.schemas';
+import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 import type { GamesSortKey, GamesStatusKey } from '@/lib/games/library-filters';
 
 export function filterGamesByStatus(
-  entries: readonly GameDetailDto[],
+  entries: readonly UserLibraryEntry[],
   status: GamesStatusKey
-): readonly GameDetailDto[] {
+): readonly UserLibraryEntry[] {
   switch (status) {
     case 'owned':
       return entries.filter(e => e.currentState !== 'Wishlist');
@@ -27,9 +27,9 @@ export function filterGamesByStatus(
 }
 
 export function filterGamesByQuery(
-  entries: readonly GameDetailDto[],
+  entries: readonly UserLibraryEntry[],
   query: string
-): readonly GameDetailDto[] {
+): readonly UserLibraryEntry[] {
   const q = query.trim().toLowerCase();
   if (q === '') return entries;
   return entries.filter(e => e.gameTitle.toLowerCase().includes(q));
@@ -38,9 +38,9 @@ export function filterGamesByQuery(
 const titleCollator = new Intl.Collator(undefined, { sensitivity: 'base' });
 
 export function sortGames(
-  entries: readonly GameDetailDto[],
+  entries: readonly UserLibraryEntry[],
   sort: GamesSortKey
-): readonly GameDetailDto[] {
+): readonly UserLibraryEntry[] {
   const copy = [...entries];
   switch (sort) {
     case 'rating':
@@ -62,10 +62,10 @@ export function sortGames(
 }
 
 export function deriveGamesTabEntries(
-  entries: readonly GameDetailDto[],
+  entries: readonly UserLibraryEntry[],
   status: GamesStatusKey,
   query: string,
   sort: GamesSortKey
-): readonly GameDetailDto[] {
+): readonly UserLibraryEntry[] {
   return sortGames(filterGamesByQuery(filterGamesByStatus(entries, status), query), sort);
 }

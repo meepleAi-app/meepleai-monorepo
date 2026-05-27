@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { GameDetailDto } from '@/lib/api/schemas/library.schemas';
+import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 
 import {
   deriveGamesTabEntries,
@@ -9,7 +9,7 @@ import {
   sortGames,
 } from '../games-tab-filters';
 
-function entry(overrides: Partial<GameDetailDto>): GameDetailDto {
+function entry(overrides: Partial<UserLibraryEntry>): UserLibraryEntry {
   return {
     id: overrides.id ?? 'e1',
     userId: 'u1',
@@ -17,12 +17,8 @@ function entry(overrides: Partial<GameDetailDto>): GameDetailDto {
     gameTitle: overrides.gameTitle ?? 'Catan',
     gamePublisher: overrides.gamePublisher ?? 'Kosmos',
     gameYearPublished: overrides.gameYearPublished ?? 1995,
-    gameDescription: '',
-    gameIconUrl: '',
-    gameImageUrl: '',
-    minPlayers: 2,
-    maxPlayers: 4,
-    playTimeMinutes: 60,
+    gameIconUrl: null,
+    gameImageUrl: null,
     complexityRating: null,
     averageRating: overrides.averageRating ?? null,
     addedAt: overrides.addedAt ?? '2026-01-01T00:00:00Z',
@@ -31,14 +27,22 @@ function entry(overrides: Partial<GameDetailDto>): GameDetailDto {
     currentState: overrides.currentState ?? 'Owned',
     stateChangedAt: null,
     stateNotes: null,
-    isAvailableForPlay: true,
+    hasKb: false,
+    kbCardCount: 0,
+    kbIndexedCount: 0,
+    kbProcessingCount: 0,
+    ownershipDeclaredAt: null,
+    hasRagAccess: false,
+    agentIsOwned: true,
+    minPlayers: null,
+    maxPlayers: null,
+    playingTimeMinutes: null,
     timesPlayed: overrides.timesPlayed ?? 0,
     lastPlayed: overrides.lastPlayed ?? null,
-    winRate: 'N/A',
-    avgDuration: 'N/A',
-    recentSessions: [],
-    checklist: [],
-  } as GameDetailDto;
+    privateGameId: null,
+    isPrivateGame: false,
+    canProposeToCatalog: false,
+  } as UserLibraryEntry;
 }
 
 describe('filterGamesByStatus', () => {

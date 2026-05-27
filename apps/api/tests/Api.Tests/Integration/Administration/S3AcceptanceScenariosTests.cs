@@ -405,6 +405,8 @@ public sealed class S3AcceptanceScenariosTests : IAsyncLifetime
         var carolId = await SeedTargetUserAsync($"s3-6-carol-{Guid.NewGuid():N}@meepleai.test");
 
         // Refresh alice's recency (SeedAdminWith2FAAsync leaves it at the register-time default = null).
+        // Capture the exact value so we can later assert the impersonate session inherited it.
+        var aliceFreshTime = DateTime.UtcNow;
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -412,7 +414,7 @@ public sealed class S3AcceptanceScenariosTests : IAsyncLifetime
                 .Where(s => s.UserId == aliceId && s.RevokedAt == null && s.ImpersonatedByUserId == null)
                 .OrderByDescending(s => s.CreatedAt)
                 .FirstAsync();
-            aliceSession.LastTotpVerifiedAt = DateTime.UtcNow;
+            aliceSession.LastTotpVerifiedAt = aliceFreshTime;
             await db.SaveChangesAsync();
         }
         _strictModeOn = true;
@@ -422,6 +424,24 @@ public sealed class S3AcceptanceScenariosTests : IAsyncLifetime
         impStart.StatusCode.Should().Be(HttpStatusCode.Created,
             $"impersonation start should succeed; body: {await impStart.Content.ReadAsStringAsync()}");
         RefreshClientCookieFromResponse(impStart);
+
+        // F3 pre-overwrite assertion: the impersonate session MUST inherit alice's recency from
+        // the REAL HTTP pipeline (ValidateSessionQueryHandler → HttpContext.Items[SessionStatusDto]
+        // → ImpersonationStartCommandHandler.ExtractCallerLastTotpVerifiedAt → impersonate row).
+        // Without this, the overwrite below would mask a regression where the propagation silently
+        // returns null. Companion regression-only test: Regression_ImpersonationInheritsActorRecency_ViaRealPipeline.
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var impAfterStart = await db.UserSessions
+                .Where(s => s.ImpersonatedByUserId == aliceId && s.RevokedAt == null)
+                .OrderByDescending(s => s.CreatedAt)
+                .FirstAsync();
+            impAfterStart.LastTotpVerifiedAt.Should().BeCloseTo(aliceFreshTime, TimeSpan.FromSeconds(5),
+                "ExtractCallerLastTotpVerifiedAt must propagate the actor's LastTotpVerifiedAt from "
+                + "the live SessionStatusDto in HttpContext.Items — fixture-only injection would mask "
+                + "a regression in the real ValidateSession pipeline (S2 lesson)");
+        }
 
         // The impersonate session inherits alice's recency (T1 spike). Move that recency back to
         // -10min: STALE for ImpersonationStart (MaxAge=5) but FRESH for DeleteUser (MaxAge=30).
@@ -462,5 +482,63 @@ public sealed class S3AcceptanceScenariosTests : IAsyncLifetime
         // succeeds — strict mode must NEVER touch non-decorated commands.
         response.StatusCode.Should().Be(HttpStatusCode.OK,
             "TwoFactorEnforcementBehavior.S3-7 regression guard: missing [RequireTwoFactor] = no gate");
+    }
+
+    /// <summary>
+    /// F3 follow-up regression test (post-merge of PR #1597): isolates the propagation of the
+    /// actor's <c>LastTotpVerifiedAt</c> through the REAL HTTP pipeline
+    /// (<c>SessionAuthenticationMiddleware</c> → <c>ValidateSessionQueryHandler</c> →
+    /// <c>HttpContext.Items[SessionStatusDto]</c> →
+    /// <c>ImpersonationStartCommandHandler.ExtractCallerLastTotpVerifiedAt</c> → impersonate row).
+    ///
+    /// S3_6 exercises this propagation but then immediately overwrites the inherited value, so a
+    /// regression where <c>ExtractCallerLastTotpVerifiedAt</c> silently returns <c>null</c> would
+    /// still PASS S3_6's DeleteUser assertion. This test asserts ONLY the propagation, with no
+    /// overwrite. Aligns with the S2 lesson <c>feedback_acceptance_tests_must_exercise_real_pipeline</c>
+    /// — the unit test <c>Handle_HappyPath_InheritsActorLastTotpVerifiedAtFromHttpContext</c>
+    /// constructs <c>SessionStatusDto</c> manually and would not catch a regression in the
+    /// <c>ValidateSession</c> hydration step.
+    /// </summary>
+    [Fact]
+    public async Task Regression_ImpersonationInheritsActorRecency_ViaRealPipeline()
+    {
+        var aliceFreshTime = DateTime.UtcNow;
+        var (aliceId, _, _) = await SeedAdminWith2FAAsync(
+            $"f3-alice-{Guid.NewGuid():N}@meepleai.test", "UnusualPwd123!", role: "superadmin");
+        var bobId = await SeedTargetUserAsync($"f3-bob-{Guid.NewGuid():N}@meepleai.test");
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var aliceSession = await db.UserSessions
+                .Where(s => s.UserId == aliceId && s.RevokedAt == null && s.ImpersonatedByUserId == null)
+                .OrderByDescending(s => s.CreatedAt)
+                .FirstAsync();
+            aliceSession.LastTotpVerifiedAt = aliceFreshTime;
+            await db.SaveChangesAsync();
+        }
+        _strictModeOn = true;
+
+        var impStart = await _client.PostAsJsonAsync("/api/v1/admin/impersonation/start",
+            new { TargetUserId = bobId, Reason = "F3 regression: real-pipeline recency inheritance", DurationMinutes = 15 });
+        impStart.StatusCode.Should().Be(HttpStatusCode.Created,
+            $"impersonation start should succeed; body: {await impStart.Content.ReadAsStringAsync()}");
+
+        // Assert the impersonate session row carries alice's recency (no mutation between start and read).
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var imp = await db.UserSessions
+                .Where(s => s.ImpersonatedByUserId == aliceId && s.RevokedAt == null)
+                .OrderByDescending(s => s.CreatedAt)
+                .FirstAsync();
+
+            imp.LastTotpVerifiedAt.Should().BeCloseTo(aliceFreshTime, TimeSpan.FromSeconds(5),
+                "ImpersonationStartCommandHandler.ExtractCallerLastTotpVerifiedAt must read alice's "
+                + "LastTotpVerifiedAt from HttpContext.Items[SessionStatusDto] (populated by the real "
+                + "ValidateSessionQueryHandler) and write it into the new impersonate session row. "
+                + "A null value here indicates ValidateSession is failing to hydrate "
+                + "LastTotpVerifiedAt into SessionStatusDto exposed to the command handler.");
+        }
     }
 }

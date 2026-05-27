@@ -125,6 +125,10 @@ jobs:
           # The previous version conflated (b) and (c), with `|| true` swallowing
           # the 403 error and then the `[ -z "$ONLINE_RUNNERS" ]` check failing
           # because the variable contained the JSON error body, not empty.
+          # Primary guard: gh CLI exits non-zero on any HTTP 4xx/5xx (incl. the
+          # 403 from a missing administration scope). The grep is intentionally
+          # belt-and-suspenders for a hypothetical future CLI that exits 0 with
+          # an error body — RUNNERS_RC is the authoritative check.
           RUNNERS_RAW=$(gh api "repos/${REPO}/actions/runners" 2>&1) && RUNNERS_RC=0 || RUNNERS_RC=$?
           if [ "$RUNNERS_RC" -ne 0 ] || echo "$RUNNERS_RAW" | grep -q '"status": *"403"\|Resource not accessible'; then
             echo "⚠️ Cannot list runners (HTTP error or permission denied):"
@@ -132,10 +136,12 @@ jobs:
             echo ""
             echo "🛡️ FAIL-SAFE: forcing DRY_RUN=true. Stuck-job detection still runs"
             echo "   for visibility, but no actual cancellations will occur."
-            echo "   To enable cancellations, ensure the workflow has"
-            echo "   permissions.administration: read and the org allows it."
+            echo "   To enable cancellations, configure the WATCHDOG_RUNNERS_PAT secret"
+            echo "   (fine-grained PAT: Administration:Read + Actions:Read/write)."
+            echo "   See docs/for-developers/operations/watchdog-runners-pat-setup.md"
             DRY_RUN=true
-            ONLINE_RUNNERS="(unknown — runners API unreachable, fail-safe engaged)"
+            ONLINE_RUNNERS=""
+            RUNNERS_ONLINE_COUNT="unknown (fail-safe)"
           else
             ONLINE_RUNNERS=$(echo "$RUNNERS_RAW" | jq -r '.runners[] | select(.status == "online") | select(.labels | any(.name == "self-hosted")) | .name' || true)
             if [ -z "$ONLINE_RUNNERS" ]; then
@@ -143,6 +149,8 @@ jobs:
               echo "   (A queued job in this state is waiting legitimately; cancelling would not help.)"
               exit 0
             fi
+            # grep -c . counts non-empty lines (one runner name per line)
+            RUNNERS_ONLINE_COUNT=$(echo "$ONLINE_RUNNERS" | grep -c .)
             echo "✅ Self-hosted runners online:"
             echo "$ONLINE_RUNNERS" | sed 's/^/   - /'
           fi
@@ -204,14 +212,19 @@ jobs:
                     # this is fine: it's a single linear job chain, so there's
                     # no healthy parallel job to preserve. Cancel the run, then
                     # force-cancel as fallback for terminal-but-stuck states.
-                    if gh api -X POST "repos/${REPO}/actions/runs/${RUN_ID}/cancel" >/dev/null 2>&1; then
+                    # Capture stderr so a cancel failure (e.g. PAT missing
+                    # Actions:write, or token expired) surfaces the HTTP error
+                    # instead of a generic "already terminal?" guess. The
+                    # runners-endpoint fail-safe does NOT cover the cancel
+                    # endpoint, so this diagnostic is the only signal here.
+                    if gh api -X POST "repos/${REPO}/actions/runs/${RUN_ID}/cancel" >/dev/null 2>/tmp/cancel_err; then
                       echo "   ✅ Cancelled run ${RUN_ID}"
                       CANCELLED_REFS="${CANCELLED_REFS} run:${RUN_ID}"
-                    elif gh api -X POST "repos/${REPO}/actions/runs/${RUN_ID}/force-cancel" >/dev/null 2>&1; then
+                    elif gh api -X POST "repos/${REPO}/actions/runs/${RUN_ID}/force-cancel" >/dev/null 2>/tmp/cancel_err; then
                       echo "   ✅ Force-cancelled run ${RUN_ID}"
                       CANCELLED_REFS="${CANCELLED_REFS} run:${RUN_ID}(force)"
                     else
-                      echo "   ⚠️ Run cancellation did not succeed (already terminal?)"
+                      echo "   ⚠️ Run cancellation did not succeed: $(head -2 /tmp/cancel_err 2>/dev/null | tr '\n' ' ')"
                     fi
                   fi
                 else
@@ -234,7 +247,7 @@ jobs:
             echo ""
             echo "- Threshold: ${THRESHOLD} min"
             echo "- Per page: ${PER_PAGE}"
-            echo "- Self-hosted runners online: $(echo "$ONLINE_RUNNERS" | wc -l)"
+            echo "- Self-hosted runners online: ${RUNNERS_ONLINE_COUNT}"
             echo "- Stuck jobs detected: ${STUCK_COUNT}"
             if [ -n "$CANCELLED_REFS" ]; then
               echo "- Cancelled:${CANCELLED_REFS}"

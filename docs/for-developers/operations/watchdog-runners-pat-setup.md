@@ -32,7 +32,7 @@ full cancel capability.
    | Permission | Access | Why |
    |------------|--------|-----|
    | **Administration** | **Read-only** | `GET /actions/runners` (list self-hosted runners) |
-   | **Actions** | **Read and write** | list runs/jobs + `POST /actions/runs/{id}/cancel` |
+   | **Actions** | **Read and write** | list runs/jobs + `POST /actions/runs/{id}/cancel` (and `/force-cancel`, same scope) |
    | Metadata | Read-only | auto-selected (mandatory) |
 
 7. **Generate token** → copy the `github_pat_…` value (shown once).

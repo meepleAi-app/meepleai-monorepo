@@ -41,6 +41,13 @@ const messages: Record<string, string> = {
   'pages.library.filters.section.sessionStatus': 'Stato sessione',
   'pages.library.filters.section.sessionType': 'Tipo sessione',
   'pages.library.filters.section.playerCount': 'Giocatori (min)',
+  // section labels (kb scope)
+  'pages.library.filters.section.processingStates': 'Stato di elaborazione',
+  'pages.library.filters.kbState.ready': 'Pronto',
+  'pages.library.filters.kbState.pending': 'In elaborazione',
+  'pages.library.filters.kbState.failed': 'Errore',
+  // section labels (chat scope)
+  'pages.library.filters.section.messageCountMin': 'Messaggi (min)',
   // checkbox option labels
   'pages.library.filters.state.owned': 'Posseduto',
   'pages.library.filters.state.wishlist': 'Wishlist',
@@ -325,5 +332,64 @@ describe('AdvancedFiltersDrawer — session scope rendering', () => {
     expect(slider).toHaveAttribute('aria-valuemin', '1');
     expect(slider).toHaveAttribute('aria-valuemax', '12');
     expect(slider).toHaveAttribute('aria-valuenow', '4');
+  });
+});
+
+describe('AdvancedFiltersDrawer — kb scope rendering', () => {
+  beforeEach(() => {
+    installMatchMedia(true);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('renders 1 section (processingStates) with 3 checkboxes (Ready/Pending/Failed)', () => {
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        entityScope="kb"
+        activeFilters={{ scope: 'kb', processingStates: ['Ready'] }}
+        onApply={noop}
+        onClear={noop}
+      />
+    );
+    const slots = screen.getAllByTestId(/^advanced-filters-section-/);
+    expect(slots).toHaveLength(1);
+    expect(slots[0]?.getAttribute('data-slot')).toBe('advanced-filters-section-processingStates');
+
+    expect(screen.getByRole('checkbox', { name: /pronto/i })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: /in elaborazione/i })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: /errore/i })).not.toBeChecked();
+  });
+});
+
+describe('AdvancedFiltersDrawer — chat scope rendering', () => {
+  beforeEach(() => {
+    installMatchMedia(true);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('renders 1 section (messageCountMin slider) with min=0 max=100', () => {
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        entityScope="chat"
+        activeFilters={{ scope: 'chat', messageCountMin: 10 }}
+        onApply={noop}
+        onClear={noop}
+      />
+    );
+    const slots = screen.getAllByTestId(/^advanced-filters-section-/);
+    expect(slots).toHaveLength(1);
+    const slider = screen.getByRole('slider', { name: /messaggi/i });
+    expect(slider).toHaveAttribute('aria-valuemin', '0');
+    expect(slider).toHaveAttribute('aria-valuemax', '100');
+    expect(slider).toHaveAttribute('aria-valuenow', '10');
   });
 });

@@ -90,6 +90,8 @@
     <PackageReference Include="Quartz.Extensions.Hosting" Version="3.13.1" />
     <PackageReference Include="Quartz.Serialization.Json" Version="3.13.1" />
     <PackageReference Include="QuestPDF" Version="2025.12.3" />
+    <!-- Issue #1629: Resend transactional email provider (replaces Gmail SMTP for FROM @meepleai.app) -->
+    <PackageReference Include="Resend" Version="0.1.4" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.8" />
     <!-- PERF-05: HybridCache for AI/RAG response caching with L1+L2 support -->
     <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" Version="10.0.0" />

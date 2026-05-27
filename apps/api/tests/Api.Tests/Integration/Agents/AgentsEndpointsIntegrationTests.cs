@@ -1,7 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities.UserLibrary;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
@@ -585,6 +588,175 @@ public sealed class AgentsEndpointsIntegrationTests : IAsyncLifetime
     }
 
     // -------------------------------------------------------------------------
+    // GET /api/v1/agents?scope=my-library — Issue #1589 (BE-2)
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// AC1: scope=my-library returns agents whose GameId is in the caller's library
+    /// plus system agents (GameId == null). Agents for games NOT in the library are excluded.
+    /// Assertions are seeded-id-scoped (not exact count) because this class shares one
+    /// isolated DB across all tests and other tests may have seeded additional agents.
+    /// </summary>
+    [Fact]
+    public async Task GetAgents_ScopeMyLibrary_ReturnsLibraryGamesPlusSystemAgents()
+    {
+        // Arrange
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (callerId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        // Seed two SharedGames: Catan (in library) and Azul (not in library).
+        var catanId = await TestSessionHelper.SeedSharedGameAsync(dbContext, title: "Catan-1589-AC1");
+        var azulId = await TestSessionHelper.SeedSharedGameAsync(dbContext, title: "Azul-1589-AC1");
+
+        // Seed agents with unique names (avoids IX_agent_definitions_name unique-index collisions
+        // when seeding multiple agents per test). Helper returns the Id directly.
+        var a1Id = await SeedUniqueAgentAsync(dbContext, gameId: catanId);
+        var a2Id = await SeedUniqueAgentAsync(dbContext, gameId: azulId);
+        await SeedUniqueAgentAsync(dbContext, gameId: null); // a3 system — id not needed
+
+        // Seed caller's library: Catan only (Azul is NOT added).
+        dbContext.UserLibraryEntries.Add(new UserLibraryEntryEntity
+        {
+            UserId = callerId,
+            SharedGameId = catanId,
+            AddedAt = DateTime.UtcNow
+        });
+        await dbContext.SaveChangesAsync();
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            "/api/v1/agents?scope=my-library",
+            sessionToken);
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var payload = await response.Content.ReadFromJsonAsync<GetAllAgentsResponse>();
+        payload.Should().NotBeNull();
+        payload!.Success.Should().BeTrue();
+
+        // a1 (Catan, in library) MUST be present.
+        payload.Agents.Should().Contain(a => a.Id == a1Id,
+            "agent linked to a library game should be included");
+
+        // a2 (Azul, NOT in library) MUST be absent.
+        payload.Agents.Should().NotContain(a => a.Id == a2Id,
+            "agent linked to a game not in the caller's library should be excluded");
+
+        // System agents (GameId == null) MUST always pass through the scope filter.
+        payload.Agents.Should().Contain(a => a.GameId == null,
+            "system agents (null GameId) are always included by the my-library scope");
+    }
+
+    /// <summary>
+    /// AC2: no scope returns all agents globally (no library filter applied).
+    /// Assertions verify that the agent linked to the non-library game IS present.
+    /// </summary>
+    [Fact]
+    public async Task GetAgents_NoScope_ReturnsAllAgentsGlobal()
+    {
+        // Arrange
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (callerId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        var catanId = await TestSessionHelper.SeedSharedGameAsync(dbContext, title: "Catan-1589-AC2");
+        var azulId = await TestSessionHelper.SeedSharedGameAsync(dbContext, title: "Azul-1589-AC2");
+
+        var a1Id = await SeedUniqueAgentAsync(dbContext, gameId: catanId);
+        var a2Id = await SeedUniqueAgentAsync(dbContext, gameId: azulId);
+
+        // Caller's library has Catan only — but scope=global so Azul agent must still appear.
+        dbContext.UserLibraryEntries.Add(new UserLibraryEntryEntity
+        {
+            UserId = callerId,
+            SharedGameId = catanId,
+            AddedAt = DateTime.UtcNow
+        });
+        await dbContext.SaveChangesAsync();
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            "/api/v1/agents",
+            sessionToken);
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var payload = await response.Content.ReadFromJsonAsync<GetAllAgentsResponse>();
+        payload.Should().NotBeNull();
+        payload!.Success.Should().BeTrue();
+
+        // Both seeded agents must be present — no library filter applied.
+        payload.Agents.Should().Contain(a => a.Id == a1Id,
+            "global scope must include agent for library game");
+        payload.Agents.Should().Contain(a => a.Id == a2Id,
+            "global scope must include agent for non-library game (no filtering)");
+    }
+
+    /// <summary>
+    /// AC4: scope=my-library with an empty library returns only system agents
+    /// (those with GameId == null). Game-linked agents are excluded.
+    /// </summary>
+    [Fact]
+    public async Task GetAgents_ScopeMyLibrary_EmptyLibrary_ReturnsOnlySystemAgents()
+    {
+        // Arrange
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        var catanId = await TestSessionHelper.SeedSharedGameAsync(dbContext, title: "Catan-1589-AC4");
+
+        // Seed one game-linked agent and one system agent (unique names).
+        var gameLinkedId = await SeedUniqueAgentAsync(dbContext, gameId: catanId);
+        await SeedUniqueAgentAsync(dbContext, gameId: null);
+
+        // Caller's library is empty — no UserLibraryEntry seeded.
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            "/api/v1/agents?scope=my-library",
+            sessionToken);
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var payload = await response.Content.ReadFromJsonAsync<GetAllAgentsResponse>();
+        payload.Should().NotBeNull();
+        payload!.Success.Should().BeTrue();
+
+        // Game-linked agent must be absent (not in empty library).
+        payload.Agents.Should().NotContain(a => a.Id == gameLinkedId,
+            "agent for a game not in the caller's (empty) library should be excluded");
+    }
+
+    /// <summary>
+    /// AC3: an unauthenticated request (no session cookie) must receive 401 Unauthorized.
+    /// The endpoint is decorated with .RequireAuthenticatedUser() so the middleware
+    /// rejects the request before the handler runs.
+    /// Note: the existing GetAgents_WithoutAuth_ReturnsUnauthorized test (no query string)
+    /// already covers the unauthenticated path; this test explicitly uses scope=my-library
+    /// to confirm the auth gate fires for the scoped path too.
+    /// </summary>
+    [Fact]
+    public async Task GetAgents_Unauthenticated_ScopeMyLibrary_Returns401()
+    {
+        // Act — no Cookie header
+        var response = await _client.GetAsync("/api/v1/agents?scope=my-library");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    // -------------------------------------------------------------------------
     // PUT /api/v1/agents/{id}/user — Issue #656
     // -------------------------------------------------------------------------
 
@@ -780,6 +952,36 @@ public sealed class AgentsEndpointsIntegrationTests : IAsyncLifetime
         dto.Temperature.Should().BeApproximately(0.42m, 0.001m);
         dto.MaxTokens.Should().Be(1234);
         dto.LlmModel.Should().Be("gpt-4"); // unchanged
+    }
+
+    // -------------------------------------------------------------------------
+    // BE-2 #1589 test infrastructure
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Seeds a single <see cref="AgentDefinition"/> with a globally-unique name (avoids the
+    /// <c>IX_agent_definitions_name</c> unique-index collision that breaks repeated calls to
+    /// <see cref="TestSessionHelper.SeedAgentDefinitionsAsync"/> within the same test).
+    /// Mirrors the helper's construction pattern but returns the new agent's Id directly,
+    /// eliminating the need for follow-up EF.Property queries to retrieve it.
+    /// </summary>
+    private static async Task<Guid> SeedUniqueAgentAsync(
+        MeepleAiDbContext dbContext,
+        Guid? gameId)
+    {
+        var agent = AgentDefinition.Create(
+            name: $"BE2-Agent-{Guid.NewGuid():N}",
+            description: "BE-2 #1589 test agent",
+            type: AgentType.RagAgent,
+            config: AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f));
+        agent.Activate();
+        if (gameId.HasValue)
+        {
+            agent.SetGameId(gameId.Value);
+        }
+        dbContext.AgentDefinitions.Add(agent);
+        await dbContext.SaveChangesAsync();
+        return agent.Id;
     }
 }
 

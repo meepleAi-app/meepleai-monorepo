@@ -129,16 +129,27 @@ internal static class AgentsEndpoints
         group.MapGet("/agents", async (
             [FromQuery] bool? activeOnly,
             [FromQuery] string? type,
+            [FromQuery] string? scope,
             IMediator mediator,
             HttpContext context,
             CancellationToken ct) =>
         {
-            var (authenticated, _, error) = context.TryGetAuthenticatedUser();
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
             if (!authenticated) return error!;
+
+            // BE-2 #1589: scope=my-library needs the caller's userId; global path does not.
+            Guid? scopeUserId = null;
+            if (string.Equals(scope, "my-library", StringComparison.Ordinal)
+                && session!.Principal?.Subject?.Id is Guid callerId)
+            {
+                scopeUserId = callerId;
+            }
 
             var query = new GetAllAgentsQuery(
                 ActiveOnly: activeOnly,
-                Type: type
+                Type: type,
+                Scope: scope,
+                ScopeUserId: scopeUserId
             );
             var agents = await mediator.Send(query, ct).ConfigureAwait(false);
 
@@ -152,9 +163,10 @@ internal static class AgentsEndpoints
         .RequireAuthenticatedUser()
         .Produces(200)
         .Produces(401)
+        .Produces(422)
         .WithTags("Agents")
         .WithSummary("List all agents")
-        .WithDescription("Returns all agents with optional activeOnly and type filters. Issue #641 Wave B.2 hotfix.")
+        .WithDescription("Returns all agents. ?scope=my-library filters to agents whose game is in the caller's library plus system agents; no scope returns all agents (global). Optional activeOnly + type filters.")
         .WithOpenApi();
     }
 

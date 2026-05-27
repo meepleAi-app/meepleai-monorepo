@@ -1592,6 +1592,34 @@
           "placeholder": "Search by title, publisher or year…",
           "ariaLabel": "Search the library",
           "clearAriaLabel": "Clear search"
+        },
+        "title": "More filters",
+        "description": "Filter the library by entity-specific dimensions.",
+        "apply": "Apply",
+        "clear": "Reset",
+        "section": {
+          "state": "State",
+          "withKb": "With Knowledge Base only",
+          "rating": "Minimum rating",
+          "players": "Player count",
+          "year": "Year published",
+          "agentType": "Agent type",
+          "activeOnly": "Active only",
+          "sessionStatus": "Session status",
+          "sessionType": "Session type",
+          "playerCount": "Players (min)",
+          "processingState": "Processing state",
+          "messageCountMin": "Messages (min)"
+        },
+        "state": {
+          "owned": "Owned",
+          "wishlist": "Wishlist",
+          "loaned": "Loaned"
+        },
+        "kbState": {
+          "ready": "Ready",
+          "pending": "Pending",
+          "failed": "Failed"
         }
       },
       "sort": {

@@ -49,7 +49,12 @@ on:
 
 permissions:
   contents: read
-  actions: write  # required for run cancel
+  actions: write       # required for run/job cancel
+  administration: read # required for /repos/{owner}/{repo}/actions/runners listing
+                       # (without this, GITHUB_TOKEN gets HTTP 403 on the runners
+                       # endpoint and the safety guard cannot determine if a
+                       # self-hosted runner is online — runtime falls back to
+                       # dry-run mode in that case to fail safe.)
 
 concurrency:
   # Only one watchdog at a time. cancel-in-progress: true so a manual
@@ -93,16 +98,41 @@ jobs:
           # The runners API returns each runner's labels as objects
           # ({id, name, type}), NOT as plain strings. Filter on
           # `.labels[].name == "self-hosted"`, not on raw label equality.
-          ONLINE_RUNNERS=$(gh api "repos/${REPO}/actions/runners" \
-            --jq '.runners[] | select(.status == "online") | select(.labels | any(.name == "self-hosted")) | .name' \
-            || true)
-          if [ -z "$ONLINE_RUNNERS" ]; then
-            echo "⚠️ No SELF-HOSTED runners online — nothing to do."
-            echo "   (A queued job in this state is waiting legitimately; cancelling would not help.)"
-            exit 0
+          #
+          # Error handling rationale (post-2026-05-27 run 26492366133):
+          # The /actions/runners endpoint requires the `administration:read`
+          # GITHUB_TOKEN scope (declared in `permissions:` above). If the org
+          # has restricted that scope (e.g. fine-grained PAT-only access), the
+          # API returns HTTP 403. We MUST distinguish three states:
+          #   (a) API succeeded, runners online → proceed
+          #   (b) API succeeded, no runners online → exit cleanly (no work)
+          #   (c) API failed (403/network/etc) → fail-SAFE: force DRY_RUN so
+          #       we still log stuck-job detection for visibility but never
+          #       cancel anything we couldn't verify the precondition for
+          # The previous version conflated (b) and (c), with `|| true` swallowing
+          # the 403 error and then the `[ -z "$ONLINE_RUNNERS" ]` check failing
+          # because the variable contained the JSON error body, not empty.
+          RUNNERS_RAW=$(gh api "repos/${REPO}/actions/runners" 2>&1) && RUNNERS_RC=0 || RUNNERS_RC=$?
+          if [ "$RUNNERS_RC" -ne 0 ] || echo "$RUNNERS_RAW" | grep -q '"status": *"403"\|Resource not accessible'; then
+            echo "⚠️ Cannot list runners (HTTP error or permission denied):"
+            echo "$RUNNERS_RAW" | head -3 | sed 's/^/   /'
+            echo ""
+            echo "🛡️ FAIL-SAFE: forcing DRY_RUN=true. Stuck-job detection still runs"
+            echo "   for visibility, but no actual cancellations will occur."
+            echo "   To enable cancellations, ensure the workflow has"
+            echo "   permissions.administration: read and the org allows it."
+            DRY_RUN=true
+            ONLINE_RUNNERS="(unknown — runners API unreachable, fail-safe engaged)"
+          else
+            ONLINE_RUNNERS=$(echo "$RUNNERS_RAW" | jq -r '.runners[] | select(.status == "online") | select(.labels | any(.name == "self-hosted")) | .name' || true)
+            if [ -z "$ONLINE_RUNNERS" ]; then
+              echo "⚠️ No SELF-HOSTED runners online — nothing to do."
+              echo "   (A queued job in this state is waiting legitimately; cancelling would not help.)"
+              exit 0
+            fi
+            echo "✅ Self-hosted runners online:"
+            echo "$ONLINE_RUNNERS" | sed 's/^/   - /'
           fi
-          echo "✅ Self-hosted runners online:"
-          echo "$ONLINE_RUNNERS" | sed 's/^/   - /'
           echo ""
 
           # Scan recent runs in queued + in_progress states for stuck jobs.

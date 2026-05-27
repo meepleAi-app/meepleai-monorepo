@@ -350,6 +350,66 @@ public sealed class InvitationFlowIntegrationTests : IAsyncLifetime
         _output("Revoked token correctly returns 'invalid'");
     }
 
+    /// <summary>
+    /// Issue #1633 — regression test for the NoTracking-default persistence bug.
+    /// The production DbContext sets QueryTrackingBehavior.NoTracking by default (PERF-06,
+    /// InfrastructureServiceExtensions.cs:162) but the integration fixture does NOT, so the
+    /// existing ValidateToken_RevokedInvitation test passes despite the prod bug (it reuses the
+    /// already-tracked entity from AddAsync). This test replicates the real request flow:
+    /// empty change tracker + NoTracking default → InvitationTokenRepository.UpdateAsync must
+    /// still persist the status change. Pre-fix: FAILS (status stays Pending because the
+    /// FindAsync-loaded entity is untracked and SaveChanges no-ops). Post-fix: PASSES.
+    /// </summary>
+    [Fact]
+    public async Task Revoke_WithNoTrackingDefault_PersistsRevokedStatus()
+    {
+        // Arrange
+        var invitationRepo = _serviceProvider!.GetRequiredService<IInvitationTokenRepository>();
+        var unitOfWork = _serviceProvider!.GetRequiredService<IUnitOfWork>();
+
+        var email = $"revoke-notracking-{Guid.NewGuid():N}@test.meepleai.dev";
+        var tokenHash = Convert.ToBase64String(
+            System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes("nt-" + Guid.NewGuid().ToString("N"))));
+        var invitation = Api.BoundedContexts.Authentication.Domain.Entities.InvitationToken.Create(
+            email, "User", tokenHash, AdminUserId);
+
+        await invitationRepo.AddAsync(invitation, TestCancellationToken);
+        await unitOfWork.SaveChangesAsync(TestCancellationToken);
+        var invitationId = invitation.Id;
+
+        // Simulate a fresh HTTP request: empty tracker + production NoTracking default.
+        _dbContext!.ChangeTracker.Clear();
+        var originalBehavior = _dbContext.ChangeTracker.QueryTrackingBehavior;
+        _dbContext.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
+
+        try
+        {
+            // Act — mirror RevokeInvitationCommandHandler exactly.
+            var loaded = await invitationRepo.GetByIdAsync(invitationId, TestCancellationToken);
+            loaded.Should().NotBeNull();
+            loaded!.Revoke();
+            await invitationRepo.UpdateAsync(loaded, TestCancellationToken);
+            await unitOfWork.SaveChangesAsync(TestCancellationToken);
+        }
+        finally
+        {
+            _dbContext.ChangeTracker.QueryTrackingBehavior = originalBehavior;
+        }
+
+        // Assert — read back from DB with a clean tracker; the change MUST be persisted.
+        _dbContext.ChangeTracker.Clear();
+        var fromDb = await _dbContext.InvitationTokens
+            .AsNoTracking()
+            .FirstAsync(t => t.Id == invitationId, TestCancellationToken);
+
+        fromDb.Status.Should().Be("Revoked",
+            "revoke must persist under the production NoTracking default (#1633)");
+        fromDb.RevokedAt.Should().NotBeNull("RevokedAt must be set when the revoke persists");
+
+        _output("Revoke persisted correctly under NoTracking default");
+    }
+
     #endregion
 
     #region Duplicate Email Conflict

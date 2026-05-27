@@ -186,5 +186,15 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
 
         builder.HasIndex(e => new { e.ContentHash, e.PrivateGameId })
             .HasDatabaseName("ix_pdf_documents_content_hash_private_game_id");
+
+        // BE-1 #1588: composite index for cross-game per-user paginated listing
+        // (GET /api/v1/kb-docs). Without this, the user-scoped query degrades to
+        // a sequential scan on a multi-million-row table. The DESCENDING order on
+        // ProcessedAt matches the sortBy=recent default (coalesced with UploadedAt
+        // at query time; the index covers ProcessedAt only and Postgres handles
+        // the COALESCE in the filter step).
+        builder.HasIndex(e => new { e.UploadedByUserId, e.ProcessedAt })
+            .IsDescending(false, true)
+            .HasDatabaseName("ix_pdf_documents_uploaded_by_user_id_processed_at_desc");
     }
 }

@@ -13,12 +13,15 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.TwoFactor;
 /// <c>TwoFactorVerify</c> audit — so this handler does NOT re-implement any of that. On success it
 /// refreshes <c>LastTotpVerifiedAt</c> on the session (clearing a step-up block) and emits a
 /// <c>TwoFactorStepUp</c> audit. A distinct lockout pre-check surfaces <c>LockedOut</c> so the
-/// endpoint can return 429 + retry-after (D-S3-4b).
+/// endpoint can return <c>401 two_factor_required</c> with <c>subcode=locked_out</c> +
+/// <c>retryAfterSeconds</c> (D-S3-4b; unified with the enforcement vocabulary in Option B —
+/// see refactor commit <c>399c98543</c> and <c>docs/api/2fa-step-up-protocol.md</c>).
 /// </summary>
 internal class StepUpTwoFactorCommandHandler : ICommandHandler<StepUpTwoFactorCommand, StepUpTwoFactorResult>
 {
     // Mirrors TotpService.LockoutDurationMinutes (15min). The lockout key TTL is the authoritative
-    // wait; this fixed value is the client-facing retry-after hint for the 429 response.
+    // wait; this fixed value is the client-facing retry-after hint for the
+    // 401 + subcode=locked_out response (Option B; not 429 — see ApiExceptionHandlerMiddleware).
     private const int LockoutRetryAfterSeconds = 900;
 
     private readonly ITotpService _totpService;

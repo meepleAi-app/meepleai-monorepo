@@ -42,7 +42,7 @@ const messages: Record<string, string> = {
   'pages.library.filters.section.sessionType': 'Tipo sessione',
   'pages.library.filters.section.playerCount': 'Giocatori (min)',
   // section labels (kb scope)
-  'pages.library.filters.section.processingStates': 'Stato di elaborazione',
+  'pages.library.filters.section.processingState': 'Stato di elaborazione',
   'pages.library.filters.kbState.ready': 'Pronto',
   'pages.library.filters.kbState.pending': 'In elaborazione',
   'pages.library.filters.kbState.failed': 'Errore',

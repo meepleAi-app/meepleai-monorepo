@@ -19,6 +19,18 @@ import { useCallback, useEffect, useMemo, useState, type ReactElement } from 're
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import {
+  GamesEmptyState,
+  GamesFiltersInline,
+  GamesResultsGrid,
+  type GamesEmptyKind,
+  type GamesEmptyStateLabels,
+  type GamesFiltersInlineLabels,
+  type GamesResultsView,
+  type GamesSortKey,
+  type GamesStatusKey,
+  type GamesViewKey,
+} from '@/components/features/games';
+import {
   BulkSelectionBar,
   CrossEntityFilters,
   EmptyLibrary,
@@ -38,9 +50,15 @@ import {
   type LibraryViewMode,
 } from '@/components/features/library';
 import { useHybridHubItems } from '@/hooks/queries/useHybridHubItems';
-import { useLibraryActivity, useRemoveGameFromLibrary } from '@/hooks/queries/useLibrary';
+import {
+  useLibrary,
+  useLibraryActivity,
+  useRemoveGameFromLibrary,
+} from '@/hooks/queries/useLibrary';
 import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
 import { useTranslation } from '@/hooks/useTranslation';
+import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
+import { deriveGamesTabEntries } from '@/lib/library/games-tab-filters';
 import {
   deriveHybridItems,
   type HybridHubSources,
@@ -81,9 +99,43 @@ export function LibraryHub(): ReactElement {
   });
   const { view, setView } = useLibraryView('grid');
 
+  // ─── games-tab local state (#1566) ───
+  const [gamesStatus, setGamesStatus] = useState<GamesStatusKey>('all');
+  const [gamesSort, setGamesSort] = useState<GamesSortKey>('last-played');
+  const [gamesQuery, setGamesQuery] = useState('');
+  const [gamesView, setGamesView] = useState<GamesViewKey>('grid');
+
   const stateOverride = parseStateOverride(searchParams.get('state'));
 
   const hub = useHybridHubItems();
+
+  // #1566: dedicated library fetch for the games tab. Identical key to the call
+  // inside useHybridHubItems (useHybridHubItems.ts:41-46) → TanStack dedups to a
+  // single network request; this is 1 fetch, 2 references (not a double fetch).
+  const libraryQuery = useLibrary({
+    page: 1,
+    pageSize: 50,
+    sortBy: 'addedAt',
+    sortDescending: true,
+  });
+  const gameEntries = useMemo<readonly UserLibraryEntry[]>(
+    () => libraryQuery.data?.items ?? [],
+    [libraryQuery.data]
+  );
+  const gamesFiltered = useMemo<readonly UserLibraryEntry[]>(
+    () => deriveGamesTabEntries(gameEntries, gamesStatus, gamesQuery, gamesSort),
+    [gameEntries, gamesStatus, gamesQuery, gamesSort]
+  );
+  const gamesKind = useMemo<GamesEmptyKind | 'default'>(() => {
+    if (libraryQuery.isLoading) return 'loading';
+    if (libraryQuery.isError) return 'error';
+    if (gameEntries.length === 0) return 'empty';
+    if (gamesFiltered.length === 0) return 'filtered-empty';
+    return 'default';
+  }, [libraryQuery.isLoading, libraryQuery.isError, gameEntries.length, gamesFiltered.length]);
+  const gamesEffectiveKind: GamesEmptyKind | 'default' =
+    (stateOverride as GamesEmptyKind | null) ?? gamesKind;
+
   const removeMutation = useRemoveGameFromLibrary();
   const activityQuery = useLibraryActivity(20);
 
@@ -232,6 +284,64 @@ export function LibraryHub(): ReactElement {
     };
   }, [t, selected]);
 
+  const gamesFiltersLabels = useMemo<GamesFiltersInlineLabels>(
+    () => ({
+      search: {
+        placeholder: t('pages.library.gamesTab.filters.search.placeholder'),
+        ariaLabel: t('pages.library.gamesTab.filters.search.ariaLabel'),
+        clearAriaLabel: t('pages.library.gamesTab.filters.search.clearAriaLabel'),
+      },
+      status: {
+        label: t('pages.library.gamesTab.filters.status.label'),
+        options: {
+          all: t('pages.library.gamesTab.filters.status.options.all'),
+          owned: t('pages.library.gamesTab.filters.status.options.owned'),
+          wishlist: t('pages.library.gamesTab.filters.status.options.wishlist'),
+          played: t('pages.library.gamesTab.filters.status.options.played'),
+        },
+      },
+      sort: {
+        label: t('pages.library.gamesTab.filters.sort.label'),
+        options: {
+          'last-played': t('pages.library.gamesTab.filters.sort.options.last-played'),
+          rating: t('pages.library.gamesTab.filters.sort.options.rating'),
+          title: t('pages.library.gamesTab.filters.sort.options.title'),
+          year: t('pages.library.gamesTab.filters.sort.options.year'),
+        },
+      },
+      view: {
+        label: t('pages.library.gamesTab.filters.view.label'),
+        options: {
+          grid: t('pages.library.gamesTab.filters.view.options.grid'),
+          list: t('pages.library.gamesTab.filters.view.options.list'),
+        },
+      },
+      resultCount: (count: number) => t('pages.library.gamesTab.filters.resultCount', { count }),
+    }),
+    [t]
+  );
+
+  const gamesEmptyLabels = useMemo<GamesEmptyStateLabels>(
+    () => ({
+      empty: {
+        title: t('pages.library.gamesTab.emptyState.empty.title'),
+        subtitle: t('pages.library.gamesTab.emptyState.empty.subtitle'),
+        cta: t('pages.library.gamesTab.emptyState.empty.cta'),
+      },
+      filteredEmpty: {
+        title: t('pages.library.gamesTab.emptyState.filteredEmpty.title'),
+        subtitle: t('pages.library.gamesTab.emptyState.filteredEmpty.subtitle'),
+        cta: t('pages.library.gamesTab.emptyState.filteredEmpty.cta'),
+      },
+      error: {
+        title: t('pages.library.gamesTab.emptyState.error.title'),
+        subtitle: t('pages.library.gamesTab.emptyState.error.subtitle'),
+        cta: t('pages.library.gamesTab.emptyState.error.cta'),
+      },
+    }),
+    [t]
+  );
+
   // ─── FSM (partial-failure aware) ───
   const realKind = useMemo<SurfaceKind>(() => {
     if (hub.allFailed) return 'error';
@@ -283,6 +393,7 @@ export function LibraryHub(): ReactElement {
     setSelected(new Set());
   }, []);
 
+  // #1566: retained for re-wiring (spec §3.5) — unreachable until enter-select-mode is restored.
   const handleBulkDelete = useCallback(async () => {
     const ids = Array.from(selected);
     if (ids.length === 0) return;
@@ -300,6 +411,12 @@ export function LibraryHub(): ReactElement {
     setQuery('');
     setTab('all');
     setGameStateFilter({ states: [], withKb: false });
+    if (stateOverride != null) router.push(pathname);
+  }, [stateOverride, router, pathname]);
+
+  const handleGamesClearFilters = useCallback(() => {
+    setGamesQuery('');
+    setGamesStatus('all');
     if (stateOverride != null) router.push(pathname);
   }, [stateOverride, router, pathname]);
 
@@ -329,91 +446,113 @@ export function LibraryHub(): ReactElement {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
         <div className="flex flex-1 flex-col gap-4">
           <LibraryTabs<HybridHubTab> tabs={tabsConfig} active={tab} onChange={setTab} />
-          <CrossEntityFilters
-            tab={tab}
-            gameStateFilter={gameStateFilter}
-            onGameStateFilterChange={setGameStateFilter}
-          />
-          <div
-            data-slot="library-toolbar"
-            className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm"
-          >
-            <input
-              type="search"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder={t('pages.library.filters.search.placeholder')}
-              aria-label={t('pages.library.filters.search.ariaLabel')}
-              data-slot="library-search-input"
-              className="min-w-[12rem] flex-1 rounded-full border border-input bg-background px-4 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-            <label className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span className="sr-only sm:not-sr-only">{t('pages.library.sort.label')}</span>
-              <select
-                value={sortKey}
-                onChange={e => setSortKey(e.target.value as LibrarySortKey)}
-                aria-label={t('pages.library.sort.ariaLabel')}
-                data-slot="library-sort-select"
-                className="rounded-full border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="recent">{t('pages.library.sort.recent')}</option>
-                <option value="title">{t('pages.library.sort.title')}</option>
-                <option value="rating">{t('pages.library.sort.rating')}</option>
-                <option value="state">{t('pages.library.sort.state')}</option>
-              </select>
-            </label>
-            <div
-              role="group"
-              aria-label={t('pages.library.view.ariaLabel')}
-              data-slot="library-view-toggle"
-              className="inline-flex items-center gap-1 rounded-full border border-input bg-background p-1"
-            >
-              {(['grid', 'list', 'compact'] as const).map(mode => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setView(mode)}
-                  aria-pressed={view === mode}
-                  data-view-mode={mode}
-                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                    view === mode
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {t(`pages.library.view.${mode}` as const)}
-                </button>
-              ))}
-            </div>
-            {tab === 'games' && selectionMode === 'browse' ? (
-              <button
-                type="button"
-                onClick={() => handleEnterSelectMode()}
-                aria-label={t('pages.library.selectionMode.enterAriaLabel')}
-                data-slot="library-enter-select-mode"
-                className="ml-auto rounded-full border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                {t('pages.library.selectionMode.enter')}
-              </button>
-            ) : null}
-          </div>
-          {effectiveKind === 'default' ? (
-            <LibraryHybridGrid
-              items={merged}
-              view={view as LibraryViewMode}
-              selectionMode={selectionMode}
-              selected={selected}
-              onCardClick={handleCardClick}
-              onLongPressEnter={handleEnterSelectMode}
-            />
+          {tab === 'games' ? (
+            <>
+              <GamesFiltersInline
+                labels={gamesFiltersLabels}
+                query={gamesQuery}
+                onQueryChange={setGamesQuery}
+                status={gamesStatus}
+                onStatusChange={setGamesStatus}
+                sort={gamesSort}
+                onSortChange={setGamesSort}
+                view={gamesView}
+                onViewChange={setGamesView}
+                resultCount={gamesFiltered.length}
+              />
+              {gamesEffectiveKind === 'default' ? (
+                <GamesResultsGrid entries={gamesFiltered} view={gamesView as GamesResultsView} />
+              ) : (
+                <GamesEmptyState
+                  kind={gamesEffectiveKind}
+                  labels={gamesEmptyLabels}
+                  onAddGame={handleAddGame}
+                  onClearFilters={handleGamesClearFilters}
+                  onRetry={handleRetry}
+                />
+              )}
+            </>
           ) : (
-            <EmptyLibrary
-              kind={effectiveKind}
-              labels={emptyLabels}
-              onAddGame={handleAddGame}
-              onClearFilters={handleClearFilters}
-              onRetry={handleRetry}
-            />
+            <>
+              <CrossEntityFilters
+                tab={tab}
+                gameStateFilter={gameStateFilter}
+                onGameStateFilterChange={setGameStateFilter}
+              />
+              <div
+                data-slot="library-toolbar"
+                className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm"
+              >
+                <input
+                  type="search"
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  placeholder={t('pages.library.filters.search.placeholder')}
+                  aria-label={t('pages.library.filters.search.ariaLabel')}
+                  data-slot="library-search-input"
+                  className="min-w-[12rem] flex-1 rounded-full border border-input bg-background px-4 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="sr-only sm:not-sr-only">{t('pages.library.sort.label')}</span>
+                  <select
+                    value={sortKey}
+                    onChange={e => setSortKey(e.target.value as LibrarySortKey)}
+                    aria-label={t('pages.library.sort.ariaLabel')}
+                    data-slot="library-sort-select"
+                    className="rounded-full border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <option value="recent">{t('pages.library.sort.recent')}</option>
+                    <option value="title">{t('pages.library.sort.title')}</option>
+                    <option value="rating">{t('pages.library.sort.rating')}</option>
+                    <option value="state">{t('pages.library.sort.state')}</option>
+                  </select>
+                </label>
+                <div
+                  role="group"
+                  aria-label={t('pages.library.view.ariaLabel')}
+                  data-slot="library-view-toggle"
+                  className="inline-flex items-center gap-1 rounded-full border border-input bg-background p-1"
+                >
+                  {(['grid', 'list', 'compact'] as const).map(mode => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setView(mode)}
+                      aria-pressed={view === mode}
+                      data-view-mode={mode}
+                      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                        view === mode
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      {t(`pages.library.view.${mode}` as const)}
+                    </button>
+                  ))}
+                </div>
+                {/* #1566: the enter-select-mode button was deleted — it is not in
+                    the games branch (handled by GamesFiltersInline) and not re-added
+                    here. The else-branch exists only for non-games tabs. */}
+              </div>
+              {effectiveKind === 'default' ? (
+                <LibraryHybridGrid
+                  items={merged}
+                  view={view as LibraryViewMode}
+                  selectionMode={selectionMode}
+                  selected={selected}
+                  onCardClick={handleCardClick}
+                  onLongPressEnter={handleEnterSelectMode}
+                />
+              ) : (
+                <EmptyLibrary
+                  kind={effectiveKind}
+                  labels={emptyLabels}
+                  onAddGame={handleAddGame}
+                  onClearFilters={handleClearFilters}
+                  onRetry={handleRetry}
+                />
+              )}
+            </>
           )}
         </div>
         <RecentActivityRail items={activityItems} />

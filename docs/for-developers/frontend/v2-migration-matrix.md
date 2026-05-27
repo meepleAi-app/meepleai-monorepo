@@ -159,15 +159,17 @@ the PR review.
 
 ### Games index — `/games` → redirect `/library` (#1521) — 5 shelf-ready components — **Tier S**
 
-> **Routing decision (#1521, PR pending)**: `/games` was a multi-tab hub (library/catalog/kb). The `sp4-games-index` mockup IS the **library** view, and `/library` (LibraryHub) is the canonical route for it. `/games` now **redirects to `/library`** (mirrors #1480 `/hub/toolkits` → `/toolkits`); the multi-tab orchestrator `GamesLibraryView` + `AdvancedFiltersDrawer` stub were removed. The 5 mockup components below are **shelf-ready** (tested, mockup-faithful) awaiting a follow-up that wires them into LibraryHub in place of its older implementation.
+> **Routing decision (#1521)**: `/games` was a multi-tab hub (library/catalog/kb). The `sp4-games-index` mockup IS the **library** view, and `/library` (LibraryHub) is the canonical route for it. `/games` now **redirects to `/library`** (mirrors #1480 `/hub/toolkits` → `/toolkits`); the multi-tab orchestrator `GamesLibraryView` + `AdvancedFiltersDrawer` stub were removed.
+>
+> **#1566 update (2026-05-27)**: 3 of the 5 components were wired into the `games` tab of `LibraryHub` (reachable by clicking the "Giochi" tab) — `GamesFiltersInline` + `GamesResultsGrid` + `GamesEmptyState`. `GamesHero` and `GamesRecentRail` remain **shelf-ready**: `GamesHero` is superseded by the cross-entity `LibraryHeroDesktop` (#1618) in the multi-tab hub, and `GamesRecentRail` belongs to the game-night flow G3 (not `sp4-games-index`) — both deferred per [spec §7](../../superpowers/specs/2026-05-27-1566-library-games-tab-wireup-design.md#7-out-of-scope-tracked-separately).
 
 | Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
 |--------|-----------|------|-------|--------|----|----|----------|
-| `sp4-games-index.jsx` | `GamesHero` | `apps/web/src/components/features/games/GamesHero.tsx` | `/library` (shelf-ready) | shelf-ready | #635 | T A M V | — |
-| `sp4-games-index.jsx` | `GamesFiltersInline` | `apps/web/src/components/features/games/GamesFiltersInline.tsx` | `/library` (shelf-ready) | shelf-ready | #635 | T A V | — |
-| `sp4-games-index.jsx` | `GamesResultsGrid` | `apps/web/src/components/features/games/GamesResultsGrid.tsx` | `/library` (shelf-ready) | shelf-ready | #635 | T A V | — |
-| `sp4-games-index.jsx` | `GamesEmptyState` | `apps/web/src/components/features/games/GamesEmptyState.tsx` | `/library` (shelf-ready) | shelf-ready | #635 | T A V | — |
-| (extension G3) | `GamesRecentRail` | `apps/web/src/components/features/games/GamesRecentRail.tsx` | `/library` (shelf-ready) | shelf-ready | #907 | T A V | — |
+| `sp4-games-index.jsx` | `GamesHero` | `apps/web/src/components/features/games/GamesHero.tsx` | `/library` (shelf-ready; #1566 deferred §7) | shelf-ready | #635 | T A M V | — |
+| `sp4-games-index.jsx` | `GamesFiltersInline` | `apps/web/src/components/features/games/GamesFiltersInline.tsx` | `/library?tab=games` | done | #1566 | T A V | — |
+| `sp4-games-index.jsx` | `GamesResultsGrid` | `apps/web/src/components/features/games/GamesResultsGrid.tsx` | `/library?tab=games` | done | #1566 | T A V | — |
+| `sp4-games-index.jsx` | `GamesEmptyState` | `apps/web/src/components/features/games/GamesEmptyState.tsx` | `/library?tab=games` | done | #1566 | T A V | — |
+| (extension G3) | `GamesRecentRail` | `apps/web/src/components/features/games/GamesRecentRail.tsx` | `/library` (shelf-ready; #1566 deferred §7) | shelf-ready | #907 | T A V | — |
 
 ### Game detail — `/games/[id]` — 8 components — **Tier L** ⚠️ Phase 0.5 required
 
@@ -674,7 +676,7 @@ instead.
 
 | Route | Mockup | Note |
 |-------|--------|------|
-| `/games` | `sp4-games-index.html` | redirect → `/library` (#1521); mockup = library view, 5 components shelf-ready for LibraryHub wiring |
+| `/games` | `sp4-games-index.html` | redirect → `/library` (#1521); mockup = library view. #1566 wired 3/5 components into the `/library` games tab (Filters+Grid+EmptyState); GamesHero+GamesRecentRail deferred (§7) |
 | `/games/[id]` | `sp4-game-detail.html` | Tier L done (PR #702) |
 | `/games/[id]/faqs` | `sp3-faq-enhanced.html` ↻ | Reuse |
 | `/games/[id]/reviews` · `/strategies` · `/rules` | — | gap (sub-tab) |

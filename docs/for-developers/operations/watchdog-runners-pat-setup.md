@@ -90,9 +90,10 @@ gh run view <run-id> --repo meepleAi-app/meepleai-monorepo --log \
 
   | Field | Value |
   |-------|-------|
-  | Token owner | _(fill in)_ |
-  | Created | _(fill in)_ |
-  | Expires | _(fill in — 90 days from creation)_ |
+  | Token owner | `meepleAi-app` (GitHub account authenticated for the repo at setup) |
+  | Created | 2026-05-27 (secret `WATCHDOG_RUNNERS_PAT` set 09:30 UTC) |
+  | Expires | 2026-08-25 (assumes the 90-day expiry from this guide — update if a different expiry was chosen at token creation) |
+  | Validated | 2026-05-27 — watchdog run `26503048359` listed runner `meepleai-staging`, no fail-safe |
 
 - **Future hardening**: migrate to a **GitHub App** installation token
   (org-owned, auto-refreshing, not tied to a personal account). Tracked as a

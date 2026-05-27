@@ -9,7 +9,7 @@
 
 'use client';
 
-import { useState, type ReactElement } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 
 import {
   Drawer,
@@ -42,10 +42,24 @@ export function AdvancedFiltersDrawer({
 }: AdvancedFiltersDrawerProps): ReactElement {
   const { t } = useTranslation();
   const [draft, setDraft] = useState<LibraryFilters>(activeFilters);
+  useEffect(() => {
+    if (open) setDraft(activeFilters);
+  }, [open, activeFilters]);
 
   const handleCancel = () => {
     setDraft(activeFilters);
     onOpenChange(false);
+  };
+
+  const handleApply = () => {
+    onApply(draft);
+    onOpenChange(false);
+  };
+
+  const handleClear = () => {
+    const empty = { scope: entityScope } as LibraryFilters;
+    setDraft(empty);
+    onClear();
   };
 
   const sections = getSectionsForScope(entityScope);
@@ -79,15 +93,26 @@ export function AdvancedFiltersDrawer({
           >
             {t('common.cancel')}
           </button>
-          {/* Clear + Apply buttons added in Task 7 */}
+          <button
+            type="button"
+            data-slot="advanced-filters-clear"
+            onClick={handleClear}
+            className="rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/40"
+          >
+            {t('pages.library.filters.clear')}
+          </button>
+          <button
+            type="button"
+            data-slot="advanced-filters-apply"
+            onClick={handleApply}
+            className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            {t('pages.library.filters.apply')}
+          </button>
         </DrawerFooter>
       </DrawerContent>
     </Drawer>
   );
-
-  // Silence unused warnings for symbols Task 7 will consume
-  void onApply;
-  void onClear;
 }
 
 // ─── Section renderer ────────────────────────────────────────────────────────

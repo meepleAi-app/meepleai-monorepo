@@ -28,6 +28,8 @@ const messages: Record<string, string> = {
   'pages.library.filters.title': 'Più filtri',
   'pages.library.filters.description': "Filtra la libreria per dimensioni specifiche dell'entità.",
   'common.cancel': 'Annulla',
+  'pages.library.filters.apply': 'Applica',
+  'pages.library.filters.clear': 'Reimposta',
   // section labels (game scope)
   'pages.library.filters.section.state': 'Stato',
   'pages.library.filters.section.withKb': 'Solo con Knowledge Base',
@@ -391,5 +393,90 @@ describe('AdvancedFiltersDrawer — chat scope rendering', () => {
     expect(slider).toHaveAttribute('aria-valuemin', '0');
     expect(slider).toHaveAttribute('aria-valuemax', '100');
     expect(slider).toHaveAttribute('aria-valuenow', '10');
+  });
+});
+
+describe('AdvancedFiltersDrawer — Apply / Clear callbacks', () => {
+  beforeEach(() => {
+    installMatchMedia(true);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('Apply button calls onApply with current draft and closes the drawer', async () => {
+    const onApply = vi.fn();
+    const onOpenChange = vi.fn();
+    const user = userEvent.setup();
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={onOpenChange}
+        entityScope="game"
+        activeFilters={{ scope: 'game' }}
+        onApply={onApply}
+        onClear={noop}
+      />
+    );
+
+    const owned = screen.getByRole('checkbox', { name: /posseduto/i });
+    await user.click(owned);
+    await user.click(screen.getByRole('button', { name: /applica/i }));
+
+    expect(onApply).toHaveBeenCalledTimes(1);
+    expect(onApply).toHaveBeenCalledWith({ scope: 'game', states: ['Owned'] });
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('Clear button calls onClear and resets draft to empty scope, drawer stays open', async () => {
+    const onClear = vi.fn();
+    const onOpenChange = vi.fn();
+    const user = userEvent.setup();
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={onOpenChange}
+        entityScope="game"
+        activeFilters={{ scope: 'game', states: ['Owned'], ratingMin: 7 }}
+        onApply={noop}
+        onClear={onClear}
+      />
+    );
+
+    const owned = screen.getByRole('checkbox', { name: /posseduto/i });
+    expect(owned).toBeChecked();
+
+    await user.click(screen.getByRole('button', { name: /reimposta/i }));
+
+    expect(onClear).toHaveBeenCalledTimes(1);
+    expect(onOpenChange).not.toHaveBeenCalledWith(false); // drawer stays open
+    expect(screen.getByRole('checkbox', { name: /posseduto/i })).not.toBeChecked();
+  });
+
+  it('when reopened with new activeFilters, draft resets to the new activeFilters', async () => {
+    const { rerender } = renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={false}
+        onOpenChange={noop}
+        entityScope="game"
+        activeFilters={{ scope: 'game' }}
+        onApply={noop}
+        onClear={noop}
+      />
+    );
+    rerender(
+      <IntlProvider locale="it" messages={messages}>
+        <AdvancedFiltersDrawer
+          open={true}
+          onOpenChange={noop}
+          entityScope="game"
+          activeFilters={{ scope: 'game', states: ['Wishlist'] }}
+          onApply={noop}
+          onClear={noop}
+        />
+      </IntlProvider>
+    );
+    expect(screen.getByRole('checkbox', { name: /wishlist/i })).toBeChecked();
   });
 });

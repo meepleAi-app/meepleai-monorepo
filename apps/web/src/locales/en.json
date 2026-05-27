@@ -1566,7 +1566,10 @@
           "totalGames": "Total games",
           "kbReady": "Knowledge bases",
           "wishlist": "Wishlist",
-          "loaned": "On loan"
+          "loaned": "On loan",
+          "agents": "Agents",
+          "docs": "Documents",
+          "chats": "Chats"
         },
         "cta": {
           "add": "Add game",
@@ -1579,6 +1582,14 @@
         "kb": "Knowledge bases",
         "loaned": "On loan",
         "count": "{count, plural, =0 {none} =1 {1} other {#}}"
+      },
+      "hubTabs": {
+        "all": "All",
+        "games": "Games",
+        "agents": "Agents",
+        "kb": "KB",
+        "sessions": "Sessions",
+        "chat": "Chat"
       },
       "selectionMode": {
         "enter": "Select",

@@ -1,30 +1,31 @@
 /**
- * Wave B.3 (Issue #574) — LibraryHub orchestrator tests.
+ * Phase 2a (Issue #1605) — LibraryHub hybrid-hub orchestrator tests.
  *
- * Mirrors Wave B.1 GamesLibraryView and B.2 AgentsLibraryView tests:
- *   - stub `useLibrary` + `useRemoveGameFromLibrary` + `next/navigation` search
- *     params + i18n via IntlProvider seeded with the actual `pages.library.*`
- *     keys from `it.json`. The orchestrator is the only stateful piece — the 6
- *     feature components (LibraryHeroDesktop, LibraryTabs, LibraryHybridGrid,
- *     EmptyLibrary, BulkSelectionBar, RecentActivityRail) are pure label-driven
- *     (covered separately under `components/features/library/__tests__/`).
+ * Migrated from the Wave B.3 games-only suite (#574). The orchestrator now
+ * consumes `useHybridHubItems` (the 3-source data layer) instead of
+ * `useLibrary`, so the tests mock that hook wholesale and feed it
+ * `HybridHubSources` of pre-mapped `HybridHubItem`s.
  *
- * Contract under test (spec §3.2 + §4.2):
- *   - 5-state FSM: default | loading | empty | filtered-empty | error
- *   - `?state=...` URL override gated by NODE_ENV !== 'production' (test env)
- *   - Single click dispatcher: browse → router.push(/games/:id); select →
- *     toggle membership in `selected` Set
- *   - Tab switch (`all/kb/loaned`) filters via `filterByEntity`
- *   - Bulk delete: enter select mode → toggle cards → confirm dialog →
- *     `Promise.allSettled` fan-out + clear selection + exit select mode
- *   - Hero stats derived from entries (totalGames, kbReady, wishlist, loaned)
+ * Contract under test (plan §4c + #1605 AC):
+ *   - 6 hub tabs: all / games / agents / kb / sessions / chat
+ *   - 5-state FSM: default | loading | empty | filtered-empty | error,
+ *     partial-failure-aware (error only when ALL ready sources fail).
+ *   - `?state=...` URL override gated by NODE_ENV !== 'production' (test env).
+ *   - Single click dispatcher: browse → router.push(item.href); select →
+ *     toggle membership in `selected` Set.
+ *   - Selection mode is game-scoped: enter button only in the games tab,
+ *     forced to browse when leaving it.
+ *   - Bulk delete: enter select mode (games tab) → toggle cards → confirm
+ *     dialog → `Promise.allSettled` fan-out + clear selection + exit.
+ *   - Hero stats are hybrid counts (games/agents/docs/chats) from totalCounts.
  *   - `useMiniNavConfig` invoked with breadcrumb 'Libreria · Hub' + Hub/Wishlist
- *     tabs + 'Aggiungi gioco' primary action
- *   - clearFilters CTA from filtered-empty drops `?state=` override
+ *     tabs + 'Aggiungi gioco' primary action.
+ *   - clearFilters CTA from filtered-empty drops `?state=` override.
  *
  * Hooks mocked:
  *   - `next/navigation` (useRouter/useSearchParams/usePathname)
- *   - `@/hooks/queries/useLibrary` (useLibrary + useRemoveGameFromLibrary)
+ *   - `@/hooks/queries/useHybridHubItems` (the data layer)
+ *   - `@/hooks/queries/useLibrary` (useRemoveGameFromLibrary + useLibraryActivity)
  *   - `@/hooks/useMiniNavConfig` (verify call signature)
  *   - `@/hooks/useTranslation` is left real — it consumes IntlProvider seeded
  *     by the test wrapper, exercising the same react-intl path as production.
@@ -34,15 +35,17 @@
  */
 
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { IntlProvider } from 'react-intl';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactElement } from 'react';
 
 import type {
-  GameStateType,
-  PaginatedLibraryResponse,
-  UserLibraryEntry,
-} from '@/lib/api/schemas/library.schemas';
+  HybridHubSourceKey,
+  UseHybridHubItemsResult,
+} from '@/hooks/queries/useHybridHubItems';
+import type { HybridHubSources } from '@/lib/library/hybrid-hub.derive';
+import type { HybridHubItem } from '@/lib/library/hybrid-hub.types';
 
 // ─── next/navigation mocks ────────────────────────────────────────────────
 
@@ -61,15 +64,16 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/library',
 }));
 
-// ─── useLibrary + useRemoveGameFromLibrary + useLibraryActivity mocks ─────
+// ─── useHybridHubItems mock (the data layer) ──────────────────────────────
 
-type MockLibraryReturn = {
-  data?: PaginatedLibraryResponse;
-  isLoading: boolean;
-  isError: boolean;
-  error: Error | null;
-  refetch?: () => void;
-};
+const hubMock = vi.fn<[], UseHybridHubItemsResult>();
+
+vi.mock('@/hooks/queries/useHybridHubItems', () => ({
+  useHybridHubItems: () => hubMock(),
+  PER_SOURCE_CAP: 20,
+}));
+
+// ─── useRemoveGameFromLibrary + useLibraryActivity mocks ──────────────────
 
 type MockMutationReturn = {
   mutateAsync: (gameId: string) => Promise<void>;
@@ -83,7 +87,6 @@ type MockActivityReturn = {
   error: Error | null;
 };
 
-const useLibraryMock = vi.fn<[], MockLibraryReturn>();
 const useRemoveGameFromLibraryMock = vi.fn<[], MockMutationReturn>();
 const useLibraryActivityMock = vi.fn<[], MockActivityReturn>(() => ({
   data: [],
@@ -93,7 +96,9 @@ const useLibraryActivityMock = vi.fn<[], MockActivityReturn>(() => ({
 }));
 
 vi.mock('@/hooks/queries/useLibrary', () => ({
-  useLibrary: () => useLibraryMock(),
+  // useHybridHubItems is mocked wholesale, so its internal useLibrary never runs;
+  // the orchestrator only pulls these two from this module directly.
+  useLibrary: () => ({ data: undefined, isLoading: false, isError: false, error: null }),
   useRemoveGameFromLibrary: () => useRemoveGameFromLibraryMock(),
   useLibraryActivity: () => useLibraryActivityMock(),
 }));
@@ -109,18 +114,29 @@ vi.mock('@/hooks/useMiniNavConfig', () => ({
 // ─── react-intl messages (subset matching it.json `pages.library.*`) ──────
 
 const MESSAGES: Record<string, string> = {
-  'pages.library.hero.title': 'La tua libreria',
-  'pages.library.hero.subtitle': 'Tutti i giochi che possiedi, in attesa di giocare o in prestito.',
+  'pages.library.hero.title': 'La mia libreria',
+  'pages.library.hero.subtitle': 'Tutta la tua collezione, gli agenti AI e le partite recenti.',
   'pages.library.hero.cta.add': 'Aggiungi gioco',
   'pages.library.hero.stats.totalGames': 'Giochi totali',
-  'pages.library.hero.stats.kbReady': 'KB pronte',
+  'pages.library.hero.stats.kbReady': 'Knowledge base',
   'pages.library.hero.stats.wishlist': 'Wishlist',
   'pages.library.hero.stats.loaned': 'In prestito',
-  'pages.library.tabs.all': 'Tutti',
-  'pages.library.tabs.kb': 'KB pronte',
-  'pages.library.tabs.loaned': 'In prestito',
+  'pages.library.hero.stats.agents': 'Agenti',
+  'pages.library.hero.stats.docs': 'Documenti',
+  'pages.library.hero.stats.chats': 'Chat',
+  'pages.library.hubTabs.all': 'Tutti',
+  'pages.library.hubTabs.games': 'Giochi',
+  'pages.library.hubTabs.agents': 'Agenti',
+  'pages.library.hubTabs.kb': 'KB',
+  'pages.library.hubTabs.sessions': 'Sessioni',
+  'pages.library.hubTabs.chat': 'Chat',
   'pages.library.filters.search.placeholder': 'Cerca per titolo, editore o anno…',
   'pages.library.filters.search.ariaLabel': 'Cerca nella libreria',
+  'pages.library.filters.stato.label': 'Stato',
+  'pages.library.filters.stato.owned': 'Posseduti',
+  'pages.library.filters.stato.wishlist': 'Wishlist',
+  'pages.library.filters.stato.loaned': 'In prestito',
+  'pages.library.filters.stato.withKb': 'Con Knowledge Base',
   'pages.library.sort.label': 'Ordina',
   'pages.library.sort.ariaLabel': 'Ordina i risultati',
   'pages.library.sort.recent': 'Più recenti',
@@ -164,141 +180,152 @@ function renderWithIntl(ui: ReactElement) {
   );
 }
 
-// ─── fixture helpers ──────────────────────────────────────────────────────
+// ─── hybrid hub fixture helpers ───────────────────────────────────────────
 
-const NOW = '2026-04-30T10:00:00.000Z';
-const USER_ID = '00000000-0000-4000-8000-aaaaaaaaaaaa';
-
-function makeEntry(
-  overrides: Partial<UserLibraryEntry> &
-    Pick<UserLibraryEntry, 'id' | 'gameId' | 'gameTitle' | 'currentState'>
-): UserLibraryEntry {
+function gameItem(
+  overrides: Partial<Extract<HybridHubItem, { entity: 'game' }>> = {}
+): HybridHubItem {
   return {
-    userId: USER_ID,
-    gamePublisher: null,
-    gameYearPublished: null,
-    gameIconUrl: null,
-    gameImageUrl: null,
-    addedAt: NOW,
-    notes: null,
-    isFavorite: false,
-    stateChangedAt: null,
-    stateNotes: null,
+    id: 'g1',
+    entity: 'game',
+    title: 'Catan',
+    subtitle: 'Kosmos',
+    updatedAt: '2026-01-01T00:00:00Z',
+    href: '/library/game-1',
+    gameId: 'game-1',
+    rating: 7,
+    state: 'Owned',
+    imageUrl: 'https://example.test/catan.jpg',
     hasKb: false,
-    kbCardCount: 0,
-    kbIndexedCount: 0,
-    kbProcessingCount: 0,
-    ownershipDeclaredAt: null,
-    hasRagAccess: false,
-    agentIsOwned: false,
-    minPlayers: null,
-    maxPlayers: null,
-    playingTimeMinutes: null,
-    complexityRating: null,
-    averageRating: null,
-    privateGameId: null,
-    isPrivateGame: false,
-    canProposeToCatalog: false,
     ...overrides,
-  } as UserLibraryEntry;
+  };
 }
 
-// 6 entries: 4 Owned (2 hasKb), 1 InPrestito, 1 Wishlist
-//   → totalGames=6, kbReady=2, wishlist=1, loaned=1
-//   → tab counts: all=6, kb=2, loaned=1
-const ENTRIES_6: UserLibraryEntry[] = [
-  makeEntry({
-    id: 'entry-1',
-    gameId: 'game-1',
-    gameTitle: 'Catan',
-    gamePublisher: 'KOSMOS',
-    currentState: 'Owned' as GameStateType,
-    hasKb: true,
-    kbCardCount: 12,
-    kbIndexedCount: 12,
-    averageRating: 7.2,
-  }),
-  makeEntry({
-    id: 'entry-2',
-    gameId: 'game-2',
-    gameTitle: 'Wingspan',
-    gamePublisher: 'Stonemaier',
-    currentState: 'Owned' as GameStateType,
-    hasKb: true,
-    kbCardCount: 8,
-    kbIndexedCount: 8,
-    averageRating: 8.1,
-  }),
-  makeEntry({
-    id: 'entry-3',
-    gameId: 'game-3',
-    gameTitle: 'Terraforming Mars',
-    gamePublisher: 'FryxGames',
-    currentState: 'Owned' as GameStateType,
-    averageRating: 8.4,
-  }),
-  makeEntry({
-    id: 'entry-4',
-    gameId: 'game-4',
-    gameTitle: 'Azul',
-    gamePublisher: 'Plan B Games',
-    currentState: 'Owned' as GameStateType,
-    averageRating: 7.8,
-  }),
-  makeEntry({
-    id: 'entry-5',
-    gameId: 'game-5',
-    gameTitle: 'Carcassonne',
-    gamePublisher: 'Z-Man Games',
-    currentState: 'InPrestito' as GameStateType,
-    averageRating: 7.4,
-  }),
-  makeEntry({
-    id: 'entry-6',
-    gameId: 'game-6',
-    gameTitle: 'Pandemic Legacy',
-    gamePublisher: 'Z-Man Games',
-    currentState: 'Wishlist' as GameStateType,
-    averageRating: 8.6,
-  }),
-];
-
-function paginated(items: UserLibraryEntry[]): PaginatedLibraryResponse {
+function sessionItem(
+  overrides: Partial<Extract<HybridHubItem, { entity: 'session' }>> = {}
+): HybridHubItem {
   return {
-    items,
-    page: 1,
-    pageSize: 50,
-    totalCount: items.length,
-    totalPages: 1,
-    hasNextPage: false,
-    hasPreviousPage: false,
+    id: 's1',
+    entity: 'session',
+    title: 'Session s1',
+    subtitle: 'Alice',
+    updatedAt: '2026-02-01T00:00:00Z',
+    href: '/sessions/s1',
+    status: 'Completed',
+    playerCount: 4,
+    ...overrides,
   };
+}
+
+function chatItem(
+  overrides: Partial<Extract<HybridHubItem, { entity: 'chat' }>> = {}
+): HybridHubItem {
+  return {
+    id: 'c1',
+    entity: 'chat',
+    title: 'How to play?',
+    subtitle: 'Catan',
+    updatedAt: '2026-03-01T00:00:00Z',
+    href: '/chats/c1',
+    messageCount: 3,
+    ...overrides,
+  };
+}
+
+const emptySources: HybridHubSources = { games: [], agents: [], kb: [], sessions: [], chat: [] };
+const zeroCounts: Record<HybridHubSourceKey, number> = {
+  games: 0,
+  agents: 0,
+  kb: 0,
+  sessions: 0,
+  chat: 0,
+};
+const noErrors: Record<HybridHubSourceKey, Error | null> = {
+  games: null,
+  agents: null,
+  kb: null,
+  sessions: null,
+  chat: null,
+};
+
+/**
+ * Default hub: 2 games, 1 session, 1 chat (agents/kb empty), no errors, loaded.
+ * → totalCounts games:2 sessions:1 chat:1; FSM resolves to 'default'.
+ */
+function makeHub(overrides: Partial<UseHybridHubItemsResult> = {}): UseHybridHubItemsResult {
+  const games = [
+    gameItem(),
+    gameItem({
+      id: 'g2',
+      title: 'Wingspan',
+      href: '/library/game-2',
+      gameId: 'game-2',
+      state: 'Wishlist',
+    }),
+  ];
+  const sessions = [sessionItem()];
+  const chat = [chatItem()];
+  const sources: HybridHubSources = { games, agents: [], kb: [], sessions, chat };
+  return {
+    sources,
+    isLoading: false,
+    allFailed: false,
+    partialErrors: { ...noErrors },
+    totalCounts: {
+      games: games.length,
+      agents: 0,
+      kb: 0,
+      sessions: sessions.length,
+      chat: chat.length,
+    },
+    ...overrides,
+  };
+}
+
+function renderHub(hub: UseHybridHubItemsResult) {
+  hubMock.mockReturnValue(hub);
+  return renderWithIntl(<LibraryHub />);
 }
 
 // Import after mocks declared so module resolution sees the mocked hooks.
 import { LibraryHub } from '../LibraryHub';
 
-describe('LibraryHub (Wave B.3)', () => {
+describe('LibraryHub (Phase 2a hybrid hub)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     searchParamsState.value = '';
-    useLibraryMock.mockReturnValue({
-      data: paginated(ENTRIES_6),
-      isLoading: false,
-      isError: false,
-      error: null,
-      refetch: vi.fn(),
-    });
+    hubMock.mockReturnValue(makeHub());
     useRemoveGameFromLibraryMock.mockReturnValue({
       mutateAsync: vi.fn().mockResolvedValue(undefined),
       isPending: false,
     });
+    useLibraryActivityMock.mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+  });
+
+  // ─── 6 hub tabs ──────────────────────────────────────────────────────────
+
+  it('renders 6 hub tabs (all/games/agents/kb/sessions/chat)', () => {
+    renderHub(makeHub());
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs.map(tab => tab.getAttribute('data-tab-key'))).toEqual([
+      'all',
+      'games',
+      'agents',
+      'kb',
+      'sessions',
+      'chat',
+    ]);
   });
 
   // ─── FSM: default ──────────────────────────────────────────────────────
 
   it('renders Hero + Tabs + Toolbar + HybridGrid + ActivityRail in default state', () => {
-    const { container } = renderWithIntl(<LibraryHub />);
+    const { container } = renderHub(makeHub());
     const root = container.querySelector('[data-slot="library-hub-v2"]');
     expect(root).not.toBeNull();
     expect(root).toHaveAttribute('data-state', 'default');
@@ -310,61 +337,64 @@ describe('LibraryHub (Wave B.3)', () => {
     expect(container.querySelector('[data-slot="library-empty-state"]')).not.toBeInTheDocument();
   });
 
-  it('derives hero stats from entries via deriveHeroStats (6 totalGames, 2 kbReady, 1 wishlist, 1 loaned)', () => {
-    const { container } = renderWithIntl(<LibraryHub />);
+  it('derives hero stats from hybrid totalCounts (games/agents/docs/chats)', () => {
+    // makeHub default: games:2 agents:0 kb(docs):0 chats:1
+    const { container } = renderHub(makeHub());
     const stats = container.querySelectorAll('[data-slot="library-hero-stat-value"]');
     expect(stats).toHaveLength(4);
-    // Order = totalGames, kbReady, wishlist, loaned (per orchestrator §3.2 stat ordering)
-    expect(stats[0]).toHaveTextContent('6');
-    expect(stats[1]).toHaveTextContent('2');
-    expect(stats[2]).toHaveTextContent('1');
+    // Order = games, agents, docs, chats (plan §4c hero stat ordering)
+    expect(stats[0]).toHaveTextContent('2');
+    expect(stats[1]).toHaveTextContent('0');
+    expect(stats[2]).toHaveTextContent('0');
     expect(stats[3]).toHaveTextContent('1');
   });
 
   // ─── FSM: loading ──────────────────────────────────────────────────────
 
-  it('renders kind="loading" EmptyLibrary when useLibrary.isLoading=true', () => {
-    useLibraryMock.mockReturnValue({
-      data: undefined,
-      isLoading: true,
-      isError: false,
-      error: null,
-      refetch: vi.fn(),
-    });
-    const { container } = renderWithIntl(<LibraryHub />);
+  it('renders kind="loading" EmptyLibrary when hub.isLoading=true', () => {
+    const { container } = renderHub(
+      makeHub({ isLoading: true, sources: emptySources, totalCounts: { ...zeroCounts } })
+    );
     const empty = container.querySelector('[data-slot="library-empty-state"]');
     expect(empty).not.toBeNull();
     expect(empty).toHaveAttribute('data-kind', 'loading');
     expect(container.querySelector('[data-slot="library-hybrid-grid"]')).not.toBeInTheDocument();
   });
 
-  // ─── FSM: error ────────────────────────────────────────────────────────
+  // ─── FSM: error (all sources fail) ───────────────────────────────────────
 
-  it('renders kind="error" EmptyLibrary when useLibrary.isError=true', () => {
-    useLibraryMock.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      isError: true,
-      error: new Error('boom'),
-      refetch: vi.fn(),
-    });
-    const { container } = renderWithIntl(<LibraryHub />);
+  it('all sources fail → error surface', () => {
+    const { container } = renderHub(
+      makeHub({ allFailed: true, sources: emptySources, totalCounts: { ...zeroCounts } })
+    );
+    const root = container.querySelector('[data-slot="library-hub-v2"]');
+    expect(root).toHaveAttribute('data-state', 'error');
     const empty = container.querySelector('[data-slot="library-empty-state"]');
     expect(empty).toHaveAttribute('data-kind', 'error');
     expect(screen.getByRole('button', { name: 'Riprova' })).toBeInTheDocument();
   });
 
+  // ─── FSM: partial failure (1 source errors, others render) ───────────────
+
+  it('partial failure: a source errors but others render, no error surface', () => {
+    const { container } = renderHub(
+      makeHub({
+        partialErrors: { ...noErrors, sessions: new Error('x') },
+        allFailed: false,
+      })
+    );
+    const root = container.querySelector('[data-slot="library-hub-v2"]');
+    expect(root).toHaveAttribute('data-state', 'default');
+    expect(container.querySelector('[data-slot="library-hybrid-grid"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-slot="library-empty-state"]')).not.toBeInTheDocument();
+  });
+
   // ─── FSM: empty ────────────────────────────────────────────────────────
 
-  it('renders kind="empty" EmptyLibrary when data.items is empty array', () => {
-    useLibraryMock.mockReturnValue({
-      data: paginated([]),
-      isLoading: false,
-      isError: false,
-      error: null,
-      refetch: vi.fn(),
-    });
-    const { container } = renderWithIntl(<LibraryHub />);
+  it('renders kind="empty" EmptyLibrary when all sources are empty', () => {
+    const { container } = renderHub(
+      makeHub({ sources: emptySources, totalCounts: { ...zeroCounts } })
+    );
     const empty = container.querySelector('[data-slot="library-empty-state"]') as HTMLElement;
     expect(empty).toHaveAttribute('data-kind', 'empty');
     // Scope CTA query to empty state — Hero also renders an "Aggiungi gioco" CTA.
@@ -373,12 +403,12 @@ describe('LibraryHub (Wave B.3)', () => {
 
   // ─── FSM: filtered-empty ───────────────────────────────────────────────
 
-  it('renders kind="filtered-empty" EmptyLibrary when search query matches no entries', () => {
-    const { container } = renderWithIntl(<LibraryHub />);
+  it('renders kind="filtered-empty" EmptyLibrary when search query matches no items', () => {
+    const { container } = renderHub(makeHub());
     const search = container.querySelector(
       '[data-slot="library-search-input"]'
     ) as HTMLInputElement;
-    fireEvent.change(search, { target: { value: 'totally-nonexistent-game-title-xyz' } });
+    fireEvent.change(search, { target: { value: 'totally-nonexistent-item-title-xyz' } });
     const empty = container.querySelector('[data-slot="library-empty-state"]') as HTMLElement;
     expect(empty).toHaveAttribute('data-kind', 'filtered-empty');
     expect(within(empty).getByRole('button', { name: 'Cancella filtri' })).toBeInTheDocument();
@@ -388,7 +418,7 @@ describe('LibraryHub (Wave B.3)', () => {
 
   it('?state=loading override forces kind="loading" surface (NODE_ENV=test)', () => {
     searchParamsState.value = 'loading';
-    const { container } = renderWithIntl(<LibraryHub />);
+    const { container } = renderHub(makeHub());
     expect(container.querySelector('[data-slot="library-empty-state"]')).toHaveAttribute(
       'data-kind',
       'loading'
@@ -397,7 +427,7 @@ describe('LibraryHub (Wave B.3)', () => {
 
   it('?state=empty override forces kind="empty" surface', () => {
     searchParamsState.value = 'empty';
-    const { container } = renderWithIntl(<LibraryHub />);
+    const { container } = renderHub(makeHub());
     expect(container.querySelector('[data-slot="library-empty-state"]')).toHaveAttribute(
       'data-kind',
       'empty'
@@ -406,7 +436,7 @@ describe('LibraryHub (Wave B.3)', () => {
 
   it('?state=filtered-empty override forces kind="filtered-empty" surface', () => {
     searchParamsState.value = 'filtered-empty';
-    const { container } = renderWithIntl(<LibraryHub />);
+    const { container } = renderHub(makeHub());
     expect(container.querySelector('[data-slot="library-empty-state"]')).toHaveAttribute(
       'data-kind',
       'filtered-empty'
@@ -415,7 +445,7 @@ describe('LibraryHub (Wave B.3)', () => {
 
   it('?state=error override forces kind="error" surface', () => {
     searchParamsState.value = 'error';
-    const { container } = renderWithIntl(<LibraryHub />);
+    const { container } = renderHub(makeHub());
     expect(container.querySelector('[data-slot="library-empty-state"]')).toHaveAttribute(
       'data-kind',
       'error'
@@ -424,46 +454,43 @@ describe('LibraryHub (Wave B.3)', () => {
 
   it('ignores unknown ?state= values and falls back to real FSM', () => {
     searchParamsState.value = 'totally-bogus';
-    const { container } = renderWithIntl(<LibraryHub />);
+    const { container } = renderHub(makeHub());
     expect(container.querySelector('[data-slot="library-hybrid-grid"]')).toBeInTheDocument();
     expect(container.querySelector('[data-slot="library-empty-state"]')).not.toBeInTheDocument();
   });
 
-  // ─── Tab switch (LibraryEntityKey filtering) ───────────────────────────
+  // ─── Tab switch filters the merged grid by entity ──────────────────────
 
-  it('switching to "kb" tab filters grid to entries with hasKb=true (2 cards)', () => {
-    const { container } = renderWithIntl(<LibraryHub />);
-    const kbTab = container.querySelector('[data-tab-key="kb"]') as HTMLButtonElement;
-    expect(kbTab).not.toBeNull();
-    fireEvent.click(kbTab);
+  it('switching to "sessions" tab filters grid to session items only', () => {
+    const { container } = renderHub(makeHub());
+    const sessionsTab = container.querySelector('[data-tab-key="sessions"]') as HTMLButtonElement;
+    expect(sessionsTab).not.toBeNull();
+    fireEvent.click(sessionsTab);
     const cards = container.querySelectorAll('[data-slot="library-grid-card"]');
-    expect(cards).toHaveLength(2);
-    // Entries with hasKb=true are entry-1 (Catan) + entry-2 (Wingspan)
-    const ids = Array.from(cards).map(c => c.getAttribute('data-entry-id'));
-    expect(ids).toEqual(expect.arrayContaining(['entry-1', 'entry-2']));
+    // default hub has 1 session
+    expect(cards).toHaveLength(1);
+    expect(cards[0].getAttribute('data-entry-id')).toBe('s1');
   });
 
-  // ─── Click dispatcher: browse → router.push ────────────────────────────
+  // ─── Click dispatcher: browse → router.push(item.href) ─────────────────
 
-  it('clicking a card in browse mode navigates to /library/{gameId} via router.push', () => {
-    const { container } = renderWithIntl(<LibraryHub />);
+  it('clicking a card in browse mode navigates to item.href via router.push', () => {
+    const { container } = renderHub(makeHub());
     const firstCard = container.querySelector(
       '[data-slot="library-grid-card"]'
     ) as HTMLButtonElement;
     expect(firstCard).not.toBeNull();
-    const entryId = firstCard.getAttribute('data-entry-id');
-    // LibraryHub maps entryId → entry.gameId for navigation (#871 IA refactor).
-    // Fixture: entry-N → game-N (see ENTRIES above).
-    const gameId = entryId?.replace('entry-', 'game-');
     fireEvent.click(firstCard);
-    expect(routerPush).toHaveBeenCalledWith(`/library/${gameId}`);
+    // default sort is 'recent' (updatedAt desc) → chat c1 (2026-03) is first.
+    expect(routerPush).toHaveBeenCalledWith('/chats/c1');
   });
 
-  // ─── Click dispatcher: select → toggles Set membership ─────────────────
+  // ─── Click dispatcher: select → toggles Set membership (games tab) ─────
 
-  it('in select mode, clicking a card toggles selection (aria-pressed reflects state)', () => {
-    const { container } = renderWithIntl(<LibraryHub />);
-    // Enter select mode
+  it('in select mode (games tab), clicking a card toggles selection', () => {
+    const { container } = renderHub(makeHub());
+    // Selection is game-scoped — switch to the games tab first.
+    fireEvent.click(container.querySelector('[data-tab-key="games"]') as HTMLButtonElement);
     const enterBtn = container.querySelector(
       '[data-slot="library-enter-select-mode"]'
     ) as HTMLButtonElement;
@@ -482,20 +509,51 @@ describe('LibraryHub (Wave B.3)', () => {
     expect(firstCard).toHaveAttribute('aria-pressed', 'false');
   });
 
+  // ─── Select mode is game-scoped ──────────────────────────────────────────
+
+  it('select-mode enter button is absent outside the games tab', () => {
+    const { container } = renderHub(makeHub());
+    // default tab is 'all' → no enter-select-mode button
+    expect(container.querySelector('[data-slot="library-enter-select-mode"]')).toBeNull();
+    // switch to games → button appears
+    fireEvent.click(container.querySelector('[data-tab-key="games"]') as HTMLButtonElement);
+    expect(container.querySelector('[data-slot="library-enter-select-mode"]')).not.toBeNull();
+  });
+
+  it('select mode is forced to browse when switching away from games tab', async () => {
+    const user = userEvent.setup();
+    const { container } = renderHub(makeHub());
+    await user.click(screen.getByRole('tab', { name: /giochi/i }));
+    await user.click(
+      container.querySelector('[data-slot="library-enter-select-mode"]') as HTMLButtonElement
+    );
+    // BulkSelectionBar mounted in games select mode
+    expect(container.querySelector('[data-slot="library-bulk-selection-bar"]')).not.toBeNull();
+    // Switch to sessions tab → useEffect forces browse → bar unmounts.
+    await user.click(screen.getByRole('tab', { name: /sessioni/i }));
+    await waitFor(() => {
+      expect(
+        container.querySelector('[data-slot="library-bulk-selection-bar"]')
+      ).not.toBeInTheDocument();
+    });
+  });
+
   // ─── Bulk delete fan-out ────────────────────────────────────────────────
 
   it('bulk delete fans out N parallel removeMutation calls and exits select mode', async () => {
     const mutateAsync = vi.fn().mockResolvedValue(undefined);
     useRemoveGameFromLibraryMock.mockReturnValue({ mutateAsync, isPending: false });
 
-    const { container } = renderWithIntl(<LibraryHub />);
-    // Enter select mode
+    const { container } = renderHub(makeHub());
+    // Selection is game-scoped — switch to the games tab first.
+    fireEvent.click(container.querySelector('[data-tab-key="games"]') as HTMLButtonElement);
     fireEvent.click(
       container.querySelector('[data-slot="library-enter-select-mode"]') as HTMLButtonElement
     );
 
-    // Select 2 cards
+    // Select both game cards (default hub: g1 + g2).
     const cards = container.querySelectorAll('[data-slot="library-grid-card"]');
+    expect(cards).toHaveLength(2);
     fireEvent.click(cards[0] as HTMLButtonElement);
     fireEvent.click(cards[1] as HTMLButtonElement);
     const selectedIds = [
@@ -503,7 +561,7 @@ describe('LibraryHub (Wave B.3)', () => {
       cards[1].getAttribute('data-entry-id'),
     ];
 
-    // Open AlertDialog via Elimina trigger
+    // Open AlertDialog via Elimina trigger.
     fireEvent.click(
       container.querySelector('[data-slot="library-bulk-selection-archive"]') as HTMLButtonElement
     );
@@ -530,7 +588,7 @@ describe('LibraryHub (Wave B.3)', () => {
   // ─── Hero CTA → router.push add-game query ─────────────────────────────
 
   it('clicking hero "Aggiungi gioco" CTA navigates to /library?action=add', () => {
-    const { container } = renderWithIntl(<LibraryHub />);
+    const { container } = renderHub(makeHub());
     const hero = container.querySelector('[data-slot="library-hero-desktop"]') as HTMLElement;
     const cta = within(hero).getByRole('button', { name: 'Aggiungi gioco' });
     fireEvent.click(cta);
@@ -541,7 +599,7 @@ describe('LibraryHub (Wave B.3)', () => {
 
   it('clearFilters CTA from filtered-empty drops ?state= via router.push(pathname)', () => {
     searchParamsState.value = 'filtered-empty';
-    renderWithIntl(<LibraryHub />);
+    renderHub(makeHub());
     const cta = screen.getByRole('button', { name: 'Cancella filtri' });
     fireEvent.click(cta);
     // Orchestrator should call router.push(pathname) to drop the ?state= override.
@@ -551,7 +609,7 @@ describe('LibraryHub (Wave B.3)', () => {
   // ─── useMiniNavConfig invocation contract ──────────────────────────────
 
   it('registers mini-nav config with breadcrumb + Hub/Wishlist tabs + primaryAction', () => {
-    renderWithIntl(<LibraryHub />);
+    renderHub(makeHub());
     expect(useMiniNavConfigMock).toHaveBeenCalled();
     const lastCall = useMiniNavConfigMock.mock.calls.at(-1)?.[0] as {
       breadcrumb: string;
@@ -566,7 +624,7 @@ describe('LibraryHub (Wave B.3)', () => {
     expect(lastCall.tabs[1]).toMatchObject({
       id: 'wishlist',
       href: '/library/wishlist',
-      count: 1, // 1 Wishlist entry in fixture
+      count: 0, // Phase 2a: wishlist count not yet wired into the hybrid hub
     });
     expect(lastCall.primaryAction.label).toBe('Aggiungi gioco');
     expect(typeof lastCall.primaryAction.onClick).toBe('function');

@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -155,10 +157,15 @@ internal sealed class ListUserKbDocsQueryHandler
     }
 
     /// <summary>
-    /// Stable hashed user-id token for log redaction (avoids leaking raw Guids
-    /// into log aggregation). 8 hex chars is enough for cross-request correlation
-    /// without being reversible.
+    /// Stable SHA-256-derived token for log redaction. Mirrors the codebase
+    /// convention (<see cref="SHA256.HashData(ReadOnlySpan{byte})"/> over
+    /// <see cref="Encoding.UTF8"/> bytes — same as the auth/invitation handlers).
+    /// 8 hex chars give enough entropy for cross-request correlation without
+    /// allowing trivial reversal of the raw Guid.
     /// </summary>
-    private static string HashUserId(Guid userId) =>
-        userId.ToString("N")[..8];
+    private static string HashUserId(Guid userId)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(userId.ToString("N")));
+        return Convert.ToHexString(bytes)[..8].ToLowerInvariant();
+    }
 }

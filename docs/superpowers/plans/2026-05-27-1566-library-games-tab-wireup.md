@@ -18,6 +18,10 @@
 
 | File | Action | Responsibility |
 |---|---|---|
+| `apps/api/src/Api/BoundedContexts/UserLibrary/Application/DTOs/UserLibraryEntryDto.cs` | **Modify** | Add `TimesPlayed` (int) + `LastPlayed` (DateTime?) to the list DTO record. |
+| `apps/api/src/Api/BoundedContexts/UserLibrary/Application/Queries/GetUserLibraryQueryHandler.cs` | **Modify** | Populate the 2 new fields from `entry.Stats` in both DTO-construction branches. |
+| `apps/web/src/lib/api/schemas/library.schemas.ts` | **Modify** | Add `timesPlayed` + `lastPlayed` to `UserLibraryEntrySchema` (FE zod). |
+| `tests/Api.Tests/.../GetUserLibraryQueryHandler*Tests.cs` | **Modify/Create** | Integration test asserting the list returns `TimesPlayed`/`LastPlayed`. |
 | `apps/web/src/lib/library/games-tab-filters.ts` | **Create** | Pure filter/sort/search functions over `UserLibraryEntry[]` for the games tab. No React, no IO — unit-testable in isolation. |
 | `apps/web/src/lib/library/__tests__/games-tab-filters.test.ts` | **Create** | Unit tests for the pure functions above. |
 | `apps/web/src/locales/it.json` | **Modify** | Add `pages.library.gamesTab.*` keys (Italian). |
@@ -30,11 +34,64 @@
 
 ---
 
-## Task 1: Pure filter/sort/search logic
+## Task 1A: Backend — enrich UserLibraryEntryDto with TimesPlayed/LastPlayed
+
+**Decided 2026-05-27 (user):** real data, not proxies. Cheap because `entry.Stats.TimesPlayed`/`LastPlayed` are already materialized in the list handler (columns on `UserLibraryEntryEntity`, read by `MapToDomain` at `UserLibraryRepository.cs:397-403`; the paginated query uses `MapToDomain` at `:127`). No EF query change, no migration.
 
 **Files:**
-- Create: `apps/web/src/lib/library/games-tab-filters.ts`
-- Test: `apps/web/src/lib/library/__tests__/games-tab-filters.test.ts`
+- Modify: `apps/api/src/Api/BoundedContexts/UserLibrary/Application/DTOs/UserLibraryEntryDto.cs`
+- Modify: `apps/api/src/Api/BoundedContexts/UserLibrary/Application/Queries/GetUserLibraryQueryHandler.cs`
+- Modify: `apps/web/src/lib/api/schemas/library.schemas.ts`
+- Test: existing `GetUserLibraryQueryHandler` test class under `tests/Api.Tests/` (find with `grep -rl "GetUserLibraryQueryHandler" tests/`)
+
+- [ ] **Step 1: Add fields to the DTO record.** In `UserLibraryEntryDto.cs`, add two optional params at the end of the record (after `HasRagAccess`):
+
+```csharp
+    DateTime? OwnershipDeclaredAt = null, // (existing)
+    bool HasRagAccess = false,            // (existing — add trailing comma)
+    int TimesPlayed = 0,                  // #1566: gameplay count for games-tab 'played' filter
+    DateTime? LastPlayed = null           // #1566: last play timestamp for games-tab 'last-played' sort
+```
+
+- [ ] **Step 2: Write a failing integration test.** Find the handler's test class (`grep -rl "GetUserLibraryQueryHandler" tests/`). Add a test that seeds a library entry with a recorded session (TimesPlayed > 0, LastPlayed set) and asserts the returned `UserLibraryEntryDto.TimesPlayed`/`.LastPlayed` match. Run it; expect FAIL (fields not populated / default 0/null). Use the existing seeding helpers in that test class — match their fixture pattern.
+
+- [ ] **Step 3: Populate in the handler.** In `GetUserLibraryQueryHandler.cs`, add to BOTH `new UserLibraryEntryDto(...)` constructions (shared-game branch ~line 155, private-game branch ~line 194):
+
+```csharp
+                    HasRagAccess: /* existing expression */,
+                    TimesPlayed: entry.Stats.TimesPlayed,
+                    LastPlayed: entry.Stats.LastPlayed
+```
+
+- [ ] **Step 4: Run the integration test → PASS.** Run the specific test (the project uses xUnit + Testcontainers; run via `dotnet test --filter "FullyQualifiedName~GetUserLibraryQueryHandler"` from `apps/api/src/Api` or the test project dir). Expected: PASS.
+
+- [ ] **Step 5: Add the fields to the FE zod schema.** In `apps/web/src/lib/api/schemas/library.schemas.ts`, inside `UserLibraryEntrySchema` (after `averageRating`), add:
+
+```typescript
+  timesPlayed: z.number().int().nonnegative().default(0),
+  lastPlayed: z.string().datetime({ offset: true }).nullable().optional(),
+```
+
+- [ ] **Step 6: Verify FE typecheck + backend build.** Run: `cd apps/web && pnpm typecheck` (expect clean) and `cd apps/api/src/Api && dotnet build` (expect success).
+
+- [ ] **Step 7: Commit.**
+
+```bash
+git add "apps/api/src/Api/BoundedContexts/UserLibrary/Application/DTOs/UserLibraryEntryDto.cs" "apps/api/src/Api/BoundedContexts/UserLibrary/Application/Queries/GetUserLibraryQueryHandler.cs" apps/web/src/lib/api/schemas/library.schemas.ts tests/
+git commit -m "feat(library): #1566 expose TimesPlayed/LastPlayed on library list DTO
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
+```
+
+---
+
+## Task 1B: Pure filter/sort/search logic
+
+> **Correction note:** A first pass of this task was committed (`e49185670`) using `GameDetailDto` because `UserLibraryEntry` lacked `timesPlayed`/`lastPlayed`. After Task 1A those fields exist on `UserLibraryEntry`. This task **rewrites `games-tab-filters.ts` to use `UserLibraryEntry`** (the type `useLibrary()` returns and `GamesResultsGrid` consumes), replacing the `GameDetailDto` import. Update the test factory cast to `UserLibraryEntry` and add the new fields.
+
+**Files:**
+- Modify (rewrite type): `apps/web/src/lib/library/games-tab-filters.ts`
+- Modify: `apps/web/src/lib/library/__tests__/games-tab-filters.test.ts`
 
 - [ ] **Step 1: Verify the GamesStatusKey / GamesSortKey source**
 

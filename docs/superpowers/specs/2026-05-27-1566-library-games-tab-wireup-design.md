@@ -79,6 +79,17 @@ const entries: readonly UserLibraryEntry[] = libraryQuery.data?.items ?? [];
 
 **Why a second `useLibrary` call is safe**: `useHybridHubItems` already calls `useLibrary` with the identical key (verified at `apps/web/src/hooks/queries/useHybridHubItems.ts:41-46`). TanStack Query dedups requests with matching keys → one real HTTP fetch, two reference points. Pattern is explicit and self-documenting; the alternative (an inverse `GameHubItem → UserLibraryEntry`-like mapper) would be lossy and add maintenance burden.
 
+#### 3.3.1 Backend prerequisite (decided 2026-05-27) — Task 1A
+
+The list DTO `UserLibraryEntryDto` (`apps/api/src/Api/BoundedContexts/UserLibrary/Application/DTOs/UserLibraryEntryDto.cs`) does **not** currently expose `TimesPlayed`/`LastPlayed` — only the *detail* DTO `GameDetailDto` does. The mockup's `played` filter and `last-played` sort need those fields on every list row.
+
+**Decision (user, 2026-05-27): enrich the list DTO with real data** rather than use proxies. This is cheap because the data is already loaded:
+
+- `UserLibraryEntryEntity` persists `TimesPlayed` + `LastPlayed` as **direct columns** (confirmed: `UserLibraryRepository.cs:608-611` writes them; `:397-403` reads them in `MapToDomain`).
+- `GetUserLibraryPaginatedAsync` builds entries via `MapToDomain` (`UserLibraryRepository.cs:127`), so `entry.Stats.TimesPlayed` / `entry.Stats.LastPlayed` are **already materialized** on each domain entry in the list handler — no `Include(Sessions)`, no N+1, no migration.
+
+Task 1A therefore: (a) add `TimesPlayed` (int) + `LastPlayed` (DateTime?) to the `UserLibraryEntryDto` record, (b) populate both from `entry.Stats` in **both** branches of `GetUserLibraryQueryHandler` (shared-game ~line 155, private-game ~line 194), (c) add `timesPlayed: z.number()` + `lastPlayed: z.string().datetime().nullable()` to `UserLibraryEntrySchema` (FE zod), (d) integration test asserting the list endpoint returns the fields.
+
 ### 3.4 Filter logic (games tab)
 
 Mockup `STATUS_OPTS = ['all', 'owned', 'wishlist', 'played']` maps to `UserLibraryEntry.currentState` (enum `'Nuovo' | 'InPrestito' | 'Wishlist' | 'Owned'`) and `timesPlayed`:
@@ -182,6 +193,7 @@ The existing hub-level `effectiveKind` (from #1618) keeps driving the non-games 
 
 ## 5. Acceptance criteria
 
+- [ ] **(Task 1A — backend)** `UserLibraryEntryDto` exposes `TimesPlayed` (int) + `LastPlayed` (DateTime?), populated from `entry.Stats` in both branches of `GetUserLibraryQueryHandler`. FE `UserLibraryEntrySchema` mirrors the two fields. Integration test asserts the `GET /api/v1/library` list returns them. No EF query change (columns already materialized via `MapToDomain`).
 - [ ] When `tab === 'games'`, `LibraryHub` renders `GamesFiltersInline` + `GamesResultsGrid` (or `GamesEmptyState`) in place of `CrossEntityFilters` + inline toolbar + `LibraryHybridGrid` + `EmptyLibrary`.
 - [ ] When `tab !== 'games'`, `LibraryHub` renders unchanged from #1618 (hybrid hub branch).
 - [ ] `useLibrary({page:1, pageSize:50, sortBy:'addedAt', sortDescending:true})` feeds `UserLibraryEntry[]` directly to `GamesResultsGrid`; no `HybridHubItem → UserLibraryEntry` adapter.

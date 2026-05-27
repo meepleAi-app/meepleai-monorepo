@@ -54,6 +54,10 @@ export function TwoFactorWizardBody({ setupData, onEnabled, resetKey }: Props): 
         setStep('codes');
         void queryClient.invalidateQueries({ queryKey: ['2fa-status'] });
       } else {
+        // Surfaces the BE error text verbatim (incl. a "locked_out" message when the TOTP
+        // attempt limit is hit). A live mm:ss countdown banner (plan G2) is deferred:
+        // Enable2FAResult has no `retryAfterSeconds` field — only the step-up endpoint exposes
+        // it. Revisit here if the enable endpoint starts returning the retry window.
         setOtpError(result.errorMessage ?? 'Invalid code. Try again.');
       }
     },

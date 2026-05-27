@@ -24,6 +24,106 @@
 
 ---
 
+## Plan revision (3-agent review fixes — apply DURING execution)
+
+These fixes correct issues raised by the post-write review. Each task below applies them inline; this section is the canonical errata to consult.
+
+**[I1 — B5 import order]** `SecuritySection` in B5 must NOT import `TwoFactorBottomSheet`. B5 renders only `TwoFactorSetupModal` (desktop wizard works on every viewport). D1 introduces both the bottom-sheet file AND the breakpoint switch in `SecuritySection` atomically. This avoids the compile-break between B5 and D1.
+
+**[I2 — `SettingsRow` aria-current]** Before A2 Step 3, add a micro-step that extends `apps/web/src/components/ui/settings-row/settings-row.tsx`: (a) `SettingsRowProps` accepts `aria-current?: 'true'|'false'|'page'|'step'|'location'|'date'|'time'`, (b) forward it on the inner element. Run `pnpm typecheck` immediately. Commit with the SubNav.
+
+**[I3 — E1 e2e scope]** E1 Step 2 must enumerate which test cases (a) get rewritten for the new URL/DOM (tab labels Overview/Achievements/Activity/Settings + section sidebar items via `data-testid`), (b) get **explicitly deleted with rationale** (e.g. change-password / delete-account tests have no corresponding UI in this design — they belong in a separate feature and were never spec'd here; document the deletion + open an issue if the underlying flow still exists in the codebase), (c) get deferred. Do not silently delete coverage.
+
+**[I4 — B4 success:false test]** Add a third test to `TwoFactorSetupModal.test.tsx`:
+```tsx
+it('shows OTP error when enable2FA returns success: false', async () => {
+  vi.mocked(api.auth.enable2FA).mockResolvedValueOnce({ success: false, errorMessage: 'Invalid code', backupCodes: null });
+  // render at step 2, submit a 6-digit code, assert error banner + animate-shake on OTPInput6Slot
+});
+```
+
+**[I5 — A3 stub files]** A3 Step 4 must explicitly create ALL FIVE stub files before `SettingsTab.tsx` imports them. Each stub:
+```tsx
+// sections/<SectionName>.tsx (PHASE-A STUB — replaced in B5/C1-C4)
+import { SectionPlaceholder } from './SectionPlaceholder';
+import { SETTINGS_SECTIONS } from '../settings-sections';
+export function <SectionName>() {
+  const def = SETTINGS_SECTIONS.find(s => s.id === '<section-id>')!;
+  return <SectionPlaceholder section={def} />;
+}
+```
+Files to create: `SecuritySection.tsx`, `ProfileSection.tsx`, `PreferencesSection.tsx`, `ApiKeysSection.tsx`, `AiConsentSection.tsx` (each with the corresponding `id`).
+
+**[I6 — A4 typecheck gate]** Add a typecheck step between A4 Step 4 (server-component conversion) and A4 Step 5 (final tests): `cd apps/web && pnpm typecheck`. Catches client-only hooks leaking into the new server component.
+
+**[I7 — E3 TOTP minting]** Before E3 Step 1, add **Step 0**: investigate `apps/web/e2e/` for an existing TOTP mint helper (`grep -rn "OTPAuth\|otpauth\|speakeasy\|totp" apps/web/e2e`). If absent, create `apps/web/e2e/fixtures/totp.ts` using the `otpauth` library (already a transitive dep via Next/Node; verify with `pnpm list otpauth`). The helper signature: `mintTotp(secret: string): string`. E3's enrollment test imports this. If neither helper nor a stable e2e test-account with 2FA pre-seeded exists, document the test as `.skip` with the rationale; do NOT let it become a trivially-passing stub.
+
+**[I8 — commit hygiene]** Throughout the plan, every commit step uses **explicit `git add <paths>`** before `git commit -m "..."` (never `commit -am` for tasks that create new files). Override the `-am` invocations in B2 Step 5, B3 Step 5, B5 Step 6, C1 Step 5, C2 Step 5, C3 Step 5 to:
+```bash
+git add apps/web/src/components/features/settings/<area>/ apps/web/src/components/features/settings/__tests__/<test>
+git commit -m "<msg>"
+```
+
+**[I9 — orphan settings/* pages]** Add new task **C5** before Phase D: delete the remaining standalone pages under `apps/web/src/app/(authenticated)/settings/` (`notifications/page.tsx`, `preferences/page.tsx`, `api-keys/page.tsx`, `services/page.tsx`, `profile/page.tsx`, plus client siblings like `notifications/client.tsx`). Before each `git rm`, verify no `<Link href="/settings/<name>">` consumer remains (`grep -rn`); update any to query-param URL. The catch-all redirect in `next.config.js` keeps the routes externally valid. Run `pnpm typecheck` after.
+
+**[G1 — BackupCodesView copy/download test]** Add two test cases to B2 Step 1:
+```tsx
+it('copies all codes to clipboard on "Copy all"', async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  Object.assign(navigator, { clipboard: { writeText } });
+  render(<BackupCodesView codes={CODES} acked={false} onAck={()=>{}} />);
+  fireEvent.click(screen.getByRole('button', { name: /copy all/i }));
+  expect(writeText).toHaveBeenCalledWith(CODES.join('\n'));
+});
+it('triggers download on "Download .txt"', () => {
+  const createObjectURL = vi.fn(() => 'blob:x');
+  Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() });
+  render(<BackupCodesView codes={CODES} acked={false} onAck={()=>{}} />);
+  fireEvent.click(screen.getByRole('button', { name: /download/i }));
+  expect(createObjectURL).toHaveBeenCalled();
+});
+```
+
+**[G2 — Lockout countdown banner]** B4 Step 3 (TwoFactorStatusCard) and B4 Step 4 (TwoFactorSetupModal): when `enable2FA` returns `success: false` AND `errorMessage` includes `locked_out` (or BE adds `retryAfterSeconds` to the result — check the actual shape via `apps/web/src/lib/api/schemas/auth.schemas.ts` `Enable2FAResult` first; if `retryAfterSeconds` is absent the FE can only display the message text without a live countdown), render an inline banner with the parsed countdown (`fmtMmSs(seconds)`, `setInterval` decrementing in `useEffect`). Add test in `TwoFactorSetupModal.test.tsx`:
+```tsx
+it('renders lockout countdown when BE returns locked_out', async () => {
+  vi.mocked(api.auth.enable2FA).mockResolvedValueOnce({ success: false, errorMessage: 'locked_out: 900', backupCodes: null });
+  // assert banner visible with "15:00" or similar
+});
+```
+If the wire format doesn't include the seconds, render only the static message — do NOT fake a countdown.
+
+**[G3 — Per-section error card]** Update `SettingsTab.tsx` in A3 Step 4: wrap each real-section render in a per-section error boundary. Use a lightweight `<SectionErrorCard>` component (new file `sections/SectionErrorCard.tsx`) rendered when the section's primary `useQuery` reports `isError`. Pattern: each real section exposes `isError` state from its top-level `useQuery` and renders `<SectionErrorCard>` instead of its normal content. Add unit test in `SettingsTab.test.tsx`:
+```tsx
+it('renders SectionErrorCard when a section reports isError', () => {
+  // mock SecuritySection to throw or surface isError prop; render SettingsTab with activeSection='security'
+  // assert error card UI with retry button
+});
+```
+The error card has a "Retry" button calling `queryClient.invalidateQueries({queryKey: [<section-key>]})`.
+
+**[G4 — OTPInput6Slot disabled test]** Add to B1 Step 1:
+```tsx
+it('disables all inputs when disabled prop is set', () => {
+  render(<OTPInput6Slot onComplete={()=>{}} disabled />);
+  screen.getAllByRole('textbox').forEach(i => expect(i).toBeDisabled());
+});
+```
+
+**[G5 — Invalid-section fallback unit test]** Add to A4 Step 1:
+```tsx
+it('replaces the URL when section param is invalid', () => {
+  const replace = vi.fn();
+  vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams('tab=settings&section=BOGUS'));
+  vi.mocked(useRouter).mockReturnValue({ replace, push: vi.fn() } as any);
+  render(<ProfilePageContent />);
+  expect(replace).toHaveBeenCalledWith('/profile?tab=settings&section=profile', { scroll: false });
+});
+```
+The `ProfilePageContent` implements this via a `useEffect` that detects the invalid section and calls `setQuery({ section: DEFAULT_SECTION })`.
+
+---
+
 ## File Structure
 
 **Create:**
@@ -33,6 +133,8 @@
 - `apps/web/src/components/features/settings/settings-sections.ts` — SECTION config (id, label, entity, icon)
 - `apps/web/src/components/features/settings/sections/{Security,Profile,Preferences,ApiKeys,AiConsent}Section.tsx`
 - `apps/web/src/components/features/settings/sections/SectionPlaceholder.tsx`
+- `apps/web/src/components/features/settings/sections/SectionErrorCard.tsx` (per-section error boundary, see G3)
+- `apps/web/e2e/fixtures/totp.ts` (TOTP mint helper if absent, see I7)
 - `apps/web/src/components/features/settings/two-factor/{TwoFactorStatusCard,TwoFactorSetupModal,TwoFactorBottomSheet,TwoFactorDisableDialog,OTPInput6Slot,BackupCodesView,ActiveSessionsCard}.tsx`
 - `apps/web/src/components/features/settings/__tests__/*.test.tsx`
 - `apps/web/e2e/settings/settings-tab-2fa.spec.ts`

@@ -61,7 +61,8 @@ internal class CreateSessionCommandHandler : ICommandHandler<CreateSessionComman
             ipAddress: command.IpAddress,
             userAgent: command.UserAgent,
             impersonatedByUserId: command.ImpersonatedByUserId,
-            impersonatedUntil: command.ImpersonatedUntil
+            impersonatedUntil: command.ImpersonatedUntil,
+            lastTotpVerifiedAt: command.LastTotpVerifiedAt    // SP5 S3: pre-seed for impersonate inheritance
         );
 
         await _sessionRepository.AddAsync(session, cancellationToken).ConfigureAwait(false);

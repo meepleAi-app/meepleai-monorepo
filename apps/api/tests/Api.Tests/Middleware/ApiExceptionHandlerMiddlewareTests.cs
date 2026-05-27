@@ -616,6 +616,117 @@ public class ApiExceptionHandlerMiddlewareTests
         _httpContext.Response.StatusCode.Should().Be(expectedStatusCode);
     }
 
+    [Fact]
+    public async Task InvokeAsync_TwoFactorRequiredException_StepUp_Returns401WithSubcodeAndChallenge()
+    {
+        // SP5 S3 — D-S3-2: strict TwoFactorEnforcementBehavior throws when TOTP recency is
+        // missing/stale. The middleware maps to 401 + structured body + WWW-Authenticate header.
+        var exception = new TwoFactorRequiredException(
+            TwoFactorRequiredSubcode.StepUpRequired,
+            "TOTP verification required for this command.");
+        var middleware = new ApiExceptionHandlerMiddleware(
+            next: (context) => throw exception,
+            _loggerMock.Object,
+            _environmentMock.Object);
+
+        _httpContext.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(_httpContext);
+
+        _httpContext.Response.StatusCode.Should().Be(401);
+        _httpContext.Response.Headers["WWW-Authenticate"].ToString()
+            .Should().Be("TOTP-StepUp realm=\"meepleai-admin\"",
+                "RFC 7235 challenge header lets non-browser clients distinguish from session-invalid 401");
+
+        _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
+        using var reader = new StreamReader(_httpContext.Response.Body);
+        var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
+        using var errorResponse = ParseErrorResponse(responseBody);
+
+        errorResponse.RootElement.GetProperty("error").GetString().Should().Be("two_factor_required");
+        errorResponse.RootElement.GetProperty("subcode").GetString().Should().Be("step_up_required",
+            "FE routes on subcode: step_up_required opens the TOTP modal");
+        errorResponse.RootElement.GetProperty("message").GetString().Should().Contain("TOTP");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_TwoFactorRequiredException_EnrollRequired_Returns401WithEnrollSubcode()
+    {
+        var exception = new TwoFactorRequiredException(
+            TwoFactorRequiredSubcode.EnrollRequired,
+            "Two-factor authentication must be enabled for this action.");
+        var middleware = new ApiExceptionHandlerMiddleware(
+            next: (context) => throw exception,
+            _loggerMock.Object,
+            _environmentMock.Object);
+
+        _httpContext.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(_httpContext);
+
+        _httpContext.Response.StatusCode.Should().Be(401);
+        _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
+        using var reader = new StreamReader(_httpContext.Response.Body);
+        var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
+        using var errorResponse = ParseErrorResponse(responseBody);
+
+        errorResponse.RootElement.GetProperty("subcode").GetString().Should().Be("enroll_required",
+            "FE routes on subcode: enroll_required redirects to /settings/2fa/enroll");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_TwoFactorRequiredException_LockedOut_Returns401WithRetryAfter()
+    {
+        var exception = new TwoFactorRequiredException(
+            TwoFactorRequiredSubcode.LockedOut,
+            "Account locked due to excessive failed step-up attempts.",
+            retryAfterSeconds: 900);
+        var middleware = new ApiExceptionHandlerMiddleware(
+            next: (context) => throw exception,
+            _loggerMock.Object,
+            _environmentMock.Object);
+
+        _httpContext.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(_httpContext);
+
+        _httpContext.Response.StatusCode.Should().Be(401);
+        _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
+        using var reader = new StreamReader(_httpContext.Response.Body);
+        var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
+        using var errorResponse = ParseErrorResponse(responseBody);
+
+        errorResponse.RootElement.GetProperty("subcode").GetString().Should().Be("locked_out");
+        errorResponse.RootElement.GetProperty("retryAfterSeconds").GetInt32().Should().Be(900,
+            "the FE shows a retry-after toast with the wait duration");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_TwoFactorUnavailableException_Returns503()
+    {
+        // SP5 S3 — D-S3-4 (Option B): when the TOTP store / rate-limit backend is unreachable, the
+        // step-up cannot complete; the middleware maps it to 503 (transient) rather than a generic
+        // 500, so the FE shows a retryable error toast instead of a failed-code / step-up signal.
+        var exception = new TwoFactorUnavailableException("Two-factor service is temporarily unavailable.");
+        var middleware = new ApiExceptionHandlerMiddleware(
+            next: (context) => throw exception,
+            _loggerMock.Object,
+            _environmentMock.Object);
+
+        _httpContext.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(_httpContext);
+
+        _httpContext.Response.StatusCode.Should().Be(503);
+
+        _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
+        using var reader = new StreamReader(_httpContext.Response.Body);
+        var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
+        using var errorResponse = ParseErrorResponse(responseBody);
+
+        errorResponse.RootElement.GetProperty("error").GetString().Should().Be("two_factor_unavailable");
+    }
+
     private static JsonDocument ParseErrorResponse(string responseBody)
     {
         return JsonDocument.Parse(responseBody);

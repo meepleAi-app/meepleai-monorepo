@@ -1,6 +1,8 @@
 using System.Security.Claims;
+using Api.Extensions;
 using Api.Helpers;
 using Api.Middleware;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.Services;
 using MediatR;
@@ -10,6 +12,8 @@ using GenerateTotpSetupCommand = Api.BoundedContexts.Authentication.Application.
 using Verify2FACommand = Api.BoundedContexts.Authentication.Application.Commands.TwoFactor.Verify2FACommand;
 using AdminDisable2FACommand = Api.BoundedContexts.Authentication.Application.Commands.TwoFactor.AdminDisable2FACommand;
 using DddCreateSessionCommand = Api.BoundedContexts.Authentication.Application.Commands.CreateSessionCommand;
+using StepUpTwoFactorCommand = Api.BoundedContexts.Authentication.Application.Commands.TwoFactor.StepUpTwoFactorCommand;
+using StepUpOutcome = Api.BoundedContexts.Authentication.Application.Commands.TwoFactor.StepUpOutcome;
 
 namespace Api.Routing;
 
@@ -155,6 +159,64 @@ internal static class TwoFactorEndpoints
         .RequireRateLimiting("AuthVerify2FA") // C6: IP-based throttle on top of per-session-token limit
         .WithName("Verify2FA")
         .WithTags("Authentication");
+
+        // SP5 Admin Security S3 — T5 + Option B: step-up re-verification on the CURRENT session.
+        // Clears a step_up_required block from TwoFactorEnforcementBehavior by refreshing
+        // LastTotpVerifiedAt. Does NOT create a new session. The acting admin (EffectiveActor) is
+        // verified — during an impersonation that is the admin, not the target. All error mapping
+        // delegates to ApiExceptionHandlerMiddleware via TwoFactorRequiredException /
+        // TwoFactorUnavailableException for one shared error vocabulary with the enforcement filter.
+        // Wire contract: docs/api/2fa-step-up-protocol.md.
+        group.MapPost("/auth/2fa/step-up", async (
+            TwoFactorStepUpRequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
+
+            // EffectiveActor: the impersonating admin during an impersonation, else the user.
+            var actorId = session.Principal!.EffectiveActor.Id;
+            var sessionId = session.SessionId ?? Guid.Empty;
+            if (sessionId == Guid.Empty)
+            {
+                // A valid session without a SessionId should not happen post-S2; fail closed.
+                return Results.Unauthorized();
+            }
+
+            var result = await mediator.Send(
+                new StepUpTwoFactorCommand(sessionId, actorId, request.Code), ct).ConfigureAwait(false);
+
+            return result.Outcome switch
+            {
+                StepUpOutcome.Success => Results.Ok(new
+                {
+                    success = true,
+                    lastTotpVerifiedAt = result.LastTotpVerifiedAt
+                }),
+                // The three non-success outcomes are mapped by the middleware to the shared 2FA
+                // error vocabulary (401 two_factor_required + subcode for InvalidCode/LockedOut;
+                // 503 two_factor_unavailable for store-down) so a client speaks the SAME wire format
+                // here as it does for an enforcement-blocked command.
+                StepUpOutcome.LockedOut => throw new TwoFactorRequiredException(
+                    TwoFactorRequiredSubcode.LockedOut,
+                    "Too many failed step-up attempts. Try again later.",
+                    retryAfterSeconds: result.RetryAfterSeconds ?? 900),
+                StepUpOutcome.Unavailable => throw new TwoFactorUnavailableException(
+                    "Two-factor service is temporarily unavailable. Please try again."),
+                StepUpOutcome.InvalidCode => throw new TwoFactorRequiredException(
+                    TwoFactorRequiredSubcode.InvalidCode,
+                    "Invalid or expired verification code."),
+                _ => throw new TwoFactorRequiredException(
+                    TwoFactorRequiredSubcode.InvalidCode,
+                    "Invalid or expired verification code.")
+            };
+        })
+        .RequireAuthorization()
+        .WithName("StepUp2FA")
+        .WithTags("Authentication")
+        .WithSummary("Step-up 2FA verification on the current session (SP5 S3)")
+        .Produces(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status503ServiceUnavailable);
     }
 
     private static void MapTwoFactorManagementEndpoints(RouteGroupBuilder group)

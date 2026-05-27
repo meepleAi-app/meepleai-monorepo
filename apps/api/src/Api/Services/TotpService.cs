@@ -320,6 +320,17 @@ internal class TotpService : ITotpService
         };
     }
 
+    /// <summary>
+    /// SP5 S3 — D-S3-4b: read-only lockout check (does not consume the rate-limit bucket).
+    /// Delegates to the same <see cref="IsAccountLockedOutAsync"/> used internally by
+    /// <see cref="VerifyCodeAsync"/>, so the step-up endpoint and the verify flow share one
+    /// source of truth for the lockout state.
+    /// </summary>
+    public virtual async Task<bool> IsLockedOutAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await IsAccountLockedOutAsync(userId, "totp").ConfigureAwait(false);
+    }
+
     // ==================== PRIVATE HELPER METHODS ====================
 
     private async Task<bool> ValidateTotpRateLimitAndLockoutAsync(Guid userId, CancellationToken cancellationToken)

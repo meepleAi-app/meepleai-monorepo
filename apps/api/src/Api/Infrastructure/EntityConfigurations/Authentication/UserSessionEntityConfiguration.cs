@@ -28,6 +28,10 @@ internal class UserSessionEntityConfiguration : IEntityTypeConfiguration<UserSes
         builder.Property(e => e.ImpersonatedByUserId).HasColumnName("impersonated_by_user_id");
         builder.Property(e => e.ImpersonatedUntil).HasColumnName("impersonated_until");
 
+        // SP5 Admin Security S3 — D-S3-3: TOTP recency for the strict TwoFactorEnforcementBehavior.
+        // Nullable timestamptz; read-by-PK on session validation hot path, no index needed.
+        builder.Property(e => e.LastTotpVerifiedAt).HasColumnName("last_totp_verified_at");
+
         // Partial index supports GetActiveImpersonationsQuery (T6) without scanning the whole
         // sessions table. PostgreSQL filtered index applies WHERE clause at write time so the
         // index only contains the (typically small) set of active impersonations.

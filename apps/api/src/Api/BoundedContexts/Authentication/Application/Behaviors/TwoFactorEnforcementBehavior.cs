@@ -1,8 +1,12 @@
 using System.Reflection;
 using Api.BoundedContexts.Authentication.Application.Attributes;
+using Api.BoundedContexts.Authentication.Application.Configuration;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Infrastructure.Security;
+using Api.Middleware.Exceptions;
+using Api.Services;
 using MediatR;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Api.BoundedContexts.Authentication.Application.Behaviors;
 
@@ -23,21 +27,38 @@ namespace Api.BoundedContexts.Authentication.Application.Behaviors;
 ///   (or domain-specific TwoFactorRequiredException).
 /// - Add session schema field LastTotpVerifiedAt to track recency precisely.
 ///
-/// Note: this behavior is intentionally permissive while we collect telemetry.
-/// Do NOT replicate the resilience pattern from AuditLoggingBehavior: failures
-/// here ARE the desired outcome (visibility); we only log + proceed.
+/// SP5 Admin Security S3 (strict cutover):
+/// - Gated by the <c>TwoFactor:StrictMode</c> dynamic flag (default false). When false, the
+///   shadow behavior above is preserved (log + proceed). When true, a missing 2FA enrollment or
+///   stale TOTP recency throws <see cref="TwoFactorRequiredException"/> (mapped to 401 + subcode).
+/// - 2FA enforcement is an AUTHORIZATION check, so it reads <c>Principal.EffectiveActor</c> (the
+///   real acting admin during impersonation), NOT <c>Subject</c>. The session's
+///   <c>LastTotpVerifiedAt</c> is the actor's recency (inherited at impersonation start — S3 T1).
+/// - On a strict block, a forensic <c>TwoFactorRequired</c> audit is emitted from a FRESH DI scope
+///   so it commits independently of the command's (possibly <c>[AtomicAudit]</c>) transaction,
+///   which rolls back when this behavior throws. Consistent with the existing 2FA audit family
+///   (<c>TotpService</c> uses <c>AuditService.LogAsync</c> direct-write).
 /// </summary>
 internal sealed class TwoFactorEnforcementBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TRequest : IRequest<TResponse>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ITwoFactorEnforcementConfiguration _twoFactorConfig;
+    private readonly TimeProvider _timeProvider;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<TwoFactorEnforcementBehavior<TRequest, TResponse>> _logger;
 
     public TwoFactorEnforcementBehavior(
         IHttpContextAccessor httpContextAccessor,
+        ITwoFactorEnforcementConfiguration twoFactorConfig,
+        TimeProvider timeProvider,
+        IServiceScopeFactory scopeFactory,
         ILogger<TwoFactorEnforcementBehavior<TRequest, TResponse>> logger)
     {
         _httpContextAccessor = httpContextAccessor;
+        _twoFactorConfig = twoFactorConfig;
+        _timeProvider = timeProvider;
+        _scopeFactory = scopeFactory;
         _logger = logger;
     }
 
@@ -48,7 +69,7 @@ internal sealed class TwoFactorEnforcementBehavior<TRequest, TResponse> : IPipel
     {
         var attr = typeof(TRequest).GetCustomAttribute<RequireTwoFactorAttribute>();
 
-        // Skip if command is not decorated with [RequireTwoFactor]
+        // S3-7 regression guard: commands NOT decorated with [RequireTwoFactor] are never gated.
         if (attr is null)
         {
             return await next().ConfigureAwait(false);
@@ -64,8 +85,11 @@ internal sealed class TwoFactorEnforcementBehavior<TRequest, TResponse> : IPipel
             return await next().ConfigureAwait(false);
         }
 
-        var user = session.Principal?.Subject;
-        if (user is null)
+        // 2FA enforcement is an AUTHORIZATION check → read EffectiveActor (the acting admin during
+        // an impersonation), NOT Subject. During impersonate, Subject is the target user (who may
+        // have no 2FA at all); the security gate applies to the real actor.
+        var actor = session.Principal?.EffectiveActor;
+        if (actor is null)
         {
             // Anonymous request hit a 2FA-required command — outer authorization layer
             // should have stopped this. Log defensively and proceed.
@@ -75,26 +99,97 @@ internal sealed class TwoFactorEnforcementBehavior<TRequest, TResponse> : IPipel
             return await next().ConfigureAwait(false);
         }
 
-        // Shadow-mode check: log if user lacks 2FA enrollment for a sensitive command.
-        // Strict mode will reject; for now we only emit telemetry.
-        if (!user.IsTwoFactorEnabled)
+        var strictMode = await _twoFactorConfig.GetStrictModeAsync(cancellationToken).ConfigureAwait(false);
+        if (!strictMode)
+        {
+            LogShadow(actor, attr);
+            return await next().ConfigureAwait(false);
+        }
+
+        // ── STRICT MODE (D-S3-1) ──────────────────────────────────────────────────────────────
+        // D-S3-5: hard block when the actor has no 2FA enrolled at all.
+        if (!actor.IsTwoFactorEnabled)
         {
             _logger.LogWarning(
-                "TwoFactorEnforcementBehavior[shadow]: user {UserId} ({Email}) invoked 2FA-required command "
-                + "{CommandType} WITHOUT 2FA enabled. Reason: {Reason}. MaxAge: {MaxAgeMinutes}min",
-                user.Id, DataMasking.MaskEmail(user.Email), typeof(TRequest).Name, attr.Reason ?? "(unspecified)", attr.MaxAgeMinutes);
+                "TwoFactorEnforcementBehavior[strict]: actor {UserId} ({Email}) BLOCKED on {CommandType} — 2FA not enrolled.",
+                actor.Id, DataMasking.MaskEmail(actor.Email), typeof(TRequest).Name);
+            await EmitTwoFactorRequiredAuditAsync(actor, attr, "enroll_required", cancellationToken).ConfigureAwait(false);
+            throw new TwoFactorRequiredException(
+                TwoFactorRequiredSubcode.EnrollRequired,
+                $"Two-factor authentication must be enabled to perform this action. {attr.Reason}".Trim());
         }
-        else
+
+        // D-S3-1/D-S3-7: block when the TOTP recency exceeds the per-command MaxAgeMinutes.
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var lastVerified = session.LastTotpVerifiedAt;
+        var isRecent = lastVerified is not null
+            && (now - lastVerified.Value) <= TimeSpan.FromMinutes(attr.MaxAgeMinutes);
+        if (!isRecent)
         {
-            // User has 2FA enabled. In strict mode we'd verify session.LastTotpVerifiedAt
-            // is within attr.MaxAgeMinutes. For shadow mode we just record participation.
-            _logger.LogInformation(
-                "TwoFactorEnforcementBehavior[shadow]: user {UserId} invoked 2FA-required command "
-                + "{CommandType} with 2FA enabled. (Strict-mode recency check pending session schema update.)",
-                user.Id, typeof(TRequest).Name);
+            _logger.LogWarning(
+                "TwoFactorEnforcementBehavior[strict]: actor {UserId} BLOCKED on {CommandType} — TOTP stale "
+                + "(lastVerified={LastVerified}, maxAge={MaxAgeMinutes}min). Step-up required.",
+                actor.Id, typeof(TRequest).Name, lastVerified, attr.MaxAgeMinutes);
+            await EmitTwoFactorRequiredAuditAsync(actor, attr, "step_up_required", cancellationToken).ConfigureAwait(false);
+            throw new TwoFactorRequiredException(
+                TwoFactorRequiredSubcode.StepUpRequired,
+                $"Recent two-factor verification is required for this action. {attr.Reason}".Trim());
         }
 
         return await next().ConfigureAwait(false);
+    }
+
+    private void LogShadow(UserDto actor, RequireTwoFactorAttribute attr)
+    {
+        if (!actor.IsTwoFactorEnabled)
+        {
+            _logger.LogWarning(
+                "TwoFactorEnforcementBehavior[shadow]: actor {UserId} ({Email}) invoked 2FA-required command "
+                + "{CommandType} WITHOUT 2FA enabled. Reason: {Reason}. MaxAge: {MaxAgeMinutes}min",
+                actor.Id, DataMasking.MaskEmail(actor.Email), typeof(TRequest).Name, attr.Reason ?? "(unspecified)", attr.MaxAgeMinutes);
+        }
+        else
+        {
+            _logger.LogInformation(
+                "TwoFactorEnforcementBehavior[shadow]: actor {UserId} invoked 2FA-required command "
+                + "{CommandType} with 2FA enabled. (Strict mode OFF — not enforcing recency.)",
+                actor.Id, typeof(TRequest).Name);
+        }
+    }
+
+    /// <summary>
+    /// Emits the forensic <c>TwoFactorRequired</c> audit from a FRESH DI scope so it commits
+    /// independently of the command's (possibly <c>[AtomicAudit]</c>) transaction — which rolls
+    /// back when this behavior throws. Best-effort: <c>AuditService.LogAsync</c> swallows its own
+    /// failures, and this wrapper additionally guards against scope/resolution errors so the
+    /// security gate (the throw) is never suppressed by an audit-side problem. D-S3-6.
+    /// </summary>
+    private async Task EmitTwoFactorRequiredAuditAsync(
+        UserDto actor, RequireTwoFactorAttribute attr, string subcode, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var scope = _scopeFactory.CreateAsyncScope();
+            await using (scope.ConfigureAwait(false))
+            {
+                var auditService = scope.ServiceProvider.GetRequiredService<AuditService>();
+                await auditService.LogAsync(
+                    userId: actor.Id.ToString(),
+                    action: "TwoFactorRequired",
+                    resource: typeof(TRequest).Name,
+                    resourceId: null,
+                    result: "Blocked",
+                    details: $"subcode={subcode}; maxAgeMinutes={attr.MaxAgeMinutes}",
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
+        }
+#pragma warning disable CA1031 // forensic audit must never suppress the security gate (the throw)
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _logger.LogError(ex,
+                "Failed to emit TwoFactorRequired forensic audit for {CommandType}", typeof(TRequest).Name);
+        }
     }
 
     private SessionStatusDto? ExtractSession()

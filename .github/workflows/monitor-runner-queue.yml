@@ -57,10 +57,13 @@ permissions:
   # here causes the workflow parser to fail with HTTP 422 (see hotfix that
   # reverted the attempt). The runtime gracefully degrades via the fail-safe
   # block in the step below: on HTTP 403, DRY_RUN is forced true so detection
-  # still runs for visibility but no cancellations occur. To get full cancel
-  # capability, configure a repository secret WATCHDOG_RUNNERS_PAT with a
-  # fine-grained PAT scoped `Administration: Read` on this repo, then plumb
-  # it into GH_TOKEN below (out of scope for this initial watchdog).
+  # still runs for visibility but no cancellations occur.
+  #
+  # FULL CANCEL CAPABILITY: configure the repository secret WATCHDOG_RUNNERS_PAT
+  # (a fine-grained PAT scoped to THIS repo with `Administration: Read` +
+  # `Actions: Read and write`). The GH_TOKEN env below falls back to it when
+  # present. When absent, the workflow keeps running in fail-safe (DRY_RUN).
+  # See docs/for-developers/operations/watchdog-runners-pat-setup.md.
 
 concurrency:
   # Only one watchdog at a time. cancel-in-progress: true so a manual
@@ -77,7 +80,11 @@ jobs:
     steps:
       - name: Identify and cancel stuck jobs
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Prefer the fine-grained PAT (Administration:Read + Actions:RW) so
+          # the runners endpoint returns 200 and cancellations are authorized.
+          # Falls back to GITHUB_TOKEN when the secret is absent → the step's
+          # fail-safe forces DRY_RUN on the resulting 403. See header note.
+          GH_TOKEN: ${{ secrets.WATCHDOG_RUNNERS_PAT || secrets.GITHUB_TOKEN }}
           THRESHOLD: ${{ inputs.threshold_minutes || '10' }}
           # Explicit boolean coercion to string: avoids accidental shell
           # comparison against a non-string truthy value from the boolean input.
@@ -118,6 +125,10 @@ jobs:
           # The previous version conflated (b) and (c), with `|| true` swallowing
           # the 403 error and then the `[ -z "$ONLINE_RUNNERS" ]` check failing
           # because the variable contained the JSON error body, not empty.
+          # Primary guard: gh CLI exits non-zero on any HTTP 4xx/5xx (incl. the
+          # 403 from a missing administration scope). The grep is intentionally
+          # belt-and-suspenders for a hypothetical future CLI that exits 0 with
+          # an error body — RUNNERS_RC is the authoritative check.
           RUNNERS_RAW=$(gh api "repos/${REPO}/actions/runners" 2>&1) && RUNNERS_RC=0 || RUNNERS_RC=$?
           if [ "$RUNNERS_RC" -ne 0 ] || echo "$RUNNERS_RAW" | grep -q '"status": *"403"\|Resource not accessible'; then
             echo "⚠️ Cannot list runners (HTTP error or permission denied):"
@@ -125,10 +136,12 @@ jobs:
             echo ""
             echo "🛡️ FAIL-SAFE: forcing DRY_RUN=true. Stuck-job detection still runs"
             echo "   for visibility, but no actual cancellations will occur."
-            echo "   To enable cancellations, ensure the workflow has"
-            echo "   permissions.administration: read and the org allows it."
+            echo "   To enable cancellations, configure the WATCHDOG_RUNNERS_PAT secret"
+            echo "   (fine-grained PAT: Administration:Read + Actions:Read/write)."
+            echo "   See docs/for-developers/operations/watchdog-runners-pat-setup.md"
             DRY_RUN=true
-            ONLINE_RUNNERS="(unknown — runners API unreachable, fail-safe engaged)"
+            ONLINE_RUNNERS=""
+            RUNNERS_ONLINE_COUNT="unknown (fail-safe)"
           else
             ONLINE_RUNNERS=$(echo "$RUNNERS_RAW" | jq -r '.runners[] | select(.status == "online") | select(.labels | any(.name == "self-hosted")) | .name' || true)
             if [ -z "$ONLINE_RUNNERS" ]; then
@@ -136,6 +149,8 @@ jobs:
               echo "   (A queued job in this state is waiting legitimately; cancelling would not help.)"
               exit 0
             fi
+            # grep -c . counts non-empty lines (one runner name per line)
+            RUNNERS_ONLINE_COUNT=$(echo "$ONLINE_RUNNERS" | grep -c .)
             echo "✅ Self-hosted runners online:"
             echo "$ONLINE_RUNNERS" | sed 's/^/   - /'
           fi
@@ -189,23 +204,27 @@ jobs:
                   STUCK_COUNT=$((STUCK_COUNT + 1))
 
                   if [ "$DRY_RUN" = "true" ]; then
-                    echo "   🧪 DRY_RUN: would cancel job ${JOB_ID} (fall back to run ${RUN_ID})"
+                    echo "   🧪 DRY_RUN: would cancel run ${RUN_ID} (stuck job ${JOB_ID})"
                   else
-                    # Prefer job-level cancel to minimize blast radius on
-                    # multi-job runs (e.g. a run with one healthy ubuntu-latest
-                    # job + one stuck self-hosted job). Fall back to run-level
-                    # cancel if the job endpoint fails, then force-cancel.
-                    if gh api -X POST "repos/${REPO}/actions/jobs/${JOB_ID}/cancel" >/dev/null 2>&1; then
-                      echo "   ✅ Cancelled job ${JOB_ID} (run ${RUN_ID})"
-                      CANCELLED_REFS="${CANCELLED_REFS} job:${JOB_ID}"
-                    elif gh api -X POST "repos/${REPO}/actions/runs/${RUN_ID}/cancel" >/dev/null 2>&1; then
-                      echo "   ✅ Cancelled run ${RUN_ID} (job-level cancel unavailable; whole run cancelled)"
+                    # GitHub's REST API has NO job-level cancel endpoint
+                    # (POST /actions/jobs/{id}/cancel returns 404 — verified).
+                    # The unit of cancellation is the RUN. For deploy-staging
+                    # this is fine: it's a single linear job chain, so there's
+                    # no healthy parallel job to preserve. Cancel the run, then
+                    # force-cancel as fallback for terminal-but-stuck states.
+                    # Capture stderr so a cancel failure (e.g. PAT missing
+                    # Actions:write, or token expired) surfaces the HTTP error
+                    # instead of a generic "already terminal?" guess. The
+                    # runners-endpoint fail-safe does NOT cover the cancel
+                    # endpoint, so this diagnostic is the only signal here.
+                    if gh api -X POST "repos/${REPO}/actions/runs/${RUN_ID}/cancel" >/dev/null 2>/tmp/cancel_err; then
+                      echo "   ✅ Cancelled run ${RUN_ID}"
                       CANCELLED_REFS="${CANCELLED_REFS} run:${RUN_ID}"
-                    elif gh api -X POST "repos/${REPO}/actions/runs/${RUN_ID}/force-cancel" >/dev/null 2>&1; then
+                    elif gh api -X POST "repos/${REPO}/actions/runs/${RUN_ID}/force-cancel" >/dev/null 2>/tmp/cancel_err; then
                       echo "   ✅ Force-cancelled run ${RUN_ID}"
                       CANCELLED_REFS="${CANCELLED_REFS} run:${RUN_ID}(force)"
                     else
-                      echo "   ⚠️ Neither job nor run cancellation succeeded (already terminal?)"
+                      echo "   ⚠️ Run cancellation did not succeed: $(head -2 /tmp/cancel_err 2>/dev/null | tr '\n' ' ')"
                     fi
                   fi
                 else
@@ -228,7 +247,7 @@ jobs:
             echo ""
             echo "- Threshold: ${THRESHOLD} min"
             echo "- Per page: ${PER_PAGE}"
-            echo "- Self-hosted runners online: $(echo "$ONLINE_RUNNERS" | wc -l)"
+            echo "- Self-hosted runners online: ${RUNNERS_ONLINE_COUNT}"
             echo "- Stuck jobs detected: ${STUCK_COUNT}"
             if [ -n "$CANCELLED_REFS" ]; then
               echo "- Cancelled:${CANCELLED_REFS}"

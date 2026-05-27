@@ -1,6 +1,6 @@
 /**
- * AI Consent Settings Page (Issue #5512 — GDPR compliance)
- * Manages user consent for AI data processing and external provider usage
+ * AiConsentSection — GDPR AI data consent settings (Issue #1608)
+ * Migrated from apps/web/src/app/(authenticated)/settings/ai-consent/page.tsx
  */
 
 'use client';
@@ -25,7 +25,7 @@ interface AiConsentState {
   consentVersion: string;
 }
 
-export default function AiConsentPage() {
+export function AiConsentSection(): React.JSX.Element {
   const [consent, setConsent] = useState<AiConsentState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -105,35 +105,28 @@ export default function AiConsentPage() {
 
   if (isLoading) {
     return (
-      <div className="container max-w-3xl mx-auto py-8">
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   if (!consent) {
     return (
-      <div className="container max-w-3xl mx-auto py-8">
-        <p className="text-center text-muted-foreground">Failed to load AI consent preferences</p>
-      </div>
+      <p className="text-center text-muted-foreground">Failed to load AI consent preferences</p>
     );
   }
 
   return (
-    <div className="container max-w-3xl mx-auto py-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">AI & Privacy</h1>
-          <p className="text-muted-foreground">
-            Control how your data is used for AI-powered features
-          </p>
-        </div>
+    <div className="space-y-6">
+      {/* Section header row */}
+      <div className="flex items-center justify-between">
+        <h3 className="font-quicksand font-bold text-foreground">AI &amp; data consent</h3>
         <Button
           onClick={handleSave}
           disabled={isSaving || !hasChanges}
           data-testid="save-ai-consent"
+          size="sm"
         >
           {isSaving ? (
             <>
@@ -149,15 +142,13 @@ export default function AiConsentPage() {
         </Button>
       </div>
 
-      {/* GDPR Info Banner */}
-      <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-6">
+      {/* GDPR Info Banner — blue → chat semantic tokens */}
+      <div className="bg-chat/10 border border-chat/30 rounded-xl p-4">
         <div className="flex items-start gap-3">
-          <ShieldCheck className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+          <ShieldCheck className="h-5 w-5 text-chat mt-0.5 shrink-0" />
           <div>
-            <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-              Your privacy matters
-            </p>
-            <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+            <p className="text-sm font-medium text-foreground">Your privacy matters</p>
+            <p className="text-sm text-muted-foreground mt-1">
               Under GDPR, you have the right to control how your data is processed. You can change
               these settings at any time. Disabling AI features will switch to traditional
               search-only mode.
@@ -167,10 +158,11 @@ export default function AiConsentPage() {
       </div>
 
       {/* AI Processing Consent */}
-      <div className="mb-6">
+      <div>
         <div className="flex items-start gap-4 mb-3">
-          <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/20">
-            <Brain className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+          {/* purple → entity-player semantic token */}
+          <div className="p-2 rounded-lg bg-entity-player/10">
+            <Brain className="h-6 w-6 text-entity-player" />
           </div>
           <div className="flex-1">
             <h2 className="text-xl font-bold mb-1">AI-Powered Features</h2>
@@ -200,10 +192,11 @@ export default function AiConsentPage() {
       </div>
 
       {/* External Provider Consent */}
-      <div className="mb-6">
+      <div>
         <div className="flex items-start gap-4 mb-3">
-          <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/20">
-            <Globe className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+          {/* amber → warning semantic token */}
+          <div className="p-2 rounded-lg bg-warning/10">
+            <Globe className="h-6 w-6 text-warning" />
           </div>
           <div className="flex-1">
             <h2 className="text-xl font-bold mb-1">External AI Providers</h2>

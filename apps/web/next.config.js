@@ -235,6 +235,31 @@ const nextConfig = {
         destination: '/profile?tab=settings&section=security',
         permanent: true,
       },
+      {
+        source: '/settings/ai-consent',
+        destination: '/profile?tab=settings&section=ai-consent',
+        permanent: true,
+      },
+      {
+        source: '/settings/profile',
+        destination: '/profile?tab=settings&section=profile',
+        permanent: true,
+      },
+      {
+        source: '/settings/preferences',
+        destination: '/profile?tab=settings&section=preferences',
+        permanent: true,
+      },
+      {
+        source: '/settings/api-keys',
+        destination: '/profile?tab=settings&section=api-keys',
+        permanent: true,
+      },
+      {
+        source: '/settings/services',
+        destination: '/profile?tab=settings&section=services',
+        permanent: true,
+      },
       { source: '/settings', destination: '/profile?tab=settings', permanent: true },
       {
         source: '/profile/achievements',

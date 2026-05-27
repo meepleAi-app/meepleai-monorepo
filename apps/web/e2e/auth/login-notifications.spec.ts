@@ -114,7 +114,7 @@ async function setupLoginNotificationsMocks(
   }
 
   // Mock auth
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -131,7 +131,7 @@ async function setupLoginNotificationsMocks(
   });
 
   // Mock login notifications endpoint
-  await page.route(`${API_BASE}/api/v1/users/me/login-notifications`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/users/me/login-notifications`, async route => {
     const method = route.request().method();
 
     if (method === 'GET') {
@@ -140,13 +140,13 @@ async function setupLoginNotificationsMocks(
         contentType: 'application/json',
         body: JSON.stringify({
           notifications: mockNotifications,
-          unreadCount: mockNotifications.filter((n) => !n.acknowledged).length,
+          unreadCount: mockNotifications.filter(n => !n.acknowledged).length,
         }),
       });
     } else if (method === 'POST') {
       // Acknowledge notification
       const body = await route.request().postDataJSON();
-      const notification = mockNotifications.find((n) => n.id === body?.notificationId);
+      const notification = mockNotifications.find(n => n.id === body?.notificationId);
       if (notification) {
         notification.acknowledged = true;
       }
@@ -161,7 +161,7 @@ async function setupLoginNotificationsMocks(
   });
 
   // Mock notification settings endpoint
-  await page.route(`${API_BASE}/api/v1/users/me/notification-settings`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/users/me/notification-settings`, async route => {
     const method = route.request().method();
 
     if (method === 'GET') {
@@ -187,7 +187,7 @@ async function setupLoginNotificationsMocks(
   });
 
   // Mock common endpoints
-  await page.route(`${API_BASE}/api/v1/games**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/games**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -203,6 +203,7 @@ test.describe('AUTH-11: Login Notifications', () => {
     test('should show notification for new device login', async ({ page }) => {
       await setupLoginNotificationsMocks(page, { hasNewDeviceLogin: true });
 
+      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 
@@ -217,6 +218,7 @@ test.describe('AUTH-11: Login Notifications', () => {
     test('should display device details in notification', async ({ page }) => {
       await setupLoginNotificationsMocks(page, { hasNewDeviceLogin: true });
 
+      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 
@@ -227,6 +229,7 @@ test.describe('AUTH-11: Login Notifications', () => {
     test('should allow acknowledging new device notification', async ({ page }) => {
       await setupLoginNotificationsMocks(page, { hasNewDeviceLogin: true });
 
+      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 
@@ -245,6 +248,7 @@ test.describe('AUTH-11: Login Notifications', () => {
     test('should show warning for suspicious location login', async ({ page }) => {
       await setupLoginNotificationsMocks(page, { hasSuspiciousLogin: true });
 
+      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 
@@ -259,6 +263,7 @@ test.describe('AUTH-11: Login Notifications', () => {
     test('should show location details for suspicious login', async ({ page }) => {
       await setupLoginNotificationsMocks(page, { hasSuspiciousLogin: true });
 
+      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 
@@ -269,6 +274,7 @@ test.describe('AUTH-11: Login Notifications', () => {
     test('should offer security actions for suspicious login', async ({ page }) => {
       await setupLoginNotificationsMocks(page, { hasSuspiciousLogin: true });
 
+      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 

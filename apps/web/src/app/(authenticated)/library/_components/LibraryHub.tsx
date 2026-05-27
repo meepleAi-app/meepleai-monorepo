@@ -19,6 +19,18 @@ import { useCallback, useEffect, useMemo, useState, type ReactElement } from 're
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import {
+  GamesEmptyState,
+  GamesFiltersInline,
+  GamesResultsGrid,
+  type GamesEmptyKind,
+  type GamesEmptyStateLabels,
+  type GamesFiltersInlineLabels,
+  type GamesResultsView,
+  type GamesSortKey,
+  type GamesStatusKey,
+  type GamesViewKey,
+} from '@/components/features/games';
+import {
   BulkSelectionBar,
   CrossEntityFilters,
   EmptyLibrary,
@@ -37,18 +49,6 @@ import {
   type LibraryTabConfig,
   type LibraryViewMode,
 } from '@/components/features/library';
-import {
-  GamesEmptyState,
-  GamesFiltersInline,
-  GamesResultsGrid,
-  type GamesEmptyKind,
-  type GamesEmptyStateLabels,
-  type GamesFiltersInlineLabels,
-  type GamesResultsView,
-  type GamesSortKey,
-  type GamesStatusKey,
-  type GamesViewKey,
-} from '@/components/features/games';
 import { useHybridHubItems } from '@/hooks/queries/useHybridHubItems';
 import {
   useLibrary,
@@ -57,17 +57,17 @@ import {
 } from '@/hooks/queries/useLibrary';
 import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
 import { useTranslation } from '@/hooks/useTranslation';
+import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
+import { deriveGamesTabEntries } from '@/lib/library/games-tab-filters';
 import {
   deriveHybridItems,
   type HybridHubSources,
   type HybridHubTab,
 } from '@/lib/library/hybrid-hub.derive';
 import type { HybridHubItem } from '@/lib/library/hybrid-hub.types';
-import { deriveGamesTabEntries } from '@/lib/library/games-tab-filters';
 import type { LibrarySortKey } from '@/lib/library/library-filters';
 import { useLibraryView } from '@/lib/library/use-library-view';
 import { IS_VISUAL_TEST_BUILD } from '@/lib/library/visual-test-fixture';
-import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 
 // ─── State override hatch (dev / visual-test only) ─────────────────────────
 

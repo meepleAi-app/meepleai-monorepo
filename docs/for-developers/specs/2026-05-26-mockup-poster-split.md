@@ -3,7 +3,7 @@
 > **Date**: 2026-05-26
 > **Status**: Approved (user confirmed Q1+Q2+Q6 — 2026-05-26)
 > **Owner**: Frontend / Design Handoff
-> **Related**: [admin-mockups/README.md](../../../admin-mockups/README.md), [MOCKUPS_INDEX.md](../../../admin-mockups/MOCKUPS_INDEX.md), [scripts/mockup_demo/](../../../admin-mockups/scripts/mockup_demo/)
+> **Related**: [admin-mockups/README.md](../../../admin-mockups/README.md), [MOCKUPS_INDEX.md](../../../admin-mockups/MOCKUPS_INDEX.md), `admin-mockups/scripts/mockup_demo/` (to be created by this PR)
 > **Discussion record**: spec-panel review (Wiegers / Adzic / Fowler / Hohpe / Crispin) — see § Appendix
 
 ## TL;DR

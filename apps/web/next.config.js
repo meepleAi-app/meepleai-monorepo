@@ -604,6 +604,12 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https:",
               "font-src 'self' data:",
+              // PWA manifest declared in app/layout.tsx (rel="manifest" -> /manifest.json).
+              // Explicit manifest-src avoids falling back to default-src and reduces console
+              // noise when an upstream gateway (e.g. Cloudflare Access) intercepts the static
+              // /manifest.json request and serves a cross-origin login page. Root cause of the
+              // gateway-intercept must be fixed via infra (allowlist /manifest.json + /sw.js).
+              "manifest-src 'self'",
               `connect-src 'self' ${apiBaseUrl}`,
               "frame-ancestors 'none'",
               "base-uri 'self'",

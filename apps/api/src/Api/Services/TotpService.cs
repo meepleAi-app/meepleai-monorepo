@@ -81,9 +81,17 @@ internal class TotpService : ITotpService
         // Generate backup codes
         var backupCodes = GenerateBackupCodes();
 
-        // Store encrypted secret (not enabled yet - requires verification)
+        // Store encrypted secret (not enabled yet - requires verification).
+        // BUG-FIX (#1608 dogfood): the DbContext default is NoTracking (PERF-06 in
+        // InfrastructureServiceExtensions.cs), so FindAsync above returns a DETACHED entity
+        // whose property mutations are invisible to the change tracker. Without an explicit
+        // Update(), SaveChangesAsync is a silent no-op — the secret never reaches the DB and
+        // the subsequent enable2FA call sees TotpSecretEncrypted=NULL ("No secret configured").
+        // Integration tests (Api.Tests) didn't catch this because the test fixture re-registers
+        // the DbContext without NoTracking, leaving TrackAll as the default.
         user.TotpSecretEncrypted = encryptedSecret;
         user.IsTwoFactorEnabled = false; // Not enabled until verified
+        _dbContext.Users.Update(user);
         await _dbContext.SaveChangesAsync().ConfigureAwait(false);
 
         // Delete existing backup codes if re-enrolling
@@ -155,9 +163,11 @@ internal class TotpService : ITotpService
             return false;
         }
 
-        // Enable 2FA
+        // Enable 2FA. See BUG-FIX comment in GenerateSetupAsync — Update() is required because
+        // the DbContext default is NoTracking (PERF-06).
         user.IsTwoFactorEnabled = true;
         user.TwoFactorEnabledAt = _timeProvider.GetUtcNow().UtcDateTime;
+        _dbContext.Users.Update(user);
         await _dbContext.SaveChangesAsync().ConfigureAwait(false);
 
         await _auditService.LogAsync(userId.ToString(), "TwoFactorEnable", "TwoFactor", userId.ToString(), "Success",
@@ -276,10 +286,14 @@ internal class TotpService : ITotpService
             throw new UnauthorizedAccessException("Invalid verification code");
         }
 
-        // Disable 2FA and clear all data
+        // Disable 2FA and clear all data. See BUG-FIX comment in GenerateSetupAsync — Update()
+        // is required because the DbContext default is NoTracking (PERF-06). UserBackupCodes
+        // changes via Add/RemoveRange are tracked automatically (they touch the change-tracker
+        // through the DbSet API), so only the user mutation needs the explicit Update().
         user.IsTwoFactorEnabled = false;
         user.TotpSecretEncrypted = null;
         user.TwoFactorEnabledAt = null;
+        _dbContext.Users.Update(user);
 
         // Delete all backup codes (used and unused)
         var allBackupCodes = await _dbContext.UserBackupCodes

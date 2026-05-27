@@ -56,6 +56,9 @@ export const UserLibraryEntrySchema = z.object({
   playingTimeMinutes: z.number().int().nullable().optional(),
   complexityRating: z.number().nullable().optional(),
   averageRating: z.number().nullable().optional(),
+  // Issue #1566: gameplay stats for games-tab 'played' filter and 'last-played' sort
+  timesPlayed: z.number().int().nonnegative().default(0),
+  lastPlayed: z.string().datetime({ offset: true }).nullable().optional(),
   // Issue #3663: Private game distinction fields
   privateGameId: z.string().uuid().nullable().optional(), // non-null when entry is a private/custom game
   isPrivateGame: z.boolean().default(false), // computed flag from backend

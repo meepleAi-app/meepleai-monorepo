@@ -217,6 +217,7 @@ test.describe('Gap Analysis: Critical Features', () => {
    */
   test.describe('Two-Factor Authentication', () => {
     test('2FA - Complete setup wizard flow', async ({ page }) => {
+      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
       await page.goto('/settings/security');
 
       // Verify 2FA status (disabled)
@@ -253,6 +254,7 @@ test.describe('Gap Analysis: Critical Features', () => {
 
     test('2FA - Disable 2FA with password confirmation', async ({ page }) => {
       // TODO: Setup 2FA first
+      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
       await page.goto('/settings/security');
 
       const disableButton = page.locator('[data-testid="disable-2fa"]');

@@ -33,23 +33,28 @@ import type { LibraryEntityKey } from '@/lib/library/library-filters';
 
 export type { LibraryEntityKey };
 
-export interface LibraryTabConfig {
-  readonly key: LibraryEntityKey;
+export interface LibraryTabConfig<K extends string = LibraryEntityKey> {
+  readonly key: K;
   readonly label: string;
   readonly count: number;
 }
 
-export interface LibraryTabsProps {
-  readonly tabs: ReadonlyArray<LibraryTabConfig>;
-  readonly active: LibraryEntityKey;
-  readonly onChange: (next: LibraryEntityKey) => void;
+export interface LibraryTabsProps<K extends string = LibraryEntityKey> {
+  readonly tabs: ReadonlyArray<LibraryTabConfig<K>>;
+  readonly active: K;
+  readonly onChange: (next: K) => void;
   readonly className?: string;
 }
 
-export function LibraryTabs({ tabs, active, onChange, className }: LibraryTabsProps): ReactElement {
-  const orderedKeys = useMemo<readonly LibraryEntityKey[]>(() => tabs.map(t => t.key), [tabs]);
+export function LibraryTabs<K extends string = LibraryEntityKey>({
+  tabs,
+  active,
+  onChange,
+  className,
+}: LibraryTabsProps<K>): ReactElement {
+  const orderedKeys = useMemo<readonly K[]>(() => tabs.map(t => t.key), [tabs]);
 
-  const { tabRefs, handleKeyDown } = useTablistKeyboardNav<LibraryEntityKey>({
+  const { tabRefs, handleKeyDown } = useTablistKeyboardNav<K>({
     orderedKeys,
     onChange,
   });

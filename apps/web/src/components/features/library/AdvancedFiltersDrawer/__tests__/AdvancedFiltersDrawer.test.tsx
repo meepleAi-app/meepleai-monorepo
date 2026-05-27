@@ -18,6 +18,7 @@ import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { axe } from 'jest-axe';
 import { IntlProvider } from 'react-intl';
 
 import { AdvancedFiltersDrawer } from '../AdvancedFiltersDrawer';
@@ -478,5 +479,43 @@ describe('AdvancedFiltersDrawer — Apply / Clear callbacks', () => {
       </IntlProvider>
     );
     expect(screen.getByRole('checkbox', { name: /wishlist/i })).toBeChecked();
+  });
+});
+
+describe('AdvancedFiltersDrawer — a11y', () => {
+  beforeEach(() => {
+    installMatchMedia(true);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('renders no axe violations for game scope when open', async () => {
+    const { container } = renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        entityScope="game"
+        activeFilters={{ scope: 'game' }}
+        onApply={noop}
+        onClear={noop}
+      />
+    );
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('renders no axe violations for kb scope when open', async () => {
+    const { container } = renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        entityScope="kb"
+        activeFilters={{ scope: 'kb' }}
+        onApply={noop}
+        onClear={noop}
+      />
+    );
+    expect(await axe(container)).toHaveNoViolations();
   });
 });

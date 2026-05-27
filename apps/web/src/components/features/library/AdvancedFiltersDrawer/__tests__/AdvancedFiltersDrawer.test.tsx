@@ -28,12 +28,19 @@ const messages: Record<string, string> = {
   'pages.library.filters.title': 'Più filtri',
   'pages.library.filters.description': "Filtra la libreria per dimensioni specifiche dell'entità.",
   'common.cancel': 'Annulla',
-  // section labels
+  // section labels (game scope)
   'pages.library.filters.section.state': 'Stato',
   'pages.library.filters.section.withKb': 'Solo con Knowledge Base',
   'pages.library.filters.section.rating': 'Rating minimo',
   'pages.library.filters.section.players': 'Numero di giocatori',
   'pages.library.filters.section.year': 'Anno di pubblicazione',
+  // section labels (agent scope)
+  'pages.library.filters.section.agentType': 'Tipo di agente',
+  'pages.library.filters.section.activeOnly': 'Solo attivi',
+  // section labels (session scope)
+  'pages.library.filters.section.sessionStatus': 'Stato sessione',
+  'pages.library.filters.section.sessionType': 'Tipo sessione',
+  'pages.library.filters.section.playerCount': 'Giocatori (min)',
   // checkbox option labels
   'pages.library.filters.state.owned': 'Posseduto',
   'pages.library.filters.state.wishlist': 'Wishlist',
@@ -224,5 +231,99 @@ describe('AdvancedFiltersDrawer — game scope rendering', () => {
     expect(slider).toHaveAttribute('aria-valuenow', '7');
     expect(slider).toHaveAttribute('aria-valuemin', '0');
     expect(slider).toHaveAttribute('aria-valuemax', '10');
+  });
+});
+
+describe('AdvancedFiltersDrawer — agent scope rendering', () => {
+  beforeEach(() => {
+    installMatchMedia(true);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('renders 2 sections for agent scope (types, activeOnly)', () => {
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        entityScope="agent"
+        activeFilters={{ scope: 'agent' }}
+        onApply={noop}
+        onClear={noop}
+      />
+    );
+    const slots = screen.getAllByTestId(/^advanced-filters-section-/);
+    expect(slots).toHaveLength(2);
+    expect(slots.map(el => el.getAttribute('data-slot'))).toEqual([
+      'advanced-filters-section-types',
+      'advanced-filters-section-activeOnly',
+    ]);
+  });
+
+  it('agent.activeOnly toggle reflects activeFilters and updates draft on click', async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        entityScope="agent"
+        activeFilters={{ scope: 'agent', activeOnly: false }}
+        onApply={noop}
+        onClear={noop}
+      />
+    );
+    const toggle = screen.getByRole('switch', { name: /solo attivi/i });
+    expect(toggle).toHaveAttribute('aria-checked', 'false');
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-checked', 'true');
+  });
+});
+
+describe('AdvancedFiltersDrawer — session scope rendering', () => {
+  beforeEach(() => {
+    installMatchMedia(true);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('renders 3 sections for session scope (statuses, sessionTypes, playerCount)', () => {
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        entityScope="session"
+        activeFilters={{ scope: 'session' }}
+        onApply={noop}
+        onClear={noop}
+      />
+    );
+    const slots = screen.getAllByTestId(/^advanced-filters-section-/);
+    expect(slots).toHaveLength(3);
+    expect(slots.map(el => el.getAttribute('data-slot'))).toEqual([
+      'advanced-filters-section-statuses',
+      'advanced-filters-section-sessionTypes',
+      'advanced-filters-section-playerCount',
+    ]);
+  });
+
+  it('session.playerCount slider has min=1 max=12 and reflects activeFilters.playerCountMin', () => {
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        entityScope="session"
+        activeFilters={{ scope: 'session', playerCountMin: 4 }}
+        onApply={noop}
+        onClear={noop}
+      />
+    );
+    const slider = screen.getByRole('slider', { name: /giocatori/i });
+    expect(slider).toHaveAttribute('aria-valuemin', '1');
+    expect(slider).toHaveAttribute('aria-valuemax', '12');
+    expect(slider).toHaveAttribute('aria-valuenow', '4');
   });
 });

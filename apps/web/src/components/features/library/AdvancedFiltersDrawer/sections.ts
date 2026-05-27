@@ -63,6 +63,9 @@ const KB_STATE_OPTIONS: ReadonlyArray<CheckboxOption> = [
   { value: 'Failed', i18nKey: 'pages.library.filters.kbState.failed' },
 ];
 
+// Evaluated once at module load. Acceptable for a publication-year filter range:
+// the upper bound only goes stale across a year boundary within a long-running
+// process, which has negligible impact on a board-game year selector.
 const CURRENT_YEAR = new Date().getFullYear();
 
 export function getSectionsForScope(scope: HybridHubEntity): ReadonlyArray<SectionConfig> {

@@ -57,6 +57,9 @@ export function AdvancedFiltersDrawer({
   };
 
   const handleClear = () => {
+    // All filter fields are optional; an object carrying only the `scope`
+    // discriminant is a valid member of every LibraryFilters variant, so the
+    // cast is safe (it just selects the variant by the runtime scope value).
     const empty = { scope: entityScope } as LibraryFilters;
     setDraft(empty);
     onClear();

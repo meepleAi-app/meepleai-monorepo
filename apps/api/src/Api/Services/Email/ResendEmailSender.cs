@@ -1,4 +1,5 @@
 using Api.Infrastructure.Security;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Resend;
 
@@ -16,11 +17,20 @@ internal sealed class ResendEmailSender : IEmailSender
 {
     private readonly IResend _resend;
     private readonly ILogger<ResendEmailSender> _logger;
+    private readonly string? _fromEmailOverride;
 
-    public ResendEmailSender(IResend resend, ILogger<ResendEmailSender> logger)
+    public ResendEmailSender(IResend resend, IConfiguration configuration, ILogger<ResendEmailSender> logger)
     {
         _resend = resend ?? throw new ArgumentNullException(nameof(resend));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        // Resend can only send from a verified domain. The caller's FROM (EmailService
+        // _fromAddress) may be an environment-specific dev value (e.g. noreply@meepleai.dev
+        // used for Mailpit) that is NOT verified on Resend. So the Resend transport pins the
+        // FROM to RESEND_FROM_EMAIL, falling back to the caller value only if unset.
+        _fromEmailOverride = configuration["RESEND_FROM_EMAIL"]
+            ?? configuration["Email:Resend:FromEmail"];
     }
 
     public string ProviderName => "resend";
@@ -29,9 +39,13 @@ internal sealed class ResendEmailSender : IEmailSender
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        var fromEmail = !string.IsNullOrWhiteSpace(_fromEmailOverride)
+            ? _fromEmailOverride
+            : request.FromEmail;
+
         var message = new EmailMessage
         {
-            From = $"{request.FromName} <{request.FromEmail}>",
+            From = $"{request.FromName} <{fromEmail}>",
             Subject = request.Subject,
             HtmlBody = request.HtmlBody
         };

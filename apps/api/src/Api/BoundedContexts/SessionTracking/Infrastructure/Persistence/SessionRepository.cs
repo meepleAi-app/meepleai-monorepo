@@ -82,6 +82,10 @@ public class SessionRepository : RepositoryBase, ISessionRepository
             throw new InvalidOperationException($"Session code {session.SessionCode} already exists.");
         }
 
+        // BE-3 #1590 (C2): collect domain events (e.g. session.created) before persistence
+        // so they are dispatched atomically with the SaveChangesAsync call upstream.
+        CollectDomainEvents(session);
+
         var entity = SessionMapper.ToEntity(session);
         await DbContext.SessionTrackingSessions.AddAsync(entity, ct).ConfigureAwait(false);
     }
@@ -89,6 +93,10 @@ public class SessionRepository : RepositoryBase, ISessionRepository
     public async Task UpdateAsync(Session session, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(session);
+
+        // BE-3 #1590 (C2): collect domain events (e.g. session.finalized) before persistence
+        // so they are dispatched atomically with the SaveChangesAsync call upstream.
+        CollectDomainEvents(session);
 
         // Retrieve existing entity to preserve EF Core tracking
         var existing = await DbContext.SessionTrackingSessions

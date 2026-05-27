@@ -9,6 +9,15 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Events;
 /// BE-3 #1590 H2: registered in <see cref="Api.Infrastructure.DomainEventLog.EventTypeRegistry"/>
 /// with alias <c>"chat.session.created"</c> (matches real command name, not fictional CreateChatThreadCommand).
 ///
+/// <para><b>Payload fields (H2 spec):</b>
+/// <list type="bullet">
+///   <item><c>GameId</c> — game the session belongs to (always present)</item>
+///   <item><c>GameName</c> — display name resolved via ISharedGameRepository (null when game not found)</item>
+///   <item><c>AgentId</c> — custom agent definition id (null for system-agent or bare chat)</item>
+///   <item><c>AgentName</c> — display name copied from aggregate (null when no agent)</item>
+/// </list>
+/// Required so the Task 8 activity rail can show title-meaningful chat items without a join.</para>
+///
 /// <para><b>Mapper conventions (DomainEventLogMapper):</b>
 /// <list type="bullet">
 ///   <item><c>UserId</c> → <c>domain_event_logs.user_id</c> (reflection lookup)</item>
@@ -34,10 +43,38 @@ internal sealed class ChatSessionCreatedEvent : DomainEventBase
     /// <summary>The game associated with this chat session.</summary>
     public Guid GameId { get; }
 
-    public ChatSessionCreatedEvent(Guid sessionId, Guid userId, Guid gameId)
+    /// <summary>
+    /// Display name of the game, resolved at creation time via ISharedGameRepository.
+    /// Null when the game is not found in the catalog (edge case: deleted / pending import).
+    /// BE-3 #1590 H2: required for activity rail title rendering without a join.
+    /// </summary>
+    public string? GameName { get; }
+
+    /// <summary>
+    /// Id of the custom AgentDefinition used for this session.
+    /// Null when a system agent type (auto/tutor/arbitro/decisore) is used, or for bare chat.
+    /// </summary>
+    public Guid? AgentId { get; }
+
+    /// <summary>
+    /// Display name of the agent. Copied from ChatSession.AgentName at creation time.
+    /// Null when no agent is configured.
+    /// </summary>
+    public string? AgentName { get; }
+
+    public ChatSessionCreatedEvent(
+        Guid sessionId,
+        Guid userId,
+        Guid gameId,
+        string? gameName,
+        Guid? agentId,
+        string? agentName)
     {
         AggregateId = sessionId;
         UserId = userId;
         GameId = gameId;
+        GameName = gameName;
+        AgentId = agentId;
+        AgentName = agentName;
     }
 }

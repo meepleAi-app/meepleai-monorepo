@@ -42,6 +42,8 @@ internal sealed class ChatSession : AggregateRoot<Guid>
     /// <summary>
     /// Creates a new chat session.
     /// Issue #4913: Added AgentId/AgentType/AgentName for grouped history.
+    /// BE-3 #1590: gameName added so the ChatSessionCreatedEvent carries a complete
+    /// payload for the activity rail without a secondary join.
     /// </summary>
     public ChatSession(
         Guid id,
@@ -53,7 +55,8 @@ internal sealed class ChatSession : AggregateRoot<Guid>
         string? agentConfigJson = null,
         Guid? agentId = null,
         string? agentType = null,
-        string? agentName = null) : base(id)
+        string? agentName = null,
+        string? gameName = null) : base(id)
     {
         if (userId == Guid.Empty)
             throw new ArgumentException("UserId cannot be empty", nameof(userId));
@@ -73,7 +76,13 @@ internal sealed class ChatSession : AggregateRoot<Guid>
         LastMessageAt = CreatedAt;
         IsArchived = false;
 
-        AddDomainEvent(new ChatSessionCreatedEvent(id, userId, gameId));
+        AddDomainEvent(new ChatSessionCreatedEvent(
+            sessionId: id,
+            userId: userId,
+            gameId: gameId,
+            gameName: gameName,
+            agentId: agentId,
+            agentName: agentName));
     }
 
     /// <summary>

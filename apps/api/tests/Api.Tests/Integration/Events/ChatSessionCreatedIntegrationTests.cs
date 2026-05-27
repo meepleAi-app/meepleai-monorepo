@@ -113,5 +113,11 @@ public sealed class ChatSessionCreatedIntegrationTests : IAsyncLifetime
         // PayloadJson — DomainEventLogMapper uses JsonNamingPolicy.CamelCase
         logRow.PayloadJson.Should().Contain("\"gameId\"")
             .And.Contain(gameId.ToString());
+
+        // BE-3 #1590 H2 payload-completeness: gameName must be present so the
+        // activity rail can render a meaningful title without a secondary join.
+        logRow.PayloadJson.Should().Contain("\"gameName\"")
+            .And.Contain("Catan-BE3-Chat",
+                because: "CreateChatSessionCommandHandler resolves gameName via ISharedGameRepository");
     }
 }

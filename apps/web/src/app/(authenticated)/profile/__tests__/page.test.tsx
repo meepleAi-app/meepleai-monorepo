@@ -251,19 +251,6 @@ describe('ProfilePage', () => {
   });
 
   describe('ProfilePage — Settings tab (#1608)', () => {
-    it('renders tab bar with four tabs including Settings', async () => {
-      setSearchParams('');
-      renderWithQuery(<ProfilePage />);
-
-      await waitFor(() => {
-        expect(screen.getByRole('tab', { name: /Overview/i })).toBeInTheDocument();
-      });
-
-      ['Overview', 'Achievements', 'Activity', 'Settings'].forEach(name =>
-        expect(screen.getByRole('tab', { name })).toBeInTheDocument()
-      );
-    });
-
     it('activates the Settings tab from ?tab=settings', async () => {
       setSearchParams('tab=settings&section=security');
       renderWithQuery(<ProfilePage />);

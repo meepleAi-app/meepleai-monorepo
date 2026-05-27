@@ -497,7 +497,15 @@ jobs:
     # change (e.g. DEPLOY_METHOD=k8s) would still SSH and silently fail (the
     # `|| true` on the BASELINE read swallows errors), wasting a self-hosted
     # runner slot. Aligns with the gating pattern on every other SSH step.
-    if: vars.DEPLOY_METHOD == 'ssh'
+    #
+    # Issue #1602: the explicit `if:` alone does NOT bypass GHA's implicit
+    # `success()` propagation along the entire `needs` chain. When upstream
+    # `pre-deploy-check` is skipped (workflow_dispatch + skip_tests=true),
+    # GHA propagates the skip down to this job even though `build.result` is
+    # `success`. Empirically validated by run 26492568604 (post-#1600). The
+    # `always() &&` prefix forces evaluation of the explicit condition
+    # regardless of the implicit success() check — see #1602 for full finding.
+    if: always() && vars.DEPLOY_METHOD == 'ssh'
     outputs:
       previous_baseline: ${{ steps.read-baseline.outputs.baseline }}
     steps:
@@ -1069,7 +1077,12 @@ jobs:
     name: Staging E2E Smoke Tests
     runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}  # Needs browser support (not self-hosted ARM64)
     needs: [validate]
-    if: needs.validate.result == 'success'
+    # Issue #1602: `always() &&` prefix required to bypass GHA's implicit
+    # success() propagation along the entire `needs` chain. Without it, this
+    # job is skipped under workflow_dispatch + skip_tests=true even when
+    # `validate` succeeds, because upstream `pre-deploy-check` is skipped.
+    # Validated by investigation run 26492568604 — see #1602 for full finding.
+    if: always() && needs.validate.result == 'success'
     timeout-minutes: 10
     steps:
       - name: Checkout

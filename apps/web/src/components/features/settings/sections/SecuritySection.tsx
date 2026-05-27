@@ -1,10 +1,65 @@
-// PHASE-A STUB — replaced in later phases
-import type React from 'react';
+'use client';
 
-import { SectionPlaceholder } from './SectionPlaceholder';
-import { SETTINGS_SECTIONS } from '../settings-sections';
+import { useState } from 'react';
+
+import { useQuery, useMutation } from '@tanstack/react-query';
+
+import { api } from '@/lib/api';
+
+import { ActiveSessionsCard } from '../two-factor/ActiveSessionsCard';
+import { TwoFactorDisableDialog } from '../two-factor/TwoFactorDisableDialog';
+import { TwoFactorSetupModal } from '../two-factor/TwoFactorSetupModal';
+import { TwoFactorStatusCard } from '../two-factor/TwoFactorStatusCard';
+
+interface SetupData {
+  secret: string;
+  qrCodeUrl: string;
+  backupCodes: string[];
+}
 
 export function SecuritySection(): React.JSX.Element {
-  const def = SETTINGS_SECTIONS.find(s => s.id === 'security')!;
-  return <SectionPlaceholder section={def} />;
+  const [setupData, setSetupData] = useState<SetupData | null>(null);
+  const [setupOpen, setSetupOpen] = useState(false);
+  const [disableOpen, setDisableOpen] = useState(false);
+
+  const statusQuery = useQuery({
+    queryKey: ['2fa-status'],
+    queryFn: () => api.auth.getTwoFactorStatus(),
+  });
+
+  const setupMutation = useMutation({
+    mutationFn: () => api.auth.setup2FA(),
+    onSuccess: data => {
+      setSetupData(data);
+      setSetupOpen(true);
+    },
+  });
+
+  const status = statusQuery.data ?? {
+    isEnabled: false,
+    enabledAt: null,
+    unusedBackupCodesCount: 0,
+  };
+
+  return (
+    <div className="space-y-6">
+      <TwoFactorStatusCard
+        status={status}
+        onSetup={() => setupMutation.mutate()}
+        onDisable={() => setDisableOpen(true)}
+        isPending={setupMutation.isPending}
+      />
+
+      <ActiveSessionsCard />
+
+      <TwoFactorSetupModal
+        open={setupOpen}
+        setupData={setupData}
+        onClose={() => setSetupOpen(false)}
+        onEnabled={() => setSetupData(null)}
+      />
+
+      <TwoFactorDisableDialog open={disableOpen} onClose={() => setDisableOpen(false)} />
+    </div>
+  );
 }

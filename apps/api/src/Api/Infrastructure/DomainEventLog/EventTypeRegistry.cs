@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.UserLibrary.Domain.Events;
 using Api.SharedKernel.Domain.Interfaces;
@@ -43,6 +44,11 @@ public static class EventTypeRegistry
         // H2: chat.session.created matches the real command name (CreateChatSessionCommand).
         //     Alias uses "session" not "thread" — the BE has no CreateChatThreadCommand.
         [typeof(ChatSessionCreatedEvent)] = "chat.session.created",
+
+        // H3: kb.doc.indexed fires ONLY when PdfDocument.TransitionTo(Ready) succeeds.
+        //     PdfStateChangedEvent (fires on every transition) remains UNREGISTERED to avoid
+        //     log explosion (one row per pipeline step). Decision B3 from #1590 spec panel.
+        [typeof(KbDocIndexedEvent)] = "kb.doc.indexed",
     };
 
     /// <summary>

@@ -5,14 +5,14 @@
  * (EntityTabBar). Spec: docs/superpowers/specs/2026-04-30-v2-migration-wave-b-3-library.md
  * §3.2 + AC-2 + AC-4 + AC-8.
  *
- * Scope ridotto B.3 — 3 tabs (`all` / `kb` / `loaned`):
- *   - `game` droppato YAGNI (alias di `all` con backend game-only).
- *   - `archived` rinominato `loaned` per allineamento col mapping
- *     `currentState='InPrestito'` (§3.3).
- *   - `agent`/`session`/`chat` deferred a Wave B.4+ (backend extension
- *     child issue tracking).
+ * Generic key type (Phase 2a #1605): the component is generic over
+ * `<K extends string = LibraryEntityKey>` so a single tab strip serves both
+ * the legacy Wave B.3 3-tab key (`all|kb|loaned`, default) and the Phase 2a+
+ * hybrid 6-tab key (`HybridHubTab` = `all|games|agents|kb|sessions|chat`)
+ * without forking the component. Existing consumers that pass `LibraryEntityKey`
+ * (or omit the type arg) keep working unchanged.
  *
- * Keyboard contract via `useTablistKeyboardNav<LibraryEntityKey>` (PR #623):
+ * Keyboard contract via `useTablistKeyboardNav<K>` (PR #623):
  *   ArrowLeft/ArrowRight wrap, Home/End jump, roving tabindex automatic
  *   activation, off-axis keys no-op. Mirror del pattern già usato in
  *   `shared-game-detail/tabs.tsx` (Wave A.4) e `category-tabs.tsx` (PR #620).

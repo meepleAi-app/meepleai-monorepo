@@ -174,9 +174,9 @@ export function LibraryHub(): ReactElement {
         label: t('pages.library.hero.stats.totalGames'),
         value: heroStats.games,
       },
-      { key: 'kbReady', label: t('pages.library.hero.stats.agents'), value: heroStats.agents },
-      { key: 'wishlist', label: t('pages.library.hero.stats.docs'), value: heroStats.docs },
-      { key: 'loaned', label: t('pages.library.hero.stats.chats'), value: heroStats.chats },
+      { key: 'agents', label: t('pages.library.hero.stats.agents'), value: heroStats.agents },
+      { key: 'docs', label: t('pages.library.hero.stats.docs'), value: heroStats.docs },
+      { key: 'chats', label: t('pages.library.hero.stats.chats'), value: heroStats.chats },
     ],
     [t, heroStats]
   );

@@ -1,27 +1,22 @@
 name: Deploy to Staging
 
-# Spec R2 — Deploy quality gate (Sprint 2b, 2026-04-09):
-# This workflow no longer fires on direct push to main-staging. It is now
-# gated on a successful CI run on main-staging via workflow_run, which
-# closes the feedback loop "main-staging green CI → deploy" as a structural
-# invariant rather than a developer responsibility.
+# Triggers (issue #1573 follow-up: header rewritten to match actual config —
+# the prior comment described a `workflow_run` gating that was never implemented
+# in this file; the rollback note also no longer applies):
+#   1. push to main-staging: every merge to main-staging deploys automatically.
+#      Code is already validated by CI on the main-dev PR before reaching
+#      main-staging (release PR main-dev → main-staging), so an additional
+#      CI gate at deploy-time would be redundant.
+#   2. workflow_dispatch: manual escape hatch (emergency deploy, retry,
+#      validation runs from feature branches with skip_tests=true).
 #
-# Triggers:
-#   1. workflow_run: fires after CI completes on main-staging IF AND ONLY
-#      IF conclusion == 'success' (enforced at job level via `gate` job)
-#   2. workflow_dispatch: manual escape hatch (emergency deploy, retry, etc.)
-#
-# IMPORTANT: under workflow_run, GitHub executes this workflow in the
-# DEFAULT BRANCH context. `github.sha`, `github.ref`, and `github.head_ref`
-# all point to the default branch, NOT the commit that triggered CI. To
-# get the actual deploy SHA we use `github.event.workflow_run.head_sha`
-# (with fallback to github.sha for workflow_dispatch). This is exposed as
-# the env vars DEPLOY_SHA and DEPLOY_BRANCH below — every checkout and
-# every reference to "the commit being deployed" must route through them.
-#
-# Migration note: the previous `on: push: branches: [main-staging]` trigger
-# was removed in favor of workflow_run. To rollback, restore the push block
-# and revert the env-var routing.
+# DEPLOY_SHA / DEPLOY_BRANCH routing:
+# Under `push`, github.sha is the commit pushed to main-staging — used directly.
+# Under `workflow_dispatch`, github.sha is HEAD of the ref input — used directly.
+# A defensive fallback to `github.event.workflow_run.head_sha` is retained in
+# downstream env vars in case the trigger is ever migrated to workflow_run.
+# Every `checkout` and reference to "the commit being deployed" routes through
+# the env vars DEPLOY_SHA / DEPLOY_BRANCH (defined below in `env:`).
 on:
   push:
     branches: [main-staging]
@@ -496,6 +491,13 @@ jobs:
     name: Snapshot Performance Baseline
     runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
     needs: [build]
+    # Issue #1573 follow-up (PR #1598 code review P1 A): gated on
+    # DEPLOY_METHOD == 'ssh'. This job opens an SSH connection to the staging
+    # VPS to read DEPLOYMENT.json — without this guard, a future deploy method
+    # change (e.g. DEPLOY_METHOD=k8s) would still SSH and silently fail (the
+    # `|| true` on the BASELINE read swallows errors), wasting a self-hosted
+    # runner slot. Aligns with the gating pattern on every other SSH step.
+    if: vars.DEPLOY_METHOD == 'ssh'
     outputs:
       previous_baseline: ${{ steps.read-baseline.outputs.baseline }}
     steps:
@@ -557,8 +559,16 @@ jobs:
   deploy:
     name: Deploy to Staging
     runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
-    # Issue #1573: bumped 15 → 30 to absorb gen SQL (~2-3 min) + migration
-    # apply (~5-10 min). Deploy SSH itself stays under 5 min.
+    # Issue #1573: bumped 15 → 30 to absorb the inlined migration handling.
+    # Worst-case step times on cold self-hosted runner:
+    #   - Restore + build API project (for dotnet-ef): 3-8 min (NuGet network)
+    #   - Generate idempotent migration SQL: 2-3 min
+    #   - Apply migrations on staging (backup + scp + psql + verify): 5-10 min
+    #   - Deploy via SSH (pull + compose up + health checks): 3-5 min
+    # Total: ~26 min worst case → ~4 min headroom under timeout-minutes: 30.
+    # Observed actuals (run 26472087138, push to main-staging): deploy job
+    # completed in 13m38s. Margin is tight on cold-cache builds; bump to 40
+    # if NuGet restore consistently exceeds 8 min.
     timeout-minutes: 30
     needs: [build, snapshot-baseline]
     if: always() && needs.build.result == 'success' && (needs.snapshot-baseline.result == 'success' || needs.snapshot-baseline.result == 'skipped')
@@ -816,6 +826,14 @@ jobs:
     name: Post-deploy Validation
     runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
     needs: [deploy, snapshot-baseline]
+    # Issue #1573 follow-up (PR #1598 code review P1 B): explicit `if` guard
+    # replacing the previous implicit success() of needs. Pre-fix behavior
+    # relied on GHA skip propagation (if deploy was skipped, validate was
+    # implicitly skipped too), which is fragile. With this explicit guard,
+    # validate runs only when deploy actually succeeded — snapshot-baseline
+    # may be `skipped` (e.g. first deploy with no prior DEPLOYMENT.json) and
+    # validate still proceeds, since the baseline read is informational only.
+    if: always() && needs.deploy.result == 'success'
     steps:
       - name: Checkout
         uses: actions/checkout@v6

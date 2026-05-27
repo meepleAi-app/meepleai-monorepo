@@ -1642,6 +1642,34 @@
           "placeholder": "Cerca per titolo, editore o anno…",
           "ariaLabel": "Cerca nella libreria",
           "clearAriaLabel": "Cancella la ricerca"
+        },
+        "title": "Più filtri",
+        "description": "Filtra la libreria per dimensioni specifiche dell'entità.",
+        "apply": "Applica",
+        "clear": "Reimposta",
+        "section": {
+          "state": "Stato",
+          "withKb": "Solo con Knowledge Base",
+          "rating": "Rating minimo",
+          "players": "Numero di giocatori",
+          "year": "Anno di pubblicazione",
+          "agentType": "Tipo di agente",
+          "activeOnly": "Solo attivi",
+          "sessionStatus": "Stato sessione",
+          "sessionType": "Tipo sessione",
+          "playerCount": "Giocatori (min)",
+          "processingState": "Stato di elaborazione",
+          "messageCountMin": "Messaggi (min)"
+        },
+        "state": {
+          "owned": "Posseduto",
+          "wishlist": "Wishlist",
+          "loaned": "In prestito"
+        },
+        "kbState": {
+          "ready": "Pronto",
+          "pending": "In elaborazione",
+          "failed": "Errore"
         }
       },
       "sort": {

@@ -338,16 +338,18 @@ the PR review.
 | `sp4-game-nights-index.jsx` | `StatusPill` | `apps/web/src/components/features/game-nights/StatusPill.tsx` | `/game-nights` | done | #1173 | T A V | #1397 |
 | `sp4-game-nights-index.jsx` | `PlayerAvatars` | `apps/web/src/components/features/game-nights/PlayerAvatars.tsx` | `/game-nights` | done | #1173 | T A V | #1397 |
 
-### Discover — `/discover` — 6 components — **Tier L** ⚠️ Phase 0.5 required
+### Discover — `/discover` — 6 components — **Tier L** ✅ done
+
+> **Status (#1483, 2026-05-28)**: route fully implemented via PR #1160 (`feat(discover): 7-row Stage 3 catalog`, closes #1147) + code-split via PR #1213. BE prerequisite #728 closed (5 cross-entity row endpoints; search + nearby-events stay disabled-shell pending follow-up). Component unit tests (86 across 6 files) added 2026-05-28 to close the AC `T` gap — the 5 `useDiscover*` hooks were already tested under `hooks/queries/__tests__/`.
 
 | Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
 |--------|-----------|------|-------|--------|----|----|----------|
-| `sp4-discover.jsx` | `DiscoverHero` | `apps/web/src/components/features/discover/DiscoverHero.tsx` | `/discover` | pending | — | T A M V | — |
-| `sp4-discover.jsx` | `DiscoverSearchBox` | `apps/web/src/components/features/discover/DiscoverSearchBox.tsx` | `/discover` | pending | — | T A V | — |
-| `sp4-discover.jsx` | `EntityFilterPillBar` | `apps/web/src/components/features/discover/EntityFilterPillBar.tsx` | `/discover` | pending | — | T A V | — |
-| `sp4-discover.jsx` | `HorizontalRow` | `apps/web/src/components/features/discover/HorizontalRow.tsx` | `/discover` | pending | — | T A M V | — |
-| `sp4-discover.jsx` | `RowScroller` | `apps/web/src/components/features/discover/RowScroller.tsx` | `/discover` | pending | — | T A V | — |
-| `sp4-discover.jsx` | `FooterCTA` | `apps/web/src/components/features/discover/FooterCTA.tsx` | `/discover` | pending | — | T A V | — |
+| `sp4-discover.jsx` | `DiscoverHero` | `apps/web/src/components/features/discover/DiscoverHero.tsx` | `/discover` | done | #1160 | T A V | — |
+| `sp4-discover.jsx` | `DiscoverSearchBox` | `apps/web/src/components/features/discover/DiscoverSearchBox.tsx` | `/discover` | done | #1160 | T A V | — |
+| `sp4-discover.jsx` | `EntityFilterPillBar` | `apps/web/src/components/features/discover/EntityFilterPillBar.tsx` | `/discover` | done | #1160 | T A V | — |
+| `sp4-discover.jsx` | `HorizontalRow` | `apps/web/src/components/features/discover/HorizontalRow.tsx` | `/discover` | done | #1160 | T A V | — |
+| `sp4-discover.jsx` | `RowScroller` | `apps/web/src/components/features/discover/RowScroller.tsx` | `/discover` | done | #1160 | T A V | — |
+| `sp4-discover.jsx` | `FooterCTA` | `apps/web/src/components/features/discover/FooterCTA.tsx` | `/discover` | done | #1160 | T A V | — |
 
 ## Wave 4 — 4 routes + Toolkits/KB extension (D1 ✅ done, G2 ✅ done via SP7, E1/F1 🎨 mockup-ready)
 

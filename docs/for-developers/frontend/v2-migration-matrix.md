@@ -303,16 +303,18 @@ the PR review.
 | `sp4-player-detail.jsx` | `FavoriteAgentCard` | `apps/web/src/components/features/player-detail/FavoriteAgentCard.tsx` | `/players/[id]` | done | #1539 | T A V | #1544 |
 | `sp4-player-detail.jsx` | `AchievementBadgeGrid` | `apps/web/src/components/features/player-detail/AchievementBadgeGrid.tsx` | `/players/[id]` | done | #1539 | T A V | #1544 |
 
-### Toolkit detail — `/toolkits/[id]` — 6 components — **Tier M**
+### Toolkit detail — `/toolkits/[id]` — 6 components — **Tier M** ✅ done
+
+> **Status (#1479, 2026-05-28)**: route fully implemented + wired (orchestrator `ToolkitDetailView` + tab panels). All 6 components shipped via PR #1163 (`Stage 3 FE — DetailPageLayout adoption`, closes #1145) — `VersionTimeline`/`RatingBreakdown`/`PromptPreviewBlock` tested earlier (#1531), `ToolkitSummaryPanel`/`ToolkitIncludesGrid` component tests added 2026-05-28 (23 tests), `Stars` is a thin re-export of the canonical `ui/feedback/Stars` (#1469, covered by the canonical's tests).
 
 | Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
 |--------|-----------|------|-------|--------|----|----|----------|
-| `sp4-toolkit-detail.jsx` | `ToolkitSummaryPanel` | `apps/web/src/components/features/toolkit-detail/ToolkitSummaryPanel.tsx` | `/toolkits/[id]` | pending | — | T A V | — |
-| `sp4-toolkit-detail.jsx` | `ToolkitIncludesGrid` | `apps/web/src/components/features/toolkit-detail/ToolkitIncludesGrid.tsx` | `/toolkits/[id]` | pending | — | T A V | — |
+| `sp4-toolkit-detail.jsx` | `ToolkitSummaryPanel` | `apps/web/src/components/features/toolkit-detail/ToolkitSummaryPanel.tsx` | `/toolkits/[id]` | done | #1163 | T A V | — |
+| `sp4-toolkit-detail.jsx` | `ToolkitIncludesGrid` | `apps/web/src/components/features/toolkit-detail/ToolkitIncludesGrid.tsx` | `/toolkits/[id]` | done | #1163 | T A V | — |
 | `sp4-toolkit-detail.jsx` | `VersionTimeline` | `apps/web/src/components/features/toolkit-detail/VersionTimeline.tsx` | `/toolkits/[id]` | done | #1531 | T A V | — |
 | `sp4-toolkit-detail.jsx` | `RatingBreakdown` | `apps/web/src/components/features/toolkit-detail/RatingBreakdown.tsx` | `/toolkits/[id]` | done | #1531 | T A V | — |
 | `sp4-toolkit-detail.jsx` | `PromptPreviewBlock` | `apps/web/src/components/features/toolkit-detail/PromptPreviewBlock.tsx` | `/toolkits/[id]` | done | #1531 | T A V | — |
-| `sp4-toolkit-detail.jsx` | `Stars` | `apps/web/src/components/features/toolkit-detail/Stars.tsx` | `/toolkits/[id]` | pending | — | T A V | — |
+| `sp4-toolkit-detail.jsx` | `Stars` | `apps/web/src/components/features/toolkit-detail/Stars.tsx` | `/toolkits/[id]` | done | #1469 | T A V | — |
 
 ### KB detail — `/kb/[id]` — 6 components — **Tier M**
 

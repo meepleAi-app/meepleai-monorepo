@@ -19,9 +19,12 @@ export default function KbFeedbackPage() {
       </div>
 
       <div className="space-y-2 max-w-sm">
-        <Label htmlFor="game-id-input">Game ID</Label>
+        <Label htmlFor="game-id-input" className="text-foreground">
+          Game ID
+        </Label>
         <Input
           id="game-id-input"
+          className="text-foreground"
           placeholder="Inserisci l'UUID del gioco..."
           value={gameId}
           onChange={e => setGameId(e.target.value)}

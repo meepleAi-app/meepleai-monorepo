@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
@@ -80,24 +79,19 @@ export function QueueDashboardClient({
 
   return (
     <div className="space-y-4 h-full">
-      {/* Header */}
+      {/* Page toolbar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href={gameId ? `/admin/shared-games/${gameId}` : '/admin/knowledge-base'}>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <ArrowLeftIcon className="h-4 w-4" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
-              Processing Queue
-            </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {gameId
-                ? 'Processing jobs for selected game'
-                : 'Monitor and manage PDF processing jobs'}
-            </p>
-          </div>
+          {gameId && (
+            <>
+              <Link href={`/admin/shared-games/${gameId}`}>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <ArrowLeftIcon className="h-4 w-4" />
+                </Button>
+              </Link>
+              <p className="text-sm text-muted-foreground">Processing jobs for selected game</p>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <SSEConnectionIndicator state={queueSSEState} onReconnect={reconnectQueueSSE} />
@@ -135,7 +129,7 @@ export function QueueDashboardClient({
       {/* Main Content: List (40%) + Detail (60%) */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 min-h-[500px]">
         {/* Queue List - 2/5 = 40% */}
-        <div className="lg:col-span-2 bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-border/50 dark:border-zinc-700/50 overflow-hidden">
+        <div className="lg:col-span-2 rounded-[10px] border border-border/60 bg-card overflow-hidden">
           <QueueList
             data={queueData}
             isLoading={isQueueLoading}
@@ -147,7 +141,7 @@ export function QueueDashboardClient({
         </div>
 
         {/* Detail Panel - 3/5 = 60% */}
-        <div className="lg:col-span-3 bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-border/50 dark:border-zinc-700/50 overflow-hidden">
+        <div className="lg:col-span-3 rounded-[10px] border border-border/60 bg-card overflow-hidden">
           <JobDetailPanel job={jobDetail} isLoading={isDetailLoading} />
         </div>
       </div>

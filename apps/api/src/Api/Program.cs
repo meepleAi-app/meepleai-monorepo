@@ -746,6 +746,7 @@ v1Api.MapModelEndpoints(); // Issue #3377: AI model configuration endpoints
 v1Api.MapLlmEndpoints(); // ISSUE-2391: Sprint 2 - LLM provider management
 v1Api.MapAiEndpoints();
 v1Api.MapAgentsEndpoints(); // Issue #641 (Wave B.2 hotfix): user-facing agent listing
+v1Api.MapActivityFeedEndpoints(); // BE-3 #1590 Task 8: cross-entity activity feed from domain_event_logs
 v1Api.MapAgentTypologiesEndpoints(); // Issue #649: user-facing typology dropdown
 v1Api.MapRulebookAnalysisEndpoints(); // ISSUE-2402: Rulebook analysis service
 

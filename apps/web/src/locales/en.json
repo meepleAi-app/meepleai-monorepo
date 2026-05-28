@@ -1707,7 +1707,15 @@
         "subtitle": "Latest additions and changes to your library.",
         "empty": "No recent activity.",
         "viewAll": "View all",
-        "viewAllAriaLabel": "Open the full activity history"
+        "viewAllAriaLabel": "Open the full activity history",
+        "error": "Failed to load activity.",
+        "fallback": {
+          "agent": "New agent created",
+          "chat": "New chat",
+          "kbIndexed": "Document indexed",
+          "play": "Session",
+          "removed": "Removed from library"
+        }
       },
       "emptyState": {
         "default": {

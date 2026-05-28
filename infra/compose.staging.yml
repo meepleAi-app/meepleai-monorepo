@@ -151,6 +151,11 @@ services:
   # ===========================================================================
 
   embedding-service:
+    # Issue #1578: hard-required GHCR image (no stale-local fallback) + force
+    # pull. pull_policy: always guarantees the VPS PULLS the arm64 image built
+    # in CI and NEVER builds torch locally (avoids the disk-full/swap incident).
+    image: ${EMBEDDING_IMAGE:?EMBEDDING_IMAGE env var required for staging — set to GHCR tag}
+    pull_policy: always
     restart: always
     deploy:
       resources:
@@ -163,6 +168,9 @@ services:
     # Traefik labels removed (post CF Tunnel cutover). Internal service exposed only on docker network.
 
   reranker-service:
+    # Issue #1578: see embedding-service note above.
+    image: ${RERANKER_IMAGE:?RERANKER_IMAGE env var required for staging — set to GHCR tag}
+    pull_policy: always
     restart: always
     deploy:
       resources:
@@ -203,6 +211,11 @@ services:
     # Traefik labels removed (post CF Tunnel cutover). Internal service exposed only on docker network.
 
   orchestration-service:
+    # Issue #1578: publish-only. Soft default (not :?) — orchestration is not in
+    # the ai-essential deploy profile, so it is not started in staging. If a
+    # future --profile tutor-agents activates it, it pulls from GHCR (not build).
+    image: ${ORCHESTRATION_IMAGE:-ghcr.io/meepleai-app/meepleai-monorepo/orchestration-service:staging-latest}
+    pull_policy: always
     restart: always
     env_file:
       - ./secrets/database.secret

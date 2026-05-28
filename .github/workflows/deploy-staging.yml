@@ -878,6 +878,40 @@ jobs:
             export API_IMAGE="${{ env.API_IMAGE }}:staging-latest"
             export WEB_IMAGE="${{ env.WEB_IMAGE }}:staging-latest"
 
+            # Issue #1578 — AI image vars. compose.staging.yml guards
+            # embedding/reranker with ${X_IMAGE:?}, so every `compose up`
+            # (even one targeting only some services) needs them set, or it
+            # aborts (analog of the api/web #1399-C fix above). Default all to
+            # staging-latest; changed services keep this ref (the build-ai job
+            # always pushes staging-latest).
+            AI_BASE="${{ env.REGISTRY }}/${{ github.repository }}"
+            export EMBEDDING_IMAGE="${AI_BASE}/embedding-service:staging-latest"
+            export RERANKER_IMAGE="${AI_BASE}/reranker-service:staging-latest"
+            export ORCHESTRATION_IMAGE="${AI_BASE}/orchestration-service:staging-latest"
+
+            EMB_CHANGED="${{ fromJSON(needs.detect-changes.outputs.ai_changed).embedding }}"
+            RRK_CHANGED="${{ fromJSON(needs.detect-changes.outputs.ai_changed).reranker }}"
+            ORC_CHANGED="${{ fromJSON(needs.detect-changes.outputs.ai_changed).orchestration }}"
+
+            # Pre-pull disk guard (issue #1578 / #1575). Pulling a ~5GB torch
+            # image while the old one is still referenced can fill the disk.
+            # Pre-prune, then require AI_PULL_GATE_GB free; otherwise ABORT
+            # (fail-safe) — never risk disk-full.
+            AI_PULL_GATE_GB="${AI_PULL_GATE_GB:-15}"
+            if [ "$EMB_CHANGED" = "true" ] || [ "$RRK_CHANGED" = "true" ] || [ "$ORC_CHANGED" = "true" ]; then
+              echo "🧹 Pre-prune before AI image pull..."
+              docker image prune -af --filter "until=24h" || true
+              FREE_GB=$(df -BG / | awk 'NR==2 {gsub(/G/,"",$4); print $4}')
+              echo "💽 VPS disk: ${FREE_GB} GB free — AI pull gate ${AI_PULL_GATE_GB} GB"
+              if [ "$FREE_GB" -lt "$AI_PULL_GATE_GB" ]; then
+                echo "::error::Insufficient disk for AI image pull: ${FREE_GB} GB free < ${AI_PULL_GATE_GB} GB"
+                echo "🚫 Aborting AI deploy (fail-safe). Manual cleanup on the VPS:"
+                echo "  docker image prune -af"
+                echo "  bash /opt/meepleai/repo/infra/scripts/daily-disk-prune.sh"
+                exit 1
+              fi
+            fi
+
             SERVICES=""
 
             # Pull and tag only changed images
@@ -893,6 +927,24 @@ jobs:
               export WEB_IMAGE="${{ needs.build.outputs.web_image }}"
               SERVICES="$SERVICES web"
               echo "📦 Web image updated"
+            fi
+
+            # Issue #1578 — AI services. embedding/reranker are in the
+            # ai-essential profile → pull + recreate. orchestration is
+            # publish-only → pull ONLY (cached for a future activation).
+            if [ "$EMB_CHANGED" = "true" ]; then
+              docker pull "$EMBEDDING_IMAGE"
+              SERVICES="$SERVICES embedding-service"
+              echo "📦 embedding-service image updated"
+            fi
+            if [ "$RRK_CHANGED" = "true" ]; then
+              docker pull "$RERANKER_IMAGE"
+              SERVICES="$SERVICES reranker-service"
+              echo "📦 reranker-service image updated"
+            fi
+            if [ "$ORC_CHANGED" = "true" ]; then
+              docker pull "$ORCHESTRATION_IMAGE" || echo "⚠️ orchestration pull failed (non-blocking; not active in staging)"
+              echo "📦 orchestration-service image cached (not started in staging)"
             fi
 
             if [ -z "$SERVICES" ]; then
@@ -937,12 +989,34 @@ jobs:
             assert any(c['name']=='redis' and c['status']=='Healthy' for c in d['checks']), 'redis unhealthy'
             " || exit 1
 
+            # Issue #1578 — AI container health (only for recreated services).
+            # Container names per compose: embedding-service→meepleai-embedding,
+            # reranker-service→meepleai-reranker.
+            ai_health() {
+              cname="$1"
+              echo "⏳ Waiting for ${cname} health..."
+              for attempt in $(seq 1 40); do
+                st=$(docker inspect --format '{{.State.Health.Status}}' "$cname" 2>/dev/null || echo "missing")
+                if [ "$st" = "healthy" ]; then echo "✅ ${cname} healthy after ~$((attempt*5))s"; return 0; fi
+                sleep 5
+              done
+              echo "::error::${cname} did not become healthy"
+              docker logs "$cname" --tail 30 2>/dev/null || true
+              return 1
+            }
+            case " $SERVICES " in *" embedding-service "*) ai_health meepleai-embedding || exit 1 ;; esac
+            case " $SERVICES " in *" reranker-service "*) ai_health meepleai-reranker || exit 1 ;; esac
+
             # Record deployment version
             cat > /opt/meepleai/repo/infra/DEPLOYMENT.json << VEREOF
             {
               "version": "${{ needs.build.outputs.version }}",
               "api_image": "${{ needs.build.outputs.api_image }}",
               "web_image": "${{ needs.build.outputs.web_image }}",
+              "embedding_image": "${EMBEDDING_IMAGE}",
+              "reranker_image": "${RERANKER_IMAGE}",
+              "orchestration_image": "${ORCHESTRATION_IMAGE}",
+              "ai_changed": "embedding=${EMB_CHANGED},reranker=${RRK_CHANGED},orchestration=${ORC_CHANGED}",
               "environment": "staging",
               "deployed_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
               "deployed_by": "${{ github.actor }}",

@@ -1,5 +1,5 @@
 /**
- * useActivityFeed
+ * useDashboardActivityFeed
  *
  * Aggregates recent play sessions and earned badges into a unified
  * activity feed sorted by timestamp descending.
@@ -22,7 +22,7 @@ export interface ActivityItem {
   iconEmoji: string;
 }
 
-export interface UseActivityFeedResult {
+export interface UseDashboardActivityFeedResult {
   items: ActivityItem[];
   isLoading: boolean;
   error: string | null;
@@ -50,7 +50,7 @@ function buildAchievementItem(a: UserBadgeDto): ActivityItem {
   };
 }
 
-export function useActivityFeed(limit = 10): UseActivityFeedResult {
+export function useDashboardActivityFeed(limit = 10): UseDashboardActivityFeedResult {
   const [items, setItems] = useState<ActivityItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

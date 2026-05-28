@@ -81,6 +81,11 @@ jobs:
   changes:
     name: Detect Changes
     runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
+    # Issue #1587: explicit timeout so this self-hosted job (checkout +
+    # paths-filter) can never tie up the single runner in a stuck teardown.
+    # Completes the "timeout on every perf job" coverage started in #1594
+    # (which pinned lighthouse-* and added their timeouts).
+    timeout-minutes: 10
     outputs:
       web: ${{ steps.filter.outputs.web || 'true' }}
       api: ${{ steps.filter.outputs.api || 'true' }}
@@ -603,6 +608,8 @@ jobs:
   notify-failure:
     name: Notify on Failure
     runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
+    # Issue #1587: explicit timeout — completes the "every perf job" coverage.
+    timeout-minutes: 10
     needs: [k6-tests, lighthouse-ci]
     if: failure() && github.event_name == 'schedule'
     permissions:

@@ -312,6 +312,9 @@ internal partial class EmailService
     }
 
     // ISSUE-124: Invitation system emails
+    // Issue #1629: refactored to route through IEmailSender (Resend/SMTP) and
+    // fixed redeem link from /accept-invite?token=… to /invites/{token} so it
+    // matches the actual Next.js route at apps/web/src/app/(public)/invites/[token].
     public async Task SendInvitationEmailAsync(
         string toEmail,
         string role,
@@ -321,26 +324,11 @@ internal partial class EmailService
     {
         try
         {
-            var inviteLink = $"{_frontendBaseUrl}/accept-invite?token={Uri.EscapeDataString(token)}";
+            var inviteLink = $"{_frontendBaseUrl}/invites/{Uri.EscapeDataString(token)}";
             var subject = "You've been invited to MeepleAI";
             var body = BuildInvitationEmailBody(role, inviteLink, invitedByName);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, ct).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Invitation email sent successfully to {Email} for role {Role}",
@@ -359,6 +347,8 @@ internal partial class EmailService
     }
 
     // ISSUE-124: Enhanced invitation email with custom message, platform intro, and expiry notice
+    // Issue #1629: same transport routing + link fix as the basic overload above.
+    // The enhanced flow points at /setup-account (account-provisioning UI), not /invites/[token].
     public async Task SendInvitationEmailAsync(
         string toEmail,
         string displayName,
@@ -375,22 +365,7 @@ internal partial class EmailService
             var subject = "Sei stato invitato su MeepleAI!";
             var body = BuildEnhancedInvitationEmailBody(displayName, role, setupLink, invitedByName, customMessage, expiresAt);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, ct).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Enhanced invitation email sent successfully to {Email} for role {Role}",

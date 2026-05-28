@@ -183,7 +183,14 @@ jobs:
     # 8min cap. The 12-min budget gives ~3min headroom. Per issue #1161 note,
     # this trigger justifies splitting build + test into separate jobs (option b);
     # tracked as follow-up.
-    timeout-minutes: 12
+    # Issue #1630: raised 12 → 18 minutes. The 12-min cap covers setup + Release
+    # build (~4min) + the full unit suite (~4-8min, 17k+ tests) in ONE job, and
+    # on a cache-miss / noisy-runner combo the three phases stacked past 12min
+    # (PR #1627 hit the cap on 2/3 attempts on a 3-line change). This is runner
+    # variance on a monolithic job, not a slow test — 18min right-sizes the
+    # budget. Splitting build+test (artifact hand-off, à la ci.yml) and xUnit
+    # parallelization remain the structural follow-ups.
+    timeout-minutes: 18
     needs: changes
     if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     steps:

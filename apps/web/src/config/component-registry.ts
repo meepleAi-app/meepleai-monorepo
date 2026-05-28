@@ -3682,57 +3682,8 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
 
   // ─── Desktop UX Redesign — Shell Atomics ──────────────────────────────────
 
-  {
-    id: 'top-bar-logo',
-    name: 'TopBarLogo',
-    importPath: '@/components/layout/UserShell/TopBarLogo',
-    category: 'Layout',
-    areas: ['shared'],
-    tier: 'static',
-    description: 'MeepleAI wordmark for the 64px desktop top bar.',
-    tags: ['redesign', 'top-bar', 'logo', 'layout'],
-    mockProps: {},
-  },
-  {
-    id: 'top-bar-search-pill',
-    name: 'TopBarSearchPill',
-    importPath: '@/components/layout/UserShell/TopBarSearchPill',
-    category: 'Layout',
-    areas: ['shared'],
-    tier: 'static',
-    description: 'Cmd/Ctrl+K search pill embedded in the desktop top bar.',
-    tags: ['redesign', 'top-bar', 'search'],
-    mockProps: { placeholder: 'Cerca…' },
-  },
-  {
-    id: 'top-bar-chat-button',
-    name: 'TopBarChatButton',
-    importPath: '@/components/layout/UserShell/TopBarChatButton',
-    category: 'Layout',
-    areas: ['shared'],
-    tier: 'static',
-    description: 'Chat icon button in the top bar that opens the chat slide-over panel.',
-    tags: ['redesign', 'top-bar', 'chat'],
-    mockProps: { hasUnread: false },
-    mockVariants: [
-      { name: 'Default', props: { hasUnread: false } },
-      { name: 'With unread', props: { hasUnread: true } },
-    ],
-  },
   // ─── Desktop UX Redesign — Shell Containers ───────────────────────────────
 
-  {
-    id: 'top-bar',
-    name: 'TopBar',
-    importPath: '@/components/layout/UserShell/TopBar',
-    category: 'Layout',
-    areas: ['shared'],
-    tier: 'static',
-    description:
-      '64px sticky top navigation bar. Composes Logo + NavLinks + SearchPill + ChatButton + Notifications + UserMenu.',
-    tags: ['redesign', 'shell', 'top-bar', 'container'],
-    mockProps: { onOpenChat: () => {}, onOpenSearch: () => {} },
-  },
   {
     id: 'mini-nav-slot',
     name: 'MiniNavSlot',

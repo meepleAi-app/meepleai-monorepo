@@ -43,6 +43,10 @@ services:
       - ./secrets/smoldocling-service.secret
       - ./secrets/storage.secret
       - ./secrets/db-sync.secret
+      # Issue #1629: email provider config (EMAIL_PROVIDER, RESEND_API_KEY, …).
+      # Listed BEFORE api.env.dev so the dev Mailpit overrides (Email__SmtpHost=mailpit)
+      # still win for the SMTP path; only the Resend keys come from here.
+      - ./secrets/email.secret
       - ./env/api.env.dev
     ports: ["127.0.0.1:8080:8080"]
     environment:

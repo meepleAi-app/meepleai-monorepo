@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.DTOs.PlayRecords;
 using Api.BoundedContexts.GameManagement.Application.Queries.PlayRecords;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Interfaces;
@@ -49,12 +50,10 @@ internal class GetPlayerStatisticsQueryHandler : IQueryHandler<GetPlayerStatisti
         // Calculate statistics
         var totalSessions = records.Count;
 
-        // Total wins (count records where user has win score dimension)
-        var totalWins = records.Count(r =>
-            r.Players.Any(p => p.Scores.Any(s =>
-                s.Dimension.Equals("wins", StringComparison.OrdinalIgnoreCase) && s.Value > 0)));
+        // Total wins: reuse PlayRecordOutcomeCalculator.HasWinner (DRY — avoids duplicating "wins">0 logic)
+        var totalWins = records.Count(r => PlayRecordOutcomeCalculator.HasWinner(r.Players));
 
-        // Game play counts
+        // Game play counts (legacy dict — backward compat)
         var gamePlayCounts = records
             .GroupBy(r => r.GameName, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(
@@ -62,7 +61,7 @@ internal class GetPlayerStatisticsQueryHandler : IQueryHandler<GetPlayerStatisti
                 g => g.Count(),
                 StringComparer.OrdinalIgnoreCase);
 
-        // Average scores by game (for "points" dimension)
+        // Average scores by game (for "points" dimension — legacy dict — backward compat)
         var averageScoresByGame = records
             .Where(r => r.Players.Any(p => p.Scores.Any(s =>
                 s.Dimension.Equals("points", StringComparison.OrdinalIgnoreCase))))
@@ -77,11 +76,45 @@ internal class GetPlayerStatisticsQueryHandler : IQueryHandler<GetPlayerStatisti
                     .Average(),
                 StringComparer.OrdinalIgnoreCase);
 
+        // Total duration: sum nullable durations; null contributes 0
+        var totalDurationMinutes = (int)Math.Round(
+            records.Sum(r => r.Duration?.TotalMinutes ?? 0));
+
+        // Group by (GameId, GameName) for win-rate and play-count breakdowns.
+        // Free-form records (GameId == null) group by (null, GameName) so two records
+        // with the same free-form name aggregate together — per spec.
+        var byGame = records
+            .GroupBy(r => (r.GameId, r.GameName))
+            .ToList();
+
+        var winByGame = byGame
+            .Select(g => new GameWinStats(
+                GameId: g.Key.GameId,
+                GameName: g.Key.GameName,
+                Played: g.Count(),
+                Won: g.Count(r => PlayRecordOutcomeCalculator.HasWinner(r.Players))))
+            .OrderByDescending(x => x.Played)
+            .ThenByDescending(x => x.Won)
+            .ToList()
+            .AsReadOnly();
+
+        var mostPlayedGames = byGame
+            .Select(g => new GamePlayCount(
+                GameId: g.Key.GameId,
+                GameName: g.Key.GameName,
+                Plays: g.Count()))
+            .OrderByDescending(x => x.Plays)
+            .ToList()
+            .AsReadOnly();
+
         return new PlayerStatisticsDto(
             totalSessions,
             totalWins,
             gamePlayCounts,
-            averageScoresByGame
+            averageScoresByGame,
+            totalDurationMinutes,
+            winByGame,
+            mostPlayedGames
         );
     }
 }

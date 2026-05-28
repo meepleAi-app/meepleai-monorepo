@@ -52,6 +52,22 @@ internal static class PlayRecordOutcomeCalculator
     }
 
     /// <summary>
+    /// Returns <c>true</c> when at least one player in the collection has a "wins" score
+    /// with <see cref="RecordScoreEntity.Value"/> &gt; 0.
+    /// Avoids allocating a list; use this instead of <see cref="WinnerPlayerIds"/> when
+    /// only the boolean result is needed (e.g. counting wins across many records).
+    /// Issue #1663: Phase 2 – statistics dashboard fields.
+    /// </summary>
+    public static bool HasWinner(IEnumerable<RecordPlayerEntity> players)
+    {
+        ArgumentNullException.ThrowIfNull(players);
+
+        return players.Any(p => p.Scores.Any(s =>
+            string.Equals(s.Dimension, WinsDimension, StringComparison.OrdinalIgnoreCase)
+            && s.Value > 0));
+    }
+
+    /// <summary>
     /// Returns the "points" dimension <see cref="RecordScoreEntity.Value"/> for the given player,
     /// or <c>null</c> if the player has no "points" score recorded.
     /// </summary>

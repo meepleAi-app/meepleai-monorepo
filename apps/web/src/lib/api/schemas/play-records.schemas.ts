@@ -89,11 +89,31 @@ export const PlayRecordSummarySchema = z.object({
 });
 export type PlayRecordSummary = z.infer<typeof PlayRecordSummarySchema>;
 
+// #1663 Phase 2: per-game win/play stats keyed by gameId (gameName fallback).
+export const GameWinStatsSchema = z.object({
+  gameId: z.string().uuid().nullable(),
+  gameName: z.string(),
+  played: z.number().int().nonnegative(),
+  won: z.number().int().nonnegative(),
+});
+export type GameWinStats = z.infer<typeof GameWinStatsSchema>;
+
+export const GamePlayCountSchema = z.object({
+  gameId: z.string().uuid().nullable(),
+  gameName: z.string(),
+  plays: z.number().int().nonnegative(),
+});
+export type GamePlayCount = z.infer<typeof GamePlayCountSchema>;
+
 export const PlayerStatisticsSchema = z.object({
   totalSessions: z.number().int().nonnegative(),
   totalWins: z.number().int().nonnegative(),
   gamePlayCounts: z.record(z.string(), z.number().int()),
   averageScoresByGame: z.record(z.string(), z.number()),
+  // #1663 Phase 2: new fields, optional during BE rollout.
+  totalDurationMinutes: z.number().int().nonnegative().optional(),
+  winByGame: z.array(GameWinStatsSchema).optional(),
+  mostPlayedGames: z.array(GamePlayCountSchema).optional(),
 });
 export type PlayerStatistics = z.infer<typeof PlayerStatisticsSchema>;
 

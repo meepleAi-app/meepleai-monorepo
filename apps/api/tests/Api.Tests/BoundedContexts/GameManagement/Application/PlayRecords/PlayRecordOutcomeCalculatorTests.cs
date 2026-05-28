@@ -264,6 +264,70 @@ public class PlayRecordOutcomeCalculatorTests
 
     #endregion
 
+    #region HasWinner
+
+    [Fact]
+    public void HasWinner_OnePlayerWithWinsGreaterThanZero_ReturnsTrue()
+    {
+        // Arrange
+        var winner = MakePlayer(Guid.NewGuid(), ("wins", 1));
+        var loser = MakePlayer(Guid.NewGuid(), ("wins", 0));
+        var noScore = MakePlayer(Guid.NewGuid());
+
+        // Act
+        var result = PlayRecordOutcomeCalculator.HasWinner([winner, loser, noScore]);
+
+        // Assert
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void HasWinner_NoPlayerHasWinsDimension_ReturnsFalse()
+    {
+        // Arrange — non-competitive: no "wins" dimension at all
+        var player1 = MakePlayer(Guid.NewGuid(), ("points", 42));
+        var player2 = MakePlayer(Guid.NewGuid(), ("points", 30));
+
+        // Act
+        var result = PlayRecordOutcomeCalculator.HasWinner([player1, player2]);
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void HasWinner_WinsDimensionExistsButValueZero_ReturnsFalse()
+    {
+        // Arrange — "wins" dimension present with value 0 (player did not win)
+        var player = MakePlayer(Guid.NewGuid(), ("wins", 0));
+
+        // Act
+        var result = PlayRecordOutcomeCalculator.HasWinner([player]);
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void HasWinner_EmptyPlayerList_ReturnsFalse()
+    {
+        // Act
+        var result = PlayRecordOutcomeCalculator.HasWinner([]);
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void HasWinner_NullArgument_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        var act = () => PlayRecordOutcomeCalculator.HasWinner(null!);
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    #endregion
+
     #region Scenario: Competitive vs Non-competitive combinations
 
     [Fact]

@@ -143,6 +143,7 @@ Expected: FAIL with "Failed to resolve import '../KbSubNav'" (file not created y
 
 ```tsx
 // apps/web/src/components/admin/knowledge-base/explorer/KbSubNav.tsx
+/* eslint-disable local/no-hardcoded-color-utility -- admin KB explorer: amber accent + zinc dark palette (admin convention, DS-13c scope deferred to DS-16) */
 'use client';
 
 import Link from 'next/link';
@@ -322,15 +323,19 @@ const game1: GameKbStatusItem = {
   gameId: 'g-1',
   gameName: 'Wingspan',
   kbStatus: 'complete',
+  documentCount: 6,
   totalChunks: 412,
   latestIndexedAt: '2024-12-08T14:22:00Z',
+  hasAutoBackup: true,
 };
 const game2: GameKbStatusItem = {
   gameId: 'g-2',
   gameName: 'Brass: Birmingham',
   kbStatus: 'partial',
+  documentCount: 3,
   totalChunks: 187,
   latestIndexedAt: null,
+  hasAutoBackup: false,
 };
 
 const doc1: GameDocument = {
@@ -496,6 +501,7 @@ Expected: FAIL with module-not-found.
 
 ```tsx
 // apps/web/src/components/admin/knowledge-base/explorer/KbTree.tsx
+/* eslint-disable local/no-hardcoded-color-utility -- admin KB explorer: amber accent + zinc dark palette (admin convention, DS-13c scope deferred to DS-16) */
 'use client';
 
 import { useMemo } from 'react';
@@ -826,7 +832,7 @@ describe('KbDocDetailPanel', () => {
       fetchNextPage: vi.fn(),
     });
     render(<KbDocDetailPanel docId="doc-1" />);
-    expect(screen.getByText(/c-1/)).toBeInTheDocument();
+    expect(screen.getByText(/c-0012/)).toBeInTheDocument();
     expect(screen.getByText(/p\. 22/)).toBeInTheDocument();
     expect(screen.getByText(/Quando più uccelli/)).toBeInTheDocument();
     expect(screen.getByText('Setup › Predator activation')).toBeInTheDocument();
@@ -865,6 +871,7 @@ Expected: FAIL with module-not-found.
 
 ```tsx
 // apps/web/src/components/admin/knowledge-base/explorer/KbDocDetailPanel.tsx
+/* eslint-disable local/no-hardcoded-color-utility -- admin KB explorer: amber/emerald/rose chip palette + zinc dark (admin convention, DS-13c scope deferred to DS-16) */
 'use client';
 
 import { useKbChunksList } from '@/hooks/queries/useKbChunksList';
@@ -1122,8 +1129,10 @@ const games: GameKbStatusItem[] = [
     gameId: 'g-1',
     gameName: 'Wingspan',
     kbStatus: 'complete',
+    documentCount: 6,
     totalChunks: 412,
     latestIndexedAt: null,
+    hasAutoBackup: true,
   },
 ];
 
@@ -1147,7 +1156,7 @@ describe('KbExplorer', () => {
   });
 
   it('renders the tree once games load and the empty doc panel by default', async () => {
-    mockGetGameKbStatuses.mockResolvedValue(games);
+    mockGetGameKbStatuses.mockResolvedValue({ items: games });
     render(wrap(<KbExplorer />));
     expect(await screen.findByText('Wingspan')).toBeInTheDocument();
     expect(screen.getByTestId('kb-doc-detail-empty')).toBeInTheDocument();
@@ -1155,7 +1164,7 @@ describe('KbExplorer', () => {
 
   it('hydrates selectedDocId from ?doc= query param', async () => {
     mockSearchParams.mockReturnValue(new URLSearchParams({ doc: 'd-42' }));
-    mockGetGameKbStatuses.mockResolvedValue(games);
+    mockGetGameKbStatuses.mockResolvedValue({ items: games });
     render(wrap(<KbExplorer />));
     // The panel was rendered with docId='d-42' (mocked hooks return null/empty,
     // so it'll show loading skeleton via useKbDocDetail or empty for null —
@@ -1167,7 +1176,7 @@ describe('KbExplorer', () => {
   });
 
   it('updates ?doc= via router.replace when a doc leaf is clicked', async () => {
-    mockGetGameKbStatuses.mockResolvedValue(games);
+    mockGetGameKbStatuses.mockResolvedValue({ items: games });
     render(wrap(<KbExplorer />));
     await screen.findByText('Wingspan');
     // expand the game
@@ -1189,6 +1198,7 @@ Expected: FAIL with module-not-found.
 
 ```tsx
 // apps/web/src/components/admin/knowledge-base/explorer/KbExplorer.tsx
+/* eslint-disable local/no-hardcoded-color-utility -- admin KB explorer: rose error chip + muted skeletons (admin convention, DS-13c scope deferred to DS-16) */
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
@@ -1225,7 +1235,8 @@ export function KbExplorer() {
 
   const { data: games, isLoading, error } = useQuery({
     queryKey: ADMIN_GAME_KB_STATUSES_QUERY_KEY,
-    queryFn: () => adminClient.getGameKbStatuses(),
+    // getGameKbStatuses returns { items: GameKbStatusItem[] }; unwrap to the array.
+    queryFn: () => adminClient.getGameKbStatuses().then(r => r.items),
   });
 
   const setSelectedDocId = (docId: string | null) => {

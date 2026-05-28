@@ -96,7 +96,7 @@ Costruito da zero (i componenti `features/kb-detail/*` sono stub DEFERRED, non r
 ## 6. Data flow (hook esistenti — nessun nuovo endpoint)
 
 ```
-KbTree (top-level)   adminClient.getGameKbStatuses()    → GameKbStatusItem[]   (gameId, gameName, kbStatus 'complete'|'partial'|'none', totalChunks, latestIndexedAt)
+KbTree (top-level)   adminClient.getGameKbStatuses()    → GameKbStatuses { items: GameKbStatusItem[] }   (gameId, gameName, kbStatus 'complete'|'partial'|'none', documentCount, totalChunks, latestIndexedAt, hasAutoBackup) — KbExplorer unwrap via .then(r => r.items)
 KbTree (on-expand)   useKbGameDocuments(gameId)         → GameDocument[]       (KB-indexed docs della game, hook esistente)
 Detail (hero)        useKbDocDetail({docId})            → KbDocEnvelope        ({status:'ready', doc:KbDocDetail} | {status:'locked', processingStatus})
 Detail (chunks)      useKbChunksList({docId, limit:50}) → useInfiniteQuery     (items:KbChunkSummary[] = id/position/headingPath/snippet/pageNumber, nextCursor)

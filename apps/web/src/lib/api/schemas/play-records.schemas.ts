@@ -37,8 +37,16 @@ export const SessionPlayerSchema = z.object({
   userId: z.string().uuid().nullable(),
   displayName: z.string(),
   scores: z.array(SessionScoreSchema),
+  // #1663 Phase 1: derived from the "points" dimension (null if absent).
+  // Optional during BE rollout; tighten once the BE ships the field.
+  totalScore: z.number().int().nullable().optional(),
 });
 export type SessionPlayer = z.infer<typeof SessionPlayerSchema>;
+
+// #1663: outcome classification for a record. "competitive" when any player
+// carries a "wins" dimension; "none" for cooperative/narrative/unscored games.
+export const PlayRecordOutcomeTypeSchema = z.enum(['competitive', 'none']);
+export type PlayRecordOutcomeType = z.infer<typeof PlayRecordOutcomeTypeSchema>;
 
 // ========== DTOs ==========
 
@@ -59,6 +67,10 @@ export const PlayRecordDtoSchema = z.object({
   location: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
+  // #1663 Phase 1: derived on-read (winner = players with "wins" dimension > 0).
+  // Optional during BE rollout; tighten once the BE ships the fields.
+  winnerPlayerIds: z.array(z.string().uuid()).optional(),
+  outcomeType: PlayRecordOutcomeTypeSchema.optional(),
 });
 export type PlayRecordDto = z.infer<typeof PlayRecordDtoSchema>;
 
@@ -69,6 +81,11 @@ export const PlayRecordSummarySchema = z.object({
   duration: z.string().nullable(),
   status: PlayRecordStatusSchema,
   playerCount: z.number().int().nonnegative(),
+  // #1663 Phase 1: enable cover/deep-link + outcome badge in the list view.
+  // Optional during BE rollout; tighten once the BE ships the fields.
+  gameId: z.string().uuid().nullable().optional(),
+  winnerPlayerIds: z.array(z.string().uuid()).optional(),
+  outcomeType: PlayRecordOutcomeTypeSchema.optional(),
 });
 export type PlayRecordSummary = z.infer<typeof PlayRecordSummarySchema>;
 

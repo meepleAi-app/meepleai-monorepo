@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.DTOs.PlayRecords;
 using Api.BoundedContexts.GameManagement.Application.Queries.PlayRecords;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
@@ -38,6 +39,10 @@ internal class GetPlayRecordQueryHandler : IQueryHandler<GetPlayRecordQuery, Pla
         var scoringConfig = System.Text.Json.JsonSerializer.Deserialize<SessionScoringConfigDto>(entity.ScoringConfigJson)
             ?? new SessionScoringConfigDto(new List<string>(), new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
 
+        // Compute outcome fields from player scores (no storage change — computed on read)
+        var winnerPlayerIds = PlayRecordOutcomeCalculator.WinnerPlayerIds(entity.Players);
+        var outcomeType = PlayRecordOutcomeCalculator.OutcomeType(entity.Players);
+
         return new PlayRecordDto(
             entity.Id,
             entity.GameId,
@@ -53,7 +58,8 @@ internal class GetPlayRecordQueryHandler : IQueryHandler<GetPlayRecordQuery, Pla
                     s.Dimension,
                     s.Value,
                     s.Unit
-                )).ToList()
+                )).ToList(),
+                PlayRecordOutcomeCalculator.TotalScore(p)
             )).ToList(),
             scoringConfig,
             entity.CreatedByUserId,
@@ -63,7 +69,9 @@ internal class GetPlayRecordQueryHandler : IQueryHandler<GetPlayRecordQuery, Pla
             entity.Notes,
             entity.Location,
             entity.CreatedAt,
-            entity.UpdatedAt
+            entity.UpdatedAt,
+            winnerPlayerIds,
+            outcomeType
         );
     }
 }

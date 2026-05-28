@@ -136,6 +136,8 @@ jobs:
       infra: ${{ steps.changes.outputs.infra }}
       deploy_api: ${{ steps.decision.outputs.deploy_api }}
       deploy_web: ${{ steps.decision.outputs.deploy_web }}
+      ai_changed: ${{ steps.decision.outputs.ai_changed }}
+      ai_any: ${{ steps.decision.outputs.ai_any }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -178,6 +180,12 @@ jobs:
             infra:
               - 'infra/**'
               - '.github/workflows/deploy-staging.yml'
+            embedding:
+              - 'apps/embedding-service/**'
+            reranker:
+              - 'apps/reranker-service/**'
+            orchestration:
+              - 'apps/orchestration-service/**'
 
       - name: Determine what to deploy
         id: decision
@@ -208,6 +216,29 @@ jobs:
             echo "deploy_web=$WEB" >> $GITHUB_OUTPUT
             echo "📦 Selective deploy: api=$API, web=$WEB"
           fi
+
+          # Issue #1578 — AI service change detection. Same force-full triggers
+          # as api/web (workflow_dispatch / force / infra / initial push).
+          EMB="${{ steps.changes.outputs.embedding }}"
+          RRK="${{ steps.changes.outputs.reranker }}"
+          ORC="${{ steps.changes.outputs.orchestration }}"
+          if [ "$EVENT" = "workflow_dispatch" ] \
+            || [ "$FORCE" = "true" ] \
+            || [ "$INFRA" = "true" ] \
+            || [ "$BEFORE" = "$ZEROS" ] \
+            || [ -z "$BEFORE" ]; then
+            EMB=true; RRK=true; ORC=true
+          fi
+          # paths-filter outputs are empty when the changes step is skipped
+          # (workflow_dispatch). Normalize empties to false.
+          EMB="${EMB:-false}"; RRK="${RRK:-false}"; ORC="${ORC:-false}"
+          echo "ai_changed={\"embedding\":$EMB,\"reranker\":$RRK,\"orchestration\":$ORC}" >> $GITHUB_OUTPUT
+          if [ "$EMB" = "true" ] || [ "$RRK" = "true" ] || [ "$ORC" = "true" ]; then
+            echo "ai_any=true" >> $GITHUB_OUTPUT
+          else
+            echo "ai_any=false" >> $GITHUB_OUTPUT
+          fi
+          echo "🤖 AI changed: embedding=$EMB reranker=$RRK orchestration=$ORC"
 
   # Lightweight pre-deploy validation (full CI already ran on main-dev PR)
   # Rationale: Code reaching main-staging has already passed the full ci.yml

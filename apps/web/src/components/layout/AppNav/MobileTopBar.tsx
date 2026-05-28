@@ -63,7 +63,7 @@ export function MobileTopBar({ onHamburgerClick, adminMode, className }: MobileT
         href="/notifications"
         aria-label="Notifiche"
         data-testid="mobile-top-bar-notifications"
-        className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-muted"
+        className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (

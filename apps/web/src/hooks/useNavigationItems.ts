@@ -74,6 +74,9 @@ export function useNavigationItems(): UseNavigationItemsReturn {
     [fullItems]
   );
 
+  // Desktop "Altro" overflow: everything not already in the top row and not in the
+  // user pill. USER_PILL_NAV_IDS (profile/notifications) are surfaced via the avatar
+  // dropdown + bell, so they are excluded here even though they live in `fullItems`.
   const desktopOverflowItems = useMemo(() => {
     const exclude = new Set<string>([...TOP_BAR_NAV_IDS, ...USER_PILL_NAV_IDS, 'welcome']);
     return fullItems.filter(item => !exclude.has(item.id));

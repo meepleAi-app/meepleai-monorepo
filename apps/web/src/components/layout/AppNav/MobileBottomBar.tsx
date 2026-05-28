@@ -56,7 +56,7 @@ export function MobileBottomBar({ className }: MobileBottomBarProps) {
             data-testid={`bottom-tab-${item.id}`}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-md py-1 text-[10px] font-bold transition-colors',
+              'flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-md py-1 text-[10px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               active ? 'text-entity-game-text' : 'text-muted-foreground hover:text-foreground'
             )}
           >

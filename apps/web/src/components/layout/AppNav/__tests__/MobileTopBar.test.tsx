@@ -20,8 +20,10 @@ vi.mock('@/hooks/queries/useCurrentUser', () => ({
 }));
 
 vi.mock('@/stores/notification/store', () => ({
-  useNotificationStore: () => 3,
-  selectUnreadCount: vi.fn(),
+  // Exercise the real selector pattern: useNotificationStore(selectUnreadCount).
+  useNotificationStore: (selector: (s: { unreadCount: number }) => unknown) =>
+    selector({ unreadCount: 3 }),
+  selectUnreadCount: (s: { unreadCount: number }) => s.unreadCount,
 }));
 
 import { MobileTopBar } from '@/components/layout/AppNav/MobileTopBar';

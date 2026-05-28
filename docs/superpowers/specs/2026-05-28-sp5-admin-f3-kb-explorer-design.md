@@ -28,6 +28,8 @@ Valore: estetica SP5 sull'area KB + un esploratore gerarchico che oggi manca, se
 - ❌ **Re-skin interno delle 7 tool-page** (vectors, queue, pipeline, embedding, feedback, settings, snapshots): in F3.1 ereditano **solo** la sub-nav dal layout; il loro contenuto resta invariato. Re-skin in incrementi successivi.
 - ❌ **Azioni esotiche** del pannello (Quality eval, Export chunks JSON, View embeddings): nessun backend → fuori scope.
 - ❌ **Similarity-search dentro i chunk** (il mockup mostra "similarity match"): in F3.1 la ricerca chunk è un **filtro testo** sulla lista esistente.
+- ❌ **Tab Preview (rendering PDF) del pannello documento**: richiede un PDF viewer (react-pdf, iframe, …) → fuori scope F3.1. Il pannello dx ha **una sola vista** (hero + lista chunk), senza tab. Preview = follow-up dedicato.
+- ❌ **Riuso `features/kb-detail/*`**: i 4 componenti (`KbHeader`, `KbChunkListPanel`, `KbChunkPreview`, `KbProcessingState`) sono **stub `return null`** esplicitamente DEFERRED post-pivot 2026-05-10 ("NON IMPORTARE questo componente"). F3.1 costruisce un componente nuovo `KbDocDetailPanel` minimale (vedi §5).
 - ❌ **A5b (upload), A4 (AI/RAG), D1 (mechanic-extractor)**: parte del cluster F3 ma incrementi separati (F3.2+).
 - ❌ **Header KB condiviso nel layout** (crumbs + stat globali `247 docs · 18.487 chunks`): in F3.1 il layout rende solo la sub-nav; spostare l'header nel layout richiederebbe editare le 7 sub-page (rimosso il loro `<h1>`) → rimandato all'incremento di re-skin sub-page.
 
@@ -57,6 +59,7 @@ Il mockup `sp5-admin-kb-subnav.html` risolve la sub-nav come una `.admin-tabs` d
 | `apps/web/src/components/admin/knowledge-base/explorer/KbSubNav.tsx` | **nuovo** — client, sub-nav 8 tab, active da `usePathname()`. | net-new |
 | `apps/web/src/components/admin/knowledge-base/explorer/KbTree.tsx` | **nuovo** — client, tree gioco→documenti (cuore, TDD). | **net-new** |
 | `apps/web/src/components/admin/knowledge-base/explorer/KbExplorer.tsx` | **nuovo** — client, orchestra master-detail. | net-new |
+| `apps/web/src/components/admin/knowledge-base/explorer/KbDocDetailPanel.tsx` | **nuovo** — client, pannello dx minimale (hero + lista chunk). | net-new |
 | 7 tool-page sotto `knowledge-base/*` | **invariate** | riuso |
 
 Blast radius F3.1 = 1 layout + 1 page riscritta + 3 componenti nuovi. **Zero edit** alle 7 tool-page.
@@ -80,17 +83,23 @@ Il cuore dell'ondata. Niente tree gerarchico esiste oggi nel codebase.
 ### `KbExplorer.tsx` (client)
 Orchestra il master-detail in grid `300px | 1fr`:
 - **sinistra**: `<KbTree/>` con stato espansione + filtro locali.
-- **destra**: pannello documento — quando un doc è selezionato, hero-stats (pagine, chunks, confidence, size, status) + `.admin-tabs` con **solo Preview + Chunks**; quando nessun doc è selezionato, placeholder "Seleziona un documento".
+- **destra**: `<KbDocDetailPanel docId={selectedDocId}/>` (o placeholder se nessuno selezionato).
 - **Selezione via URL**: `?doc=<id>` (deep-link condivisibile/bookmarkabile) con `useSearchParams` + `router.replace`.
-- Riusa `features/kb-detail/{KbHeader, KbChunkListPanel, KbChunkPreview, KbProcessingState}` per il pannello, senza riscriverli.
+
+### `KbDocDetailPanel.tsx` (client) — pannello documento minimale
+Costruito da zero (i componenti `features/kb-detail/*` sono stub DEFERRED, non riusabili).
+- **Hero** dal `useKbDocDetail({docId})`: titolo, gameName, language, docType, uploadedAt, lastIngestedAt, processingStatus chip, chunkCount, pageCount.
+- **Stato 423 (locked)**: `useKbDocDetail` ritorna `{status:'locked', processingStatus}` quando il doc è queued/processing/failed → pannello renderizza banner "Documento in elaborazione" + status chip, niente lista chunk.
+- **Stato 200 (ready)**: sotto l'hero, lista chunk via `useKbChunksList({docId, limit:50})` con cursor "Carica altri" (`fetchNextPage`). Ogni riga = `position` · `pageNumber` (se presente) · snippet (1-2 righe troncate) · `headingPath` come breadcrumb mono.
+- Placeholder "Seleziona un documento" se `docId` è null/undefined.
 
 ## 6. Data flow (hook esistenti — nessun nuovo endpoint)
 
 ```
-KbTree (top-level)   adminClient.getGameKbStatuses()  → giochi + kbStatus + totalChunks
-KbTree (on-expand)   useGameDocuments(gameId)         → doc del gioco (chunkCount, status, language)
-Detail (hero)        useKbDocDetail(docId)            → pagine, chunks, size, status, confidence
-Detail (tab Chunks)  useKbChunksList(docId)           → lista chunk (score, pagina) + filtro testo
+KbTree (top-level)   adminClient.getGameKbStatuses()    → GameKbStatusItem[]   (gameId, gameName, kbStatus 'complete'|'partial'|'none', totalChunks, latestIndexedAt)
+KbTree (on-expand)   useKbGameDocuments(gameId)         → GameDocument[]       (KB-indexed docs della game, hook esistente)
+Detail (hero)        useKbDocDetail({docId})            → KbDocEnvelope        ({status:'ready', doc:KbDocDetail} | {status:'locked', processingStatus})
+Detail (chunks)      useKbChunksList({docId, limit:50}) → useInfiniteQuery     (items:KbChunkSummary[] = id/position/headingPath/snippet/pageNumber, nextCursor)
 ```
 
 Azioni core del pannello (Re-index / Delete / Download) wired **solo alle mutation già esistenti** (es. la `removeMutation` di `game-kb-documents`); se una mutation non esiste, l'azione è omessa in F3.1 (no stub). La conferma esatta degli endpoint/mutation avviene in fase `writing-plans` (API discovery via Serena prima dei test, da CLAUDE.md).
@@ -113,7 +122,7 @@ Azioni core del pannello (Re-index / Delete / Download) wired **solo alle mutati
 1. `/admin/knowledge-base` rende l'esploratore master-detail (non più la griglia di card).
 2. La sub-nav è visibile su `/admin/knowledge-base` **e** su tutte le 7 sub-page, col tab corretto in stato `active`.
 3. KbTree lista i giochi con KB; espandendo un gioco compaiono i suoi doc con stato e chunk-count; i doc si caricano all'espansione.
-4. Selezionando un doc, il pannello destro mostra hero-stats + tab Chunks (lista reale) + Preview; l'URL diventa `?doc=<id>` e ricaricando la pagina la selezione si idrata.
+4. Selezionando un doc, il pannello destro mostra hero-stats + lista chunk (cursor paginata, "Carica altri" funzionante); l'URL diventa `?doc=<id>` e ricaricando la pagina la selezione si idrata. Se il doc è in stato locked (423), pannello mostra banner "in elaborazione" senza lista chunk.
 5. Le 7 tool-page restano **identiche** nel contenuto (diff = solo la sub-nav ereditata dal layout).
 6. Nessun tab Ingestion-log/Used-by, nessun dato finto, nessuna azione senza backend.
 7. Token-only (nessun colore hardcoded, ESLint `local/no-hardcoded-color-utility` verde); a11y tree (role/aria) presente.
@@ -124,4 +133,5 @@ Azioni core del pannello (Re-index / Delete / Download) wired **solo alle mutati
 - **F3-FU-2**: tab Used-by (agenti che usano il doc) (richiede endpoint).
 - **F3-FU-3**: re-skin interno delle 7 tool-page KB verso il look SP5 + header KB condiviso nel layout.
 - **F3-FU-4**: azioni avanzate pannello (Quality eval, Export chunks JSON, View embeddings) + similarity-search nei chunk.
+- **F3-FU-5**: tab Preview del pannello documento (richiede integrazione PDF viewer: react-pdf o iframe gated).
 - **F3.2+**: re-skin A5b (upload), A4 (AI/RAG), D1 (mechanic-extractor).

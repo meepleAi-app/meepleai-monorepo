@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
+using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.BoundedContexts.UserLibrary.Domain.Events;
 using Api.SharedKernel.Domain.Interfaces;
 
@@ -49,6 +50,11 @@ public static class EventTypeRegistry
         //     PdfStateChangedEvent (fires on every transition) remains UNREGISTERED to avoid
         //     log explosion (one row per pipeline step). Decision B3 from #1590 spec panel.
         [typeof(KbDocIndexedEvent)] = "kb.doc.indexed",
+
+        // SessionTracking lifecycle. session.created is orthogonal to the session_events diary
+        // "session_created" row (#1590 C3 — different consumers). session.finalized is added in
+        // Task 7 (after SessionFinalizedEvent implements IDomainEvent).
+        [typeof(SessionCreatedEvent)] = "session.created",
     };
 
     /// <summary>

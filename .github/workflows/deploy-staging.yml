@@ -1327,9 +1327,30 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+  # Bound GHCR storage for the AI packages. Issue #1578.
+  ghcr-retention:
+    name: GHCR Retention (AI)
+    needs: [deploy]
+    if: ${{ !cancelled() && needs.deploy.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [embedding, reranker, orchestration]
+    steps:
+      - name: Delete old container versions (keep last 5)
+        uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55  # v5.0.0
+        with:
+          package-name: ${{ github.event.repository.name }}/${{ matrix.service }}-service
+          package-type: container
+          min-versions-to-keep: 5
+          ignore-versions: '^staging-latest$'
+
   notify-end:
     if: always()
-    needs: [detect-changes, pre-deploy-check, build, snapshot-baseline, deploy, validate, e2e-staging]
+    needs: [detect-changes, pre-deploy-check, build, build-ai, snapshot-baseline, deploy, validate, e2e-staging, ghcr-retention]
     uses: ./.github/workflows/notify-slack.yml
     with:
       event: ${{ contains(join(needs.*.result, ','), 'failure') && 'failed' || contains(join(needs.*.result, ','), 'cancelled') && 'cancelled' || 'completed' }}

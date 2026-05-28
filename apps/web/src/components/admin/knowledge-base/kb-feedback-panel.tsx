@@ -79,7 +79,8 @@ export function KbFeedbackPanel({ gameId }: Props) {
               <div className="flex items-center gap-2 mb-1 flex-wrap">
                 {/* Outcome badge */}
                 <Badge
-                  className={`text-[10px] font-mono font-bold uppercase tracking-wide rounded-full px-2 py-0.5 border-0 ${
+                  variant="outline"
+                  className={`border-0 text-[10px] font-mono font-bold uppercase tracking-wide rounded-full px-2 py-0.5 ${
                     item.outcome === 'helpful'
                       ? 'bg-entity-toolkit/12 text-entity-toolkit'
                       : 'bg-entity-event/12 text-entity-event'
@@ -125,7 +126,8 @@ export function KbFeedbackPanel({ gameId }: Props) {
         {data && data.total > 20 && (
           <div className="flex items-center justify-center gap-2 pt-2 border-t border-border/60 mt-2">
             <button
-              className="rounded-md border border-border/60 bg-card px-2 py-1 text-[11px] font-quicksand font-bold hover:bg-muted disabled:opacity-40"
+              type="button"
+              className="rounded-md border border-border/60 bg-card px-2 py-1 text-[11px] font-quicksand font-bold hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
               disabled={page === 1}
               onClick={() => setPage(p => p - 1)}
             >
@@ -133,7 +135,8 @@ export function KbFeedbackPanel({ gameId }: Props) {
             </button>
             <span className="font-mono text-[11px] text-muted-foreground px-1">Pag {page}</span>
             <button
-              className="rounded-md border border-border/60 bg-card px-2 py-1 text-[11px] font-quicksand font-bold hover:bg-muted disabled:opacity-40"
+              type="button"
+              className="rounded-md border border-border/60 bg-card px-2 py-1 text-[11px] font-quicksand font-bold hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
               disabled={page * 20 >= data.total}
               onClick={() => setPage(p => p + 1)}
             >

@@ -136,6 +136,8 @@ jobs:
       infra: ${{ steps.changes.outputs.infra }}
       deploy_api: ${{ steps.decision.outputs.deploy_api }}
       deploy_web: ${{ steps.decision.outputs.deploy_web }}
+      ai_changed: ${{ steps.decision.outputs.ai_changed }}
+      ai_any: ${{ steps.decision.outputs.ai_any }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -178,6 +180,12 @@ jobs:
             infra:
               - 'infra/**'
               - '.github/workflows/deploy-staging.yml'
+            embedding:
+              - 'apps/embedding-service/**'
+            reranker:
+              - 'apps/reranker-service/**'
+            orchestration:
+              - 'apps/orchestration-service/**'
 
       - name: Determine what to deploy
         id: decision
@@ -208,6 +216,29 @@ jobs:
             echo "deploy_web=$WEB" >> $GITHUB_OUTPUT
             echo "📦 Selective deploy: api=$API, web=$WEB"
           fi
+
+          # Issue #1578 — AI service change detection. Same force-full triggers
+          # as api/web (workflow_dispatch / force / infra / initial push).
+          EMB="${{ steps.changes.outputs.embedding }}"
+          RRK="${{ steps.changes.outputs.reranker }}"
+          ORC="${{ steps.changes.outputs.orchestration }}"
+          if [ "$EVENT" = "workflow_dispatch" ] \
+            || [ "$FORCE" = "true" ] \
+            || [ "$INFRA" = "true" ] \
+            || [ "$BEFORE" = "$ZEROS" ] \
+            || [ -z "$BEFORE" ]; then
+            EMB=true; RRK=true; ORC=true
+          fi
+          # paths-filter outputs are empty when the changes step is skipped
+          # (workflow_dispatch). Normalize empties to false.
+          EMB="${EMB:-false}"; RRK="${RRK:-false}"; ORC="${ORC:-false}"
+          echo "ai_changed={\"embedding\":$EMB,\"reranker\":$RRK,\"orchestration\":$ORC}" >> $GITHUB_OUTPUT
+          if [ "$EMB" = "true" ] || [ "$RRK" = "true" ] || [ "$ORC" = "true" ]; then
+            echo "ai_any=true" >> $GITHUB_OUTPUT
+          else
+            echo "ai_any=false" >> $GITHUB_OUTPUT
+          fi
+          echo "🤖 AI changed: embedding=$EMB reranker=$RRK orchestration=$ORC"
 
   # Lightweight pre-deploy validation (full CI already ran on main-dev PR)
   # Rationale: Code reaching main-staging has already passed the full ci.yml
@@ -486,6 +517,90 @@ jobs:
           echo "  API built: ${{ needs.detect-changes.outputs.deploy_api }}"
           echo "  Web built: ${{ needs.detect-changes.outputs.deploy_web }}"
 
+  # Build and push AI service images (only changed ones). Issue #1578.
+  # Separate from `build` so the slow torch QEMU builds run in parallel
+  # (matrix), with per-service timeout, and a single failure does not block
+  # the other services. ALWAYS ubuntu-latest (cloud) — never the VPS.
+  build-ai:
+    name: Build AI Images
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    needs: [pre-deploy-check, detect-changes]
+    if: always() && (needs.pre-deploy-check.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_tests == true)) && needs.detect-changes.outputs.ai_any == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [embedding, reranker, orchestration]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+          sparse-checkout: |
+            apps/${{ matrix.service }}-service/
+          sparse-checkout-cone-mode: true
+
+      - name: Generate Version
+        id: version
+        run: |
+          VERSION="staging-$(date +'%Y%m%d')-${GITHUB_SHA::7}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 ${{ matrix.service }} version: $VERSION"
+
+      - name: Free disk space for build
+        if: ${{ fromJSON(needs.detect-changes.outputs.ai_changed)[matrix.service] }}
+        run: |
+          docker builder prune -f 2>/dev/null || true
+          docker image prune -a -f --filter 'until=24h' 2>/dev/null || true
+          echo "📊 Disk free: $(df -h / | tail -1 | awk '{print $4}')"
+
+      - name: Setup Docker Buildx
+        if: ${{ fromJSON(needs.detect-changes.outputs.ai_changed)[matrix.service] }}
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd  # v4
+
+      - name: Setup QEMU for ARM64
+        if: ${{ fromJSON(needs.detect-changes.outputs.ai_changed)[matrix.service] }}
+        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a  # v4
+        with:
+          platforms: arm64
+
+      - name: Login to GitHub Container Registry
+        if: ${{ fromJSON(needs.detect-changes.outputs.ai_changed)[matrix.service] }}
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee  # v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Metadata
+        if: ${{ fromJSON(needs.detect-changes.outputs.ai_changed)[matrix.service] }}
+        id: meta
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf  # v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service }}-service
+          tags: |
+            type=raw,value=${{ steps.version.outputs.version }}
+            type=raw,value=staging-latest
+
+      # Python torch Dockerfiles are NOT cross-compile-ready (no $BUILDPLATFORM),
+      # so the arm64 build runs under QEMU emulation. Acceptable: gated by
+      # change-detection (rare) and runs on the cloud runner (never the VPS).
+      - name: Build and Push ${{ matrix.service }}
+        if: ${{ fromJSON(needs.detect-changes.outputs.ai_changed)[matrix.service] }}
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7.1.0
+        with:
+          context: ./apps/${{ matrix.service }}-service
+          file: ./apps/${{ matrix.service }}-service/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/arm64
+          cache-from: type=gha,scope=ai-${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=ai-${{ matrix.service }}
+
+      - name: Build Summary
+        run: echo "🤖 ${{ matrix.service }}-service — changed=${{ fromJSON(needs.detect-changes.outputs.ai_changed)[matrix.service] }}"
+
   # Snapshot previous performance baseline before deploy overwrites DEPLOYMENT.json
   snapshot-baseline:
     name: Snapshot Performance Baseline
@@ -583,8 +698,14 @@ jobs:
     # completed in 13m38s. Margin is tight on cold-cache builds; bump to 40
     # if NuGet restore consistently exceeds 8 min.
     timeout-minutes: 30
-    needs: [build, snapshot-baseline]
-    if: always() && needs.build.result == 'success' && (needs.snapshot-baseline.result == 'success' || needs.snapshot-baseline.result == 'skipped')
+    needs: [detect-changes, build, build-ai, snapshot-baseline]
+    # Issue #1578 — skip-propagation handling. An AI-only deploy has `build`
+    # (api/web) skipped, so `build` may be 'success' OR 'skipped'. build-ai may
+    # be 'success' (built) or 'skipped' (no AI change); a build-ai FAILURE
+    # (success||skipped false) blocks the deploy on purpose — don't deploy when
+    # an image we asked to build failed. snapshot-baseline may be skipped on
+    # AI-only deploys (it gates on `build`).
+    if: always() && (needs.build.result == 'success' || needs.build.result == 'skipped') && (needs.build-ai.result == 'success' || needs.build-ai.result == 'skipped') && (needs.snapshot-baseline.result == 'success' || needs.snapshot-baseline.result == 'skipped')
     environment:
       name: staging
       url: https://meepleai.app
@@ -757,6 +878,40 @@ jobs:
             export API_IMAGE="${{ env.API_IMAGE }}:staging-latest"
             export WEB_IMAGE="${{ env.WEB_IMAGE }}:staging-latest"
 
+            # Issue #1578 — AI image vars. compose.staging.yml guards
+            # embedding/reranker with ${X_IMAGE:?}, so every `compose up`
+            # (even one targeting only some services) needs them set, or it
+            # aborts (analog of the api/web #1399-C fix above). Default all to
+            # staging-latest; changed services keep this ref (the build-ai job
+            # always pushes staging-latest).
+            AI_BASE="${{ env.REGISTRY }}/${{ github.repository }}"
+            export EMBEDDING_IMAGE="${AI_BASE}/embedding-service:staging-latest"
+            export RERANKER_IMAGE="${AI_BASE}/reranker-service:staging-latest"
+            export ORCHESTRATION_IMAGE="${AI_BASE}/orchestration-service:staging-latest"
+
+            EMB_CHANGED="${{ fromJSON(needs.detect-changes.outputs.ai_changed).embedding }}"
+            RRK_CHANGED="${{ fromJSON(needs.detect-changes.outputs.ai_changed).reranker }}"
+            ORC_CHANGED="${{ fromJSON(needs.detect-changes.outputs.ai_changed).orchestration }}"
+
+            # Pre-pull disk guard (issue #1578 / #1575). Pulling a ~5GB torch
+            # image while the old one is still referenced can fill the disk.
+            # Pre-prune, then require AI_PULL_GATE_GB free; otherwise ABORT
+            # (fail-safe) — never risk disk-full.
+            AI_PULL_GATE_GB="${AI_PULL_GATE_GB:-15}"
+            if [ "$EMB_CHANGED" = "true" ] || [ "$RRK_CHANGED" = "true" ] || [ "$ORC_CHANGED" = "true" ]; then
+              echo "🧹 Pre-prune before AI image pull..."
+              docker image prune -af --filter "until=24h" || true
+              FREE_GB=$(df -BG / | awk 'NR==2 {gsub(/G/,"",$4); print $4}')
+              echo "💽 VPS disk: ${FREE_GB} GB free — AI pull gate ${AI_PULL_GATE_GB} GB"
+              if [ "$FREE_GB" -lt "$AI_PULL_GATE_GB" ]; then
+                echo "::error::Insufficient disk for AI image pull: ${FREE_GB} GB free < ${AI_PULL_GATE_GB} GB"
+                echo "🚫 Aborting AI deploy (fail-safe). Manual cleanup on the VPS:"
+                echo "  docker image prune -af"
+                echo "  bash /opt/meepleai/repo/infra/scripts/daily-disk-prune.sh"
+                exit 1
+              fi
+            fi
+
             SERVICES=""
 
             # Pull and tag only changed images
@@ -772,6 +927,24 @@ jobs:
               export WEB_IMAGE="${{ needs.build.outputs.web_image }}"
               SERVICES="$SERVICES web"
               echo "📦 Web image updated"
+            fi
+
+            # Issue #1578 — AI services. embedding/reranker are in the
+            # ai-essential profile → pull + recreate. orchestration is
+            # publish-only → pull ONLY (cached for a future activation).
+            if [ "$EMB_CHANGED" = "true" ]; then
+              docker pull "$EMBEDDING_IMAGE"
+              SERVICES="$SERVICES embedding-service"
+              echo "📦 embedding-service image updated"
+            fi
+            if [ "$RRK_CHANGED" = "true" ]; then
+              docker pull "$RERANKER_IMAGE"
+              SERVICES="$SERVICES reranker-service"
+              echo "📦 reranker-service image updated"
+            fi
+            if [ "$ORC_CHANGED" = "true" ]; then
+              docker pull "$ORCHESTRATION_IMAGE" || echo "⚠️ orchestration pull failed (non-blocking; not active in staging)"
+              echo "📦 orchestration-service image cached (not started in staging)"
             fi
 
             if [ -z "$SERVICES" ]; then
@@ -816,12 +989,34 @@ jobs:
             assert any(c['name']=='redis' and c['status']=='Healthy' for c in d['checks']), 'redis unhealthy'
             " || exit 1
 
+            # Issue #1578 — AI container health (only for recreated services).
+            # Container names per compose: embedding-service→meepleai-embedding,
+            # reranker-service→meepleai-reranker.
+            ai_health() {
+              cname="$1"
+              echo "⏳ Waiting for ${cname} health..."
+              for attempt in $(seq 1 40); do
+                st=$(docker inspect --format '{{.State.Health.Status}}' "$cname" 2>/dev/null || echo "missing")
+                if [ "$st" = "healthy" ]; then echo "✅ ${cname} healthy after ~$((attempt*5))s"; return 0; fi
+                sleep 5
+              done
+              echo "::error::${cname} did not become healthy"
+              docker logs "$cname" --tail 30 2>/dev/null || true
+              return 1
+            }
+            case " $SERVICES " in *" embedding-service "*) ai_health meepleai-embedding || exit 1 ;; esac
+            case " $SERVICES " in *" reranker-service "*) ai_health meepleai-reranker || exit 1 ;; esac
+
             # Record deployment version
             cat > /opt/meepleai/repo/infra/DEPLOYMENT.json << VEREOF
             {
               "version": "${{ needs.build.outputs.version }}",
               "api_image": "${{ needs.build.outputs.api_image }}",
               "web_image": "${{ needs.build.outputs.web_image }}",
+              "embedding_image": "${EMBEDDING_IMAGE}",
+              "reranker_image": "${RERANKER_IMAGE}",
+              "orchestration_image": "${ORCHESTRATION_IMAGE}",
+              "ai_changed": "embedding=${EMB_CHANGED},reranker=${RRK_CHANGED},orchestration=${ORC_CHANGED}",
               "environment": "staging",
               "deployed_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
               "deployed_by": "${{ github.actor }}",
@@ -1132,9 +1327,30 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+  # Bound GHCR storage for the AI packages. Issue #1578.
+  ghcr-retention:
+    name: GHCR Retention (AI)
+    needs: [deploy]
+    if: ${{ !cancelled() && needs.deploy.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [embedding, reranker, orchestration]
+    steps:
+      - name: Delete old container versions (keep last 5)
+        uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55  # v5.0.0
+        with:
+          package-name: ${{ github.event.repository.name }}/${{ matrix.service }}-service
+          package-type: container
+          min-versions-to-keep: 5
+          ignore-versions: '^staging-latest$'
+
   notify-end:
     if: always()
-    needs: [detect-changes, pre-deploy-check, build, snapshot-baseline, deploy, validate, e2e-staging]
+    needs: [detect-changes, pre-deploy-check, build, build-ai, snapshot-baseline, deploy, validate, e2e-staging, ghcr-retention]
     uses: ./.github/workflows/notify-slack.yml
     with:
       event: ${{ contains(join(needs.*.result, ','), 'failure') && 'failed' || contains(join(needs.*.result, ','), 'cancelled') && 'cancelled' || 'completed' }}

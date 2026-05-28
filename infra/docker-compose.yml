@@ -181,6 +181,10 @@ services:
     build:
       context: ../apps/embedding-service
       dockerfile: ./Dockerfile
+    # Issue #1578: staging pulls this from GHCR (compose.staging.yml sets
+    # EMBEDDING_IMAGE + pull_policy: always). Dev leaves the var unset → builds
+    # locally as meepleai-embedding (mirrors api/web).
+    image: ${EMBEDDING_IMAGE:-meepleai-embedding}
     container_name: meepleai-embedding
     restart: unless-stopped
     profiles: [ai, ai-essential]
@@ -262,6 +266,8 @@ services:
     build:
       context: ../apps/reranker-service
       dockerfile: ./Dockerfile
+    # Issue #1578: see embedding-service note above.
+    image: ${RERANKER_IMAGE:-meepleai-reranker}
     container_name: meepleai-reranker
     restart: unless-stopped
     profiles: [ai, ai-essential]
@@ -288,6 +294,9 @@ services:
     build:
       context: ../apps/orchestration-service
       dockerfile: ./Dockerfile
+    # Issue #1578: publish-only. Image built+pushed to GHCR but not activated
+    # in staging (stays out of the ai-essential deploy profile).
+    image: ${ORCHESTRATION_IMAGE:-meepleai-orchestrator}
     container_name: meepleai-orchestrator
     restart: unless-stopped
     profiles: [ai, tutor-agents]

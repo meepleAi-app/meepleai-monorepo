@@ -310,15 +310,18 @@ export default function VectorStorePage() {
                     <span className="font-mono text-[9.5px] font-bold uppercase tracking-wide text-muted-foreground">
                       Snippet
                     </span>
-                    <span className="font-mono text-[9.5px] font-bold uppercase tracking-wide text-muted-foreground text-right">
-                      Score ↓
+                    <span
+                      className="font-mono text-[9.5px] font-bold uppercase tracking-wide text-muted-foreground text-right"
+                      title="Score not exposed by the current API"
+                    >
+                      Score
                     </span>
                     <span />
                   </div>
 
                   {searchResults.map(item => {
                     const isExpanded = expandedResult === item.documentId;
-                    const shortId = item.documentId.slice(0, 8);
+                    const shortId = item.documentId.slice(0, 8) || item.documentId || '—';
                     return (
                       <div key={`${item.documentId}-${item.chunkIndex}`}>
                         <button

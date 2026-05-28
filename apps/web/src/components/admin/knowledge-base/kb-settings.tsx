@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- admin KB chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13b admin scope (see token-bridge-map.md for --admin-* decision deferred to DS-15). */
 'use client';
 
 import { useState } from 'react';
@@ -78,17 +77,19 @@ interface ClearCacheResult {
 function SettingRow({ label, value }: { label: string; value: string | number | boolean }) {
   const displayValue =
     typeof value === 'boolean' ? (value ? 'Enabled' : 'Disabled') : String(value);
-  const boolColor =
+  const valueClass =
     typeof value === 'boolean'
       ? value
-        ? 'text-green-600 dark:text-green-400'
-        : 'text-muted-foreground dark:text-muted-foreground'
-      : 'text-foreground dark:text-zinc-100';
+        ? 'text-entity-toolkit'
+        : 'text-muted-foreground'
+      : 'text-foreground';
 
   return (
-    <div className="flex items-center justify-between py-2 border-b border-border dark:border-zinc-800 last:border-0">
-      <span className="text-sm text-muted-foreground dark:text-muted-foreground">{label}</span>
-      <span className={`text-sm font-mono ${boolColor}`}>{displayValue}</span>
+    <div className="flex items-center justify-between py-1.5 border-b border-border/60 last:border-0">
+      <span className="font-mono text-[9.5px] font-bold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </span>
+      <span className={`font-mono text-[11.5px] font-semibold ${valueClass}`}>{displayValue}</span>
     </div>
   );
 }
@@ -103,12 +104,12 @@ function SettingsCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-5 border border-border/50 dark:border-zinc-700/50">
-      <div className="flex items-center gap-2 mb-4">
-        <Icon className="h-5 w-5 text-blue-500" />
-        <h3 className="font-semibold text-foreground dark:text-zinc-100">{title}</h3>
+    <div className="rounded-[10px] border border-border/60 bg-card overflow-hidden">
+      <div className="flex items-center gap-2.5 border-b border-border/60 bg-background px-3.5 py-2.5">
+        <Icon className="h-3.5 w-3.5 text-entity-kb shrink-0" />
+        <h3 className="font-quicksand text-[13px] font-extrabold text-foreground">{title}</h3>
       </div>
-      <div className="space-y-0">{children}</div>
+      <div className="p-3.5 space-y-0">{children}</div>
     </div>
   );
 }
@@ -153,7 +154,7 @@ export function KBSettings() {
     return (
       <div className="space-y-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-48 bg-card/40 dark:bg-zinc-800/40 rounded-xl animate-pulse" />
+          <div key={i} className="h-48 rounded-[10px] bg-muted animate-pulse" />
         ))}
       </div>
     );
@@ -161,8 +162,8 @@ export function KBSettings() {
 
   if (!settings) {
     return (
-      <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-border/50 dark:border-zinc-700/50">
-        <p className="text-sm text-muted-foreground dark:text-muted-foreground">Unable to load KB settings</p>
+      <div className="rounded-[10px] border border-border/60 bg-card p-4">
+        <p className="text-sm text-muted-foreground">Unable to load KB settings</p>
       </div>
     );
   }
@@ -170,35 +171,36 @@ export function KBSettings() {
   return (
     <div className="space-y-6">
       {/* Info Banner */}
-      <div className="flex items-start gap-3 bg-blue-50/70 dark:bg-blue-900/20 backdrop-blur-md rounded-xl p-4 border border-blue-200/50 dark:border-blue-800/50">
-        <InfoIcon className="h-5 w-5 text-blue-500 mt-0.5 shrink-0" />
-        <div>
-          <p className="text-sm font-medium text-blue-900 dark:text-blue-200">
+      <div className="flex items-start gap-3 rounded-[10px] border border-entity-chat/30 bg-entity-chat/12 p-4">
+        <InfoIcon className="h-4 w-4 text-entity-chat mt-0.5 shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="font-quicksand text-[13px] font-extrabold text-entity-chat">
             Read-only Configuration
           </p>
-          <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+          <p className="mt-1 text-xs text-muted-foreground">
             These settings are configured via environment variables and config files. To modify
             them, update the server configuration and restart the API service.
           </p>
         </div>
-      </div>
-
-      {/* Refresh Button */}
-      <div className="flex justify-end">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => refetch()}
-          disabled={isRefetching}
-          className="gap-2"
-        >
-          <RefreshCwIcon className={`h-4 w-4 ${isRefetching ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] font-bold text-muted-foreground">
+            read-only
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isRefetching}
+            className="gap-1.5 h-7 px-2.5 text-[11px]"
+          >
+            <RefreshCwIcon className={`h-3.5 w-3.5 ${isRefetching ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Settings Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {/* Embedding Model */}
         <SettingsCard title="Embedding Model" icon={CpuIcon}>
           <SettingRow label="Provider" value={settings.embedding.provider} />
@@ -252,7 +254,7 @@ export function KBSettings() {
           <SettingRow label="Configured" value={settings.reranker.configured} />
           {settings.reranker.url && <SettingRow label="URL" value={settings.reranker.url} />}
           {!settings.reranker.configured && (
-            <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+            <p className="text-xs text-entity-agent mt-2">
               Reranker not configured. Set RERANKER_URL to enable cross-encoder reranking.
             </p>
           )}
@@ -261,7 +263,7 @@ export function KBSettings() {
         {/* Storage */}
         <SettingsCard title="File Storage" icon={HardDriveIcon}>
           <SettingRow label="Provider" value={settings.storage.provider} />
-          <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-2">
+          <p className="text-xs text-muted-foreground mt-2">
             {settings.storage.provider === 'local'
               ? 'Using local filesystem storage. Set STORAGE_PROVIDER=s3 for cloud storage.'
               : 'Using S3-compatible cloud storage.'}
@@ -273,146 +275,160 @@ export function KBSettings() {
       <RagEnhancementsTab />
 
       {/* Danger Zone */}
-      <div className="bg-red-50/70 dark:bg-red-900/20 backdrop-blur-md rounded-xl p-6 border-2 border-red-200 dark:border-red-800">
-        <div className="flex items-center gap-2 mb-4">
-          <AlertTriangleIcon className="w-5 h-5 text-red-600 dark:text-red-400" />
-          <h2 className="font-quicksand text-xl font-bold text-red-900 dark:text-red-300">
+      <div className="rounded-[10px] border border-entity-event/40 bg-entity-event/5 overflow-hidden">
+        {/* Danger Zone header */}
+        <div className="flex items-center gap-2.5 border-b border-entity-event/25 px-4 py-3 bg-gradient-to-r from-entity-event/14 to-entity-event/4">
+          <AlertTriangleIcon className="h-4 w-4 text-entity-event shrink-0" />
+          <h2 className="font-quicksand text-[14px] font-extrabold text-entity-event">
             Danger Zone
           </h2>
+          <span className="font-mono text-[10.5px] text-muted-foreground ml-2">
+            These actions may affect system performance and data availability.
+          </span>
         </div>
-        <p className="text-sm text-red-700 dark:text-red-400 mb-4">
-          These actions may affect system performance and data availability.
-        </p>
 
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-entity-event/15">
           {/* Rebuild Index */}
-          {!showRebuildConfirm ? (
-            <div className="flex items-center justify-between">
+          <div className="p-4 flex flex-col gap-3">
+            <div className="flex items-start gap-3">
+              <div className="h-8 w-8 rounded-lg bg-entity-event/14 flex items-center justify-center shrink-0">
+                <RefreshCwIcon className="h-4 w-4 text-entity-event" />
+              </div>
               <div>
-                <p className="text-sm font-medium text-red-900 dark:text-red-200">
+                <p className="font-quicksand text-[13.5px] font-extrabold text-foreground">
                   Rebuild Vector Index
                 </p>
-                <p className="text-xs text-red-600 dark:text-red-400">
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
                   Triggers reindexing of all pgvector embeddings. May temporarily affect search.
                 </p>
               </div>
+            </div>
+
+            {!showRebuildConfirm ? (
               <Button
                 variant="destructive"
                 size="sm"
                 onClick={() => setShowRebuildConfirm(true)}
                 disabled={rebuildIndexMutation.isPending}
+                className="self-start gap-1.5"
               >
-                <RefreshCwIcon className="h-4 w-4 mr-1" />
+                <RefreshCwIcon className="h-4 w-4" />
                 Rebuild Index
               </Button>
-            </div>
-          ) : (
-            <div className="bg-red-100 dark:bg-red-900/40 rounded-lg p-4">
-              <p className="text-sm font-medium text-red-900 dark:text-red-200 mb-3">
-                Are you sure you want to rebuild all vector indices?
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => rebuildIndexMutation.mutate()}
-                  disabled={rebuildIndexMutation.isPending}
-                >
-                  {rebuildIndexMutation.isPending ? (
-                    <>
-                      <RefreshCwIcon className="h-4 w-4 mr-1 animate-spin" />
-                      Rebuilding...
-                    </>
-                  ) : (
-                    'Yes, Rebuild'
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowRebuildConfirm(false)}
-                  disabled={rebuildIndexMutation.isPending}
-                >
-                  Cancel
-                </Button>
+            ) : (
+              <div className="rounded-lg border border-entity-event/25 bg-background p-3 flex flex-col gap-2">
+                <p className="font-mono text-[11px] text-muted-foreground">
+                  Are you sure you want to rebuild all vector indices?
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => rebuildIndexMutation.mutate()}
+                    disabled={rebuildIndexMutation.isPending}
+                  >
+                    {rebuildIndexMutation.isPending ? (
+                      <>
+                        <RefreshCwIcon className="h-4 w-4 mr-1 animate-spin" />
+                        Rebuilding...
+                      </>
+                    ) : (
+                      'Yes, Rebuild'
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowRebuildConfirm(false)}
+                    disabled={rebuildIndexMutation.isPending}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+                {rebuildIndexMutation.isSuccess && (
+                  <p className="text-xs text-entity-toolkit mt-1">
+                    Rebuild triggered successfully.
+                  </p>
+                )}
+                {rebuildIndexMutation.isError && (
+                  <p className="text-xs text-entity-event mt-1">
+                    Failed to trigger rebuild. Please try again.
+                  </p>
+                )}
               </div>
-              {rebuildIndexMutation.isSuccess && (
-                <p className="text-xs text-green-600 dark:text-green-400 mt-2">
-                  Rebuild triggered successfully.
-                </p>
-              )}
-              {rebuildIndexMutation.isError && (
-                <p className="text-xs text-red-600 dark:text-red-400 mt-2">
-                  Failed to trigger rebuild. Please try again.
-                </p>
-              )}
-            </div>
-          )}
-
-          <div className="border-t border-red-200 dark:border-red-800" />
+            )}
+          </div>
 
           {/* Clear Cache */}
-          {!showClearConfirm ? (
-            <div className="flex items-center justify-between">
+          <div className="p-4 flex flex-col gap-3">
+            <div className="flex items-start gap-3">
+              <div className="h-8 w-8 rounded-lg bg-entity-event/14 flex items-center justify-center shrink-0">
+                <Trash2Icon className="h-4 w-4 text-entity-event" />
+              </div>
               <div>
-                <p className="text-sm font-medium text-red-900 dark:text-red-200">Clear KB Cache</p>
-                <p className="text-xs text-red-600 dark:text-red-400">
+                <p className="font-quicksand text-[13.5px] font-extrabold text-foreground">
+                  Clear KB Cache
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
                   Signals a cache reset. Cached entries will expire based on their TTL.
                 </p>
               </div>
+            </div>
+
+            {!showClearConfirm ? (
               <Button
                 variant="outline"
                 size="sm"
-                className="border-red-300 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
+                className="self-start gap-1.5 border-entity-event/55 text-entity-event hover:bg-entity-event/8"
                 onClick={() => setShowClearConfirm(true)}
                 disabled={clearCacheMutation.isPending}
               >
-                <Trash2Icon className="h-4 w-4 mr-1" />
+                <Trash2Icon className="h-4 w-4" />
                 Clear Cache
               </Button>
-            </div>
-          ) : (
-            <div className="bg-red-100 dark:bg-red-900/40 rounded-lg p-4">
-              <p className="text-sm font-medium text-red-900 dark:text-red-200 mb-3">
-                Are you sure you want to clear the KB cache?
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => clearCacheMutation.mutate()}
-                  disabled={clearCacheMutation.isPending}
-                >
-                  {clearCacheMutation.isPending ? (
-                    <>
-                      <RefreshCwIcon className="h-4 w-4 mr-1 animate-spin" />
-                      Clearing...
-                    </>
-                  ) : (
-                    'Yes, Clear Cache'
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowClearConfirm(false)}
-                  disabled={clearCacheMutation.isPending}
-                >
-                  Cancel
-                </Button>
+            ) : (
+              <div className="rounded-lg border border-entity-event/25 bg-background p-3 flex flex-col gap-2">
+                <p className="font-mono text-[11px] text-muted-foreground">
+                  Are you sure you want to clear the KB cache?
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => clearCacheMutation.mutate()}
+                    disabled={clearCacheMutation.isPending}
+                  >
+                    {clearCacheMutation.isPending ? (
+                      <>
+                        <RefreshCwIcon className="h-4 w-4 mr-1 animate-spin" />
+                        Clearing...
+                      </>
+                    ) : (
+                      'Yes, Clear Cache'
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowClearConfirm(false)}
+                    disabled={clearCacheMutation.isPending}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+                {clearCacheMutation.isSuccess && (
+                  <p className="text-xs text-entity-toolkit mt-1">
+                    {clearCacheMutation.data?.message}
+                  </p>
+                )}
+                {clearCacheMutation.isError && (
+                  <p className="text-xs text-entity-event mt-1">
+                    Failed to clear cache. Please try again.
+                  </p>
+                )}
               </div>
-              {clearCacheMutation.isSuccess && (
-                <p className="text-xs text-green-600 dark:text-green-400 mt-2">
-                  {clearCacheMutation.data?.message}
-                </p>
-              )}
-              {clearCacheMutation.isError && (
-                <p className="text-xs text-red-600 dark:text-red-400 mt-2">
-                  Failed to clear cache. Please try again.
-                </p>
-              )}
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

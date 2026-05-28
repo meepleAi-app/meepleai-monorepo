@@ -25,7 +25,8 @@
  * Hooks mocked:
  *   - `next/navigation` (useRouter/useSearchParams/usePathname)
  *   - `@/hooks/queries/useHybridHubItems` (the data layer)
- *   - `@/hooks/queries/useLibrary` (useRemoveGameFromLibrary + useLibraryActivity)
+ *   - `@/hooks/queries/useLibrary` (useRemoveGameFromLibrary)
+ *   - `@/hooks/useActivityFeed` (cross-entity rail feed — Phase 3b #1593)
  *   - `@/hooks/useMiniNavConfig` (verify call signature)
  *   - `@/hooks/useTranslation` is left real — it consumes IntlProvider seeded
  *     by the test wrapper, exercising the same react-intl path as production.

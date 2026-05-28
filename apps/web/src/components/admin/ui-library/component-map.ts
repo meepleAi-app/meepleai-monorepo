@@ -117,9 +117,6 @@ import { ChatMainArea } from '@/components/chat/panel/ChatMainArea';
 import { ChatMessageBubble } from '@/components/chat/panel/ChatMessageBubble';
 import { ChatPanelHeader } from '@/components/chat/panel/ChatPanelHeader';
 import { ChatSidebar } from '@/components/chat/panel/ChatSidebar';
-import { TopBarChatButton } from '@/components/layout/UserShell/TopBarChatButton';
-import { TopBarLogo } from '@/components/layout/UserShell/TopBarLogo';
-import { TopBarSearchPill } from '@/components/layout/UserShell/TopBarSearchPill';
 import { AdminConfirmationDialog } from '@/components/ui/admin/admin-confirmation-dialog';
 import { AgentStatusBadge } from '@/components/ui/agent/AgentStatusBadge';
 import { FadeIn } from '@/components/ui/animations/FadeIn';
@@ -512,11 +509,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   'bulk-actions-toolbar': BulkActionsToolbar,
   'service-health-matrix': ServiceHealthMatrix,
   'ai-models-table': AiModelsTable,
-
-  // Desktop UX Redesign — Shell atomics
-  'top-bar-logo': TopBarLogo,
-  'top-bar-search-pill': TopBarSearchPill,
-  'top-bar-chat-button': TopBarChatButton,
 
   // Desktop UX Redesign — Chat slide-over panel
   'chat-panel-header': ChatPanelHeader,

@@ -19,11 +19,14 @@ import {
   Brain,
   Calendar,
   Clock,
-  History,
+  Globe,
   LayoutDashboard,
+  MessageSquare,
+  PenTool,
   ShieldIcon,
   User,
   Users2,
+  Wrench,
 } from 'lucide-react';
 
 import type { UnifiedNavItem, UnifiedNavSubItem, NavItemVisibility } from './navigation.types';
@@ -101,7 +104,7 @@ export const UNIFIED_NAV_ITEMS: UnifiedNavItem[] = [
   {
     id: 'chat',
     href: '/chat',
-    icon: History,
+    icon: MessageSquare,
     iconName: 'message-square',
     label: 'Chat',
     ariaLabel: 'Navigate to chat history',
@@ -225,6 +228,44 @@ export const UNIFIED_NAV_ITEMS: UnifiedNavItem[] = [
     activePattern: /^\/admin/,
     visibility: { authOnly: true, minRole: 'admin' },
     group: 'admin',
+  },
+  {
+    id: 'hub',
+    href: '/hub/games',
+    icon: Globe,
+    iconName: 'globe',
+    label: 'Hub',
+    ariaLabel: 'Esplora il catalogo community',
+    priority: 13,
+    testId: 'nav-hub',
+    activePattern: /^\/hub/,
+    visibility: { authOnly: true },
+  },
+  {
+    id: 'toolkit',
+    href: '/toolkit',
+    icon: Wrench,
+    iconName: 'wrench',
+    label: 'Toolkit',
+    ariaLabel: 'Vai ai toolkit di gioco',
+    priority: 14,
+    testId: 'nav-toolkit',
+    activePattern: /^\/toolkit(\/|$)/,
+    visibility: { authOnly: true },
+    group: 'strumenti',
+  },
+  {
+    id: 'editor',
+    href: '/editor',
+    icon: PenTool,
+    iconName: 'pen-tool',
+    label: 'Editor Agenti',
+    ariaLabel: 'Editor di agenti AI',
+    priority: 15,
+    testId: 'nav-editor',
+    activePattern: /^\/editor/,
+    visibility: { authOnly: true, minRole: 'editor' },
+    group: 'strumenti',
   },
 ];
 
@@ -367,3 +408,40 @@ export const TOTAL_SLOTS = {
   tablet: 7,
   desktop: 8,
 } as const;
+
+// ---------------------------------------------------------------------------
+// sp4 navbar surface placement — single source of truth for which items
+// appear on which navbar surface, and in which order.
+//
+// Grafica: admin-mockups/design_files/sp4-dashboard.jsx (DesktopAuthNav /
+// MobileBottomBar). Le superfici sono asimmetriche per design:
+//   - desktop top-bar  → TOP_BAR_NAV_IDS
+//   - mobile bottom-bar → BOTTOM_TAB_NAV_IDS
+// Tutto ciò che non è in queste liste (né nel pill utente) confluisce
+// nell'overflow: dropdown "Altro" su desktop, drawer ☰ su mobile.
+// ---------------------------------------------------------------------------
+
+/** Ordered ids shown in the desktop top-bar primary link row. */
+export const TOP_BAR_NAV_IDS = ['dashboard', 'library', 'hub', 'sessions', 'toolkit'] as const;
+
+/** Ordered ids shown as the fixed mobile bottom-bar tabs. */
+export const BOTTOM_TAB_NAV_IDS = ['dashboard', 'library', 'hub', 'chat', 'profile'] as const;
+
+/** Ids surfaced via the user-menu pill / bell — never in the top row or drawer body. */
+export const USER_PILL_NAV_IDS = ['profile', 'notifications'] as const;
+
+/** Per-surface label overrides (e.g. Dashboard → "Home" in the bottom bar). */
+export const BOTTOM_TAB_LABEL_OVERRIDES: Record<string, string> = { dashboard: 'Home' };
+
+/**
+ * Return the items whose id is in `ids`, ordered to match `ids`.
+ * Items not present in `items` (e.g. filtered out by role) are skipped.
+ */
+export function pickNavItemsByIds(
+  items: UnifiedNavItem[],
+  ids: readonly string[]
+): UnifiedNavItem[] {
+  return ids
+    .map(id => items.find(item => item.id === id))
+    .filter((item): item is UnifiedNavItem => item !== undefined);
+}

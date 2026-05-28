@@ -3,7 +3,8 @@
 
 import { useEffect, useTransition } from 'react';
 
-import { LogOut } from 'lucide-react';
+import { LogOut, Settings } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { logoutAction } from '@/actions/auth';
@@ -87,8 +88,12 @@ export function SideDrawer({ open, onClose }: SideDrawerProps) {
         aria-label="Navigation menu"
         className="fixed top-0 left-0 bottom-0 w-[280px] bg-background border-r shadow-xl z-50 flex flex-col animate-in slide-in-from-left duration-200"
       >
-        {/* User info header */}
-        <div className="flex items-center gap-3 px-4 py-5 border-b shrink-0">
+        {/* User info header — links to profile */}
+        <Link
+          href="/profile"
+          onClick={onClose}
+          className="flex items-center gap-3 px-4 py-5 border-b shrink-0 transition-colors hover:bg-muted"
+        >
           <div className="w-10 h-10 rounded-full bg-[hsl(25,95%,45%)] flex items-center justify-center shrink-0">
             <span className="text-white text-sm font-bold">{userInitial}</span>
           </div>
@@ -96,15 +101,23 @@ export function SideDrawer({ open, onClose }: SideDrawerProps) {
             <span className="text-sm font-semibold truncate">{user?.displayName || 'Utente'}</span>
             <span className="text-xs text-muted-foreground truncate">{user?.email}</span>
           </div>
-        </div>
+        </Link>
 
         {/* Navigation items — scrollable */}
         <div className="flex-1 overflow-y-auto px-3 py-3">
-          <SideDrawerItems userRole={user?.role} onNavigate={onClose} />
+          <SideDrawerItems onNavigate={onClose} />
         </div>
 
-        {/* Logout button */}
-        <div className="px-3 py-4 border-t shrink-0">
+        {/* Account + logout */}
+        <div className="px-3 py-4 border-t shrink-0 flex flex-col gap-0.5">
+          <Link
+            href="/profile?tab=settings"
+            onClick={onClose}
+            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground/70 hover:bg-muted hover:text-foreground transition-colors"
+          >
+            <Settings className="h-4 w-4 shrink-0" />
+            <span>Impostazioni</span>
+          </Link>
           <button
             type="button"
             onClick={handleLogout}

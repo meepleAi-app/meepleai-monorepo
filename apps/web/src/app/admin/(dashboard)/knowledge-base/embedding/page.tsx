@@ -8,12 +8,8 @@ import {
   CheckCircleIcon,
   CpuIcon,
   GlobeIcon,
-  HashIcon,
   RefreshCwIcon,
-  TextIcon,
-  TimerIcon,
   XCircleIcon,
-  ZapIcon,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
@@ -58,7 +54,6 @@ function KpiSkeleton() {
     <div className="flex flex-col gap-1 rounded-[10px] border border-border/60 bg-card p-4 border-l-4 border-l-entity-kb animate-pulse min-h-[88px]">
       <div className="h-2.5 w-24 bg-muted rounded" />
       <div className="h-7 w-16 bg-muted rounded mt-1" />
-      <div className="h-2.5 w-20 bg-muted rounded mt-1" />
     </div>
   );
 }
@@ -117,7 +112,7 @@ export default function EmbeddingServicePage() {
       ) : (
         <section className="rounded-[10px] border border-border/60 bg-card overflow-hidden">
           {/* Panel header */}
-          <div className="flex items-center gap-2 border-b border-border/60 bg-background px-3.5 py-2.5">
+          <div className="flex items-center gap-2.5 border-b border-border/60 bg-background px-3.5 py-2.5">
             <BrainCircuitIcon className="h-4 w-4 text-entity-kb shrink-0" />
             <h2 className="font-quicksand text-[13px] font-extrabold text-foreground">
               Service Status
@@ -214,10 +209,6 @@ export default function EmbeddingServicePage() {
               <span className="font-quicksand text-[28px] font-extrabold tabular-nums text-foreground leading-tight">
                 {metrics?.requestsTotal?.toLocaleString() ?? '0'}
               </span>
-              <span className="font-mono text-[11px] text-muted-foreground flex items-center gap-1">
-                <ZapIcon className="h-3 w-3 text-entity-kb" />
-                embedding requests
-              </span>
             </div>
 
             {/* Total Failures */}
@@ -227,10 +218,6 @@ export default function EmbeddingServicePage() {
               </span>
               <span className="font-quicksand text-[28px] font-extrabold tabular-nums text-entity-event leading-tight">
                 {metrics?.failuresTotal?.toLocaleString() ?? '0'}
-              </span>
-              <span className="font-mono text-[11px] text-muted-foreground flex items-center gap-1">
-                <XCircleIcon className="h-3 w-3 text-entity-event" />
-                failed requests
               </span>
             </div>
 
@@ -248,10 +235,6 @@ export default function EmbeddingServicePage() {
               >
                 {`${metrics?.failureRate ?? 0}%`}
               </span>
-              <span className="font-mono text-[11px] text-muted-foreground flex items-center gap-1">
-                <AlertCircleIcon className="h-3 w-3" />
-                of total requests
-              </span>
             </div>
 
             {/* Avg Duration */}
@@ -264,10 +247,6 @@ export default function EmbeddingServicePage() {
                 <span className="font-quicksand text-[14px] font-bold text-muted-foreground ml-0.5">
                   ms
                 </span>
-              </span>
-              <span className="font-mono text-[11px] text-muted-foreground flex items-center gap-1">
-                <TimerIcon className="h-3 w-3 text-entity-chat" />
-                per request
               </span>
             </div>
 
@@ -282,10 +261,6 @@ export default function EmbeddingServicePage() {
                   s
                 </span>
               </span>
-              <span className="font-mono text-[11px] text-muted-foreground flex items-center gap-1">
-                <HashIcon className="h-3 w-3 text-entity-chat" />
-                cumulative
-              </span>
             </div>
 
             {/* Characters Processed */}
@@ -295,10 +270,6 @@ export default function EmbeddingServicePage() {
               </span>
               <span className="font-quicksand text-[28px] font-extrabold tabular-nums text-foreground leading-tight">
                 {(metrics?.totalCharsSum ?? 0).toLocaleString()}
-              </span>
-              <span className="font-mono text-[11px] text-muted-foreground flex items-center gap-1">
-                <TextIcon className="h-3 w-3 text-entity-toolkit" />
-                total chars embedded
               </span>
             </div>
           </div>

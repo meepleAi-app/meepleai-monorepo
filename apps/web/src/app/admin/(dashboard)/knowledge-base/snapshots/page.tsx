@@ -229,36 +229,22 @@ export default function KbSnapshotsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground dark:text-zinc-100">Snapshot RAG</h1>
-          <p className="text-sm text-muted-foreground dark:text-muted-foreground mt-1">
-            Gestisci i backup della Knowledge Base. Ripristina uno snapshot per evitare di
-            rielaborare i PDF.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isRefetching}
-            className="gap-2"
-          >
-            <RefreshCwIcon className={`h-4 w-4 ${isRefetching ? 'animate-spin' : ''}`} />
-            Aggiorna
-          </Button>
-          <Button
-            size="sm"
-            onClick={handleCreateSnapshot}
-            disabled={exportLoading}
-            className="gap-2"
-          >
-            <PlusIcon className="h-4 w-4" />
-            {exportLoading ? 'Creazione...' : 'Nuovo snapshot'}
-          </Button>
-        </div>
+      {/* Page toolbar */}
+      <div className="flex justify-end gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => refetch()}
+          disabled={isRefetching}
+          className="gap-2"
+        >
+          <RefreshCwIcon className={`h-4 w-4 ${isRefetching ? 'animate-spin' : ''}`} />
+          Aggiorna
+        </Button>
+        <Button size="sm" onClick={handleCreateSnapshot} disabled={exportLoading} className="gap-2">
+          <PlusIcon className="h-4 w-4" />
+          {exportLoading ? 'Creazione...' : 'Nuovo snapshot'}
+        </Button>
       </div>
 
       {/* Export error */}

@@ -116,16 +116,8 @@ export default function VectorStorePage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
-            Vector Store
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            pgvector knowledge base — embeddings health and semantic search
-          </p>
-        </div>
+      {/* Page toolbar */}
+      <div className="flex justify-end">
         <Button
           variant="outline"
           size="sm"

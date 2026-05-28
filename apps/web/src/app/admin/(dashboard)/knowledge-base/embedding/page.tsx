@@ -24,7 +24,12 @@ import { HttpClient } from '@/lib/api/core/httpClient';
 const httpClient = new HttpClient();
 const adminClient = createAdminClient({ httpClient });
 
-function StatCard({ label, value, icon: Icon, color }: {
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  color,
+}: {
   label: string;
   value: string | number;
   icon: React.ElementType;
@@ -105,16 +110,8 @@ export default function EmbeddingServicePage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
-            Embedding Service
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Monitor the multilingual embedding model and throughput
-          </p>
-        </div>
+      {/* Page toolbar */}
+      <div className="flex justify-end">
         <Button
           variant="outline"
           size="sm"
@@ -142,26 +139,34 @@ export default function EmbeddingServicePage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">Model</div>
+              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">
+                Model
+              </div>
               <div className="text-sm font-medium text-foreground dark:text-zinc-100">
                 {info?.model ?? '\u2014'}
               </div>
             </div>
             <div>
-              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">Device</div>
+              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">
+                Device
+              </div>
               <div className="text-sm font-medium text-foreground dark:text-zinc-100 flex items-center gap-1.5">
                 <CpuIcon className="h-3.5 w-3.5" />
                 {info?.device?.toUpperCase() ?? '\u2014'}
               </div>
             </div>
             <div>
-              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">Dimensions</div>
+              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">
+                Dimensions
+              </div>
               <div className="text-sm font-medium text-foreground dark:text-zinc-100">
                 {info?.dimension ?? '\u2014'}
               </div>
             </div>
             <div>
-              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">Languages</div>
+              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">
+                Languages
+              </div>
               <div className="text-sm font-medium text-foreground dark:text-zinc-100 flex items-center gap-1.5">
                 <GlobeIcon className="h-3.5 w-3.5" />
                 {info?.supportedLanguages?.join(', ').toUpperCase() ?? '\u2014'}
@@ -171,19 +176,25 @@ export default function EmbeddingServicePage() {
 
           <div className="mt-4 pt-4 border-t border-border/50 dark:border-zinc-700/50 grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">Max Input</div>
+              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">
+                Max Input
+              </div>
               <div className="text-sm text-foreground dark:text-zinc-300">
                 {info?.maxInputChars ? `${info.maxInputChars.toLocaleString()} chars` : '\u2014'}
               </div>
             </div>
             <div>
-              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">Max Batch</div>
+              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">
+                Max Batch
+              </div>
               <div className="text-sm text-foreground dark:text-zinc-300">
                 {info?.maxBatchSize ? `${info.maxBatchSize} texts` : '\u2014'}
               </div>
             </div>
             <div>
-              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">Auto-refresh</div>
+              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">
+                Auto-refresh
+              </div>
               <div className="text-sm text-foreground dark:text-zinc-300">Every 30s</div>
             </div>
           </div>
@@ -220,7 +231,9 @@ export default function EmbeddingServicePage() {
               label="Failure Rate"
               value={`${metrics?.failureRate ?? 0}%`}
               icon={AlertCircleIcon}
-              color={metrics?.failureRate && metrics.failureRate > 5 ? 'text-red-500' : 'text-green-500'}
+              color={
+                metrics?.failureRate && metrics.failureRate > 5 ? 'text-red-500' : 'text-green-500'
+              }
             />
             <StatCard
               label="Avg Duration"

@@ -7,12 +7,10 @@ import { BOTTOM_TAB_LABEL_OVERRIDES } from '@/config/navigation';
 import { useNavigationItems } from '@/hooks/useNavigationItems';
 import { cn } from '@/lib/utils';
 
-/** Immersive routes where the global bottom bar is replaced by an in-session layout. */
-const IMMERSIVE_ROUTE_PATTERNS = [/^\/sessions\/live(\/|$)/, /^\/library\/[^/]+\/play(\/|$)/];
+import { isImmersiveRoute } from './immersive-routes';
 
-export function isImmersiveRoute(pathname: string): boolean {
-  return IMMERSIVE_ROUTE_PATTERNS.some(pattern => pattern.test(pathname));
-}
+// Re-exported for the existing MobileBottomBar test + the AppNav barrel.
+export { isImmersiveRoute };
 
 interface MobileBottomBarProps {
   className?: string;

@@ -25,6 +25,10 @@ vi.mock('@/components/layout/UserShell/SessionBanner', () => ({
   SessionBanner: () => null,
 }));
 
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/dashboard',
+}));
+
 import { DesktopShell } from '../DesktopShell';
 
 describe('DesktopShell', () => {
@@ -55,5 +59,14 @@ describe('DesktopShell', () => {
       </DesktopShell>
     );
     expect(screen.getByRole('main')).toBeInTheDocument();
+  });
+
+  it('applies bottom-bar clearance padding on non-immersive routes', () => {
+    render(
+      <DesktopShell>
+        <div>child</div>
+      </DesktopShell>
+    );
+    expect(screen.getByRole('main').className).toContain('pb-16');
   });
 });

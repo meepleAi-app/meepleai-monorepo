@@ -698,8 +698,14 @@ jobs:
     # completed in 13m38s. Margin is tight on cold-cache builds; bump to 40
     # if NuGet restore consistently exceeds 8 min.
     timeout-minutes: 30
-    needs: [build, snapshot-baseline]
-    if: always() && needs.build.result == 'success' && (needs.snapshot-baseline.result == 'success' || needs.snapshot-baseline.result == 'skipped')
+    needs: [detect-changes, build, build-ai, snapshot-baseline]
+    # Issue #1578 — skip-propagation handling. An AI-only deploy has `build`
+    # (api/web) skipped, so `build` may be 'success' OR 'skipped'. build-ai may
+    # be 'success' (built) or 'skipped' (no AI change); a build-ai FAILURE
+    # (success||skipped false) blocks the deploy on purpose — don't deploy when
+    # an image we asked to build failed. snapshot-baseline may be skipped on
+    # AI-only deploys (it gates on `build`).
+    if: always() && (needs.build.result == 'success' || needs.build.result == 'skipped') && (needs.build-ai.result == 'success' || needs.build-ai.result == 'skipped') && (needs.snapshot-baseline.result == 'success' || needs.snapshot-baseline.result == 'skipped')
     environment:
       name: staging
       url: https://meepleai.app

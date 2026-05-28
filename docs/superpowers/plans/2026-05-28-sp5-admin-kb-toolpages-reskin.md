@@ -617,7 +617,7 @@ git commit -m "test(admin-kb): drop obsolete F3.1 hub-cards tests (#1652)"
 git push -u origin feature/issue-1652-kb-toolpages-reskin
 gh pr create --base main-dev --title "feat(admin-kb): SP5 F3-FU-3 — re-skin KB tool-pages + section band (#1652)" --body "<see body template below>"
 ```
-PR body must include: link to #1652, the header-decision rationale (band owns h1, sub-pages lose local h1), Tailwind-utilities strategy (per user decision), list of 7 re-skinned surfaces, the `vector-collections.test.tsx` assertion relocation, the 4 obsolete tests removed, and a request for manual designer (Sara) review. Confirm base is `main-dev` NOT `main`.
+PR body must include: link to #1652, the header-decision rationale (band owns h1, sub-pages lose local h1), Tailwind-utilities strategy (per user decision), list of 7 re-skinned surfaces, the `vector-collections.test.tsx` assertion relocation, the 4 obsolete tests removed, and a request for manual designer review (visual-regression gate removed 2026-05-20 — see CLAUDE.md). Confirm base is `main-dev` NOT `main`.
 
 - [ ] **Step 6: Code review before merge** (per CLAUDE.md + global rule)
 

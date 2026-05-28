@@ -161,7 +161,7 @@ I `.admin-kpi`, `.admin-panel`, `.admin-panel-head` sono classi del design syste
 - [ ] `pnpm lint` → 0 errori (warning admiti se file-level disable documentato).
 - [ ] Header decision applicato: layout band ha 1 `<h1>Knowledge Base</h1>`, sub-page hanno 0 h1.
 - [ ] 4 `it.skip` con TODO F3-FU-3 in `kb-hub-gaps.test.tsx` rimossi/riscritti.
-- [ ] Manual designer review (Sara) OK su PR.
+- [ ] Manual designer review OK su PR (visual-regression gate rimosso il 2026-05-20 — vedi CLAUDE.md).
 
 **Gate soft** (verifica ma non blocker):
 - [ ] 7 tool-page navigabili manuali su `http://localhost:3000/admin/knowledge-base/*`, no errori console.

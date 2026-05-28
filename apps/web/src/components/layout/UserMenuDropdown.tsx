@@ -21,7 +21,12 @@ import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { useNavigationItems } from '@/hooks/useNavigationItems';
 import { useNotificationStore, selectUnreadCount } from '@/stores/notification/store';
 
-export function UserMenuDropdown() {
+interface UserMenuDropdownProps {
+  /** Trigger style: 'icon' (default, avatar-only button) or 'pill' (avatar + name, sp4 top bar). */
+  variant?: 'icon' | 'pill';
+}
+
+export function UserMenuDropdown({ variant = 'icon' }: UserMenuDropdownProps = {}) {
   const router = useRouter();
   const { isAuthLoading, isAuthenticated } = useNavigationItems();
   const { data: user } = useCurrentUser();
@@ -65,15 +70,34 @@ export function UserMenuDropdown() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="User menu" data-testid="user-menu-trigger">
-          {user.displayName ? (
-            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-              <span className="text-sm font-semibold text-primary">{userInitial}</span>
-            </div>
-          ) : (
-            <UserIcon className="h-5 w-5" />
-          )}
-        </Button>
+        {variant === 'pill' ? (
+          <button
+            type="button"
+            aria-label="User menu"
+            data-testid="user-menu-trigger"
+            className="flex items-center gap-2 rounded-full bg-muted px-2.5 py-1 text-sm font-bold transition-colors hover:bg-muted/80"
+          >
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary">
+              {userInitial}
+            </span>
+            <span className="max-w-[8rem] truncate">{user.displayName || 'Utente'}</span>
+          </button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="User menu"
+            data-testid="user-menu-trigger"
+          >
+            {user.displayName ? (
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                <span className="text-sm font-semibold text-primary">{userInitial}</span>
+              </div>
+            ) : (
+              <UserIcon className="h-5 w-5" />
+            )}
+          </Button>
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel>

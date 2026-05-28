@@ -9,10 +9,12 @@ vi.mock('@/hooks/queries/useCurrentUser', () => ({
   useCurrentUser: () => mockUseCurrentUser(),
 }));
 vi.mock('next/navigation', () => ({ usePathname: () => '/admin/overview' }));
-vi.mock('@/components/layout/UserShell/TopBar', () => ({
-  TopBar: () => <div data-testid="topbar" />,
+vi.mock('@/components/layout/AppNav/AppTopBar', () => ({
+  AppTopBar: () => <div data-testid="app-top-bar" />,
 }));
-vi.mock('@/components/layout/SearchOverlay', () => ({ SearchOverlay: () => null }));
+vi.mock('@/components/layout/AppNav/MobileTopBar', () => ({
+  MobileTopBar: () => <div data-testid="mobile-top-bar" />,
+}));
 vi.mock('@/components/dashboard', () => ({
   DashboardEngineProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
@@ -29,6 +31,17 @@ describe('AdminShell', () => {
     );
     expect(screen.getByRole('navigation', { name: /admin sidebar/i })).toBeInTheDocument();
     expect(screen.getByText('page body')).toBeInTheDocument();
+  });
+
+  it('renders the new sp4 top bars (desktop + mobile)', () => {
+    mockUseCurrentUser.mockReturnValue({ data: { id: 'u', email: 'a@b.c', role: 'admin' } });
+    render(
+      <AdminShell>
+        <p>body</p>
+      </AdminShell>
+    );
+    expect(screen.getByTestId('app-top-bar')).toBeInTheDocument();
+    expect(screen.getByTestId('mobile-top-bar')).toBeInTheDocument();
   });
 
   it('scopes the dark theme to the admin shell root', () => {

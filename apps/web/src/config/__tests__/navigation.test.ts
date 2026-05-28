@@ -8,12 +8,17 @@ import { describe, it, expect } from 'vitest';
 import {
   UNIFIED_NAV_ITEMS,
   NAV_ITEMS,
+  TOP_BAR_NAV_IDS,
+  BOTTOM_TAB_NAV_IDS,
+  USER_PILL_NAV_IDS,
+  BOTTOM_TAB_LABEL_OVERRIDES,
   filterNavItemsByRole,
   isUnifiedNavItemActive,
   isNavItemActive,
   getNavItemsForBreakpoint,
   getOverflowNavItems,
   getContextActionSlots,
+  pickNavItemsByIds,
 } from '../navigation';
 
 describe('UNIFIED_NAV_ITEMS', () => {
@@ -269,5 +274,46 @@ describe('getContextActionSlots', () => {
 
   it('returns positive number for tablet', () => {
     expect(getContextActionSlots('tablet')).toBeGreaterThan(0);
+  });
+});
+
+describe('sp4 navbar placement', () => {
+  it('includes hub and toolkit items', () => {
+    const hub = UNIFIED_NAV_ITEMS.find(item => item.id === 'hub');
+    const toolkit = UNIFIED_NAV_ITEMS.find(item => item.id === 'toolkit');
+    expect(hub?.href).toBe('/hub/games');
+    expect(hub?.visibility?.authOnly).toBe(true);
+    expect(toolkit?.href).toBe('/toolkit');
+    expect(toolkit?.group).toBe('strumenti');
+  });
+
+  it('hub activePattern matches any /hub route', () => {
+    const hub = UNIFIED_NAV_ITEMS.find(item => item.id === 'hub')!;
+    expect(isUnifiedNavItemActive(hub, '/hub/games')).toBe(true);
+    expect(isUnifiedNavItemActive(hub, '/hub/agents')).toBe(true);
+    expect(isUnifiedNavItemActive(hub, '/library')).toBe(false);
+  });
+
+  it('toolkit activePattern matches /toolkit but not /toolkits', () => {
+    const toolkit = UNIFIED_NAV_ITEMS.find(item => item.id === 'toolkit')!;
+    expect(isUnifiedNavItemActive(toolkit, '/toolkit')).toBe(true);
+    expect(isUnifiedNavItemActive(toolkit, '/toolkit/history')).toBe(true);
+    expect(isUnifiedNavItemActive(toolkit, '/toolkits')).toBe(false);
+  });
+
+  it('placement id lists reference existing nav items', () => {
+    const ids = new Set(UNIFIED_NAV_ITEMS.map(item => item.id));
+    [...TOP_BAR_NAV_IDS, ...BOTTOM_TAB_NAV_IDS, ...USER_PILL_NAV_IDS].forEach(id => {
+      expect(ids.has(id)).toBe(true);
+    });
+  });
+
+  it('pickNavItemsByIds returns items ordered by ids, skipping missing', () => {
+    const picked = pickNavItemsByIds(UNIFIED_NAV_ITEMS, ['library', 'dashboard', 'does-not-exist']);
+    expect(picked.map(item => item.id)).toEqual(['library', 'dashboard']);
+  });
+
+  it('maps the dashboard bottom tab label to Home', () => {
+    expect(BOTTOM_TAB_LABEL_OVERRIDES.dashboard).toBe('Home');
   });
 });

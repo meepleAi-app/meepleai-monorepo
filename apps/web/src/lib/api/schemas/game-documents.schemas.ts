@@ -7,6 +7,7 @@ export const DocumentCategorySchema = z.enum([
   'QuickStart',
   'Reference',
   'PlayerAid',
+  'Faq',
   'Other',
 ]);
 

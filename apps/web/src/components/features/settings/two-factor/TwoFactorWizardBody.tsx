@@ -50,7 +50,17 @@ export function TwoFactorWizardBody({ setupData, onEnabled, resetKey }: Props): 
     onSuccess: result => {
       if (result.success) {
         setOtpError(null);
-        setIssuedCodes(result.backupCodes ?? []);
+        // Backup codes are returned in PLAINTEXT by the SETUP endpoint
+        // (TotpSetupResponse.BackupCodes) and surface here via `setupData.backupCodes`.
+        // The enable endpoint does NOT re-emit them — `Enable2FACommandHandler`
+        // returns `Success: true` only, and the persisted backup codes are PBKDF2
+        // hashed (one-way), so they cannot be reconstructed post-hash.
+        // Prefer `result.backupCodes` if the BE ever populates it; otherwise fall
+        // back to the trusted source already in the wizard's local state.
+        const codesFromEnable = result.backupCodes ?? [];
+        setIssuedCodes(
+          codesFromEnable.length > 0 ? codesFromEnable : [...(setupData.backupCodes ?? [])]
+        );
         setStep('codes');
         void queryClient.invalidateQueries({ queryKey: ['2fa-status'] });
       } else {

@@ -54,6 +54,7 @@ export * from './contactClient'; // Public contact form
 export * from './agentMemoryClient'; // AgentMemory — groups, game memory, player stats
 export * from './agentDocumentsClient'; // User-scoped agent document selection
 export * from './infrastructureClient'; // AI Infrastructure Dashboard
+export * from './kbDocsClient'; // Issue #1592 Phase 2b — cross-game per-user KB docs listing
 export * from './toolkit'; // Default Game Toolkit — session events & dice presets
 export * from './sessionSnapshotsClient'; // Session Vision AI — snapshot CRUD
 export * from '../session-flow'; // Session Flow v2.1 — typed client + DTOs

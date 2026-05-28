@@ -201,4 +201,16 @@ describe('deriveHybridItems — sort', () => {
     const result = deriveHybridItems(sources, 'all', '', 'state');
     expect(result.map(it => it.id)).toEqual(['g2', 'g3', 'g1', 'a1']);
   });
+
+  it('orders cross-entity items by updatedAt desc: kb (11:00) > chat (10:30) > session (10:00) [#1592 AC2.b.6]', () => {
+    const sources = makeSources({
+      games: [],
+      agents: [],
+      kb: [kbItem({ id: 'kb1', updatedAt: '2026-05-28T11:00:00Z' })],
+      sessions: [sessionItem({ id: 's1', updatedAt: '2026-05-28T10:00:00Z' })],
+      chat: [chatItem({ id: 'c1', updatedAt: '2026-05-28T10:30:00Z' })],
+    });
+    const result = deriveHybridItems(sources, 'all', '', 'recent');
+    expect(result.map(it => it.id)).toEqual(['kb1', 'c1', 's1']);
+  });
 });

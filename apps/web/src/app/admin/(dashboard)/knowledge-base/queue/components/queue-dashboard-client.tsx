@@ -82,16 +82,16 @@ export function QueueDashboardClient({
       {/* Page toolbar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href={gameId ? `/admin/shared-games/${gameId}` : '/admin/knowledge-base'}>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <ArrowLeftIcon className="h-4 w-4" />
-            </Button>
-          </Link>
-          <p className="text-sm text-muted-foreground">
-            {gameId
-              ? 'Processing jobs for selected game'
-              : 'Monitor and manage PDF processing jobs'}
-          </p>
+          {gameId && (
+            <>
+              <Link href={`/admin/shared-games/${gameId}`}>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <ArrowLeftIcon className="h-4 w-4" />
+                </Button>
+              </Link>
+              <p className="text-sm text-muted-foreground">Processing jobs for selected game</p>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <SSEConnectionIndicator state={queueSSEState} onReconnect={reconnectQueueSSE} />

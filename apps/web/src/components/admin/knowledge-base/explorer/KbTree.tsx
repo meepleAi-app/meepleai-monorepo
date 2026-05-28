@@ -85,7 +85,7 @@ export function KbTree({
                 aria-expanded={expanded}
                 aria-label={game.gameName}
                 onClick={() => onToggleGame(game.gameId)}
-                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/70 dark:hover:bg-zinc-800/70 font-semibold text-[13px] text-left"
+                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/70 dark:hover:bg-zinc-800/70 font-semibold text-[13px] text-left text-foreground"
               >
                 <span aria-hidden="true" className="text-muted-foreground">
                   {expanded ? '▾' : '▸'}

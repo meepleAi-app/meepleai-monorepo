@@ -81,6 +81,41 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
         // Update participant final ranks (need to access through persistence for now)
         // For now, this is a known limitation that will be addressed in refactoring
 
+        // BE-3 #1590: emit session.finalized domain event BEFORE UpdateAsync so it is collected
+        // (SessionRepository.UpdateAsync calls CollectDomainEvents — Task 5) and durably logged to
+        // domain_event_logs atomically with the session update + the session_events diary row below.
+        // This MediatR dispatch ALSO activates the previously-dormant KnowledgeBase
+        // SessionFinalizedEventHandler cascade cleanup (it was raised for SSE only until now).
+        var winnerIdForEvent = request.FinalRanks.FirstOrDefault(kvp => kvp.Value == 1).Key;
+        var winnerNameForEvent = winnerIdForEvent != Guid.Empty
+            ? session.Participants.FirstOrDefault(p => p.Id == winnerIdForEvent)?.DisplayName
+            : null;
+        var finalizedAtForEvent = session.FinalizedAt ?? _timeProvider.GetUtcNow().UtcDateTime;
+        var durationMinutesForEvent = Math.Max(0, (int)(finalizedAtForEvent - session.SessionDate).TotalMinutes);
+        string? gameNameForEvent = null;
+        if (session.GameId != Guid.Empty)
+        {
+            gameNameForEvent = await _db.SharedGames
+                .AsNoTracking()
+                .Where(g => g.Id == session.GameId)
+                .Select(g => g.Title)
+                .FirstOrDefaultAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
+        session.AddDomainEvent(new SessionFinalizedEvent
+        {
+            SessionId = session.Id,
+            UserId = session.UserId,
+            GameId = session.GameId,
+            GameName = gameNameForEvent,
+            PlayerCount = session.Participants.Count,
+            WinnerId = winnerIdForEvent != Guid.Empty ? winnerIdForEvent : null,
+            WinnerName = winnerNameForEvent,
+            FinalRanks = request.FinalRanks,
+            DurationMinutes = durationMinutesForEvent,
+            Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
+        });
+
         // Save session (adds tracked changes; SaveChangesAsync below flushes)
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
 

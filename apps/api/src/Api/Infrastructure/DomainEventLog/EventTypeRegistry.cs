@@ -52,9 +52,11 @@ public static class EventTypeRegistry
         [typeof(KbDocIndexedEvent)] = "kb.doc.indexed",
 
         // SessionTracking lifecycle. session.created is orthogonal to the session_events diary
-        // "session_created" row (#1590 C3 — different consumers). session.finalized is added in
-        // Task 7 (after SessionFinalizedEvent implements IDomainEvent).
+        // "session_created" row (#1590 C3 — different consumers). session.finalized also (re)wires
+        // the previously-dormant KnowledgeBase SessionFinalizedEventHandler cascade cleanup (the
+        // event was raised for SSE only, never into the MediatR pipeline, until BE-3).
         [typeof(SessionCreatedEvent)] = "session.created",
+        [typeof(SessionFinalizedEvent)] = "session.finalized",
     };
 
     /// <summary>

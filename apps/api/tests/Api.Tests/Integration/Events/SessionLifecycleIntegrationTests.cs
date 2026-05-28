@@ -141,4 +141,55 @@ public sealed class SessionLifecycleIntegrationTests : IAsyncLifetime
         delta.TotalMilliseconds.Should().BeLessThan(100,
             "session_events and domain_event_logs are written in the same transaction (AC5.b)");
     }
+
+    [Fact]
+    public async Task SessionFinalized_persists_to_domain_event_logs()
+    {
+        // Arrange — create + persist a session, then finalize it
+        using var scope = _webFactory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var sessionRepository = scope.ServiceProvider.GetRequiredService<ISessionRepository>();
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+
+        var (userId, _) = await TestSessionHelper.CreateUserSessionAsync(db);
+        var gameId = await TestSessionHelper.SeedSharedGameAsync(db, title: "Catan-BE3-Finalize");
+
+        var session = Session.Create(userId, gameId, SessionType.Generic);
+        await sessionRepository.AddAsync(session, CancellationToken.None);
+        await unitOfWork.SaveChangesAsync(CancellationToken.None);
+
+        // Act — finalize + emit session.finalized (mirrors FinalizeSessionCommandHandler: domain
+        // event added BEFORE UpdateAsync which collects it).
+        session.Finalize();
+        var emitTimestamp = DateTime.UtcNow;
+        session.AddDomainEvent(new SessionFinalizedEvent
+        {
+            SessionId = session.Id,
+            UserId = userId,
+            GameId = gameId,
+            GameName = "Catan-BE3-Finalize",
+            PlayerCount = session.Participants.Count,
+            WinnerId = null,
+            WinnerName = null,
+            DurationMinutes = 42,
+            Timestamp = emitTimestamp,
+        });
+        await sessionRepository.UpdateAsync(session, CancellationToken.None);
+        await unitOfWork.SaveChangesAsync(CancellationToken.None);
+
+        // Assert
+        using var verifyScope = _webFactory.Services.CreateScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var logRow = await verifyDb.DomainEventLogs
+            .AsNoTracking()
+            .Where(e => e.EventType == "session.finalized" && e.AggregateId == session.Id)
+            .FirstOrDefaultAsync();
+
+        logRow.Should().NotBeNull("session.finalized must be durably logged to domain_event_logs");
+        logRow!.AggregateType.Should().Be("SessionFinalized");
+        logRow.UserId.Should().Be(userId);
+        logRow.PayloadVersion.Should().Be(1);
+        logRow.PayloadJson.Should().Contain("\"gameId\"").And.Contain(gameId.ToString());
+        logRow.PayloadJson.Should().Contain("\"durationMinutes\"").And.Contain("42");
+    }
 }

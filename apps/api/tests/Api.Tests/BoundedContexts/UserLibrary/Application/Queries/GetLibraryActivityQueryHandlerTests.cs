@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
 using Api.Infrastructure;
@@ -17,7 +18,7 @@ namespace Api.Tests.BoundedContexts.UserLibrary.Application.Queries;
 /// <summary>
 /// Unit tests for <see cref="GetLibraryActivityQueryHandler"/> issue #661 PR-B.
 /// Covers AC-5 (full integration of log + row sources), AC-6 (retention filter),
-/// AC-12 (merge/order correctness).
+/// AC-12 (merge/order correctness), D1/D2 (#1590 bulk join + soft-delete i18n key).
 ///
 /// Uses EF Core InMemory; the production EF query is straightforward LINQ that
 /// translates to the same in-memory result, so the assertions hold across
@@ -28,6 +29,7 @@ namespace Api.Tests.BoundedContexts.UserLibrary.Application.Queries;
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "UserLibrary")]
 [Trait("Issue", "661")]
+[Trait("Issue", "1590")]
 public sealed class GetLibraryActivityQueryHandlerTests
 {
     private static readonly Guid UserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
@@ -43,6 +45,21 @@ public sealed class GetLibraryActivityQueryHandlerTests
             options,
             Mock.Of<IMediator>(),
             Mock.Of<IDomainEventCollector>());
+    }
+
+    /// <summary>
+    /// Creates a mock <see cref="ISharedGameRepository"/> that returns the given
+    /// name map from <c>GetNamesByIdsAsync</c>.
+    /// </summary>
+    private static ISharedGameRepository CreateSharedGameRepo(
+        IReadOnlyDictionary<Guid, string>? nameMap = null)
+    {
+        var mock = new Mock<ISharedGameRepository>();
+        mock.Setup(r => r.GetNamesByIdsAsync(
+                It.IsAny<IReadOnlyCollection<Guid>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(nameMap ?? new Dictionary<Guid, string>());
+        return mock.Object;
     }
 
     // -----------------------------------------------------------------------
@@ -70,12 +87,14 @@ public sealed class GetLibraryActivityQueryHandlerTests
         });
         await db.SaveChangesAsync();
 
-        var handler = new GetLibraryActivityQueryHandler(db);
+        var repo = CreateSharedGameRepo(new Dictionary<Guid, string> { [gameId] = "Catan" });
+        var handler = new GetLibraryActivityQueryHandler(db, repo);
         var result = await handler.Handle(new GetLibraryActivityQuery(UserId), CancellationToken.None);
 
         result.Should().ContainSingle();
         result[0].Type.Should().Be("removed");
         result[0].GameId.Should().Be(gameId);
+        result[0].GameTitle.Should().Be("Catan");
     }
 
     // -----------------------------------------------------------------------
@@ -103,12 +122,14 @@ public sealed class GetLibraryActivityQueryHandlerTests
         });
         await db.SaveChangesAsync();
 
-        var handler = new GetLibraryActivityQueryHandler(db);
+        var repo = CreateSharedGameRepo(new Dictionary<Guid, string> { [gameId] = "Pandemic" });
+        var handler = new GetLibraryActivityQueryHandler(db, repo);
         var result = await handler.Handle(new GetLibraryActivityQuery(UserId), CancellationToken.None);
 
         result.Should().ContainSingle();
         result[0].Type.Should().Be("session-recorded");
         result[0].GameId.Should().Be(gameId);
+        result[0].GameTitle.Should().Be("Pandemic");
     }
 
     // -----------------------------------------------------------------------
@@ -136,7 +157,7 @@ public sealed class GetLibraryActivityQueryHandlerTests
         });
         await db.SaveChangesAsync();
 
-        var handler = new GetLibraryActivityQueryHandler(db);
+        var handler = new GetLibraryActivityQueryHandler(db, CreateSharedGameRepo());
         var result = await handler.Handle(new GetLibraryActivityQuery(UserId), CancellationToken.None);
 
         result.Should().BeEmpty();
@@ -166,7 +187,7 @@ public sealed class GetLibraryActivityQueryHandlerTests
         });
         await db.SaveChangesAsync();
 
-        var handler = new GetLibraryActivityQueryHandler(db);
+        var handler = new GetLibraryActivityQueryHandler(db, CreateSharedGameRepo());
         var result = await handler.Handle(new GetLibraryActivityQuery(UserId), CancellationToken.None);
 
         result.Should().BeEmpty();
@@ -212,12 +233,109 @@ public sealed class GetLibraryActivityQueryHandlerTests
 
         await db.SaveChangesAsync();
 
-        var handler = new GetLibraryActivityQueryHandler(db);
+        var repo = CreateSharedGameRepo(new Dictionary<Guid, string> { [gameId] = "Ticket to Ride" });
+        var handler = new GetLibraryActivityQueryHandler(db, repo);
         var result = await handler.Handle(new GetLibraryActivityQuery(UserId), CancellationToken.None);
 
         // Both events present, ordered DESC by timestamp (session-recorded first).
         result.Should().HaveCount(2);
         result[0].Type.Should().Be("session-recorded");
+        result[0].GameTitle.Should().Be("Ticket to Ride");
         result[1].Type.Should().Be("added");
+    }
+
+    // -----------------------------------------------------------------------
+    // D2 (#1590) — soft-deleted game → i18n key instead of real title
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task Handle_SoftDeletedGame_ReturnsI18nKey()
+    {
+        await using var db = CreateInMemoryContext();
+
+        var gameId = Guid.NewGuid();
+        var payload = JsonSerializer.Serialize(new { gameId, userId = UserId });
+
+        db.DomainEventLogs.Add(new DomainEventLogEntity
+        {
+            Id = Guid.NewGuid(),
+            EventId = Guid.NewGuid(),
+            EventType = "library.entry.removed",
+            UserId = UserId,
+            AggregateId = Guid.NewGuid(),
+            PayloadJson = payload,
+            OccurredAt = DateTime.UtcNow.AddMinutes(-10),
+            LoggedAt = DateTime.UtcNow,
+        });
+        await db.SaveChangesAsync();
+
+        // Simulate soft-deleted game: GetNamesByIdsAsync returns empty dict (game absent).
+        var repo = CreateSharedGameRepo(new Dictionary<Guid, string>());
+        var handler = new GetLibraryActivityQueryHandler(db, repo);
+        var result = await handler.Handle(new GetLibraryActivityQuery(UserId), CancellationToken.None);
+
+        result.Should().ContainSingle();
+        result[0].GameTitle.Should().Be("library.activity.deletedGame");
+    }
+
+    // -----------------------------------------------------------------------
+    // D1 (#1590) — bulk join resolves title without N+1
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task Handle_MultipleLogEvents_ResolvesAllTitlesInOneBulkCall()
+    {
+        await using var db = CreateInMemoryContext();
+        var now = DateTime.UtcNow;
+
+        var gameId1 = Guid.NewGuid();
+        var gameId2 = Guid.NewGuid();
+
+        db.DomainEventLogs.AddRange(
+            new DomainEventLogEntity
+            {
+                Id = Guid.NewGuid(),
+                EventId = Guid.NewGuid(),
+                EventType = "library.entry.removed",
+                UserId = UserId,
+                AggregateId = Guid.NewGuid(),
+                PayloadJson = JsonSerializer.Serialize(new { gameId = gameId1, userId = UserId }),
+                OccurredAt = now.AddMinutes(-5),
+                LoggedAt = now,
+            },
+            new DomainEventLogEntity
+            {
+                Id = Guid.NewGuid(),
+                EventId = Guid.NewGuid(),
+                EventType = "library.session.recorded",
+                UserId = UserId,
+                AggregateId = Guid.NewGuid(),
+                PayloadJson = JsonSerializer.Serialize(new { gameId = gameId2, userId = UserId }),
+                OccurredAt = now.AddMinutes(-2),
+                LoggedAt = now,
+            });
+        await db.SaveChangesAsync();
+
+        var mockRepo = new Mock<ISharedGameRepository>();
+        mockRepo.Setup(r => r.GetNamesByIdsAsync(
+                It.IsAny<IReadOnlyCollection<Guid>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, string>
+            {
+                [gameId1] = "7 Wonders",
+                [gameId2] = "Wingspan",
+            });
+
+        var handler = new GetLibraryActivityQueryHandler(db, mockRepo.Object);
+        var result = await handler.Handle(new GetLibraryActivityQuery(UserId), CancellationToken.None);
+
+        result.Should().HaveCount(2);
+        result.Should().Contain(e => e.GameTitle == "7 Wonders");
+        result.Should().Contain(e => e.GameTitle == "Wingspan");
+
+        // Verify bulk join: only ONE call regardless of event count.
+        mockRepo.Verify(r => r.GetNamesByIdsAsync(
+            It.IsAny<IReadOnlyCollection<Guid>>(),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 }

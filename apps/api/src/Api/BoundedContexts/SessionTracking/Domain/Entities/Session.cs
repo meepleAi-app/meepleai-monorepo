@@ -2,15 +2,44 @@ using System.ComponentModel.DataAnnotations;
 using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Domain.Interfaces;
 
 namespace Api.BoundedContexts.SessionTracking.Domain.Entities;
 
 /// <summary>
 /// Session aggregate root representing a collaborative game session.
 /// </summary>
-public class Session
+/// <remarks>
+/// Implements <see cref="IDomainEventSource"/> so that domain events (e.g.
+/// <c>session.created</c>, <c>session.finalized</c>) can be raised and collected
+/// by the <c>domain_event_logs</c> pipeline (BE-3 #1590).  This is a light,
+/// additive change — Session is NOT converted to a full AggregateRoot subclass;
+/// its existing factory, value-objects, and persistence mapping are unchanged.
+/// </remarks>
+public class Session : IDomainEventSource
 {
     private readonly List<Participant> _participants = [];
+
+    // ── Domain event plumbing (BE-3 #1590, C1) ──────────────────────────────
+    private readonly List<IDomainEvent> _domainEvents = new();
+
+    /// <inheritdoc />
+    public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
+
+    /// <summary>
+    /// Appends a domain event to the pending-events list.
+    /// Called by domain methods after state transitions (e.g. Create, Finalize).
+    /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="domainEvent"/> is null.</exception>
+    public void AddDomainEvent(IDomainEvent domainEvent)
+    {
+        ArgumentNullException.ThrowIfNull(domainEvent);
+        _domainEvents.Add(domainEvent);
+    }
+
+    /// <inheritdoc />
+    public void ClearDomainEvents() => _domainEvents.Clear();
+    // ── End domain event plumbing ────────────────────────────────────────────
 
     /// <summary>
     /// Session unique identifier.

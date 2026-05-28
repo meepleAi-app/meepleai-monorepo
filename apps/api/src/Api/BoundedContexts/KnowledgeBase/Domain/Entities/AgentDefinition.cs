@@ -588,4 +588,23 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
 
         AddDomainEvent(new AgentDefinitionUpdatedEvent(Id, "Restored from soft-delete"));
     }
+
+    /// <summary>
+    /// Raises <see cref="AgentCreatedEvent"/> for durable activity-log persistence.
+    /// Call ONLY from <c>CreateUserAgentCommandHandler</c> (user-facing flow).
+    /// NOT called from <c>CreateAgentDefinitionCommandHandler</c> (admin/AI-Lab) — see BE-3 #1590 decision H1.
+    /// </summary>
+    /// <param name="userId">The authenticated user who triggered the creation.</param>
+    /// <param name="gameName">Resolved game name; non-null when <see cref="GameId"/> is set.</param>
+    public void RaiseUserCreatedEvent(Guid userId, string? gameName)
+    {
+        AddDomainEvent(new AgentCreatedEvent(
+            aggregateId: Id,
+            userId: userId,
+            agentType: _typeValue,
+            isActive: _isActive,
+            gameId: _gameId,
+            gameName: gameName,
+            agentName: _name));
+    }
 }

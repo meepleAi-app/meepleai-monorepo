@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
 using Api.Infrastructure;
@@ -13,8 +14,14 @@ namespace Api.BoundedContexts.UserLibrary.Application.Queries;
 /// Reads from TWO disjoint sources (spec §3.5 hardened):
 ///   (a) <c>UserLibraryEntries</c> rows — projects <c>added</c> and
 ///       <c>state-changed</c> from row timestamps (legacy MVP path).
+///       Titles are resolved via EF navigation properties (<c>SharedGame</c>
+///       / <c>PrivateGame</c>) at query time — no extra round-trip.
 ///   (b) <c>domain_event_logs</c> — projects <c>removed</c> and
 ///       <c>session-recorded</c> from durable event log rows (post-#661).
+///       Titles are resolved via a single bulk call to
+///       <see cref="ISharedGameRepository.GetNamesByIdsAsync"/> (D1 #1590).
+///       Soft-deleted or unknown games fall back to
+///       <c>"library.activity.deletedGame"</c> (D2 #1590).
 ///
 /// The two sources are disjoint (no overlapping kinds), so the merge is
 /// a straight ordered union. Pagination is cursor-based on
@@ -26,12 +33,18 @@ internal class GetLibraryActivityQueryHandler
     : IQueryHandler<GetLibraryActivityQuery, IReadOnlyList<LibraryActivityItemDto>>
 {
     private const int DefaultRetentionDays = 90;
+    private const string DeletedGameI18NKey = "library.activity.deletedGame";
 
     private readonly MeepleAiDbContext _dbContext;
+    private readonly ISharedGameRepository _sharedGameRepository;
 
-    public GetLibraryActivityQueryHandler(MeepleAiDbContext dbContext)
+    public GetLibraryActivityQueryHandler(
+        MeepleAiDbContext dbContext,
+        ISharedGameRepository sharedGameRepository)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _sharedGameRepository = sharedGameRepository
+            ?? throw new ArgumentNullException(nameof(sharedGameRepository));
     }
 
     public async Task<IReadOnlyList<LibraryActivityItemDto>> Handle(
@@ -114,9 +127,28 @@ internal class GetLibraryActivityQueryHandler
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
+        // D1 (#1590): resolve game titles for all log rows in ONE bulk call —
+        // no N+1. Parse gameIds first, then fetch names once.
+        var logGameIds = logRows
+            .Select(l => ExtractGameId(l.PayloadJson))
+            .Where(id => id != Guid.Empty)
+            .Distinct()
+            .ToList();
+
+        var gameNames = logGameIds.Count > 0
+            ? await _sharedGameRepository
+                .GetNamesByIdsAsync(logGameIds, cancellationToken)
+                .ConfigureAwait(false)
+            : (IReadOnlyDictionary<Guid, string>)new Dictionary<Guid, string>();
+
         foreach (var log in logRows)
         {
-            var (gameId, gameTitle) = ExtractGamePayload(log.PayloadJson, log.EventType);
+            var gameId = ExtractGameId(log.PayloadJson);
+            // D2 (#1590): soft-deleted or unknown game → i18n key so the FE
+            // can render "Gioco rimosso" / "Removed game" in the user's locale.
+            var gameTitle = gameId != Guid.Empty && gameNames.TryGetValue(gameId, out var name)
+                ? name
+                : DeletedGameI18NKey;
             var aggregateId = log.AggregateId ?? log.Id;
 
             switch (log.EventType)
@@ -153,36 +185,29 @@ internal class GetLibraryActivityQueryHandler
     }
 
     /// <summary>
-    /// Best-effort extraction of <c>GameId</c> + game title from a logged
-    /// event payload. The payload schema is the event class itself
-    /// (camelCase JSON). Until we add denormalized title columns we resolve
-    /// titles by joining the game catalogs — for the removed case the
-    /// library entry is gone, so we display the game id as a fallback.
+    /// Best-effort extraction of <c>GameId</c> from a logged event payload.
+    /// The payload schema is the event class itself (camelCase JSON).
+    /// Returns <see cref="Guid.Empty"/> when the property is absent or the
+    /// JSON is malformed.
     /// </summary>
-    private static (Guid gameId, string gameTitle) ExtractGamePayload(string payloadJson, string eventType)
+    private static Guid ExtractGameId(string payloadJson)
     {
         try
         {
             using var doc = JsonDocument.Parse(payloadJson);
             var root = doc.RootElement;
 
-            Guid gameId = Guid.Empty;
             if (root.TryGetProperty("gameId", out var gameIdEl) &&
                 gameIdEl.TryGetGuid(out var parsedGameId))
             {
-                gameId = parsedGameId;
+                return parsedGameId;
             }
 
-            // Future enhancement: persist a `gameTitle` snapshot in the event
-            // payload so the activity feed survives game-catalog deletions.
-            // For now, the i18n message reads "Game" when the title can't be
-            // resolved.
-            var gameTitle = gameId == Guid.Empty ? "Unknown" : "Game";
-            return (gameId, gameTitle);
+            return Guid.Empty;
         }
         catch (JsonException)
         {
-            return (Guid.Empty, "Unknown");
+            return Guid.Empty;
         }
     }
 }

@@ -29,14 +29,31 @@ public class DomainEventLogEntity
     /// <summary>The user associated with the event, when applicable.</summary>
     public Guid? UserId { get; set; }
 
-    /// <summary>The aggregate root that raised the event.</summary>
-    public Guid? AggregateId { get; set; }
-
-    /// <summary>Short type label of the aggregate, e.g. "UserLibraryEntry".</summary>
+    /// <summary>
+    /// PascalCase aggregate name. Logical FK pointer to a specific aggregate table:
+    ///   - "Session"     → sessions_tracking.id
+    ///   - "Agent"       → agent_definitions.id
+    ///   - "ChatSession" → chat_sessions.id
+    ///   - "PdfDocument" → pdf_documents.id
+    ///   - "UserLibraryEntry" → user_library_entries.id (existing library.* events)
+    /// Not enforced at DB level — append-only audit log policy (AC9, #1590).
+    /// </summary>
     public string? AggregateType { get; set; }
+
+    /// <summary>
+    /// Logical FK to the aggregate root. See <see cref="AggregateType"/> for the mapping
+    /// from PascalCase aggregate name to physical table.
+    /// </summary>
+    public Guid? AggregateId { get; set; }
 
     /// <summary>JSON-serialized event payload.</summary>
     public string PayloadJson { get; set; } = default!;
+
+    /// <summary>
+    /// Schema version of the event payload, used for forward-compatible migrations.
+    /// v1 events: PayloadVersion = 1. New payload schemas (with breaking changes) increment this.
+    /// </summary>
+    public int PayloadVersion { get; set; } = 1;
 
     /// <summary>
     /// From <see cref="Api.SharedKernel.Domain.Interfaces.IDomainEvent.OccurredAt"/>.

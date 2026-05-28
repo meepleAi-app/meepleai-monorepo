@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
@@ -16,11 +17,13 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.ChatSessi
 /// <summary>
 /// Tests for CreateChatSessionCommandHandler.
 /// Issue #3483: Chat Session Persistence Service.
+/// BE-3 #1590: ISharedGameRepository added to resolve gameName for ChatSessionCreatedEvent.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public class CreateChatSessionCommandHandlerTests
 {
     private readonly Mock<IChatSessionRepository> _mockRepository;
+    private readonly Mock<ISharedGameRepository> _mockSharedGameRepository;
     private readonly Mock<IUnitOfWork> _mockUnitOfWork;
     private readonly Mock<ILogger<CreateChatSessionCommandHandler>> _mockLogger;
     private readonly CreateChatSessionCommandHandler _handler;
@@ -28,10 +31,18 @@ public class CreateChatSessionCommandHandlerTests
     public CreateChatSessionCommandHandlerTests()
     {
         _mockRepository = new Mock<IChatSessionRepository>();
+        _mockSharedGameRepository = new Mock<ISharedGameRepository>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
         _mockLogger = new Mock<ILogger<CreateChatSessionCommandHandler>>();
+
+        // Default: return empty names dict (no game name resolution needed for most tests)
+        _mockSharedGameRepository
+            .Setup(r => r.GetNamesByIdsAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, string>());
+
         _handler = new CreateChatSessionCommandHandler(
             _mockRepository.Object,
+            _mockSharedGameRepository.Object,
             _mockUnitOfWork.Object,
             CreatePermissiveRagAccessServiceMock(),
             _mockLogger.Object);
@@ -178,6 +189,21 @@ public class CreateChatSessionCommandHandlerTests
         Action act = () =>
             new CreateChatSessionCommandHandler(
                 null!,
+                _mockSharedGameRepository.Object,
+                _mockUnitOfWork.Object,
+                CreatePermissiveRagAccessServiceMock(),
+                _mockLogger.Object);
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Constructor_WithNullSharedGameRepository_ThrowsArgumentNullException()
+    {
+        // Act & Assert — BE-3 #1590: ISharedGameRepository is required
+        Action act = () =>
+            new CreateChatSessionCommandHandler(
+                _mockRepository.Object,
+                null!,
                 _mockUnitOfWork.Object,
                 CreatePermissiveRagAccessServiceMock(),
                 _mockLogger.Object);
@@ -191,6 +217,7 @@ public class CreateChatSessionCommandHandlerTests
         Action act = () =>
             new CreateChatSessionCommandHandler(
                 _mockRepository.Object,
+                _mockSharedGameRepository.Object,
                 null!,
                 CreatePermissiveRagAccessServiceMock(),
                 _mockLogger.Object);
@@ -204,6 +231,7 @@ public class CreateChatSessionCommandHandlerTests
         Action act = () =>
             new CreateChatSessionCommandHandler(
                 _mockRepository.Object,
+                _mockSharedGameRepository.Object,
                 _mockUnitOfWork.Object,
                 CreatePermissiveRagAccessServiceMock(),
                 null!);

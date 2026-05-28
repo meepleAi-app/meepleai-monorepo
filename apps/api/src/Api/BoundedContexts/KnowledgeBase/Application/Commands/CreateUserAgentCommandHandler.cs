@@ -108,7 +108,15 @@ internal sealed class CreateUserAgentCommandHandler
         // Activate so it shows up in the user's agent list immediately.
         if (!agent.IsActive) agent.Activate();
 
+        // BE-3 #1590 H1: emit agent.created ONLY from the user-facing flow.
+        // gameName is already resolved above (line that calls GetNamesByIdsAsync).
+        // Called BEFORE AddAsync so AgentDefinitionRepository.AddAsync.CollectDomainEvents()
+        // picks up this event alongside AgentDefinitionCreatedEvent in a single collection pass,
+        // ensuring the log row is written atomically with the agent row in SaveChangesAsync.
+        agent.RaiseUserCreatedEvent(request.UserId, gameName);
+
         await _repository.AddAsync(agent, cancellationToken).ConfigureAwait(false);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Record usage so CanPerformAsync reflects the new count on next call (Redis atomic counter).

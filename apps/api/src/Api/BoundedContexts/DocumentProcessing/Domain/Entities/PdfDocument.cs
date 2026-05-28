@@ -380,6 +380,23 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
 
         // Emit domain event for real-time updates (Issue #4218)
         AddDomainEvent(new PdfStateChangedEvent(Id, previousState, newState, UploadedByUserId));
+
+        // BE-3 #1590 B2: when entering Ready, also raise a dedicated KbDocIndexedEvent for the
+        // activity log. PdfStateChangedEvent stays for internal handlers (cache, metrics, UI
+        // real-time); KbDocIndexedEvent is the user-meaningful "doc indexed" milestone for the
+        // activity rail. gameName is null — resolved query-time by the activity endpoint via
+        // SharedGameRepository (pure domain method has no repository access).
+        if (newState == PdfProcessingState.Ready)
+        {
+            AddDomainEvent(new KbDocIndexedEvent(
+                aggregateId: Id,
+                userId: UploadedByUserId,
+                fileName: FileName.Value,
+                gameId: SharedGameId,
+                gameName: null,
+                pageCount: PageCount
+            ));
+        }
     }
 
     /// <summary>

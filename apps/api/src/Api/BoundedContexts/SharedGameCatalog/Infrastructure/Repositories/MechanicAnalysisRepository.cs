@@ -16,7 +16,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 /// Repository implementation for the <see cref="MechanicAnalysis"/> aggregate (ADR-051 / M1.1).
 /// </summary>
 /// <remarks>
-/// Audit-via-repository pattern: before clearing domain events via <see cref="RepositoryBase.CollectDomainEvents"/>,
+/// Audit-via-repository pattern: before clearing domain events via <see cref="RepositoryBase.CollectDomainEvents(Api.SharedKernel.Domain.Interfaces.IAggregateRoot)"/>,
 /// the repository inspects the aggregate's pending events and synthesizes corresponding rows in
 /// <c>mechanic_status_audit</c> / <c>mechanic_suppression_audit</c> into the same <see cref="DbContext"/>.
 /// Because all inserts share the same <see cref="DbContext.SaveChangesAsync(CancellationToken)"/>

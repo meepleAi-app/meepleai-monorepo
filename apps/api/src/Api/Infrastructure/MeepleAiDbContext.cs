@@ -1,5 +1,6 @@
 using Api.Infrastructure.DomainEventLog;
 using Api.Infrastructure.Entities;
+using Api.Observability;
 using Api.Infrastructure.Entities.Administration;
 using Api.Infrastructure.Entities.Authentication;
 using Api.Infrastructure.Entities.DocumentProcessing;
@@ -449,6 +450,10 @@ public class MeepleAiDbContext : DbContext
                 if (logEntity is not null)
                 {
                     DomainEventLogs.Add(logEntity);
+                    // G1 (#1590 AC7): one counter tick per durable row added.
+                    MeepleAiMetrics.DomainEventsInserted.Add(
+                        1,
+                        new KeyValuePair<string, object?>("event_type", logEntity.EventType));
                 }
             }
         }
@@ -475,6 +480,18 @@ public class MeepleAiDbContext : DbContext
                 _logger?.LogError(ex,
                     "MediatR.Publish failed for domain event {EventType} (EventId={EventId}); log row already committed",
                     domainEvent.GetType().Name, domainEvent.EventId);
+
+                // G2 (#1590 AC7): expose the otherwise-silent handler crash.
+                // event_type uses the registry alias (CLR-type fallback) so it JOINS with the
+                // G1 inserted.total counter on the same label value. handler_name uses the CLR
+                // type name because MediatR.Publish dispatches to all handlers internally — the
+                // specific failing handler is not available in this scope (acceptable for v1;
+                // only SessionFinalizedEvent has >1 handler).
+                var eventAlias = EventTypeRegistry.TryResolve(domainEvent) ?? domainEvent.GetType().Name;
+                MeepleAiMetrics.DomainEventDispatchFailures.Add(
+                    1,
+                    new KeyValuePair<string, object?>("event_type", eventAlias),
+                    new KeyValuePair<string, object?>("handler_name", domainEvent.GetType().Name));
             }
 #pragma warning restore CA1031
         }

@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 /**
@@ -21,7 +20,6 @@ import {
   PlusIcon,
 } from 'lucide-react';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,21 +58,21 @@ function RestoreResultBanner({ result }: { result: KbImportResult }) {
     <div
       className={`rounded-xl border p-4 ${
         hasErrors
-          ? 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'
-          : 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800'
+          ? 'bg-entity-event/12 border-entity-event/30'
+          : 'bg-entity-toolkit/12 border-entity-toolkit/30'
       }`}
     >
       <div className="flex items-start gap-3">
         <CheckCircle2Icon
-          className={`h-5 w-5 mt-0.5 ${hasErrors ? 'text-red-500' : 'text-emerald-500'}`}
+          className={`h-5 w-5 mt-0.5 ${hasErrors ? 'text-entity-event' : 'text-entity-toolkit'}`}
         />
         <div className="flex-1">
           <p
-            className={`text-sm font-semibold ${hasErrors ? 'text-red-700 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'}`}
+            className={`text-sm font-semibold ${hasErrors ? 'text-entity-event' : 'text-entity-toolkit'}`}
           >
             {hasErrors ? 'Restore completato con errori' : 'Restore completato con successo'}
           </p>
-          <div className="mt-1 text-xs text-muted-foreground dark:text-muted-foreground space-y-0.5">
+          <div className="mt-1 text-xs text-muted-foreground space-y-0.5">
             <p>
               Documenti: {result.imported} importati · {result.skipped} già presenti ·{' '}
               {result.failed} falliti
@@ -82,7 +80,7 @@ function RestoreResultBanner({ result }: { result: KbImportResult }) {
             {result.reEmbedded > 0 && <p>{result.reEmbedded} documenti ri-embeddati</p>}
           </div>
           {result.errors.length > 0 && (
-            <ul className="mt-2 text-xs text-red-600 dark:text-red-400 space-y-0.5">
+            <ul className="mt-2 text-xs text-entity-event space-y-0.5">
               {result.errors.map((e, i) => (
                 <li key={i}>• {e}</li>
               ))}
@@ -110,16 +108,16 @@ function SnapshotCard({
   const isLatest = snapshot.id === 'latest';
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 px-4 rounded-xl hover:bg-muted dark:hover:bg-zinc-800/50 transition-colors">
+    <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 px-4 hover:bg-muted transition-colors">
       {/* Icon */}
       <div className="flex-shrink-0">
         <div
           className={`h-10 w-10 rounded-lg flex items-center justify-center ${
-            isLatest ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-muted dark:bg-zinc-700/50'
+            isLatest ? 'bg-entity-chat/12' : 'bg-muted'
           }`}
         >
           <FileArchiveIcon
-            className={`h-5 w-5 ${isLatest ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground dark:text-muted-foreground'}`}
+            className={`h-5 w-5 ${isLatest ? 'text-entity-chat' : 'text-muted-foreground'}`}
           />
         </div>
       </div>
@@ -127,16 +125,14 @@ function SnapshotCard({
       {/* Metadata */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-sm font-medium text-foreground dark:text-zinc-100 font-mono truncate">
-            {snapshot.id}
-          </p>
+          <p className="text-sm font-medium text-foreground font-mono truncate">{snapshot.id}</p>
           {isLatest && (
-            <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded font-medium">
+            <span className="text-xs bg-entity-chat/12 text-entity-chat px-1.5 py-0.5 rounded font-mono font-bold">
               auto
             </span>
           )}
         </div>
-        <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground dark:text-muted-foreground">
+        <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
           <span>{formatSnapshotDate(snapshot.exportedAt)}</span>
           {snapshot.totalDocuments !== null && (
             <span>
@@ -151,26 +147,24 @@ function SnapshotCard({
 
       {/* Actions */}
       <div className="flex items-center gap-2 flex-shrink-0">
-        <Button
-          variant="outline"
-          size="sm"
+        <button
+          type="button"
           onClick={() => onRestore(snapshot.id)}
           disabled={isRestoring || isDeleting}
-          className="gap-1.5 text-xs"
+          className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-card px-2 py-1 text-[11px] font-quicksand font-bold hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <RotateCcwIcon className={`h-3.5 w-3.5 ${isRestoring ? 'animate-spin' : ''}`} />
           {isRestoring ? 'Restore...' : 'Ripristina'}
-        </Button>
+        </button>
         {!isLatest && (
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
+            type="button"
             onClick={() => onDelete(snapshot.id)}
             disabled={isRestoring || isDeleting}
-            className="gap-1.5 text-xs text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+            className="inline-flex items-center gap-1.5 rounded-md border border-entity-event/55 bg-card px-2 py-1 text-[11px] font-quicksand font-bold text-entity-event hover:bg-entity-event/8 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Trash2Icon className="h-3.5 w-3.5" />
-          </Button>
+          </button>
         )}
       </div>
     </div>
@@ -249,7 +243,7 @@ export default function KbSnapshotsPage() {
 
       {/* Export error */}
       {exportError && (
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800 text-sm text-red-600 dark:text-red-400">
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-entity-event/12 border border-entity-event/30 text-sm text-entity-event">
           <AlertCircleIcon className="h-4 w-4 flex-shrink-0" />
           {exportError}
         </div>
@@ -259,71 +253,65 @@ export default function KbSnapshotsPage() {
       {restoreResult && <RestoreResultBanner result={restoreResult} />}
 
       {/* Info box */}
-      <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
-        <p className="text-sm text-blue-700 dark:text-blue-300">
+      <div className="rounded-xl border border-entity-chat/30 bg-entity-chat/12 p-4">
+        <p className="text-sm text-entity-chat">
           <strong>Come funziona:</strong> Lo snapshot{' '}
-          <code className="font-mono text-xs bg-blue-100 dark:bg-blue-900/50 px-1 rounded">
-            latest
-          </code>{' '}
-          viene aggiornato automaticamente dopo ogni indicizzazione PDF. Gli snapshot con data sono
-          backup manuali completi. Ripristina per ricaricare chunks ed embeddings nel database senza
+          <code className="font-mono text-xs bg-entity-chat/12 px-1 rounded">latest</code> viene
+          aggiornato automaticamente dopo ogni indicizzazione PDF. Gli snapshot con data sono backup
+          manuali completi. Ripristina per ricaricare chunks ed embeddings nel database senza
           rielaborare i PDF originali.
         </p>
       </div>
 
       {/* Snapshots list */}
-      <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <ArchiveIcon className="h-4 w-4 text-purple-500" />
+      <section className="rounded-[10px] border border-border/60 bg-card overflow-hidden">
+        <div className="flex items-center gap-2.5 border-b border-border/60 bg-background px-3.5 py-2.5">
+          <ArchiveIcon className="h-3.5 w-3.5 text-entity-kb shrink-0" />
+          <h2 className="font-quicksand text-[13px] font-extrabold text-foreground">
             Snapshot disponibili
-            {snapshots.length > 0 && (
-              <span className="ml-auto text-sm font-normal text-muted-foreground dark:text-muted-foreground">
-                {snapshots.length} snapshot
-              </span>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-2">
-          {isLoading ? (
-            <div className="space-y-2 p-2">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-16 rounded-xl bg-muted dark:bg-zinc-700/50 animate-pulse"
-                />
-              ))}
-            </div>
-          ) : error ? (
-            <div className="flex items-center gap-2 p-4 text-red-500 dark:text-red-400">
-              <AlertCircleIcon className="h-4 w-4" />
-              <span className="text-sm">Errore nel caricamento degli snapshot</span>
-            </div>
-          ) : snapshots.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground dark:text-muted-foreground">
-              <ArchiveIcon className="h-10 w-10" />
-              <p className="text-sm">Nessuno snapshot disponibile</p>
-              <p className="text-xs text-center max-w-xs">
-                Gli snapshot vengono creati automaticamente dopo ogni indexing PDF, oppure
-                manualmente con il bottone &quot;Nuovo snapshot&quot;.
-              </p>
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100 dark:divide-zinc-700/50">
-              {snapshots.map(snapshot => (
-                <SnapshotCard
-                  key={snapshot.id}
-                  snapshot={snapshot}
-                  onRestore={id => setRestoreTarget(id)}
-                  onDelete={id => setDeleteTarget(id)}
-                  isRestoring={restoreMutation.isPending && restoreTarget === snapshot.id}
-                  isDeleting={deleteMutation.isPending && deleteTarget === snapshot.id}
-                />
-              ))}
-            </div>
+          </h2>
+          {snapshots.length > 0 && (
+            <span className="font-mono text-[10px] text-muted-foreground ml-auto">
+              {snapshots.length} snapshot
+            </span>
           )}
-        </CardContent>
-      </Card>
+        </div>
+
+        {isLoading ? (
+          <div className="space-y-2 p-3.5">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-16 rounded-xl bg-muted animate-pulse" />
+            ))}
+          </div>
+        ) : error ? (
+          <div className="flex items-center gap-2 p-4 text-entity-event">
+            <AlertCircleIcon className="h-4 w-4" />
+            <span className="text-sm">Errore nel caricamento degli snapshot</span>
+          </div>
+        ) : snapshots.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
+            <ArchiveIcon className="h-10 w-10" />
+            <p className="text-sm">Nessuno snapshot disponibile</p>
+            <p className="text-xs text-center max-w-xs">
+              Gli snapshot vengono creati automaticamente dopo ogni indexing PDF, oppure manualmente
+              con il bottone &quot;Nuovo snapshot&quot;.
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border/60">
+            {snapshots.map(snapshot => (
+              <SnapshotCard
+                key={snapshot.id}
+                snapshot={snapshot}
+                onRestore={id => setRestoreTarget(id)}
+                onDelete={id => setDeleteTarget(id)}
+                isRestoring={restoreMutation.isPending && restoreTarget === snapshot.id}
+                isDeleting={deleteMutation.isPending && deleteTarget === snapshot.id}
+              />
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* Restore confirm dialog */}
       <AlertDialog
@@ -372,7 +360,7 @@ export default function KbSnapshotsPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Annulla</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-entity-event text-white hover:bg-entity-event/90"
               onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget)}
             >
               Elimina

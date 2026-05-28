@@ -62,15 +62,20 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Implements GetAllAgentsQuery from backend
      * @param activeOnly If true, only return active agents
      * @param type Optional agent type filter
+     * @param scope Optional scope: `'my-library'` returns agents whose game is in
+     *   the caller's library + system agents (BE-2 #1589). Omit for global list.
      * Resolved by Wave B.2 hotfix #641 (2026-05-03) — route registered in AgentsEndpoints.cs.
      */
-    async getAll(activeOnly?: boolean, type?: string): Promise<AgentDto[]> {
+    async getAll(activeOnly?: boolean, type?: string, scope?: 'my-library'): Promise<AgentDto[]> {
       const params = new URLSearchParams();
       if (activeOnly !== undefined) {
         params.append('activeOnly', activeOnly.toString());
       }
       if (type) {
         params.append('type', type);
+      }
+      if (scope) {
+        params.append('scope', scope);
       }
 
       const url = `/api/v1/agents${params.toString() ? `?${params.toString()}` : ''}`;

@@ -151,7 +151,7 @@ function SnapshotCard({
           type="button"
           onClick={() => onRestore(snapshot.id)}
           disabled={isRestoring || isDeleting}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-card px-2 py-1 text-[11px] font-quicksand font-bold hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-card px-2 py-1 text-[11px] font-quicksand font-bold hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           <RotateCcwIcon className={`h-3.5 w-3.5 ${isRestoring ? 'animate-spin' : ''}`} />
           {isRestoring ? 'Restore...' : 'Ripristina'}
@@ -161,7 +161,7 @@ function SnapshotCard({
             type="button"
             onClick={() => onDelete(snapshot.id)}
             disabled={isRestoring || isDeleting}
-            className="inline-flex items-center gap-1.5 rounded-md border border-entity-event/55 bg-card px-2 py-1 text-[11px] font-quicksand font-bold text-entity-event hover:bg-entity-event/8 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 rounded-md border border-entity-event/55 bg-card px-2 py-1 text-[11px] font-quicksand font-bold text-entity-event hover:bg-entity-event/8 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <Trash2Icon className="h-3.5 w-3.5" />
           </button>
@@ -360,7 +360,7 @@ export default function KbSnapshotsPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Annulla</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-entity-event text-white hover:bg-entity-event/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget)}
             >
               Elimina

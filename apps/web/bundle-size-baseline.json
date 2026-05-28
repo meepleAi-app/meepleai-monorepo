@@ -1,6 +1,6 @@
 {
-  "description": "Baseline JS bundle size for prod build (no mock). Update manually in dedicated PRs. Last bump rebaselines post-#871 IA consolidation (Nanolith libro-game): adds LibroGameDetailView (305 LOC), CampaignSetupDrawer (515 LOC), is-libro-game helper, and incorporates Stage 2 de-versioning (PR #1025) rename impact on chunk hashing.",
-  "updatedAt": "2026-05-11",
-  "totalBytes": 14371308,
+  "description": "Baseline JS bundle size for prod build (no mock). Update manually in dedicated PRs. Last bump rebaselines post-SP5 F3.1 KbExplorer client component (+~25KB): adds KbExplorer with document list, search, and preview panel.",
+  "updatedAt": "2026-05-28",
+  "totalBytes": 14500000,
   "toleranceBytes": 10240
 }

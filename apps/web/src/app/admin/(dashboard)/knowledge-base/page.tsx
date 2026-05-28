@@ -1,204 +1,26 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
-import {
-  FileTextIcon,
-  DatabaseIcon,
-  UploadIcon,
-  BrainCircuitIcon,
-  SettingsIcon,
-  ListOrderedIcon,
-  ArrowRightIcon,
-  CpuIcon,
-  ThumbsUpIcon,
-  GamepadIcon,
-  ArchiveIcon,
-} from 'lucide-react';
+// apps/web/src/app/admin/(dashboard)/knowledge-base/page.tsx
 import { type Metadata } from 'next';
-import Link from 'next/link';
 
-import { KbHubClient } from '@/components/admin/knowledge-base/hub/kb-hub-client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { KbExplorer } from '@/components/admin/knowledge-base/explorer/KbExplorer';
 
 export const metadata: Metadata = {
   title: 'Knowledge Base',
-  description: 'Manage documents, vector collections, and the RAG pipeline',
+  description: 'Esploratore master-detail della Knowledge Base admin',
 };
-
-const sections = [
-  {
-    title: 'Documents',
-    description:
-      'Browse uploaded documents, view processing status, and manage the document library',
-    icon: FileTextIcon,
-    href: '/admin/knowledge-base/documents',
-    color: 'from-amber-500 to-orange-600',
-    stats: 'View library',
-  },
-  {
-    title: 'Vector Collections',
-    description:
-      'Manage pgvector embeddings, view vector store health, and run similarity searches',
-    icon: DatabaseIcon,
-    href: '/admin/knowledge-base/vectors',
-    color: 'from-blue-500 to-indigo-600',
-    stats: 'Manage vectors',
-  },
-  {
-    title: 'Processing Queue',
-    description:
-      'Monitor PDF processing jobs, view step timelines, logs, and manage the queue with filters',
-    icon: ListOrderedIcon,
-    href: '/admin/knowledge-base/queue',
-    color: 'from-cyan-500 to-teal-600',
-    stats: 'View queue',
-  },
-  {
-    title: 'Upload & Process',
-    description:
-      'Upload new documents for processing, configure extraction settings, and monitor pipeline jobs',
-    icon: UploadIcon,
-    href: '/admin/knowledge-base/upload',
-    color: 'from-emerald-500 to-green-600',
-    stats: 'Upload files',
-  },
-  {
-    title: 'RAG Pipeline',
-    description:
-      'Monitor the RAG retrieval pipeline, view execution logs, and tune retrieval parameters',
-    icon: BrainCircuitIcon,
-    href: '/admin/knowledge-base/pipeline',
-    color: 'from-purple-500 to-violet-600',
-    stats: 'View dashboard',
-  },
-  {
-    title: 'Settings',
-    description:
-      'Configure tier strategies, embedding models, chunking parameters, and reranking options',
-    icon: SettingsIcon,
-    href: '/admin/knowledge-base/settings',
-    color: 'from-slate-500 to-zinc-600',
-    stats: 'Configure',
-  },
-  {
-    title: 'Embedding Service',
-    description: 'Monitor the multilingual embedding model, throughput metrics, and service health',
-    icon: CpuIcon,
-    href: '/admin/knowledge-base/embedding',
-    color: 'from-violet-500 to-purple-600',
-    stats: 'View metrics',
-  },
-  {
-    title: 'User Feedback',
-    description:
-      'Review thumbs up/down feedback from users on KB-powered chat responses, filter by outcome and paginate results',
-    icon: ThumbsUpIcon,
-    href: '/admin/knowledge-base/feedback',
-    color: 'from-rose-500 to-pink-600',
-    stats: 'View feedback',
-  },
-  {
-    title: 'KB per Gioco',
-    description:
-      'Panoramica dello stato della Knowledge Base per ogni gioco: documenti indicizzati, chunk count, e stato backup automatico',
-    icon: GamepadIcon,
-    href: '/admin/knowledge-base/games',
-    color: 'from-teal-500 to-cyan-600',
-    stats: 'Vedi stati',
-  },
-  {
-    title: 'Snapshot RAG',
-    description:
-      'Gestisci i backup della Knowledge Base. Ripristina uno snapshot per evitare di rielaborare i PDF — risparmia tempo e risorse',
-    icon: ArchiveIcon,
-    href: '/admin/knowledge-base/snapshots',
-    color: 'from-indigo-500 to-purple-600',
-    stats: 'Gestisci snapshot',
-  },
-];
 
 export default function KnowledgeBasePage() {
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
+    <div className="space-y-4">
+      <header>
         <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
           Knowledge Base
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Manage documents, vector collections, and the RAG retrieval pipeline
+          Esplora i documenti indicizzati per gioco.
         </p>
-      </div>
+      </header>
 
-      {/* Live Dashboard Widgets */}
-      <KbHubClient />
-
-      {/* Section Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {sections.map(section => {
-          const Icon = section.icon;
-          return (
-            <Link key={section.title} href={section.href}>
-              <Card className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl border-border/60 dark:border-zinc-700/60 hover:border-amber-300/60 dark:hover:border-amber-600/40 transition-all cursor-pointer group h-full">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3 text-base">
-                    <div
-                      className={`h-10 w-10 rounded-xl bg-gradient-to-br ${section.color} flex items-center justify-center shadow-sm`}
-                    >
-                      <Icon className="h-5 w-5 text-white" />
-                    </div>
-                    <span>{section.title}</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {section.description}
-                  </p>
-                  <div className="flex items-center gap-1 text-sm font-medium text-amber-700 dark:text-amber-400 group-hover:gap-2 transition-all">
-                    {section.stats}
-                    <ArrowRightIcon className="h-3 w-3" />
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          );
-        })}
-      </div>
-
-      {/* Quick Links */}
-      <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-border/60 dark:border-zinc-700/40 p-6">
-        <h2 className="font-quicksand font-semibold text-lg text-foreground mb-4">Quick Links</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <Link
-            href="/admin/agents/analytics"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-muted/80 dark:hover:bg-zinc-700/60"
-          >
-            RAG Executions Log
-          </Link>
-          <Link
-            href="/admin/agents/models"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-muted/80 dark:hover:bg-zinc-700/60"
-          >
-            AI Models
-          </Link>
-          <Link
-            href="/admin/agents/strategy"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-muted/80 dark:hover:bg-zinc-700/60"
-          >
-            Strategy Config
-          </Link>
-          <Link
-            href="/admin/knowledge-base/settings"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-muted/80 dark:hover:bg-zinc-700/60"
-          >
-            KB Settings
-          </Link>
-          <Link
-            href="/admin/agents/usage"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-muted/80 dark:hover:bg-zinc-700/60"
-          >
-            Usage &amp; Costs
-          </Link>
-        </div>
-      </div>
+      <KbExplorer />
     </div>
   );
 }

@@ -254,7 +254,7 @@ export function KBSettings() {
           <SettingRow label="Configured" value={settings.reranker.configured} />
           {settings.reranker.url && <SettingRow label="URL" value={settings.reranker.url} />}
           {!settings.reranker.configured && (
-            <p className="text-xs text-entity-agent mt-2">
+            <p className="text-xs text-muted-foreground mt-2">
               Reranker not configured. Set RERANKER_URL to enable cross-encoder reranking.
             </p>
           )}
@@ -282,7 +282,7 @@ export function KBSettings() {
           <h2 className="font-quicksand text-[14px] font-extrabold text-entity-event">
             Danger Zone
           </h2>
-          <span className="font-mono text-[10.5px] text-muted-foreground ml-2">
+          <span className="font-mono text-[10.5px] text-foreground ml-2">
             These actions may affect system performance and data availability.
           </span>
         </div>

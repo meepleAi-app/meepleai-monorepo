@@ -127,7 +127,7 @@ export function KbFeedbackPanel({ gameId }: Props) {
           <div className="flex items-center justify-center gap-2 pt-2 border-t border-border/60 mt-2">
             <button
               type="button"
-              className="rounded-md border border-border/60 bg-card px-2 py-1 text-[11px] font-quicksand font-bold hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+              className="rounded-md border border-border/60 bg-card px-2 py-1 text-[11px] font-quicksand font-bold hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               disabled={page === 1}
               onClick={() => setPage(p => p - 1)}
             >
@@ -136,7 +136,7 @@ export function KbFeedbackPanel({ gameId }: Props) {
             <span className="font-mono text-[11px] text-muted-foreground px-1">Pag {page}</span>
             <button
               type="button"
-              className="rounded-md border border-border/60 bg-card px-2 py-1 text-[11px] font-quicksand font-bold hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+              className="rounded-md border border-border/60 bg-card px-2 py-1 text-[11px] font-quicksand font-bold hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               disabled={page * 20 >= data.total}
               onClick={() => setPage(p => p + 1)}
             >

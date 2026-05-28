@@ -327,7 +327,7 @@ export default function VectorStorePage() {
                         <button
                           type="button"
                           onClick={() => setExpandedResult(isExpanded ? null : item.documentId)}
-                          className={`w-full grid grid-cols-[110px_110px_1fr_70px_28px] gap-3 px-3.5 py-2.5 text-left border-b border-border/60 last:border-0 hover:bg-muted/50 transition-colors ${isExpanded ? 'bg-entity-kb/4' : ''}`}
+                          className={`w-full grid grid-cols-[110px_110px_1fr_70px_28px] gap-3 px-3.5 py-2.5 text-left border-b border-border/60 last:border-0 hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${isExpanded ? 'bg-entity-kb/4' : ''}`}
                         >
                           <span className="font-mono text-[10.5px] font-bold text-entity-kb flex items-center gap-1.5 shrink-0 truncate">
                             <span className="h-1.5 w-1.5 rounded-full bg-entity-game shrink-0" />

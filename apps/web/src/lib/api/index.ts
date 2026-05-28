@@ -72,7 +72,9 @@ import {
   createInfrastructureClient,
   createSessionFlowClient,
   createKbDocsClient,
+  createActivityClient,
   type KbDocsClient,
+  type ActivityClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -368,6 +370,9 @@ export interface ApiClient {
   /** Cross-game per-user KB documents listing (Issue #1592 Phase 2b) */
   kbDocs: KbDocsClient;
 
+  /** Cross-entity activity feed (Issue #1593 Phase 3b) */
+  activity: ActivityClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -470,6 +475,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     infrastructure: createInfrastructureClient({ httpClient }), // AI Infrastructure Dashboard
     sessionFlow: createSessionFlowClient({ httpClient }), // Session Flow v2.1
     kbDocs: createKbDocsClient({ httpClient }), // Issue #1592 Phase 2b
+    activity: createActivityClient({ httpClient }), // Issue #1593 Phase 3b
     delete: (path: string) => httpClient.delete(path),
   };
 

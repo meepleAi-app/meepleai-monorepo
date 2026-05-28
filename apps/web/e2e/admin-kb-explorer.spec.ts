@@ -15,6 +15,8 @@ import { expect, Page, test as base } from '@playwright/test';
 
 import { AdminHelper } from './pages';
 
+const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+
 // ── Admin-auth fixture — same pattern as admin-analytics.spec.ts / admin-configuration.spec.ts ──
 
 const test = base.extend<{ adminPage: Page }>({
@@ -28,6 +30,24 @@ const test = base.extend<{ adminPage: Page }>({
 });
 
 test.describe('Admin KB Explorer + sub-nav (F3.1)', () => {
+  // Register specific mock for getGameKbStatuses BEFORE navigation so it takes
+  // priority over the AdminHelper catch-all stub (which returns {data:[]} and
+  // would fail GameKbStatusesSchema validation, causing the error panel to render).
+  // Playwright matches routes in registration order; since setupAdminAuth registers
+  // the catch-all during fixture setup, we register this specific route here —
+  // Playwright will match the more-specific route registered after because it checks
+  // all matching handlers and the last `route.fulfill` wins, but to be safe we use
+  // beforeEach to ensure the specific handler is always active before goto.
+  test.beforeEach(async ({ adminPage: page }) => {
+    await page.route(`${apiBase}/api/v1/admin/kb/games/`, async route =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ items: [] }),
+      })
+    );
+  });
+
   test('landing /admin/knowledge-base renders sub-nav with Explorer active and Explorer body', async ({
     adminPage: page,
   }) => {

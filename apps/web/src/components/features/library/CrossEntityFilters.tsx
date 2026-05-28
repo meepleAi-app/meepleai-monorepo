@@ -1,14 +1,12 @@
 /**
- * CrossEntityFilters — Phase 2a (#1605). Chip row above the hub grid.
+ * CrossEntityFilters — Phase 2a (#1605) + Phase 3b (#1593). Chip row above the hub grid.
  *
- * In the `games` tab the STATO chip group is FUNCTIONAL: it carries the
- * game-state filters that the retired `loaned`/`kb` tabs used to provide
- * (Owned / Wishlist / InPrestito + a with-KB toggle), so no access regresses
- * when the 3 game-state tabs collapse into one `games` tab. For all other tabs
- * the component renders nothing — search + sort live as globals in the hub
- * toolbar.
+ * In the `games` tab the STATO chip group is FUNCTIONAL (Owned / Wishlist /
+ * InPrestito + with-KB toggle). Phase 3b adds a "Più filtri" chip (on every tab
+ * except `all`) that opens the AdvancedFiltersDrawer via `onMoreFilters`.
  *
- * Controlled component: the parent (`LibraryHub`) owns `gameStateFilter`.
+ * Controlled component: the parent (`LibraryHub`) owns `gameStateFilter` + the
+ * drawer state.
  */
 
 'use client';
@@ -30,6 +28,10 @@ export interface CrossEntityFiltersProps {
   readonly tab: HybridHubTab;
   readonly gameStateFilter: GameStateFilter;
   readonly onGameStateFilterChange: (next: GameStateFilter) => void;
+  /** Phase 3b: opens the AdvancedFiltersDrawer. When undefined, the chip is hidden. */
+  readonly onMoreFilters?: () => void;
+  /** Phase 3b: number of active drawer filters to badge on the chip (0 = no badge). */
+  readonly activeFiltersCount?: number;
   readonly className?: string;
 }
 
@@ -43,11 +45,17 @@ export function CrossEntityFilters({
   tab,
   gameStateFilter,
   onGameStateFilterChange,
+  onMoreFilters,
+  activeFiltersCount = 0,
   className,
 }: CrossEntityFiltersProps): ReactElement | null {
   const { t } = useTranslation();
 
-  if (tab !== 'games') return null;
+  const showStato = tab === 'games';
+  // R4: hide the drawer chip on the 'all' tab (no single entity scope).
+  const showMoreFilters = onMoreFilters !== undefined && tab !== 'all';
+
+  if (!showStato && !showMoreFilters) return null;
 
   const toggleState = (value: GameStateType) => {
     const has = gameStateFilter.states.includes(value);
@@ -63,43 +71,64 @@ export function CrossEntityFilters({
       data-testid="cross-entity-filters-stato"
       className={clsx('flex flex-wrap items-center gap-2', className)}
     >
-      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {t('pages.library.filters.stato.label')}
-      </span>
-      {STATE_CHIPS.map(chip => {
-        const active = gameStateFilter.states.includes(chip.value);
-        return (
+      {showStato ? (
+        <>
+          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {t('pages.library.filters.stato.label')}
+          </span>
+          {STATE_CHIPS.map(chip => {
+            const active = gameStateFilter.states.includes(chip.value);
+            return (
+              <button
+                key={chip.value}
+                type="button"
+                aria-pressed={active}
+                onClick={() => toggleState(chip.value)}
+                className={clsx(
+                  'rounded-full border px-3 py-1 text-sm font-medium transition-colors',
+                  active
+                    ? 'border-primary bg-primary/10 text-foreground'
+                    : 'border-border bg-background text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {t(chip.i18nKey)}
+              </button>
+            );
+          })}
           <button
-            key={chip.value}
             type="button"
-            aria-pressed={active}
-            onClick={() => toggleState(chip.value)}
+            aria-pressed={gameStateFilter.withKb}
+            onClick={() =>
+              onGameStateFilterChange({ ...gameStateFilter, withKb: !gameStateFilter.withKb })
+            }
             className={clsx(
               'rounded-full border px-3 py-1 text-sm font-medium transition-colors',
-              active
+              gameStateFilter.withKb
                 ? 'border-primary bg-primary/10 text-foreground'
                 : 'border-border bg-background text-muted-foreground hover:text-foreground'
             )}
           >
-            {t(chip.i18nKey)}
+            {t('pages.library.filters.stato.withKb')}
           </button>
-        );
-      })}
-      <button
-        type="button"
-        aria-pressed={gameStateFilter.withKb}
-        onClick={() =>
-          onGameStateFilterChange({ ...gameStateFilter, withKb: !gameStateFilter.withKb })
-        }
-        className={clsx(
-          'rounded-full border px-3 py-1 text-sm font-medium transition-colors',
-          gameStateFilter.withKb
-            ? 'border-primary bg-primary/10 text-foreground'
-            : 'border-border bg-background text-muted-foreground hover:text-foreground'
-        )}
-      >
-        {t('pages.library.filters.stato.withKb')}
-      </button>
+        </>
+      ) : null}
+
+      {showMoreFilters ? (
+        <button
+          type="button"
+          data-testid="cross-entity-filters-more"
+          onClick={onMoreFilters}
+          className={clsx(
+            'rounded-full border px-3 py-1 text-sm font-medium transition-colors',
+            activeFiltersCount > 0
+              ? 'border-primary bg-primary/10 text-foreground'
+              : 'border-border bg-background text-muted-foreground hover:text-foreground'
+          )}
+        >
+          {t('pages.library.filters.title')}
+          {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ''}
+        </button>
+      ) : null}
     </div>
   );
 }

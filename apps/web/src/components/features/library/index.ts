@@ -52,3 +52,15 @@ export type {
   CrossEntityFiltersProps,
   GameStateFilter,
 } from '@/components/features/library/CrossEntityFilters';
+
+export { AdvancedFiltersDrawer } from '@/components/features/library/AdvancedFiltersDrawer';
+export type {
+  AdvancedFiltersDrawerProps,
+  LibraryFilters,
+  GameLibraryFilters,
+  AgentLibraryFilters,
+  SessionLibraryFilters,
+  KbLibraryFilters,
+  ChatLibraryFilters,
+  FiltersForScope,
+} from '@/components/features/library/AdvancedFiltersDrawer';

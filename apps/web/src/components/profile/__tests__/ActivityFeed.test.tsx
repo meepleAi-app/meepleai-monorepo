@@ -1,16 +1,20 @@
 import { render, screen } from '@testing-library/react';
 import { vi, describe, it, expect } from 'vitest';
 
-vi.mock('@/hooks/useActivityFeed', () => ({
-  useActivityFeed: vi.fn(),
+vi.mock('@/hooks/useDashboardActivityFeed', () => ({
+  useDashboardActivityFeed: vi.fn(),
 }));
 
-import { useActivityFeed } from '@/hooks/useActivityFeed';
+import { useDashboardActivityFeed } from '@/hooks/useDashboardActivityFeed';
 import { ActivityFeed } from '../ActivityFeed';
 
 describe('ActivityFeed', () => {
   it('mostra skeleton durante il caricamento', () => {
-    vi.mocked(useActivityFeed).mockReturnValue({ items: [], isLoading: true, error: null });
+    vi.mocked(useDashboardActivityFeed).mockReturnValue({
+      items: [],
+      isLoading: true,
+      error: null,
+    });
     render(<ActivityFeed />);
     expect(document.querySelectorAll('[data-testid="activity-skeleton"]').length).toBeGreaterThan(
       0
@@ -18,7 +22,7 @@ describe('ActivityFeed', () => {
   });
 
   it('mostra gli item quando caricati', () => {
-    vi.mocked(useActivityFeed).mockReturnValue({
+    vi.mocked(useDashboardActivityFeed).mockReturnValue({
       items: [
         {
           id: '1',
@@ -46,7 +50,11 @@ describe('ActivityFeed', () => {
   });
 
   it('mostra stato vuoto se non ci sono attività', () => {
-    vi.mocked(useActivityFeed).mockReturnValue({ items: [], isLoading: false, error: null });
+    vi.mocked(useDashboardActivityFeed).mockReturnValue({
+      items: [],
+      isLoading: false,
+      error: null,
+    });
     render(<ActivityFeed />);
     expect(screen.getByText(/nessuna attività/i)).toBeInTheDocument();
   });

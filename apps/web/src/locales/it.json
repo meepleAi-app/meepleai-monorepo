@@ -1757,7 +1757,15 @@
         "subtitle": "Le ultime aggiunte e modifiche alla tua libreria.",
         "empty": "Nessuna attività recente.",
         "viewAll": "Vedi tutto",
-        "viewAllAriaLabel": "Vai allo storico completo dell'attività"
+        "viewAllAriaLabel": "Vai allo storico completo dell'attività",
+        "error": "Impossibile caricare l'attività.",
+        "fallback": {
+          "agent": "Nuovo agent creato",
+          "chat": "Nuova chat",
+          "kbIndexed": "Documento indicizzato",
+          "play": "Sessione",
+          "removed": "Rimosso dalla libreria"
+        }
       },
       "emptyState": {
         "default": {

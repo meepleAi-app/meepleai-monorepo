@@ -9,7 +9,7 @@ vi.mock('@/lib/api', () => ({
 }));
 
 import { api } from '@/lib/api';
-import { useActivityFeed } from '../useActivityFeed';
+import { useDashboardActivityFeed } from '../useDashboardActivityFeed';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -23,9 +23,9 @@ beforeEach(() => {
   vi.mocked(api.badges.getMyBadges).mockResolvedValue([]);
 });
 
-describe('useActivityFeed', () => {
+describe('useDashboardActivityFeed', () => {
   it('starts with isLoading true', () => {
-    const { result } = renderHook(() => useActivityFeed());
+    const { result } = renderHook(() => useDashboardActivityFeed());
     expect(result.current.isLoading).toBe(true);
   });
 
@@ -57,7 +57,7 @@ describe('useActivityFeed', () => {
         isDisplayed: true,
       },
     ]);
-    const { result } = renderHook(() => useActivityFeed());
+    const { result } = renderHook(() => useDashboardActivityFeed());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.items.length).toBe(2);
     // most recent first
@@ -94,7 +94,7 @@ describe('useActivityFeed', () => {
         isDisplayed: true,
       },
     ]);
-    const { result } = renderHook(() => useActivityFeed());
+    const { result } = renderHook(() => useDashboardActivityFeed());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     const types = result.current.items.map(i => i.type);
     expect(types).toContain('session');
@@ -104,7 +104,7 @@ describe('useActivityFeed', () => {
   it('exposes error if both fetches fail', async () => {
     vi.mocked(api.playRecords.getHistory).mockRejectedValue(new Error('fail'));
     vi.mocked(api.badges.getMyBadges).mockRejectedValue(new Error('fail'));
-    const { result } = renderHook(() => useActivityFeed());
+    const { result } = renderHook(() => useDashboardActivityFeed());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.error).toBeTruthy();
   });

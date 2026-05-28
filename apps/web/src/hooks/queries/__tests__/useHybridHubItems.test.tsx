@@ -1,12 +1,15 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 
+import type { AgentDto } from '@/lib/api/schemas/agents.schemas';
+
 import { useHybridHubItems } from '../useHybridHubItems';
 
 const mockUseLibrary = vi.fn();
 const mockUseActiveSessions = vi.fn();
 const mockUseRecentChatSessions = vi.fn();
 const mockUseAgents = vi.fn();
+const mockUseUserKbDocs = vi.fn();
 
 vi.mock('../useLibrary', () => ({ useLibrary: (...args: unknown[]) => mockUseLibrary(...args) }));
 vi.mock('../useActiveSessions', () => ({
@@ -16,6 +19,9 @@ vi.mock('../useChatSessions', () => ({
   useRecentChatSessions: (...args: unknown[]) => mockUseRecentChatSessions(...args),
 }));
 vi.mock('../useAgents', () => ({ useAgents: (...args: unknown[]) => mockUseAgents(...args) }));
+vi.mock('../useUserKbDocs', () => ({
+  useUserKbDocs: (...args: unknown[]) => mockUseUserKbDocs(...args),
+}));
 
 function ok<T>(data: T) {
   return { data, isLoading: false, isError: false, error: null };
@@ -103,6 +109,7 @@ beforeEach(() => {
   );
   mockUseRecentChatSessions.mockReturnValue(ok({ sessions: [chatDto], totalCount: 1 }));
   mockUseAgents.mockReturnValue(ok([]));
+  mockUseUserKbDocs.mockReturnValue(ok({ items: [], total: 0, page: 1, pageSize: 20 }));
 });
 
 describe('useHybridHubItems', () => {
@@ -181,10 +188,12 @@ describe('useHybridHubItems', () => {
     expect(result.current.sources.sessions).toEqual([]);
   });
 
-  it('allFailed=true only when every ready source errors', () => {
+  it('allFailed=true only when every source errors (including agents+kb)', () => {
     mockUseLibrary.mockReturnValue(failed(new Error('a')));
     mockUseActiveSessions.mockReturnValue(failed(new Error('b')));
     mockUseRecentChatSessions.mockReturnValue(failed(new Error('c')));
+    mockUseAgents.mockReturnValue(failed(new Error('d')));
+    mockUseUserKbDocs.mockReturnValue(failed(new Error('e')));
     const { result } = renderHook(() => useHybridHubItems());
     expect(result.current.allFailed).toBe(true);
   });
@@ -196,6 +205,33 @@ describe('useHybridHubItems', () => {
     );
     mockUseRecentChatSessions.mockReturnValue(failed(new Error('c')));
     const { result } = renderHook(() => useHybridHubItems());
+    expect(result.current.allFailed).toBe(false);
+  });
+
+  it('AC2.b.5: kb endpoint fails, agents OK — graceful degradation', () => {
+    const agentDto: AgentDto = {
+      id: '11111111-1111-1111-1111-111111111111',
+      name: 'Agent Test',
+      type: 'Tutor',
+      strategyName: 'HybridSearch',
+      strategyParameters: {},
+      isActive: true,
+      createdAt: '2026-05-28T10:00:00+00:00',
+      lastInvokedAt: null,
+      invocationCount: 0,
+      isRecentlyUsed: false,
+      isIdle: true,
+    };
+
+    mockUseUserKbDocs.mockReturnValue(failed(new Error('500 server error')));
+    mockUseAgents.mockReturnValue(ok([agentDto]));
+
+    const { result } = renderHook(() => useHybridHubItems());
+
+    expect(result.current.sources.agents).toHaveLength(1);
+    expect(result.current.sources.kb).toEqual([]);
+    expect(result.current.partialErrors.kb).toBeInstanceOf(Error);
+    expect(result.current.partialErrors.agents).toBeNull();
     expect(result.current.allFailed).toBe(false);
   });
 });

@@ -26,11 +26,11 @@ const adminClient = createAdminClient({ httpClient });
 function statusDotColor(status: PipelineStageStatus) {
   switch (status) {
     case 'healthy':
-      return 'bg-entity-toolkit shadow-[0_0_8px_hsl(var(--entity-toolkit)/0.5)]';
+      return 'bg-entity-toolkit shadow-[0_0_8px_hsl(var(--c-toolkit)/0.5)]';
     case 'warning':
       return 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]';
     case 'error':
-      return 'bg-entity-event shadow-[0_0_8px_hsl(var(--entity-event)/0.5)]';
+      return 'bg-entity-event shadow-[0_0_8px_hsl(var(--c-event)/0.5)]';
     default:
       return 'bg-muted-foreground';
   }

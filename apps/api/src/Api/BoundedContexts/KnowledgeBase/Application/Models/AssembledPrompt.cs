@@ -33,4 +33,11 @@ internal sealed record ChunkCitation(
     /// </summary>
     [JsonIgnore]
     public string? FullText { get; init; }
+
+    /// <summary>
+    /// Source game ID — populated on the cross-game path (AssembleFromContextAsync, #1661).
+    /// Null on single-game paths (AssemblePromptAsync) to preserve backward compatibility
+    /// with all existing call sites that create ChunkCitation without a game context.
+    /// </summary>
+    public Guid? GameId { get; init; }
 }

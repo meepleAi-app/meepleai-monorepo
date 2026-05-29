@@ -5,6 +5,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.ContextEngineering.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.CrossGameStreamQa;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGameDocuments;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunkById;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunks;
@@ -18,6 +19,7 @@ using Api.Extensions;
 using Api.Services;
 using Api.Helpers;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Serialization;
 using Api.Middleware;
 using Api.Models;
 using MediatR;
@@ -38,6 +40,7 @@ internal static class KnowledgeBaseEndpoints
         MapSearchEndpoint(group);
         MapGlobalSearchEndpoint(group);
         MapAskEndpoint(group);
+        MapGlobalAskStreamEndpoint(group);
         MapChatLookupEndpoints(group);
         MapChatHistoryEndpoints(group);
         MapChatLifecycleEndpoints(group);
@@ -135,6 +138,113 @@ internal static class KnowledgeBaseEndpoints
         .WithName("KnowledgeBaseAsk")
         .RequireSession()
         .WithTags("KnowledgeBase");
+    }
+
+    private static void MapGlobalAskStreamEndpoint(RouteGroupBuilder group)
+    {
+        // Issue #1661 PR-2 Task 9: Cross-game SSE ask endpoint.
+        // Streams RagStreamingEvents (StateUpdate → Citations → Token* → Complete) for
+        // a natural-language question across all RBAC-accessible games for the caller.
+        // Emits text/event-stream; honors EC-3 client-disconnect via CancellationToken.
+        group.MapPost("/knowledge-base/ask/global", HandleGlobalAskStream)
+            .WithName("GlobalKbAskStream")
+            .RequireSession()
+            .WithTags("KnowledgeBase")
+            .WithSummary("Cross-game knowledge base SSE ask (RBAC-filtered)")
+            .WithDescription(
+                "Streams a RAG answer to the provided question across all games accessible to the " +
+                "authenticated user (public games + library-owned games). Admins see all games. " +
+                "Emits Server-Sent Events with the RagStreamingEvent wire format: " +
+                "StateUpdate → Citations → Token* → Complete (or Error on failure). " +
+                "Honors EC-3: cancelling the HTTP request stops the LLM stream cleanly. " +
+                "Issue #1661 PR-2.")
+            .Produces(StatusCodes.Status200OK)              // text/event-stream
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status422UnprocessableEntity);
+    }
+
+    private static async Task<IResult> HandleGlobalAskStream(
+        GlobalKbAskRequest request,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var userId = session.Principal!.Subject.Id;
+        var role   = session.Principal!.EffectiveActor.Role;
+
+        if (!Enum.TryParse<UserRole>(role, ignoreCase: true, out var userRole))
+            userRole = UserRole.User;
+
+        // Minimal validation: query must not be empty
+        if (string.IsNullOrWhiteSpace(request.Query))
+        {
+            return Results.UnprocessableEntity(new { error = "query is required" });
+        }
+
+        logger.LogInformation(
+            "[GlobalKbAsk] Cross-game ask from user {UserId} (role={Role}): {Query}",
+            userId, role, request.Query);
+
+        // Set SSE headers — must be set before writing the body
+        context.Response.Headers["Content-Type"]  = "text/event-stream";
+        context.Response.Headers["Cache-Control"] = "no-cache";
+        context.Response.Headers["Connection"]    = "keep-alive";
+
+        // EC-3: use HttpContext.RequestAborted so client disconnect stops the LLM stream
+        var streamCt = context.RequestAborted;
+
+        try
+        {
+            var query = new CrossGameStreamQaQuery(
+                Query:         request.Query,
+                UserId:        userId,
+                Role:          userRole,
+                AgentLanguage: request.Language ?? "it",
+                TopK:          request.TopK ?? 8);
+
+            await foreach (var evt in mediator.CreateStream(query, streamCt).ConfigureAwait(false))
+            {
+                if (streamCt.IsCancellationRequested)
+                    break;
+
+                var json = System.Text.Json.JsonSerializer.Serialize(evt, SseJsonOptions.Default);
+                await context.Response.WriteAsync($"data: {json}\n\n", streamCt).ConfigureAwait(false);
+                await context.Response.Body.FlushAsync(streamCt).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogInformation(ex,
+                "[GlobalKbAsk] Stream cancelled by client for user {UserId}", userId);
+        }
+#pragma warning disable CA1031 // SSE endpoint must handle all errors gracefully
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "[GlobalKbAsk] Error during ask stream for user {UserId}", userId);
+
+            try
+            {
+                var errorEvent = new RagStreamingEvent(
+                    StreamingEventType.Error,
+                    new StreamingError("An internal error occurred. See server logs for details.", "INTERNAL_ERROR"),
+                    DateTime.UtcNow);
+                var json = System.Text.Json.JsonSerializer.Serialize(errorEvent, SseJsonOptions.Default);
+                await context.Response.WriteAsync($"data: {json}\n\n", CancellationToken.None).ConfigureAwait(false);
+                await context.Response.Body.FlushAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+#pragma warning disable CA1031 // Cleanup: if error event fails, client is disconnected
+            catch
+            {
+                // Client connection broken — nothing more we can do
+            }
+#pragma warning restore CA1031
+        }
+#pragma warning restore CA1031
+
+        return Results.Empty;
     }
 
     private static void MapChatLookupEndpoints(RouteGroupBuilder group)
@@ -1307,3 +1417,15 @@ internal sealed record GlobalKbSearchRequest(
     string? Cursor = null,
     SearchMode? Mode = null,
     double? MinScore = null);
+
+/// <summary>
+/// Request body for POST /api/v1/knowledge-base/ask/global (cross-game SSE ask, Issue #1661 PR-2).
+/// User/Role are NOT in the request — they are resolved from the authenticated session.
+/// </summary>
+/// <param name="Query">The natural-language question to ask across all accessible games.</param>
+/// <param name="Language">ISO 639-1 language code for the LLM prompt (default: "it").</param>
+/// <param name="TopK">Max chunks to retrieve cross-game (default: 8, capped by handler).</param>
+internal sealed record GlobalKbAskRequest(
+    string Query,
+    string? Language = null,
+    int? TopK = null);

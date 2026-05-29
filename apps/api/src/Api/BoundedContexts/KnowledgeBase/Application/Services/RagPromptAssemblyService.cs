@@ -401,7 +401,6 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
             filteredChunks = await TrySentenceWindowExpansionAsync(filteredChunks, profile, ct).ConfigureAwait(false);
 
             // Format chunks and track citations (with copyright annotation)
-            var sb = new StringBuilder();
             foreach (var chunk in filteredChunks)
             {
                 var citation = new ChunkCitation(
@@ -413,11 +412,10 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                     FullText = chunk.Text  // #447: preserve full text for copyright leak guard
                 };
 
-                sb.AppendLine(FormatChunkForPrompt(citation, chunk.Text));
                 citations.Add(citation);
             }
 
-            var ragContext = sb.ToString().TrimEnd();
+            var ragContext = BuildRagContextString(citations);
 
             // === Graph RAG: Inject entity context ===
             if (activeEnhancements.HasFlag(RagEnhancement.GraphTraversal))
@@ -876,6 +874,73 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
     {
         // Rough estimate: ~4 characters per token (GPT-style)
         return (int)Math.Ceiling(text.Length / 4.0);
+    }
+
+    /// <summary>
+    /// Formats a list of citations into the RAG context string used in the system prompt.
+    /// Extracted from <see cref="RetrieveRagContextAsync"/> to enable reuse by
+    /// <see cref="AssembleFromContextAsync"/> on the cross-game path (#1661).
+    /// The single-game path continues to call this method internally — output is byte-identical.
+    /// </summary>
+    private static string BuildRagContextString(IReadOnlyList<ChunkCitation> citations)
+    {
+        if (citations.Count == 0)
+            return string.Empty;
+
+        var sb = new StringBuilder();
+        foreach (var citation in citations)
+        {
+            // FullText is set on the single-game path; for cross-game pre-retrieved chunks
+            // SnippetPreview is the canonical text (FullText may be null — acceptable for cross-game).
+            var chunkText = citation.FullText ?? citation.SnippetPreview;
+            sb.AppendLine(FormatChunkForPrompt(citation, chunkText));
+        }
+
+        return sb.ToString().TrimEnd();
+    }
+
+    /// <inheritdoc />
+    public Task<AssembledPrompt> AssembleFromContextAsync(
+        string agentTypology,
+        string gameTitle,
+        string userQuestion,
+        IReadOnlyList<ChunkCitation> preRetrievedChunks,
+        ChatThread? chatThread,
+        UserTier? userTier,
+        string agentLanguage,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(agentTypology);
+        ArgumentNullException.ThrowIfNull(gameTitle);
+        ArgumentNullException.ThrowIfNull(userQuestion);
+        ArgumentNullException.ThrowIfNull(preRetrievedChunks);
+        ArgumentNullException.ThrowIfNull(agentLanguage);
+
+        // Build RAG context from the pre-retrieved chunks — NO retrieval services invoked.
+        var ragContext = BuildRagContextString(preRetrievedChunks);
+
+        // Determine copyright instruction requirement from the supplied chunks.
+        var hasProtectedCitations = preRetrievedChunks.Any(c => c.CopyrightTier == CopyrightTier.Protected);
+
+        MeepleAiMetrics.CopyrightInstructionInjected.Add(1,
+            new KeyValuePair<string, object?>("has_protected", hasProtectedCitations),
+            new KeyValuePair<string, object?>("agent_language", agentLanguage));
+
+        // Build prompts using the same helpers as AssemblePromptAsync (behavior parity).
+        // hasExpansions = false on the cross-game path (no single-game expansion concept).
+        var systemPrompt = BuildSystemPrompt(
+            agentTypology, gameTitle, gameState: null, ragContext,
+            hasExpansions: false, hasProtectedCitations, agentLanguage);
+
+        var userPrompt = BuildUserPrompt(userQuestion, chatThread);
+        var estimatedTokens = EstimateTokens(systemPrompt) + EstimateTokens(userPrompt);
+
+        _logger.LogInformation(
+            "AssembleFromContextAsync: {AgentType} for '{GameTitle}', {ChunkCount} pre-retrieved chunks, ~{Tokens} tokens",
+            agentTypology, gameTitle, preRetrievedChunks.Count, estimatedTokens);
+
+        return Task.FromResult(
+            new AssembledPrompt(systemPrompt, userPrompt, preRetrievedChunks.ToList(), estimatedTokens));
     }
 
     /// <summary>

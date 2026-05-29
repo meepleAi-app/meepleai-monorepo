@@ -1,5 +1,7 @@
 using System.Net;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.DocumentProcessing;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
@@ -115,6 +117,61 @@ public sealed class IngestionLogEndpointTests : IAsyncLifetime
         (response.StatusCode == HttpStatusCode.BadRequest
          || response.StatusCode == HttpStatusCode.OK)
             .Should().BeTrue($"Expected 400 or 200, got {response.StatusCode}");
+    }
+
+    [Fact]
+    public async Task GET_ExistingDocWithJob_Returns200WithIngestionLog()
+    {
+        // Arrange — seed a PdfDocument + ProcessingJob, then call the endpoint as admin
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (adminUserId, sessionToken) = await TestSessionHelper.CreateAdminSessionAsync(dbContext);
+
+        var docId = Guid.NewGuid();
+        var jobId = Guid.NewGuid();
+
+        dbContext.Set<PdfDocumentEntity>().Add(new PdfDocumentEntity
+        {
+            Id = docId,
+            FileName = $"test-{docId:N}.pdf",
+            FilePath = $"/test/test-{docId:N}.pdf",
+            FileSizeBytes = 2048,
+            UploadedByUserId = adminUserId,
+            UploadedAt = DateTime.UtcNow,
+        });
+        dbContext.Set<ProcessingJobEntity>().Add(new ProcessingJobEntity
+        {
+            Id = jobId,
+            PdfDocumentId = docId,
+            UserId = adminUserId,
+            Status = "Completed",
+            RetryCount = 0,
+            MaxRetries = 3,
+            CreatedAt = DateTimeOffset.UtcNow,
+        });
+        await dbContext.SaveChangesAsync();
+
+        var request = CreateAuthenticatedRequest(HttpMethod.Get,
+            $"/api/v1/admin/kb/docs/{docId}/ingestion-log",
+            sessionToken);
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadAsStringAsync();
+        body.Should().NotBeNullOrEmpty("a ProcessingJob exists for the document");
+
+        using var json = System.Text.Json.JsonDocument.Parse(body);
+        var root = json.RootElement;
+
+        root.GetProperty("pdfDocumentId").GetGuid()
+            .Should().Be(docId, "response must identify the queried document");
+
+        root.GetProperty("status").GetString()
+            .Should().Be("Completed", "job was seeded with Status=Completed");
     }
 
     // ========================================

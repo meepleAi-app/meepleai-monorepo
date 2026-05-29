@@ -114,4 +114,23 @@ internal class EmbeddingRepository : RepositoryBase, IEmbeddingRepository
             .Where(vd => vd.GameId == gameId)
             .SumAsync(vd => vd.ChunkCount, cancellationToken).ConfigureAwait(false);
     }
+
+    public async Task<IReadOnlyList<ScoredEmbedding>> SearchByVectorWithScoresAsync(
+        Guid gameId,
+        Vector queryVector,
+        int topK,
+        double minScore,
+        IReadOnlyList<Guid>? documentIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        // Delegate to pgvector adapter for score-returning similarity search.
+        // Issue #1653: additive — does not replace SearchByVectorAsync.
+        return await _vectorStore.SearchWithScoresAsync(
+            gameId,
+            queryVector,
+            topK,
+            minScore,
+            documentIds,
+            cancellationToken).ConfigureAwait(false);
+    }
 }

@@ -117,6 +117,100 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         }
     }
 
+    /// <summary>
+    /// Score-returning variant of <see cref="SearchAsync"/>.
+    /// Copies the same SQL and reader loop but ALSO reads the <c>similarity</c> column (index 7)
+    /// and returns <see cref="ScoredEmbedding"/> pairs.
+    /// The existing <see cref="SearchAsync"/> is NOT modified (other RAG callers depend on it).
+    /// Issue #1653: F3-FU-4 — per-document scored similarity-search.
+    /// </summary>
+    public async Task<List<ScoredEmbedding>> SearchWithScoresAsync(
+        Guid gameId,
+        DomainVector queryVector,
+        int topK,
+        double minScore,
+        IReadOnlyList<Guid>? documentIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        var connection = _context.Database.GetDbConnection();
+        await EnsureConnectionOpenAsync(connection, cancellationToken).ConfigureAwait(false);
+
+        // Identical SQL to SearchAsync — similarity column is at index 7 and is now surfaced.
+        var sql = $"""
+            SELECT id, vector_document_id, text_content, model, chunk_index, page_number, role_tags,
+                   1 - (vector <=> @queryVector) AS similarity
+            FROM {TableName}
+            WHERE game_id = @gameId
+              AND 1 - (vector <=> @queryVector) >= @minScore
+            """;
+
+        if (documentIds is { Count: > 0 })
+        {
+            sql += "\n  AND vector_document_id = ANY(@documentIds)";
+        }
+
+        sql += $"""
+
+            ORDER BY vector <=> @queryVector
+            LIMIT @topK
+            """;
+
+        var command = (NpgsqlCommand)connection.CreateCommand();
+        await using (command.ConfigureAwait(false))
+        {
+            command.CommandText = sql;
+
+            var pgVector = new Pgvector.Vector(queryVector.Values);
+            command.Parameters.AddWithValue("@queryVector", pgVector);
+            command.Parameters.AddWithValue("@gameId", gameId);
+            command.Parameters.AddWithValue("@minScore", minScore);
+            command.Parameters.AddWithValue("@topK", topK);
+
+            if (documentIds is { Count: > 0 })
+            {
+                command.Parameters.AddWithValue("@documentIds", documentIds.ToArray());
+            }
+
+            var results = new List<ScoredEmbedding>();
+
+            var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            await using (reader.ConfigureAwait(false))
+            {
+                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    var id = reader.GetGuid(0);
+                    var vectorDocumentId = reader.GetGuid(1);
+                    var textContent = reader.GetString(2);
+                    var model = reader.GetString(3);
+                    var chunkIndex = reader.GetInt32(4);
+                    var pageNumber = reader.GetInt32(5);
+                    var roleTags = reader.GetInt32(6);
+                    // Column 7: similarity = 1 - (vector <=> @queryVector)
+                    var score = reader.GetDouble(7);
+
+                    var placeholderVector = DomainVector.CreatePlaceholder(queryVector.Dimensions);
+                    var embedding = new Embedding(
+                        id: id,
+                        vectorDocumentId: vectorDocumentId,
+                        textContent: textContent,
+                        vector: placeholderVector,
+                        model: model,
+                        chunkIndex: chunkIndex,
+                        pageNumber: Math.Max(1, pageNumber),
+                        roleTags: roleTags);
+
+                    results.Add(new ScoredEmbedding(embedding, score));
+                }
+            }
+
+            _logger.LogInformation(
+                "pgvector scored search returned {ResultCount} results for gameId={GameId} (minScore={MinScore}, topK={TopK})",
+                results.Count, gameId, minScore, topK);
+
+            return results;
+        }
+    }
+
     /// <inheritdoc/>
     public async Task<List<Embedding>> SearchByMultipleGameIdsAsync(
         IReadOnlyList<Guid> gameIds,

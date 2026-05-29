@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.EstimateAgentCost;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.ExportDocumentChunks;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGamesWithoutKb;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.SearchDocumentChunks;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.Filters;
 using MediatR;
@@ -97,6 +98,21 @@ internal static class AdminKnowledgeBaseEndpoints
         .WithName("ExportKbDocChunks")
         .WithSummary("Export all chunks (full content) for a document as JSON.");
 
+        // POST /api/v1/admin/kb/docs/{docId}/chunks/search — Issue #1653 F3-FU-4 (scored similarity)
+        kbGroup.MapPost("/docs/{docId:guid}/chunks/search", async (
+            Guid docId,
+            [FromBody] DocChunkSearchRequest req,
+            IMediator m,
+            CancellationToken ct) =>
+        {
+            var r = await m.Send(
+                new SearchDocumentChunksByVectorQuery(docId, req.Query, req.TopK ?? 10, req.MinScore ?? 0.0),
+                ct).ConfigureAwait(false);
+            return Results.Ok(r);
+        })
+        .WithName("SearchKbDocChunks")
+        .WithSummary("Per-document semantic chunk search (scored).");
+
         // GET /api/v1/admin/kb/docs/{docId}/agents — Issue #1651 F3-FU-2
         kbGroup.MapGet("/docs/{docId:guid}/agents", async (
             Guid docId,
@@ -186,4 +202,14 @@ internal record EstimateAgentCostByDocumentsRequest(
     Guid GameId,
     List<Guid> DocumentIds,
     string? StrategyName
+);
+
+/// <summary>
+/// Request model for per-document semantic chunk search.
+/// Issue #1653: F3-FU-4 — per-document scored similarity-search.
+/// </summary>
+internal record DocChunkSearchRequest(
+    string Query,
+    int? TopK,
+    double? MinScore
 );

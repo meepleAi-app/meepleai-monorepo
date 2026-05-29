@@ -10,8 +10,14 @@ import { IngestionPanel } from './ingestion/IngestionPanel';
 import { KbDocDetailTabs, type KbDocTabKey } from './KbDocDetailTabs';
 import { UsedByPanel } from './used-by/UsedByPanel';
 
+import type { SelectedDocMeta } from './explorer-types';
+
 export interface KbDocDetailPanelProps {
   readonly docId: string | null;
+  /** Metadata carried from the tree selection (title + gameId). Available even
+   *  when the document is locked (HTTP 423, no body). T8 will consume this to
+   *  render the action-bar in all states. */
+  readonly selectedDocMeta?: SelectedDocMeta | null;
 }
 
 function formatDate(iso: string): string {
@@ -44,7 +50,11 @@ function processingChipClass(status: string): string {
  *   - locked (423)   → banner "Documento in elaborazione"
  *   - ready (200)    → hero + lista chunk infinite-cursor
  */
-export function KbDocDetailPanel({ docId }: KbDocDetailPanelProps) {
+
+export function KbDocDetailPanel({
+  docId,
+  selectedDocMeta: _selectedDocMeta,
+}: KbDocDetailPanelProps) {
   const searchParams = useSearchParams();
   const activeTab: KbDocTabKey = (() => {
     const tab = searchParams?.get('tab');

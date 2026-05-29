@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { KbTree } from '../KbTree';
 import type { GameKbStatusItem } from '@/lib/api/schemas/admin-knowledge-base.schemas';
 import type { GameDocument } from '@/lib/api/schemas/game-documents.schemas';
+import type { SelectedDocMeta } from '../explorer-types';
 
 // Mock the per-game docs hook so KbTree's expanded-node sub-component can render
 // without TanStack Query plumbing.
@@ -131,12 +132,13 @@ describe('KbTree', () => {
     expect(leaf).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('clicking a doc leaf calls onSelectDoc with doc.id', () => {
+  it('clicking a doc leaf calls onSelectDoc with { id, title, gameId }', () => {
     setHook('g-1', [doc1]);
     const onSelectDoc = vi.fn();
     render(<KbTree {...baseProps} expandedGameIds={new Set(['g-1'])} onSelectDoc={onSelectDoc} />);
     fireEvent.click(screen.getByText('Wingspan-Oceania-EN.pdf'));
-    expect(onSelectDoc).toHaveBeenCalledWith(doc1.id);
+    const expected: SelectedDocMeta = { id: doc1.id, title: doc1.title, gameId: game1.gameId };
+    expect(onSelectDoc).toHaveBeenCalledWith(expected);
   });
 
   it('filter narrows games by name (case-insensitive)', () => {

@@ -11,6 +11,8 @@ import { HttpClient } from '@/lib/api/core/httpClient';
 import { KbDocDetailPanel } from './KbDocDetailPanel';
 import { KbTree } from './KbTree';
 
+import type { SelectedDocMeta } from './explorer-types';
+
 const ADMIN_GAME_KB_STATUSES_QUERY_KEY = ['admin-game-kb-statuses'] as const;
 
 /**
@@ -30,6 +32,7 @@ export function KbExplorer() {
 
   const [expandedGameIds, setExpandedGameIds] = useState<Set<string>>(() => new Set());
   const [filter, setFilter] = useState('');
+  const [selectedDocMeta, setSelectedDocMeta] = useState<SelectedDocMeta | null>(null);
 
   const adminClient = useMemo(() => createAdminClient({ httpClient: new HttpClient() }), []);
 
@@ -49,6 +52,11 @@ export function KbExplorer() {
     else params.set('doc', docId);
     const qs = params.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname);
+  };
+
+  const handleSelectDoc = (meta: SelectedDocMeta) => {
+    setSelectedDocId(meta.id);
+    setSelectedDocMeta(meta);
   };
 
   const handleToggleGame = (gameId: string) => {
@@ -93,10 +101,10 @@ export function KbExplorer() {
         selectedDocId={selectedDocId}
         filter={filter}
         onToggleGame={handleToggleGame}
-        onSelectDoc={id => setSelectedDocId(id)}
+        onSelectDoc={handleSelectDoc}
         onFilterChange={setFilter}
       />
-      <KbDocDetailPanel docId={selectedDocId} />
+      <KbDocDetailPanel docId={selectedDocId} selectedDocMeta={selectedDocMeta} />
     </div>
   );
 }

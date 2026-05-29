@@ -85,11 +85,11 @@ Expected: a version number (e.g., `29.4.3`). If missing daemon, start Docker Des
 - [ ] **Step 3: Kill any zombie testhost / Api.Tests processes**
 
 ```bash
-taskkill //F //IM testhost.exe 2>$null
-taskkill //F //IM Api.Tests.exe 2>$null
+taskkill //F //IM testhost.exe 2>/dev/null || true
+taskkill //F //IM Api.Tests.exe 2>/dev/null || true
 ```
 
-Either output `OPERAZIONE RIUSCITA` or `non è in esecuzione` — both fine. Use `2>$null` (PowerShell), NOT `2>/dev/null` (which would create a literal file).
+Either output `OPERAZIONE RIUSCITA` or `non è in esecuzione` — both fine. Commands run via the Bash tool (POSIX), so `2>/dev/null` discards stderr and `|| true` swallows the non-zero exit when no zombie process exists.
 
 - [ ] **Step 4: Run the full Category=Integration suite and save the log**
 
@@ -625,8 +625,8 @@ Expected: `Superato!` with all SP5 S3 acceptance scenarios PASS. If failures, **
 - [ ] **Step 3: Kill zombies (full-suite run is heavy)**
 
 ```bash
-taskkill //F //IM testhost.exe 2>$null
-taskkill //F //IM Api.Tests.exe 2>$null
+taskkill //F //IM testhost.exe 2>/dev/null || true
+taskkill //F //IM Api.Tests.exe 2>/dev/null || true
 ```
 
 - [ ] **Step 4: Run the full `Category=Integration` suite and save `post-A` baseline**
@@ -713,8 +713,8 @@ Expected: `Errori: 0`.
 - If Step 4 was executed: capture a post-B baseline.
 
 ```bash
-taskkill //F //IM testhost.exe 2>$null
-taskkill //F //IM Api.Tests.exe 2>$null
+taskkill //F //IM testhost.exe 2>/dev/null || true
+taskkill //F //IM Api.Tests.exe 2>/dev/null || true
 cd D:/Repositories/meepleai-monorepo-main/apps/api/tests/Api.Tests
 dotnet test --filter "Category=Integration" --logger "console;verbosity=normal" > ../../../../audits/2026-05-29-integration-suite-baseline-post-B.log 2>&1
 ```
@@ -1084,8 +1084,8 @@ Expected: 0 FAIL.
 - [ ] **Step 2: Kill zombies**
 
 ```bash
-taskkill //F //IM testhost.exe 2>$null
-taskkill //F //IM Api.Tests.exe 2>$null
+taskkill //F //IM testhost.exe 2>/dev/null || true
+taskkill //F //IM Api.Tests.exe 2>/dev/null || true
 ```
 
 - [ ] **Step 3: Run full Category=Integration suite and save post-C baseline**
@@ -1107,8 +1107,8 @@ Expected: `Non superati: 0`. If non-zero, identify the residual failures — if 
 - [ ] **Step 5: Re-run for determinism**
 
 ```bash
-taskkill //F //IM testhost.exe 2>$null
-taskkill //F //IM Api.Tests.exe 2>$null
+taskkill //F //IM testhost.exe 2>/dev/null || true
+taskkill //F //IM Api.Tests.exe 2>/dev/null || true
 dotnet test --filter "Category=Integration" --logger "console;verbosity=minimal" 2>&1 | grep -iE "superato!|non superato!" | tail -1
 ```
 

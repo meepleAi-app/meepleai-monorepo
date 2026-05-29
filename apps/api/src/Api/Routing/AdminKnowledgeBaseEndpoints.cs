@@ -2,6 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Queries.Queue;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.EstimateAgentCost;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.ExportDocumentChunks;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGamesWithoutKb;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.Filters;
@@ -83,6 +84,18 @@ internal static class AdminKnowledgeBaseEndpoints
         })
         .WithName("GetKbDocIngestionLog")
         .WithSummary("Get the latest ProcessingJob (with Steps and LogEntries) for a PdfDocumentId.");
+
+        // GET /api/v1/admin/kb/docs/{docId}/chunks/export — Issue #1653 F3-FU-4
+        kbGroup.MapGet("/docs/{docId:guid}/chunks/export", async (
+            Guid docId,
+            IMediator m,
+            CancellationToken ct) =>
+        {
+            var chunks = await m.Send(new ExportDocumentChunksQuery(docId), ct).ConfigureAwait(false);
+            return Results.Ok(chunks);
+        })
+        .WithName("ExportKbDocChunks")
+        .WithSummary("Export all chunks (full content) for a document as JSON.");
 
         // GET /api/v1/admin/kb/docs/{docId}/agents — Issue #1651 F3-FU-2
         kbGroup.MapGet("/docs/{docId:guid}/agents", async (

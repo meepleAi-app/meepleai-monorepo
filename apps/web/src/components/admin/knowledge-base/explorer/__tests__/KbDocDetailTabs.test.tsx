@@ -7,7 +7,7 @@ vi.mock('next/navigation', async () => {
   return {
     ...actual,
     usePathname: () => '/admin/knowledge-base',
-    useSearchParams: () => new URLSearchParams('docId=abc&tab=ingestion'),
+    useSearchParams: () => new URLSearchParams('doc=abc&tab=ingestion'),
   };
 });
 
@@ -19,10 +19,10 @@ describe('KbDocDetailTabs', () => {
     expect(screen.getByRole('link', { name: /used by/i })).toBeInTheDocument();
   });
 
-  it('Used by link sets ?tab=used-by and preserves docId', () => {
+  it('Used by link sets ?tab=used-by and preserves doc param', () => {
     render(<KbDocDetailTabs docId="abc" activeTab="overview" />);
     const usedByLink = screen.getByRole('link', { name: /used by/i });
-    expect(usedByLink.getAttribute('href')).toContain('docId=abc');
+    expect(usedByLink.getAttribute('href')).toContain('doc=abc');
     expect(usedByLink.getAttribute('href')).toContain('tab=used-by');
   });
 
@@ -33,10 +33,10 @@ describe('KbDocDetailTabs', () => {
     );
   });
 
-  it('preserves docId in each tab href', () => {
+  it('preserves doc param in each tab href', () => {
     render(<KbDocDetailTabs docId="abc" activeTab="overview" />);
     const ingestionLink = screen.getByRole('link', { name: /ingestion log/i });
-    expect(ingestionLink.getAttribute('href')).toContain('docId=abc');
+    expect(ingestionLink.getAttribute('href')).toContain('doc=abc');
     expect(ingestionLink.getAttribute('href')).toContain('tab=ingestion');
   });
 

@@ -4,6 +4,8 @@ import { useCallback } from 'react';
 
 import type { IngestionLog } from '@/lib/api/schemas/ingestion-log.schemas';
 
+import { downloadAsFile } from '../utils/downloadAsFile';
+
 interface IngestionActionsProps {
   readonly log: IngestionLog;
   readonly onRetry: (jobId: string) => void;
@@ -15,19 +17,6 @@ function buildLogText(log: IngestionLog): string {
     .sort((a, b) => a.timestamp.localeCompare(b.timestamp))
     .map(e => `[${e.timestamp}] [${e.level.toUpperCase()}] [${e.step}] ${e.message}`)
     .join('\n');
-}
-
-function downloadAsFile(content: string, filename: string): void {
-  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 /**

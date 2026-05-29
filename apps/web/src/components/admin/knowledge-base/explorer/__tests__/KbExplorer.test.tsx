@@ -35,6 +35,22 @@ vi.mock('@/hooks/queries/useKbDocDetail', () => ({
 vi.mock('@/hooks/queries/useKbChunksList', () => ({
   useKbChunksList: () => ({ data: undefined, hasNextPage: false }),
 }));
+// KbDocActions hooks — mocked so the api singleton is not eagerly evaluated
+vi.mock('@/hooks/queries/useKbDocActions', () => ({
+  useReindexDoc: () => ({ mutate: vi.fn(), isPending: false }),
+  useDeleteKbDoc: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+vi.mock('@/hooks/queries/useKbDocConsumingAgents', () => ({
+  useKbDocConsumingAgents: () => ({ data: [], isLoading: false, isError: false }),
+}));
+vi.mock('@/lib/api', () => ({
+  api: {
+    pdf: {
+      getPdfDownloadUrl: () => '#',
+      exportDocChunks: vi.fn().mockResolvedValue([]),
+    },
+  },
+}));
 
 const games: GameKbStatusItem[] = [
   {

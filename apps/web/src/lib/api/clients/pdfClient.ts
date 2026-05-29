@@ -357,6 +357,40 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
     },
 
     /**
+     * Delete a KB document by ID with cascade (admin) — Issue #1653.
+     * DELETE /api/v1/admin/pdfs/{docId} → 204
+     */
+    async adminDeleteKbDoc(pdfId: string): Promise<void> {
+      return httpClient.delete(`/api/v1/admin/pdfs/${encodeURIComponent(pdfId)}`);
+    },
+
+    /**
+     * Export all chunks for a KB document (admin) — Issue #1653.
+     * GET /api/v1/admin/kb/docs/{docId}/chunks/export
+     */
+    async exportDocChunks(pdfId: string): Promise<ExportedChunk[]> {
+      const result = await httpClient.get<ExportedChunk[]>(
+        `/api/v1/admin/kb/docs/${encodeURIComponent(pdfId)}/chunks/export`
+      );
+      return result ?? [];
+    },
+
+    /**
+     * Run a scored similarity search against a document's chunks (admin) — Issue #1653.
+     * POST /api/v1/admin/kb/docs/{docId}/chunks/search
+     */
+    async searchDocChunks(
+      pdfId: string,
+      body: { query: string; topK?: number; minScore?: number }
+    ): Promise<DocChunkSearchResult> {
+      const result = await httpClient.post<DocChunkSearchResult>(
+        `/api/v1/admin/kb/docs/${encodeURIComponent(pdfId)}/chunks/search`,
+        body
+      );
+      return result ?? { results: [], errorMessage: null };
+    },
+
+    /**
      * Purge stale documents stuck in processing (admin)
      */
     async purgeStaleDocuments(): Promise<{ purgedCount: number }> {
@@ -475,6 +509,31 @@ export interface ChunkedUploadStatusResult {
   totalChunks: number;
   progressPercentage: number;
   isComplete: boolean;
+}
+
+// ========== KB Doc Admin Types (Issue #1653) ==========
+
+/** A single exported chunk from GET /api/v1/admin/kb/docs/{id}/chunks/export */
+export interface ExportedChunk {
+  id: string;
+  chunkIndex: number;
+  pageNumber: number | null;
+  heading: string | null;
+  content: string;
+}
+
+/** A single hit returned by the chunk similarity-search endpoint */
+export interface DocChunkSearchHit {
+  chunkIndex: number;
+  pageNumber: number | null;
+  score: number;
+  snippet: string;
+}
+
+/** Response shape for POST /api/v1/admin/kb/docs/{id}/chunks/search */
+export interface DocChunkSearchResult {
+  results: DocChunkSearchHit[];
+  errorMessage: string | null;
 }
 
 export type PdfClient = ReturnType<typeof createPdfClient>;

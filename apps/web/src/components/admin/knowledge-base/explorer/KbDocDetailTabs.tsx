@@ -29,7 +29,7 @@ export function KbDocDetailTabs({ docId, activeTab }: KbDocDetailTabsProps) {
       <ul className="flex gap-1 min-w-max m-0 p-0 list-none">
         {TABS.map(tab => {
           const isActive = activeTab === tab.key;
-          const params = new URLSearchParams({ docId });
+          const params = new URLSearchParams({ doc: docId });
           if (tab.key !== 'overview') params.set('tab', tab.key);
           const href = `/admin/knowledge-base?${params.toString()}`;
           return (

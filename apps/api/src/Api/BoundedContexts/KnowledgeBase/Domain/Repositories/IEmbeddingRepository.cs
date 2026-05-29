@@ -74,4 +74,17 @@ internal interface IEmbeddingRepository
     Task<int> GetCountByGameIdAsync(
         Guid gameId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Performs vector similarity search and returns each matching embedding together with
+    /// its cosine-similarity score (additive — does NOT replace SearchByVectorAsync).
+    /// Issue #1653: F3-FU-4 — per-document scored similarity-search for the admin KB explorer.
+    /// </summary>
+    Task<IReadOnlyList<ScoredEmbedding>> SearchByVectorWithScoresAsync(
+        Guid gameId,
+        Vector queryVector,
+        int topK,
+        double minScore,
+        IReadOnlyList<Guid>? documentIds = null,
+        CancellationToken cancellationToken = default);
 }

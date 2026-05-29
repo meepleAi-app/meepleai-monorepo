@@ -217,13 +217,13 @@ All pure presentational, labels-injected, DS-15 tokens, `data-slot`, jest-axe pe
 | # | Question | Owner | Status | Blocks |
 |---|---|---|---|---|
 | Q1 | **Does a cross-game KB search FE endpoint exist?** | BE | ✅ **RESOLVED** by #1661 PR-1 (`POST /api/v1/knowledge-base/search/global`, response = `GlobalKbSearchResponseDto` mirroring §5 above; cursor pagination + hasMore). | (unblocked) |
-| Q2 | **Does a kb-ask SSE endpoint exist** (`POST /api/v1/kb/ask`) or only agent-chat? | BE | 🟡 **IN PROGRESS** in #1661 PR-2 — `POST /api/v1/knowledge-base/ask/global` emitting `RagStreamingEvent` (mirrors `useAgentChatStream` wire format). | `useKbAskStream` (Interactions) |
+| Q2 | **Does a kb-ask SSE endpoint exist** (`POST /api/v1/kb/ask`) or only agent-chat? | BE | ✅ **RESOLVED** by #1661 PR-2 — `POST /api/v1/knowledge-base/ask/global` emitting `RagStreamingEvent` (mirrors `useAgentChatStream` wire format). Body: `{ query: string, language?: string, topK?: number }`. RBAC-filtered (public ∪ owned ∪ all-for-admin). | `useKbAskStream` (Interactions — now UNBLOCKED) |
 | Q3 | **CitationPill click behavior**: nav viewer to chunk, open modal, or highlight? Recommend: deep-link `?docId=&chunkId=` + scroll. | Design | open | Drawer + viewer integration |
 | Q4 | **RBAC for global search**: private games included? Only shared/community? Only user's library? | Product/BE | ✅ **RESOLVED** by #1661 PR-1: accessible = `SharedGame.IsRagPublic` ∪ `UserLibraryEntry.OwnershipDeclaredAt != null` (user-owned library), excludes other users' private games. Admin/SuperAdmin → all non-deleted. | (unblocked) |
 | Q5 | **Editor scope**: edit doc content (chunks) or only metadata (title/type/tags/lang)? Recommend metadata-only v1. | Product | open | `KbEditorDesktop` + `useUpdateKbDocMeta` |
 | Q6 | **Filter facets** beyond docType/game/language? (tags? date?) | Design | open | `FilterAccordion` |
 
-**Foundation (Phase 1) is now UNBLOCKED** (Q1 ✅ + Q4 ✅). **Interactions (Phase 2) waits on Q2** (#1661 PR-2 in-flight) + Q3 + Q5.
+**Foundation (Phase 1) is now UNBLOCKED** (Q1 ✅ + Q4 ✅). **Interactions (Phase 2) is now UNBLOCKED for Q2** (Q2 ✅ by #1661 PR-2 — `POST /api/v1/knowledge-base/ask/global`). Remaining open: Q3 (CitationPill click behavior) + Q5 (Editor scope).
 
 ## §8. Bundle budget
 

@@ -96,16 +96,17 @@ export function WinByGameBar({ stats }: WinByGameBarProps) {
 
               {/* Game Title + Bar */}
               <div className="min-w-0 flex-1">
-                <div className="flex items-baseline justify-between gap-2 mb-1">
-                  <span
-                    className="truncate font-display text-sm font-bold text-foreground"
-                    data-testid="game-label"
-                    aria-label={`${sharedGame?.title || game.gameName} - ${winRate}% win rate (${game.won} of ${game.played} games)`}
-                  >
+                <div
+                  className="flex items-baseline justify-between gap-2 mb-1"
+                  data-testid="game-label"
+                  aria-label={`${sharedGame?.title || game.gameName} - ${winRate}% win rate (${game.won} of ${game.played} games)`}
+                >
+                  <span className="truncate font-display text-sm font-bold text-foreground">
                     {sharedGame?.title || game.gameName}
                   </span>
                   <span
                     className="flex-shrink-0 font-mono text-xs font-bold text-entity-toolkit"
+                    data-testid="win-rate"
                     aria-hidden="true"
                   >
                     {winRate}%{' '}

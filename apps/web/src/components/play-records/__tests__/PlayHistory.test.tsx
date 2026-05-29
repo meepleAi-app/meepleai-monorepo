@@ -11,11 +11,16 @@ import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 
 import { PlayHistory } from '../PlayHistory';
 import { playRecordsIndexMessages } from '@/__tests__/fixtures/i18n-test-messages';
+import { usePlayHistory, playRecordsKeys } from '@/lib/domain-hooks/usePlayRecords';
 
-// Mock next-intl
+// Mock next-intl — `useTranslations(namespace)` returns a `t` fn that receives the
+// subkey only; we must prepend the namespace to look up the fixture (keys in
+// playRecordsIndexMessages are stored with full dotted paths).
 vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) =>
-    playRecordsIndexMessages[key as keyof typeof playRecordsIndexMessages] || key,
+  useTranslations: (namespace: string) => (key: string) => {
+    const fullKey = `${namespace}.${key}`;
+    return playRecordsIndexMessages[fullKey as keyof typeof playRecordsIndexMessages] || fullKey;
+  },
 }));
 
 // Mock usePlayRecordsStore
@@ -154,8 +159,9 @@ describe('PlayHistory Integration', () => {
     renderWithProviders(<PlayHistory />);
 
     await waitFor(() => {
-      // AC-1.3: Records displayed
-      expect(screen.getByText('Catan')).toBeInTheDocument();
+      // AC-1.3: Records displayed — "Catan" may also appear in StatsHero "favorite"
+      // so use getAllByText and assert at least one occurrence (the card title).
+      expect(screen.getAllByText('Catan').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText('Ticket to Ride')).toBeInTheDocument();
     });
   });
@@ -167,7 +173,7 @@ describe('PlayHistory Integration', () => {
     fireEvent.change(search, { target: { value: 'Catan' } });
 
     await waitFor(() => {
-      expect(screen.getByText('Catan')).toBeInTheDocument();
+      expect(screen.getAllByText('Catan').length).toBeGreaterThanOrEqual(1);
       // Ticket to Ride should not match
       expect(screen.queryByText('Ticket to Ride')).not.toBeInTheDocument();
     });
@@ -187,7 +193,7 @@ describe('PlayHistory Integration', () => {
   });
 
   it('shows first-run empty state when no records', () => {
-    vi.mocked(require('@/lib/domain-hooks/usePlayRecords').usePlayHistory).mockReturnValueOnce({
+    vi.mocked(usePlayHistory).mockReturnValueOnce({
       data: { records: [], totalCount: 0, page: 1, pageSize: 20, totalPages: 0 },
       isLoading: false,
       error: null,
@@ -202,7 +208,7 @@ describe('PlayHistory Integration', () => {
   });
 
   it('shows loading skeleton', () => {
-    vi.mocked(require('@/lib/domain-hooks/usePlayRecords').usePlayHistory).mockReturnValueOnce({
+    vi.mocked(usePlayHistory).mockReturnValueOnce({
       data: null,
       isLoading: true,
       error: null,
@@ -217,7 +223,7 @@ describe('PlayHistory Integration', () => {
 
   it('shows error state', () => {
     const mockError = new Error('Network error');
-    vi.mocked(require('@/lib/domain-hooks/usePlayRecords').usePlayHistory).mockReturnValueOnce({
+    vi.mocked(usePlayHistory).mockReturnValueOnce({
       data: null,
       isLoading: false,
       error: mockError,
@@ -233,10 +239,8 @@ describe('PlayHistory Integration', () => {
 
   it('implements cache invalidation (AC-1.9)', () => {
     // This test verifies that query keys are correctly structured
-    // for proper cache invalidation on mutations
-    const { usePlayHistory } = require('@/lib/domain-hooks/usePlayRecords');
-    const { playRecordsKeys } = require('@/lib/domain-hooks/usePlayRecords');
-
+    // for proper cache invalidation on mutations.
+    // usePlayHistory + playRecordsKeys imported statically at top of file.
     expect(playRecordsKeys.lists()).toEqual(['play-records', 'list']);
     expect(playRecordsKeys.detail('rec-1')).toEqual(['play-records', 'detail', 'rec-1']);
     expect(playRecordsKeys.statistics()).toEqual(['play-records', 'statistics']);

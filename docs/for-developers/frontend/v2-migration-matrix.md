@@ -660,7 +660,7 @@ instead.
 
 | Route | Mockup | Note |
 |-------|--------|------|
-| `/library` | `sp4-library-desktop.html` | Tier S done (PR #574/635/638) |
+| `/library` | `sp4-library-desktop.html` + `sp4-library-mobile.html` | Tier S done (PR #574/635/638); mobile variant SP8 brief 2026-05-30 (IA semplificata 3 tab + overflow Più=Agents/KB) |
 | `/library/wishlist` | — | gap |
 | `/library/playlists` · `/[id]` · `/shared/[token]` | — | **gap critico** (US-attiva) |
 | `/library/private` · `/add` · `/[id]` | `sp4-add-game-pdf-dedup.html` + `sp4-upload-wizard-extended.html` [partial] | — |
@@ -669,7 +669,7 @@ instead.
 | `/library/[gameId]` | `sp4-game-detail.html` + `librogame-runthrough-game-detail.html` + `librogame-runthrough-game-onboarding.html` | IA closes #871 (PR #1037); onboarding gap-coverage 2026-05-12 (pending Stage-2); libro variant audit #1551 → **0% drift** (see [libro-detail-gap-report.md](../../../admin-mockups/design_handoff/libro-detail-gap-report.md)) |
 | `/library/[gameId]/agent` | `sp4-agent-detail.html` + `sp4-game-chat-tab.html` | — |
 | `/library/[gameId]/play` | `librogame-runthrough-resume-picker.html` + `sp6-libro-game-resume-state.html` | Libro-game |
-| `/library/[gameId]/play/[campaignId]` | `librogame-runthrough-play-session.html` + `sp6-libro-game-index.html` | — |
+| `/library/[gameId]/play/[campaignId]` | `librogame-runthrough-play-session.html` + `sp6-libro-game-index.html` | 4 stati v1 congelati + 3 stati SP8 companion (state-05 diary, state-06 paragrafi-drawer, state-07 end-campaign) brief 2026-05-30; nuovo jsx twin con 3 lab interattivi; deviazione narrativa dati documentata (nuovi stati riferiscono §214/Tainted Grail/Niamh, congelati §289/Eldoria/Voidstone) |
 | `/library/[gameId]/play/[campaignId]/translate` | `librogame-runthrough-translate-viewer.html` + `sp6-libro-game-photo-upload.html` | Tier S done (PR #790) |
 | `/library/[gameId]/play/[campaignId]/encounter` | `librogame-runthrough-encounter-cheatsheet.html` | Tier S done (PR #1525, parse-centric MVP; state D deferred) |
 | `/library/[gameId]/toolbox` · `/toolkit` · `/toolkit/[sessionId]` | `sp4-toolkit-detail.html` ↻ | — |

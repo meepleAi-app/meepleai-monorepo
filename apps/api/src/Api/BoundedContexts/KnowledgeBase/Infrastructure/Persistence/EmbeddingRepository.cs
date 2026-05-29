@@ -69,6 +69,26 @@ internal class EmbeddingRepository : RepositoryBase, IEmbeddingRepository
             cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<List<Embedding>> SearchByMultipleGameIdsAsync(
+        IReadOnlyList<Guid> gameIds,
+        Vector queryVector,
+        int topK,
+        double minScore,
+        IReadOnlyList<Guid>? documentIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        // Early return: no adapter call when game list is empty (Issue #1661)
+        if (gameIds.Count == 0) return new List<Embedding>();
+
+        return await _vectorStore.SearchByMultipleGameIdsAsync(
+            gameIds,
+            queryVector,
+            topK,
+            minScore,
+            documentIds,
+            cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task AddBatchAsync(
         List<Embedding> embeddings,
         CancellationToken cancellationToken = default)

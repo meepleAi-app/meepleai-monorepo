@@ -64,7 +64,7 @@ test.describe('Play Records Index', () => {
 
       // Verify navigation (URL should contain /play-records/{id})
       await expect(page)
-        .toHaveURL(/\/play-records\/[a-f0-9\-]{36}$/i)
+        .toHaveURL(/\/play-records\/[a-f0-9-]{36}$/i)
         .catch(() => {
           // Navigation might not happen in test environment
         });

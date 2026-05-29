@@ -3664,6 +3664,11 @@
       },
       "cta": {
         "newRecord": "Record Game"
+      },
+      "headerTitle": "Statistics",
+      "error": {
+        "title": "Could not load statistics",
+        "description": "A network error occurred. Check your connection and try again."
       }
     },
     "new": {
@@ -3734,7 +3739,8 @@
         "stepIndicatorLabel": "Recording progress",
         "backButton": "Go back to previous step",
         "closeButton": "Close",
-        "previewLabel": "Live preview play record"
+        "previewLabel": "Live preview play record",
+        "backToList": "Back to play records"
       }
     },
     "index": {
@@ -3787,7 +3793,9 @@
       "a11y": {
         "searchRole": "search",
         "resultsLive": "polite"
-      }
+      },
+      "headerTitle": "Play Records",
+      "viewStatsLabel": "View statistics"
     },
     "detail": {
       "hero": {

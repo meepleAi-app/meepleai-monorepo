@@ -3717,6 +3717,11 @@
       },
       "cta": {
         "newRecord": "Registra partita"
+      },
+      "headerTitle": "Statistiche",
+      "error": {
+        "title": "Impossibile caricare le statistiche",
+        "description": "Si è verificato un errore di rete. Verifica la connessione e riprova."
       }
     },
     "new": {
@@ -3787,7 +3792,8 @@
         "stepIndicatorLabel": "Avanzamento registrazione",
         "backButton": "Torna al passo precedente",
         "closeButton": "Chiudi",
-        "previewLabel": "Anteprima live record partita"
+        "previewLabel": "Anteprima live record partita",
+        "backToList": "Torna alle partite"
       }
     },
     "index": {
@@ -3840,7 +3846,9 @@
       "a11y": {
         "searchRole": "search",
         "resultsLive": "polite"
-      }
+      },
+      "headerTitle": "Partite Giocate",
+      "viewStatsLabel": "Vai alle statistiche"
     },
     "detail": {
       "hero": {

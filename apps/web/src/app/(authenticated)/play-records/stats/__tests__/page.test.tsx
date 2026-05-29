@@ -73,7 +73,8 @@ describe('StatisticsPage (play-records/stats)', () => {
     render(<StatisticsPage />);
 
     expect(screen.getByTestId('stats-error')).toBeInTheDocument();
-    expect(screen.getByText(/impossibile caricare/i)).toBeInTheDocument();
+    // Mock i18n returns the raw key; StatisticsView renders t('playRecords.stats.error.title').
+    expect(screen.getByText('playRecords.stats.error.title')).toBeInTheDocument();
   });
 
   it('AC-5.5: empty stats show KPI with zeros and EmptySection CTAs', async () => {

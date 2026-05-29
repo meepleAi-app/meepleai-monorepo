@@ -13,11 +13,13 @@ import { toast } from 'sonner';
 
 import { SessionCreateForm } from '@/components/play-records/SessionCreateForm';
 import { Button } from '@/components/ui/primitives/button';
+import { useTranslation } from '@/hooks/useTranslation';
 import type { SessionCreateForm as SessionFormData } from '@/lib/api/schemas/play-records.schemas';
 import { useCreatePlayRecord } from '@/lib/domain-hooks/usePlayRecords';
 
 export default function NewPlayRecordPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const createRecord = useCreatePlayRecord();
 
   const handleSubmit = async (data: SessionFormData) => {
@@ -32,14 +34,15 @@ export default function NewPlayRecordPage() {
         dimensionUnits: data.enableScoring ? data.dimensionUnits : undefined,
       });
 
-      toast.success('Session Created', {
-        description: 'Your play record has been created successfully',
+      toast.success(t('playRecords.new.success.toast'), {
+        description: t('playRecords.new.success.toastDescription'),
       });
 
       router.push(`/play-records/${recordId}`);
     } catch (error) {
-      toast.error('Error', {
-        description: error instanceof Error ? error.message : 'Failed to create session',
+      toast.error(t('playRecords.new.error.saveFailed'), {
+        description:
+          error instanceof Error ? error.message : t('playRecords.new.error.saveFailedDescription'),
       });
     }
   };
@@ -52,12 +55,17 @@ export default function NewPlayRecordPage() {
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={handleCancel} aria-label="Back to history">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleCancel}
+          aria-label={t('playRecords.new.a11y.backToList')}
+        >
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">New Play Session</h1>
-          <p className="text-muted-foreground mt-1">Record a new game session</p>
+          <h1 className="text-3xl font-bold">{t('playRecords.new.pageTitle')}</h1>
+          <p className="text-muted-foreground mt-1">{t('playRecords.new.pageSubtitle')}</p>
         </div>
       </div>
 

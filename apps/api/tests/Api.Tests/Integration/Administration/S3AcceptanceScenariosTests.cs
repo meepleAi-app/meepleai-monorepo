@@ -140,7 +140,7 @@ public sealed class S3AcceptanceScenariosTests : IAsyncLifetime
         // admin/superadmin role.
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var user = await db.Users.SingleAsync(u => u.Email == email);
+        var user = await db.Users.AsTracking().SingleAsync(u => u.Email == email); // Issue #1628 follow-up: AsTracking needed because fixture is NoTracking
         user.Role = role;
         await db.SaveChangesAsync();
 
@@ -203,7 +203,7 @@ public sealed class S3AcceptanceScenariosTests : IAsyncLifetime
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var session = await db.UserSessions.FirstAsync(s => s.Id == sessionId);
+        var session = await db.UserSessions.AsTracking().FirstAsync(s => s.Id == sessionId); // Issue #1628 follow-up: AsTracking needed because fixture is NoTracking
         session.LastTotpVerifiedAt = when;
         await db.SaveChangesAsync();
     }
@@ -411,6 +411,7 @@ public sealed class S3AcceptanceScenariosTests : IAsyncLifetime
         {
             var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             var aliceSession = await db.UserSessions
+                .AsTracking() // Issue #1628 follow-up: AsTracking needed because fixture is NoTracking
                 .Where(s => s.UserId == aliceId && s.RevokedAt == null && s.ImpersonatedByUserId == null)
                 .OrderByDescending(s => s.CreatedAt)
                 .FirstAsync();
@@ -450,6 +451,7 @@ public sealed class S3AcceptanceScenariosTests : IAsyncLifetime
         {
             var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             var imp = await db.UserSessions
+                .AsTracking() // Issue #1628 follow-up: AsTracking needed because fixture is NoTracking
                 .Where(s => s.ImpersonatedByUserId == aliceId && s.RevokedAt == null)
                 .OrderByDescending(s => s.CreatedAt)
                 .FirstAsync();
@@ -511,6 +513,7 @@ public sealed class S3AcceptanceScenariosTests : IAsyncLifetime
         {
             var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             var aliceSession = await db.UserSessions
+                .AsTracking() // Issue #1628 follow-up: AsTracking needed because fixture is NoTracking
                 .Where(s => s.UserId == aliceId && s.RevokedAt == null && s.ImpersonatedByUserId == null)
                 .OrderByDescending(s => s.CreatedAt)
                 .FirstAsync();

@@ -3829,6 +3829,52 @@
       "notFound": "Game not found",
       "retry": "Retry",
       "backToList": "Back to games"
+    },
+    "edit": {
+      "pageTitle": "Edit play record",
+      "pageSubtitle": "Update the game session details",
+      "banner": {
+        "gateTitle": "Limited editing",
+        "gateDescription": "To change players or scores, delete and recreate the record",
+        "deleteAction": "Delete record"
+      },
+      "fields": {
+        "sessionDate": "Session date",
+        "location": "Location (optional)",
+        "notes": "Notes (optional)",
+        "game": "Game",
+        "players": "Players",
+        "scores": "Scores"
+      },
+      "delete": {
+        "title": "Delete record?",
+        "description": "This action cannot be undone. The record and all associated data will be deleted.",
+        "confirm": "Delete",
+        "cancel": "Cancel"
+      },
+      "success": {
+        "toast": "Record updated",
+        "toastDescription": "Your changes have been saved",
+        "deleteToast": "Record deleted",
+        "deleteToastDescription": "The record was deleted successfully"
+      },
+      "error": {
+        "loadFailed": "Could not load the record",
+        "updateFailed": "Update failed",
+        "deleteFailed": "Delete failed"
+      },
+      "a11y": {
+        "formLabel": "Edit play record form",
+        "readonlyFieldsLabel": "Non-editable fields",
+        "ariaReadonly": "This field is not editable"
+      },
+      "actions": {
+        "save": "Save changes",
+        "saving": "Saving…",
+        "delete": "Delete",
+        "cancel": "Cancel",
+        "back": "← Back"
+      }
     }
   }
 }

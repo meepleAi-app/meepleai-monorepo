@@ -3882,6 +3882,52 @@
       "notFound": "Partita non trovata",
       "retry": "Riprova",
       "backToList": "Torna alle partite"
+    },
+    "edit": {
+      "pageTitle": "Modifica partita",
+      "pageSubtitle": "Aggiorna i dettagli della partita",
+      "banner": {
+        "gateTitle": "Modifica limitata",
+        "gateDescription": "Per modificare giocatori o punteggi, elimina e ricrea la partita",
+        "deleteAction": "Cancella partita"
+      },
+      "fields": {
+        "sessionDate": "Data partita",
+        "location": "Luogo (opzionale)",
+        "notes": "Note (opzionale)",
+        "game": "Gioco",
+        "players": "Giocatori",
+        "scores": "Punteggi"
+      },
+      "delete": {
+        "title": "Elimina partita?",
+        "description": "Questa azione non può essere annullata. La partita e tutti i dati associati verranno eliminati.",
+        "confirm": "Elimina",
+        "cancel": "Annulla"
+      },
+      "success": {
+        "toast": "Partita aggiornata",
+        "toastDescription": "Le modifiche sono state salvate",
+        "deleteToast": "Partita eliminata",
+        "deleteToastDescription": "La partita è stata eliminata correttamente"
+      },
+      "error": {
+        "loadFailed": "Impossibile caricare la partita",
+        "updateFailed": "Aggiornamento non riuscito",
+        "deleteFailed": "Eliminazione non riuscita"
+      },
+      "a11y": {
+        "formLabel": "Modulo modifica partita",
+        "readonlyFieldsLabel": "Campi non modificabili",
+        "ariaReadonly": "Questo campo non è modificabile"
+      },
+      "actions": {
+        "save": "Salva modifiche",
+        "saving": "Salvataggio…",
+        "delete": "Elimina",
+        "cancel": "Annulla",
+        "back": "← Indietro"
+      }
     }
   }
 }

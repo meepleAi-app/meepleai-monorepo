@@ -291,12 +291,22 @@ describe('EditPlayRecordPage', () => {
       expect(screen.getByTestId('delete-trigger')).toBeInTheDocument();
     });
 
-    const deleteButton = screen.getByTestId('delete-trigger');
-    await user.click(deleteButton);
+    // Click delete CTA → opens the inline confirmation modal (component uses local
+    // showDeleteConfirm state, not a useConfirmationDialog hook).
+    await user.click(screen.getByTestId('delete-trigger'));
 
-    // Verify confirmation dialog was shown
+    // Confirmation modal appears with its title (mock i18n resolves delete.title)
     await waitFor(() => {
-      expect(mockShowConfirmation).toHaveBeenCalled();
+      expect(screen.getByText(playRecordsEditMessages['delete.title'])).toBeInTheDocument();
+    });
+
+    // Click the destructive confirm button → handleDelete → redirect to /play-records
+    await user.click(
+      screen.getByRole('button', { name: playRecordsEditMessages['delete.confirm'] })
+    );
+
+    await waitFor(() => {
+      expect(mockRouterPush).toHaveBeenCalledWith('/play-records');
     });
   });
 
@@ -349,8 +359,10 @@ describe('EditPlayRecordPage', () => {
       </QueryClientProvider>
     );
 
+    // Component renders error.message when error is an Error instance (falls back
+    // to t('error.loadFailed') only when error has no message).
     await waitFor(() => {
-      expect(screen.getByText(/not found/i)).toBeInTheDocument();
+      expect(screen.getByText(/Failed to load record/i)).toBeInTheDocument();
     });
   });
 });

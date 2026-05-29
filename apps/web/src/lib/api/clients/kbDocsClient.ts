@@ -8,6 +8,11 @@
  */
 
 import { KbDocsListResponseSchema, type KbDocsListResponse } from '../schemas/kb-docs.schemas';
+import {
+  GlobalKbSearchResponseSchema,
+  type GlobalKbSearchRequest,
+  type GlobalKbSearchResponse,
+} from '../schemas/kb-globale.schemas';
 
 import type { HttpClient } from '../core/httpClient';
 
@@ -26,6 +31,7 @@ export interface ListUserKbDocsParams {
 
 export interface KbDocsClient {
   listUserKbDocs(params?: ListUserKbDocsParams): Promise<KbDocsListResponse>;
+  searchGlobal(req: GlobalKbSearchRequest): Promise<GlobalKbSearchResponse>;
 }
 
 export function createKbDocsClient({ httpClient }: CreateKbDocsClientParams): KbDocsClient {
@@ -42,6 +48,15 @@ export function createKbDocsClient({ httpClient }: CreateKbDocsClientParams): Kb
       return (
         response ?? { items: [], total: 0, page: params.page ?? 1, pageSize: params.pageSize ?? 20 }
       );
+    },
+
+    async searchGlobal(req: GlobalKbSearchRequest): Promise<GlobalKbSearchResponse> {
+      const response = await httpClient.post<GlobalKbSearchResponse>(
+        '/api/v1/knowledge-base/search/global',
+        req,
+        GlobalKbSearchResponseSchema
+      );
+      return response ?? { results: [], hasMore: false, nextCursor: null };
     },
   };
 }

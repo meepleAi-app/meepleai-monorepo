@@ -44,11 +44,17 @@ public sealed class TotpServiceTrackingContractTests : IAsyncLifetime
 
     public async ValueTask DisposeAsync()
     {
-        await _factory.DisposeAsync();
-        await _postgres.DisposeAsync();
+        if (_factory is not null)
+        {
+            await _factory.DisposeAsync();
+        }
+        if (_postgres is not null)
+        {
+            await _postgres.DisposeAsync();
+        }
     }
 
-    private async Task<UserEntity> SeedUserAsync()
+    private async ValueTask<UserEntity> SeedUserAsync()
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -92,7 +98,7 @@ public sealed class TotpServiceTrackingContractTests : IAsyncLifetime
         {
             var db = assertScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             var reloaded = await db.Users.AsNoTracking().FirstAsync(u => u.Id == user.Id);
-            reloaded.TotpSecretEncrypted.Should().NotBeNullOrEmpty(
+            reloaded.TotpSecretEncrypted.Should().NotBeNull(
                 "GenerateSetupAsync must persist the encrypted secret to the users table");
         }
     }

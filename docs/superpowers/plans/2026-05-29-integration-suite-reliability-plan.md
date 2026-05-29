@@ -85,11 +85,11 @@ Expected: a version number (e.g., `29.4.3`). If missing daemon, start Docker Des
 - [ ] **Step 3: Kill any zombie testhost / Api.Tests processes**
 
 ```bash
-taskkill //F //IM testhost.exe 2>/dev/null
-taskkill //F //IM Api.Tests.exe 2>/dev/null
+taskkill //F //IM testhost.exe 2>$null
+taskkill //F //IM Api.Tests.exe 2>$null
 ```
 
-Either output `OPERAZIONE RIUSCITA` or `non è in esecuzione` — both fine.
+Either output `OPERAZIONE RIUSCITA` or `non è in esecuzione` — both fine. Use `2>$null` (PowerShell), NOT `2>/dev/null` (which would create a literal file).
 
 - [ ] **Step 4: Run the full Category=Integration suite and save the log**
 
@@ -140,7 +140,7 @@ git rm apps/api/tests/Api.Tests/Infrastructure/AuthBoundedContextTestBase.cs
 - [ ] **Step 3: Build to confirm no broken references**
 
 ```bash
-cd apps/api/src/Api
+cd D:/Repositories/meepleai-monorepo-main/apps/api/tests/Api.Tests
 dotnet build --configuration Debug 2>&1 | tail -6
 ```
 
@@ -183,7 +183,6 @@ Replace the entire file with:
 ```csharp
 using Api.BoundedContexts.Administration.Application.Queries.Resources;
 using Api.Infrastructure;
-using Api.Models;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
 using MediatR;
@@ -271,11 +270,12 @@ Notes:
 - The 2nd test method body should be preserved if there are more than one in the original file; verify in Step 1 reading and copy as-is.
 
 If the original file has more `[Fact]` methods beyond `Handle_ReturnsValidDatabaseMetrics`, **copy them all unchanged** into the new file. Do NOT change test bodies.
+- If any preserved test body references a type from `Api.Models` (e.g., the original `using Api.Models;` was used by the test), restore the `using Api.Models;` directive at the top to avoid compile errors.
 
 - [ ] **Step 3: Build**
 
 ```bash
-cd apps/api/src/Api
+cd D:/Repositories/meepleai-monorepo-main/apps/api/tests/Api.Tests
 dotnet build --configuration Debug 2>&1 | tail -6
 ```
 
@@ -398,7 +398,7 @@ In Step 1, you captured the existing `[Fact]` and `[Theory]` methods. **Paste th
 - [ ] **Step 3: Build**
 
 ```bash
-cd apps/api/src/Api
+cd D:/Repositories/meepleai-monorepo-main/apps/api/tests/Api.Tests
 dotnet build --configuration Debug 2>&1 | tail -6
 ```
 
@@ -433,7 +433,7 @@ per-database; safe on shared cluster with isolated DB."
 **Files:**
 - Modify: `apps/api/tests/Api.Tests/Integration/Services/TotpServiceTrackingContractTests.cs`
 
-- [ ] **Step 1: Read the current file in full**
+- [ ] **Step 1: Read the current file in full and verify pre-flight assumptions**
 
 ```bash
 cd D:/Repositories/meepleai-monorepo-main
@@ -441,6 +441,19 @@ cat apps/api/tests/Api.Tests/Integration/Services/TotpServiceTrackingContractTes
 ```
 
 The file uses `IntegrationWebApplicationFactory.Create(_postgres.GetConnectionString())`. The fix is to replace `_postgres.GetConnectionString()` with the connection string from `_fixture.CreateIsolatedDatabaseAsync(...)`.
+
+**Pre-flight checks (already verified 2026-05-29, re-verify if the file changed since)**:
+```bash
+# Must have NO parameterless constructor (avoids duplicate after Change 2.c):
+grep -nE "public TotpServiceTrackingContractTests\(\)" apps/api/tests/Api.Tests/Integration/Services/TotpServiceTrackingContractTests.cs
+# Expected: empty output.
+
+# Must call Create() with ONE argument only (avoids missing args in Change 2.d):
+grep -n "IntegrationWebApplicationFactory.Create(" apps/api/tests/Api.Tests/Integration/Services/TotpServiceTrackingContractTests.cs
+# Expected: a single line with one argument inside the parentheses.
+```
+
+If either check fails, **STOP** and report — the conversion snippets below assume the verified shape.
 
 - [ ] **Step 2: Apply the conversion**
 
@@ -556,7 +569,7 @@ Replace with:
 - [ ] **Step 3: Build**
 
 ```bash
-cd apps/api/src/Api
+cd D:/Repositories/meepleai-monorepo-main/apps/api/tests/Api.Tests
 dotnet build --configuration Debug 2>&1 | tail -6
 ```
 
@@ -612,8 +625,8 @@ Expected: `Superato!` with all SP5 S3 acceptance scenarios PASS. If failures, **
 - [ ] **Step 3: Kill zombies (full-suite run is heavy)**
 
 ```bash
-taskkill //F //IM testhost.exe 2>/dev/null
-taskkill //F //IM Api.Tests.exe 2>/dev/null
+taskkill //F //IM testhost.exe 2>$null
+taskkill //F //IM Api.Tests.exe 2>$null
 ```
 
 - [ ] **Step 4: Run the full `Category=Integration` suite and save `post-A` baseline**
@@ -688,7 +701,7 @@ Worst-case demand: 4 concurrent classes × 5 connections each = **20 connections
 Edit `apps/api/tests/Api.Tests/Infrastructure/TestcontainersConfiguration.cs`: locate the `PostgresMaxConnections` constant and change its value to `100`. Build to verify:
 
 ```bash
-cd apps/api/src/Api
+cd D:/Repositories/meepleai-monorepo-main/apps/api/tests/Api.Tests
 dotnet build --configuration Debug 2>&1 | tail -6
 ```
 
@@ -700,8 +713,8 @@ Expected: `Errori: 0`.
 - If Step 4 was executed: capture a post-B baseline.
 
 ```bash
-taskkill //F //IM testhost.exe 2>/dev/null
-taskkill //F //IM Api.Tests.exe 2>/dev/null
+taskkill //F //IM testhost.exe 2>$null
+taskkill //F //IM Api.Tests.exe 2>$null
 cd D:/Repositories/meepleai-monorepo-main/apps/api/tests/Api.Tests
 dotnet test --filter "Category=Integration" --logger "console;verbosity=normal" > ../../../../audits/2026-05-29-integration-suite-baseline-post-B.log 2>&1
 ```
@@ -771,7 +784,7 @@ vs `post-A` (vs `post-B` if applicable) baseline comparison:
 ## Regression guards
 
 - `Integration.Authentication` filter still 192/192 PASS.
-- `S3AcceptanceScenariosTests` (SP5 S3 critical) still 8-9/9 PASS.
+- `S3AcceptanceScenariosTests` (SP5 S3 critical) PASS count matches the pre-A baseline.
 - `TotpServiceTrackingContractTests` (3 own contract tests) still 3/3
   PASS under the shared fixture.
 
@@ -835,14 +848,22 @@ The 5 tests by display name:
 4. `GET with malformed request should return 400 Bad Request`
 5. `POST /auth/login with missing fields should return 400 Bad Request`
 
-Locate each method name (xUnit display names may be set via `[Fact(DisplayName = "...")]`):
+Locate each method name (xUnit display names may be set via `[Fact(DisplayName = "...")]`). Use the EXACT display-name strings from the spec table to avoid false hits (e.g., `malformed` alone matches both `malformed request` AND `malformed JSON` — only the former is in scope):
 
 ```bash
 cd D:/Repositories/meepleai-monorepo-main
-grep -rn -A1 "DisplayName" apps/api/tests/Api.Tests/Integration/FrontendSdk/ | grep -E "(security headers|same session|logout|malformed|missing fields)" | head -20
+for d in \
+  "Auth responses should include security headers" \
+  "Concurrent requests with same session should work correctly" \
+  "POST /auth/logout should clear session cookie" \
+  "GET with malformed request should return 400 Bad Request" \
+  "POST /auth/login with missing fields should return 400 Bad Request"; do
+  echo "=== $d ==="
+  grep -rn "$d" apps/api/tests/Api.Tests/Integration/FrontendSdk/ | head -3
+done
 ```
 
-Record each test's file path + method name. If display names are set via `[Theory]` + `[InlineData]`, the method may be parameterised; record the parameter values that match the failing case.
+Record each test's file path + method name + the exact display name string. If display names are set via `[Theory]` + `[InlineData]`, the method may be parameterised; record the parameter values that match the failing case.
 
 ---
 
@@ -1063,8 +1084,8 @@ Expected: 0 FAIL.
 - [ ] **Step 2: Kill zombies**
 
 ```bash
-taskkill //F //IM testhost.exe 2>/dev/null
-taskkill //F //IM Api.Tests.exe 2>/dev/null
+taskkill //F //IM testhost.exe 2>$null
+taskkill //F //IM Api.Tests.exe 2>$null
 ```
 
 - [ ] **Step 3: Run full Category=Integration suite and save post-C baseline**
@@ -1086,8 +1107,8 @@ Expected: `Non superati: 0`. If non-zero, identify the residual failures — if 
 - [ ] **Step 5: Re-run for determinism**
 
 ```bash
-taskkill //F //IM testhost.exe 2>/dev/null
-taskkill //F //IM Api.Tests.exe 2>/dev/null
+taskkill //F //IM testhost.exe 2>$null
+taskkill //F //IM Api.Tests.exe 2>$null
 dotnet test --filter "Category=Integration" --logger "console;verbosity=minimal" 2>&1 | grep -iE "superato!|non superato!" | tail -1
 ```
 
@@ -1120,7 +1141,7 @@ git push -u origin feature/frontendsdk-failures-fix 2>&1 | tail -5
 - [ ] **Step 2: Open PR**
 
 ```bash
-gh pr create --draft --base main-dev --title "fix(2fa-flows): FrontendSdk pre-existing 5 failures (Phase C)" --body "$(cat <<'EOF'
+gh pr create --draft --base main-dev --title "fix(test-infra): FrontendSdk pre-existing 5 failures (Phase C)" --body "$(cat <<'EOF'
 Companion PR to #1670 (#1628). Implements Phase C of
 `docs/superpowers/specs/2026-05-29-integration-suite-reliability-design.md`.
 

@@ -55,14 +55,14 @@ export function IngestionActions({ log, onRetry }: IngestionActionsProps) {
       <button
         type="button"
         onClick={handleDownload}
-        className="px-3 py-1.5 text-xs font-medium border border-border rounded-md hover:bg-muted/70"
+        className="px-3 py-1.5 text-xs font-medium border border-border rounded-md hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
         ⤓ Download log
       </button>
       <button
         type="button"
         onClick={handleCopy}
-        className="px-3 py-1.5 text-xs font-medium border border-border rounded-md hover:bg-muted/70"
+        className="px-3 py-1.5 text-xs font-medium border border-border rounded-md hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
         📋 Copy job ID
       </button>
@@ -70,7 +70,7 @@ export function IngestionActions({ log, onRetry }: IngestionActionsProps) {
         <button
           type="button"
           onClick={handleRetry}
-          className="px-3 py-1.5 text-xs font-medium border border-amber-500/50 text-amber-700 dark:text-amber-300 rounded-md hover:bg-amber-500/10"
+          className="px-3 py-1.5 text-xs font-medium border border-amber-500/50 text-amber-700 dark:text-amber-300 rounded-md hover:bg-amber-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           ⟳ Re-enqueue
         </button>

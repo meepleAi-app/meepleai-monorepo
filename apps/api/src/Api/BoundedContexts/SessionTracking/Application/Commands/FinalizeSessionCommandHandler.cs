@@ -102,7 +102,12 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
                 .FirstOrDefaultAsync(cancellationToken)
                 .ConfigureAwait(false);
         }
-        session.AddDomainEvent(new SessionFinalizedEvent
+        // #1642: construct the event once and reuse the same instance for both the
+        // domain-event pipeline (AddDomainEvent → collector → MediatR via SaveChangesAsync)
+        // and the SSE broadcast (PublishEventAsync).  Previously two separate instances were
+        // built; the second (SSE path) was sparse — missing UserId/GameId/GameName/PlayerCount/
+        // WinnerName — and introduced latent risk if a non-idempotent handler were added later.
+        var sessionFinalizedEvent = new SessionFinalizedEvent
         {
             SessionId = session.Id,
             UserId = session.UserId,
@@ -114,7 +119,8 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
             FinalRanks = request.FinalRanks,
             DurationMinutes = durationMinutesForEvent,
             Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
-        });
+        };
+        session.AddDomainEvent(sessionFinalizedEvent);
 
         // Save session (adds tracked changes; SaveChangesAsync below flushes)
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
@@ -183,18 +189,11 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
             // CreateGamesPlayedCommand integration
         }
 
-        // GST-003: Publish SSE event for session finalization
-        var durationMinutes = (int)(_timeProvider.GetUtcNow().UtcDateTime - session.SessionDate).TotalMinutes;
-
-        var evt = new SessionFinalizedEvent
-        {
-            SessionId = request.SessionId,
-            WinnerId = winnerId != Guid.Empty ? winnerId : null,
-            FinalRanks = request.FinalRanks,
-            DurationMinutes = durationMinutes,
-            Timestamp = _timeProvider.GetUtcNow().UtcDateTime
-        };
-        await _syncService.PublishEventAsync(request.SessionId, evt, cancellationToken).ConfigureAwait(false);
+        // GST-003: Publish SSE event for session finalization.
+        // #1642: reuse the single sessionFinalizedEvent instance (full payload) instead of
+        // constructing a sparse second instance.  PublishEventAsync writes to an in-memory
+        // Channel — it does NOT go through MediatR — so there is no dual-dispatch risk.
+        await _syncService.PublishEventAsync(request.SessionId, sessionFinalizedEvent, cancellationToken).ConfigureAwait(false);
 
         return new FinalizeSessionResult(
             winnerId != Guid.Empty ? winnerId : null,

@@ -42,6 +42,11 @@ vi.mock('@/lib/api/admin-kb-ingestion', () => ({
   retryIngestionJob: vi.fn().mockResolvedValue(undefined),
 }));
 
+// ── admin-kb-used-by mock (UsedByPanel uses fetchKbDocConsumingAgents) ─────────
+vi.mock('@/lib/api/admin-kb-used-by', () => ({
+  fetchKbDocConsumingAgents: vi.fn().mockResolvedValue([]),
+}));
+
 const mockUseKbDocDetail = vi.fn();
 const mockUseKbChunksList = vi.fn();
 
@@ -220,6 +225,24 @@ describe('KbDocDetailPanel', () => {
     // IngestionPanel empty state should appear (fetchKbDocIngestionLog resolves null)
     await waitFor(() => expect(screen.getByTestId('ingestion-panel-empty')).toBeInTheDocument());
     // Overview hero should NOT be visible
+    expect(
+      screen.queryByRole('heading', { name: /Wingspan-Oceania-EN\.pdf/ })
+    ).not.toBeInTheDocument();
+  });
+
+  it('renders UsedByPanel when ?tab=used-by', async () => {
+    mockSearchParams = new URLSearchParams('tab=used-by');
+    mockUseKbDocDetail.mockReturnValue({ data: readyEnvelope, isLoading: false });
+    mockUseKbChunksList.mockReturnValue({
+      data: undefined,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      fetchNextPage: vi.fn(),
+    });
+    render(<KbDocDetailPanel docId="doc-1" />, { wrapper: makeWrapper() });
+    // Empty state appears because fetchKbDocConsumingAgents mock resolves [].
+    await waitFor(() => expect(screen.getByTestId('used-by-empty')).toBeInTheDocument());
+    // Overview hero must NOT render when used-by is active.
     expect(
       screen.queryByRole('heading', { name: /Wingspan-Oceania-EN\.pdf/ })
     ).not.toBeInTheDocument();

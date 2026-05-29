@@ -8,6 +8,7 @@ import { useKbDocDetail } from '@/hooks/queries/useKbDocDetail';
 
 import { IngestionPanel } from './ingestion/IngestionPanel';
 import { KbDocDetailTabs, type KbDocTabKey } from './KbDocDetailTabs';
+import { UsedByPanel } from './used-by/UsedByPanel';
 
 export interface KbDocDetailPanelProps {
   readonly docId: string | null;
@@ -45,8 +46,12 @@ function processingChipClass(status: string): string {
  */
 export function KbDocDetailPanel({ docId }: KbDocDetailPanelProps) {
   const searchParams = useSearchParams();
-  const activeTab: KbDocTabKey =
-    searchParams?.get('tab') === 'ingestion' ? 'ingestion' : 'overview';
+  const activeTab: KbDocTabKey = (() => {
+    const tab = searchParams?.get('tab');
+    if (tab === 'ingestion') return 'ingestion';
+    if (tab === 'used-by') return 'used-by';
+    return 'overview';
+  })();
 
   const detailQuery = useKbDocDetail({ docId: docId ?? undefined, enabled: docId !== null });
   const chunksQuery = useKbChunksList({
@@ -110,9 +115,13 @@ export function KbDocDetailPanel({ docId }: KbDocDetailPanelProps) {
     <div className="border border-border/60 dark:border-zinc-700/60 rounded-lg bg-card/80 dark:bg-zinc-900/80 overflow-hidden">
       <KbDocDetailTabs docId={doc.id} activeTab={activeTab} />
 
-      {activeTab === 'ingestion' ? (
+      {activeTab === 'ingestion' && (
         <IngestionPanel docId={doc.id} chunkCount={doc.chunkCount} pageCount={doc.pageCount ?? 0} />
-      ) : (
+      )}
+
+      {activeTab === 'used-by' && <UsedByPanel docId={doc.id} />}
+
+      {activeTab === 'overview' && (
         <>
           {/* Hero */}
           <header className="p-5 border-b border-border/60 dark:border-zinc-700/60 bg-gradient-to-b from-amber-500/5 to-transparent">

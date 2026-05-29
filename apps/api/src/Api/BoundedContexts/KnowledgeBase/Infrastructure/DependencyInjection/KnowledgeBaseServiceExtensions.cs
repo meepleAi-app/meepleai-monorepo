@@ -477,6 +477,10 @@ internal static class KnowledgeBaseServiceExtensions
         // Ownership/RAG access: cascading access check (admin → public → ownership)
         services.AddScoped<IRagAccessService, RagAccessService>();
 
+        // Issue #1661: cross-game hybrid search — parallel orchestration wrapper
+        // Scoped because IHybridSearchService (its dependency) is Scoped.
+        services.AddScoped<IMultiGameHybridSearchService, MultiGameHybridSearchService>();
+
         // RAG enhancements orchestrator — feature flag integration for advanced RAG features
         services.AddScoped<IRagEnhancementService, RagEnhancementService>();
 

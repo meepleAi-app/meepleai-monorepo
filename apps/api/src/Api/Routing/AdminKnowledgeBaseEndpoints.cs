@@ -71,6 +71,19 @@ internal static class AdminKnowledgeBaseEndpoints
             return Results.Ok(result);
         });
 
+        // GET /api/v1/admin/kb/docs/{docId}/ingestion-log — Issue #1650
+        kbGroup.MapGet("/docs/{docId:guid}/ingestion-log", async (
+            Guid docId,
+            IMediator mediator,
+            CancellationToken cancellationToken) =>
+        {
+            var query = new GetLatestIngestionLogByDocumentIdQuery(docId);
+            var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("GetKbDocIngestionLog")
+        .WithSummary("Get the latest ProcessingJob (with Steps and LogEntries) for a PdfDocumentId.");
+
         // POST /api/v1/admin/kb/agents/estimate-cost - Pre-chat cost estimation
         kbGroup.MapPost("/agents/estimate-cost", async (
             [FromBody] EstimateAgentCostByDocumentsRequest request,

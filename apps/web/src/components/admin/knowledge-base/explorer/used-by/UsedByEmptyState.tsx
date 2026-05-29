@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin KB explorer: zinc dark overrides (admin convention, DS-13c scope deferred to DS-16) */
 'use client';
 
 export function UsedByEmptyState() {

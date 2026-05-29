@@ -148,7 +148,7 @@ export function KbDocActions({ docId, fileName, gameId, processingStatus }: KbDo
 
       {/* 5. Used-by link */}
       <Link
-        href={`/admin/knowledge-base?docId=${docId}&tab=used-by`}
+        href={`/admin/knowledge-base?doc=${docId}&tab=used-by`}
         className={`inline-flex items-center px-3 py-1.5 text-xs font-medium border border-border rounded-md hover:bg-muted/70 ${FOCUS_RING}`}
       >
         🔗 Agent

@@ -57,6 +57,19 @@ vi.mock('@/hooks/queries/useKbChunksList', () => ({
   useKbChunksList: (options: unknown) => mockUseKbChunksList(options),
 }));
 
+// ── KbDocActions mock (panel test doesn't exercise action internals) ───────────
+const mockKbDocActions = vi.fn();
+vi.mock('../actions/KbDocActions', () => ({
+  KbDocActions: (props: Record<string, unknown>) => {
+    mockKbDocActions(props);
+    return (
+      <div data-testid="kb-doc-actions-mock">
+        <button type="button">⟳ Re-index</button>
+      </div>
+    );
+  },
+}));
+
 // ── QueryClientProvider wrapper (needed for IngestionPanel tab) ───────────────
 function makeWrapper() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -110,6 +123,7 @@ describe('KbDocDetailPanel', () => {
     mockSearchParams = new URLSearchParams(''); // default: overview tab
     mockUseKbDocDetail.mockReset();
     mockUseKbChunksList.mockReset();
+    mockKbDocActions.mockReset();
   });
 
   it('renders the empty placeholder when docId is null', () => {
@@ -265,5 +279,82 @@ describe('KbDocDetailPanel', () => {
     render(<KbDocDetailPanel docId="doc-1" />, { wrapper: makeWrapper() });
     expect(screen.getByText(/in elaborazione/i)).toBeInTheDocument();
     expect(screen.queryByTestId('used-by-empty')).not.toBeInTheDocument();
+  });
+
+  // ── Part A: action-bar reachable for locked/failed docs ───────────────────────
+
+  it('renders the action-bar for a failed/locked doc so actions are reachable', () => {
+    const failedEnvelope: KbDocEnvelope = {
+      status: 'locked',
+      processingStatus: 'failed',
+      doc: null,
+    };
+    mockUseKbDocDetail.mockReturnValue({ data: failedEnvelope, isLoading: false });
+    mockUseKbChunksList.mockReturnValue({ data: undefined, hasNextPage: false });
+    render(
+      <KbDocDetailPanel docId="d1" selectedDocMeta={{ id: 'd1', title: 'X.pdf', gameId: 'g1' }} />,
+      { wrapper: makeWrapper() }
+    );
+    // KbDocActions mock renders a Re-index button
+    expect(screen.getByRole('button', { name: /re-?index/i })).toBeInTheDocument();
+    // The "in elaborazione" notice is still shown
+    expect(screen.getByText(/in elaborazione/i)).toBeInTheDocument();
+    // KbDocActions was rendered with the correct props
+    expect(mockKbDocActions).toHaveBeenCalledWith(
+      expect.objectContaining({
+        docId: 'd1',
+        fileName: 'X.pdf',
+        gameId: 'g1',
+        processingStatus: 'failed',
+      })
+    );
+  });
+
+  it('falls back to docId when selectedDocMeta is null for locked doc', () => {
+    const failedEnvelope: KbDocEnvelope = {
+      status: 'locked',
+      processingStatus: 'failed',
+      doc: null,
+    };
+    mockUseKbDocDetail.mockReturnValue({ data: failedEnvelope, isLoading: false });
+    mockUseKbChunksList.mockReturnValue({ data: undefined, hasNextPage: false });
+    render(<KbDocDetailPanel docId="d1" selectedDocMeta={null} />, {
+      wrapper: makeWrapper(),
+    });
+    expect(mockKbDocActions).toHaveBeenCalledWith(
+      expect.objectContaining({
+        docId: 'd1',
+        fileName: 'd1',
+        gameId: null,
+        processingStatus: 'failed',
+      })
+    );
+  });
+
+  it('ready doc renders KbDocActions with doc fields (regression)', () => {
+    mockUseKbDocDetail.mockReturnValue({ data: readyEnvelope, isLoading: false });
+    mockUseKbChunksList.mockReturnValue({
+      data: { pages: [{ items: [chunk1], nextCursor: null, totalCount: 1 }] },
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      fetchNextPage: vi.fn(),
+    });
+    render(<KbDocDetailPanel docId="doc-1" />, { wrapper: makeWrapper() });
+    expect(mockKbDocActions).toHaveBeenCalledWith(
+      expect.objectContaining({
+        docId: 'doc-1',
+        fileName: 'Wingspan-Oceania-EN.pdf',
+        gameId: 'g-1',
+        processingStatus: 'ready',
+      })
+    );
+  });
+
+  it('locked doc on overview tab renders the tab nav', () => {
+    mockSearchParams = new URLSearchParams('');
+    mockUseKbDocDetail.mockReturnValue({ data: lockedEnvelope, isLoading: false });
+    mockUseKbChunksList.mockReturnValue({ data: undefined, hasNextPage: false });
+    render(<KbDocDetailPanel docId="doc-1" />, { wrapper: makeWrapper() });
+    expect(screen.getByRole('navigation', { name: /sezione documento/i })).toBeInTheDocument();
   });
 });

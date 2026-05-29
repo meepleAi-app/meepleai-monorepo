@@ -343,7 +343,7 @@ describe('KbDocActions', () => {
     const link = screen.getByRole('link', { name: /used.?by|agent/i });
     expect(link).toHaveAttribute(
       'href',
-      `/admin/knowledge-base?docId=${BASE_PROPS.docId}&tab=used-by`
+      `/admin/knowledge-base?doc=${BASE_PROPS.docId}&tab=used-by`
     );
   });
 });

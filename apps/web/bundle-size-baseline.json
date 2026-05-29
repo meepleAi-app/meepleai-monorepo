@@ -1,6 +1,6 @@
 {
-  "description": "Baseline JS bundle size for prod build (no mock). Update manually in dedicated PRs. Last bump rebaselines post-SP5 F3.1 KbExplorer client component (+~25KB): adds KbExplorer with document list, search, and preview panel.",
-  "updatedAt": "2026-05-28",
-  "totalBytes": 14500000,
+  "description": "Baseline JS bundle size for prod build (no mock). Update manually in dedicated PRs. Last bump rebaselines post-SP5 F3-FU-4 KbDocActions + KbChunkSearch + locked-restructure (+~155KB): adds doc-action bar (reindex/download/delete/export/used-by), per-doc chunk similarity-search UI, AdminConfirmationDialog confirmPhrase prop, and reachable actions on failed/processing docs.",
+  "updatedAt": "2026-05-29",
+  "totalBytes": 14660000,
   "toleranceBytes": 10240
 }

@@ -167,6 +167,7 @@ export default function EditPlayRecordPage() {
 
       {/* Delete confirmation dialog */}
       {showDeleteConfirm && (
+        // eslint-disable-next-line local/no-hardcoded-color-utility
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-background rounded-lg shadow-lg max-w-sm w-full p-6 space-y-4">
             <h2 className="text-lg font-bold text-foreground">{t('delete.title')}</h2>

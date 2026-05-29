@@ -1,8 +1,13 @@
 /* eslint-disable local/no-hardcoded-color-utility -- admin KB explorer: amber/emerald/rose chip palette + zinc dark (admin convention, DS-13c scope deferred to DS-16) */
 'use client';
 
+import { useSearchParams } from 'next/navigation';
+
 import { useKbChunksList } from '@/hooks/queries/useKbChunksList';
 import { useKbDocDetail } from '@/hooks/queries/useKbDocDetail';
+
+import { IngestionPanel } from './ingestion/IngestionPanel';
+import { KbDocDetailTabs, type KbDocTabKey } from './KbDocDetailTabs';
 
 export interface KbDocDetailPanelProps {
   readonly docId: string | null;
@@ -39,6 +44,10 @@ function processingChipClass(status: string): string {
  *   - ready (200)    → hero + lista chunk infinite-cursor
  */
 export function KbDocDetailPanel({ docId }: KbDocDetailPanelProps) {
+  const searchParams = useSearchParams();
+  const activeTab: KbDocTabKey =
+    searchParams?.get('tab') === 'ingestion' ? 'ingestion' : 'overview';
+
   const detailQuery = useKbDocDetail({ docId: docId ?? undefined, enabled: docId !== null });
   const chunksQuery = useKbChunksList({
     docId: docId ?? undefined,
@@ -99,69 +108,79 @@ export function KbDocDetailPanel({ docId }: KbDocDetailPanelProps) {
 
   return (
     <div className="border border-border/60 dark:border-zinc-700/60 rounded-lg bg-card/80 dark:bg-zinc-900/80 overflow-hidden">
-      {/* Hero */}
-      <header className="p-5 border-b border-border/60 dark:border-zinc-700/60 bg-gradient-to-b from-amber-500/5 to-transparent">
-        <div className="flex items-start gap-4">
-          <span aria-hidden="true" className="text-3xl">
-            📄
-          </span>
-          <div className="flex-1 min-w-0">
-            <h2 className="font-quicksand font-bold text-lg truncate">{doc.title}</h2>
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground font-mono">
-              <span>{doc.gameName ?? 'KB globale'}</span>
-              <span aria-hidden="true">·</span>
-              <span>{doc.docType}</span>
-              <span aria-hidden="true">·</span>
-              <span>uploaded {formatDate(doc.uploadedAt)}</span>
-              <span
-                className={`ml-auto inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full border ${processingChipClass(doc.processingStatus)}`}
-              >
-                {doc.processingStatus}
+      <KbDocDetailTabs docId={doc.id} activeTab={activeTab} />
+
+      {activeTab === 'ingestion' ? (
+        <IngestionPanel docId={doc.id} chunkCount={doc.chunkCount} pageCount={doc.pageCount ?? 0} />
+      ) : (
+        <>
+          {/* Hero */}
+          <header className="p-5 border-b border-border/60 dark:border-zinc-700/60 bg-gradient-to-b from-amber-500/5 to-transparent">
+            <div className="flex items-start gap-4">
+              <span aria-hidden="true" className="text-3xl">
+                📄
               </span>
-            </div>
-          </div>
-        </div>
-
-        <dl className="mt-4 grid grid-cols-3 gap-2">
-          <Stat label="Chunks" value={doc.chunkCount.toLocaleString('it-IT')} />
-          <Stat label="Pagine" value={doc.pageCount?.toLocaleString('it-IT') ?? '—'} />
-          <Stat label="Lingua" value={doc.language} />
-        </dl>
-      </header>
-
-      {/* Chunks */}
-      <section className="p-4">
-        <h3 className="font-quicksand font-semibold text-sm mb-2">Chunks</h3>
-        <ul className="divide-y divide-border/60 dark:divide-zinc-700/60">
-          {chunks.map(c => (
-            <li key={c.id} className="py-2.5">
-              <div className="flex items-center gap-2 text-[10.5px] font-mono text-muted-foreground mb-0.5">
-                <code>c-{c.position.toString().padStart(4, '0')}</code>
-                {c.pageNumber !== null && <span>· p. {c.pageNumber}</span>}
-                {c.headingPath.length > 0 && (
-                  <>
-                    <span aria-hidden="true">·</span>
-                    <span className="truncate" data-testid="kb-chunk-heading">
-                      {c.headingPath.join(' › ')}
-                    </span>
-                  </>
-                )}
+              <div className="flex-1 min-w-0">
+                <h2 className="font-quicksand font-bold text-lg truncate">{doc.title}</h2>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground font-mono">
+                  <span>{doc.gameName ?? 'KB globale'}</span>
+                  <span aria-hidden="true">·</span>
+                  <span>{doc.docType}</span>
+                  <span aria-hidden="true">·</span>
+                  <span>uploaded {formatDate(doc.uploadedAt)}</span>
+                  <span
+                    className={`ml-auto inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full border ${processingChipClass(doc.processingStatus)}`}
+                  >
+                    {doc.processingStatus}
+                  </span>
+                </div>
               </div>
-              <p className="text-[12.5px] text-foreground leading-snug line-clamp-2">{c.snippet}</p>
-            </li>
-          ))}
-        </ul>
-        {chunksQuery.hasNextPage && (
-          <button
-            type="button"
-            onClick={() => chunksQuery.fetchNextPage()}
-            disabled={chunksQuery.isFetchingNextPage}
-            className="mt-3 w-full text-center text-xs font-medium text-amber-700 dark:text-amber-300 border border-border/60 dark:border-zinc-700/60 rounded-md py-2 hover:bg-muted/70 disabled:opacity-60"
-          >
-            {chunksQuery.isFetchingNextPage ? 'Caricamento…' : 'Carica altri'}
-          </button>
-        )}
-      </section>
+            </div>
+
+            <dl className="mt-4 grid grid-cols-3 gap-2">
+              <Stat label="Chunks" value={doc.chunkCount.toLocaleString('it-IT')} />
+              <Stat label="Pagine" value={doc.pageCount?.toLocaleString('it-IT') ?? '—'} />
+              <Stat label="Lingua" value={doc.language} />
+            </dl>
+          </header>
+
+          {/* Chunks */}
+          <section className="p-4">
+            <h3 className="font-quicksand font-semibold text-sm mb-2">Chunks</h3>
+            <ul className="divide-y divide-border/60 dark:divide-zinc-700/60">
+              {chunks.map(c => (
+                <li key={c.id} className="py-2.5">
+                  <div className="flex items-center gap-2 text-[10.5px] font-mono text-muted-foreground mb-0.5">
+                    <code>c-{c.position.toString().padStart(4, '0')}</code>
+                    {c.pageNumber !== null && <span>· p. {c.pageNumber}</span>}
+                    {c.headingPath.length > 0 && (
+                      <>
+                        <span aria-hidden="true">·</span>
+                        <span className="truncate" data-testid="kb-chunk-heading">
+                          {c.headingPath.join(' › ')}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  <p className="text-[12.5px] text-foreground leading-snug line-clamp-2">
+                    {c.snippet}
+                  </p>
+                </li>
+              ))}
+            </ul>
+            {chunksQuery.hasNextPage && (
+              <button
+                type="button"
+                onClick={() => chunksQuery.fetchNextPage()}
+                disabled={chunksQuery.isFetchingNextPage}
+                className="mt-3 w-full text-center text-xs font-medium text-amber-700 dark:text-amber-300 border border-border/60 dark:border-zinc-700/60 rounded-md py-2 hover:bg-muted/70 disabled:opacity-60"
+              >
+                {chunksQuery.isFetchingNextPage ? 'Caricamento…' : 'Carica altri'}
+              </button>
+            )}
+          </section>
+        </>
+      )}
     </div>
   );
 }

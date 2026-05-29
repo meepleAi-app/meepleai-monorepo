@@ -9,6 +9,7 @@ import { useKbDocDetail } from '@/hooks/queries/useKbDocDetail';
 import { KbDocActions } from './actions/KbDocActions';
 import { IngestionPanel } from './ingestion/IngestionPanel';
 import { KbDocDetailTabs, type KbDocTabKey } from './KbDocDetailTabs';
+import { KbChunkSearch } from './search/KbChunkSearch';
 import { UsedByPanel } from './used-by/UsedByPanel';
 
 import type { SelectedDocMeta } from './explorer-types';
@@ -226,6 +227,11 @@ export function KbDocDetailPanel({ docId, selectedDocMeta }: KbDocDetailPanelPro
               />
             </div>
           </header>
+
+          {/* Chunk similarity search */}
+          <section className="px-4 pt-4">
+            <KbChunkSearch docId={doc.id} chunkCount={doc.chunkCount} />
+          </section>
 
           {/* Chunks */}
           <section className="p-4">

@@ -70,6 +70,13 @@ vi.mock('../actions/KbDocActions', () => ({
   },
 }));
 
+// ── KbChunkSearch mock (panel test doesn't exercise search internals) ──────────
+vi.mock('../search/KbChunkSearch', () => ({
+  KbChunkSearch: ({ docId, chunkCount }: { docId: string; chunkCount: number }) => (
+    <div data-testid="kb-chunk-search-mock" data-doc-id={docId} data-chunk-count={chunkCount} />
+  ),
+}));
+
 // ── QueryClientProvider wrapper (needed for IngestionPanel tab) ───────────────
 function makeWrapper() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });

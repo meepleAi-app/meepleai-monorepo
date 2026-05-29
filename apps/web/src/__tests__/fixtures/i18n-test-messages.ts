@@ -162,6 +162,78 @@ export const playRecordsIndexMessages = {
 } as const;
 
 // =============================================================================
+// Play Records — New Wizard i18n messages (Italian)
+// =============================================================================
+
+export const playRecordsNewMessages = {
+  pageTitle: 'Registra partita',
+  pageSubtitle: 'Wizard passo-passo per registrare una partita',
+  stepIndicatorLabel: 'Step {current} di 3',
+  step1Label: 'Gioco',
+  step2Label: 'Quando',
+  step3Label: 'Punteggi',
+
+  // Step 1 keys
+  'step1.title': 'Quale gioco avete giocato?',
+  'step1.subtitle': 'Scegli dalla tua libreria.',
+  'step1.searchPlaceholder': 'Cerca nella libreria…',
+  'step1.emptyLibraryHint': '↑ Seleziona un gioco per continuare',
+  'step1.freeformLabel': 'Nome gioco (testo libero)',
+  'step1.freeformPlaceholder': 'Es. Catan, Puerto Rico…',
+  'step1.freeformHint': 'Inserisci il nome del gioco se non è in catalogo',
+
+  // Step 2 keys
+  'step2.title': "Quando l'avete giocata?",
+  'step2.subtitle': 'Data, ora di inizio e durata.',
+  'step2.dateLabel': 'Data',
+  'step2.timeLabel': 'Ora di inizio',
+  'step2.durationLabel': 'Durata (opzionale)',
+  'step2.locationLabel': 'Luogo (opzionale)',
+  'step2.locationPlaceholder': 'Es. Casa di Marco',
+  'step2.notesLabel': 'Note (opzionale)',
+  'step2.notesPlaceholder': 'Aggiungi un commento sulla partita…',
+  'step2.durationHint': 'Approssimativa',
+
+  // Step 3 keys
+  'step3.title': 'Chi ha giocato e con che punteggio?',
+  'step3.subtitle': 'Inserisci i punteggi.',
+  'step3.playersLabel': 'Giocatori e punteggi ({count})',
+  'step3.addPlayerPlaceholder': 'Nome giocatore…',
+  'step3.addPlayerButton': 'Aggiungi giocatore',
+  'step3.winnerBadge': 'Vincitore',
+  'step3.noPlayersHint': 'Aggiungi almeno un giocatore',
+
+  // Preview
+  'preview.sectionLabel': 'Anteprima live · Record partita',
+  'preview.noGameSelected': 'Seleziona un gioco',
+  'preview.rankingLabel': 'Classifica · {count} giocatori',
+  'preview.tip': 'Il vincitore è calcolato dal punteggio più alto.',
+
+  // Actions
+  'actions.next': 'Avanti →',
+  'actions.back': '← Indietro',
+  'actions.save': '✓ Salva partita',
+  'actions.saving': 'Salvataggio…',
+  'actions.cancel': 'Annulla',
+  'actions.draft': 'Bozza',
+
+  // Success / error
+  'success.toast': 'Partita registrata',
+  'success.toastDescription': 'La partita è stata registrata correttamente',
+  'error.saveFailed': 'Salvataggio non riuscito',
+  'error.saveFailedDescription': 'Impossibile salvare la partita.',
+  'error.retry': '↻ Riprova salvataggio',
+  'loading.library': 'Caricamento libreria…',
+
+  // A11y
+  'a11y.wizardLabel': 'Wizard registrazione partita',
+  'a11y.stepIndicatorLabel': 'Avanzamento registrazione',
+  'a11y.backButton': 'Torna al passo precedente',
+  'a11y.closeButton': 'Chiudi',
+  'a11y.previewLabel': 'Anteprima live record partita',
+} as const;
+
+// =============================================================================
 // Settings Page Labels (Italian - hardcoded in component)
 // =============================================================================
 

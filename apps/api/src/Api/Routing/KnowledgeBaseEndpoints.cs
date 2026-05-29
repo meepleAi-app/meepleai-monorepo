@@ -10,9 +10,12 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunkById;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunks;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbDocumentById;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetRecentKbDocs;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.GlobalKbSearch;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.ListUserKbDocs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.SearchKbChunks;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Extensions;
+using Api.Services;
 using Api.Helpers;
 using Api.Infrastructure.Entities;
 using Api.Middleware;
@@ -33,6 +36,7 @@ internal static class KnowledgeBaseEndpoints
     {
         MapStatusEndpoint(group);
         MapSearchEndpoint(group);
+        MapGlobalSearchEndpoint(group);
         MapAskEndpoint(group);
         MapChatLookupEndpoints(group);
         MapChatHistoryEndpoints(group);
@@ -71,6 +75,57 @@ internal static class KnowledgeBaseEndpoints
         .WithName("KnowledgeBaseSearch")
         .RequireSession()
         .WithTags("KnowledgeBase");
+    }
+
+    private static void MapGlobalSearchEndpoint(RouteGroupBuilder group)
+    {
+        // Issue #1661 (PR-1 Task 5): Cross-game RBAC-filtered knowledge base search.
+        group.MapPost("/knowledge-base/search/global", HandleGlobalSearch)
+            .WithName("GlobalKbSearch")
+            .RequireSession()
+            .WithTags("KnowledgeBase")
+            .WithSummary("Cross-game knowledge base search (RBAC-filtered)")
+            .WithDescription(
+                "Searches the knowledge base across all games accessible to the authenticated user " +
+                "(public games + library-owned games). Admins see all games. " +
+                "Returns ranked results with cursor-based pagination (hasMore + nextCursor). " +
+                "Issue #1661.")
+            .Produces<GlobalKbSearchResponseDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status422UnprocessableEntity);
+    }
+
+    private static async Task<IResult> HandleGlobalSearch(
+        GlobalKbSearchRequest request,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var userId = session.Principal!.Subject.Id;
+        var role = session.Principal!.EffectiveActor.Role;
+
+        if (!Enum.TryParse<UserRole>(role, ignoreCase: true, out var userRole))
+        {
+            userRole = UserRole.User;
+        }
+
+        logger.LogInformation(
+            "[GlobalKbSearch] Cross-game search from user {UserId} (role={Role}): {Query}",
+            userId, role, request.Query);
+
+        var query = new GlobalKbSearchQuery(
+            Query: request.Query,
+            Limit: request.Limit,
+            Cursor: request.Cursor,
+            Mode: request.Mode ?? SearchMode.Hybrid,
+            MinScore: request.MinScore ?? 0.0,
+            UserId: userId,
+            Role: userRole);
+
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
     }
 
     private static void MapAskEndpoint(RouteGroupBuilder group)
@@ -1241,3 +1296,14 @@ internal record LinkKbRequest(Guid PdfDocumentId);
 /// Request body for POST /api/v1/kb-docs/{id}/chunks/search (G3 in-document FTS).
 /// </summary>
 internal sealed record SearchKbChunksRequest(string Query, int? Skip, int? Take);
+
+/// <summary>
+/// Request body for POST /api/v1/knowledge-base/search/global (cross-game search, Issue #1661).
+/// User/Role are NOT in the request — they are resolved from the authenticated session.
+/// </summary>
+internal sealed record GlobalKbSearchRequest(
+    string Query,
+    int Limit = 20,
+    string? Cursor = null,
+    SearchMode? Mode = null,
+    double? MinScore = null);

@@ -158,20 +158,32 @@ export const GlobalKbSearchFiltersSchema = z.object({
 export const GlobalKbSearchResultSchema = z.object({
   // mirror KbChunkSummary + doc context for cross-game display
   chunkId: z.string(),
-  docId: z.string(),
+  docId: z.string().uuid(),
   docTitle: z.string(),
-  gameId: z.string().uuid().nullable(),
-  gameName: z.string().nullable(),
-  docType: z.enum(['rulebook', 'faq', 'errata', 'guide']),
-  headingPath: z.array(z.string()),
+  // BE guarantees gameId/gameName are populated (results without a resolvable
+  // game are dropped during enrichment), so both are non-nullable.
+  gameId: z.string().uuid(),
+  gameName: z.string(),
+  // BE emits the raw DocumentType enum string (e.g. "Rulebook"); FE narrows
+  // case-insensitively if it needs the enum union.
+  docType: z.string(),
+  // Best-effort. The chunk metadata heading is not materialized in the
+  // pgvector result set yet (D2 known limitation, BE PR-1 #1672), so this
+  // ships as a nullable single string instead of a hierarchical array.
+  // Will become z.array(z.string()) once the chunk metadata is materialized.
+  headingPath: z.string().nullable(),
   snippet: z.string(),
   pageNumber: z.number().int().nullable(),
   score: z.number(),
 });
 export const GlobalKbSearchResponseSchema = z.object({
-  items: z.array(GlobalKbSearchResultSchema),
+  // Field name `results` matches the BE DTO (GlobalKbSearchResponseDto).
+  results: z.array(GlobalKbSearchResultSchema),
   nextCursor: z.string().nullable(),
-  totalCount: z.number().int().nonnegative(),
+  // The BE intentionally does NOT emit a `totalCount` for cross-game search
+  // because computing an exact count across N games is too expensive
+  // (Nygard, spec-panel D6). Use `hasMore` to drive "load more" UI.
+  hasMore: z.boolean(),
 });
 
 // kb-ask citation (extends streaming CitationSchema with chunk nav)
@@ -202,16 +214,16 @@ All pure presentational, labels-injected, DS-15 tokens, `data-slot`, jest-axe pe
 
 ## §7. Open questions (MUST resolve before Phase 1/2 dispatch)
 
-| # | Question | Owner | Blocks |
-|---|---|---|---|
-| Q1 | **Does a cross-game KB search FE endpoint exist?** BE `VectorSemanticSearchQueryHandler` supports it (source comment) but no FE client method found. Need `POST /api/v1/kb/search` route + response contract confirmed. | BE | `useGlobalKbSearch` (Foundation blocker) |
-| Q2 | **Does a kb-ask SSE endpoint exist** (`POST /api/v1/kb/ask`) or only agent-chat? If only per-agent, the AI drawer needs a kb-scoped ask endpoint. | BE | `useKbAskStream` (Interactions blocker) |
-| Q3 | **CitationPill click behavior**: nav viewer to chunk, open modal, or highlight? Recommend: deep-link `?docId=&chunkId=` + scroll. | Design | Drawer + viewer integration |
-| Q4 | **RBAC for global search**: private games included? Only shared/community? Only user's library? | Product/BE | search scope + result filtering |
-| Q5 | **Editor scope**: edit doc content (chunks) or only metadata (title/type/tags/lang)? Recommend metadata-only v1. | Product | `KbEditorDesktop` + `useUpdateKbDocMeta` |
-| Q6 | **Filter facets** beyond docType/game/language? (tags? date?) | Design | `FilterAccordion` |
+| # | Question | Owner | Status | Blocks |
+|---|---|---|---|---|
+| Q1 | **Does a cross-game KB search FE endpoint exist?** | BE | ✅ **RESOLVED** by #1661 PR-1 (`POST /api/v1/knowledge-base/search/global`, response = `GlobalKbSearchResponseDto` mirroring §5 above; cursor pagination + hasMore). | (unblocked) |
+| Q2 | **Does a kb-ask SSE endpoint exist** (`POST /api/v1/kb/ask`) or only agent-chat? | BE | 🟡 **IN PROGRESS** in #1661 PR-2 — `POST /api/v1/knowledge-base/ask/global` emitting `RagStreamingEvent` (mirrors `useAgentChatStream` wire format). | `useKbAskStream` (Interactions) |
+| Q3 | **CitationPill click behavior**: nav viewer to chunk, open modal, or highlight? Recommend: deep-link `?docId=&chunkId=` + scroll. | Design | open | Drawer + viewer integration |
+| Q4 | **RBAC for global search**: private games included? Only shared/community? Only user's library? | Product/BE | ✅ **RESOLVED** by #1661 PR-1: accessible = `SharedGame.IsRagPublic` ∪ `UserLibraryEntry.OwnershipDeclaredAt != null` (user-owned library), excludes other users' private games. Admin/SuperAdmin → all non-deleted. | (unblocked) |
+| Q5 | **Editor scope**: edit doc content (chunks) or only metadata (title/type/tags/lang)? Recommend metadata-only v1. | Product | open | `KbEditorDesktop` + `useUpdateKbDocMeta` |
+| Q6 | **Filter facets** beyond docType/game/language? (tags? date?) | Design | open | `FilterAccordion` |
 
-**Foundation (Phase 1) can start once Q1 + Q4 are resolved. Interactions (Phase 2) needs Q2 + Q3 + Q5.**
+**Foundation (Phase 1) is now UNBLOCKED** (Q1 ✅ + Q4 ✅). **Interactions (Phase 2) waits on Q2** (#1661 PR-2 in-flight) + Q3 + Q5.
 
 ## §8. Bundle budget
 
@@ -240,7 +252,7 @@ useKbAskStream:
 useGlobalKbSearch:
   - debounced query → results
   - filters change → refetch with facets
-  - empty results → totalCount 0
+  - empty results → results=[], hasMore=false, nextCursor=null
   - error → error state
 ```
 

@@ -143,4 +143,26 @@ public sealed class AgentDefinitionRepository : RepositoryBase, IAgentDefinition
             .CountAsync(a => a.GameId != null && gameIds.Contains(a.GameId.Value), cancellationToken)
             .ConfigureAwait(false);
     }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<AgentDefinition>> GetByConsumedDocumentAsync(
+        Guid documentId, CancellationToken cancellationToken = default)
+    {
+        if (documentId == Guid.Empty)
+            return Array.Empty<AgentDefinition>();
+
+        // JSONB containment: agents whose kb_card_ids array contains documentId.
+        // is_deleted = false is asserted explicitly in SQL — the global query filter
+        // is not guaranteed to compose over FromSqlInterpolated.
+        var docIdJsonLiteral = $"[\"{documentId}\"]";
+
+        return await DbContext.Set<AgentDefinition>()
+            .FromSqlInterpolated(
+                $@"SELECT * FROM knowledge_base.agent_definitions
+                   WHERE kb_card_ids @> {docIdJsonLiteral}::jsonb
+                   AND is_deleted = false")
+            .AsNoTracking()
+            .OrderBy(a => a.Name)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+    }
 }

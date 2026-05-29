@@ -104,9 +104,9 @@ public sealed class SearchDocumentChunksQueryHandlerIntegrationTests : IAsyncLif
 
     /// <summary>
     /// Seeds a SharedGame + PdfDocument + VectorDocument in the relational DB,
-    /// then inserts 2 embedding rows directly into <c>pgvector_embeddings</c> via
-    /// <see cref="PgVectorStoreAdapter.IndexBatchAsync"/> so the happy-path test can
-    /// assert score-ordered results.
+    /// then inserts 2 embedding rows directly into <c>pgvector_embeddings</c> via raw
+    /// parameterised SQL (<see cref="InsertEmbeddingRawAsync"/>) so the happy-path test
+    /// can assert score-ordered results.
     ///
     /// The <c>pgvector_embeddings</c> table is created by the EF Initial migration with a
     /// <c>vector(768)</c> column — we must use 768-dimensional test vectors.
@@ -189,9 +189,9 @@ public sealed class SearchDocumentChunksQueryHandlerIntegrationTests : IAsyncLif
             .Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { queryVector }));
 
-        // Insert embeddings directly via raw SQL.
-        // NOTE: Do NOT call EnsureCollectionExistsAsync (table already exists from EF migrations)
-        // and do NOT use IndexBatchAsync (it does LEFT JOIN games which was dropped in migration 1345).
+        // Insert embeddings directly via raw SQL for test isolation/speed (bypasses the
+        // production ingestion pipeline). NOTE: Do NOT call EnsureCollectionExistsAsync —
+        // the pgvector_embeddings table already exists via EF migrations.
         await InsertEmbeddingRawAsync(vectorDocId, sharedGame.Id, 0, 1, "Predator activation rules explained in detail", embVector1);
         await InsertEmbeddingRawAsync(vectorDocId, sharedGame.Id, 1, 2, "Another chunk about different game mechanics", embVector2);
 

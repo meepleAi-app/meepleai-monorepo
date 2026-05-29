@@ -84,6 +84,19 @@ internal static class AdminKnowledgeBaseEndpoints
         .WithName("GetKbDocIngestionLog")
         .WithSummary("Get the latest ProcessingJob (with Steps and LogEntries) for a PdfDocumentId.");
 
+        // GET /api/v1/admin/kb/docs/{docId}/agents — Issue #1651 F3-FU-2
+        kbGroup.MapGet("/docs/{docId:guid}/agents", async (
+            Guid docId,
+            IMediator mediator,
+            CancellationToken cancellationToken) =>
+        {
+            var query = new GetConsumingAgentsByDocumentIdQuery(docId);
+            var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("GetKbDocConsumingAgents")
+        .WithSummary("List agent definitions that consume a given PDF document (KbCardIds containment).");
+
         // POST /api/v1/admin/kb/agents/estimate-cost - Pre-chat cost estimation
         kbGroup.MapPost("/agents/estimate-cost", async (
             [FromBody] EstimateAgentCostByDocumentsRequest request,

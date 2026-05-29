@@ -42,6 +42,11 @@ vi.mock('@/lib/api/admin-kb-ingestion', () => ({
   retryIngestionJob: vi.fn().mockResolvedValue(undefined),
 }));
 
+// ── admin-kb-used-by mock (UsedByPanel uses fetchKbDocConsumingAgents) ─────────
+vi.mock('@/lib/api/admin-kb-used-by', () => ({
+  fetchKbDocConsumingAgents: vi.fn().mockResolvedValue([]),
+}));
+
 const mockUseKbDocDetail = vi.fn();
 const mockUseKbChunksList = vi.fn();
 
@@ -223,5 +228,42 @@ describe('KbDocDetailPanel', () => {
     expect(
       screen.queryByRole('heading', { name: /Wingspan-Oceania-EN\.pdf/ })
     ).not.toBeInTheDocument();
+  });
+
+  it('renders UsedByPanel when ?tab=used-by', async () => {
+    mockSearchParams = new URLSearchParams('tab=used-by');
+    mockUseKbDocDetail.mockReturnValue({ data: readyEnvelope, isLoading: false });
+    mockUseKbChunksList.mockReturnValue({
+      data: undefined,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      fetchNextPage: vi.fn(),
+    });
+    render(<KbDocDetailPanel docId="doc-1" />, { wrapper: makeWrapper() });
+    // Empty state appears because fetchKbDocConsumingAgents mock resolves [].
+    await waitFor(() => expect(screen.getByTestId('used-by-empty')).toBeInTheDocument());
+    // Overview hero must NOT render when used-by is active.
+    expect(
+      screen.queryByRole('heading', { name: /Wingspan-Oceania-EN\.pdf/ })
+    ).not.toBeInTheDocument();
+  });
+
+  it('renders UsedByPanel even when document is locked (independent of doc readiness)', async () => {
+    mockSearchParams = new URLSearchParams('tab=used-by');
+    mockUseKbDocDetail.mockReturnValue({ data: lockedEnvelope, isLoading: false });
+    mockUseKbChunksList.mockReturnValue({ data: undefined, hasNextPage: false });
+    render(<KbDocDetailPanel docId="doc-1" />, { wrapper: makeWrapper() });
+    // Used-by tab renders (empty state mock resolves []), NOT the locked banner.
+    await waitFor(() => expect(screen.getByTestId('used-by-empty')).toBeInTheDocument());
+    expect(screen.queryByText(/in elaborazione/i)).not.toBeInTheDocument();
+  });
+
+  it('still shows the locked banner when activeTab is overview', () => {
+    mockSearchParams = new URLSearchParams(''); // default: overview
+    mockUseKbDocDetail.mockReturnValue({ data: lockedEnvelope, isLoading: false });
+    mockUseKbChunksList.mockReturnValue({ data: undefined, hasNextPage: false });
+    render(<KbDocDetailPanel docId="doc-1" />, { wrapper: makeWrapper() });
+    expect(screen.getByText(/in elaborazione/i)).toBeInTheDocument();
+    expect(screen.queryByTestId('used-by-empty')).not.toBeInTheDocument();
   });
 });

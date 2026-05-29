@@ -12,10 +12,25 @@ vi.mock('next/navigation', async () => {
 });
 
 describe('KbDocDetailTabs', () => {
-  it('renders two tabs: Overview and Ingestion log', () => {
+  it('renders three tabs: Overview, Ingestion log, Used by', () => {
     render(<KbDocDetailTabs docId="abc" activeTab="overview" />);
     expect(screen.getByRole('link', { name: /overview/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /ingestion log/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /used by/i })).toBeInTheDocument();
+  });
+
+  it('Used by link sets ?tab=used-by and preserves docId', () => {
+    render(<KbDocDetailTabs docId="abc" activeTab="overview" />);
+    const usedByLink = screen.getByRole('link', { name: /used by/i });
+    expect(usedByLink.getAttribute('href')).toContain('docId=abc');
+    expect(usedByLink.getAttribute('href')).toContain('tab=used-by');
+  });
+
+  it('marks Used by as active when activeTab="used-by"', () => {
+    render(<KbDocDetailTabs docId="abc" activeTab="used-by" />);
+    expect(screen.getByRole('link', { name: /used by/i }).getAttribute('aria-current')).toBe(
+      'page'
+    );
   });
 
   it('preserves docId in each tab href', () => {

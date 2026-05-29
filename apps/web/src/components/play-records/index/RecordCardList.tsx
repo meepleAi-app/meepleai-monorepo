@@ -27,11 +27,12 @@ export interface RecordCardListProps {
 
 function formatDuration(duration: string | null): string {
   if (!duration) return '';
+  // eslint-disable-next-line security/detect-unsafe-regex
   const match = duration.match(/^(?:(\d+)\.)?(\d+):(\d+):(\d+)$/);
   if (match) {
-    const days = match[1] ? parseInt(match[1]) : 0;
-    const hours = parseInt(match[2]) + days * 24;
-    const minutes = parseInt(match[3]);
+    const days = match[1] ? parseInt(match[1], 10) : 0;
+    const hours = parseInt(match[2], 10) + days * 24;
+    const minutes = parseInt(match[3], 10);
     const h = hours > 0 ? `${hours}h` : '';
     const m = minutes > 0 ? `${minutes}min` : '';
     return [h, m].filter(Boolean).join(' ') || '';
@@ -44,7 +45,8 @@ export function RecordCardList({ record }: RecordCardListProps) {
   const t = useTranslations('playRecords.index');
   const { data: games } = useSharedGames(record.gameId ? [record.gameId] : []);
 
-  const game = record.gameId ? games?.[record.gameId] : null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const game = record.gameId && games ? (games as any)[record.gameId] : null;
   const isInProgress = record.status === 'InProgress';
   const isPlanned = record.status === 'Planned';
 

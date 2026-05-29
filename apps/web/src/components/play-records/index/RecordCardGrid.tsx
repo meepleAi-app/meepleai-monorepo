@@ -25,10 +25,11 @@ export interface RecordCardGridProps {
 
 function formatDuration(duration: string | null): string {
   if (!duration) return '';
+  // eslint-disable-next-line security/detect-unsafe-regex
   const match = duration.match(/^(?:(\d+)\.)?(\d+):(\d+):(\d+)$/);
   if (match) {
-    const hours = parseInt(match[2]) + (match[1] ? parseInt(match[1]) * 24 : 0);
-    const minutes = parseInt(match[3]);
+    const hours = parseInt(match[2], 10) + (match[1] ? parseInt(match[1], 10) * 24 : 0);
+    const minutes = parseInt(match[3], 10);
     const h = hours > 0 ? `${hours}h` : '';
     const m = minutes > 0 ? `${minutes}min` : '';
     return [h, m].filter(Boolean).join(' ') || '';
@@ -40,7 +41,8 @@ export function RecordCardGrid({ record }: RecordCardGridProps) {
   const router = useRouter();
   const { data: games } = useSharedGames(record.gameId ? [record.gameId] : []);
 
-  const game = record.gameId ? games?.[record.gameId] : null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const game = record.gameId && games ? (games as any)[record.gameId] : null;
   const isPlanned = record.status === 'Planned';
 
   // Determine outcome badge variant
@@ -84,7 +86,7 @@ export function RecordCardGrid({ record }: RecordCardGridProps) {
         </span>
 
         {/* Entity label top-left */}
-        <div className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full border border-entity-session/20 bg-white/85 px-2 py-1 backdrop-blur-sm font-mono text-[8px] font-extrabold uppercase tracking-wider text-entity-session">
+        <div className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full border border-entity-session/20 bg-card/85 px-2 py-1 backdrop-blur-sm font-mono text-[8px] font-extrabold uppercase tracking-wider text-entity-session">
           <span aria-hidden="true">🎯</span>
           Partita
         </div>

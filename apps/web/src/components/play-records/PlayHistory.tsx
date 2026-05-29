@@ -14,6 +14,8 @@
 
 import { useEffect, useState } from 'react';
 
+import Link from 'next/link';
+
 import { usePlayHistory } from '@/lib/domain-hooks/usePlayRecords';
 import {
   usePlayRecordsStore,
@@ -139,13 +141,13 @@ export function PlayHistory({ gameId: propGameId, limit }: PlayHistoryProps) {
             <p className="mt-2 text-sm text-muted-foreground sm:text-base">
               Registra la tua prima partita per tracciare punteggi, esiti e classifiche del gruppo.
             </p>
-            <a
+            <Link
               href="/play-records/new"
               className="mt-4 inline-flex items-center gap-2 rounded-md bg-entity-session px-4 py-2 font-display text-sm font-extrabold text-white shadow-lg shadow-entity-session/40 transition-all hover:bg-entity-session/90"
             >
               <span aria-hidden="true">+</span>
               Registra prima partita
-            </a>
+            </Link>
           </div>
         )}
 

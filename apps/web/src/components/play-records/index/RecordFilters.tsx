@@ -85,7 +85,7 @@ export function RecordFilters({
             data-testid={`filter-status-${option.value}`}
           >
             {option.icon && <span aria-hidden="true">{option.icon}</span>}
-            {t(option.key as any)}
+            {t(option.key)}
           </button>
         ))}
       </div>

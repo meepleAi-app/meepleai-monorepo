@@ -247,4 +247,23 @@ describe('KbDocDetailPanel', () => {
       screen.queryByRole('heading', { name: /Wingspan-Oceania-EN\.pdf/ })
     ).not.toBeInTheDocument();
   });
+
+  it('renders UsedByPanel even when document is locked (independent of doc readiness)', async () => {
+    mockSearchParams = new URLSearchParams('tab=used-by');
+    mockUseKbDocDetail.mockReturnValue({ data: lockedEnvelope, isLoading: false });
+    mockUseKbChunksList.mockReturnValue({ data: undefined, hasNextPage: false });
+    render(<KbDocDetailPanel docId="doc-1" />, { wrapper: makeWrapper() });
+    // Used-by tab renders (empty state mock resolves []), NOT the locked banner.
+    await waitFor(() => expect(screen.getByTestId('used-by-empty')).toBeInTheDocument());
+    expect(screen.queryByText(/in elaborazione/i)).not.toBeInTheDocument();
+  });
+
+  it('still shows the locked banner when activeTab is overview', () => {
+    mockSearchParams = new URLSearchParams(''); // default: overview
+    mockUseKbDocDetail.mockReturnValue({ data: lockedEnvelope, isLoading: false });
+    mockUseKbChunksList.mockReturnValue({ data: undefined, hasNextPage: false });
+    render(<KbDocDetailPanel docId="doc-1" />, { wrapper: makeWrapper() });
+    expect(screen.getByText(/in elaborazione/i)).toBeInTheDocument();
+    expect(screen.queryByTestId('used-by-empty')).not.toBeInTheDocument();
+  });
 });

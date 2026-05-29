@@ -90,6 +90,17 @@ export function KbDocDetailPanel({ docId }: KbDocDetailPanelProps) {
   const envelope = detailQuery.data;
 
   if (envelope?.status === 'locked') {
+    // The Used-by tab is independent of doc readiness (it only needs the docId
+    // to query agents whose KbCardIds contain it). Allow it to render during
+    // processing — addresses the carry-forward gap flagged on PR #1668 (#1650).
+    if (activeTab === 'used-by') {
+      return (
+        <div className="border border-border/60 dark:border-zinc-700/60 rounded-lg bg-card/80 dark:bg-zinc-900/80 overflow-hidden">
+          <KbDocDetailTabs docId={docId} activeTab={activeTab} />
+          <UsedByPanel docId={docId} />
+        </div>
+      );
+    }
     return (
       <div className="border border-amber-500/30 rounded-lg bg-amber-500/5 p-6">
         <h3 className="font-quicksand font-bold text-base text-amber-700 dark:text-amber-300 mb-1">

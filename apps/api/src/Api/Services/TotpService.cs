@@ -92,10 +92,14 @@ internal class TotpService : ITotpService
         user.IsTwoFactorEnabled = false; // Not enabled until verified
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        // Delete existing backup codes if re-enrolling
+        // Delete existing backup codes if re-enrolling.
+        // AsTracking(): under the global NoTracking default (PERF-06), RemoveRange must operate
+        // on tracked entities; loading detached then RemoveRange relies on EF's implicit
+        // re-attach-as-Deleted, which throws if a conflicting instance is already tracked.
         var existingCodes = await _dbContext.UserBackupCodes
+            .AsTracking()
             .Where(bc => bc.UserId == userId)
-            .ToListAsync().ConfigureAwait(false);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
         if (existingCodes.Count > 0)
         {
             _dbContext.UserBackupCodes.RemoveRange(existingCodes);
@@ -114,7 +118,7 @@ internal class TotpService : ITotpService
                 CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
             });
         }
-        await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         await _auditService.LogAsync(userId.ToString(), "TwoFactorSetup", "TwoFactor", userId.ToString(), "Success",
             "User generated 2FA setup").ConfigureAwait(false);
@@ -295,8 +299,11 @@ internal class TotpService : ITotpService
         user.TotpSecretEncrypted = null;
         user.TwoFactorEnabledAt = null;
 
-        // Delete all backup codes (used and unused)
+        // Delete all backup codes (used and unused).
+        // AsTracking(): see GenerateSetupAsync — RemoveRange needs tracked entities under the
+        // global NoTracking default (PERF-06).
         var allBackupCodes = await _dbContext.UserBackupCodes
+            .AsTracking()
             .Where(bc => bc.UserId == userId)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
         _dbContext.UserBackupCodes.RemoveRange(allBackupCodes);

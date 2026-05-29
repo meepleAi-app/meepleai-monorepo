@@ -164,9 +164,12 @@ public sealed class TotpServiceTrackingContractTests : IAsyncLifetime
             (await totp.EnableTwoFactorAsync(user.Id, enableCode)).Should().BeTrue();
         }
 
-        // Disable requires password + a fresh TOTP code. Compute a new code (the previous one
-        // is consumed by the replay-prevention nonce check).
-        await Task.Delay(TimeSpan.FromSeconds(31)); // cross a TOTP step boundary
+        // Disable requires password + a fresh TOTP code. The enable code is consumed by the
+        // replay-prevention nonce check, so we need a code from a different TOTP step.
+        // VerifyTotpCodeAsync accepts a ±2-step (±60s) window, so a 31s wait sits too close to
+        // the enable code's acceptance window and can flake under CI load. Wait 91s (>3 full
+        // 30s steps) to clear both the verification window and the nonce reuse risk.
+        await Task.Delay(TimeSpan.FromSeconds(91));
         var disableCode = totpComputer.ComputeTotp();
 
         // We need a known password on the seeded user — UPDATE it inline.

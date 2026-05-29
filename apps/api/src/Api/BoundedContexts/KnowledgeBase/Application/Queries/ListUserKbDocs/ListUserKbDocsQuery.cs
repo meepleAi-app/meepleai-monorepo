@@ -42,6 +42,7 @@ public sealed record KbDocsListResponse(
 /// <param name="PageCount">Number of pages; null until extraction completes.</param>
 /// <param name="ProcessedAt">Timestamp of the most recent processing state transition; null for Pending docs that never started.</param>
 /// <param name="UploadedAt">Upload timestamp; always non-null. Used as the sort fallback when <paramref name="ProcessedAt"/> is null.</param>
+/// <param name="UpdatedAt">Explicit recency signal: ProcessedAt ?? UploadedAt. Mirrors the canonical sort key from the handler. Issue #1645.</param>
 public sealed record UserKbDocDto(
     Guid Id,
     Guid? GameId,
@@ -50,4 +51,5 @@ public sealed record UserKbDocDto(
     string ProcessingState,
     int? PageCount,
     DateTime? ProcessedAt,
-    DateTime UploadedAt);
+    DateTime UploadedAt,
+    DateTime UpdatedAt);

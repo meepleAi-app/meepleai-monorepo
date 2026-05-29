@@ -3,10 +3,9 @@
  * listing (BE-1 #1588). Calls `GET /api/v1/kb-docs` with default
  * `{ page:1, pageSize:20, sortBy:'recent', state:'ready' }` (K3 #1592).
  *
- * Adapter (K1.1): the BE DTO has `processedAt?` + `uploadedAt` but NOT a single
- * `updatedAt`. Server-side `sortBy=recent` orders by `ProcessedAt ?? UploadedAt`;
- * we mirror that on the FE so the `kbDocToHubItem` mapper signature stays
- * unchanged (AC2.b.4). Follow-up #1645 tracks exposing `updatedAt` explicit BE-side.
+ * Adapter (K1.1, #1645): the BE DTO now explicitly exposes `updatedAt`,
+ * which is computed server-side as `ProcessedAt ?? UploadedAt` (the canonical
+ * sort key). This eliminates the FE adapter derivation.
  */
 
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
@@ -15,7 +14,7 @@ import { api } from '@/lib/api';
 import type { KbDocsListResponse, UserKbDocDto } from '@/lib/api/schemas/kb-docs.schemas';
 import type { KbDoc } from '@/lib/library/hybrid-hub.mappers';
 
-/** Adapter: DTO → FE `KbDoc` (derives `updatedAt`). Pure, unit-testable. */
+/** Adapter: DTO → FE `KbDoc`. Pure, unit-testable. */
 export function toKbDoc(dto: UserKbDocDto): KbDoc {
   return {
     id: dto.id,
@@ -25,8 +24,8 @@ export function toKbDoc(dto: UserKbDocDto): KbDoc {
     processingState: dto.processingState,
     pageCount: dto.pageCount,
     processedAt: dto.processedAt,
-    // K1.1: server-side sortBy=recent uses ProcessedAt ?? UploadedAt — mirror it.
-    updatedAt: dto.processedAt ?? dto.uploadedAt,
+    uploadedAt: dto.uploadedAt,
+    updatedAt: dto.updatedAt,
   };
 }
 

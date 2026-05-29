@@ -316,4 +316,47 @@ public sealed class ListUserKbDocsQueryHandlerIntegrationTests : IAsyncLifetime
         orphan.GameId.Should().BeNull();
         orphan.GameName.Should().BeNull();
     }
+
+    // ─── AC7: UpdatedAt = ProcessedAt ?? UploadedAt (explicit field) ────────
+
+    [Fact(Timeout = 30000)]
+    public async Task UpdatedAt_equals_ProcessedAt_when_processed()
+    {
+        await SeedUserAsync(UserA);
+        var game = await SeedGameAsync("Catan");
+        var uploadTime = DateTime.UtcNow.AddDays(-5);
+        var processTime = DateTime.UtcNow.AddDays(-1);
+        _dbContext!.PdfDocuments.Add(
+            NewDoc(UserA, game.Id, "Ready", "processed.pdf", uploadTime, processTime));
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        var result = await _handler!.Handle(new ListUserKbDocsQuery(UserA), TestCancellationToken);
+
+        result.Items.Should().HaveCount(1);
+        var dto = result.Items.Single();
+        // DB round-trip may lose microsecond precision; use tolerance of 1ms.
+        dto.UpdatedAt.Should().BeCloseTo(processTime, TimeSpan.FromMilliseconds(1),
+            "UpdatedAt should equal ProcessedAt when present");
+    }
+
+    [Fact(Timeout = 30000)]
+    public async Task UpdatedAt_equals_UploadedAt_when_ProcessedAt_null()
+    {
+        await SeedUserAsync(UserA);
+        var game = await SeedGameAsync("Catan");
+        var uploadTime = DateTime.UtcNow;
+        _dbContext!.PdfDocuments.Add(
+            NewDoc(UserA, game.Id, "Pending", "unprocessed.pdf", uploadTime, null));
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        var result = await _handler!.Handle(
+            new ListUserKbDocsQuery(UserA, State: "all"),
+            TestCancellationToken);
+
+        result.Items.Should().HaveCount(1);
+        var dto = result.Items.Single();
+        // DB round-trip may lose microsecond precision; use tolerance of 1ms.
+        dto.UpdatedAt.Should().BeCloseTo(uploadTime, TimeSpan.FromMilliseconds(1),
+            "UpdatedAt should equal UploadedAt when ProcessedAt is null");
+    }
 }

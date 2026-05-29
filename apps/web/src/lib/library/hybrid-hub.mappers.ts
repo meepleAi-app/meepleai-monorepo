@@ -46,6 +46,7 @@ export interface KbDoc {
   readonly processingState: string;
   readonly pageCount?: number | null;
   readonly processedAt: string | null;
+  readonly uploadedAt: string;
   readonly updatedAt: string;
 }
 

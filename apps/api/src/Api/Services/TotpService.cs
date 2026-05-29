@@ -64,7 +64,13 @@ internal class TotpService : ITotpService
     /// </summary>
     public async Task<TotpSetupResponse> GenerateSetupAsync(Guid userId, string userEmail, CancellationToken cancellationToken = default)
     {
-        var user = await _dbContext.Users.FindAsync(userId).ConfigureAwait(false);
+        // Issue #888 + #1628: AsTracking() is REQUIRED — DbContext default is NoTracking
+        // (PERF-06 in InfrastructureServiceExtensions.cs:162), so without it EF won't detect
+        // mutations and SaveChangesAsync returns 0 affected rows. Mirrors UserRepository.UpdateAsync.
+        var user = await _dbContext.Users
+            .AsTracking()
+            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken)
+            .ConfigureAwait(false);
         if (user == null)
         {
             _logger.LogWarning("2FA setup failed: User {UserId} not found", userId);
@@ -82,17 +88,9 @@ internal class TotpService : ITotpService
         var backupCodes = GenerateBackupCodes();
 
         // Store encrypted secret (not enabled yet - requires verification).
-        // BUG-FIX (#1608 dogfood): the DbContext default is NoTracking (PERF-06 in
-        // InfrastructureServiceExtensions.cs), so FindAsync above returns a DETACHED entity
-        // whose property mutations are invisible to the change tracker. Without an explicit
-        // Update(), SaveChangesAsync is a silent no-op — the secret never reaches the DB and
-        // the subsequent enable2FA call sees TotpSecretEncrypted=NULL ("No secret configured").
-        // Integration tests (Api.Tests) didn't catch this because the test fixture re-registers
-        // the DbContext without NoTracking, leaving TrackAll as the default.
         user.TotpSecretEncrypted = encryptedSecret;
         user.IsTwoFactorEnabled = false; // Not enabled until verified
-        _dbContext.Users.Update(user);
-        await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Delete existing backup codes if re-enrolling
         var existingCodes = await _dbContext.UserBackupCodes

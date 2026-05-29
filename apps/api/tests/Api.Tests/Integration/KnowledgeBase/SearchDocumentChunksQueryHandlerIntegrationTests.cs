@@ -104,9 +104,9 @@ public sealed class SearchDocumentChunksQueryHandlerIntegrationTests : IAsyncLif
 
     /// <summary>
     /// Seeds a SharedGame + PdfDocument + VectorDocument in the relational DB,
-    /// then inserts 2 embedding rows directly into <c>pgvector_embeddings</c> via
-    /// <see cref="PgVectorStoreAdapter.IndexBatchAsync"/> so the happy-path test can
-    /// assert score-ordered results.
+    /// then inserts 2 embedding rows directly into <c>pgvector_embeddings</c> via raw
+    /// parameterised SQL (<see cref="InsertEmbeddingRawAsync"/>) so the happy-path test
+    /// can assert score-ordered results.
     ///
     /// The <c>pgvector_embeddings</c> table is created by the EF Initial migration with a
     /// <c>vector(768)</c> column — we must use 768-dimensional test vectors.

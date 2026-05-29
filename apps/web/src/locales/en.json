@@ -1600,22 +1600,47 @@
           },
           "status": {
             "label": "Status",
-            "options": { "all": "All", "owned": "Owned", "wishlist": "Wishlist", "played": "Played" }
+            "options": {
+              "all": "All",
+              "owned": "Owned",
+              "wishlist": "Wishlist",
+              "played": "Played"
+            }
           },
           "sort": {
             "label": "Sort",
-            "options": { "last-played": "Last played", "rating": "Rating", "title": "Title A-Z", "year": "Year" }
+            "options": {
+              "last-played": "Last played",
+              "rating": "Rating",
+              "title": "Title A-Z",
+              "year": "Year"
+            }
           },
           "view": {
             "label": "View",
-            "options": { "grid": "Grid", "list": "List" }
+            "options": {
+              "grid": "Grid",
+              "list": "List"
+            }
           },
           "resultCount": "{count, plural, one {# game} other {# games}}"
         },
         "emptyState": {
-          "empty": { "title": "Add your first game", "subtitle": "Build your library to get started.", "cta": "Add game" },
-          "filteredEmpty": { "title": "No results", "subtitle": "Try widening or clearing the filters.", "cta": "Clear filters" },
-          "error": { "title": "Failed to load", "subtitle": "Could not fetch your library.", "cta": "Retry" }
+          "empty": {
+            "title": "Add your first game",
+            "subtitle": "Build your library to get started.",
+            "cta": "Add game"
+          },
+          "filteredEmpty": {
+            "title": "No results",
+            "subtitle": "Try widening or clearing the filters.",
+            "cta": "Clear filters"
+          },
+          "error": {
+            "title": "Failed to load",
+            "subtitle": "Could not fetch your library.",
+            "cta": "Retry"
+          }
         }
       },
       "selectionMode": {
@@ -3608,6 +3633,256 @@
       "inviteesListLabel": "Invitees list",
       "gamesListLabel": "Suggested games list",
       "previewLabel": "Invitation preview"
+    }
+  },
+  "playRecords": {
+    "stats": {
+      "badge": {
+        "statistics": "Statistics · /play-records/stats"
+      },
+      "title": "Your Statistics",
+      "subtitle": "An overview of your recorded games: how many you've played, your favorite games, and your win rate.",
+      "kpi": {
+        "sessions": "Games",
+        "uniqueGames": "Unique Games",
+        "winRate": "Win Rate",
+        "winRateWins": "wins",
+        "favorite": "Favorite"
+      },
+      "mostPlayed": {
+        "title": "Most Played Games",
+        "meta": "top {count}",
+        "plays": "plays"
+      },
+      "winByGame": {
+        "title": "Win Rate by Game",
+        "meta": "sorted by %"
+      },
+      "empty": {
+        "noGames": "No games recorded yet. Statistics will appear here.",
+        "noWins": "No wins recorded yet. Play to see your win rate."
+      },
+      "cta": {
+        "newRecord": "Record Game"
+      },
+      "headerTitle": "Statistics",
+      "error": {
+        "title": "Could not load statistics",
+        "description": "A network error occurred. Check your connection and try again."
+      }
+    },
+    "new": {
+      "pageTitle": "Record a game",
+      "pageSubtitle": "Step-by-step wizard to record a play session",
+      "stepIndicatorLabel": "Step {current} of 3",
+      "step1Label": "Game",
+      "step2Label": "When",
+      "step3Label": "Scores",
+      "step1": {
+        "title": "Which game did you play?",
+        "subtitle": "Choose from your library. Scoring and players adapt to the game.",
+        "searchPlaceholder": "Search your library…",
+        "emptyLibraryHint": "↑ Select a game to continue",
+        "freeformLabel": "Game name (free text)",
+        "freeformPlaceholder": "e.g. Catan, Puerto Rico…",
+        "freeformHint": "Enter the game name if it's not in the catalog"
+      },
+      "step2": {
+        "title": "When did you play?",
+        "subtitle": "Date, start time and duration. Duration is optional.",
+        "dateLabel": "Date",
+        "timeLabel": "Start time",
+        "durationLabel": "Duration (optional)",
+        "locationLabel": "Location (optional)",
+        "locationPlaceholder": "e.g. Marco's place",
+        "notesLabel": "Notes (optional)",
+        "notesPlaceholder": "Add a comment about the session…",
+        "durationHint": "Approximate — used for total hours statistics"
+      },
+      "step3": {
+        "title": "Who played and what were the scores?",
+        "subtitle": "Enter scores: the winner is automatically the highest scorer.",
+        "playersLabel": "Players and scores ({count})",
+        "addPlayerPlaceholder": "Player name…",
+        "addPlayerButton": "Add player",
+        "winnerBadge": "Winner",
+        "noPlayersHint": "Add at least one player to save the game"
+      },
+      "preview": {
+        "sectionLabel": "Live preview · Play record",
+        "noGameSelected": "Select a game",
+        "rankingLabel": "Ranking · {count} players",
+        "tip": "The winner is determined by the highest score. Updates in real time as you fill in the form."
+      },
+      "actions": {
+        "next": "Next →",
+        "back": "← Back",
+        "save": "✓ Save game",
+        "saving": "Saving…",
+        "cancel": "Cancel",
+        "draft": "Draft"
+      },
+      "success": {
+        "toast": "Game recorded",
+        "toastDescription": "The game has been recorded successfully"
+      },
+      "error": {
+        "saveFailed": "Save failed",
+        "saveFailedDescription": "Unable to save the game. Please try again.",
+        "retry": "↻ Retry save"
+      },
+      "loading": {
+        "library": "Loading library…"
+      },
+      "a11y": {
+        "wizardLabel": "Game recording wizard",
+        "stepIndicatorLabel": "Recording progress",
+        "backButton": "Go back to previous step",
+        "closeButton": "Close",
+        "previewLabel": "Live preview play record",
+        "backToList": "Back to play records"
+      }
+    },
+    "index": {
+      "hero": {
+        "title": "Your games",
+        "subtitle": "History, outcomes and rankings of your recorded sessions.",
+        "label": "Play records",
+        "cta": "+ Record game",
+        "stats": {
+          "games": "games",
+          "wins": "wins",
+          "count": "titles",
+          "hours": "total"
+        }
+      },
+      "filters": {
+        "searchPlaceholder": "Search game or session...",
+        "statusAll": "All",
+        "statusInProgress": "● In progress",
+        "statusCompleted": "✓ Completed",
+        "statusPlanned": "📅 Planned",
+        "dropdownGame": "GAME",
+        "dropdownDate": "DATE",
+        "dropdownOutcome": "OUTCOME",
+        "dropdownSort": "SORT",
+        "viewList": "List · default",
+        "viewGrid": "Grid",
+        "toggleArchivedLabel": "Show archived"
+      },
+      "card": {
+        "duration": "Duration",
+        "players": "players",
+        "winner": "Winner",
+        "resume": "▶ Resume",
+        "launch": "Start now"
+      },
+      "empty": {
+        "firstRunTitle": "No games recorded",
+        "firstRunMessage": "Record your first game to start tracking scores, outcomes and group rankings.",
+        "firstRunCta": "+ Record first game",
+        "filterTitle": "No games match these filters",
+        "filterMessage": "Try removing some constraints or changing the time period.",
+        "resetButton": "↻ Reset filters"
+      },
+      "error": {
+        "title": "Load error",
+        "message": "Unable to fetch games. Check your connection.",
+        "retry": "↻ Retry"
+      },
+      "a11y": {
+        "searchRole": "search",
+        "resultsLive": "polite"
+      },
+      "headerTitle": "Play Records",
+      "viewStatsLabel": "View statistics"
+    },
+    "detail": {
+      "hero": {
+        "won": "🏆 Victory",
+        "tied": "🤝 Tie",
+        "cooperative": "🤝 Cooperative",
+        "inprogress": "In progress",
+        "planned": "📅 Planned",
+        "bannerWon": "{winnerName} wins {gameName}",
+        "bannerTied": "Tie at {score} points",
+        "bannerCooperative": "Cooperative game of {gameName}",
+        "bannerInProgress": "{gameName} in progress",
+        "bannerPlanned": "{gameName} planned",
+        "metaPlayers": "{count} players",
+        "ctaStart": "Start game"
+      },
+      "connectionBar": {
+        "label": "Links",
+        "playerCount": "{count} players",
+        "chatCount": "{count} messages",
+        "noChat": "No chat"
+      },
+      "kpi": {
+        "title": "Game statistics",
+        "duration": "Duration",
+        "topScore": "Top score",
+        "avg": "Average",
+        "spread": "Spread"
+      },
+      "classifica": {
+        "title": "Leaderboard",
+        "winnerBadge": "Winner"
+      },
+      "scoreBreakdown": {
+        "title": "Score breakdown",
+        "toggleLabel": "Show score breakdown"
+      },
+      "loading": "Loading...",
+      "notFound": "Game not found",
+      "retry": "Retry",
+      "backToList": "Back to games"
+    },
+    "edit": {
+      "pageTitle": "Edit play record",
+      "pageSubtitle": "Update the game session details",
+      "banner": {
+        "gateTitle": "Limited editing",
+        "gateDescription": "To change players or scores, delete and recreate the record",
+        "deleteAction": "Delete record"
+      },
+      "fields": {
+        "sessionDate": "Session date",
+        "location": "Location (optional)",
+        "notes": "Notes (optional)",
+        "game": "Game",
+        "players": "Players",
+        "scores": "Scores"
+      },
+      "delete": {
+        "title": "Delete record?",
+        "description": "This action cannot be undone. The record and all associated data will be deleted.",
+        "confirm": "Delete",
+        "cancel": "Cancel"
+      },
+      "success": {
+        "toast": "Record updated",
+        "toastDescription": "Your changes have been saved",
+        "deleteToast": "Record deleted",
+        "deleteToastDescription": "The record was deleted successfully"
+      },
+      "error": {
+        "loadFailed": "Could not load the record",
+        "updateFailed": "Update failed",
+        "deleteFailed": "Delete failed"
+      },
+      "a11y": {
+        "formLabel": "Edit play record form",
+        "readonlyFieldsLabel": "Non-editable fields",
+        "ariaReadonly": "This field is not editable"
+      },
+      "actions": {
+        "save": "Save changes",
+        "saving": "Saving…",
+        "delete": "Delete",
+        "cancel": "Cancel",
+        "back": "← Back"
+      }
     }
   }
 }

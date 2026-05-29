@@ -164,32 +164,20 @@ export type PlayHistoryResponse = z.infer<typeof PlayHistoryResponseSchema>;
 
 // ========== Form Schemas (Client-side validation) ==========
 
-export const SessionCreateFormSchema = z
-  .object({
-    gameType: z.enum(['catalog', 'freeform']),
-    gameId: z.string().uuid().optional(),
-    gameName: z.string().min(1, 'Game name is required').max(255),
-    sessionDate: z.date(),
-    visibility: PlayRecordVisibilitySchema,
-    groupId: z.string().uuid().optional(),
-    enableScoring: z.boolean().optional(),
-    scoringDimensions: z.array(z.string()).optional(),
-    dimensionUnits: z.record(z.string(), z.string()).optional(),
-    notes: z.string().max(2000).optional(),
-    location: z.string().max(255).optional(),
-  })
-  .refine(
-    data => {
-      // If catalog game selected, gameId must be provided
-      if (data.gameType === 'catalog' && !data.gameId) return false;
-      // If Group visibility, groupId must be provided
-      if (data.visibility === 'Group' && !data.groupId) return false;
-      return true;
-    },
-    {
-      message: 'Invalid game or group selection',
-    }
-  );
+export const SessionCreateFormSchema = z.object({
+  gameType: z.enum(['catalog', 'freeform']),
+  gameId: z.string().uuid().optional(),
+  // Allow empty string during multi-step navigation; per-step validation enforces non-empty.
+  gameName: z.string().max(255),
+  sessionDate: z.date(),
+  visibility: PlayRecordVisibilitySchema,
+  groupId: z.string().uuid().optional(),
+  enableScoring: z.boolean().optional(),
+  scoringDimensions: z.array(z.string()).optional(),
+  dimensionUnits: z.record(z.string(), z.string()).optional(),
+  notes: z.string().max(2000).optional(),
+  location: z.string().max(255).optional(),
+});
 export type SessionCreateForm = z.infer<typeof SessionCreateFormSchema>;
 
 export const PlayerAddFormSchema = z

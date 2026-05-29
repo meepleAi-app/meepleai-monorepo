@@ -23,6 +23,7 @@ import { notificationsHandlers } from './notifications.handlers';
 import { badgesHandlers } from './badges.handlers';
 import { gamebookHandlers } from './gamebook.handlers';
 import { gamebookGlossaryHandlers } from './gamebook-glossary.handlers';
+import { playRecordsHandlers } from './play-records.handlers';
 
 /**
  * All MSW request handlers
@@ -47,6 +48,7 @@ export const handlers = [
   ...badgesHandlers,
   ...gamebookHandlers,
   ...gamebookGlossaryHandlers,
+  ...playRecordsHandlers,
 ];
 
 // Re-export individual handler groups for selective use
@@ -98,3 +100,16 @@ export {
   setUpsertResponder,
   resetGlossaryResponder,
 } from './gamebook-glossary.handlers';
+export {
+  playRecordsHandlers,
+  resetPlayRecordsState,
+  getPlayRecordsState,
+  FIXTURE_WON,
+  FIXTURE_TIED,
+  FIXTURE_COOP,
+  FIXTURE_INPROGRESS,
+  FIXTURE_PLANNED,
+  FIXTURE_SPECTATOR,
+  FIXTURE_FREEFORM,
+  FIXTURE_MULTIDIM,
+} from './play-records.handlers';

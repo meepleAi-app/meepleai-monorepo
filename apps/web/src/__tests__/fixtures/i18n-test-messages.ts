@@ -39,7 +39,8 @@ export const twoFactorVerificationMessages = {
 
 export const twoFactorSetupMessages = {
   'auth.2fa.setupTitle': 'Set Up Two-Factor Authentication',
-  'auth.2fa.setupSubtitle': 'Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)',
+  'auth.2fa.setupSubtitle':
+    'Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)',
   'auth.2fa.step1': 'Step 1: Scan QR Code',
   'auth.2fa.step2': 'Step 2: Verify & Enable',
   'auth.2fa.cantScan': "Can't scan? Enter manually",
@@ -106,6 +107,187 @@ export const validationMessages = {
 } as const;
 
 // =============================================================================
+// Play Records Index (Task 1: #1488)
+// =============================================================================
+
+export const playRecordsIndexMessages = {
+  // Hero section
+  'playRecords.index.hero.title': 'Le tue partite',
+  'playRecords.index.hero.subtitle': 'Storico, esiti e classifiche delle partite registrate.',
+  'playRecords.index.hero.label': 'Play records',
+  'playRecords.index.hero.stats.games': 'partite',
+  'playRecords.index.hero.stats.wins': 'vittorie',
+  'playRecords.index.hero.stats.count': 'giochi',
+  'playRecords.index.hero.stats.hours': 'totali',
+  'playRecords.index.hero.cta': '+ Registra partita',
+
+  // Filters
+  'playRecords.index.filters.searchPlaceholder': 'Cerca partita o gioco...',
+  'playRecords.index.filters.statusAll': 'Tutte',
+  'playRecords.index.filters.statusInProgress': '● In corso',
+  'playRecords.index.filters.statusCompleted': '✓ Completate',
+  'playRecords.index.filters.statusPlanned': '📅 Pianificate',
+  'playRecords.index.filters.dropdownGame': 'GIOCO',
+  'playRecords.index.filters.dropdownDate': 'DATA',
+  'playRecords.index.filters.dropdownOutcome': 'ESITO',
+  'playRecords.index.filters.dropdownSort': 'SORT',
+  'playRecords.index.filters.viewList': 'List · default',
+  'playRecords.index.filters.viewGrid': 'Grid',
+  'playRecords.index.filters.toggleArchivedLabel': 'Mostra archiviate',
+
+  // Card list
+  'playRecords.index.card.duration': 'Durata',
+  'playRecords.index.card.players': 'giocatori',
+  'playRecords.index.card.winner': 'Vincitore',
+  'playRecords.index.card.resume': '▶ Riprendi',
+  'playRecords.index.card.launch': 'Avvia ora',
+
+  // Empty states
+  'playRecords.index.empty.firstRunTitle': 'Nessuna partita registrata',
+  'playRecords.index.empty.firstRunMessage':
+    'Registra la tua prima partita per tracciare punteggi, esiti e classifiche del gruppo.',
+  'playRecords.index.empty.firstRunCta': '+ Registra prima partita',
+  'playRecords.index.empty.filterTitle': 'Nessuna partita per questi filtri',
+  'playRecords.index.empty.filterMessage': 'Prova a rimuovere alcuni vincoli o cambiare periodo.',
+  'playRecords.index.empty.resetButton': '↻ Reset filtri',
+
+  // Error
+  'playRecords.index.error.title': 'Errore caricamento',
+  'playRecords.index.error.message': 'Impossibile recuperare le partite. Verifica la connessione.',
+  'playRecords.index.error.retry': '↻ Riprova',
+
+  // Accessibility
+  'playRecords.index.a11y.searchRole': 'search',
+  'playRecords.index.a11y.resultsLive': 'polite',
+} as const;
+
+// =============================================================================
+// Play Records — New Wizard i18n messages (Italian)
+// =============================================================================
+
+export const playRecordsNewMessages = {
+  pageTitle: 'Registra partita',
+  pageSubtitle: 'Wizard passo-passo per registrare una partita',
+  stepIndicatorLabel: 'Step {current} di 3',
+  step1Label: 'Gioco',
+  step2Label: 'Quando',
+  step3Label: 'Punteggi',
+
+  // Step 1 keys
+  'step1.title': 'Quale gioco avete giocato?',
+  'step1.subtitle': 'Scegli dalla tua libreria.',
+  'step1.searchPlaceholder': 'Cerca nella libreria…',
+  'step1.emptyLibraryHint': '↑ Seleziona un gioco per continuare',
+  'step1.freeformLabel': 'Nome gioco (testo libero)',
+  'step1.freeformPlaceholder': 'Es. Catan, Puerto Rico…',
+  'step1.freeformHint': 'Inserisci il nome del gioco se non è in catalogo',
+
+  // Step 2 keys
+  'step2.title': "Quando l'avete giocata?",
+  'step2.subtitle': 'Data, ora di inizio e durata.',
+  'step2.dateLabel': 'Data',
+  'step2.timeLabel': 'Ora di inizio',
+  'step2.durationLabel': 'Durata (opzionale)',
+  'step2.locationLabel': 'Luogo (opzionale)',
+  'step2.locationPlaceholder': 'Es. Casa di Marco',
+  'step2.notesLabel': 'Note (opzionale)',
+  'step2.notesPlaceholder': 'Aggiungi un commento sulla partita…',
+  'step2.durationHint': 'Approssimativa',
+
+  // Step 3 keys
+  'step3.title': 'Chi ha giocato e con che punteggio?',
+  'step3.subtitle': 'Inserisci i punteggi.',
+  'step3.playersLabel': 'Giocatori e punteggi ({count})',
+  'step3.addPlayerPlaceholder': 'Nome giocatore…',
+  'step3.addPlayerButton': 'Aggiungi giocatore',
+  'step3.winnerBadge': 'Vincitore',
+  'step3.noPlayersHint': 'Aggiungi almeno un giocatore',
+
+  // Preview
+  'preview.sectionLabel': 'Anteprima live · Record partita',
+  'preview.noGameSelected': 'Seleziona un gioco',
+  'preview.rankingLabel': 'Classifica · {count} giocatori',
+  'preview.tip': 'Il vincitore è calcolato dal punteggio più alto.',
+
+  // Actions
+  'actions.next': 'Avanti →',
+  'actions.back': '← Indietro',
+  'actions.save': '✓ Salva partita',
+  'actions.saving': 'Salvataggio…',
+  'actions.cancel': 'Annulla',
+  'actions.draft': 'Bozza',
+
+  // Success / error
+  'success.toast': 'Partita registrata',
+  'success.toastDescription': 'La partita è stata registrata correttamente',
+  'error.saveFailed': 'Salvataggio non riuscito',
+  'error.saveFailedDescription': 'Impossibile salvare la partita.',
+  'error.retry': '↻ Riprova salvataggio',
+  'loading.library': 'Caricamento libreria…',
+
+  // A11y
+  'a11y.wizardLabel': 'Wizard registrazione partita',
+  'a11y.stepIndicatorLabel': 'Avanzamento registrazione',
+  'a11y.backButton': 'Torna al passo precedente',
+  'a11y.closeButton': 'Chiudi',
+  'a11y.previewLabel': 'Anteprima live record partita',
+} as const;
+
+// =============================================================================
+// Play Records Edit Page Messages
+// =============================================================================
+
+export const playRecordsEditMessages = {
+  pageTitle: 'Modifica partita',
+  pageSubtitle: 'Aggiorna i dettagli della partita',
+
+  // K5 gate banner
+  'banner.gateTitle': 'Modifica limitata',
+  'banner.gateDescription': 'Per modificare giocatori o punteggi, elimina e ricrea la partita',
+  'banner.deleteAction': 'Cancella partita',
+
+  // Editable fields
+  'fields.sessionDate': 'Data partita',
+  'fields.location': 'Luogo (opzionale)',
+  'fields.notes': 'Note (opzionale)',
+
+  // Readonly fields
+  'fields.game': 'Gioco',
+  'fields.players': 'Giocatori',
+  'fields.scores': 'Punteggi',
+
+  // Delete confirmation
+  'delete.title': 'Elimina partita?',
+  'delete.description':
+    'Questa azione non può essere annullata. La partita e tutti i dati associati verranno eliminati.',
+  'delete.confirm': 'Elimina',
+  'delete.cancel': 'Annulla',
+
+  // Success / error
+  'success.toast': 'Partita aggiornata',
+  'success.toastDescription': 'Le modifiche sono state salvate',
+  'success.deleteToast': 'Partita eliminata',
+  'success.deleteToastDescription': 'La partita è stata eliminata correttamente',
+
+  'error.loadFailed': 'Impossibile caricare la partita',
+  'error.updateFailed': 'Aggiornamento non riuscito',
+  'error.deleteFailed': 'Eliminazione non riuscita',
+
+  // A11y
+  'a11y.formLabel': 'Modulo modifica partita',
+  'a11y.readonlyFieldsLabel': 'Campi non modificabili (K5 gate)',
+  'a11y.focusSessionDate': 'Focus iniziale sul campo data',
+  'a11y.ariaReadonly': 'Questo campo non è modificabile',
+
+  // Actions
+  'actions.save': 'Salva modifiche',
+  'actions.saving': 'Salvataggio…',
+  'actions.delete': 'Elimina',
+  'actions.cancel': 'Annulla',
+  'actions.back': '← Indietro',
+} as const;
+
+// =============================================================================
 // Settings Page Labels (Italian - hardcoded in component)
 // =============================================================================
 
@@ -154,6 +336,7 @@ export const allTestMessages: Record<string, string> = {
   ...commonMessages,
   ...validationMessages,
   ...settingsLabels,
+  ...playRecordsIndexMessages,
 };
 
 // =============================================================================
@@ -192,10 +375,10 @@ export function msg(key: AllMessageKeys): string {
  */
 export const settingsPatterns = {
   tabs: {
-    profile: /profil/i,     // Matches 'Profilo' (IT) and 'Profile' (EN)
+    profile: /profil/i, // Matches 'Profilo' (IT) and 'Profile' (EN)
     preferences: /prefer/i, // Matches 'Preferenze' (IT) and 'Preferences' (EN)
-    privacy: /privacy/i,    // Same in both languages
-    account: /account/i,    // Same in both languages
+    privacy: /privacy/i, // Same in both languages
+    account: /account/i, // Same in both languages
   },
   labels: {
     displayName: /nome visualizzato/i,

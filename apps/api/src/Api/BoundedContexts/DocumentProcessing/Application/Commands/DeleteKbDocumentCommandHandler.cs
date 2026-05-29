@@ -69,14 +69,9 @@ internal sealed class DeleteKbDocumentCommandHandler : ICommandHandler<DeleteKbD
             agent.UpdateKbCardIds(agent.KbCardIds.Where(kbId => kbId != id));
             await _agents.UpdateAsync(agent, cancellationToken).ConfigureAwait(false);
         }
-
-        if (consumingAgents.Count > 0)
-        {
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            _logger.LogInformation(
-                "Detached KB document {DocId} from {AgentCount} consuming agents",
-                id, consumingAgents.Count);
-        }
+        // No intermediate SaveChanges: the agent detach stays tracked and is flushed together
+        // with the document removal in the single SaveChangesAsync below, so detach + delete
+        // commit atomically in one transaction (also wrapped by [AtomicAudit]).
 
         // 3. pgvector embeddings — delete raw embeddings (pgvector_embeddings table)
         //    before removing the VectorDocument (to which they link).
@@ -97,7 +92,9 @@ internal sealed class DeleteKbDocumentCommandHandler : ICommandHandler<DeleteKbD
         var storageGameId = (doc.PrivateGameId ?? doc.SharedGameId)?.ToString() ?? string.Empty;
         _db.PdfDocuments.Remove(doc);
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        _logger.LogInformation("Deleted KB document {DocId}", id);
+        _logger.LogInformation(
+            "Deleted KB document {DocId} (detached from {AgentCount} consuming agents)",
+            id, consumingAgents.Count);
 
         // 5. Blob — best-effort physical file deletion
         await DeletePhysicalFileAsync(id.ToString(), storageGameId, cancellationToken).ConfigureAwait(false);

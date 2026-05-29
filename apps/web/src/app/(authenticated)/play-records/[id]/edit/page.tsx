@@ -1,74 +1,103 @@
 /**
- * Edit Play Record Page
+ * Edit Play Record Page — K5 gate readonly
  *
- * Edit session details (creator only).
- * Issue #3892: Play Records Frontend UI
+ * AC-4.1  Layout identico a `new` (riusa SessionCreateForm con prop `mode='edit'`)
+ * AC-4.2  Pre-fill: caricamento via `usePlayRecord(id)` + setValues su form
+ * AC-4.3  K5 gate readonly: ONLY sessionDate/notes/location editabili
+ * AC-4.4  Banner inline sopra form: "Per modificare..." + "Cancella partita" link
+ * AC-4.5  Submit → PUT /api/v1/play-records/{id} con UpdatePlayRecordRequest
+ * AC-4.6  Delete CTA: confirmation dialog → DELETE → redirect /play-records
+ * AC-4.7  K11 cache invalidation post-update/delete
+ * AC-4.8  K16 a11y: aria-readonly sui campi non editabili
+ *
+ * Issue #1488: Play Records reskin — Task 4
  */
 
 'use client';
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, Save } from 'lucide-react';
+import { useState } from 'react';
+
+import { useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
+import { EditGateBanner } from '@/components/play-records/EditGateBanner';
+import { SessionCreateForm } from '@/components/play-records/SessionCreateForm';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/forms/form';
 import { Button } from '@/components/ui/primitives/button';
-import { Input } from '@/components/ui/primitives/input';
-import { Textarea } from '@/components/ui/primitives/textarea';
 import {
+  type SessionCreateForm as SessionCreateFormData,
   UpdatePlayRecordRequestSchema,
-  type UpdatePlayRecordRequest,
 } from '@/lib/api/schemas/play-records.schemas';
-import { usePlayRecord, useUpdateRecord } from '@/lib/domain-hooks/usePlayRecords';
+import { usePlayRecord, useUpdateRecord, useDeleteRecord } from '@/lib/domain-hooks/usePlayRecords';
 
 export default function EditPlayRecordPage() {
   const params = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const t = useTranslations('playRecords.edit');
 
   const recordId = typeof params?.id === 'string' ? params.id : '';
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const { data: record, isLoading, error } = usePlayRecord(recordId);
-  const updateRecord = useUpdateRecord(recordId);
+  const updateMutation = useUpdateRecord(recordId);
+  const deleteMutation = useDeleteRecord(recordId);
 
-  const form = useForm<UpdatePlayRecordRequest>({
-    resolver: zodResolver(UpdatePlayRecordRequestSchema),
-    values: record
-      ? {
-          sessionDate: record.sessionDate,
-          notes: record.notes || undefined,
-          location: record.location || undefined,
-        }
-      : undefined,
-  });
-
-  const handleSubmit = form.handleSubmit(async data => {
+  const handleSubmit = async (data: SessionCreateFormData) => {
     try {
-      await updateRecord.mutateAsync(data);
-      toast.success('Session Updated', {
-        description: 'Your changes have been saved',
+      // Extract only the editable fields (K5 gate)
+      const updateData = {
+        sessionDate: data.sessionDate,
+        notes: data.notes,
+        location: data.location,
+      };
+
+      // Validate against schema
+      const validated = UpdatePlayRecordRequestSchema.parse(updateData);
+      await updateMutation.mutateAsync(validated);
+
+      // K11 cache invalidation
+      queryClient.invalidateQueries({ queryKey: ['play-records', 'detail', recordId] });
+      queryClient.invalidateQueries({ queryKey: ['play-records', 'history'] });
+      queryClient.invalidateQueries({ queryKey: ['play-records', 'stats'] });
+
+      toast.success(t('success.toast'), {
+        description: t('success.toastDescription'),
       });
       router.push(`/play-records/${recordId}`);
     } catch (error) {
-      toast.error('Error', {
-        description: error instanceof Error ? error.message : 'Failed to update session',
+      toast.error(t('error.updateFailed'), {
+        description: error instanceof Error ? error.message : 'Unknown error',
       });
     }
-  });
+  };
+
+  const handleDelete = async () => {
+    try {
+      await deleteMutation.mutateAsync();
+
+      // K11 cache invalidation
+      queryClient.invalidateQueries({ queryKey: ['play-records'] });
+
+      toast.success(t('success.deleteToast'), {
+        description: t('success.deleteToastDescription'),
+      });
+      router.push('/play-records');
+    } catch (error) {
+      toast.error(t('error.deleteFailed'), {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  };
 
   const handleCancel = () => {
     router.push(`/play-records/${recordId}`);
   };
 
+  // Loading state
   if (isLoading) {
     return (
       <div className="container mx-auto p-6">
@@ -82,22 +111,24 @@ export default function EditPlayRecordPage() {
     );
   }
 
+  // Error state
   if (error || !record) {
     return (
       <div className="container mx-auto p-6">
         <Alert variant="destructive">
           <AlertDescription>
-            {error instanceof Error ? error.message : 'Play record not found'}
+            {error instanceof Error ? error.message : t('error.loadFailed')}
           </AlertDescription>
         </Alert>
         <Button variant="outline" className="mt-4" onClick={() => router.push('/play-records')}>
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to History
+          {t('actions.back')}
         </Button>
       </div>
     );
   }
 
+  // Archived state
   if (record.status === 'Archived') {
     return (
       <div className="container mx-auto p-6">
@@ -108,91 +139,60 @@ export default function EditPlayRecordPage() {
         </Alert>
         <Button variant="outline" className="mt-4" onClick={handleCancel}>
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Details
+          {t('actions.back')}
         </Button>
       </div>
     );
   }
 
+  // AC-4.1: Layout identical to `new` using SessionCreateForm with mode='edit'
   return (
-    <div className="container mx-auto p-6 space-y-6 max-w-2xl">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={handleCancel} aria-label="Back to details">
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold">Edit Session</h1>
-          <p className="text-muted-foreground mt-1">{record.gameName}</p>
-        </div>
+    <div role="main" aria-label={t('a11y.formLabel')}>
+      {/* AC-4.4: Banner inline sopra form */}
+      <div className="px-4 py-6 md:px-6">
+        <EditGateBanner
+          onDelete={() => setShowDeleteConfirm(true)}
+          isDeleting={deleteMutation.isPending}
+        />
       </div>
 
-      {/* Edit Form */}
-      <Form {...form}>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <FormField
-            control={form.control}
-            name="sessionDate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Session Date</FormLabel>
-                <FormControl>
-                  <Input
-                    type="datetime-local"
-                    value={field.value ? new Date(field.value).toISOString().slice(0, 16) : ''}
-                    onChange={e => field.onChange(new Date(e.target.value).toISOString())}
-                    max={new Date().toISOString().slice(0, 16)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+      {/* AC-4.1: SessionCreateForm with mode='edit' + editable fields whitelist */}
+      <SessionCreateForm
+        mode="edit"
+        editableFields={new Set(['sessionDate', 'notes', 'location'])}
+        onSubmit={handleSubmit}
+        onCancel={handleCancel}
+        isSubmitting={updateMutation.isPending}
+      />
 
-          <FormField
-            control={form.control}
-            name="location"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Location (Optional)</FormLabel>
-                <FormControl>
-                  <Input placeholder="Where did you play?" {...field} value={field.value || ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+      {/* Delete confirmation dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-background rounded-lg shadow-lg max-w-sm w-full p-6 space-y-4">
+            <h2 className="text-lg font-bold text-foreground">{t('delete.title')}</h2>
+            <p className="text-sm text-muted-foreground">{t('delete.description')}</p>
 
-          <FormField
-            control={form.control}
-            name="notes"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Notes (Optional)</FormLabel>
-                <FormControl>
-                  <Textarea
-                    placeholder="Any memorable moments or notes..."
-                    rows={4}
-                    {...field}
-                    value={field.value || ''}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={handleCancel}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={updateRecord.isPending}>
-              <Save className="w-4 h-4 mr-2" />
-              {updateRecord.isPending ? 'Saving...' : 'Save Changes'}
-            </Button>
+            <div className="flex gap-3 justify-end pt-4 border-t border-border">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleteMutation.isPending}
+              >
+                {t('delete.cancel')}
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? `${t('delete.confirm')}…` : t('delete.confirm')}
+              </Button>
+            </div>
           </div>
-        </form>
-      </Form>
+        </div>
+      )}
     </div>
   );
 }

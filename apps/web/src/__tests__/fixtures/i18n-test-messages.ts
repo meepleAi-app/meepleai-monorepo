@@ -234,6 +234,60 @@ export const playRecordsNewMessages = {
 } as const;
 
 // =============================================================================
+// Play Records Edit Page Messages
+// =============================================================================
+
+export const playRecordsEditMessages = {
+  pageTitle: 'Modifica partita',
+  pageSubtitle: 'Aggiorna i dettagli della partita',
+
+  // K5 gate banner
+  'banner.gateTitle': 'Modifica limitata',
+  'banner.gateDescription': 'Per modificare giocatori o punteggi, elimina e ricrea la partita',
+  'banner.deleteAction': 'Cancella partita',
+
+  // Editable fields
+  'fields.sessionDate': 'Data partita',
+  'fields.location': 'Luogo (opzionale)',
+  'fields.notes': 'Note (opzionale)',
+
+  // Readonly fields
+  'fields.game': 'Gioco',
+  'fields.players': 'Giocatori',
+  'fields.scores': 'Punteggi',
+
+  // Delete confirmation
+  'delete.title': 'Elimina partita?',
+  'delete.description':
+    'Questa azione non può essere annullata. La partita e tutti i dati associati verranno eliminati.',
+  'delete.confirm': 'Elimina',
+  'delete.cancel': 'Annulla',
+
+  // Success / error
+  'success.toast': 'Partita aggiornata',
+  'success.toastDescription': 'Le modifiche sono state salvate',
+  'success.deleteToast': 'Partita eliminata',
+  'success.deleteToastDescription': 'La partita è stata eliminata correttamente',
+
+  'error.loadFailed': 'Impossibile caricare la partita',
+  'error.updateFailed': 'Aggiornamento non riuscito',
+  'error.deleteFailed': 'Eliminazione non riuscita',
+
+  // A11y
+  'a11y.formLabel': 'Modulo modifica partita',
+  'a11y.readonlyFieldsLabel': 'Campi non modificabili (K5 gate)',
+  'a11y.focusSessionDate': 'Focus iniziale sul campo data',
+  'a11y.ariaReadonly': 'Questo campo non è modificabile',
+
+  // Actions
+  'actions.save': 'Salva modifiche',
+  'actions.saving': 'Salvataggio…',
+  'actions.delete': 'Elimina',
+  'actions.cancel': 'Annulla',
+  'actions.back': '← Indietro',
+} as const;
+
+// =============================================================================
 // Settings Page Labels (Italian - hardcoded in component)
 // =============================================================================
 

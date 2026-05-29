@@ -229,3 +229,19 @@ export function useUpdateRecord(recordId: string) {
     },
   });
 }
+
+/**
+ * Delete a play record by ID (AC-4.6)
+ */
+export function useDeleteRecord(recordId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => playRecordsApi.deleteRecord(recordId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: playRecordsKeys.detail(recordId) });
+      queryClient.invalidateQueries({ queryKey: playRecordsKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: playRecordsKeys.statistics() });
+    },
+  });
+}

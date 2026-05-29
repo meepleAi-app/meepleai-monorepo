@@ -50,6 +50,10 @@ export interface SessionCreateFormProps {
   onSubmit: (data: SessionCreateFormData) => void;
   onCancel?: () => void;
   isSubmitting?: boolean;
+  /** AC-4.1: mode='edit' disables game/players/scores fields, shows K5 gate */
+  mode?: 'create' | 'edit';
+  /** AC-4.3: Whitelist of fields editable in edit mode (e.g., Set(['sessionDate', 'notes', 'location'])) */
+  editableFields?: Set<string>;
 }
 
 interface PlayerEntry {
@@ -278,9 +282,11 @@ interface Step1Props {
   form: ReturnType<typeof useForm<SessionCreateFormData>>;
   isSubmitting: boolean;
   t: (k: string) => string;
+  /** K5 gate: disable game field in edit mode */
+  isReadonly?: boolean;
 }
 
-function Step1Gioco({ form, isSubmitting, t }: Step1Props) {
+function Step1Gioco({ form, isSubmitting, t, isReadonly }: Step1Props) {
   const gameType = form.watch('gameType');
 
   return (
@@ -290,7 +296,7 @@ function Step1Gioco({ form, isSubmitting, t }: Step1Props) {
         <p className="text-sm text-muted-foreground mt-1">{t('step1.subtitle')}</p>
       </div>
 
-      {/* Game source toggle */}
+      {/* Game source toggle — AC-4.3 disabled in edit mode */}
       <FormField
         control={form.control}
         name="gameType"
@@ -301,16 +307,23 @@ function Step1Gioco({ form, isSubmitting, t }: Step1Props) {
                 onValueChange={field.onChange}
                 defaultValue={field.value}
                 className="flex gap-3"
+                disabled={isReadonly}
               >
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="catalog" id="catalog" />
-                  <Label htmlFor="catalog" className="cursor-pointer">
+                  <RadioGroupItem value="catalog" id="catalog" disabled={isReadonly} />
+                  <Label
+                    htmlFor="catalog"
+                    className={isReadonly ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
+                  >
                     Libreria
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="freeform" id="freeform" />
-                  <Label htmlFor="freeform" className="cursor-pointer">
+                  <RadioGroupItem value="freeform" id="freeform" disabled={isReadonly} />
+                  <Label
+                    htmlFor="freeform"
+                    className={isReadonly ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
+                  >
                     Freeform
                   </Label>
                 </div>
@@ -335,7 +348,7 @@ function Step1Gioco({ form, isSubmitting, t }: Step1Props) {
                     field.onChange(gameId);
                     form.setValue('gameName', gameName);
                   }}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isReadonly}
                   placeholder={t('step1.searchPlaceholder')}
                 />
               </FormControl>
@@ -353,6 +366,9 @@ function Step1Gioco({ form, isSubmitting, t }: Step1Props) {
               <FormControl>
                 <Input
                   placeholder={t('step1.freeformPlaceholder')}
+                  disabled={isReadonly}
+                  readOnly={isReadonly}
+                  aria-readonly={isReadonly}
                   aria-describedby="freeform-hint"
                   {...field}
                 />
@@ -460,6 +476,8 @@ interface Step3Props {
   onRemovePlayer: (id: string) => void;
   onUpdateScore: (id: string, score: string) => void;
   t: (k: string) => string;
+  /** K5 gate: disable player add/remove in edit mode */
+  isReadonly?: boolean;
 }
 
 function Step3Punteggi({
@@ -470,6 +488,7 @@ function Step3Punteggi({
   onRemovePlayer,
   onUpdateScore,
   t,
+  isReadonly,
 }: Step3Props) {
   const winnerIdx = (() => {
     let best = -Infinity;
@@ -524,14 +543,24 @@ function Step3Punteggi({
                   value={p.score}
                   onChange={e => onUpdateScore(p.id, e.target.value)}
                   placeholder="Pts"
-                  className="w-16 rounded-lg bg-muted border border-border px-2 py-1 text-center text-sm font-mono font-bold text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+                  disabled={isReadonly}
+                  readOnly={isReadonly}
+                  aria-readonly={isReadonly}
+                  className={cn(
+                    'w-16 rounded-lg bg-muted border border-border px-2 py-1 text-center text-sm font-mono font-bold text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30',
+                    isReadonly && 'opacity-60 cursor-not-allowed'
+                  )}
                   aria-label={`Punteggio di ${p.name}`}
                   data-testid={`player-score-${p.name}`}
                 />
                 <button
                   type="button"
                   onClick={() => onRemovePlayer(p.id)}
-                  className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:text-destructive"
+                  disabled={isReadonly}
+                  className={cn(
+                    'flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:text-destructive',
+                    isReadonly && 'opacity-40 cursor-not-allowed hover:text-muted-foreground'
+                  )}
                   aria-label={`Rimuovi ${p.name}`}
                 >
                   <X className="h-3.5 w-3.5" />
@@ -542,7 +571,7 @@ function Step3Punteggi({
         })}
       </div>
 
-      {/* Add player input */}
+      {/* Add player input — AC-4.3 disabled in edit mode */}
       <div className="flex gap-2">
         <input
           type="text"
@@ -554,14 +583,22 @@ function Step3Punteggi({
               onAddPlayer();
             }
           }}
+          disabled={isReadonly}
           placeholder={t('step3.addPlayerPlaceholder')}
-          className="flex-1 rounded-xl bg-muted border border-border px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+          className={cn(
+            'flex-1 rounded-xl bg-muted border border-border px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30',
+            isReadonly && 'opacity-50 cursor-not-allowed'
+          )}
           data-testid="new-player-input"
         />
         <button
           type="button"
           onClick={onAddPlayer}
-          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-muted border border-border text-foreground/80 hover:bg-muted/80"
+          disabled={isReadonly}
+          className={cn(
+            'flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-muted border border-border text-foreground/80 hover:bg-muted/80',
+            isReadonly && 'opacity-40 cursor-not-allowed hover:bg-muted'
+          )}
           aria-label={t('step3.addPlayerButton')}
           data-testid="add-player-btn"
         >
@@ -583,8 +620,10 @@ export function SessionCreateForm({
   onSubmit,
   onCancel,
   isSubmitting = false,
+  mode = 'create',
+  editableFields,
 }: SessionCreateFormProps) {
-  const t = useTranslations('playRecords.new');
+  const t = useTranslations(mode === 'edit' ? 'playRecords.edit' : 'playRecords.new');
   const isMobile = useMediaQuery(MOBILE_BREAKPOINT);
   const formId = useId();
 
@@ -669,8 +708,13 @@ export function SessionCreateForm({
   };
 
   // ── Step content ─────────────────────────────────────────────────────────
+  const isReadonlyMode = mode === 'edit';
   const renderStepContent = () => {
-    if (currentStep === 0) return <Step1Gioco form={form} isSubmitting={isSubmitting} t={t} />;
+    if (currentStep === 0) {
+      return (
+        <Step1Gioco form={form} isSubmitting={isSubmitting} t={t} isReadonly={isReadonlyMode} />
+      );
+    }
     if (currentStep === 1) return <Step2Quando form={form} t={t} />;
     return (
       <Step3Punteggi
@@ -681,6 +725,7 @@ export function SessionCreateForm({
         onRemovePlayer={removePlayer}
         onUpdateScore={updateScore}
         t={t}
+        isReadonly={isReadonlyMode}
       />
     );
   };

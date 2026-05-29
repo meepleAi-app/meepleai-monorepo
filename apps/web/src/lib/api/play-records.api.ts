@@ -169,4 +169,17 @@ export const playRecordsApi = {
     }
     return res.json();
   },
+
+  /**
+   * Delete a play record by ID (AC-4.6)
+   */
+  async deleteRecord(recordId: string): Promise<void> {
+    const res = await fetch(`${BASE_URL}/${recordId}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ message: 'Failed to delete record' }));
+      throw new Error(error.message || 'Failed to delete record');
+    }
+  },
 };

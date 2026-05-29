@@ -49,7 +49,15 @@ internal static class IntegrationServiceCollectionBuilder
         // DbContext with pgvector support + audit interceptor
         services.AddDbContext<MeepleAiDbContext>((sp, options) =>
         {
-            options.UseNpgsql(connectionString, o => o.UseVector());
+            options.UseNpgsql(connectionString, o =>
+            {
+                o.UseVector();
+                // PR2 follow-up to #1684: Testcontainers on Docker Desktop Windows produces
+                // transient EndOfStreamException/Npgsql connection drops under load. Without
+                // EnableRetryOnFailure, those surface as test failures instead of being retried.
+                // Pattern mirrors FrontendSdkTestFactory (PR #1684).
+                o.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(10), errorCodesToAdd: null);
+            });
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
             options.AddInterceptors(sp.GetRequiredService<AuditingSaveChangesInterceptor>());

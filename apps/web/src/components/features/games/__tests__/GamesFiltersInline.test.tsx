@@ -209,4 +209,30 @@ describe('GamesFiltersInline (Wave B.1)', () => {
     renderFilters({ query: '' });
     expect(screen.queryByRole('button', { name: 'Cancella la ricerca' })).toBeNull();
   });
+
+  // #1658: AdvancedFiltersDrawer "Più filtri" chip support
+  it('renders the "Più filtri" chip when onMoreFilters is provided', () => {
+    const onMoreFilters = vi.fn();
+    renderFilters({ onMoreFilters });
+    expect(screen.getByRole('button', { name: /Più filtri/ })).toBeInTheDocument();
+  });
+
+  it('calls onMoreFilters when the "Più filtri" chip is clicked', () => {
+    const onMoreFilters = vi.fn();
+    renderFilters({ onMoreFilters });
+    fireEvent.click(screen.getByRole('button', { name: /Più filtri/ }));
+    expect(onMoreFilters).toHaveBeenCalledTimes(1);
+  });
+
+  it('displays activeFiltersCount badge on the "Più filtri" chip when > 0', () => {
+    const onMoreFilters = vi.fn();
+    renderFilters({ onMoreFilters, activeFiltersCount: 3 });
+    const chip = screen.getByRole('button', { name: /Più filtri/ });
+    expect(chip).toHaveTextContent('Più filtri (3)');
+  });
+
+  it('does not display the "Più filtri" chip when onMoreFilters is undefined', () => {
+    renderFilters({ onMoreFilters: undefined });
+    expect(screen.queryByRole('button', { name: /Più filtri/ })).toBeNull();
+  });
 });

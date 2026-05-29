@@ -904,6 +904,24 @@ describe('LibraryHub — Phase 3b drawer + rail integration (#1593)', () => {
     expect(screen.queryByTestId('cross-entity-filters-more')).toBeNull();
   });
 
+  it('shows "Più filtri" chip on the games tab (#1658)', async () => {
+    const user = userEvent.setup();
+    installMatchMedia(true);
+    renderWithIntl(<LibraryHub />);
+    await user.click(screen.getByRole('tab', { name: /giochi/i }));
+    expect(screen.getByTestId('games-filters-more')).toBeInTheDocument();
+  });
+
+  it('clicking "Più filtri" chip on games tab opens the AdvancedFiltersDrawer (#1658)', async () => {
+    const user = userEvent.setup();
+    installMatchMedia(true);
+    renderWithIntl(<LibraryHub />);
+    await user.click(screen.getByRole('tab', { name: /giochi/i }));
+    const chip = screen.getByTestId('games-filters-more');
+    await user.click(chip);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
   it('shows "Più filtri" chip on the sessions tab', async () => {
     const user = userEvent.setup();
     renderWithIntl(<LibraryHub />);

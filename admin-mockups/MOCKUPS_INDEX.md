@@ -6,7 +6,7 @@
 >
 > **Audience**: developers looking for "which mockup file do I need for route X?".
 >
-> **Last updated**: 2026-05-23. Keep in sync with
+> **Last updated**: 2026-05-30. Keep in sync with
 > [`docs/for-developers/frontend/v2-migration-matrix.md`](../docs/for-developers/frontend/v2-migration-matrix.md)
 > Route Index section.
 
@@ -78,6 +78,7 @@
 | `sp4-kb-detail.html` | page-mock | `/knowledge-base/[id]` (deferred — G4 v3 pivot) |
 | `sp4-kb-hub.html` | page-mock | `/knowledge-base` |
 | `sp4-library-desktop.html` | page-mock | `/library` (Wave B.3 done) |
+| `sp4-library-mobile.html` | page-mock | `/library` (mobile <768px variant, SP8 brief 2026-05-30, IA semplificata 3 tab + overflow) |
 | `sp4-player-detail.html` | page-mock | `/players/[id]`, `/players/[id]/{achievements,games,sessions,stats}` |
 | `sp4-players-index.html` | page-mock | `/players` |
 | `sp4-session-live-parts.jsx` | component-mock | Sub-components of `/sessions/[id]/live` Foundation sub-PR |
@@ -137,7 +138,7 @@
 | `librogame-runthrough-game-onboarding.html` | page-mock | `/library/[gameId]` (libro variant — prereq gate, gap-coverage 2026-05-12, PR #1056) |
 | `librogame-runthrough-glossary-editor.html` | component-mock | Glossary editor (mirror of sp6 jsx) |
 | `librogame-runthrough-library-search.html` | component-mock | In-library search overlay (not page-level) |
-| `librogame-runthrough-play-session.html` | page-mock | `/library/[gameId]/play/[campaignId]` |
+| `librogame-runthrough-play-session.html` | page-mock | `/library/[gameId]/play/[campaignId]` (4 stati v1 congelati + 3 stati SP8 companion: state-05 diary, state-06 paragrafi-drawer, state-07 end-campaign, brief 2026-05-30; jsx twin nuovo con 3 lab interattivi) |
 | `librogame-runthrough-quota-credits.html` | component-mock | Quota/credits overlay (global) |
 | `librogame-runthrough-resume-picker.html` | page-mock | `/library/[gameId]/play` |
 | `librogame-runthrough-session-end.html` | page-mock | `/sessions/live/[sessionId]` (end-state) |

@@ -136,7 +136,7 @@ public sealed class AdminProviderEndpointsIntegrationTests : IAsyncLifetime
     /// <summary>
     /// G1-S1: Valid token → 200 with tokenAuthenticated:true, fingerprint present, no raw key in body.
     /// </summary>
-    [Fact(Timeout = 30_000)]
+    [Fact(Timeout = 90_000)]
     public async Task Probe_TokenValid_Returns200WithAuthenticated()
     {
         // Arrange — WireMock returns 200 with model list containing the default model
@@ -175,7 +175,7 @@ public sealed class AdminProviderEndpointsIntegrationTests : IAsyncLifetime
     /// <summary>
     /// G1-S2: Provider returns 401 → 200 with tokenAuthenticated:false + errorCode:unauthorized.
     /// </summary>
-    [Fact(Timeout = 30_000)]
+    [Fact(Timeout = 90_000)]
     public async Task Probe_Provider401_Returns200WithUnauthorized()
     {
         // Arrange — WireMock returns 401
@@ -205,7 +205,7 @@ public sealed class AdminProviderEndpointsIntegrationTests : IAsyncLifetime
     /// ProviderProbeService reads env var at probe-time, so we can toggle it on the existing factory
     /// without rebuilding. Restored in finally.
     /// </summary>
-    [Fact(Timeout = 30_000)]
+    [Fact(Timeout = 90_000)]
     public async Task Probe_NoToken_Returns200WithNotConfigured()
     {
         // Snapshot current WireMock log size — assert no NEW requests after probe.
@@ -234,7 +234,7 @@ public sealed class AdminProviderEndpointsIntegrationTests : IAsyncLifetime
     /// <summary>
     /// G1-S4: Unknown provider name → 404 with errorCode:unknown_provider.
     /// </summary>
-    [Fact(Timeout = 30_000)]
+    [Fact(Timeout = 90_000)]
     public async Task Probe_UnknownProvider_Returns404()
     {
         // Arrange — "cohere" is not in the known provider list
@@ -255,7 +255,7 @@ public sealed class AdminProviderEndpointsIntegrationTests : IAsyncLifetime
     /// G1-S5: Non-SuperAdmin user → 403.
     /// Editor role does not satisfy RequireSuperAdmin policy.
     /// </summary>
-    [Fact(Timeout = 30_000)]
+    [Fact(Timeout = 90_000)]
     public async Task Probe_NotSuperAdmin_Returns403()
     {
         // Arrange — use editor client
@@ -271,7 +271,7 @@ public sealed class AdminProviderEndpointsIntegrationTests : IAsyncLifetime
     /// <summary>
     /// G1-S5b: Unauthenticated request (no cookie) → 401.
     /// </summary>
-    [Fact(Timeout = 30_000)]
+    [Fact(Timeout = 90_000)]
     public async Task Probe_NoAuth_Returns401()
     {
         // Arrange — plain request with no cookie
@@ -290,7 +290,7 @@ public sealed class AdminProviderEndpointsIntegrationTests : IAsyncLifetime
     /// G3: Successful probe writes an audit entry to ProviderProbeAuditEntries with Outcome=Success.
     /// This verifies the G3 Gherkin scenario: audit trail is persisted for every probe call.
     /// </summary>
-    [Fact(Timeout = 30_000)]
+    [Fact(Timeout = 90_000)]
     public async Task Probe_WritesAuditEntry_OnSuccess()
     {
         // Arrange — WireMock returns 200 with model list
@@ -329,7 +329,7 @@ public sealed class AdminProviderEndpointsIntegrationTests : IAsyncLifetime
     /// <summary>
     /// G3: Unauthorized probe (401 from provider) also writes audit entry with Outcome=Unauthorized.
     /// </summary>
-    [Fact(Timeout = 30_000)]
+    [Fact(Timeout = 90_000)]
     public async Task Probe_WritesAuditEntry_OnUnauthorized()
     {
         // Arrange

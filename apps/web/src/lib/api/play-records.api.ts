@@ -18,7 +18,8 @@ import type {
   UpdatePlayRecordRequest,
 } from '@/lib/api/schemas/play-records.schemas';
 
-const BASE_URL = '/api/v1/play-records';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+const BASE_URL = `${API_BASE}/api/v1/play-records`;
 
 /**
  * Play Records API Client

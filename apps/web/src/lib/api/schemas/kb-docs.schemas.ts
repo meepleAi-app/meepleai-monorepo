@@ -31,6 +31,8 @@ export type ProcessingState = z.infer<typeof ProcessingStateSchema>;
 /**
  * UserKbDocDto — lightweight cross-game user-scoped projection (BE-1).
  * Does NOT include `filePath`, `fileSizeBytes`, `documentType`, etc. — see issue #1592.
+ * The `updatedAt` field (issue #1645) is explicit BE-side: equals ProcessedAt ?? UploadedAt,
+ * mirroring the canonical sort key from the handler.
  */
 export const UserKbDocDtoSchema = z.object({
   id: z.string().uuid(),
@@ -41,6 +43,7 @@ export const UserKbDocDtoSchema = z.object({
   pageCount: z.number().int().positive().nullable(),
   processedAt: z.string().datetime({ offset: true }).nullable(),
   uploadedAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }),
 });
 
 export type UserKbDocDto = z.infer<typeof UserKbDocDtoSchema>;

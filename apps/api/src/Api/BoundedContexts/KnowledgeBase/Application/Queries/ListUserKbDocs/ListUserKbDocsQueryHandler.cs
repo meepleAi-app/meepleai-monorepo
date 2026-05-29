@@ -147,7 +147,8 @@ internal sealed class ListUserKbDocsQueryHandler
             ProcessingState: r.ProcessingState,
             PageCount: r.PageCount,
             ProcessedAt: r.ProcessedAt,
-            UploadedAt: r.UploadedAt)).ToList();
+            UploadedAt: r.UploadedAt,
+            UpdatedAt: r.ProcessedAt ?? r.UploadedAt)).ToList();
 
         return new KbDocsListResponse(
             Items: items,

@@ -25,17 +25,22 @@ const dtoBase: UserKbDocDto = {
   pageCount: 24,
   processedAt: '2026-05-28T11:00:00+00:00',
   uploadedAt: '2026-05-28T09:00:00+00:00',
+  updatedAt: '2026-05-28T11:00:00+00:00',
 };
 
 describe('toKbDoc (adapter)', () => {
-  it('uses processedAt as updatedAt when present (K1.1 last-activity)', () => {
+  it('passes through BE updatedAt when ProcessedAt is present (#1645 canonical BE-side)', () => {
     const result = toKbDoc(dtoBase);
-    expect(result.updatedAt).toBe('2026-05-28T11:00:00+00:00');
+    expect(result.updatedAt).toBe(dtoBase.updatedAt);
   });
 
-  it('falls back to uploadedAt when processedAt is null (K1.1)', () => {
-    const result = toKbDoc({ ...dtoBase, processedAt: null });
-    expect(result.updatedAt).toBe('2026-05-28T09:00:00+00:00');
+  it('passes through BE updatedAt when ProcessedAt is null (BE returns uploadedAt as updatedAt) (#1645)', () => {
+    const result = toKbDoc({
+      ...dtoBase,
+      processedAt: null,
+      updatedAt: dtoBase.uploadedAt,
+    });
+    expect(result.updatedAt).toBe(dtoBase.uploadedAt);
   });
 
   it('preserves the other fields unchanged', () => {

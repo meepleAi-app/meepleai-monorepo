@@ -63,7 +63,7 @@ internal sealed class GetLatestIngestionLogByDocumentIdQueryHandler
         return new ProcessingJobDetailDto(
             job.Id,
             job.PdfDocumentId,
-            job.PdfDocument.FileName,
+            job.PdfDocument?.FileName ?? string.Empty, // Defensive: PdfDocumentId is a non-nullable FK, but guard against ORM edge cases.
             job.UserId,
             job.Status,
             job.Priority,

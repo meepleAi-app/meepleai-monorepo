@@ -153,6 +153,9 @@ internal static class IntegrationWebApplicationFactory
                         options.EnableSensitiveDataLogging();
                         options.ConfigureWarnings(warnings =>
                             warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+                        // Issue #1628: align with production (PERF-06, InfrastructureServiceExtensions.cs:162)
+                        // so silent-write bugs (writers that mutate without AsTracking/Update) surface here.
+                        options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
                         // SP5 Admin Security S1 T3: attach the audit interceptor for HTTP integration tests.
                         options.AddInterceptors(serviceProvider.GetRequiredService<AuditingSaveChangesInterceptor>());
                     });

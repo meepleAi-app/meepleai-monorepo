@@ -70,6 +70,12 @@ export interface AdminConfirmationDialogProps {
 
   /** Whether to show loading state on confirm button */
   isLoading?: boolean;
+
+  /**
+   * Phrase the user must type to enable confirm on Level2.
+   * Defaults to 'CONFIRM' when omitted (backward-compatible).
+   */
+  confirmPhrase?: string;
 }
 
 /**
@@ -86,11 +92,13 @@ export function AdminConfirmationDialog({
   confirmText,
   cancelText = 'Annulla',
   isLoading = false,
+  confirmPhrase,
 }: AdminConfirmationDialogProps) {
   const [typedConfirmation, setTypedConfirmation] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isLevel2 = level === AdminConfirmationLevel.Level2;
-  const isConfirmDisabled = isLevel2 && typedConfirmation !== 'CONFIRM';
+  const requiredPhrase = confirmPhrase ?? 'CONFIRM';
+  const isConfirmDisabled = isLevel2 && typedConfirmation !== requiredPhrase;
 
   // Reset typed confirmation and submission state when dialog opens
   useEffect(() => {
@@ -119,7 +127,9 @@ export function AdminConfirmationDialog({
   };
 
   const Icon = isLevel2 ? ShieldAlert : AlertTriangle;
-  const iconColor = isLevel2 ? 'text-red-600 dark:text-red-500' : 'text-yellow-600 dark:text-yellow-500';
+  const iconColor = isLevel2
+    ? 'text-red-600 dark:text-red-500'
+    : 'text-yellow-600 dark:text-yellow-500';
   const defaultConfirmText = isLevel2 ? 'Conferma Azione Critica' : 'Conferma';
 
   return (
@@ -148,22 +158,26 @@ export function AdminConfirmationDialog({
         {isLevel2 && (
           <div className="space-y-2 pt-2">
             <Label htmlFor="confirm-input" className="text-sm font-medium">
-              Digita <span className="font-mono font-bold text-red-600 dark:text-red-500">CONFIRM</span> per procedere:
+              Digita{' '}
+              <span className="font-mono font-bold text-red-600 dark:text-red-500">
+                {requiredPhrase}
+              </span>{' '}
+              per procedere:
             </Label>
             <Input
               id="confirm-input"
               type="text"
               value={typedConfirmation}
-              onChange={(e) => setTypedConfirmation(e.target.value)}
-              placeholder="CONFIRM"
+              onChange={e => setTypedConfirmation(e.target.value)}
+              placeholder={requiredPhrase}
               className="font-mono"
               autoFocus
               disabled={isLoading || isSubmitting}
-              aria-label="Type CONFIRM to proceed with critical action"
+              aria-label={`Type ${requiredPhrase} to proceed with critical action`}
             />
-            {typedConfirmation && typedConfirmation !== 'CONFIRM' && (
+            {typedConfirmation && typedConfirmation !== requiredPhrase && (
               <p className="text-xs text-red-600 dark:text-red-500">
-                La parola deve corrispondere esattamente: CONFIRM
+                La parola deve corrispondere esattamente: {requiredPhrase}
               </p>
             )}
           </div>

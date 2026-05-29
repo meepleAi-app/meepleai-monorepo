@@ -27,7 +27,7 @@ export async function fetchKbDocIngestionLog(docId: string): Promise<IngestionLo
 }
 
 /**
- * POST /api/v1/admin/queue/jobs/{jobId}/retry
+ * POST /api/v1/admin/queue/{jobId}/retry
  * Re-enqueues a failed processing job. Backend handler is RetryJobCommand.
  * Issue #1650.
  */

@@ -469,6 +469,8 @@ export function LibraryHub(): ReactElement {
                 view={gamesView}
                 onViewChange={setGamesView}
                 resultCount={gamesFiltered.length}
+                onMoreFilters={() => setDrawerOpen(true)}
+                activeFiltersCount={activeFiltersCount}
               />
               {gamesEffectiveKind === 'default' ? (
                 <GamesResultsGrid entries={gamesFiltered} view={gamesView as GamesResultsView} />

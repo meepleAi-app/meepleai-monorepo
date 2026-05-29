@@ -66,6 +66,10 @@ export interface GamesFiltersInlineProps {
   readonly resultCount: number;
   readonly compact?: boolean;
   readonly className?: string;
+  /** #1658: opens the AdvancedFiltersDrawer. When undefined, the chip is hidden. */
+  readonly onMoreFilters?: () => void;
+  /** #1658: number of active drawer filters to badge on the chip (0 = no badge). */
+  readonly activeFiltersCount?: number;
 }
 
 const STATUS_KEYS: readonly GamesStatusKey[] = ['all', 'owned', 'wishlist', 'played'];
@@ -87,6 +91,8 @@ export function GamesFiltersInline({
   resultCount,
   compact = false,
   className,
+  onMoreFilters,
+  activeFiltersCount = 0,
 }: GamesFiltersInlineProps): ReactElement {
   const [localQuery, setLocalQuery] = useState(query);
   const debouncedQuery = useDebounce(localQuery, SEARCH_DEBOUNCE_MS);
@@ -169,6 +175,22 @@ export function GamesFiltersInline({
         className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4"
         data-slot="games-filters-controls"
       >
+        {onMoreFilters ? (
+          <button
+            type="button"
+            data-testid="games-filters-more"
+            onClick={onMoreFilters}
+            className={clsx(
+              'rounded-full border px-3 py-1 text-sm font-medium transition-colors',
+              activeFiltersCount > 0
+                ? 'border-primary bg-primary/10 text-foreground'
+                : 'border-border bg-background text-muted-foreground hover:text-foreground'
+            )}
+          >
+            Più filtri{activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ''}
+          </button>
+        ) : null}
+
         <div
           role="tablist"
           aria-label={labels.status.label}

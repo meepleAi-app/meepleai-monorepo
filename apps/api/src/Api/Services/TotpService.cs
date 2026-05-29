@@ -298,7 +298,7 @@ internal class TotpService : ITotpService
         // Delete all backup codes (used and unused)
         var allBackupCodes = await _dbContext.UserBackupCodes
             .Where(bc => bc.UserId == userId)
-            .ToListAsync().ConfigureAwait(false);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
         _dbContext.UserBackupCodes.RemoveRange(allBackupCodes);
 
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

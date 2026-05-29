@@ -1,5 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 
 import { KbDocDetailPanel } from '../KbDocDetailPanel';
 import type {
@@ -7,6 +9,38 @@ import type {
   KbDocEnvelope,
   KbChunkSummary,
 } from '@/lib/api/schemas/kb-chunks.schemas';
+
+// ── next/navigation mock (mutable per-test via mockSearchParams) ──────────────
+let mockSearchParams: URLSearchParams = new URLSearchParams('');
+
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => mockSearchParams,
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  usePathname: () => '/admin/knowledge-base',
+}));
+
+// ── next/link mock (KbDocDetailTabs renders Link) ─────────────────────────────
+vi.mock('next/link', () => ({
+  default: ({
+    href,
+    children,
+    ...rest
+  }: {
+    href: string;
+    children: ReactNode;
+    [k: string]: unknown;
+  }) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
+}));
+
+// ── admin-kb-ingestion mock (IngestionPanel uses fetchKbDocIngestionLog) ───────
+vi.mock('@/lib/api/admin-kb-ingestion', () => ({
+  fetchKbDocIngestionLog: vi.fn().mockResolvedValue(null),
+  retryIngestionJob: vi.fn().mockResolvedValue(undefined),
+}));
 
 const mockUseKbDocDetail = vi.fn();
 const mockUseKbChunksList = vi.fn();
@@ -17,6 +51,14 @@ vi.mock('@/hooks/queries/useKbDocDetail', () => ({
 vi.mock('@/hooks/queries/useKbChunksList', () => ({
   useKbChunksList: (options: unknown) => mockUseKbChunksList(options),
 }));
+
+// ── QueryClientProvider wrapper (needed for IngestionPanel tab) ───────────────
+function makeWrapper() {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={qc}>{children}</QueryClientProvider>
+  );
+}
 
 const readyDoc: KbDocDetail = {
   id: 'doc-1',
@@ -60,6 +102,7 @@ const chunk2: KbChunkSummary = {
 
 describe('KbDocDetailPanel', () => {
   beforeEach(() => {
+    mockSearchParams = new URLSearchParams(''); // default: overview tab
     mockUseKbDocDetail.mockReset();
     mockUseKbChunksList.mockReset();
   });
@@ -139,5 +182,46 @@ describe('KbDocDetailPanel', () => {
     render(<KbDocDetailPanel docId={null} />);
     expect(mockUseKbDocDetail).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
     expect(mockUseKbChunksList).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
+  });
+
+  // ── Tab routing tests ─────────────────────────────────────────────────────
+
+  it('renders Overview content (hero + chunks) when no ?tab param', () => {
+    // mockSearchParams defaults to '' (overview) from beforeEach
+    mockUseKbDocDetail.mockReturnValue({ data: readyEnvelope, isLoading: false });
+    mockUseKbChunksList.mockReturnValue({
+      data: { pages: [{ items: [chunk1], nextCursor: null, totalCount: 1 }] },
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      fetchNextPage: vi.fn(),
+    });
+    render(<KbDocDetailPanel docId="doc-1" />, { wrapper: makeWrapper() });
+    // Hero heading should be visible (overview content)
+    expect(screen.getByRole('heading', { name: /Wingspan-Oceania-EN\.pdf/ })).toBeInTheDocument();
+    // Tabs nav should be present
+    expect(screen.getByRole('navigation', { name: /sezione documento/i })).toBeInTheDocument();
+    // IngestionPanel should NOT be rendered
+    expect(screen.queryByTestId('ingestion-panel-empty')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('ingestion-panel-loading')).not.toBeInTheDocument();
+  });
+
+  it('renders IngestionPanel when ?tab=ingestion', async () => {
+    mockSearchParams = new URLSearchParams('tab=ingestion');
+    mockUseKbDocDetail.mockReturnValue({ data: readyEnvelope, isLoading: false });
+    mockUseKbChunksList.mockReturnValue({
+      data: undefined,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      fetchNextPage: vi.fn(),
+    });
+    render(<KbDocDetailPanel docId="doc-1" />, { wrapper: makeWrapper() });
+    // Tabs nav should be present
+    expect(screen.getByRole('navigation', { name: /sezione documento/i })).toBeInTheDocument();
+    // IngestionPanel empty state should appear (fetchKbDocIngestionLog resolves null)
+    await waitFor(() => expect(screen.getByTestId('ingestion-panel-empty')).toBeInTheDocument());
+    // Overview hero should NOT be visible
+    expect(
+      screen.queryByRole('heading', { name: /Wingspan-Oceania-EN\.pdf/ })
+    ).not.toBeInTheDocument();
   });
 });

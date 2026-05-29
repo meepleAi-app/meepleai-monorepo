@@ -3704,7 +3704,7 @@
       },
       "mostPlayed": {
         "title": "Giochi più giocati",
-        "meta": "top {{count}}",
+        "meta": "top {count}",
         "plays": "partite"
       },
       "winByGame": {

@@ -3651,7 +3651,7 @@
       },
       "mostPlayed": {
         "title": "Most Played Games",
-        "meta": "top {{count}}",
+        "meta": "top {count}",
         "plays": "plays"
       },
       "winByGame": {

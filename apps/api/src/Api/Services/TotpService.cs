@@ -248,7 +248,11 @@ internal class TotpService : ITotpService
     /// </summary>
     public async Task DisableTwoFactorAsync(Guid userId, string password, string totpOrBackupCode, CancellationToken cancellationToken = default)
     {
-        var user = await _dbContext.Users.FindAsync(userId).ConfigureAwait(false);
+        // Issue #888 + #1628: AsTracking() required because DbContext default is NoTracking (PERF-06).
+        var user = await _dbContext.Users
+            .AsTracking()
+            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken)
+            .ConfigureAwait(false);
         if (user == null)
         {
             _logger.LogWarning("2FA disable failed: User {UserId} not found", userId);
@@ -286,14 +290,10 @@ internal class TotpService : ITotpService
             throw new UnauthorizedAccessException("Invalid verification code");
         }
 
-        // Disable 2FA and clear all data. See BUG-FIX comment in GenerateSetupAsync — Update()
-        // is required because the DbContext default is NoTracking (PERF-06). UserBackupCodes
-        // changes via Add/RemoveRange are tracked automatically (they touch the change-tracker
-        // through the DbSet API), so only the user mutation needs the explicit Update().
+        // Disable 2FA and clear all data.
         user.IsTwoFactorEnabled = false;
         user.TotpSecretEncrypted = null;
         user.TwoFactorEnabledAt = null;
-        _dbContext.Users.Update(user);
 
         // Delete all backup codes (used and unused)
         var allBackupCodes = await _dbContext.UserBackupCodes
@@ -301,7 +301,7 @@ internal class TotpService : ITotpService
             .ToListAsync().ConfigureAwait(false);
         _dbContext.UserBackupCodes.RemoveRange(allBackupCodes);
 
-        await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         await _auditService.LogAsync(userId.ToString(), "TwoFactorDisable", "TwoFactor", userId.ToString(), "Success",
             "User disabled 2FA").ConfigureAwait(false);

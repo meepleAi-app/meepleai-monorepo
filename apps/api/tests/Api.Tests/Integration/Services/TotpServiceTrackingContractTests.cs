@@ -140,4 +140,64 @@ public sealed class TotpServiceTrackingContractTests : IAsyncLifetime
             reloaded.TwoFactorEnabledAt.Should().NotBeNull();
         }
     }
+
+    [Fact]
+    public async Task DisableTwoFactorAsync_ClearsSecretAndFlag_UnderNoTrackingDefault()
+    {
+        // Arrange: seed user, fully enable 2FA.
+        var user = await SeedUserAsync();
+
+        string secret;
+        using (var setupScope = _factory.Services.CreateScope())
+        {
+            var totp = setupScope.ServiceProvider.GetRequiredService<ITotpService>();
+            var setup = await totp.GenerateSetupAsync(user.Id, user.Email);
+            secret = setup.Secret;
+        }
+
+        var totpComputer = new OtpNet.Totp(OtpNet.Base32Encoding.ToBytes(secret), step: 30);
+        var enableCode = totpComputer.ComputeTotp();
+
+        using (var enableScope = _factory.Services.CreateScope())
+        {
+            var totp = enableScope.ServiceProvider.GetRequiredService<ITotpService>();
+            (await totp.EnableTwoFactorAsync(user.Id, enableCode)).Should().BeTrue();
+        }
+
+        // Disable requires password + a fresh TOTP code. Compute a new code (the previous one
+        // is consumed by the replay-prevention nonce check).
+        await Task.Delay(TimeSpan.FromSeconds(31)); // cross a TOTP step boundary
+        var disableCode = totpComputer.ComputeTotp();
+
+        // We need a known password on the seeded user — UPDATE it inline.
+        const string password = "TestPassword123!";
+        var hasher = _factory.Services.GetRequiredService<IPasswordHashingService>();
+        using (var pwScope = _factory.Services.CreateScope())
+        {
+            var db = pwScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var u = await db.Users.AsTracking().FirstAsync(x => x.Id == user.Id);
+            u.PasswordHash = hasher.HashSecret(password);
+            await db.SaveChangesAsync();
+        }
+
+        // Act
+        using (var actScope = _factory.Services.CreateScope())
+        {
+            var totp = actScope.ServiceProvider.GetRequiredService<ITotpService>();
+            await totp.DisableTwoFactorAsync(user.Id, password, disableCode);
+        }
+
+        // Assert: secret + flag cleared, backup codes removed.
+        using (var assertScope = _factory.Services.CreateScope())
+        {
+            var db = assertScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var reloaded = await db.Users.AsNoTracking().FirstAsync(u => u.Id == user.Id);
+            reloaded.IsTwoFactorEnabled.Should().BeFalse();
+            reloaded.TotpSecretEncrypted.Should().BeNull();
+            reloaded.TwoFactorEnabledAt.Should().BeNull();
+
+            var remainingCodes = await db.UserBackupCodes.CountAsync(c => c.UserId == user.Id);
+            remainingCodes.Should().Be(0);
+        }
+    }
 }

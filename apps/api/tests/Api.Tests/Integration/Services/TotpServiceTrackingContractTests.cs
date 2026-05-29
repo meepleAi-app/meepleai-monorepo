@@ -6,6 +6,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using OtpNet;
 using Testcontainers.PostgreSql;
 using Xunit;
 
@@ -100,6 +101,43 @@ public sealed class TotpServiceTrackingContractTests : IAsyncLifetime
             var reloaded = await db.Users.AsNoTracking().FirstAsync(u => u.Id == user.Id);
             reloaded.TotpSecretEncrypted.Should().NotBeNull(
                 "GenerateSetupAsync must persist the encrypted secret to the users table");
+        }
+    }
+
+    [Fact]
+    public async Task EnableTwoFactorAsync_PersistsEnabledFlag_UnderNoTrackingDefault()
+    {
+        // Arrange: seed user, run setup to produce a valid secret + persisted encrypted secret.
+        var user = await SeedUserAsync();
+
+        string secret;
+        using (var setupScope = _factory.Services.CreateScope())
+        {
+            var totp = setupScope.ServiceProvider.GetRequiredService<ITotpService>();
+            var setup = await totp.GenerateSetupAsync(user.Id, user.Email);
+            secret = setup.Secret;
+        }
+
+        // Compute a valid TOTP code for the secret using OtpNet (matches the service impl).
+        var totpComputer = new Totp(Base32Encoding.ToBytes(secret), step: 30);
+        var code = totpComputer.ComputeTotp();
+
+        // Act: invoke EnableTwoFactorAsync.
+        bool result;
+        using (var actScope = _factory.Services.CreateScope())
+        {
+            var totp = actScope.ServiceProvider.GetRequiredService<ITotpService>();
+            result = await totp.EnableTwoFactorAsync(user.Id, code);
+        }
+
+        // Assert
+        result.Should().BeTrue("the freshly computed TOTP code must verify");
+        using (var assertScope = _factory.Services.CreateScope())
+        {
+            var db = assertScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var reloaded = await db.Users.AsNoTracking().FirstAsync(u => u.Id == user.Id);
+            reloaded.IsTwoFactorEnabled.Should().BeTrue();
+            reloaded.TwoFactorEnabledAt.Should().NotBeNull();
         }
     }
 }

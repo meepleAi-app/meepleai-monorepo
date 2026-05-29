@@ -136,7 +136,11 @@ internal class TotpService : ITotpService
     /// </summary>
     public async Task<bool> EnableTwoFactorAsync(Guid userId, string totpCode, CancellationToken cancellationToken = default)
     {
-        var user = await _dbContext.Users.FindAsync(userId).ConfigureAwait(false);
+        // Issue #888 + #1628: AsTracking() required because DbContext default is NoTracking (PERF-06).
+        var user = await _dbContext.Users
+            .AsTracking()
+            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken)
+            .ConfigureAwait(false);
         if (user == null)
         {
             _logger.LogWarning("2FA enable failed: User {UserId} not found", userId);
@@ -161,12 +165,10 @@ internal class TotpService : ITotpService
             return false;
         }
 
-        // Enable 2FA. See BUG-FIX comment in GenerateSetupAsync — Update() is required because
-        // the DbContext default is NoTracking (PERF-06).
+        // Enable 2FA.
         user.IsTwoFactorEnabled = true;
         user.TwoFactorEnabledAt = _timeProvider.GetUtcNow().UtcDateTime;
-        _dbContext.Users.Update(user);
-        await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         await _auditService.LogAsync(userId.ToString(), "TwoFactorEnable", "TwoFactor", userId.ToString(), "Success",
             "User enabled 2FA").ConfigureAwait(false);

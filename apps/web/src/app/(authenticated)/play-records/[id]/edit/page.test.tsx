@@ -58,16 +58,12 @@ vi.mock('@/lib/domain-hooks/usePlayRecords', () => ({
   }),
 }));
 
-// SessionCreateForm — mock the form component
+// SessionCreateForm — mock the form component.
+// The real K5 gate is driven solely by `mode`: in edit mode, game (Step 1) and
+// players/scores (Step 3) become readonly; sessionDate/notes/location (Step 2)
+// always stay editable. The mock mirrors that contract.
 vi.mock('@/components/play-records/SessionCreateForm', () => ({
-  SessionCreateForm: ({
-    mode,
-    editableFields,
-    initialValues,
-    onSubmit,
-    onCancel,
-    isSubmitting,
-  }: any) => (
+  SessionCreateForm: ({ mode, onSubmit, onCancel, isSubmitting }: any) => (
     <form
       data-testid="session-form"
       onSubmit={e => {
@@ -80,23 +76,11 @@ vi.mock('@/components/play-records/SessionCreateForm', () => ({
         });
       }}
     >
-      <input
-        data-testid="sessionDate-field"
-        type="datetime-local"
-        disabled={mode === 'edit' && !editableFields?.has('sessionDate')}
-        aria-readonly={mode === 'edit' && !editableFields?.has('sessionDate')}
-      />
-      <input
-        data-testid="location-field"
-        disabled={mode === 'edit' && !editableFields?.has('location')}
-        aria-readonly={mode === 'edit' && !editableFields?.has('location')}
-      />
-      <textarea
-        data-testid="notes-field"
-        disabled={mode === 'edit' && !editableFields?.has('notes')}
-        aria-readonly={mode === 'edit' && !editableFields?.has('notes')}
-      />
-      {/* Mock readonly fields (game, players, scores) */}
+      {/* Editable fields (Step 2) — never disabled */}
+      <input data-testid="sessionDate-field" type="datetime-local" />
+      <input data-testid="location-field" />
+      <textarea data-testid="notes-field" />
+      {/* Readonly fields (game / players / scores) — disabled in edit mode */}
       <input data-testid="game-field" disabled={mode === 'edit'} aria-readonly={mode === 'edit'} />
       <input
         data-testid="players-field"

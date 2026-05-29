@@ -159,7 +159,6 @@ export default function EditPlayRecordPage() {
       {/* AC-4.1: SessionCreateForm with mode='edit' + editable fields whitelist */}
       <SessionCreateForm
         mode="edit"
-        editableFields={new Set(['sessionDate', 'notes', 'location'])}
         onSubmit={handleSubmit}
         onCancel={handleCancel}
         isSubmitting={updateMutation.isPending}

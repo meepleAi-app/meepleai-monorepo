@@ -50,10 +50,12 @@ export interface SessionCreateFormProps {
   onSubmit: (data: SessionCreateFormData) => void;
   onCancel?: () => void;
   isSubmitting?: boolean;
-  /** AC-4.1: mode='edit' disables game/players/scores fields, shows K5 gate */
+  /**
+   * AC-4.1/AC-4.3: mode='edit' enforces the K5 gate — game (Step 1) and
+   * players/scores (Step 3) become readonly, leaving only sessionDate/notes/
+   * location editable (Step 2). The gate is driven entirely by `mode`.
+   */
   mode?: 'create' | 'edit';
-  /** AC-4.3: Whitelist of fields editable in edit mode (e.g., Set(['sessionDate', 'notes', 'location'])) */
-  editableFields?: Set<string>;
 }
 
 interface PlayerEntry {
@@ -621,7 +623,6 @@ export function SessionCreateForm({
   onCancel,
   isSubmitting = false,
   mode = 'create',
-  editableFields,
 }: SessionCreateFormProps) {
   const t = useTranslations(mode === 'edit' ? 'playRecords.edit' : 'playRecords.new');
   const isMobile = useMediaQuery(MOBILE_BREAKPOINT);

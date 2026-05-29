@@ -39,7 +39,8 @@ export const twoFactorVerificationMessages = {
 
 export const twoFactorSetupMessages = {
   'auth.2fa.setupTitle': 'Set Up Two-Factor Authentication',
-  'auth.2fa.setupSubtitle': 'Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)',
+  'auth.2fa.setupSubtitle':
+    'Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)',
   'auth.2fa.step1': 'Step 1: Scan QR Code',
   'auth.2fa.step2': 'Step 2: Verify & Enable',
   'auth.2fa.cantScan': "Can't scan? Enter manually",
@@ -106,6 +107,61 @@ export const validationMessages = {
 } as const;
 
 // =============================================================================
+// Play Records Index (Task 1: #1488)
+// =============================================================================
+
+export const playRecordsIndexMessages = {
+  // Hero section
+  'playRecords.index.hero.title': 'Le tue partite',
+  'playRecords.index.hero.subtitle': 'Storico, esiti e classifiche delle partite registrate.',
+  'playRecords.index.hero.label': 'Play records',
+  'playRecords.index.hero.stats.games': 'partite',
+  'playRecords.index.hero.stats.wins': 'vittorie',
+  'playRecords.index.hero.stats.count': 'giochi',
+  'playRecords.index.hero.stats.hours': 'totali',
+  'playRecords.index.hero.cta': '+ Registra partita',
+
+  // Filters
+  'playRecords.index.filters.searchPlaceholder': 'Cerca partita o gioco...',
+  'playRecords.index.filters.statusAll': 'Tutte',
+  'playRecords.index.filters.statusInProgress': '● In corso',
+  'playRecords.index.filters.statusCompleted': '✓ Completate',
+  'playRecords.index.filters.statusPlanned': '📅 Pianificate',
+  'playRecords.index.filters.dropdownGame': 'GIOCO',
+  'playRecords.index.filters.dropdownDate': 'DATA',
+  'playRecords.index.filters.dropdownOutcome': 'ESITO',
+  'playRecords.index.filters.dropdownSort': 'SORT',
+  'playRecords.index.filters.viewList': 'List · default',
+  'playRecords.index.filters.viewGrid': 'Grid',
+  'playRecords.index.filters.toggleArchivedLabel': 'Mostra archiviate',
+
+  // Card list
+  'playRecords.index.card.duration': 'Durata',
+  'playRecords.index.card.players': 'giocatori',
+  'playRecords.index.card.winner': 'Vincitore',
+  'playRecords.index.card.resume': '▶ Riprendi',
+  'playRecords.index.card.launch': 'Avvia ora',
+
+  // Empty states
+  'playRecords.index.empty.firstRunTitle': 'Nessuna partita registrata',
+  'playRecords.index.empty.firstRunMessage':
+    'Registra la tua prima partita per tracciare punteggi, esiti e classifiche del gruppo.',
+  'playRecords.index.empty.firstRunCta': '+ Registra prima partita',
+  'playRecords.index.empty.filterTitle': 'Nessuna partita per questi filtri',
+  'playRecords.index.empty.filterMessage': 'Prova a rimuovere alcuni vincoli o cambiare periodo.',
+  'playRecords.index.empty.resetButton': '↻ Reset filtri',
+
+  // Error
+  'playRecords.index.error.title': 'Errore caricamento',
+  'playRecords.index.error.message': 'Impossibile recuperare le partite. Verifica la connessione.',
+  'playRecords.index.error.retry': '↻ Riprova',
+
+  // Accessibility
+  'playRecords.index.a11y.searchRole': 'search',
+  'playRecords.index.a11y.resultsLive': 'polite',
+} as const;
+
+// =============================================================================
 // Settings Page Labels (Italian - hardcoded in component)
 // =============================================================================
 
@@ -154,6 +210,7 @@ export const allTestMessages: Record<string, string> = {
   ...commonMessages,
   ...validationMessages,
   ...settingsLabels,
+  ...playRecordsIndexMessages,
 };
 
 // =============================================================================
@@ -192,10 +249,10 @@ export function msg(key: AllMessageKeys): string {
  */
 export const settingsPatterns = {
   tabs: {
-    profile: /profil/i,     // Matches 'Profilo' (IT) and 'Profile' (EN)
+    profile: /profil/i, // Matches 'Profilo' (IT) and 'Profile' (EN)
     preferences: /prefer/i, // Matches 'Preferenze' (IT) and 'Preferences' (EN)
-    privacy: /privacy/i,    // Same in both languages
-    account: /account/i,    // Same in both languages
+    privacy: /privacy/i, // Same in both languages
+    account: /account/i, // Same in both languages
   },
   labels: {
     displayName: /nome visualizzato/i,

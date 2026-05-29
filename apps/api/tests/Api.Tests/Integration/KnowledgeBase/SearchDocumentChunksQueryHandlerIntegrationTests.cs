@@ -273,4 +273,94 @@ public sealed class SearchDocumentChunksQueryHandlerIntegrationTests : IAsyncLif
         result.Results.Should().BeEmpty();
         result.ErrorMessage.Should().NotBeNull();
     }
+
+    /// <summary>
+    /// Regression for #1345: IndexBatchAsync (exercised via IEmbeddingRepository.AddBatchAsync)
+    /// must not reference the dropped <c>games</c> table. Before the fix, the resolver SQL did
+    /// <c>LEFT JOIN games</c> and threw <c>relation "games" does not exist</c> against the
+    /// post-Phase-2d schema. Verifies indexing succeeds and resolves game_id from shared_game_id.
+    /// </summary>
+    [Fact(Timeout = 30000)]
+    public async Task IndexBatchAsync_ResolvesGameId_WithoutGamesTable()
+    {
+        const int Dims = 768;
+
+        var userId = Guid.NewGuid();
+        _dbContext!.Users.Add(new UserEntity
+        {
+            Id = userId,
+            Email = $"idx-batch-{userId:N}@test.local",
+            CreatedAt = DateTime.UtcNow
+        });
+
+        var sharedGame = new SharedGameEntity
+        {
+            Id = Guid.NewGuid(),
+            Title = "IndexBatch Test Game",
+            YearPublished = 2024,
+            Description = string.Empty,
+            ImageUrl = string.Empty,
+            ThumbnailUrl = string.Empty,
+            MinPlayers = 1,
+            MaxPlayers = 4,
+            PlayingTimeMinutes = 60,
+            MinAge = 10,
+            Status = 1,
+            CreatedBy = userId,
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.SharedGames.Add(sharedGame);
+
+        var pdfId = Guid.NewGuid();
+        _dbContext.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = pdfId,
+            FileName = "idx-batch-test.pdf",
+            FilePath = "/tmp/idx-batch-test.pdf",
+            FileSizeBytes = 1024,
+            ContentType = "application/pdf",
+            UploadedByUserId = userId,
+            UploadedAt = DateTime.UtcNow,
+            ProcessingState = "Ready",
+            ProcessedAt = DateTime.UtcNow,
+            SharedGameId = sharedGame.Id
+        });
+
+        var vectorDocId = Guid.NewGuid();
+        _dbContext.VectorDocuments.Add(new VectorDocumentEntity
+        {
+            Id = vectorDocId,
+            GameId = sharedGame.Id,
+            SharedGameId = sharedGame.Id,
+            PdfDocumentId = pdfId,
+            ChunkCount = 1,
+            TotalCharacters = 50,
+            IndexingStatus = "completed",
+            IndexedAt = DateTime.UtcNow,
+            EmbeddingModel = "test-model",
+            EmbeddingDimensions = Dims
+        });
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        var repo = _serviceProvider!.GetRequiredService<IEmbeddingRepository>();
+        var embedding = new Embedding(
+            Guid.NewGuid(), vectorDocId, "Predator activation rules",
+            new Vector(MakeVector(Dims, firstComponent: 1f)),
+            "test-model", chunkIndex: 0, pageNumber: 1);
+
+        // Act — must NOT throw `relation "games" does not exist`.
+        var act = async () => await repo.AddBatchAsync(
+            new List<Embedding> { embedding }, TestCancellationToken);
+        await act.Should().NotThrowAsync();
+
+        // Assert the row was written with game_id resolved from shared_game_id.
+        var conn = _dbContext.Database.GetDbConnection();
+        if (conn.State != System.Data.ConnectionState.Open)
+            await conn.OpenAsync(TestCancellationToken);
+        await using var cmd = (NpgsqlCommand)conn.CreateCommand();
+        cmd.CommandText = "SELECT game_id FROM pgvector_embeddings WHERE vector_document_id = @vd";
+        cmd.Parameters.AddWithValue("@vd", vectorDocId);
+        var resolvedGameId = (Guid?)await cmd.ExecuteScalarAsync(TestCancellationToken);
+        resolvedGameId.Should().Be(sharedGame.Id);
+    }
 }

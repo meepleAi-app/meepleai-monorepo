@@ -52,6 +52,12 @@ public sealed class GlobalKbSearchEndpointTests : IAsyncLifetime
     private string _aliceToken = null!;
     private string _bobToken = null!;
 
+    // Captures every gameIds list the handler passes to IMultiGameHybridSearchService.
+    // Used by the RBAC integration test to assert that the chain
+    // (handler → GetAccessibleGameIdsAsync → search) excludes non-accessible games
+    // BEFORE the search runs — not vacuously after enrichment drops everything.
+    private readonly System.Collections.Concurrent.ConcurrentBag<IReadOnlyList<Guid>> _capturedGameIds = new();
+
     private const string Endpoint = "/api/v1/knowledge-base/search/global";
 
     public GlobalKbSearchEndpointTests(SharedTestcontainersFixture fixture)
@@ -197,6 +203,8 @@ public sealed class GlobalKbSearchEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Bob_CannotSee_AliceOwnedPrivateGame()
     {
+        _capturedGameIds.Clear();
+
         var request = TestSessionHelper.CreateAuthenticatedRequest(
             HttpMethod.Post,
             Endpoint,
@@ -212,11 +220,24 @@ public sealed class GlobalKbSearchEndpointTests : IAsyncLifetime
 
         payload.Should().NotBeNull();
 
-        // Bob has no library and gameBobOwned is private, so he only sees public games.
-        // No result should come from Alice's private owned game.
+        // RBAC enforcement happens BEFORE the vector search: GetAccessibleGameIdsAsync
+        // resolves Bob's accessible games (public ∪ owned-by-Bob, NO Alice-owned),
+        // and only those are passed to IMultiGameHybridSearchService.SearchAsync.
+        // We verify the captured gameIds — asserting on payload.Results would be
+        // vacuously true because the mock's synthetic pdfDocIds never enrich.
+        _capturedGameIds.Should().NotBeEmpty(
+            "the handler must invoke the cross-game search for Bob (public game is accessible)");
+
+        _capturedGameIds.Should().AllSatisfy(ids =>
+            ids.Should().NotContain(
+                _gameAliceOwnedId,
+                "RBAC must exclude Alice's privately-owned game from Bob's search inputs (EC-5 leak prevention)"));
+
+        // Defense in depth: even if some path leaked a result, the post-enrichment Results
+        // must not contain Alice's owned game.
         payload!.Results.Should().NotContain(
             r => r.GameId == _gameAliceOwnedId,
-            "Bob must not see chunks from Alice's privately-owned game (RBAC leak, EC-5)");
+            "Bob must not see chunks from Alice's privately-owned game (EC-5)");
     }
 
     // ── AC-3: User with 0 accessible games → 200 empty ───────────────────────
@@ -424,6 +445,15 @@ public sealed class GlobalKbSearchEndpointTests : IAsyncLifetime
                 It.IsAny<SearchMode>(),
                 It.IsAny<double>(),
                 It.IsAny<CancellationToken>()))
+            .Callback<string, IReadOnlyList<Guid>, int, SearchMode, double, CancellationToken>(
+                (_, gameIds, _, _, _, _) =>
+                {
+                    // Capture the gameIds the handler asked the search to run on. This is what
+                    // RBAC enforcement actually controls — verifying the post-enrichment Results
+                    // list is empty would be a vacuous assertion when the mock returns synthetic
+                    // pdfDocIds that the enrichment join can never resolve.
+                    _capturedGameIds.Add(gameIds);
+                })
             .ReturnsAsync((
                 string _,
                 IReadOnlyList<Guid> gameIds,
@@ -432,11 +462,14 @@ public sealed class GlobalKbSearchEndpointTests : IAsyncLifetime
                 double minScore,
                 CancellationToken _) =>
             {
-                // Return one synthetic result per accessible game (up to limit)
+                // Return one synthetic result per accessible game (up to limit).
+                // Note: pdfDocId is a fresh Guid that the handler's enrichment join cannot
+                // resolve — Results will end up empty regardless of RBAC. RBAC assertions
+                // must therefore inspect `_capturedGameIds`, not `payload.Results`.
                 var results = new List<MultiGameSearchResultItem>();
                 foreach (var gameId in gameIds.Take(limit))
                 {
-                    var fakePdfDocId = Guid.NewGuid().ToString(); // will not enrich — that's fine for RBAC tests
+                    var fakePdfDocId = Guid.NewGuid().ToString();
                     results.Add(new MultiGameSearchResultItem
                     {
                         GameId = gameId,

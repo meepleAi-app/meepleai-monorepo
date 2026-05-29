@@ -64,7 +64,7 @@ Surface = **hero buttons** (mockup-faithful). Phasing decision = **Phase 1 + Pha
 | A3 | Delete | NEW `DELETE /api/v1/admin/pdfs/{docId}` reusing `DeletePdfCommand` | ⚠️ endpoint + agent-ref handling |
 | B3 | Export chunks JSON | NEW `GET /api/v1/admin/kb/docs/{docId}/chunks/export` (full content) | ⚠️ new endpoint |
 | B5 | Used-by link | FU-2 `/admin/kb/docs/{docId}/agents` | ✅ done |
-| C | Similarity-search in doc | extend `VectorSemanticSearchQuery` with `DocId`/`PdfId` filter | ⚠️ query + endpoint param |
+| C | Similarity-search in doc | resolve `VectorDocuments.Where(PdfDocumentId==docId)` → (vectorDocId, gameId); `SearchByVector…(gameId, vec, topK, minScore, documentIds:[vectorDocId])`. **Score gap**: adapter discards similarity → needs additive score-returning method | ⚠️ new admin query/endpoint + score-returning repo/adapter method |
 
 ## 5. Functional requirements (testable — Adzic/Wiegers)
 
@@ -116,7 +116,8 @@ Then the full chunk set (id, position, headingPath, page, full content) download
 ```
 Given a ready doc and a query "predator activation"
 When admin types in the in-panel search box
-Then a semantic search scoped to THIS doc's chunks runs (vector-search + docId filter),
+Then a semantic search scoped to THIS doc's chunks runs (resolve VectorDocument + gameId from
+  PdfDocumentId, then SearchByVectorWithScores with documentIds:[vectorDocId]),
   results show score + page + snippet, sorted by score desc;
   a score-threshold filter (e.g. ≥0.7) narrows results;
   empty result set shows an empty state; 0-chunk doc disables the search box.
@@ -180,3 +181,39 @@ net-new backend (B2 corpus-leak risk) → spun out. Productive tension: mockup-f
 (hero actions unreachable on failed docs) → resolved by O-1 restructure. Wiegers/Adzic: FRs needed
 testable Given/When/Then → §5. Crispin: edge cases (delete referenced doc, reindex-while-processing,
 missing blob, 0-chunk search) → §8. Gregory: O-2/O-3 were blocking → investigated; O-2→D-1, O-3 informational.
+
+## Addendum — recon corrections (2026-05-29, parallel research agents)
+
+Implementation recon corrected/added several facts that reshape the plan:
+
+- **Delete (FR-3) — exact mechanics**: New `DeleteKbDocumentCommand(Guid DocId)` + handler,
+  `[AuditableAction("KbDocumentDelete","Document",Level=2)] [AtomicAudit]` → `AuditLoggingBehavior`
+  auto-writes the audit row. Agent cascade (D-1=b): `IAgentDefinitionRepository.GetByConsumedDocumentAsync(docId)`
+  → for each, `agent.UpdateKbCardIds(agent.KbCardIds.Where(id => id != docId))` + `UpdateAsync`.
+  EF cascade (`OnDelete(Cascade)` on `TextChunk.PdfDocumentId` + `VectorDocument.PdfDocumentId`) auto-removes
+  chunks + vector-doc on `PdfDocuments.Remove`. **Latent gap to fix**: raw `pgvector_embeddings`
+  (keyed by vector_document_id, NO FK) is NOT cascaded — handler must call
+  `IVectorStore/PgVectorStoreAdapter.DeleteByVectorDocumentIdAsync` explicitly. Endpoint:
+  `DELETE /api/v1/admin/pdfs/{docId}` in `AdminPdfManagementEndpoints.cs` (group already admin-gated,
+  hosts reindex). Distinct from the existing `DELETE /api/v1/pdf/{id}` (no cascade/audit).
+- **Similarity-search (FR-5) — two corrections**: (1) `SearchByVectorAsync.documentIds` filters on
+  **VectorDocumentId, not PdfDocumentId**, and requires **gameId** → resolve both from
+  `VectorDocuments.Where(v => v.PdfDocumentId == docId)` first (404 if not indexed). (2) **Score gap**:
+  `PgVectorStoreAdapter.SearchAsync` computes `1-(vec<=>q)` but discards it (only list order survives);
+  the result `Embedding` has no score field. Mockup shows score badges → add an **additive**
+  `SearchByVectorWithScoresAsync` (repo + adapter) returning `(Embedding, double score)` so existing RAG
+  callers are untouched. Query embedding via `IEmbeddingService.GenerateEmbeddingAsync(text)` →
+  `new Vector(result.Embeddings[0])`. New endpoint `POST /api/v1/admin/kb/docs/{docId}/chunks/search`.
+- **Export (FR-4)**: `TextChunkEntity.Content` holds full text; existing `GetKbChunks` is snippet-truncated
+  (200 chars) + paginated → new `ExportDocumentChunksQuery(docId)` over `TextChunks.Where(PdfDocumentId==docId)
+  .OrderBy(ChunkIndex)`. Endpoint `GET /api/v1/admin/kb/docs/{docId}/chunks/export`.
+- **Locked-restructure (O-1) — 423 carries no DTO**: under 423 `useKbDocDetail` returns `doc=null`
+  (only `processingStatus`). For a failed doc, Re-index needs only docId, but **Delete's typed-confirm
+  needs the filename** which is unavailable. Resolution: extend the 423 response with a partial DTO
+  (`id`, `title`/`fileName`, `processingStatus`) — the hook comment already anticipates this — so the
+  slim hero + filename typed-confirm work for failed/processing docs.
+- **FE reuse**: `api.pdf.reindexDocument(docId)` already targets `POST /admin/pdfs/{id}/reindex` (FR-1 ready);
+  `api.pdf.getPdfDownloadUrl(docId)` builds the download URL — cookie-session auth → plain
+  `<a href download>` works (FR-2, no fetch+blob). Typed-confirm = extend `AdminConfirmationDialog`
+  (`ui/admin/admin-confirmation-dialog.tsx`) with an optional `confirmPhrase` prop (default `'CONFIRM'`).
+  Toast = `sonner`. Invalidate `kbDocDetailKeys.byId`, `kbChunksListKeys`, `kbGameDocumentKeys.byGame`.

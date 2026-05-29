@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using OtpNet;
-using Testcontainers.PostgreSql;
 using Xunit;
 
 namespace Api.Tests.Integration.Services;
@@ -21,26 +20,31 @@ namespace Api.Tests.Integration.Services;
 ///
 /// Fixture: a NoTracking-aligned WebApplicationFactory (matches prod PERF-06).
 /// </summary>
+[Collection("Integration-GroupD")]
 [Trait("Category", "Integration")]
 [Trait("BoundedContext", "Authentication")]
 public sealed class TotpServiceTrackingContractTests : IAsyncLifetime
 {
-    private PostgreSqlContainer _postgres = null!;
+    private readonly SharedTestcontainersFixture _fixture;
     private WebApplicationFactory<Program> _factory = null!;
+
+    public TotpServiceTrackingContractTests(SharedTestcontainersFixture fixture)
+    {
+        _fixture = fixture;
+    }
 
     public async ValueTask InitializeAsync()
     {
-        _postgres = new PostgreSqlBuilder()
-            .WithImage("pgvector/pgvector:pg16")
-            .Build();
-        await _postgres.StartAsync();
+        // Issue #1628 follow-up: use SharedTestcontainersFixture instead of a dedicated container.
+        var dbName = $"test_totp_{Guid.NewGuid():N}";
+        var connStr = await _fixture.CreateIsolatedDatabaseAsync(dbName).ConfigureAwait(false);
 
-        _factory = IntegrationWebApplicationFactory.Create(_postgres.GetConnectionString());
+        _factory = IntegrationWebApplicationFactory.Create(connStr);
 
-        // Apply migrations
+        // Apply migrations on the freshly-created empty database (pre-flight Q2).
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await db.Database.MigrateAsync();
+        await db.Database.MigrateAsync().ConfigureAwait(false);
     }
 
     public async ValueTask DisposeAsync()
@@ -48,10 +52,6 @@ public sealed class TotpServiceTrackingContractTests : IAsyncLifetime
         if (_factory is not null)
         {
             await _factory.DisposeAsync();
-        }
-        if (_postgres is not null)
-        {
-            await _postgres.DisposeAsync();
         }
     }
 

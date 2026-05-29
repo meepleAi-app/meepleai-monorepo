@@ -20,13 +20,13 @@ import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
 import { EditGateBanner } from '@/components/play-records/EditGateBanner';
 import { SessionCreateForm } from '@/components/play-records/SessionCreateForm';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
+import { useTranslation } from '@/hooks/useTranslation';
 import {
   type SessionCreateForm as SessionCreateFormData,
   UpdatePlayRecordRequestSchema,
@@ -37,7 +37,7 @@ export default function EditPlayRecordPage() {
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const t = useTranslations('playRecords.edit');
+  const { t } = useTranslation();
 
   const recordId = typeof params?.id === 'string' ? params.id : '';
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -64,12 +64,12 @@ export default function EditPlayRecordPage() {
       queryClient.invalidateQueries({ queryKey: ['play-records', 'history'] });
       queryClient.invalidateQueries({ queryKey: ['play-records', 'stats'] });
 
-      toast.success(t('success.toast'), {
-        description: t('success.toastDescription'),
+      toast.success(t('playRecords.edit.success.toast'), {
+        description: t('playRecords.edit.success.toastDescription'),
       });
       router.push(`/play-records/${recordId}`);
     } catch (error) {
-      toast.error(t('error.updateFailed'), {
+      toast.error(t('playRecords.edit.error.updateFailed'), {
         description: error instanceof Error ? error.message : 'Unknown error',
       });
     }
@@ -82,12 +82,12 @@ export default function EditPlayRecordPage() {
       // K11 cache invalidation
       queryClient.invalidateQueries({ queryKey: ['play-records'] });
 
-      toast.success(t('success.deleteToast'), {
-        description: t('success.deleteToastDescription'),
+      toast.success(t('playRecords.edit.success.deleteToast'), {
+        description: t('playRecords.edit.success.deleteToastDescription'),
       });
       router.push('/play-records');
     } catch (error) {
-      toast.error(t('error.deleteFailed'), {
+      toast.error(t('playRecords.edit.error.deleteFailed'), {
         description: error instanceof Error ? error.message : 'Unknown error',
       });
     }
@@ -117,12 +117,12 @@ export default function EditPlayRecordPage() {
       <div className="container mx-auto p-6">
         <Alert variant="destructive">
           <AlertDescription>
-            {error instanceof Error ? error.message : t('error.loadFailed')}
+            {error instanceof Error ? error.message : t('playRecords.edit.error.loadFailed')}
           </AlertDescription>
         </Alert>
         <Button variant="outline" className="mt-4" onClick={() => router.push('/play-records')}>
           <ArrowLeft className="w-4 h-4 mr-2" />
-          {t('actions.back')}
+          {t('playRecords.edit.actions.back')}
         </Button>
       </div>
     );
@@ -139,7 +139,7 @@ export default function EditPlayRecordPage() {
         </Alert>
         <Button variant="outline" className="mt-4" onClick={handleCancel}>
           <ArrowLeft className="w-4 h-4 mr-2" />
-          {t('actions.back')}
+          {t('playRecords.edit.actions.back')}
         </Button>
       </div>
     );
@@ -147,7 +147,7 @@ export default function EditPlayRecordPage() {
 
   // AC-4.1: Layout identical to `new` using SessionCreateForm with mode='edit'
   return (
-    <div role="main" aria-label={t('a11y.formLabel')}>
+    <div role="main" aria-label={t('playRecords.edit.a11y.formLabel')}>
       {/* AC-4.4: Banner inline sopra form */}
       <div className="px-4 py-6 md:px-6">
         <EditGateBanner
@@ -169,8 +169,12 @@ export default function EditPlayRecordPage() {
         // eslint-disable-next-line local/no-hardcoded-color-utility
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-background rounded-lg shadow-lg max-w-sm w-full p-6 space-y-4">
-            <h2 className="text-lg font-bold text-foreground">{t('delete.title')}</h2>
-            <p className="text-sm text-muted-foreground">{t('delete.description')}</p>
+            <h2 className="text-lg font-bold text-foreground">
+              {t('playRecords.edit.delete.title')}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {t('playRecords.edit.delete.description')}
+            </p>
 
             <div className="flex gap-3 justify-end pt-4 border-t border-border">
               <Button
@@ -179,7 +183,7 @@ export default function EditPlayRecordPage() {
                 onClick={() => setShowDeleteConfirm(false)}
                 disabled={deleteMutation.isPending}
               >
-                {t('delete.cancel')}
+                {t('playRecords.edit.delete.cancel')}
               </Button>
               <Button
                 type="button"
@@ -187,7 +191,9 @@ export default function EditPlayRecordPage() {
                 onClick={handleDelete}
                 disabled={deleteMutation.isPending}
               >
-                {deleteMutation.isPending ? `${t('delete.confirm')}…` : t('delete.confirm')}
+                {deleteMutation.isPending
+                  ? `${t('playRecords.edit.delete.confirm')}…`
+                  : t('playRecords.edit.delete.confirm')}
               </Button>
             </div>
           </div>

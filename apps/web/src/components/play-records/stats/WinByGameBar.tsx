@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
 
+import { useTranslation } from '@/hooks/useTranslation';
 import type { PlayerStatistics } from '@/lib/api/schemas/play-records.schemas';
 import { useSharedGames } from '@/lib/play-records/useSharedGames';
 
@@ -11,7 +11,7 @@ interface WinByGameBarProps {
 }
 
 export function WinByGameBar({ stats }: WinByGameBarProps) {
-  const t = useTranslations('playRecords.stats');
+  const { t } = useTranslation();
 
   const games = stats.winByGame || [];
   const isEmpty = games.length === 0;
@@ -25,14 +25,14 @@ export function WinByGameBar({ stats }: WinByGameBarProps) {
       <section
         className="rounded-lg border border-border bg-card p-4 md:p-5"
         data-testid="win-by-game-empty"
-        aria-label={t('winByGame.title')}
+        aria-label={t('playRecords.stats.winByGame.title')}
       >
         <header className="mb-4 flex items-center gap-3">
           <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-entity-toolkit/12 text-entity-toolkit">
             🏆
           </div>
           <h2 className="font-display text-base font-black text-foreground md:text-lg">
-            {t('winByGame.title')}
+            {t('playRecords.stats.winByGame.title')}
           </h2>
         </header>
 
@@ -41,13 +41,13 @@ export function WinByGameBar({ stats }: WinByGameBarProps) {
           <div className="text-2xl" aria-hidden="true">
             🏆
           </div>
-          <p className="text-xs text-muted-foreground">{t('empty.noWins')}</p>
+          <p className="text-xs text-muted-foreground">{t('playRecords.stats.empty.noWins')}</p>
           <Link
             href="/play-records/new"
             className="rounded-md bg-entity-toolkit px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-entity-toolkit/90"
-            aria-label={t('cta.newRecord')}
+            aria-label={t('playRecords.stats.cta.newRecord')}
           >
-            + {t('cta.newRecord')}
+            + {t('playRecords.stats.cta.newRecord')}
           </Link>
         </div>
       </section>
@@ -65,7 +65,7 @@ export function WinByGameBar({ stats }: WinByGameBarProps) {
     <section
       className="rounded-lg border border-border bg-card p-4 md:p-5"
       data-testid="win-by-game-section"
-      aria-label={t('winByGame.title')}
+      aria-label={t('playRecords.stats.winByGame.title')}
     >
       {/* Section Header */}
       <header className="mb-4 flex items-center gap-3">
@@ -73,11 +73,11 @@ export function WinByGameBar({ stats }: WinByGameBarProps) {
           🏆
         </div>
         <h2 className="font-display text-base font-black text-foreground md:text-lg">
-          {t('winByGame.title')}
+          {t('playRecords.stats.winByGame.title')}
         </h2>
         <div className="flex-1" />
         <span className="font-mono text-[10px] font-bold text-muted-foreground">
-          {t('winByGame.meta')}
+          {t('playRecords.stats.winByGame.meta')}
         </span>
       </header>
 

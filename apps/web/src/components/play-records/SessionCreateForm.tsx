@@ -17,7 +17,6 @@ import { useState, useId } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, ArrowRight, Check, Trophy, Users, X, Plus } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 
 import {
@@ -34,6 +33,7 @@ import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/primitives/radio-group';
 import { Textarea } from '@/components/ui/primitives/textarea';
+import { useTranslation } from '@/hooks/useTranslation';
 import {
   SessionCreateFormSchema,
   type SessionCreateForm as SessionCreateFormData,
@@ -624,7 +624,10 @@ export function SessionCreateForm({
   isSubmitting = false,
   mode = 'create',
 }: SessionCreateFormProps) {
-  const t = useTranslations(mode === 'edit' ? 'playRecords.edit' : 'playRecords.new');
+  const { t: tRaw } = useTranslation();
+  const ns = mode === 'edit' ? 'playRecords.edit' : 'playRecords.new';
+  const t = (key: string, params?: Record<string, string | number>) =>
+    params ? tRaw(`${ns}.${key}`, params) : tRaw(`${ns}.${key}`);
   const isMobile = useMediaQuery(MOBILE_BREAKPOINT);
   const formId = useId();
 

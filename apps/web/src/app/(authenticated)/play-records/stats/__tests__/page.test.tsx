@@ -16,9 +16,8 @@ vi.mock('@/lib/domain-hooks/usePlayRecords', () => ({
   })),
 }));
 
-// Mock useTranslations
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
+vi.mock('@/hooks/useTranslation', () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
 }));
 
 // Mock next/navigation (StatisticsPage uses useRouter for back navigation)
@@ -122,7 +121,6 @@ describe('StatisticsPage (play-records/stats)', () => {
   });
 
   it('AC-5.10: uses i18n namespace playRecords.stats', () => {
-    const { useTranslations } = require('next-intl');
     render(<StatisticsPage />);
 
     // Verify page rendered successfully with i18n

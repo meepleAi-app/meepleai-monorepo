@@ -9,12 +9,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 
 import { RecordFilters } from '../RecordFilters';
-import { playRecordsIndexMessages } from '@/__tests__/fixtures/i18n-test-messages';
 
-// Mock next-intl
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) =>
-    playRecordsIndexMessages[key as keyof typeof playRecordsIndexMessages] || key,
+vi.mock('@/hooks/useTranslation', () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
 }));
 
 describe('RecordFilters', () => {

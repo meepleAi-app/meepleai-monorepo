@@ -34,10 +34,10 @@ import type { ReactElement } from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 
 import { entityHsl } from '@/components/ui/data-display/meeple-card';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
+import { useTranslation } from '@/hooks/useTranslation';
 import type { SessionPlayer } from '@/lib/api/schemas/play-records.schemas';
 import { usePlayRecord } from '@/lib/domain-hooks/usePlayRecords';
 import { derivePerspective } from '@/lib/play-records/derivePerspective';
@@ -219,7 +219,7 @@ export interface PlayRecordDetailViewProps {
 }
 
 export function PlayRecordDetailView({ recordId }: PlayRecordDetailViewProps): ReactElement {
-  const t = useTranslations('playRecords.detail');
+  const { t } = useTranslation();
   const router = useRouter();
   const { data: currentUser } = useCurrentUser();
   const { data: record, isLoading, error } = usePlayRecord(recordId);
@@ -270,21 +270,22 @@ export function PlayRecordDetailView({ recordId }: PlayRecordDetailViewProps): R
 
   // ── Hero labels ─────────────────────────────────────────────────────────────
   const heroLabels: PlayRecordHeroPodiumLabels = {
-    variantWon: t('hero.won'),
-    variantTied: t('hero.tied'),
-    variantCooperative: t('hero.cooperative'),
-    variantInProgress: t('hero.inprogress'),
-    variantPlanned: t('hero.planned'),
-    bannerWon: (winnerName, gameName) => t('hero.bannerWon', { winnerName, gameName }),
-    bannerTied: score => t('hero.bannerTied', { score }),
-    bannerCooperative: gameName => t('hero.bannerCooperative', { gameName }),
+    variantWon: t('playRecords.detail.hero.won'),
+    variantTied: t('playRecords.detail.hero.tied'),
+    variantCooperative: t('playRecords.detail.hero.cooperative'),
+    variantInProgress: t('playRecords.detail.hero.inprogress'),
+    variantPlanned: t('playRecords.detail.hero.planned'),
+    bannerWon: (winnerName, gameName) =>
+      t('playRecords.detail.hero.bannerWon', { winnerName, gameName }),
+    bannerTied: score => t('playRecords.detail.hero.bannerTied', { score }),
+    bannerCooperative: gameName => t('playRecords.detail.hero.bannerCooperative', { gameName }),
     bannerInProgress: (gameName, turn) =>
       turn !== undefined
         ? `${gameName} in corso · turno ${turn}`
-        : t('hero.bannerInProgress', { gameName }),
-    bannerPlanned: gameName => t('hero.bannerPlanned', { gameName }),
-    metaPlayers: n => t('hero.metaPlayers', { count: n }),
-    ctaStart: t('hero.ctaStart'),
+        : t('playRecords.detail.hero.bannerInProgress', { gameName }),
+    bannerPlanned: gameName => t('playRecords.detail.hero.bannerPlanned', { gameName }),
+    metaPlayers: n => t('playRecords.detail.hero.metaPlayers', { count: n }),
+    ctaStart: t('playRecords.detail.hero.ctaStart'),
   };
 
   // ── Data derivatives ────────────────────────────────────────────────────────

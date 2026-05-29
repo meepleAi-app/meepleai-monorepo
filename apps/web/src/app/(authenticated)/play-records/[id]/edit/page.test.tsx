@@ -23,12 +23,12 @@ import { playRecordsEditMessages } from '@/__tests__/fixtures/i18n-test-messages
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
-// next-intl
-vi.mock('next-intl', () => ({
-  useTranslations: (ns: string) => (key: string) => {
-    const full = `${key}`;
-    return (playRecordsEditMessages as Record<string, string>)[full] ?? key;
-  },
+vi.mock('@/hooks/useTranslation', () => ({
+  useTranslation: () => ({
+    t: (key: string) =>
+      (playRecordsEditMessages as Record<string, string>)[key.replace('playRecords.edit.', '')] ??
+      key,
+  }),
 }));
 
 // next/navigation

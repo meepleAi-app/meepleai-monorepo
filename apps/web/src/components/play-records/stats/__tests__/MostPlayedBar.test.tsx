@@ -7,8 +7,8 @@ import {
   mockSharedGamesMap,
 } from './fixtures';
 
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
+vi.mock('@/hooks/useTranslation', () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
 }));
 
 vi.mock('@/lib/play-records/useSharedGames', () => ({
@@ -62,9 +62,9 @@ describe('MostPlayedBar', () => {
   it('AC-5.5 empty: shows EmptySection with CTA', () => {
     render(<MostPlayedBar stats={mockPlayerStatisticsEmpty} />);
 
-    // Mock i18n returns key without namespace prefix
-    expect(screen.getByText('empty.noGames')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /cta.newRecord/i })).toHaveAttribute(
+    // Mock i18n returns full key path
+    expect(screen.getByText('playRecords.stats.empty.noGames')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /playRecords.stats.cta.newRecord/i })).toHaveAttribute(
       'href',
       '/play-records/new'
     );

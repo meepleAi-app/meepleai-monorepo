@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
 
+import { useTranslation } from '@/hooks/useTranslation';
 import type { PlayerStatistics } from '@/lib/api/schemas/play-records.schemas';
 import { useSharedGames } from '@/lib/play-records/useSharedGames';
 
@@ -11,7 +11,7 @@ interface MostPlayedBarProps {
 }
 
 export function MostPlayedBar({ stats }: MostPlayedBarProps) {
-  const t = useTranslations('playRecords.stats');
+  const { t } = useTranslation();
 
   const games = stats.mostPlayedGames || [];
   const isEmpty = games.length === 0;
@@ -25,14 +25,14 @@ export function MostPlayedBar({ stats }: MostPlayedBarProps) {
       <section
         className="rounded-lg border border-border bg-card p-4 md:p-5"
         data-testid="most-played-empty"
-        aria-label={t('mostPlayed.title')}
+        aria-label={t('playRecords.stats.mostPlayed.title')}
       >
         <header className="mb-4 flex items-center gap-3">
           <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-entity-game/12 text-entity-game">
             🎲
           </div>
           <h2 className="font-display text-base font-black text-foreground md:text-lg">
-            {t('mostPlayed.title')}
+            {t('playRecords.stats.mostPlayed.title')}
           </h2>
         </header>
 
@@ -41,13 +41,13 @@ export function MostPlayedBar({ stats }: MostPlayedBarProps) {
           <div className="text-2xl" aria-hidden="true">
             🎲
           </div>
-          <p className="text-xs text-muted-foreground">{t('empty.noGames')}</p>
+          <p className="text-xs text-muted-foreground">{t('playRecords.stats.empty.noGames')}</p>
           <Link
             href="/play-records/new"
             className="rounded-md bg-entity-game px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-entity-game/90"
-            aria-label={t('cta.newRecord')}
+            aria-label={t('playRecords.stats.cta.newRecord')}
           >
-            + {t('cta.newRecord')}
+            + {t('playRecords.stats.cta.newRecord')}
           </Link>
         </div>
       </section>
@@ -61,7 +61,7 @@ export function MostPlayedBar({ stats }: MostPlayedBarProps) {
     <section
       className="rounded-lg border border-border bg-card p-4 md:p-5"
       data-testid="most-played-section"
-      aria-label={t('mostPlayed.title')}
+      aria-label={t('playRecords.stats.mostPlayed.title')}
     >
       {/* Section Header */}
       <header className="mb-4 flex items-center gap-3">
@@ -69,11 +69,11 @@ export function MostPlayedBar({ stats }: MostPlayedBarProps) {
           🎲
         </div>
         <h2 className="font-display text-base font-black text-foreground md:text-lg">
-          {t('mostPlayed.title')}
+          {t('playRecords.stats.mostPlayed.title')}
         </h2>
         <div className="flex-1" />
         <span className="font-mono text-[10px] font-bold text-muted-foreground">
-          {t('mostPlayed.meta', { count: games.length })}
+          {t('playRecords.stats.mostPlayed.meta', { count: games.length })}
         </span>
       </header>
 
@@ -112,7 +112,7 @@ export function MostPlayedBar({ stats }: MostPlayedBarProps) {
                   >
                     {game.plays}
                     <span className="ml-1 text-[10px] font-semibold text-muted-foreground">
-                      {t('mostPlayed.plays')}
+                      {t('playRecords.stats.mostPlayed.plays')}
                     </span>
                   </span>
                 </div>

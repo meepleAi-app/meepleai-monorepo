@@ -1,7 +1,6 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
-
+import { useTranslation } from '@/hooks/useTranslation';
 import type { PlayerStatistics } from '@/lib/api/schemas/play-records.schemas';
 import { useSharedGames } from '@/lib/play-records/useSharedGames';
 import { cn } from '@/lib/utils';
@@ -68,7 +67,7 @@ function KpiCard({
 }
 
 export function StatsHero({ stats }: StatsHeroProps) {
-  const t = useTranslations('playRecords.stats');
+  const { t } = useTranslation();
 
   // Get favorite game (mostPlayedGames[0])
   const favoriteGameId = stats.mostPlayedGames?.[0]?.gameId;
@@ -95,44 +94,46 @@ export function StatsHero({ stats }: StatsHeroProps) {
       <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-entity-session/25 bg-entity-session/12 px-3 py-1.5">
         <span aria-hidden="true">🎯</span>
         <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-entity-session">
-          {t('badge.statistics')}
+          {t('playRecords.stats.badge.statistics')}
         </span>
       </div>
 
       {/* Title */}
       <h1 className="font-display text-2xl font-black tracking-tight text-foreground md:text-3xl">
-        {t('title')} <span aria-hidden="true">📊</span>
+        {t('playRecords.stats.title')} <span aria-hidden="true">📊</span>
       </h1>
 
       {/* Subtitle */}
-      <p className="mt-2 max-w-2xl text-sm text-muted-foreground md:text-base">{t('subtitle')}</p>
+      <p className="mt-2 max-w-2xl text-sm text-muted-foreground md:text-base">
+        {t('playRecords.stats.subtitle')}
+      </p>
 
       {/* KPI Grid */}
       <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         <KpiCard
-          label={t('kpi.sessions')}
+          label={t('playRecords.stats.kpi.sessions')}
           value={isEmpty ? '—' : stats.totalSessions}
           subLabel={isEmpty ? '—' : `${hoursFormatted}h totali`}
           icon="🎯"
           entity="session"
         />
         <KpiCard
-          label={t('kpi.uniqueGames')}
+          label={t('playRecords.stats.kpi.uniqueGames')}
           value={isEmpty ? '—' : uniqueGames}
           subLabel={isEmpty ? '—' : undefined}
           icon="🎲"
           entity="game"
         />
         <KpiCard
-          label={t('kpi.winRate')}
+          label={t('playRecords.stats.kpi.winRate')}
           value={isEmpty ? '—' : winRate}
           unit={isEmpty ? '' : '%'}
-          subLabel={isEmpty ? '—' : `${stats.totalWins} ${t('kpi.winRateWins')}`}
+          subLabel={isEmpty ? '—' : `${stats.totalWins} ${t('playRecords.stats.kpi.winRateWins')}`}
           icon="🏆"
           entity="toolkit"
         />
         <KpiCard
-          label={t('kpi.favorite')}
+          label={t('playRecords.stats.kpi.favorite')}
           value={(favoriteGame as { coverEmoji?: string } | null | undefined)?.coverEmoji || '—'}
           subLabel={favoriteGame?.title || '—'}
           icon="⭐"

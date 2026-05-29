@@ -11,8 +11,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 
+import { useTranslation } from '@/hooks/useTranslation';
 import type { PlayRecordSummary } from '@/lib/api/schemas/play-records.schemas';
 import { formatRelativeDate } from '@/lib/play-records/formatRelativeDate';
 import { useSharedGames } from '@/lib/play-records/useSharedGames';
@@ -42,7 +42,7 @@ function formatDuration(duration: string | null): string {
 
 export function RecordCardList({ record }: RecordCardListProps) {
   const router = useRouter();
-  const t = useTranslations('playRecords.index');
+  const { t } = useTranslation();
   const { data: games } = useSharedGames(record.gameId ? [record.gameId] : []);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -106,7 +106,8 @@ export function RecordCardList({ record }: RecordCardListProps) {
 
           {/* Duration + players + winner */}
           <div className="font-mono text-xs text-muted-foreground sm:text-sm">
-            ⏱ {formatDuration(record.duration)} · 👥 {record.playerCount} {t('card.players')}
+            ⏱ {formatDuration(record.duration)} · 👥 {record.playerCount}{' '}
+            {t('playRecords.index.card.players')}
           </div>
         </div>
 
@@ -118,7 +119,7 @@ export function RecordCardList({ record }: RecordCardListProps) {
               className="flex-shrink-0 inline-flex items-center gap-1 rounded-md bg-entity-session px-2.5 py-1.5 font-display text-[11px] font-extrabold text-white transition-all hover:bg-entity-session/90"
             >
               <span aria-hidden="true">▶</span>
-              {t('card.resume')}
+              {t('playRecords.index.card.resume')}
             </button>
           )}
           {isPlanned && (
@@ -126,7 +127,7 @@ export function RecordCardList({ record }: RecordCardListProps) {
               type="button"
               className="flex-shrink-0 inline-flex items-center gap-1 rounded-md border border-entity-event/40 px-2.5 py-1.5 font-display text-[11px] font-bold text-entity-event transition-colors hover:bg-entity-event/5"
             >
-              {t('card.launch')}
+              {t('playRecords.index.card.launch')}
             </button>
           )}
           {!isInProgress && !isPlanned && <div />}

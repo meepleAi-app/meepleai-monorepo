@@ -11,9 +11,9 @@
 'use client';
 
 import { AlertTriangle } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/primitives/button';
+import { useTranslation } from '@/hooks/useTranslation';
 
 export interface EditGateBannerProps {
   onDelete: () => void;
@@ -21,7 +21,7 @@ export interface EditGateBannerProps {
 }
 
 export function EditGateBanner({ onDelete, isDeleting = false }: EditGateBannerProps) {
-  const t = useTranslations('playRecords.edit');
+  const { t } = useTranslation();
 
   return (
     <div
@@ -37,8 +37,12 @@ export function EditGateBanner({ onDelete, isDeleting = false }: EditGateBannerP
 
         {/* Content */}
         <div className="flex-1 space-y-2">
-          <h3 className="font-semibold text-foreground">{t('banner.gateTitle')}</h3>
-          <p className="text-sm text-muted-foreground">{t('banner.gateDescription')}</p>
+          <h3 className="font-semibold text-foreground">
+            {t('playRecords.edit.banner.gateTitle')}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {t('playRecords.edit.banner.gateDescription')}
+          </p>
 
           {/* Delete CTA */}
           <div className="pt-2">
@@ -48,9 +52,11 @@ export function EditGateBanner({ onDelete, isDeleting = false }: EditGateBannerP
               size="sm"
               onClick={onDelete}
               disabled={isDeleting}
-              aria-label={t('banner.deleteAction')}
+              aria-label={t('playRecords.edit.banner.deleteAction')}
             >
-              {isDeleting ? `${t('actions.delete')}…` : t('banner.deleteAction')}
+              {isDeleting
+                ? `${t('playRecords.edit.actions.delete')}…`
+                : t('playRecords.edit.banner.deleteAction')}
             </Button>
           </div>
         </div>

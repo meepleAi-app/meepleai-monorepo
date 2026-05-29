@@ -13,8 +13,8 @@
 'use client';
 
 import { Search, ChevronDown } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 
+import { useTranslation } from '@/hooks/useTranslation';
 import type { PlayRecordStatus } from '@/lib/api/schemas/play-records.schemas';
 import { cn } from '@/lib/utils';
 
@@ -49,7 +49,7 @@ export function RecordFilters({
   onViewChange,
   onSearchChange,
 }: RecordFiltersProps) {
-  const t = useTranslations('playRecords.index');
+  const { t } = useTranslation();
 
   return (
     <div className="sticky top-0 z-8 space-y-3 border-b border-border-light bg-glass/80 px-4 py-3 backdrop-blur-md sm:px-8 sm:py-4 lg:px-12">
@@ -58,7 +58,7 @@ export function RecordFilters({
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <input
           type="search"
-          placeholder={t('filters.searchPlaceholder')}
+          placeholder={t('playRecords.index.filters.searchPlaceholder')}
           value={search}
           onChange={e => onSearchChange(e.target.value)}
           role="searchbox"
@@ -85,7 +85,7 @@ export function RecordFilters({
             data-testid={`filter-status-${option.value}`}
           >
             {option.icon && <span aria-hidden="true">{option.icon}</span>}
-            {t(option.key)}
+            {t(`playRecords.index.filters.${option.key}`)}
           </button>
         ))}
       </div>
@@ -118,8 +118,8 @@ export function RecordFilters({
           className="flex-shrink-0 inline-flex items-center rounded-md border border-border bg-card overflow-hidden"
         >
           {[
-            { id: 'list', icon: '☰', label: t('filters.viewList') },
-            { id: 'grid', icon: '▦', label: t('filters.viewGrid') },
+            { id: 'list', icon: '☰', label: t('playRecords.index.filters.viewList') },
+            { id: 'grid', icon: '▦', label: t('playRecords.index.filters.viewGrid') },
           ].map(option => (
             <button
               key={option.id}

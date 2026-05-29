@@ -12,8 +12,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
 
+import { useTranslation } from '@/hooks/useTranslation';
 import { usePlayerStatistics } from '@/lib/domain-hooks/usePlayRecords';
 import { cn } from '@/lib/utils';
 
@@ -22,31 +22,31 @@ export interface RecordsHeroProps {
 }
 
 export function RecordsHero({ isLoading = false }: RecordsHeroProps) {
-  const t = useTranslations('playRecords.index');
+  const { t } = useTranslation();
   const { data: stats } = usePlayerStatistics();
 
   const statsList = [
     {
       icon: '🎯',
-      label: t('hero.stats.games'),
+      label: t('playRecords.index.hero.stats.games'),
       value: stats?.totalSessions ?? 0,
       entity: 'session',
     },
     {
       icon: '🏆',
-      label: t('hero.stats.wins'),
+      label: t('playRecords.index.hero.stats.wins'),
       value: stats?.totalWins ?? 0,
       entity: 'toolkit',
     },
     {
       icon: '🎲',
-      label: t('hero.stats.count'),
+      label: t('playRecords.index.hero.stats.count'),
       value: stats?.mostPlayedGames?.length ?? 0,
       entity: 'game',
     },
     {
       icon: '⏱',
-      label: t('hero.stats.hours'),
+      label: t('playRecords.index.hero.stats.hours'),
       value: stats?.totalDurationMinutes ? Math.round(stats.totalDurationMinutes / 60) : 0,
       entity: 'event',
       suffix: 'h',
@@ -77,17 +77,17 @@ export function RecordsHero({ isLoading = false }: RecordsHeroProps) {
           {/* Label badge */}
           <div className="inline-flex w-fit items-center gap-2 rounded-full border border-entity-session/25 bg-entity-session/12 px-3 py-1 text-xs font-extrabold uppercase tracking-wider text-entity-session">
             <span aria-hidden="true">🎯</span>
-            {t('hero.label')}
+            {t('playRecords.index.hero.label')}
           </div>
 
           {/* Title */}
           <h1 className="font-display text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl lg:text-4xl">
-            {t('hero.title')}
+            {t('playRecords.index.hero.title')}
           </h1>
 
           {/* Subtitle */}
           <p className="font-body text-sm font-medium text-muted-foreground sm:text-base">
-            {t('hero.subtitle')}
+            {t('playRecords.index.hero.subtitle')}
           </p>
         </div>
 
@@ -140,7 +140,7 @@ export function RecordsHero({ isLoading = false }: RecordsHeroProps) {
             className="inline-flex items-center justify-center gap-2 rounded-md bg-entity-session px-4 py-2 font-display text-sm font-extrabold text-white shadow-lg shadow-entity-session/40 transition-all hover:bg-entity-session/90 sm:px-5 sm:py-2.5"
           >
             <span aria-hidden="true">+</span>
-            {t('hero.cta')}
+            {t('playRecords.index.hero.cta')}
           </Link>
         </div>
       </div>

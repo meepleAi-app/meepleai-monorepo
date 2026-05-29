@@ -13,14 +13,11 @@ import { PlayHistory } from '../PlayHistory';
 import { playRecordsIndexMessages } from '@/__tests__/fixtures/i18n-test-messages';
 import { usePlayHistory, playRecordsKeys } from '@/lib/domain-hooks/usePlayRecords';
 
-// Mock next-intl — `useTranslations(namespace)` returns a `t` fn that receives the
-// subkey only; we must prepend the namespace to look up the fixture (keys in
-// playRecordsIndexMessages are stored with full dotted paths).
-vi.mock('next-intl', () => ({
-  useTranslations: (namespace: string) => (key: string) => {
-    const fullKey = `${namespace}.${key}`;
-    return playRecordsIndexMessages[fullKey as keyof typeof playRecordsIndexMessages] || fullKey;
-  },
+vi.mock('@/hooks/useTranslation', () => ({
+  useTranslation: () => ({
+    t: (key: string) =>
+      playRecordsIndexMessages[key as keyof typeof playRecordsIndexMessages] ?? key,
+  }),
 }));
 
 // Mock usePlayRecordsStore

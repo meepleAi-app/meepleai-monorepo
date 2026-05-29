@@ -52,36 +52,18 @@ vi.mock('@/hooks/queries/useCurrentUser', () => ({
   userKeys: { current: () => ['user', 'current'] },
 }));
 
-// Mock next-intl so useTranslations('playRecords.detail') returns translations
-// from the MESSAGES fixture (keyed by short key, e.g. 'hero.ctaStart').
-vi.mock('next-intl', () => ({
-  useTranslations: (namespace: string) => {
-    // Flat map: full key (namespace.subkey) → display string
-    const translations: Record<string, string> = {
-      'playRecords.detail.hero.won': '🏆 Vittoria',
-      'playRecords.detail.hero.tied': '🤝 Pareggio',
-      'playRecords.detail.hero.cooperative': '🤝 Cooperativa',
-      'playRecords.detail.hero.inprogress': 'In corso',
-      'playRecords.detail.hero.planned': '📅 Pianificata',
-      'playRecords.detail.hero.bannerWon': '{winnerName} vince {gameName}',
-      'playRecords.detail.hero.bannerTied': 'Pareggio a {score} punti',
-      'playRecords.detail.hero.bannerCooperative': 'Partita cooperativa di {gameName}',
-      'playRecords.detail.hero.bannerInProgress': '{gameName} in corso',
-      'playRecords.detail.hero.bannerPlanned': '{gameName} pianificata',
-      'playRecords.detail.hero.metaPlayers': '{count} giocatori',
-      'playRecords.detail.hero.ctaStart': 'Avvia partita',
-    };
-    return (key: string, params?: Record<string, string | number>) => {
-      const fullKey = `${namespace}.${key}`;
-      let value = translations[fullKey] ?? key;
+vi.mock('@/hooks/useTranslation', () => ({
+  useTranslation: () => ({
+    t: (key: string, params?: Record<string, string | number>) => {
+      let value = MESSAGES[key] ?? key;
       if (params) {
         Object.entries(params).forEach(([k, v]) => {
           value = value.replace(`{${k}}`, String(v));
         });
       }
       return value;
-    };
-  },
+    },
+  }),
 }));
 
 // ─── i18n fixture ─────────────────────────────────────────────────────────────

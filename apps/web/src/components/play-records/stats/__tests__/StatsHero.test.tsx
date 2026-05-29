@@ -7,9 +7,8 @@ import {
   mockSharedGamesMap,
 } from './fixtures';
 
-// Mock useTranslations
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
+vi.mock('@/hooks/useTranslation', () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
 }));
 
 // Mock useSharedGames
@@ -29,21 +28,21 @@ describe('StatsHero', () => {
   it('AC-5.1: renders 4-col KPI with correct labels and values', () => {
     render(<StatsHero stats={mockPlayerStatisticsFull} />);
 
-    // Partite KPI — mock i18n returns key without namespace prefix
-    expect(screen.getByText('kpi.sessions')).toBeInTheDocument();
+    // Partite KPI — mock i18n returns full key path
+    expect(screen.getByText('playRecords.stats.kpi.sessions')).toBeInTheDocument();
     expect(screen.getByText('42')).toBeInTheDocument();
 
     // Giochi KPI
-    expect(screen.getByText('kpi.uniqueGames')).toBeInTheDocument();
+    expect(screen.getByText('playRecords.stats.kpi.uniqueGames')).toBeInTheDocument();
     expect(screen.getByText('5')).toBeInTheDocument();
 
     // Win rate KPI
-    expect(screen.getByText('kpi.winRate')).toBeInTheDocument();
+    expect(screen.getByText('playRecords.stats.kpi.winRate')).toBeInTheDocument();
     expect(screen.getByText('43')).toBeInTheDocument(); // Math.round(18/42 * 100)
     expect(screen.getByText('%')).toBeInTheDocument();
 
     // Preferito KPI
-    expect(screen.getByText('kpi.favorite')).toBeInTheDocument();
+    expect(screen.getByText('playRecords.stats.kpi.favorite')).toBeInTheDocument();
     expect(screen.getByText('🌾')).toBeInTheDocument();
     expect(screen.getByText('Catan')).toBeInTheDocument();
   });
@@ -63,11 +62,15 @@ describe('StatsHero', () => {
     expect(kpiCards.length).toBe(4);
 
     // Partite card shows '—' instead of count
-    const sessionsCard = kpiCards.find(card => card.textContent?.includes('kpi.sessions'));
+    const sessionsCard = kpiCards.find(card =>
+      card.textContent?.includes('playRecords.stats.kpi.sessions')
+    );
     expect(sessionsCard?.textContent).toContain('—');
 
     // Win rate card shows '—' (no % suffix)
-    const winRateCard = kpiCards.find(card => card.textContent?.includes('kpi.winRate'));
+    const winRateCard = kpiCards.find(card =>
+      card.textContent?.includes('playRecords.stats.kpi.winRate')
+    );
     expect(winRateCard?.textContent).toContain('—');
     expect(winRateCard?.textContent).not.toContain('%');
   });
@@ -91,7 +94,9 @@ describe('StatsHero', () => {
 
     // Empty state shows '—' placeholder (not '0.0h totali') per AC-5.5
     const kpiCards = screen.getAllByRole('article');
-    const sessionsCard = kpiCards.find(card => card.textContent?.includes('kpi.sessions'));
+    const sessionsCard = kpiCards.find(card =>
+      card.textContent?.includes('playRecords.stats.kpi.sessions')
+    );
     expect(sessionsCard?.textContent).toContain('—');
   });
 

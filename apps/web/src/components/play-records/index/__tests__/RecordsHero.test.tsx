@@ -18,9 +18,8 @@ function renderWithQuery(ui: ReactNode) {
   return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
 }
 
-// Mock next-intl so useTranslations returns the raw key (renderable as text).
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
+vi.mock('@/hooks/useTranslation', () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
 }));
 
 describe('RecordsHero', () => {

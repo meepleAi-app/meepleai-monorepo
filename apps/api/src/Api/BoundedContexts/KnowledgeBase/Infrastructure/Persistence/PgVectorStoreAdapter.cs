@@ -319,12 +319,14 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         await using (lookupCmd.ConfigureAwait(false))
         {
             // Resolve game_id for embeddings: prefer SharedGameId (for RAG search by shared game),
-            // fall back to GameId. Join with games table to resolve SharedGameId when not set on vector_documents.
+            // fall back to GameId. NB: the legacy LEFT JOIN to the 'games' table was removed
+            // after Phase 2d (#1345) dropped that table; resolution now relies on the modern
+            // vd.shared_game_id column populated by post-Phase 2d ingestion, with a defensive
+            // fallback to vd.GameId for legacy rows.
             lookupCmd.CommandText = """
                 SELECT vd."Id",
-                       COALESCE(vd.shared_game_id, g."SharedGameId", vd."GameId") AS resolved_game_id
+                       COALESCE(vd.shared_game_id, vd."GameId") AS resolved_game_id
                 FROM vector_documents vd
-                LEFT JOIN games g ON g."Id" = vd."GameId"
                 WHERE vd."Id" = ANY(@ids)
                 """;
             lookupCmd.Parameters.AddWithValue("@ids", vectorDocumentIds.ToArray());

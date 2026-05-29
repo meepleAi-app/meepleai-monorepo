@@ -189,9 +189,9 @@ public sealed class SearchDocumentChunksQueryHandlerIntegrationTests : IAsyncLif
             .Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { queryVector }));
 
-        // Insert embeddings directly via raw SQL.
-        // NOTE: Do NOT call EnsureCollectionExistsAsync (table already exists from EF migrations)
-        // and do NOT use IndexBatchAsync (it does LEFT JOIN games which was dropped in migration 1345).
+        // Insert embeddings directly via raw SQL for test isolation/speed (bypasses the
+        // production ingestion pipeline). NOTE: Do NOT call EnsureCollectionExistsAsync —
+        // the pgvector_embeddings table already exists via EF migrations.
         await InsertEmbeddingRawAsync(vectorDocId, sharedGame.Id, 0, 1, "Predator activation rules explained in detail", embVector1);
         await InsertEmbeddingRawAsync(vectorDocId, sharedGame.Id, 1, 2, "Another chunk about different game mechanics", embVector2);
 

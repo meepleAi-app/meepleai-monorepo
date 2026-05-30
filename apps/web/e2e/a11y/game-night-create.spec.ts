@@ -91,7 +91,10 @@ test.describe('A11y — /game-nights/new wizard', () => {
     });
 
     // Either "0s" (no animation) or near-zero ms — the global override
-    // reduces to 0.01ms, which most browsers report as `0s`.
-    expect(transitionDuration ?? '').toMatch(/^0s|0\.01ms|0\.0\d+s$/);
+    // reduces to 0.01ms, which most browsers report as `0s`. Some browsers
+    // also report unitless `0` for missing transition props. Regex broadened
+    // 2026-05-30 (PR #1700 release CI: was `^0s|0\.01ms|0\.0\d+s$` and failed
+    // on CI Chromium reporting empty string when no transition is set).
+    expect(transitionDuration ?? '').toMatch(/^(0s?|0\.0+s|0\.01ms|0\.0\d+s|)$/);
   });
 });

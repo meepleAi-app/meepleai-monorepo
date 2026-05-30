@@ -54,7 +54,21 @@ async function seedAuth(page: Page): Promise<void> {
 
 async function gotoSummary(page: Page, search = ''): Promise<void> {
   await seedAuth(page);
-  await page.goto(`/sessions/${FIXTURE_SESSION_ID}${search}`, {
+  // The route renders SessionSummaryHero only when fsmCell.kind is 'default'
+  // or 'partial'. Without `?fixture=...`, the orchestrator falls back to the
+  // real-data path (useSessionDetail) which 401/404s against the test backend
+  // and lands the FSM in 'error' / 'not-found' / 'loading' — no Hero rendered.
+  // Surfaced by PR #1700 release CI as 6 waitForSelector timeouts on
+  // [data-slot="session-summary-hero"]. Ensure `?fixture=` is present;
+  // append `fixture=default` for callers that pass other params (e.g.
+  // `?diary=score`, `?theme=dark`).
+  const search2 = (() => {
+    if (search === '') return '?fixture=default';
+    const params = new URLSearchParams(search.replace(/^\?/, ''));
+    if (!params.has('fixture')) params.set('fixture', 'default');
+    return `?${params.toString()}`;
+  })();
+  await page.goto(`/sessions/${FIXTURE_SESSION_ID}${search2}`, {
     waitUntil: 'domcontentloaded',
   });
   await page.waitForSelector('[data-slot="session-summary-view"]', { timeout: 30_000 });

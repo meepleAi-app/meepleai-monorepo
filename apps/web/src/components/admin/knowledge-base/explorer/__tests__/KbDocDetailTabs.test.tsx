@@ -47,4 +47,17 @@ describe('KbDocDetailTabs', () => {
     );
     expect(screen.getByRole('link', { name: /overview/i }).getAttribute('aria-current')).toBeNull();
   });
+
+  it('renders Preview tab and marks aria-current when active', () => {
+    render(<KbDocDetailTabs docId="doc-1" activeTab="preview" />);
+    const previewLink = screen.getByRole('link', { name: /preview/i });
+    expect(previewLink).toHaveAttribute('aria-current', 'page');
+    expect(previewLink).toHaveAttribute('href', '/admin/knowledge-base?doc=doc-1&tab=preview');
+  });
+
+  it('Overview link does NOT have tab param when activeTab=preview', () => {
+    render(<KbDocDetailTabs docId="doc-1" activeTab="preview" />);
+    const overviewLink = screen.getByRole('link', { name: /overview/i });
+    expect(overviewLink).toHaveAttribute('href', '/admin/knowledge-base?doc=doc-1');
+  });
 });

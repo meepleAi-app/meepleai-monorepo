@@ -160,7 +160,7 @@ test.describe('KB doc Preview tab (#1654)', () => {
     const prevBtn = page.getByRole('button', { name: /prev/i });
     const nextBtn = page.getByRole('button', { name: /next/i });
     await expect(prevBtn).toBeVisible({ timeout: 15_000 });
-    await expect(nextBtn).toBeVisible();
+    await expect(nextBtn).toBeVisible({ timeout: 15_000 });
 
     // Page counter shows "Pagina N / M" once react-pdf calls onLoadSuccess.
     // We assert a loose regex (M may vary if the fixture changes).

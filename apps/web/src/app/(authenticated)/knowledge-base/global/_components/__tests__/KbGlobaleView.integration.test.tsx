@@ -26,6 +26,7 @@
  * @see Issue #1482 Phase 1 Foundation
  */
 
+import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { type ReactNode } from 'react';
@@ -35,6 +36,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { server } from '@/__tests__/mocks/server';
 import { globalRequestCache } from '@/lib/api/core/requestCache';
+import type { KbAskEvent } from '@/lib/api/schemas/kb-ask.schemas';
 
 // ─── API base (matches vitest.setup.tsx + handler convention) ────────────────
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
@@ -55,6 +57,24 @@ vi.mock('next/navigation', () => ({
     replace: vi.fn(),
   }),
   usePathname: () => '/knowledge-base/global',
+}));
+
+// ─── next/dynamic mock ────────────────────────────────────────────────────────
+// Resolves lazy imports synchronously so ssr:false dynamic components
+// (KbDocViewerDesktopLazy, DrawerShellLazy) mount immediately in jsdom.
+vi.mock('next/dynamic', () => ({
+  default: (
+    loader: () => Promise<{ default: React.ComponentType<Record<string, unknown>> }>
+  ): React.ComponentType<Record<string, unknown>> => {
+    let Inner: React.ComponentType<Record<string, unknown>> | null = null;
+    void loader().then(mod => {
+      Inner = mod.default;
+    });
+    const Wrapper = (props: Record<string, unknown>) =>
+      Inner ? React.createElement(Inner, props) : null;
+    Wrapper.displayName = 'NextDynamicStub';
+    return Wrapper;
+  },
 }));
 
 // ─── Wrapper with fresh QueryClient per test ──────────────────────────────────
@@ -407,4 +427,254 @@ describe('KbGlobaleView integration (MSW)', () => {
       expect(screen.getByRole('alert')).toBeInTheDocument();
     });
   });
+});
+
+// ─── Phase 2 — MSW integration S8..S11 ───────────────────────────────────────
+//
+// SSE helper — mirrors kbAskClient.test.ts `buildSseStream`. Returns a
+// ReadableStream<Uint8Array> encoding each event as `data: <JSON>\n\n`.
+//
+// Content-Type: text/event-stream is set on the MSW HttpResponse so the
+// kbAskClient SSE parser receives a proper event-stream response.
+
+function buildSseStream(events: KbAskEvent[]): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  return new ReadableStream({
+    start(controller) {
+      for (const evt of events) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(evt)}\n\n`));
+      }
+      controller.close();
+    },
+  });
+}
+
+// ── react-pdf mock for Phase 2 viewer tests ──────────────────────────────────
+// KbDocViewerDesktop imports react-pdf which requires canvas/browser APIs.
+// In jsdom we mock it to a simple div so the viewer can mount without crashing.
+vi.mock('react-pdf', () => ({
+  Document: ({
+    children,
+    onLoadSuccess,
+  }: {
+    children: ReactNode;
+    onLoadSuccess?: (p: { numPages: number }) => void;
+  }) => {
+    onLoadSuccess?.({ numPages: 5 });
+    return <div data-testid="react-pdf-document">{children}</div>;
+  },
+  Page: ({ pageNumber }: { pageNumber: number }) => <div data-testid={`pdf-page-${pageNumber}`} />,
+  pdfjs: { GlobalWorkerOptions: { workerSrc: '' } },
+}));
+
+describe('Phase 2 — MSW integration S8..S11', () => {
+  beforeEach(() => {
+    mockRouterPush.mockClear();
+    // Clear request cache so each test starts with a clean fetch slate.
+    globalRequestCache.clear();
+  });
+
+  // ── Scenario S8: ?docId mounts KbDocViewerDesktop ─────────────────────────
+  it('S8: ?docId mounts KbDocViewerDesktop with doc detail', async () => {
+    const docId = DOC_IDS[0]!;
+
+    server.use(
+      // useKbDocDetail fetches GET /api/v1/kb-docs/:id
+      http.get(`${API_BASE}/api/v1/kb-docs/:id`, ({ params }) => {
+        if (params['id'] !== docId) return new HttpResponse(null, { status: 404 });
+        return HttpResponse.json({
+          id: docId,
+          title: 'Wingspan Rulebook',
+          docType: 'rulebook',
+          gameId: GAME_IDS[0],
+          gameName: 'Wingspan',
+          uploaderName: 'testuser',
+          uploadedAt: ISO_DATE,
+          lastIngestedAt: ISO_DATE,
+          processingStatus: 'ready',
+          chunkCount: 10,
+          pageCount: 20,
+          language: 'it',
+          tags: [],
+        });
+      }),
+      // useUserKbDocs — return empty so home branch baseline is stable
+      http.get(`${API_BASE}/api/v1/kb-docs`, () =>
+        HttpResponse.json({ items: [], total: 0, page: 1, pageSize: 20 })
+      )
+    );
+
+    // Mount at home branch (q empty) with ?docId set → viewer should appear
+    searchParamsMap = { docId, page: '3' };
+    const Wrapper = createWrapper();
+    render(<KbGlobaleView />, { wrapper: Wrapper });
+
+    // KbDocViewerDesktopLazy (ssr:false dynamic) renders once doc detail resolves.
+    // data-slot="kb-doc-viewer-desktop" is set on the root div of KbDocViewerDesktop.
+    await waitFor(() => {
+      expect(document.querySelector('[data-slot="kb-doc-viewer-desktop"]')).toBeInTheDocument();
+    });
+
+    // react-pdf mock renders pdf-page-3 (activePage from ?page=3)
+    await waitFor(() => {
+      expect(screen.getByTestId('pdf-page-3')).toBeInTheDocument();
+    });
+  }, 5000);
+
+  // ── Scenario S9: ?ask=1 + suggestion click → SSE → completed state ─────────
+  // Uses vi.spyOn(global, 'fetch') (not MSW) for the SSE POST — MSW's ReadableStream
+  // body routing through response.body.getReader() in jsdom has known limitations.
+  // The kb-docs GET still goes through MSW (TanStack Query, not SSE).
+  it('S9: ?ask=1 + ask flow streams to completed state', async () => {
+    const sseEvents: KbAskEvent[] = [
+      { type: 0, data: { message: 'Ricerca…' } },
+      { type: 7, data: { token: 'Risposta' } },
+      {
+        type: 4,
+        data: {
+          totalTokens: 1,
+          promptTokens: 10,
+          completionTokens: 1,
+          estimatedReadingTimeMinutes: 0,
+          confidence: null,
+        },
+      },
+    ];
+
+    // Stub kb-docs via MSW (TanStack Query REST call).
+    server.use(
+      http.get(`${API_BASE}/api/v1/kb-docs`, () =>
+        HttpResponse.json({ items: [], total: 0, page: 1, pageSize: 20 })
+      )
+    );
+
+    // Stub the SSE POST via fetch spy (bypasses MSW for the streaming call).
+    const originalFetch = global.fetch;
+    vi.spyOn(global, 'fetch').mockImplementation(async (input, init) => {
+      const url = typeof input === 'string' ? input : (input as Request).url;
+      if (url.includes('/knowledge-base/ask/global')) {
+        return new Response(buildSseStream(sseEvents), {
+          status: 200,
+          headers: { 'content-type': 'text/event-stream' },
+        });
+      }
+      // All other calls → real fetch (MSW will intercept REST calls).
+      return originalFetch(input, init);
+    });
+
+    // Mount at ?ask=1 → DrawerShellLazy mounts → DrawerIdle visible
+    searchParamsMap = { ask: '1' };
+    const Wrapper = createWrapper();
+    render(<KbGlobaleView />, { wrapper: Wrapper });
+
+    // Wait for DrawerIdle to appear (data-testid set in DrawerIdle.tsx)
+    await waitFor(() => {
+      expect(screen.getByTestId('drawer-state-idle')).toBeInTheDocument();
+    });
+
+    // Click the first suggestion button to trigger the ask flow.
+    // Suggestions from LABELS.drawer.suggestions:
+    //   "Come funziona il setup iniziale?"
+    //   "Quali sono le abilità della classe Scout?"
+    //   "Differenza tra base e enhanced effect?"
+    const allButtons = screen.getAllByRole('button');
+    // Suggestion buttons are type="button" (not submit), click first non-close button.
+    const suggestionBtn =
+      allButtons.find(
+        b => b.getAttribute('type') === 'button' && b.textContent?.includes('setup')
+      ) ?? allButtons[0];
+    await userEvent.click(suggestionBtn!);
+
+    // SSE stream fires → hook FSM transitions streaming → completed
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('drawer-state-completed')).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
+
+    vi.restoreAllMocks();
+  }, 8000);
+
+  // ── Scenario S10: citation click → router.push ?docId=&page= ──────────────
+  // jsdom limitation: next/navigation router.push is a mock, URL does not change.
+  // We assert the mock call payload instead.
+  it.skip('S10: citation click pushes ?docId=&page= URL (deferred — requires full E2E harness)', () => {
+    // TODO: S10 requires:
+    //   1. Pre-seed useKbAskStream state to status='completed' with citations.
+    //   2. Click a CitationPill to trigger openViewer callback.
+    //   3. Assert mockRouterPush was called with ?docId=<id>&page=<n>.
+    // In jsdom, forcing the FSM hook into 'completed' state from outside
+    // requires either an integration with the real SSE flow (covered by S9)
+    // or a test-seeded initial state — which the hook does not expose externally.
+    // Deferred to a Playwright E2E test in a follow-up PR.
+  });
+
+  // ── Scenario S11: completed-empty state (no docs in library) ──────────────
+  // Uses vi.spyOn(global, 'fetch') for the SSE POST (same reason as S9).
+  it('S11: completed-empty CTA visible when Complete event has zero accessible docs', async () => {
+    // 0 citations + Complete(totalTokens=0) → FSM enters 'completed-empty'
+    const sseEventsEmpty: KbAskEvent[] = [
+      { type: 0, data: { message: 'Ricerca…' } },
+      // No Citation event (type 1) — zero accessible docs
+      {
+        type: 4,
+        data: {
+          totalTokens: 0,
+          promptTokens: 0,
+          completionTokens: 0,
+          estimatedReadingTimeMinutes: 0,
+          confidence: null,
+        },
+      },
+    ];
+
+    server.use(
+      http.get(`${API_BASE}/api/v1/kb-docs`, () =>
+        HttpResponse.json({ items: [], total: 0, page: 1, pageSize: 20 })
+      )
+    );
+
+    const originalFetch = global.fetch;
+    vi.spyOn(global, 'fetch').mockImplementation(async (input, init) => {
+      const url = typeof input === 'string' ? input : (input as Request).url;
+      if (url.includes('/knowledge-base/ask/global')) {
+        return new Response(buildSseStream(sseEventsEmpty), {
+          status: 200,
+          headers: { 'content-type': 'text/event-stream' },
+        });
+      }
+      return originalFetch(input, init);
+    });
+
+    searchParamsMap = { ask: '1' };
+    const Wrapper = createWrapper();
+    render(<KbGlobaleView />, { wrapper: Wrapper });
+
+    // Wait for DrawerIdle to appear
+    await waitFor(() => {
+      expect(screen.getByTestId('drawer-state-idle')).toBeInTheDocument();
+    });
+
+    // Click a suggestion to fire the ask request
+    const allButtons = screen.getAllByRole('button');
+    const suggestionBtn =
+      allButtons.find(
+        b => b.getAttribute('type') === 'button' && b.textContent?.includes('setup')
+      ) ?? allButtons[0];
+    await userEvent.click(suggestionBtn!);
+
+    // No citations → FSM → completed-empty → DrawerEmpty mounts
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('drawer-state-empty')).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
+
+    // DrawerEmpty should render the CTA button (label: 'Vai alla libreria')
+    expect(screen.getByRole('button', { name: /libreria/i })).toBeInTheDocument();
+
+    vi.restoreAllMocks();
+  }, 8000);
 });

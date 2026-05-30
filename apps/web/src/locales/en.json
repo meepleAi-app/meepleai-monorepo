@@ -3915,6 +3915,47 @@
         "errorTitle": "Search error",
         "errorDescription": "Search failed. Please try again shortly.",
         "retry": "Retry"
+      },
+      "viewer": {
+        "pageLabel": "Page {n}",
+        "zoomIn": "Zoom in",
+        "zoomOut": "Zoom out",
+        "zoomReset": "Reset",
+        "thumbnailsLabel": "Pages",
+        "closeLabel": "Close",
+        "pageOfTotal": "{cur} / {total}"
+      },
+      "drawer": {
+        "title": "Ask the Meeple",
+        "subtitle": "Knowledge Base",
+        "closeLabel": "Close",
+        "idle": {
+          "welcomeTitle": "Ask me anything about your games",
+          "welcomeBody": "I search through your PDFs and cite the exact pages.",
+          "suggestionsLabel": "Suggestions",
+          "placeholder": "Ask the Meeple…",
+          "sendLabel": "Send"
+        },
+        "streaming": {
+          "statusLabel": "STREAMING",
+          "stopLabel": "Stop streaming"
+        },
+        "completed": {
+          "completedLabel": "COMPLETED",
+          "copyLabel": "Copy",
+          "regenerateLabel": "Regenerate"
+        },
+        "empty": {
+          "title": "No documents in your library",
+          "body": "Upload a PDF from the library to start asking.",
+          "cta": "Go to library"
+        },
+        "error": {
+          "connection": { "title": "Connection lost", "body": "Auto-retry in progress…", "action": "Retry now" },
+          "timeout": { "title": "Slow response", "body": "Continue waiting?", "action": "Continue waiting", "alt": "Cancel" },
+          "partial": { "title": "Incomplete response", "body": "Stream was interrupted.", "action": "Repeat query" },
+          "server": { "title": "Server error", "body": "Try again in a moment.", "action": "Retry" }
+        }
       }
     }
   }

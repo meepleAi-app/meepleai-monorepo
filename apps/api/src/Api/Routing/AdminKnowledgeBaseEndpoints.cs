@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.EstimateAgentCost;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.ExportDocumentChunks;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGamesWithoutKb;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbNavCounts;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.SearchDocumentChunks;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.Filters;
@@ -32,6 +33,16 @@ internal static class AdminKnowledgeBaseEndpoints
         })
         .WithName("GetVectorStats")
         .WithSummary("Get pgvector statistics grouped by game");
+
+        // GET /api/v1/admin/kb/nav-counts — Issue #1655 F3-FU-6
+        kbGroup.MapGet("/nav-counts", async (IMediator mediator, CancellationToken ct) =>
+        {
+            var counts = await mediator.Send(new GetKbNavCountsQuery(), ct).ConfigureAwait(false);
+            return Results.Ok(counts);
+        })
+        .WithName("GetKbNavCounts")
+        .WithSummary("Counts for KbSubNav badges (active queue + feedback last 7d).")
+        .Produces<KbNavCountsDto>(200);
 
         // POST /api/v1/admin/kb/vector-search — semantic search over pgvector embeddings
         kbGroup.MapPost("/vector-search", async (

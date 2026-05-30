@@ -711,7 +711,8 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
     private static string BuildSystemPrompt(
         string agentTypology, string gameTitle, GameState? gameState, string ragContext,
         bool hasExpansions = false, bool hasProtectedCitations = false,
-        string agentLanguage = "it")
+        string agentLanguage = "it",
+        bool includeInlineCitationInstructions = false)
     {
         var sb = new StringBuilder();
 
@@ -750,6 +751,19 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         sb.AppendLine("3. Explain how the rule applies to the user's specific situation.");
         sb.AppendLine("4. State your conclusion clearly.");
         sb.AppendLine();
+
+        // Issue #1703 D-1703-C: inline citation markers (only when caller opts in).
+        // Placed after Reasoning Approach so the LLM has the chain-of-thought rules
+        // in mind before being asked to emit [N] markers.
+        if (includeInlineCitationInstructions)
+        {
+            sb.AppendLine("## Citation Format");
+            sb.AppendLine("Each chunk in the documentation below is prefixed with [N] (e.g. [1], [2], [3]).");
+            sb.AppendLine("When your answer draws from a chunk, append the corresponding [N] marker immediately after the cited word(s).");
+            sb.AppendLine("Use [N,M] when a single statement is supported by multiple chunks.");
+            sb.AppendLine("You MAY still mention page numbers in prose for emphasis, but the [N] marker is required for the citation linkage.");
+            sb.AppendLine();
+        }
 
         // Copyright paraphrase instruction (when Protected citations exist)
         if (hasProtectedCitations)
@@ -888,18 +902,21 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
     /// <see cref="AssembleFromContextAsync"/> on the cross-game path (#1661).
     /// The single-game path continues to call this method internally — output is byte-identical.
     /// </summary>
-    private static string BuildRagContextString(IReadOnlyList<ChunkCitation> citations)
+    private static string BuildRagContextString(IReadOnlyList<ChunkCitation> citations, bool prependIndex = false)
     {
         if (citations.Count == 0)
             return string.Empty;
 
         var sb = new StringBuilder();
+        var idx = 0;
         foreach (var citation in citations)
         {
+            idx++;
             // FullText is set on the single-game path; for cross-game pre-retrieved chunks
             // SnippetPreview is the canonical text (FullText may be null — acceptable for cross-game).
             var chunkText = citation.FullText ?? citation.SnippetPreview;
-            sb.AppendLine(FormatChunkForPrompt(citation, chunkText));
+            int? indexForPrompt = prependIndex ? idx : null;
+            sb.AppendLine(FormatChunkForPrompt(citation, chunkText, indexForPrompt));
         }
 
         return sb.ToString().TrimEnd();

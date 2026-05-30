@@ -22,6 +22,10 @@
     "/chat/[threadId]": {
       "gzippedBytes": 659000,
       "note": "Baseline 2026-05-17 (was 631411 from 2026-04-29). +4.3% drift from #979 promotion."
+    },
+    "/knowledge-base/global": {
+      "gzippedBytes": 40000,
+      "note": "Phase 1 Foundation target 2026-05-30 (PR #1688). Tier L route: useGlobalKbSearch hook + 5 components (HeroSearch, KbHomeDesktop, KbSearchResultsDesktop, KbEmptyState, route orchestrator)."
     }
   }
 }

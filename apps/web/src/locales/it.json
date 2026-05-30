@@ -3996,7 +3996,8 @@
         "completed": {
           "completedLabel": "COMPLETED",
           "copyLabel": "Copia",
-          "regenerateLabel": "Rigenera"
+          "regenerateLabel": "Rigenera",
+          "inlineCitationAriaLabelTemplate": "Citazione {n}, documento {docId}, pagina {page}"
         },
         "empty": {
           "title": "Nessun documento nella tua libreria",

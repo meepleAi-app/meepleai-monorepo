@@ -136,4 +136,17 @@ describe('KbSubNav', () => {
       container.querySelector('[data-testid="kb-nav-badge-feedback-loading"]')
     ).toBeInTheDocument();
   });
+
+  it('renders em-dash badges when hook reports error', () => {
+    mockPathname.mockReturnValue('/admin/knowledge-base');
+    mockUseKbNavCounts.mockReturnValue({
+      queue: undefined,
+      feedback: undefined,
+      loading: false,
+      isError: true,
+    });
+    render(<KbSubNav />);
+    expect(screen.getByTestId('kb-nav-badge-queue')).toHaveTextContent('—');
+    expect(screen.getByTestId('kb-nav-badge-feedback')).toHaveTextContent('—');
+  });
 });

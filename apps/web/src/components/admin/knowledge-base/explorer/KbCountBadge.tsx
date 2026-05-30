@@ -5,11 +5,18 @@ import type { JSX } from 'react';
 interface KbCountBadgeProps {
   readonly count: number | undefined;
   readonly loading: boolean;
+  readonly isError?: boolean;
   readonly tooltip?: string;
   readonly testId?: string;
 }
 
-export function KbCountBadge({ count, loading, tooltip, testId }: KbCountBadgeProps): JSX.Element {
+export function KbCountBadge({
+  count,
+  loading,
+  isError,
+  tooltip,
+  testId,
+}: KbCountBadgeProps): JSX.Element {
   if (loading && count === undefined) {
     return (
       <span
@@ -17,6 +24,23 @@ export function KbCountBadge({ count, loading, tooltip, testId }: KbCountBadgePr
         data-testid={testId ? `${testId}-loading` : undefined}
         className="ml-1.5 inline-block h-4 w-6 rounded-full bg-muted animate-pulse"
       />
+    );
+  }
+
+  if (isError && count === undefined) {
+    return (
+      <span
+        aria-label="conteggio non disponibile"
+        title={tooltip}
+        data-testid={testId}
+        className={[
+          'ml-1.5 inline-flex items-center justify-center min-w-[1.5rem] h-4 px-1.5 rounded-full',
+          'text-[10px] font-bold leading-none',
+          'bg-muted text-muted-foreground',
+        ].join(' ')}
+      >
+        —
+      </span>
     );
   }
 

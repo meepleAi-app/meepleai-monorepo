@@ -50,7 +50,7 @@ function isActive(tabHref: string, pathname: string): boolean {
  */
 export function KbSubNav() {
   const pathname = usePathname();
-  const { queue, feedback, loading } = useKbNavCounts();
+  const { queue, feedback, loading, isError } = useKbNavCounts();
 
   return (
     <nav
@@ -79,6 +79,7 @@ export function KbSubNav() {
                   <KbCountBadge
                     count={count}
                     loading={loading}
+                    isError={isError}
                     tooltip={TOOLTIPS[tab.kind]}
                     testId={`kb-nav-badge-${tab.kind}`}
                   />

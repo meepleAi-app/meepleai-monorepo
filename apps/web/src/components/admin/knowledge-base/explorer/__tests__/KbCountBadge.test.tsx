@@ -44,4 +44,12 @@ describe('KbCountBadge', () => {
     const { container } = render(<KbCountBadge count={1} loading={false} />);
     expect(container.querySelector('[data-testid]')).toBeNull();
   });
+
+  it('renders em-dash with muted style when isError is true and count is undefined', () => {
+    render(<KbCountBadge count={undefined} loading={false} isError={true} testId="badge" />);
+    const badge = screen.getByTestId('badge');
+    expect(badge).toHaveTextContent('—');
+    expect(badge).toHaveAttribute('aria-label', 'conteggio non disponibile');
+    expect(badge.className).toContain('bg-muted');
+  });
 });

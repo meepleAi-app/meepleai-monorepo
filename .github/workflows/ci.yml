@@ -930,9 +930,16 @@ jobs:
     timeout-minutes: 15
     needs: [changes, build-frontend-a11y]
     # continue-on-error removed in Phase D gate flip (#1094 closure, 2026-05-18).
-    # Any axe AA violation now fails CI. Pre-existing test-infrastructure flakes
-    # (e.g. timing-sensitive focus assertions, fixture loading timeouts) tracked
-    # separately — these are NOT axe violations; they need test-script fixes.
+    # Any axe AA violation now fails CI. Test-infrastructure flakes (timing-
+    # sensitive focus assertions, fixture loading timeouts) are distinct from
+    # axe violations and require test-script fixes, not a11y remediation.
+    # Issue #1698 (2026-05-30) added structured fail-class categorization:
+    # `pnpm test:a11y:e2e` invokes scripts/run-a11y-e2e.mjs, which runs
+    # Playwright then pipes the JSON report through scripts/a11y-summarize.cli.ts.
+    # The summarize step writes a markdown breakdown to $GITHUB_STEP_SUMMARY
+    # (visible in the Checks UI without artifact download) and emits
+    # ::error:: (axe) / ::warning:: (flake) workflow annotations. Exit codes:
+    # 0 (all green), 1 (flake only — still fails CI), 2 (any axe — dominant).
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     defaults:
       run:
@@ -983,6 +990,19 @@ jobs:
           name: playwright-report-a11y-${{ github.run_number }}
           path: apps/web/playwright-report/
           retention-days: 7
+
+      # Issue #1698: keep the structured JSON report around for downstream
+      # analysis (manual triage, future trend dashboards). Uploaded on
+      # failure only — the summary itself already lives in the Checks UI
+      # via $GITHUB_STEP_SUMMARY, so a green run needs no artifact.
+      - name: Upload A11y JSON Report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: a11y-json-report-${{ github.run_number }}
+          path: apps/web/playwright-report-a11y/report.json
+          retention-days: 7
+          if-no-files-found: warn
 
   # Frontend bundle-size budget enforcement (Issue #629).
   # Verifies First Load JS for budgeted public routes against

@@ -4,6 +4,14 @@ import { defineCoverageReporterConfig } from '@bgotink/playwright-coverage';
 // import { ChromaticConfig } from '@chromatic-com/playwright'; // Type not exported in v0.12.8
 import { defineConfig, devices } from '@playwright/test';
 
+// Issue #1698: JSON reporter for the a11y post-processor (scripts/a11y-summarize).
+// Only attached when A11Y_JSON_REPORT_PATH is set so other Playwright invocations
+// (general e2e, smoke) do not pay the cost.
+const a11yJsonReportPath = process.env.A11Y_JSON_REPORT_PATH;
+const a11yJsonReporter: Array<[string, { outputFile: string }]> = a11yJsonReportPath
+  ? [['json', { outputFile: a11yJsonReportPath }]]
+  : [];
+
 // Issue #2009: Prometheus reporter configuration (typed for TypeScript)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Playwright reporter config allows flexible structure
 const prometheusReporter: any[] = process.env.PROMETHEUS_REMOTE_WRITE_URL
@@ -101,6 +109,11 @@ export default defineConfig({
     ...prometheusReporter, // Type-safe spread of Prometheus reporter
     // Issue #3082 Phase B: Duration tracking for shard balancing
     ['./e2e/reporters/duration-reporter.ts'],
+    // Issue #1698: see a11yJsonReporter at top of file. The wrapper in
+    // package.json (`test:a11y:e2e`) sets A11Y_JSON_REPORT_PATH to enable the
+    // reporter; the resulting JSON is consumed by scripts/a11y-summarize.cli.ts
+    // for fail-class categorization + $GITHUB_STEP_SUMMARY emission.
+    ...a11yJsonReporter,
   ],
   use: {
     baseURL: 'http://localhost:3000',

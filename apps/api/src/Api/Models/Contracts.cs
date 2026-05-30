@@ -27,7 +27,22 @@ internal record QaResponse(
     double? confidence = null,
     IReadOnlyDictionary<string, string>? metadata = null,
     IReadOnlyList<string>? followUpQuestions = null);  // CHAT-02: AI-generated follow-up questions
-internal record Snippet(string text, string source, int page, int line, float score);
+internal record Snippet(string text, string source, int page, int line, float score)
+{
+    /// <summary>
+    /// Composite chunk identifier "{PdfDocumentId}_{ChunkIndex}" from MultiGameSearchResultItem.
+    /// Only populated by cross-game retrieval (/ask/global). Null for per-game endpoints.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? chunkId { get; init; }
+
+    /// <summary>
+    /// Zero-based chunk index within the document (from TextChunkEntity.ChunkIndex / MultiGameSearchResultItem.ChunkIndex).
+    /// Only populated by cross-game retrieval. Null for per-game endpoints.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? chunkPosition { get; init; }
+}
 
 internal record IngestPdfResponse(string jobId);
 internal record SeedRequest(string gameId);

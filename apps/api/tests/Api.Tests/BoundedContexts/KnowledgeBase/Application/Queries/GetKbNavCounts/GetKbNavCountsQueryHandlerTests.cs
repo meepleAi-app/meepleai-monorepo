@@ -119,4 +119,20 @@ public sealed class GetKbNavCountsQueryHandlerTests
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
+
+    [Theory]
+    [InlineData("jobs")]
+    [InlineData("feedback")]
+    [InlineData("clock")]
+    public void Constructor_NullDependency_ThrowsArgumentNullException(string paramName)
+    {
+        Action act = paramName switch
+        {
+            "jobs"     => () => new GetKbNavCountsQueryHandler(null!, _feedback, _clock),
+            "feedback" => () => new GetKbNavCountsQueryHandler(_jobs, null!, _clock),
+            "clock"    => () => new GetKbNavCountsQueryHandler(_jobs, _feedback, null!),
+            _          => throw new InvalidOperationException()
+        };
+        act.Should().Throw<ArgumentNullException>().WithParameterName(paramName);
+    }
 }

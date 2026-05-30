@@ -23,9 +23,9 @@ internal sealed class GetKbNavCountsQueryHandler
         IKbUserFeedbackRepository feedback,
         TimeProvider clock)
     {
-        _jobs = jobs;
-        _feedback = feedback;
-        _clock = clock;
+        _jobs = jobs ?? throw new ArgumentNullException(nameof(jobs));
+        _feedback = feedback ?? throw new ArgumentNullException(nameof(feedback));
+        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
     }
 
     public async Task<KbNavCountsDto> Handle(GetKbNavCountsQuery request, CancellationToken cancellationToken)

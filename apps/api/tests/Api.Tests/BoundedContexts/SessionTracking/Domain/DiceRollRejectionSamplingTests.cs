@@ -128,4 +128,25 @@ public sealed class DiceRollRejectionSamplingTests
         result.Should().HaveCount(1_000_000);
         result.Should().OnlyContain(r => r >= 1 && r <= sides);
     }
+
+    /// <summary>
+    /// Issue #1693: <see cref="DiceRoll.Create"/> accepts an optional
+    /// <see cref="RandomNumberGenerator"/> parameter so tests can assert exact roll
+    /// outcomes without going through chi-square goodness-of-fit. Passing a
+    /// <see cref="SequenceRng"/> that emits 0 then 5 (encoded as uint) produces a 2d6
+    /// rolling [1, 6] before the modifier — fully deterministic.
+    /// </summary>
+    [Fact]
+    public void Create_WithInjectedRng_ProducesDeterministicRoll()
+    {
+        // For sides=6: value=0 → 0 % 6 + 1 = 1; value=5 → 5 % 6 + 1 = 6.
+        var rng = new SequenceRng(0u, 5u);
+        var sessionId = Guid.Parse("aaaaaaaa-0000-4000-8000-aaaaaaaaaaaa");
+        var participantId = Guid.Parse("bbbbbbbb-0000-4000-8000-bbbbbbbbbbbb");
+
+        var diceRoll = DiceRoll.Create(sessionId, participantId, "2d6", label: null, rng: rng);
+
+        diceRoll.GetRolls().Should().Equal(1, 6);
+        diceRoll.Total.Should().Be(7); // 1 + 6 + 0 (no modifier)
+    }
 }

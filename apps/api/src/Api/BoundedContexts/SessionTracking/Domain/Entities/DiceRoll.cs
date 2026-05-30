@@ -81,12 +81,19 @@ public class DiceRoll
     /// <param name="participantId">Participant performing the roll.</param>
     /// <param name="formula">Dice formula (e.g., "2d6+3").</param>
     /// <param name="label">Optional label for the roll.</param>
+    /// <param name="rng">
+    /// Optional source of randomness. When <c>null</c> (default) the process-wide
+    /// cryptographic singleton is used. Tests can pass a deterministic
+    /// <see cref="System.Security.Cryptography.RandomNumberGenerator"/> to assert
+    /// exact roll outcomes (issue #1693).
+    /// </param>
     /// <returns>New DiceRoll instance with results.</returns>
     public static DiceRoll Create(
         Guid sessionId,
         Guid participantId,
         string formula,
-        string? label = null)
+        string? label = null,
+        System.Security.Cryptography.RandomNumberGenerator? rng = null)
     {
         if (sessionId == Guid.Empty)
             throw new ArgumentException("Session ID cannot be empty.", nameof(sessionId));
@@ -98,7 +105,7 @@ public class DiceRoll
             throw new ArgumentException("Formula cannot be empty.", nameof(formula));
 
         var parsed = DiceFormulaParser.Parse(formula);
-        var rolls = RollDice(parsed.Count, parsed.Sides);
+        var rolls = RollDiceCore(parsed.Count, parsed.Sides, rng ?? SharedRng);
         var total = rolls.Sum() + parsed.Modifier;
 
         return new DiceRoll
@@ -134,13 +141,12 @@ public class DiceRoll
     }
 
     /// <summary>
-    /// Rolls dice using cryptographic RNG for fairness.
+    /// Process-wide cryptographic RNG. <see cref="System.Security.Cryptography.RandomNumberGenerator"/>
+    /// is thread-safe in .NET 6+, so a single shared instance avoids the per-roll allocation +
+    /// kernel handle acquisition cost of <c>RandomNumberGenerator.Create()</c> (issue #1693).
     /// </summary>
-    private static int[] RollDice(int count, int sides)
-    {
-        using var rng = System.Security.Cryptography.RandomNumberGenerator.Create();
-        return RollDiceCore(count, sides, rng);
-    }
+    private static readonly System.Security.Cryptography.RandomNumberGenerator SharedRng
+        = System.Security.Cryptography.RandomNumberGenerator.Create();
 
     /// <summary>
     /// Pure rolling logic exposed for deterministic testing.

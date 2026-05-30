@@ -191,4 +191,86 @@ describe('useSseStreamFsm — base FSM skeleton', () => {
 
     vi.useRealTimers();
   });
+
+  it('fires watchdog timeout when no event arrives within timeoutMs', async () => {
+    vi.useFakeTimers();
+
+    const slowTransport = vi.fn((_input: string, signal: AbortSignal) =>
+      // Yield immediately to arm watchdog, then hang forever
+      (async function* (): AsyncGenerator<TestEvent> {
+        yield { type: 'token', value: '' }; // Triggers watchdog arm
+        // Now hang forever, respecting abort signal
+        await new Promise((_, reject) => {
+          signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+        });
+        yield { type: 'done' };
+      })()
+    );
+
+    const { result } = renderHook(() =>
+      useSseStreamFsm<string, TestEvent, TestState, { kind: string; message: string }>({
+        transport: slowTransport,
+        initialState: { tokens: [], done: false },
+        eventReducer: s => s,
+        errorMapper: err => {
+          if ((err as { __sseStreamFsmReason?: string }).__sseStreamFsmReason === 'timeout') {
+            return { kind: 'timeout', message: 'no response in 30s' };
+          }
+          return { kind: 'connection', message: String(err) };
+        },
+        retryPolicy: {
+          maxRetries: 0,
+          backoffMs: [],
+          timeoutMs: 30_000,
+          retryableErrorKinds: [],
+        },
+      })
+    );
+
+    act(() => {
+      result.current.ask('q');
+    });
+    // Run all timers to allow the watchdog to fire
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    // The error should be set to timeout kind
+    expect(result.current.error?.kind).toBe('timeout');
+
+    vi.useRealTimers();
+  });
+
+  it('does NOT schedule watchdog when timeoutMs is undefined', async () => {
+    vi.useFakeTimers();
+
+    const slowTransport = vi.fn(() =>
+      (async function* (): AsyncGenerator<TestEvent> {
+        await new Promise(() => {});
+        yield { type: 'done' };
+      })()
+    );
+
+    const { result } = renderHook(() =>
+      useSseStreamFsm<string, TestEvent, TestState, Error>({
+        transport: slowTransport,
+        initialState: { tokens: [], done: false },
+        eventReducer: s => s,
+        errorMapper: err => (err instanceof Error ? err : new Error(String(err))),
+        retryPolicy: { maxRetries: 0, backoffMs: [], retryableErrorKinds: [] },
+        // timeoutMs intentionally omitted
+      })
+    );
+
+    act(() => {
+      result.current.ask('q');
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(120_000);
+    });
+
+    expect(result.current.error).toBeNull(); // never timed out
+
+    vi.useRealTimers();
+  });
 });

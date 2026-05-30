@@ -3936,6 +3936,39 @@
         "cancel": "Annulla",
         "back": "← Indietro"
       }
+    },
+    "kbGlobale": {
+      "hero": {
+        "placeholder": "Cerca nella knowledge base…",
+        "submit": "Cerca",
+        "clear": "Cancella",
+        "modeLabel": "Modalità di ricerca",
+        "modeOptions": {
+          "Semantic": "Semantica"
+        }
+      },
+      "home": {
+        "heading": "Documenti recenti",
+        "empty": {
+          "title": "Nessun documento ancora",
+          "description": "Carica un PDF dalla libreria per iniziare.",
+          "cta": "Vai alla libreria"
+        },
+        "errorTitle": "Impossibile caricare i documenti",
+        "errorDescription": "Si è verificato un errore. Riprova tra qualche istante.",
+        "retry": "Riprova"
+      },
+      "results": {
+        "loadMore": "Carica altri",
+        "loadingMore": "Caricamento…",
+        "empty": {
+          "title": "Nessun risultato",
+          "description": "Prova con termini diversi o controlla l'ortografia."
+        },
+        "errorTitle": "Errore nella ricerca",
+        "errorDescription": "La ricerca non è riuscita. Riprova tra qualche istante.",
+        "retry": "Riprova"
+      }
     }
   }
 }

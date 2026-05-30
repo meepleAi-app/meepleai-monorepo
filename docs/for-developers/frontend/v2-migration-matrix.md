@@ -414,34 +414,38 @@ the PR review.
 | `sp4-kb-hub.jsx` | `RaptorPanel` | `apps/web/src/components/features/kb-hub/RaptorPanel.tsx` | `/library/[gameId]/kb` | done | #1481 | T A V | — |
 | `sp4-kb-hub.jsx` | `DeleteDialog` | `apps/web/src/components/features/kb-hub/DeleteDialog.tsx` | `/library/[gameId]/kb` | done | #1481 | T A M V | — |
 
-### KB globale — `/knowledge-base/global` (F1b) — 10 components — **Tier L** ✅ Phase 0.5 contract delivered (#1482)
+### KB globale — `/knowledge-base/global` (F1b) — 10 components — **Tier L** ✅ Phase 0.5 contract delivered (#1482) / **Phase 1 Foundation DONE** (PR #1688)
 
 > Mockup delivered post 2026-05-10 as `sp4-kb-globale.jsx`. Global search,
 > doc viewer (desktop + mobile), inline editor, and AI drawer (4-state FSM:
 > idle/streaming/completed/error).
 > **Phase 0.5 sub-hook contract DELIVERED** (#1482): [`contracts/kb-globale-hooks.md`](contracts/kb-globale-hooks.md).
+> **Phase 1 Foundation DELIVERED** (PR #1688): `useGlobalKbSearch` hook + 5 components
+> (HeroSearch, KbHomeDesktop, KbSearchResultsDesktop, KbEmptyState, route shell + orchestrator)
+> + Zod schemas + i18n catalogs + matrix + bundle budget.
 > Route decided: `/knowledge-base/global` (canonical). Dispatch is 2-phase
-> (Foundation: search/home/results/filters/empty + `useGlobalKbSearch`;
+> (Foundation: search/home/results/filters/empty + `useGlobalKbSearch` ✅ DONE;
 > Interactions: viewer/editor/AI-drawer + `useKbAskStream` mirroring
 > `useAgentChatStream`, all lazy-split). Reuse verified: `streaming.schemas.ts`
 > (CitationSchema + StreamingEventType), `kb-chunks.schemas.ts`, `useKbDocDetail`,
-> `useKbChunksList`. Greenfield: `useGlobalKbSearch` + `useKbAskStream`.
-> **6 open questions** (BE cross-game search + kb-ask SSE endpoints, citation
-> click, RBAC, editor scope, facets) must resolve before impl dispatch — see
-> contract §7. Components remain `pending` until Foundation/Interactions PRs land.
+> `useKbChunksList`, `useUserKbDocs`. Greenfield: `useGlobalKbSearch` + `useKbAskStream`.
+> **Remaining open questions** (BE cross-game search scope, kb-ask SSE, RBAC, editor scope, facets)
+> must resolve before Interactions dispatch — see contract §7 + follow-up issues #1686 / #1687.
+> FilterAccordion, viewers, editor, drawer deferred to Phase 2.
 
 | Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
 |--------|-----------|------|-------|--------|----|----|----------|
-| `sp4-kb-globale.jsx` | `HeroSearch` | `apps/web/src/components/features/kb-globale/HeroSearch.tsx` | `/knowledge-base/global` | pending | — | T A V | — |
-| `sp4-kb-globale.jsx` | `KbHomeDesktop` | `apps/web/src/components/features/kb-globale/KbHomeDesktop.tsx` | `/knowledge-base/global` | pending | — | T A V | — |
-| `sp4-kb-globale.jsx` | `KbSearchResultsDesktop` | `apps/web/src/components/features/kb-globale/KbSearchResultsDesktop.tsx` | `/knowledge-base/global` | pending | — | T A V | — |
-| `sp4-kb-globale.jsx` | `FilterAccordion` | `apps/web/src/components/features/kb-globale/FilterAccordion.tsx` | `/knowledge-base/global` | pending | — | T A V | — |
-| `sp4-kb-globale.jsx` | `KbDocViewerDesktop` | `apps/web/src/components/features/kb-globale/KbDocViewerDesktop.tsx` | `/knowledge-base/global` | pending | — | T A M V | — |
-| `sp4-kb-globale.jsx` | `KbDocViewerMobile` | `apps/web/src/components/features/kb-globale/KbDocViewerMobile.tsx` | `/knowledge-base/global` | pending | — | T A M V | — |
-| `sp4-kb-globale.jsx` | `KbEditorDesktop` | `apps/web/src/components/features/kb-globale/KbEditorDesktop.tsx` | `/knowledge-base/global` | pending | — | T A V | — |
-| `sp4-kb-globale.jsx` | `DrawerShell` (+ `DrawerIdle` / `DrawerStreaming` / `DrawerCompleted` / `DrawerError` states) | `apps/web/src/components/features/kb-globale/Drawer*.tsx` | `/knowledge-base/global` | pending | — | T A V | — |
-| `sp4-kb-globale.jsx` | `CitationPill` | `apps/web/src/components/features/kb-globale/CitationPill.tsx` | `/knowledge-base/global` | pending | — | T A V | — |
-| `sp4-kb-globale.jsx` | `KbEmptyState` | `apps/web/src/components/features/kb-globale/KbEmptyState.tsx` | `/knowledge-base/global` | pending | — | T A V | — |
+| `sp4-kb-globale.jsx` | `HeroSearch` | `apps/web/src/components/features/kb-globale/HeroSearch.tsx` | `/knowledge-base/global` | done | #1688 | T A V | — |
+| `sp4-kb-globale.jsx` | `KbHomeDesktop` | `apps/web/src/components/features/kb-globale/KbHomeDesktop.tsx` | `/knowledge-base/global` | done | #1688 | T A V | — |
+| `sp4-kb-globale.jsx` | `KbSearchResultsDesktop` | `apps/web/src/components/features/kb-globale/KbSearchResultsDesktop.tsx` | `/knowledge-base/global` | done | #1688 | T A V | — |
+| `sp4-kb-globale.jsx` | `FilterAccordion` | `apps/web/src/components/features/kb-globale/FilterAccordion.tsx` | `/knowledge-base/global` | pending | — | T A V | #1686 deferred |
+| `sp4-kb-globale.jsx` | `KbDocViewerDesktop` | `apps/web/src/components/features/kb-globale/KbDocViewerDesktop.tsx` | `/knowledge-base/global` | pending | — | T A M V | #1687 deferred |
+| `sp4-kb-globale.jsx` | `KbDocViewerMobile` | `apps/web/src/components/features/kb-globale/KbDocViewerMobile.tsx` | `/knowledge-base/global` | pending | — | T A M V | #1687 deferred |
+| `sp4-kb-globale.jsx` | `KbEditorDesktop` | `apps/web/src/components/features/kb-globale/KbEditorDesktop.tsx` | `/knowledge-base/global` | pending | — | T A V | #1687 deferred |
+| `sp4-kb-globale.jsx` | `DrawerShell` (+ `DrawerIdle` / `DrawerStreaming` / `DrawerCompleted` / `DrawerError` states) | `apps/web/src/components/features/kb-globale/Drawer*.tsx` | `/knowledge-base/global` | pending | — | T A V | Phase 2 deferred |
+| `sp4-kb-globale.jsx` | `CitationPill` | `apps/web/src/components/features/kb-globale/CitationPill.tsx` | `/knowledge-base/global` | pending | — | T A V | Phase 2 deferred |
+| `sp4-kb-globale.jsx` | `KbEmptyState` | `apps/web/src/components/features/kb-globale/KbEmptyState.tsx` | `/knowledge-base/global` | done | #1688 | T A V | — |
+| — | Route shell + orchestrator | `apps/web/src/app/(authenticated)/knowledge-base/global/page.tsx` + `_components/KbGlobaleView.tsx` | `/knowledge-base/global` | done | #1688 | — | — |
 
 ## SP6 — Nanolith libro-game (Iter 1.B / Iter 4) — 2 components
 

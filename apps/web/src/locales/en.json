@@ -3883,6 +3883,39 @@
         "cancel": "Cancel",
         "back": "← Back"
       }
+    },
+    "kbGlobale": {
+      "hero": {
+        "placeholder": "Search across all games' KB…",
+        "submit": "Search",
+        "clear": "Clear",
+        "modeLabel": "Search mode",
+        "modeOptions": {
+          "Semantic": "Semantic"
+        }
+      },
+      "home": {
+        "heading": "Recent documents",
+        "empty": {
+          "title": "No documents yet",
+          "description": "Upload a PDF from your library to get started.",
+          "cta": "Go to library"
+        },
+        "errorTitle": "Could not load documents",
+        "errorDescription": "An error occurred. Please try again shortly.",
+        "retry": "Retry"
+      },
+      "results": {
+        "loadMore": "Load more",
+        "loadingMore": "Loading…",
+        "empty": {
+          "title": "No results",
+          "description": "Try different search terms or check your spelling."
+        },
+        "errorTitle": "Search error",
+        "errorDescription": "Search failed. Please try again shortly.",
+        "retry": "Retry"
+      }
     }
   }
 }

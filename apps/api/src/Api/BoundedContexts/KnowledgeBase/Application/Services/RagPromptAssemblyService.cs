@@ -931,7 +931,8 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         ChatThread? chatThread,
         UserTier? userTier,
         string agentLanguage,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool includeInlineCitationInstructions = false)
     {
         ArgumentNullException.ThrowIfNull(agentTypology);
         ArgumentNullException.ThrowIfNull(gameTitle);
@@ -940,7 +941,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         ArgumentNullException.ThrowIfNull(agentLanguage);
 
         // Build RAG context from the pre-retrieved chunks — NO retrieval services invoked.
-        var ragContext = BuildRagContextString(preRetrievedChunks);
+        var ragContext = BuildRagContextString(preRetrievedChunks, prependIndex: includeInlineCitationInstructions);
 
         // Determine copyright instruction requirement from the supplied chunks.
         var hasProtectedCitations = preRetrievedChunks.Any(c => c.CopyrightTier == CopyrightTier.Protected);
@@ -953,7 +954,8 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         // hasExpansions = false on the cross-game path (no single-game expansion concept).
         var systemPrompt = BuildSystemPrompt(
             agentTypology, gameTitle, gameState: null, ragContext,
-            hasExpansions: false, hasProtectedCitations, agentLanguage);
+            hasExpansions: false, hasProtectedCitations, agentLanguage,
+            includeInlineCitationInstructions: includeInlineCitationInstructions);
 
         var userPrompt = BuildUserPrompt(userQuestion, chatThread);
         var estimatedTokens = EstimateTokens(systemPrompt) + EstimateTokens(userPrompt);

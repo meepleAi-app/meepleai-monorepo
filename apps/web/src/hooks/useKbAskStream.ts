@@ -1,5 +1,5 @@
 /**
- * useKbAskStream — FSM 5-state SSE hook for /api/v1/knowledge-base/ask/global.
+ * useKbAskStream — thin wrapper over useSseStreamFsm for /api/v1/knowledge-base/ask/global.
  *
  * States (D-L spec-panel 2026-05-30):
  *   idle → streaming → completed | completed-empty | error
@@ -14,19 +14,16 @@
  *
  * Retry policy: exp backoff [1s, 3s, 9s], max 3 retries, only on `connection` kind.
  *
- * D-F: citations rendered as numbered list BELOW the answer (LLM does NOT emit
- * `[N]` inline markers; verified in `RagPromptAssemblyService.BuildSystemPrompt`).
- *
+ * @see apps/web/src/hooks/useSseStreamFsm.ts (base FSM hook)
  * @see apps/web/src/hooks/useAgentChatStream.ts (parent pattern, different retry policy)
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 
-import { flushSync } from 'react-dom';
-
+import { useSseStreamFsm, type SseStreamFsmConfig } from './useSseStreamFsm';
 import { kbAskClient } from '../lib/api/clients/kbAskClient';
 
-import type { KbAskRequest, KbCitation } from '../lib/api/schemas/kb-ask.schemas';
+import type { KbAskEvent, KbAskRequest, KbCitation } from '../lib/api/schemas/kb-ask.schemas';
 
 export type KbAskStatus = 'idle' | 'streaming' | 'completed' | 'completed-empty' | 'error';
 export type KbAskErrorKind = 'connection' | 'timeout' | 'partial' | 'server';
@@ -59,19 +56,29 @@ export interface UseKbAskStream {
   reset: () => void;
 }
 
-const INITIAL_STATE: KbAskStreamState = {
+/**
+ * Internal state tracked by the reducer inside useSseStreamFsm.
+ * Includes `error` so that SSE Error events (type 5) can set error state
+ * without going through the catch path (which is for thrown exceptions only).
+ */
+interface KbInternalState {
+  readonly status: KbAskStatus;
+  readonly partialText: string;
+  readonly citations: readonly KbCitation[];
+  readonly totalTokens: number;
+  readonly elapsedMs: number;
+  readonly error: KbAskError | null;
+}
+
+const INITIAL_INTERNAL_STATE: KbInternalState = {
   status: 'idle',
   partialText: '',
   citations: [],
   totalTokens: 0,
   elapsedMs: 0,
   error: null,
-  retryCount: 0,
 };
 
-const MAX_RETRIES = 3;
-const RETRY_DELAYS_MS = [1000, 3000, 9000] as const;
-const TIMEOUT_MS = 30_000;
 const SERVER_ERROR_CODES = new Set([
   'RBAC_RESOLUTION_FAILED',
   'RETRIEVAL_FAILED',
@@ -79,180 +86,150 @@ const SERVER_ERROR_CODES = new Set([
 ]);
 
 export function useKbAskStream(): UseKbAskStream {
-  const [state, setState] = useState<KbAskStreamState>(INITIAL_STATE);
-  const abortRef = useRef<AbortController | null>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Track per-stream start time so the reducer can compute elapsedMs on Token + Complete.
   const startTimeRef = useRef<number>(0);
+  // Stash the last connection error so it's visible even while a retry is pending.
+  // The base FSM only calls setError on final failure; we need the error on the FIRST failure
+  // (test: "Network throw maps to kind=connection" does waitFor without advancing timers).
+  const pendingErrorRef = useRef<KbAskError | null>(null);
 
-  // Cleanup on unmount
-  useEffect(
-    () => () => {
-      abortRef.current?.abort();
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    },
+  const config = useMemo<SseStreamFsmConfig<KbAskRequest, KbAskEvent, KbInternalState, KbAskError>>(
+    () => ({
+      transport: (input, signal) => {
+        startTimeRef.current = Date.now();
+        return kbAskClient.askGlobal(input, signal);
+      },
+      initialState: INITIAL_INTERNAL_STATE,
+      eventReducer: (state, event) => {
+        // Transition to streaming on first event (if still idle)
+        const next: KbInternalState =
+          state.status === 'idle' ? { ...state, status: 'streaming' } : state;
+
+        switch (event.type) {
+          case 0: // StateUpdate — no state change beyond ensuring streaming
+            return next;
+
+          case 1: // Citations
+            return { ...next, citations: event.data.citations };
+
+          case 4: // Complete
+            return {
+              ...next,
+              status:
+                event.data.totalTokens === 0 && next.citations.length === 0
+                  ? 'completed-empty'
+                  : 'completed',
+              totalTokens: event.data.totalTokens,
+              elapsedMs: Date.now() - startTimeRef.current,
+            };
+
+          case 5: {
+            // SSE Error event — handled in reducer (not thrown, so won't go through errorMapper)
+            const code = event.data.code;
+            const kind: KbAskErrorKind = SERVER_ERROR_CODES.has(code)
+              ? 'server'
+              : code === 'LLM_STREAMING_FAILED' && next.partialText.length > 0
+                ? 'partial'
+                : 'server';
+            return {
+              ...next,
+              status: 'error',
+              error: { kind, message: event.data.message, code },
+            };
+          }
+
+          case 7: // Token
+            return {
+              ...next,
+              partialText: next.partialText + event.data.token,
+              elapsedMs: Date.now() - startTimeRef.current,
+            };
+
+          default:
+            return next;
+        }
+      },
+      // errorMapper handles thrown exceptions (network errors, timeout signal).
+      // IMPORTANT: also stash to pendingErrorRef so it's visible during retries.
+      errorMapper: raw => {
+        let mapped: KbAskError;
+        // Timeout sentinel injected by useSseStreamFsm watchdog
+        if ((raw as { __sseStreamFsmReason?: string } | null)?.__sseStreamFsmReason === 'timeout') {
+          mapped = { kind: 'timeout', message: 'No response in 30s' };
+        } else if (raw instanceof TypeError) {
+          // Network / connection error
+          mapped = { kind: 'connection', message: raw.message };
+        } else {
+          // Generic error
+          mapped = { kind: 'server', message: raw instanceof Error ? raw.message : String(raw) };
+        }
+        // Always stash so it's visible while a retry is pending (base FSM only sets error
+        // on final failure, but consumers expect to see the error immediately on each attempt).
+        pendingErrorRef.current = mapped;
+        return mapped;
+      },
+      retryPolicy: {
+        maxRetries: 3,
+        backoffMs: [1000, 3000, 9000],
+        timeoutMs: 30_000,
+        retryableErrorKinds: ['connection'],
+      },
+    }),
     []
   );
 
-  const clearTimer = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-  }, []);
+  const {
+    state,
+    retryCount,
+    error: thrownError,
+    ask: baseAsk,
+    reset: baseReset,
+  } = useSseStreamFsm(config);
 
-  const runStream = useCallback(
-    async (body: KbAskRequest, retryIdx: number) => {
-      const ac = new AbortController();
-      abortRef.current = ac;
-      startTimeRef.current = Date.now();
+  // Derive merged state. Deps include retryCount so the memo recomputes when a retry fires
+  // (retryCount changes → memo re-runs → reads pendingErrorRef.current which was already stashed
+  //  by errorMapper before setRetryCount was called).
+  const mergedState = useMemo<KbAskStreamState>(() => {
+    // Priority: SSE Error event (reducer) > thrown exception (base hook final) > pending retry error
+    const mergedError: KbAskError | null =
+      state.error ?? thrownError ?? (retryCount > 0 ? pendingErrorRef.current : null);
+    const mergedStatus: KbAskStatus = mergedError != null ? 'error' : state.status;
+    return {
+      status: mergedStatus,
+      partialText: state.partialText,
+      citations: state.citations,
+      totalTokens: state.totalTokens,
+      elapsedMs: state.elapsedMs,
+      error: mergedError,
+      retryCount,
+    };
+  }, [state, thrownError, retryCount]);
 
-      // On retries (retryIdx > 0) preserve the current retryCount in state.
-      // ask() resets it to 0 via INITIAL_STATE; each catch increments it.
-      setState(s => ({ ...s, status: 'streaming', error: null, elapsedMs: 0 }));
-
-      let hasCitations = false;
-      let accumulated = '';
-
-      // Timeout watchdog — started on the FIRST event (after connection is established)
-      // to avoid the timer from being set during synchronous error paths (network throw
-      // before any events). Reset on each subsequent event.
-      let watchdogStarted = false;
-      const resetTimeout = () => {
-        clearTimer();
-        timeoutRef.current = setTimeout(() => {
-          ac.abort();
-          setState(s => ({
-            ...s,
-            status: 'error',
-            error: { kind: 'timeout', message: 'No response in 30s' },
-          }));
-        }, TIMEOUT_MS);
-      };
-
-      try {
-        for await (const evt of kbAskClient.askGlobal(body, ac.signal)) {
-          // Bail out if aborted (stop() was called during iteration)
-          if (ac.signal.aborted) return;
-
-          // Start/reset timeout watchdog on first received event.
-          if (!watchdogStarted) {
-            watchdogStarted = true;
-          }
-          resetTimeout();
-
-          if (evt.type === 0) {
-            // StateUpdate — no state change beyond noting we got an event
-            continue;
-          }
-          if (evt.type === 1) {
-            hasCitations = true;
-            setState(s => ({ ...s, citations: evt.data.citations }));
-            continue;
-          }
-          if (evt.type === 7) {
-            accumulated += evt.data.token;
-            const snap = accumulated;
-            setState(s => ({
-              ...s,
-              partialText: snap,
-              elapsedMs: Date.now() - startTimeRef.current,
-            }));
-            continue;
-          }
-          if (evt.type === 4) {
-            clearTimer();
-            const completedEmpty = evt.data.totalTokens === 0 && !hasCitations;
-            setState(s => ({
-              ...s,
-              status: completedEmpty ? 'completed-empty' : 'completed',
-              totalTokens: evt.data.totalTokens,
-              elapsedMs: Date.now() - startTimeRef.current,
-            }));
-            return;
-          }
-          if (evt.type === 5) {
-            clearTimer();
-            const code = evt.data.code;
-            const kind: KbAskErrorKind = SERVER_ERROR_CODES.has(code)
-              ? 'server'
-              : code === 'LLM_STREAMING_FAILED' && accumulated.length > 0
-                ? 'partial'
-                : 'server';
-            setState(s => ({
-              ...s,
-              status: 'error',
-              error: { kind, message: evt.data.message, code },
-            }));
-            return;
-          }
-        }
-      } catch (err) {
-        clearTimer();
-        if (ac.signal.aborted) return; // stop() called — caller handles state
-        const isNetwork = err instanceof TypeError;
-        const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-
-        const nextRetry = retryIdx + 1;
-        const errorKind: KbAskErrorKind = isNetwork ? 'connection' : 'server';
-
-        // Set connection error immediately so consumers can observe it (test 9 needs this
-        // to be visible within waitFor timeout with real timers).
-        setState(s => ({
-          ...s,
-          status: 'error',
-          error: { kind: errorKind, message: errorMsg },
-          retryCount: isNetwork && retryIdx < MAX_RETRIES ? nextRetry : retryIdx,
-        }));
-
-        if (isNetwork && retryIdx < MAX_RETRIES) {
-          // Retry with exp backoff. flushSync inside the timer callback forces React to
-          // commit the retryCount update before runStream executes the next attempt.
-          // This is needed for fake-timer tests (vi.runAllTimersAsync) where setState
-          // from timer callbacks isn't automatically flushed before the assertion.
-          const delay = RETRY_DELAYS_MS[retryIdx] ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1];
-          timeoutRef.current = setTimeout(async () => {
-            flushSync(() => {
-              setState(s => ({
-                ...s,
-                status: 'error',
-                error: { kind: 'connection', message: errorMsg },
-                retryCount: nextRetry,
-              }));
-            });
-            await runStream(body, nextRetry);
-          }, delay);
-        }
-      }
-    },
-    [clearTimer]
-  );
-
+  // Wrap ask to accept (query: string, opts?: AskOptions) and build KbAskRequest.
   const ask = useCallback(
     (query: string, opts?: AskOptions) => {
-      abortRef.current?.abort();
-      clearTimer();
-      setState({ ...INITIAL_STATE, status: 'streaming' });
+      pendingErrorRef.current = null;
       const body: KbAskRequest = {
         query,
-        ...(opts?.language && { language: opts.language }),
-        ...(opts?.topK && { topK: opts.topK }),
+        ...(opts?.language !== undefined && { language: opts.language }),
+        ...(opts?.topK !== undefined && { topK: opts.topK }),
       };
-      void runStream(body, 0);
+      baseAsk(body);
     },
-    [runStream, clearTimer]
+    [baseAsk]
   );
 
+  // stop() should reset to idle (base hook stop() only aborts, does not reset state).
+  // Using baseReset so state goes back to INITIAL_INTERNAL_STATE (idle).
   const stop = useCallback(() => {
-    abortRef.current?.abort();
-    clearTimer();
-    setState(INITIAL_STATE);
-  }, [clearTimer]);
+    pendingErrorRef.current = null;
+    baseReset();
+  }, [baseReset]);
 
   const reset = useCallback(() => {
-    abortRef.current?.abort();
-    clearTimer();
-    setState(INITIAL_STATE);
-  }, [clearTimer]);
+    pendingErrorRef.current = null;
+    baseReset();
+  }, [baseReset]);
 
-  return { state, ask, stop, reset };
+  return { state: mergedState, ask, stop, reset };
 }

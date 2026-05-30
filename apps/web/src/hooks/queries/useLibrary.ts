@@ -16,6 +16,11 @@ import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { api } from '@/lib/api';
 import { fetchUserGamebooks } from '@/lib/api/gamebooks-list';
 import type { LibraryActivityItem } from '@/lib/api/schemas/library-activity.schemas';
+import {
+  libraryFixtures,
+  parseLibraryStateOverride,
+  STATE_OVERRIDE_ENABLED,
+} from '@/lib/library/visual-test-fixture';
 import type {
   PaginatedLibraryResponse,
   UserLibraryStats,
@@ -66,6 +71,15 @@ export const libraryKeys = {
  * @param params - Optional filtering and pagination parameters
  * @param enabled - Whether to run the query (default: true)
  * @returns UseQueryResult with paginated library data
+ *
+ * Visual-test fixture hatch (issue #1714): when `STATE_OVERRIDE_ENABLED` and
+ * the URL carries `?fixture=default|empty`, the queryFn returns the matching
+ * fixture instead of hitting `/api/v1/library`. Production builds without
+ * `NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1` constant-fold the gate to
+ * `false`, so the fixture data is dead-code-eliminated.
+ *
+ * Reads `?fixture=` lazily from `window.location.search` inside the queryFn
+ * so the override survives route param changes without triggering a refetch.
  */
 export function useLibrary(
   params?: GetUserLibraryParams,
@@ -74,6 +88,12 @@ export function useLibrary(
   return useQuery({
     queryKey: libraryKeys.list(params),
     queryFn: async (): Promise<PaginatedLibraryResponse> => {
+      if (STATE_OVERRIDE_ENABLED && typeof window !== 'undefined') {
+        const override = parseLibraryStateOverride(new URLSearchParams(window.location.search));
+        if (override !== null) {
+          return libraryFixtures[override];
+        }
+      }
       return api.library.getLibrary(params);
     },
     enabled,

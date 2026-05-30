@@ -187,7 +187,8 @@ internal class ProcessingJobRepository : RepositoryBase, IProcessingJobRepositor
         IReadOnlyList<JobStatus> statuses,
         CancellationToken cancellationToken = default)
     {
-        if (statuses is null || statuses.Count == 0)
+        ArgumentNullException.ThrowIfNull(statuses);
+        if (statuses.Count == 0)
             return 0;
 
         var statusStrings = statuses.Select(s => s.ToString()).ToArray();

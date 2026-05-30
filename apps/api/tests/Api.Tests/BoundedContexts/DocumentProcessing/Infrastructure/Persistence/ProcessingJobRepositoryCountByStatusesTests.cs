@@ -1,11 +1,9 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.Infrastructure.Entities.DocumentProcessing;
-using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
-using NSubstitute;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
@@ -19,9 +17,12 @@ public sealed class ProcessingJobRepositoryCountByStatusesTests
 
     private static ProcessingJobRepository CreateRepo(out Api.Infrastructure.MeepleAiDbContext db)
     {
-        db = TestDbContextFactory.CreateInMemoryDbContext();
-        var collector = Substitute.For<IDomainEventCollector>();
-        return new ProcessingJobRepository(db, collector);
+        // Read-only tests: use the factory's shared Moq collector so the same instance is wired
+        // into both MeepleAiDbContext and the repository — see PhotoBatchUploadRepositoryIntegrationTests
+        // for the write-path (Testcontainers) pattern.
+        var collector = TestDbContextFactory.CreateMockEventCollector();
+        db = TestDbContextFactory.CreateInMemoryDbContextWithCollector(collector);
+        return new ProcessingJobRepository(db, collector.Object);
     }
 
     private static ProcessingJobEntity NewJob(JobStatus status) => new()
@@ -91,5 +92,16 @@ public sealed class ProcessingJobRepositoryCountByStatusesTests
         var count = await repo.CountByStatusesAsync(new[] { JobStatus.Failed }, Ct);
 
         count.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task CountByStatusesAsync_NullStatuses_ThrowsArgumentNullException()
+    {
+        var repo = CreateRepo(out _);
+
+        Func<Task> act = () => repo.CountByStatusesAsync(null!, Ct);
+
+        await act.Should().ThrowAsync<ArgumentNullException>()
+            .WithParameterName("statuses");
     }
 }

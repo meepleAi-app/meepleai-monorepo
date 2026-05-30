@@ -138,16 +138,40 @@ public class DiceRoll
     /// </summary>
     private static int[] RollDice(int count, int sides)
     {
-        var results = new int[count];
         using var rng = System.Security.Cryptography.RandomNumberGenerator.Create();
-        var buffer = new byte[4];
+        return RollDiceCore(count, sides, rng);
+    }
+
+    /// <summary>
+    /// Pure rolling logic exposed for deterministic testing.
+    /// Uses rejection sampling to produce a uniform distribution over [1, sides] with
+    /// zero modulo bias and no <c>Math.Abs(int.MinValue)</c> overflow (issue #1691).
+    /// </summary>
+    /// <param name="count">Number of dice to roll (must be ≥ 0).</param>
+    /// <param name="sides">Number of sides per die (must be ≥ 1).</param>
+    /// <param name="rng">Source of randomness. Must produce 4-byte fills via <see cref="System.Security.Cryptography.RandomNumberGenerator.GetBytes(byte[])"/>.</param>
+    /// <returns>Array of <paramref name="count"/> integers, each in <c>[1, sides]</c>.</returns>
+    internal static int[] RollDiceCore(int count, int sides, System.Security.Cryptography.RandomNumberGenerator rng)
+    {
+        // Largest multiple of `sides` that fits in [0, uint.MaxValue]. Values ≥ limit are
+        // rejected and re-sampled to eliminate modulo bias. Rejection probability is
+        // (uint.MaxValue + 1 - limit) / (uint.MaxValue + 1) ≤ (sides - 1) / 2^32 ≈ 10⁻⁹
+        // for standard dice (d4..d100) → performance impact negligible.
+        var limit = (uint.MaxValue / (uint)sides) * (uint)sides;
+
+        var results = new int[count];
+        Span<byte> buffer = stackalloc byte[4];
 
         for (int i = 0; i < count; i++)
         {
-            rng.GetBytes(buffer);
-            // Convert to positive integer and map to 1-sides range
-            var value = Math.Abs(BitConverter.ToInt32(buffer, 0));
-            results[i] = (value % sides) + 1;
+            uint value;
+            do
+            {
+                rng.GetBytes(buffer);
+                value = BitConverter.ToUInt32(buffer);
+            } while (value >= limit);
+
+            results[i] = (int)(value % (uint)sides) + 1;
         }
 
         return results;

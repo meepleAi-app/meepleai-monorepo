@@ -19,6 +19,7 @@ import { type ReactNode } from 'react';
 import { CitationPill } from '@/components/features/kb-globale/CitationPill';
 import type { KbCitation } from '@/lib/api/schemas/kb-ask.schemas';
 
+// eslint-disable-next-line security/detect-unsafe-regex -- regex is bounded by bracket delimiters; no catastrophic backtracking risk in practice
 const MARKER_REGEX = /\[(\d+(?:,\s*\d+)*)\]/g;
 
 export interface ParseCitationMarkersOptions {

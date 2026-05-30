@@ -200,21 +200,49 @@ public class UserRepository : RepositoryBase, IUserRepository
         existingUser.OnboardingSkipped = entity.OnboardingSkipped;
         existingUser.OnboardingCompletedAt = entity.OnboardingCompletedAt;
 
-        // Synchronize backup codes collection (delete old, add new)
-        // This ensures we don't duplicate codes on every update
-        existingUser.BackupCodes.Clear();
+        // Reconcile backup codes collection by CodeHash (Issue #1533).
+        // The previous Clear() + foreach Add pattern collided with the UNIQUE INDEX on
+        // CodeHash whenever hydrated domain codes were re-emitted (same hashes, new GUIDs)
+        // — the DELETE + INSERT batch tripped the unique constraint and surfaced as a
+        // DbUpdateConcurrencyException. Reconciling by hash also preserves the original
+        // BackupCode Ids and CreatedAt timestamps when no semantic change occurred,
+        // avoiding spurious audit churn on every UpdateAsync call.
+        var persistedByHash = existingUser.BackupCodes.ToDictionary(
+            bc => bc.CodeHash, StringComparer.Ordinal);
+        var domainHashes = entity.BackupCodes
+            .Select(bc => bc.HashedValue)
+            .ToHashSet(StringComparer.Ordinal);
 
-        foreach (var backupCode in entity.BackupCodes)
+        foreach (var persisted in existingUser.BackupCodes.ToList())
         {
-            existingUser.BackupCodes.Add(new Api.Infrastructure.Entities.UserBackupCodeEntity
+            if (!domainHashes.Contains(persisted.CodeHash))
             {
-                Id = Guid.NewGuid(),
-                UserId = entity.Id,
-                CodeHash = backupCode.HashedValue,
-                IsUsed = backupCode.IsUsed,
-                UsedAt = backupCode.UsedAt,
-                CreatedAt = DateTime.UtcNow
-            });
+                existingUser.BackupCodes.Remove(persisted);
+            }
+        }
+
+        foreach (var domainCode in entity.BackupCodes)
+        {
+            if (persistedByHash.TryGetValue(domainCode.HashedValue, out var existing))
+            {
+                if (existing.IsUsed != domainCode.IsUsed || existing.UsedAt != domainCode.UsedAt)
+                {
+                    existing.IsUsed = domainCode.IsUsed;
+                    existing.UsedAt = domainCode.UsedAt;
+                }
+            }
+            else
+            {
+                existingUser.BackupCodes.Add(new Api.Infrastructure.Entities.UserBackupCodeEntity
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = entity.Id,
+                    CodeHash = domainCode.HashedValue,
+                    IsUsed = domainCode.IsUsed,
+                    UsedAt = domainCode.UsedAt,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
         }
 
         await Task.CompletedTask.ConfigureAwait(false);
@@ -295,18 +323,30 @@ public class UserRepository : RepositoryBase, IUserRepository
             entity.DataRetentionDays);
 
         // S3011 fix: Use internal hydration methods instead of reflection
-        // Reconstruct 2FA state
-        if (entity.IsTwoFactorEnabled && !string.IsNullOrEmpty(entity.TotpSecretEncrypted))
+        // Reconstruct 2FA state + backup codes.
+        // Issue #1533: TotpSecret AND BackupCode hydration are intentionally DECOUPLED from
+        // the IsTwoFactorEnabled invariant. A user can have a persisted setup secret + codes
+        // without IsTwoFactorEnabled=true during the enrollment window (TotpService.SetupAsync
+        // persists both, but the flag flips only on first OTP confirmation) or in stale states.
+        // Without this hydration:
+        //   - empty domain.BackupCodes → UpdateAsync's reconciliation removes all persisted codes
+        //   - null  domain.TotpSecret  → UpdateAsync's scalar copy nulls TotpSecretEncrypted
+        // Either side-effect breaks enrollment when an admin command (ChangeUserRoleCommand /
+        // SuspendUserCommand) runs through UpdateAsync mid-flight.
+        var backupCodes = entity.BackupCodes
+            .Select(bc => BackupCode.FromHashed(bc.CodeHash, bc.IsUsed, bc.UsedAt))
+            .ToList();
+        var totpSecret = string.IsNullOrEmpty(entity.TotpSecretEncrypted)
+            ? null
+            : TotpSecret.FromEncrypted(entity.TotpSecretEncrypted);
+
+        if (entity.IsTwoFactorEnabled && totpSecret is not null)
         {
-            var totpSecret = TotpSecret.FromEncrypted(entity.TotpSecretEncrypted);
-
-            // Convert backup codes from persistence to domain
-            var backupCodes = entity.BackupCodes
-                .Select(bc => BackupCode.FromHashed(bc.CodeHash, bc.IsUsed, bc.UsedAt))
-                .ToList();
-
-            // Use internal method instead of reflection (S3011 compliance)
             user.Restore2FAState(totpSecret, entity.IsTwoFactorEnabled, entity.TwoFactorEnabledAt, backupCodes);
+        }
+        else if (totpSecret is not null || backupCodes.Count > 0)
+        {
+            user.RestoreSetupInProgressState(totpSecret, backupCodes);
         }
 
         // Reconstruct OAuth accounts collection

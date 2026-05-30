@@ -32,10 +32,7 @@ export function DrawerCompleted({
         <div className="bg-muted border border-border rounded-lg p-3 text-sm text-foreground leading-relaxed mb-3">
           {text}
         </div>
-        {/* D-F: NUMBERED LIST below answer (no inline pills).
-            Index numbers and page info are rendered via data attributes only so
-            that getByText(/1/) finds only "cite 1" snippet text (no DOM text "1",
-            "p.14", "p.21", "412" to create ambiguity in RTL text queries). */}
+        {/* D-F: NUMBERED LIST below answer — index + page ref + snippet all visible */}
         {citations.length > 0 && (
           <ol className="space-y-1 mb-3" data-testid="citation-list">
             {citations.map((c, idx) => (
@@ -45,19 +42,22 @@ export function DrawerCompleted({
                 data-citation-page={String(c.page)}
                 className="text-xs text-muted-foreground flex gap-2"
               >
-                <span>{c.snippet}</span>
+                <span className="font-mono font-bold text-entity-kb">{idx + 1}</span>
+                <span>
+                  p.{c.page} · {c.snippet}
+                </span>
               </li>
             ))}
           </ol>
         )}
-        {/* Status metadata stored in data attributes to avoid DOM text "/1/" ambiguity */}
         <div
           data-tokens={String(totalTokens)}
           data-elapsed={String((elapsedMs / 1000).toFixed(1))}
           data-citations={String(citations.length)}
           className="p-2 rounded-sm bg-entity-kb/5 border border-entity-kb/20 text-xs text-entity-kb font-mono"
         >
-          {`✓ ${labels.completedLabel}`}
+          ✓ {labels.completedLabel} · {totalTokens} tokens · {(elapsedMs / 1000).toFixed(1)}s ·{' '}
+          {citations.length} citations
         </div>
       </div>
       <div className="p-3 border-t border-border bg-card flex gap-2">

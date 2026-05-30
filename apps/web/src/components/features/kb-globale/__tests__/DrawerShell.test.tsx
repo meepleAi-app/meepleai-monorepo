@@ -89,12 +89,13 @@ describe('DrawerShell — FSM state rendering', () => {
       status: 'completed',
       partialText: 'Risposta completa.',
       citations: [
-        { docId: 'd1', source: 'd1', page: 14, snippet: 'cite 1', score: 0.9 },
-        { docId: 'd1', source: 'd1', page: 21, snippet: 'cite 2', score: 0.8 },
+        { docId: 'd1', source: 'd1', page: 14, snippet: 'cite uno', score: 0.9 },
+        { docId: 'd1', source: 'd1', page: 21, snippet: 'cite due', score: 0.8 },
       ],
       totalTokens: 412,
+      elapsedMs: 2100,
     };
-    render(
+    const { container } = render(
       <DrawerShell
         state={state}
         labels={labels}
@@ -108,9 +109,22 @@ describe('DrawerShell — FSM state rendering', () => {
     );
     expect(screen.getByTestId('drawer-state-completed')).toBeInTheDocument();
     expect(screen.getByText(/risposta completa/i)).toBeInTheDocument();
-    expect(screen.getByText(/1/)).toBeInTheDocument();
-    expect(screen.getByText(/cite 1/i)).toBeInTheDocument();
-    expect(screen.getByText(/cite 2/i)).toBeInTheDocument();
+    // D-F: 2 citation items in a list, each with index + page + snippet visible
+    const items = screen.getAllByRole('listitem');
+    expect(items).toHaveLength(2);
+    // Index 1 + 2 visible via data-attr selector
+    expect(container.querySelector('[data-citation-index="1"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-citation-index="2"]')).toBeInTheDocument();
+    // Page refs visible
+    expect(screen.getByText(/p\.14/)).toBeInTheDocument();
+    expect(screen.getByText(/p\.21/)).toBeInTheDocument();
+    // Snippets visible
+    expect(screen.getByText(/cite uno/i)).toBeInTheDocument();
+    expect(screen.getByText(/cite due/i)).toBeInTheDocument();
+    // Completion metadata visible
+    expect(screen.getByText(/412 tokens/)).toBeInTheDocument();
+    expect(screen.getByText(/2\.1s/)).toBeInTheDocument();
+    expect(screen.getByText(/2 citations/)).toBeInTheDocument();
   });
 
   it('renders completed-empty: dedicated empty state with CTA', async () => {

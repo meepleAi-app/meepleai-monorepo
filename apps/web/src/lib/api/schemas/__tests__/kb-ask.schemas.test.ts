@@ -30,6 +30,60 @@ describe('KbCitationSchema', () => {
   });
 });
 
+describe('KbCitationSchema — chunk-level fields (#1702)', () => {
+  const basePayload = {
+    docId: 'doc-123',
+    source: 'PDF:doc-123',
+    page: 14,
+    snippet: 'rules text',
+    score: 0.85,
+  };
+
+  it('parses cleanly when chunk fields are absent (page-level legacy payload)', () => {
+    const result = KbCitationSchema.safeParse(basePayload);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.chunkId).toBeUndefined();
+      expect(result.data.chunkPosition).toBeUndefined();
+    }
+  });
+
+  it('parses cleanly with both chunk fields set (cross-game chunk-level payload)', () => {
+    const result = KbCitationSchema.safeParse({
+      ...basePayload,
+      chunkId: 'doc-123_3',
+      chunkPosition: 3,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.chunkId).toBe('doc-123_3');
+      expect(result.data.chunkPosition).toBe(3);
+    }
+  });
+
+  it('parses cleanly with only chunkId (partial set)', () => {
+    const result = KbCitationSchema.safeParse({
+      ...basePayload,
+      chunkId: 'doc-123_0',
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.chunkId).toBe('doc-123_0');
+      expect(result.data.chunkPosition).toBeUndefined();
+    }
+  });
+
+  it('rejects chunkPosition that is negative', () => {
+    const result = KbCitationSchema.safeParse({ ...basePayload, chunkPosition: -1 });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects chunkPosition that is non-integer', () => {
+    const result = KbCitationSchema.safeParse({ ...basePayload, chunkPosition: 1.5 });
+    expect(result.success).toBe(false);
+  });
+});
+
 describe('KbAskEventSchema (discriminated union on numeric type)', () => {
   it('parses StateUpdate (type=0)', () => {
     const evt = { type: 0 as const, data: { message: 'Ricerca…' } };

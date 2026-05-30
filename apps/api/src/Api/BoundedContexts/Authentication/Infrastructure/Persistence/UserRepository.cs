@@ -324,24 +324,29 @@ public class UserRepository : RepositoryBase, IUserRepository
 
         // S3011 fix: Use internal hydration methods instead of reflection
         // Reconstruct 2FA state + backup codes.
-        // Issue #1533: BackupCode hydration is intentionally DECOUPLED from the 2FA-enabled
-        // invariant. A user can have persisted codes without IsTwoFactorEnabled=true during the
-        // setup window (TotpService.SetupAsync persists secret + codes, the flag flips only on
-        // first OTP confirmation) or in stale states. Without this hydration the next
-        // UpdateAsync issued by an admin command (ChangeUserRoleCommand / SuspendUserCommand)
-        // would wipe the persisted codes via Clear()+Add(empty).
+        // Issue #1533: TotpSecret AND BackupCode hydration are intentionally DECOUPLED from
+        // the IsTwoFactorEnabled invariant. A user can have a persisted setup secret + codes
+        // without IsTwoFactorEnabled=true during the enrollment window (TotpService.SetupAsync
+        // persists both, but the flag flips only on first OTP confirmation) or in stale states.
+        // Without this hydration:
+        //   - empty domain.BackupCodes → UpdateAsync's reconciliation removes all persisted codes
+        //   - null  domain.TotpSecret  → UpdateAsync's scalar copy nulls TotpSecretEncrypted
+        // Either side-effect breaks enrollment when an admin command (ChangeUserRoleCommand /
+        // SuspendUserCommand) runs through UpdateAsync mid-flight.
         var backupCodes = entity.BackupCodes
             .Select(bc => BackupCode.FromHashed(bc.CodeHash, bc.IsUsed, bc.UsedAt))
             .ToList();
+        var totpSecret = string.IsNullOrEmpty(entity.TotpSecretEncrypted)
+            ? null
+            : TotpSecret.FromEncrypted(entity.TotpSecretEncrypted);
 
-        if (entity.IsTwoFactorEnabled && !string.IsNullOrEmpty(entity.TotpSecretEncrypted))
+        if (entity.IsTwoFactorEnabled && totpSecret is not null)
         {
-            var totpSecret = TotpSecret.FromEncrypted(entity.TotpSecretEncrypted);
             user.Restore2FAState(totpSecret, entity.IsTwoFactorEnabled, entity.TwoFactorEnabledAt, backupCodes);
         }
-        else if (backupCodes.Count > 0)
+        else if (totpSecret is not null || backupCodes.Count > 0)
         {
-            user.RestoreBackupCodesOnly(backupCodes);
+            user.RestoreSetupInProgressState(totpSecret, backupCodes);
         }
 
         // Reconstruct OAuth accounts collection

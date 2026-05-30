@@ -188,7 +188,12 @@ public sealed class SuspendUserCommandHandlerIntegrationTests : IAsyncLifetime
         var command = new SuspendUserCommand(userId.ToString(), requesterId, "Admin action during 2FA setup");
 
         // Act
-        await _handler.Handle(command, TestContext.Current.CancellationToken);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert — suspension actually executed (guard against silent no-op masking the
+        // backup-code assertion below).
+        result.IsSuspended.Should().BeTrue(
+            because: "the suspension must actually execute, otherwise the codes-preserved assertion is meaningless");
 
         // Assert — codes still present so the user can resume enrollment.
         var codeCount = await _dbContext.UserBackupCodes
@@ -196,5 +201,14 @@ public sealed class SuspendUserCommandHandlerIntegrationTests : IAsyncLifetime
             .CountAsync(c => c.UserId == userId);
         codeCount.Should().Be(6,
             because: "SuspendUserCommand MUST NOT wipe persisted backup codes during 2FA setup (#1533)");
+
+        // Assert — TotpSecret survives so the user can resume enrollment (#1533 follow-up).
+        var persistedAfter = await _dbContext.Users
+            .AsNoTracking()
+            .FirstAsync(u => u.Id == userId);
+        persistedAfter.TotpSecretEncrypted.Should().Be("fake_setup_secret_pending_confirmation",
+            because: "the TOTP setup secret must survive admin commands during enrollment");
+        persistedAfter.IsTwoFactorEnabled.Should().BeFalse(
+            because: "the enrollment is still in-progress — the flag must NOT flip until first OTP confirmation");
     }
 }

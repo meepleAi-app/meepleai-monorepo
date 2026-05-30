@@ -989,14 +989,23 @@ public sealed class User : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Restores backup codes without enabling 2FA. Internal hydration helper used by
-    /// UserRepository when the persistence row has codes but IsTwoFactorEnabled is false
-    /// (Issue #1533: stale rows or 2FA setup-in-progress window between TotpService.SetupAsync
-    /// and the first OTP confirmation). Decouples backup-code hydration from the 2FA-enabled
-    /// invariant so subsequent UpdateAsync calls preserve the persisted codes.
+    /// Restores 2FA setup-in-progress state (TotpSecret and/or BackupCodes) without flipping
+    /// the IsTwoFactorEnabled flag. Internal hydration helper used by UserRepository when the
+    /// persistence row carries a TotpSecretEncrypted or BackupCode rows but IsTwoFactorEnabled
+    /// is still false (Issue #1533: stale rows or the setup window between TotpService.SetupAsync
+    /// and the first OTP confirmation).
+    ///
+    /// Both arguments are independently optional: pass <c>null</c> for an absent setup secret
+    /// and an empty collection for absent codes. Decoupling these from the IsTwoFactorEnabled
+    /// invariant ensures subsequent UpdateAsync calls preserve the setup secret and recovery
+    /// codes even when they reach the domain aggregate via a path that does not enable 2FA
+    /// (e.g. ChangeUserRoleCommand, SuspendUserCommand).
     /// </summary>
-    internal void RestoreBackupCodesOnly(IEnumerable<BackupCode> backupCodes)
+    internal void RestoreSetupInProgressState(TotpSecret? totpSecret, IEnumerable<BackupCode> backupCodes)
     {
+        ArgumentNullException.ThrowIfNull(backupCodes);
+
+        TotpSecret = totpSecret;
         _backupCodes.Clear();
         _backupCodes.AddRange(backupCodes);
     }

@@ -634,6 +634,17 @@ public sealed class UserRepositoryIntegrationTests : IAsyncLifetime
             .CountAsync(c => c.UserId == TestUserId1, TestCancellationToken))
             .Should().Be(8,
                 because: "admin actions during 2FA setup window MUST NOT wipe backup codes (#1533)");
+
+        // Assert — TotpSecret survives the round-trip. Without TotpSecret hydration in
+        // MapToDomain, the next UpdateAsync would null TotpSecretEncrypted via the scalar
+        // copy `existingUser.TotpSecretEncrypted = entity.TotpSecret?.EncryptedValue`,
+        // leaving the user with codes but no way to complete enrollment (#1533 follow-up).
+        var persistedAfter = await _dbContext.Users.AsNoTracking()
+            .FirstAsync(u => u.Id == TestUserId1, TestCancellationToken);
+        persistedAfter.TotpSecretEncrypted.Should().Be("fake_setup_secret_not_yet_confirmed",
+            because: "the TOTP setup secret must survive admin commands during enrollment");
+        persistedAfter.IsTwoFactorEnabled.Should().BeFalse(
+            because: "enrollment is still in-progress — the flag must NOT flip until first OTP confirmation");
     }
 
     #endregion

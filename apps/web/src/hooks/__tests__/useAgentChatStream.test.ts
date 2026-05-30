@@ -709,4 +709,24 @@ describe('useAgentChatStream', () => {
     expect(result.current.state.modelDowngrade).toBeNull();
     expect(result.current.state.currentAnswer).toBe('second');
   });
+
+  it('retries exactly 2 times on connection error then surfaces final error', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn(async () => {
+      throw new TypeError('Failed to fetch');
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { result } = renderHook(() => useAgentChatStream());
+    act(() => {
+      result.current.sendMessage('agent-id', 'hi');
+    });
+    await vi.runAllTimersAsync();
+
+    expect(result.current.state.retryCount).toBe(2);
+    // 1 initial + 2 retries = 3 fetch calls
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(result.current.state.error).not.toBeNull();
+    vi.useRealTimers();
+  });
 });

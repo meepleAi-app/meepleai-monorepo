@@ -42,7 +42,7 @@ internal static class AdminKnowledgeBaseEndpoints
         })
         .WithName("GetKbNavCounts")
         .WithSummary("Counts for KbSubNav badges (active queue + feedback last 7d).")
-        .Produces<KbNavCountsDto>(200);
+        .Produces<KbNavCountsDto>(StatusCodes.Status200OK);
 
         // POST /api/v1/admin/kb/vector-search — semantic search over pgvector embeddings
         kbGroup.MapPost("/vector-search", async (

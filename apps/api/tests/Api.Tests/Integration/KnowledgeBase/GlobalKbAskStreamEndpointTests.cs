@@ -279,6 +279,60 @@ public sealed class GlobalKbAskStreamEndpointTests : IAsyncLifetime
             "EC-1: stream must not contain an Error event for the zero-context case");
     }
 
+    // ── AC-5: chunkId / chunkPosition carried in Citations event ─────────────
+
+    /// <summary>
+    /// AC-5 (G/W/T Scenario 1, Issue #1702): The CrossGameStreamQaQueryHandler MUST populate
+    /// chunkId and chunkPosition on each Snippet when cross-game retrieval returns results.
+    /// Verifies that the SSE Citations event carries both new fields in its JSON payload.
+    /// </summary>
+    [Fact]
+    public async Task AskGlobal_WhenChunksRetrieved_CitationsCarriesChunkIdAndPosition()
+    {
+        // Arrange: BuildSearchMock already returns one result per accessible game with
+        // ChunkId = "{guid:N}_0" (contains '_') and ChunkIndex = 0.
+        // No per-test mock setup needed — the factory pattern in InitializeAsync wires it.
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            Endpoint,
+            _aliceToken,
+            new { query = "How does setup work?", language = "en", topK = 5 });
+
+        // Act
+        var response = await _client.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
+            TestCancellationToken);
+
+        response.EnsureSuccessStatusCode();
+
+        var events = await ParseSseEventsAsync(response);
+
+        // Assert: Citations event must be present
+        var citationsEvent = events
+            .Should().Contain(e => e.GetProperty("type").GetInt32() == (int)StreamingEventType.Citations,
+                "the seeded fixture MUST produce a Citations event")
+            .Which;
+
+        var citations = citationsEvent.GetProperty("data").GetProperty("citations");
+        citations.GetArrayLength().Should().BeGreaterThan(0,
+            "the seeded BuildSearchMock returns one result per accessible game — at least one must appear");
+
+        var firstCitation = citations[0];
+
+        firstCitation.TryGetProperty("chunkId", out var chunkIdProp).Should().BeTrue(
+            "chunkId MUST be present in /ask/global Citations payload (CrossGameStreamQaQueryHandler sets it from MultiGameSearchResultItem.ChunkId)");
+        chunkIdProp.GetString().Should().NotBeNullOrEmpty(
+            "chunkId must be a non-empty string");
+        chunkIdProp.GetString().Should().Contain("_",
+            "chunkId is the composite \"{PdfDocumentId}_{ChunkIndex}\" string — the underscore separator MUST be present");
+
+        firstCitation.TryGetProperty("chunkPosition", out var chunkPosProp).Should().BeTrue(
+            "chunkPosition MUST be present in /ask/global Citations payload (CrossGameStreamQaQueryHandler sets it from MultiGameSearchResultItem.ChunkIndex)");
+        chunkPosProp.GetInt32().Should().BeGreaterThanOrEqualTo(0,
+            "chunkPosition is the zero-based ChunkIndex — must be non-negative");
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────────────
 
     private async Task SeedAsync()

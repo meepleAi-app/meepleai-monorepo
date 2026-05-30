@@ -3943,7 +3943,8 @@
         "completed": {
           "completedLabel": "COMPLETED",
           "copyLabel": "Copy",
-          "regenerateLabel": "Regenerate"
+          "regenerateLabel": "Regenerate",
+          "inlineCitationAriaLabelTemplate": "Citation {n}, document {docId}, page {page}"
         },
         "empty": {
           "title": "No documents in your library",

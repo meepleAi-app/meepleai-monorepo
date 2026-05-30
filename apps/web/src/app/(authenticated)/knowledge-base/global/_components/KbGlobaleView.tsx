@@ -135,7 +135,13 @@ const LABELS = {
         sendLabel: 'Invia',
       },
       streaming: { statusLabel: 'STREAMING', stopLabel: 'Stop streaming' },
-      completed: { completedLabel: 'COMPLETED', copyLabel: 'Copia', regenerateLabel: 'Rigenera' },
+      completed: {
+        completedLabel: 'COMPLETED',
+        copyLabel: 'Copia',
+        regenerateLabel: 'Rigenera',
+        inlineCitationAriaLabel: (c: { docId: string; page: number }, n: number) =>
+          `Citazione ${n}, documento ${c.docId}, pagina ${c.page}`,
+      },
       empty: {
         title: 'Nessun documento nella tua libreria',
         body: 'Carica un PDF dalla libreria per iniziare a chiedere.',

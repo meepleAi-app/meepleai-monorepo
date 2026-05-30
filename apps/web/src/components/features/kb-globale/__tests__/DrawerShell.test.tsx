@@ -290,4 +290,72 @@ describe('DrawerShell — FSM state rendering', () => {
     await userEvent.click(screen.getByRole('button', { name: /stop streaming/i }));
     expect(onStop).toHaveBeenCalledOnce();
   });
+
+  it('renders completed: inline pills when text contains [N] markers (D-1703-D inline path)', () => {
+    const state: KbAskStreamState = {
+      ...baseState,
+      status: 'completed',
+      partialText: 'La classe Scout ha 3 abilità [1][2]. Perks parte da [3].',
+      citations: [
+        { docId: 'd1', source: 'd1', page: 14, snippet: 'cite uno', score: 0.9 },
+        { docId: 'd1', source: 'd1', page: 14, snippet: 'cite due', score: 0.8 },
+        { docId: 'd2', source: 'd2', page: 21, snippet: 'cite tre', score: 0.7 },
+      ],
+      totalTokens: 412,
+      elapsedMs: 2100,
+    };
+    const { container } = render(
+      <DrawerShell
+        state={state}
+        labels={labels}
+        suggestions={[]}
+        onAsk={vi.fn()}
+        onStop={vi.fn()}
+        onReset={vi.fn()}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId('drawer-state-completed')).toBeInTheDocument();
+    expect(screen.getByTestId('drawer-completed-answer')).toHaveAttribute(
+      'data-render-mode',
+      'inline'
+    );
+    const pills = container.querySelectorAll('[data-slot="kb-globale-citation-pill"]');
+    expect(pills).toHaveLength(3);
+    // Fallback list MUST NOT be present (UX safety invariant)
+    expect(screen.queryByTestId('citation-list')).toBeNull();
+  });
+
+  it('renders completed: fallback list when text has no [N] markers (D-F fallback preserved)', () => {
+    const state: KbAskStreamState = {
+      ...baseState,
+      status: 'completed',
+      partialText: 'Risposta semplice senza marker.',
+      citations: [{ docId: 'd1', source: 'd1', page: 14, snippet: 'cite uno', score: 0.9 }],
+      totalTokens: 100,
+      elapsedMs: 500,
+    };
+    render(
+      <DrawerShell
+        state={state}
+        labels={labels}
+        suggestions={[]}
+        onAsk={vi.fn()}
+        onStop={vi.fn()}
+        onReset={vi.fn()}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId('drawer-completed-answer')).toHaveAttribute(
+      'data-render-mode',
+      'fallback'
+    );
+    // The numbered list IS present in the fallback path
+    expect(screen.getByTestId('citation-list')).toBeInTheDocument();
+    expect(screen.getByText(/cite uno/i)).toBeInTheDocument();
+  });
 });

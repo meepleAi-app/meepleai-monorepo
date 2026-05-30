@@ -1,12 +1,20 @@
 'use client';
 import { type JSX } from 'react';
 
+import { parseCitationMarkers } from '@/lib/citations';
+
 import type { KbCitation } from '../../../lib/api/schemas/kb-ask.schemas';
 
 export interface DrawerCompletedLabels {
   completedLabel: string;
   copyLabel: string;
   regenerateLabel: string;
+  /** Optional i18n template for inline pill aria-label. If omitted, defaults to:
+   *  "Citation N, document {docId}, page {page}" (English-y, but works in any locale). */
+  inlineCitationAriaLabel?: (
+    citation: { docId: string; page: number; snippet: string },
+    n: number
+  ) => string;
 }
 
 export function DrawerCompleted({
@@ -26,14 +34,32 @@ export function DrawerCompleted({
   onRegenerate?: () => void;
   labels: DrawerCompletedLabels;
 }): JSX.Element {
+  const defaultAriaLabel = (c: { docId: string; page: number }, n: number): string =>
+    `Citation ${n}, document ${c.docId}, page ${c.page}`;
+  const ariaLabelBuilder = labels.inlineCitationAriaLabel ?? defaultAriaLabel;
+
+  const parsedNodes = parseCitationMarkers(text, citations, {
+    formatAriaLabel: (c, n) => ariaLabelBuilder(c, n),
+  });
+
+  // Inline path is active when the parser yielded at least one ReactElement
+  // (i.e. at least one CitationPill). Otherwise fall back to the numbered list.
+  // UX safety invariant (D-1703-D): NEVER both inline pills AND fallback list.
+  const hasInlinePills = parsedNodes.some(node => typeof node !== 'string');
+
   return (
     <div data-testid="drawer-state-completed" className="flex-1 flex flex-col">
       <div className="flex-1 p-4 overflow-y-auto">
-        <div className="bg-muted border border-border rounded-lg p-3 text-sm text-foreground leading-relaxed mb-3">
-          {text}
+        <div
+          className="bg-muted border border-border rounded-lg p-3 text-sm text-foreground leading-relaxed mb-3"
+          data-testid="drawer-completed-answer"
+          data-render-mode={hasInlinePills ? 'inline' : 'fallback'}
+        >
+          {hasInlinePills ? parsedNodes : text}
         </div>
-        {/* D-F: NUMBERED LIST below answer — index + page ref + snippet all visible */}
-        {citations.length > 0 && (
+        {/* D-F fallback: numbered list below answer (rendered only when no inline
+            pills were produced — never both — UX safety invariant) */}
+        {!hasInlinePills && citations.length > 0 && (
           <ol className="space-y-1 mb-3" data-testid="citation-list">
             {citations.map((c, idx) => (
               <li

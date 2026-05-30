@@ -77,6 +77,13 @@ vi.mock('../search/KbChunkSearch', () => ({
   ),
 }));
 
+// ── KbDocPreviewPanel mock (panel test doesn't exercise viewer internals) ─────
+vi.mock('../preview/KbDocPreviewPanel', () => ({
+  KbDocPreviewPanel: ({ docId }: { docId: string }) => (
+    <div data-testid="kb-doc-preview-panel-mock" data-doc-id={docId} />
+  ),
+}));
+
 // ── QueryClientProvider wrapper (needed for IngestionPanel tab) ───────────────
 function makeWrapper() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -286,6 +293,35 @@ describe('KbDocDetailPanel', () => {
     render(<KbDocDetailPanel docId="doc-1" />, { wrapper: makeWrapper() });
     expect(screen.getByText(/in elaborazione/i)).toBeInTheDocument();
     expect(screen.queryByTestId('used-by-empty')).not.toBeInTheDocument();
+  });
+
+  it('renders KbDocPreviewPanel on ?tab=preview when doc is ready', () => {
+    mockSearchParams = new URLSearchParams('doc=doc-1&tab=preview');
+    mockUseKbDocDetail.mockReturnValue({ data: readyEnvelope, isLoading: false });
+    mockUseKbChunksList.mockReturnValue({ data: { pages: [] }, hasNextPage: false });
+
+    render(<KbDocDetailPanel docId="doc-1" />, { wrapper: makeWrapper() });
+
+    expect(screen.getByTestId('kb-doc-preview-panel-mock')).toHaveAttribute('data-doc-id', 'doc-1');
+    // chunks list NOT rendered when preview tab active
+    expect(screen.queryByText(/^Chunks$/)).not.toBeInTheDocument();
+  });
+
+  it('renders KbDocPreviewPanel on ?tab=preview when doc is locked (special-case)', () => {
+    mockSearchParams = new URLSearchParams('doc=doc-1&tab=preview');
+    mockUseKbDocDetail.mockReturnValue({ data: lockedEnvelope, isLoading: false });
+
+    render(
+      <KbDocDetailPanel
+        docId="doc-1"
+        selectedDocMeta={{ id: 'doc-1', title: 'X.pdf', gameId: null }}
+      />,
+      { wrapper: makeWrapper() }
+    );
+
+    expect(screen.getByTestId('kb-doc-preview-panel-mock')).toHaveAttribute('data-doc-id', 'doc-1');
+    // locked banner ("Documento in elaborazione") NOT rendered when preview tab active
+    expect(screen.queryByText(/Documento in elaborazione/i)).not.toBeInTheDocument();
   });
 
   // ── Part A: action-bar reachable for locked/failed docs ───────────────────────

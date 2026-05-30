@@ -9,6 +9,11 @@ vi.mock('next/navigation', () => ({
   usePathname: () => mockPathname(),
 }));
 
+const mockUseKbNavCounts = vi.fn();
+vi.mock('@/hooks/admin/useKbNavCounts', () => ({
+  useKbNavCounts: () => mockUseKbNavCounts(),
+}));
+
 const TABS = [
   { label: 'Explorer', href: '/admin/knowledge-base' },
   { label: 'Vector Collections', href: '/admin/knowledge-base/vectors' },
@@ -21,7 +26,15 @@ const TABS = [
 ];
 
 describe('KbSubNav', () => {
-  beforeEach(() => mockPathname.mockReset());
+  beforeEach(() => {
+    mockPathname.mockReset();
+    mockUseKbNavCounts.mockReset().mockReturnValue({
+      queue: undefined,
+      feedback: undefined,
+      loading: false,
+      isError: false,
+    });
+  });
 
   it('renders all 8 KB tabs with correct hrefs', () => {
     mockPathname.mockReturnValue('/admin/knowledge-base');
@@ -82,5 +95,45 @@ describe('KbSubNav', () => {
     for (const tab of TABS) {
       expect(screen.getByRole('link', { name: tab.label })).not.toHaveAttribute('aria-current');
     }
+  });
+
+  it('renders queue badge with count from hook', () => {
+    mockPathname.mockReturnValue('/admin/knowledge-base');
+    mockUseKbNavCounts.mockReturnValue({ queue: 7, feedback: 23, loading: false, isError: false });
+    render(<KbSubNav />);
+    expect(screen.getByTestId('kb-nav-badge-queue')).toHaveTextContent('7');
+  });
+
+  it('renders feedback badge with count from hook', () => {
+    mockPathname.mockReturnValue('/admin/knowledge-base');
+    mockUseKbNavCounts.mockReturnValue({ queue: 7, feedback: 23, loading: false, isError: false });
+    render(<KbSubNav />);
+    expect(screen.getByTestId('kb-nav-badge-feedback')).toHaveTextContent('23');
+  });
+
+  it('does NOT render badges on non-counted tabs', () => {
+    mockPathname.mockReturnValue('/admin/knowledge-base');
+    mockUseKbNavCounts.mockReturnValue({ queue: 5, feedback: 5, loading: false, isError: false });
+    render(<KbSubNav />);
+    // 8 tabs total but only 2 with badges
+    const badges = screen.queryAllByTestId(/^kb-nav-badge-/);
+    expect(badges).toHaveLength(2);
+  });
+
+  it('renders skeleton when loading and counts are undefined', () => {
+    mockPathname.mockReturnValue('/admin/knowledge-base');
+    mockUseKbNavCounts.mockReturnValue({
+      queue: undefined,
+      feedback: undefined,
+      loading: true,
+      isError: false,
+    });
+    const { container } = render(<KbSubNav />);
+    expect(
+      container.querySelector('[data-testid="kb-nav-badge-queue-loading"]')
+    ).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-testid="kb-nav-badge-feedback-loading"]')
+    ).toBeInTheDocument();
   });
 });

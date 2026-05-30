@@ -26,7 +26,7 @@ export function KbCountBadge({ count, loading, tooltip, testId }: KbCountBadgePr
 
   return (
     <span
-      aria-label={`${safe} elementi`}
+      aria-hidden="true"
       title={tooltip}
       data-testid={testId}
       className={[

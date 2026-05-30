@@ -28,7 +28,9 @@
  *   - `apps/web/e2e/v2-states/library.spec.ts` (Commit 4)
  */
 
-import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
+import { z } from 'zod';
+
+import type { PaginatedLibraryResponse, UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 
 /**
  * Deterministic UUIDv4-shaped sentinel encoding issue #574 in the last group
@@ -253,4 +255,87 @@ export function tryLoadVisualTestFixture(
   if (!IS_VISUAL_TEST_BUILD) return null;
   if (state === 'empty') return [];
   return FIXTURE_DEFAULT;
+}
+
+// ---------------------------------------------------------------------------
+// `?fixture=` URL override hatch — issue #1714 (PR #1700 follow-up)
+// ---------------------------------------------------------------------------
+//
+// The `tryLoadVisualTestFixture` above is gated by `IS_VISUAL_TEST_BUILD`
+// only (i.e. CI a11y build). Local dev + e2e Playwright runs that don't
+// rebuild with the env var (e.g. `pnpm dev`) cannot reach the fixture
+// without this hatch. Mirrors `parseStateOverride` in
+// `apps/web/src/lib/sessions-summary/visual-test-fixture.ts`.
+//
+// The hatch enables `?fixture=default|empty` on the /library route so the
+// 4 a11y E2E tests skipped by PR #1711 can re-activate:
+//   - apps/web/e2e/a11y/library.spec.ts (default + reduced-motion)
+//   - apps/web/e2e/a11y/games-library.spec.ts (default + reduced-motion)
+
+/**
+ * Build-time gating for the `?fixture=` URL override hatch.
+ *
+ * Allowing fixture overrides in production would expose a UI manipulation
+ * surface (a real user could append `?fixture=default` and see fake data).
+ * The hatch is enabled only when IS_VISUAL_TEST_BUILD=true OR
+ * NODE_ENV !== 'production' (development/test environments).
+ */
+export const STATE_OVERRIDE_ENABLED =
+  IS_VISUAL_TEST_BUILD || process.env.NODE_ENV !== 'production';
+
+export const libraryFixtureKindSchema = z.enum(['default', 'empty']);
+export type LibraryFixtureKind = z.infer<typeof libraryFixtureKindSchema>;
+
+/**
+ * Wraps the fixture entries into a `PaginatedLibraryResponse` shape so
+ * `useLibrary` can substitute it for the real TanStack Query result without
+ * any caller-side adaptation.
+ */
+function wrapAsResponse(entries: readonly UserLibraryEntry[]): PaginatedLibraryResponse {
+  return {
+    items: [...entries],
+    page: 1,
+    pageSize: 50,
+    totalCount: entries.length,
+    totalPages: entries.length === 0 ? 0 : 1,
+    hasNextPage: false,
+    hasPreviousPage: false,
+  };
+}
+
+/**
+ * Single source of truth for the 2 library fixture URL-override variants.
+ * Keyed by `LibraryFixtureKind` — same discriminant as the existing
+ * `LibraryFixtureState` (`'default' | 'empty'`).
+ */
+export const libraryFixtures: Readonly<Record<LibraryFixtureKind, PaginatedLibraryResponse>> = {
+  default: wrapAsResponse(FIXTURE_DEFAULT),
+  empty: wrapAsResponse([]),
+};
+
+/**
+ * Parses the `?fixture=` URL search param into a `LibraryFixtureKind`.
+ *
+ * Returns `null` when:
+ *   - `STATE_OVERRIDE_ENABLED` is false (production builds without the env var)
+ *   - The param is missing, empty, or not a recognized fixture kind
+ *
+ * Accepts either a `URLSearchParams`, a plain string (the param value), or
+ * `null`/`undefined` for ergonomic call sites.
+ */
+export function parseLibraryStateOverride(
+  searchParam: string | URLSearchParams | null | undefined
+): LibraryFixtureKind | null {
+  if (!STATE_OVERRIDE_ENABLED) return null;
+  let raw: string | null;
+  if (searchParam == null) {
+    raw = null;
+  } else if (typeof searchParam === 'string') {
+    raw = searchParam;
+  } else {
+    raw = searchParam.get('fixture');
+  }
+  if (!raw) return null;
+  const parsed = libraryFixtureKindSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
 }

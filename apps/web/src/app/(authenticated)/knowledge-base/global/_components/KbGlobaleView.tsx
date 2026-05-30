@@ -30,7 +30,7 @@
 
 'use client';
 
-import { type JSX, useCallback, useMemo } from 'react';
+import { type JSX, useCallback, useEffect, useMemo } from 'react';
 
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -40,6 +40,7 @@ import type { KbDocViewerCitation } from '@/components/features/kb-globale/KbDoc
 import { KbHomeDesktop } from '@/components/features/kb-globale/KbHomeDesktop';
 import { KbSearchResultsDesktop } from '@/components/features/kb-globale/KbSearchResultsDesktop';
 import { useGlobalKbSearch } from '@/hooks/queries/useGlobalKbSearch';
+import { useKbChunkDetail } from '@/hooks/queries/useKbChunkDetail';
 import { useKbDocDetail } from '@/hooks/queries/useKbDocDetail';
 import { useUserKbDocs } from '@/hooks/queries/useUserKbDocs';
 import { useKbAskStream } from '@/hooks/useKbAskStream';
@@ -194,6 +195,7 @@ export function KbGlobaleView(): JSX.Element {
   // ── Phase 2: URL params ────────────────────────────────────────────────
   const docIdParam = searchParams.get('docId');
   const pageParam = Number(searchParams.get('page')) || 1;
+  const chunkIdParam = searchParams.get('chunkId');
   const askParam = searchParams.get('ask') === '1';
 
   // ── Hooks (called unconditionally per React rules) ─────────────────────
@@ -210,6 +212,14 @@ export function KbGlobaleView(): JSX.Element {
   // useKbDocDetail: always called but gated via enabled. Returns a
   // KbDocEnvelope discriminated union: {status:'ready',doc} | {status:'locked',...}
   const docDetail = useKbDocDetail({ docId: docIdParam, enabled: Boolean(docIdParam) });
+
+  // useKbChunkDetail: resolves chunkId → pageNumber for citation deep-link (#1702).
+  // Enabled only when both docId and chunkId are present in URL.
+  const chunkQuery = useKbChunkDetail({
+    docId: docIdParam,
+    chunkId: chunkIdParam,
+    enabled: docIdParam != null && chunkIdParam != null,
+  });
 
   // useKbAskStream: FSM 5-state hook for the DrawerShell.
   const askStream = useKbAskStream();
@@ -233,10 +243,15 @@ export function KbGlobaleView(): JSX.Element {
 
   // ── Phase 2: viewer + drawer URL helpers ──────────────────────────────
   const openViewer = useCallback(
-    (result: { docId: string; page: number }) => {
+    (result: { docId: string; page: number; chunkId?: string }) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set('docId', result.docId);
       params.set('page', String(result.page));
+      if (result.chunkId) {
+        params.set('chunkId', result.chunkId);
+      } else {
+        params.delete('chunkId');
+      }
       router.push(`/knowledge-base/global?${params.toString()}`);
     },
     [router, searchParams]
@@ -246,6 +261,7 @@ export function KbGlobaleView(): JSX.Element {
     const params = new URLSearchParams(searchParams.toString());
     params.delete('docId');
     params.delete('page');
+    params.delete('chunkId'); // prevent stale chunkId persistence (#1702)
     const qs = params.toString();
     router.push(qs ? `/knowledge-base/global?${qs}` : '/knowledge-base/global');
   }, [router, searchParams]);
@@ -262,6 +278,26 @@ export function KbGlobaleView(): JSX.Element {
     () => recent.data?.items ?? [],
     [recent.data?.items]
   );
+
+  // ── Phase 2: chunk-level page resolution (#1702) ──────────────────────
+  // resolvedPage: uses chunkQuery.data.pageNumber when available, falls back to
+  // pageParam from URL. Pure memo — no side effects here (React 19 Strict Mode
+  // double-invokes memos, so console.warn goes in a separate useEffect below).
+  const resolvedPage = useMemo(() => {
+    if (chunkQuery.isSuccess && chunkQuery.data?.pageNumber != null) {
+      return chunkQuery.data.pageNumber;
+    }
+    return pageParam;
+  }, [chunkQuery.isSuccess, chunkQuery.data?.pageNumber, pageParam]);
+
+  // Graceful degrade: warn when a chunkId in the URL cannot be resolved.
+  useEffect(() => {
+    if (chunkQuery.isError && chunkIdParam) {
+      console.warn(
+        `[KbGlobaleView] chunkId "${chunkIdParam}" not resolvable; falling back to page-level scroll (page=${pageParam}).`
+      );
+    }
+  }, [chunkQuery.isError, chunkIdParam, pageParam]);
 
   // ── Phase 2: derive viewer props from envelope ─────────────────────────
   // Only mount the viewer when status === 'ready' (locked = doc still processing).
@@ -343,7 +379,7 @@ export function KbGlobaleView(): JSX.Element {
       {viewerDoc && (
         <KbDocViewerDesktopLazy
           doc={viewerDoc}
-          activePage={pageParam}
+          activePage={resolvedPage}
           citations={viewerCitations}
           labels={LABELS.viewer}
           onPageChange={p => openViewer({ docId: viewerDoc.id, page: p })}
@@ -362,6 +398,7 @@ export function KbGlobaleView(): JSX.Element {
           onReset={askStream.reset}
           onClose={closeDrawer}
           onEmptyCta={() => router.push('/library')}
+          onCitationClick={openViewer}
         />
       )}
     </div>

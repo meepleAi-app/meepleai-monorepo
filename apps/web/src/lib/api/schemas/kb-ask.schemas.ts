@@ -6,8 +6,9 @@
  *   - NUMERIC enum values (NOT strings) — frontend MUST use z.literal(0/1/4/5/7)
  *   - Envelope shape: `{ type: number, data: {...}, timestamp?: string }`
  *
- * D-E (spec-panel 2026-05-30): NO `chunkId` / `chunkPosition` — BE Snippet shape is
- *   `(text, source, page, line, score)`. Deep-link uses `?docId=&page=` only.
+ * Updated 2026-05-31 (#1702 FE follow-up): Schema extended with optional `chunkId` / `chunkPosition`
+ *   from BE Snippet. Backward-compatible with per-game endpoints that don't set the fields.
+ *   Deep-link uses `?docId=&page=` for legacy, `?docId=&page=&chunkId=` for chunk-level.
  *
  * @see admin-mockups/design_files/sp4-kb-globale.jsx (Drawer 6a-6d)
  * @see apps/api/src/Api/Models/Contracts.cs:30 (Snippet) + 98 (RagStreamingEvent)
@@ -17,9 +18,11 @@
 import { z } from 'zod';
 
 /**
- * Page-level citation (D-E: no chunkId; deep-link is `?docId=&page=`).
- * Built from BE `Snippet(text, source, page, line, score)`:
+ * Citation extracted from BE Snippet. Supports both page-level (legacy, no chunkId)
+ * and chunk-level (new, with chunkId) deep-links.
+ * Built from BE `Snippet(text, source, page, line, score, chunkId?, chunkPosition?)`:
  *   - `source` field carries the `PdfDocumentId` as string (used as `docId`).
+ *   - `chunkId` + `chunkPosition` optional, set only by /ask/global cross-game retrieval.
  */
 export const KbCitationSchema = z.object({
   docId: z.string(),
@@ -27,6 +30,19 @@ export const KbCitationSchema = z.object({
   page: z.number().int().nonnegative(),
   snippet: z.string(),
   score: z.number(),
+  /**
+   * Chunk-level deep-link identifier (#1702). Composite "{docId}_{chunkIndex}" from
+   * MultiGameSearchResultItem.ChunkId on the BE. Only set by /ask/global cross-game
+   * retrieval; absent from per-game endpoints. When present, FE can resolve via
+   * useKbChunkDetail and navigate to the chunk's exact page. Graceful degrade to
+   * page-level when null/unresolvable.
+   */
+  chunkId: z.string().optional(),
+  /**
+   * Zero-based chunk index within the document (#1702). Mirrors TextChunkEntity.ChunkIndex.
+   * Only present alongside chunkId.
+   */
+  chunkPosition: z.number().int().nonnegative().optional(),
 });
 export type KbCitation = z.infer<typeof KbCitationSchema>;
 

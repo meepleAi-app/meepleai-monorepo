@@ -84,4 +84,39 @@ describe('CitationPill', () => {
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });
+
+  it('passes chunkId in onClick payload when prop provided (#1702)', async () => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+    render(
+      <CitationPill
+        n={2}
+        refText="Rules"
+        docId="doc-1"
+        page={5}
+        chunkId="doc-1_3"
+        ariaLabel="Apri citazione 2"
+        onClick={onClick}
+      />
+    );
+    await user.click(screen.getByRole('button'));
+    expect(onClick).toHaveBeenCalledWith({ docId: 'doc-1', page: 5, chunkId: 'doc-1_3' });
+  });
+
+  it('omits chunkId from onClick payload when prop absent (back-compat)', async () => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+    render(
+      <CitationPill
+        n={1}
+        refText="Setup"
+        docId="doc-2"
+        page={3}
+        ariaLabel="Apri citazione 1"
+        onClick={onClick}
+      />
+    );
+    await user.click(screen.getByRole('button'));
+    expect(onClick).toHaveBeenCalledWith({ docId: 'doc-2', page: 3 });
+  });
 });

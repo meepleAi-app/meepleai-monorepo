@@ -2,7 +2,7 @@
 
 import { PdfInlineViewer } from '@/components/pdf/PdfInlineViewer';
 
-export interface KbDocPreviewPanelProps {
+interface KbDocPreviewPanelProps {
   /** Document UUID. Empty string → render null (panel-level guard). */
   readonly docId: string;
 }

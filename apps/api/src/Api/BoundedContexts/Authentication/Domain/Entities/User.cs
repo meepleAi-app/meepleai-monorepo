@@ -989,6 +989,19 @@ public sealed class User : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Restores backup codes without enabling 2FA. Internal hydration helper used by
+    /// UserRepository when the persistence row has codes but IsTwoFactorEnabled is false
+    /// (Issue #1533: stale rows or 2FA setup-in-progress window between TotpService.SetupAsync
+    /// and the first OTP confirmation). Decouples backup-code hydration from the 2FA-enabled
+    /// invariant so subsequent UpdateAsync calls preserve the persisted codes.
+    /// </summary>
+    internal void RestoreBackupCodesOnly(IEnumerable<BackupCode> backupCodes)
+    {
+        _backupCodes.Clear();
+        _backupCodes.AddRange(backupCodes);
+    }
+
+    /// <summary>
     /// Restores OAuth accounts from persistence layer.
     /// Internal method to avoid reflection in repository (S3011 compliance).
     /// Should only be called by UserRepository during entity materialization.

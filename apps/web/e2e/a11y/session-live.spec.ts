@@ -284,10 +284,12 @@ test.describe('Session live — accessibility @a11y', () => {
     // Press ESC — triggers onClose() → router.replace removes ?dialog=pause
     await page.keyboard.press('Escape');
 
-    // Dialog must detach from DOM (URL navigation causes React re-render)
+    // Dialog must detach from DOM (URL navigation causes React re-render).
+    // Bumped 5s → 15s 2026-05-30 (PR #1700 release CI flake): same headroom
+    // used elsewhere in this spec for dialog mount/unmount under CI load.
     await page.waitForSelector('[data-slot="pause-overlay"]', {
       state: 'detached',
-      timeout: 5_000,
+      timeout: 15_000,
     });
 
     // URL must no longer contain ?dialog=pause (URL SSOT verified)

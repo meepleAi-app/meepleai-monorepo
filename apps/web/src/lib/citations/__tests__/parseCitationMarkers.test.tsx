@@ -247,4 +247,49 @@ describe('parseCitationMarkers (D-1703-D)', () => {
     (pill as HTMLButtonElement).click();
     expect(onClick).toHaveBeenCalledWith({ docId: 'doc-x', page: 7 });
   });
+
+  // ── chunkId forwarding (#1702) ─────────────────────────────────────────
+  it('forwards chunkId from KbCitation to rendered CitationPill (#1702)', () => {
+    const onClick = vi.fn();
+    const citations = [
+      {
+        docId: 'doc-A',
+        source: 'PDF',
+        page: 7,
+        snippet: 'rules',
+        score: 0.9,
+        chunkId: 'doc-A_2',
+        chunkPosition: 2,
+      } as KbCitation,
+    ];
+    const nodes = parseCitationMarkers('Vedi [1] per dettagli', citations, {
+      formatAriaLabel,
+      onCitationClick: onClick,
+    });
+    const container = renderNodes(nodes);
+    const pill = container.querySelector(
+      '[data-slot="kb-globale-citation-pill"]'
+    ) as HTMLButtonElement;
+    expect(pill).not.toBeNull();
+    pill.click();
+    expect(onClick).toHaveBeenCalledWith({ docId: 'doc-A', page: 7, chunkId: 'doc-A_2' });
+  });
+
+  it('omits chunkId in payload when citation has no chunkId (page-level back-compat)', () => {
+    const onClick = vi.fn();
+    const citations = [
+      { docId: 'doc-B', source: 'PDF', page: 3, snippet: 'setup', score: 0.7 } as KbCitation,
+    ];
+    const nodes = parseCitationMarkers('Vedi [1] qui', citations, {
+      formatAriaLabel,
+      onCitationClick: onClick,
+    });
+    const container = renderNodes(nodes);
+    const pill = container.querySelector(
+      '[data-slot="kb-globale-citation-pill"]'
+    ) as HTMLButtonElement;
+    expect(pill).not.toBeNull();
+    pill.click();
+    expect(onClick).toHaveBeenCalledWith({ docId: 'doc-B', page: 3 });
+  });
 });

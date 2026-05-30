@@ -2,13 +2,16 @@
  * useAgentChatStream - SSE streaming for agent chat
  * Issue #4364: SSE streaming in ChatThreadView
  *
+ * Refactored as a thin wrapper over useSseStreamFsm (#1704 Phase B).
  * Handles SSE connection to POST /api/v1/agents/{agentId}/chat
  * Parses RagStreamingEvent format (numeric StreamingEventType enum)
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 import { toast } from 'sonner';
+
+import { useSseStreamFsm, type SseStreamFsmConfig } from './useSseStreamFsm';
 
 // StreamingEventType enum values from backend
 const StreamingEventType = {
@@ -37,6 +40,12 @@ const StreamingEventType = {
   ModelDowngrade: 21,
   DebugTypologyProfile: 22,
 } as const;
+
+/** Synthetic event type for the initial "connecting" state transition */
+const SYNTHETIC_CONNECTING = -1;
+
+/** Synthetic event type for the "connection lost, retrying" state transition */
+const SYNTHETIC_DISCONNECTED = -2;
 
 // Debug step captured from SSE stream (Issue #4916)
 export interface DebugStep {
@@ -130,15 +139,26 @@ export interface AgentChatStreamCallbacks {
   onError?: (error: string) => void;
 }
 
-const MAX_RETRIES = 2;
-const RETRY_DELAY_MS = 2000;
+/** Input for a single chat message stream */
+export interface AgentChatInput {
+  agentId: string;
+  message: string;
+  chatThreadId?: string;
+  proxyGameContext?: ProxyGameContext;
+  gameSessionId?: string;
+}
 
-const INITIAL_STATE: AgentChatStreamState = {
+/** Internal state shape (base hook owns retryCount + error separately) */
+type AgentChatInternalState = Omit<AgentChatStreamState, 'retryCount' | 'error'>;
+
+/** Parsed SSE event shape */
+type AgentChatEvent = { type: number; data: unknown; timestamp?: string };
+
+const INITIAL_STATE: AgentChatInternalState = {
   statusMessage: null,
   currentAnswer: '',
   followUpQuestions: [],
   isStreaming: false,
-  error: null,
   chatThreadId: null,
   totalTokens: 0,
   debugSteps: [],
@@ -146,393 +166,454 @@ const INITIAL_STATE: AgentChatStreamState = {
   strategyTier: null,
   executionId: null,
   connectionStatus: 'idle',
-  retryCount: 0,
 };
 
-export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
-  const [state, setState] = useState<AgentChatStreamState>(INITIAL_STATE);
-  const abortControllerRef = useRef<AbortController | null>(null);
+// ─── Transport ────────────────────────────────────────────────────────────────
+
+/**
+ * Transport: verbatim port of URL builder + fetch + SSE parse loop from original
+ * useAgentChatStream.ts lines 239–360. Generator yields parsed events.
+ * Yields a synthetic SYNTHETIC_CONNECTING event first to set isStreaming+connecting state.
+ *
+ * B-4 (CRITICAL): URL builder is verbatim from original lines 239–264.
+ */
+async function* agentChatTransport(
+  input: AgentChatInput,
+  signal: AbortSignal
+): AsyncGenerator<AgentChatEvent> {
+  // Yield synthetic connecting event so reducer can set isStreaming:true, connectionStatus:'connecting'
+  // BEFORE the fetch blocks. This preserves the original "Connecting..." state that was set
+  // synchronously in sendMessage before any fetch started.
+  yield { type: SYNTHETIC_CONNECTING, data: null };
+
+  if (signal.aborted) return;
+
+  // B-4 — verbatim from original lines 239–264:
+  const useProxy =
+    !!input.proxyGameContext && process.env.NEXT_PUBLIC_USE_OPENROUTER_PROXY === 'true';
+
+  let url: string;
+  let body: Record<string, unknown>;
+
+  if (useProxy) {
+    url = '/api/chat-proxy';
+    body = {
+      message: input.message,
+      agentId: input.agentId,
+      threadId: input.chatThreadId,
+      gameContext: input.proxyGameContext,
+    };
+  } else {
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+    url = `${baseUrl}/api/v1/agents/${input.agentId}/chat`;
+    body = { message: input.message };
+    if (input.chatThreadId) {
+      body.chatThreadId = input.chatThreadId;
+    }
+    if (input.gameSessionId) {
+      body.gameSessionId = input.gameSessionId;
+    }
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      credentials: useProxy ? 'same-origin' : 'include',
+      signal,
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+  } catch (fetchErr) {
+    if (signal.aborted) return;
+    // Yield a synthetic "disconnected" event so the reducer can set connectionStatus:'disconnected'
+    // BEFORE the error propagates to the base hook's retry scheduler.
+    // This preserves the original state transition (original lines 496-503):
+    //   setState({ connectionStatus: 'disconnected', statusMessage: 'Connessione persa, riprovo...' })
+    yield { type: SYNTHETIC_DISCONNECTED, data: null };
+    throw fetchErr; // re-throw so base hook errorMapper → retry scheduling
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new Error('No response body');
+  }
+
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (signal.aborted) return;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // Process complete SSE messages (separated by \n\n)
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop() ?? '';
+
+      for (const part of parts) {
+        if (!part.trim()) continue;
+
+        // Parse "data: {json}" format
+        const dataMatch = part.match(/data:\s*([\s\S]+)/);
+        if (!dataMatch) continue;
+
+        // Backend uses camelCase serialization (SseJsonOptions.cs)
+        try {
+          const event = JSON.parse(dataMatch[1]) as AgentChatEvent;
+          yield event;
+        } catch {
+          // Skip malformed line — preserves the original lenient behavior (lines 308-310).
+        }
+      }
+    }
+  } finally {
+    try {
+      reader.releaseLock();
+    } catch {
+      /* lock may already be released on abort */
+    }
+  }
+}
+
+// ─── Reducer ──────────────────────────────────────────────────────────────────
+
+/**
+ * Event reducer: VERBATIM port of the switch from useAgentChatStream.ts lines 312–464.
+ * All 23 StreamingEventType cases (0..22) + synthetic SYNTHETIC_CONNECTING (-1).
+ *
+ * Note: toast.info calls for ModelDowngrade are side effects inside a reducer — this matches
+ * the original behavior where toast was called inside the setState updater (lines 425–429).
+ * Moving them here preserves the original test assertions on toast.info.
+ */
+function agentChatEventReducer(
+  state: AgentChatInternalState,
+  event: AgentChatEvent
+): AgentChatInternalState {
+  switch (event.type) {
+    case SYNTHETIC_CONNECTING: {
+      // Synthetic event: set connecting state before fetch begins
+      return {
+        ...state,
+        isStreaming: true,
+        statusMessage: 'Connecting...',
+        connectionStatus: 'connecting',
+      };
+    }
+
+    case SYNTHETIC_DISCONNECTED: {
+      // Synthetic event: connection failed, retry pending — matches original lines 496-503
+      return {
+        ...state,
+        connectionStatus: 'disconnected',
+        statusMessage: 'Connessione persa, riprovo...',
+        // isStreaming stays true (retry is pending)
+      };
+    }
+
+    case StreamingEventType.StateUpdate: {
+      const data = event.data as { message?: string; chatThreadId?: string };
+      return {
+        ...state,
+        statusMessage: data?.message ?? null,
+        chatThreadId: data?.chatThreadId ?? state.chatThreadId,
+        connectionStatus: 'connected',
+      };
+    }
+
+    case StreamingEventType.Citations:
+    case StreamingEventType.Outline:
+    case StreamingEventType.ScriptChunk:
+    case StreamingEventType.SetupStep: {
+      // Parsed but no additional state change beyond connection status
+      return state;
+    }
+
+    case StreamingEventType.Complete: {
+      const data = event.data as {
+        totalTokens?: number;
+        chatThreadId?: string;
+        completionTokens?: number;
+        promptTokens?: number;
+        strategyTier?: string;
+        executionId?: string;
+      };
+      return {
+        ...state,
+        totalTokens: data?.totalTokens ?? 0,
+        chatThreadId: data?.chatThreadId ?? state.chatThreadId,
+        strategyTier: data?.strategyTier ?? state.strategyTier,
+        executionId: data?.executionId ?? state.executionId,
+        isStreaming: false,
+        statusMessage: null,
+        connectionStatus: 'idle',
+        retryCount: 0,
+      } as AgentChatInternalState;
+    }
+
+    case StreamingEventType.Error: {
+      const data = event.data as { errorMessage?: string; errorCode?: string };
+      let errorMsg: string;
+      if (data?.errorCode === 'rate_limited') {
+        errorMsg = 'Hai raggiunto il limite di messaggi. Riprova tra qualche minuto.';
+      } else if (data?.errorCode === 'provider_unavailable') {
+        errorMsg = 'Il servizio AI è temporaneamente non disponibile. Riprova tra poco.';
+      } else {
+        errorMsg = data?.errorMessage ?? 'Si è verificato un errore. Riprova.';
+      }
+      // Store error in internal state so the wrapper can fire onError callback
+      // and merge into state.error
+      return {
+        ...state,
+        // We store the error message in a special field; the wrapper will pick it up
+        _sseError: errorMsg,
+        isStreaming: false,
+        statusMessage: null,
+        connectionStatus: 'error',
+      } as AgentChatInternalState;
+    }
+
+    case StreamingEventType.Heartbeat: {
+      return state;
+    }
+
+    case StreamingEventType.Token: {
+      const data = event.data as { token?: string };
+      if (data?.token) {
+        return {
+          ...state,
+          currentAnswer: state.currentAnswer + data.token,
+          statusMessage: null,
+          connectionStatus: 'connected',
+        };
+      }
+      return state;
+    }
+
+    case StreamingEventType.FollowUpQuestions: {
+      const data = event.data as { questions?: string[] };
+      return {
+        ...state,
+        followUpQuestions: data?.questions ?? [],
+      };
+    }
+
+    case StreamingEventType.ModelDowngrade: {
+      const data = event.data as {
+        originalModel?: string;
+        fallbackModel?: string;
+        reason?: string;
+        isLocalFallback?: boolean;
+        upgradeMessage?: string | null;
+      };
+      const toastMessage =
+        data?.reason === 'rate_limited'
+          ? 'Modello temporaneamente cambiato per limiti di utilizzo'
+          : 'Modello alternativo in uso per garantire la risposta';
+      toast.info(toastMessage, { duration: 5000 });
+      return {
+        ...state,
+        modelDowngrade: {
+          originalModel: data?.originalModel ?? 'unknown',
+          fallbackModel: data?.fallbackModel ?? 'unknown',
+          reason: data?.reason ?? 'unknown',
+          isLocalFallback: data?.isLocalFallback ?? false,
+          upgradeMessage: data?.upgradeMessage ?? null,
+        },
+      };
+    }
+
+    // Debug pipeline events (Issue #4916) — types 10–20, 22
+    case StreamingEventType.DebugAgentRouter:
+    case StreamingEventType.DebugStrategySelected:
+    case StreamingEventType.DebugRetrievalStart:
+    case StreamingEventType.DebugRetrievalResults:
+    case StreamingEventType.DebugPluginExecution:
+    case StreamingEventType.DebugValidationLayer:
+    case StreamingEventType.DebugPromptContext:
+    case StreamingEventType.DebugCostUpdate:
+    case StreamingEventType.DebugSearchDetails:
+    case StreamingEventType.DebugCacheCheck:
+    case StreamingEventType.DebugDocumentCheck:
+    case StreamingEventType.DebugTypologyProfile: {
+      const payload = event.data as Record<string, unknown>;
+      const step: DebugStep = {
+        type: event.type,
+        name: DEBUG_STEP_NAMES[event.type] ?? `Step ${event.type}`,
+        payload,
+        timestamp: event.timestamp ?? '',
+        latencyMs: typeof payload?.latencyMs === 'number' ? payload.latencyMs : undefined,
+      };
+      return {
+        ...state,
+        debugSteps: [...state.debugSteps, step],
+      };
+    }
+
+    default:
+      return state;
+  }
+}
+
+// ─── Hook ─────────────────────────────────────────────────────────────────────
+
+type AgentChatErrorShape = { kind: 'connection' | 'other'; message: string };
+
+export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks): {
+  state: AgentChatStreamState;
+  sendMessage: (
+    agentId: string,
+    message: string,
+    chatThreadId?: string,
+    proxyGameContext?: ProxyGameContext,
+    gameSessionId?: string
+  ) => void;
+  stopStreaming: () => void;
+  reset: () => void;
+} {
+  // M-4: track current partial answer for retry-guard decision in errorMapper.
+  // Only retry (kind: 'connection') when currentAnswer === '' — avoids duplicating partial tokens.
+  const currentAnswerRef = useRef<string>('');
   const callbacksRef = useRef(callbacks);
-  const activeRequestIdRef = useRef<number>(0);
-  const retryCountRef = useRef(0);
-  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   callbacksRef.current = callbacks;
 
-  const clearRetryTimeout = useCallback(() => {
-    if (retryTimeoutRef.current !== null) {
-      clearTimeout(retryTimeoutRef.current);
-      retryTimeoutRef.current = null;
+  // Track previous complete/error state for callback firing via useEffect
+  const prevIsStreamingRef = useRef<boolean>(false);
+  const prevErrorRef = useRef<string | null>(null);
+
+  const config = useMemo<
+    SseStreamFsmConfig<AgentChatInput, AgentChatEvent, AgentChatInternalState, AgentChatErrorShape>
+  >(
+    () => ({
+      transport: agentChatTransport,
+      initialState: INITIAL_STATE,
+      eventReducer: (s, e) => {
+        const next = agentChatEventReducer(s, e);
+        // Update currentAnswerRef so errorMapper can check M-4 guard
+        currentAnswerRef.current = next.currentAnswer;
+        return next;
+      },
+      errorMapper: raw => {
+        // M-4: only mark as 'connection' (retryable) if no partial answer received yet.
+        // This preserves the original `!hasAnswer` guard (lines 491–521 of original).
+        const isConnectionError =
+          raw instanceof TypeError || (raw instanceof Error && /HTTP \d/.test(raw.message));
+        const canRetry = isConnectionError && currentAnswerRef.current === '';
+
+        let message = 'Si è verificato un errore. Riprova.';
+        if (raw instanceof Error) {
+          message = raw.message;
+        }
+
+        return { kind: canRetry ? 'connection' : 'other', message };
+      },
+      retryPolicy: {
+        maxRetries: 2,
+        backoffMs: [2000, 2000],
+        retryableErrorKinds: ['connection'],
+      },
+    }),
+    []
+  );
+
+  const { state, retryCount, error, ask, stop, reset: baseReset } = useSseStreamFsm(config);
+
+  // ── Merged state ──────────────────────────────────────────────────────────
+
+  // Check if an SSE Error event was received (stored in internal state via _sseError)
+  const sseError = (state as AgentChatInternalState & { _sseError?: string })._sseError ?? null;
+
+  // The public `error` field is: SSE Error event message (from reducer) OR thrown error message
+  const publicError: string | null = sseError ?? error?.message ?? null;
+
+  // Build merged state: spread internal state, add base-hook retryCount and merged error.
+  // _sseError is an internal implementation field — exclude it from the public shape.
+  const stateWithExtras = state as AgentChatInternalState & { _sseError?: string };
+  const merged: AgentChatStreamState = {
+    statusMessage: stateWithExtras.statusMessage,
+    currentAnswer: stateWithExtras.currentAnswer,
+    followUpQuestions: stateWithExtras.followUpQuestions,
+    isStreaming: stateWithExtras.isStreaming,
+    chatThreadId: stateWithExtras.chatThreadId,
+    totalTokens: stateWithExtras.totalTokens,
+    debugSteps: stateWithExtras.debugSteps,
+    modelDowngrade: stateWithExtras.modelDowngrade,
+    strategyTier: stateWithExtras.strategyTier,
+    executionId: stateWithExtras.executionId,
+    connectionStatus: stateWithExtras.connectionStatus,
+    retryCount,
+    error: publicError,
+  };
+
+  // ── onComplete callback ───────────────────────────────────────────────────
+  // Fire when stream transitions from streaming → not streaming with an answer,
+  // matching original lines 371-376 (fired inside Complete event setState updater).
+  useEffect(() => {
+    const wasStreaming = prevIsStreamingRef.current;
+    prevIsStreamingRef.current = merged.isStreaming;
+
+    if (wasStreaming && !merged.isStreaming && merged.currentAnswer && !merged.error) {
+      callbacksRef.current?.onComplete?.(merged.currentAnswer, {
+        totalTokens: merged.totalTokens,
+        chatThreadId: merged.chatThreadId,
+        followUpQuestions: merged.followUpQuestions,
+      });
     }
-  }, []);
+  });
 
-  const stopStreaming = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
+  // ── onError callback ──────────────────────────────────────────────────────
+  // Fire when error becomes non-null (SSE Error event OR connection error after max retries).
+  // Matches original lines 400 (SSE error) and 531 (connection error).
+  useEffect(() => {
+    const prevError = prevErrorRef.current;
+    prevErrorRef.current = merged.error;
+
+    if (merged.error !== null && prevError === null) {
+      callbacksRef.current?.onError?.(merged.error);
     }
-    clearRetryTimeout();
-    retryCountRef.current = 0;
-    setState(prev => ({
-      ...prev,
-      isStreaming: false,
-      statusMessage: null,
-      connectionStatus: 'idle',
-      retryCount: 0,
-    }));
-  }, [clearRetryTimeout]);
+  });
 
-  const reset = useCallback(() => {
-    stopStreaming();
-    setState(INITIAL_STATE);
-  }, [stopStreaming]);
-
-  // Close the active stream when a dev-tools scenario switch begins (dev only).
+  // ── Dev tools scenario switch (non-functional for tests) ──────────────────
   useEffect(() => {
     const onScenarioSwitch = (): void => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
-      }
+      stop();
     };
     window.addEventListener('meepledev:scenario-switch-begin', onScenarioSwitch);
     return () => {
       window.removeEventListener('meepledev:scenario-switch-begin', onScenarioSwitch);
     };
-  }, []);
+  }, [stop]);
 
-  // Cleanup any pending retry timeout on unmount to avoid late setState after teardown.
-  useEffect(() => {
-    return () => {
-      if (retryTimeoutRef.current !== null) {
-        clearTimeout(retryTimeoutRef.current);
-        retryTimeoutRef.current = null;
-      }
-    };
-  }, []);
+  // ── Public API ────────────────────────────────────────────────────────────
 
-  const sendMessage = useCallback(
-    (
-      agentId: string,
-      message: string,
-      chatThreadId?: string,
-      proxyGameContext?: ProxyGameContext,
-      gameSessionId?: string
-    ) => {
-      stopStreaming();
+  const sendMessage = (
+    agentId: string,
+    message: string,
+    chatThreadId?: string,
+    proxyGameContext?: ProxyGameContext,
+    gameSessionId?: string
+  ): void => {
+    currentAnswerRef.current = ''; // reset M-4 guard for new stream
+    ask({ agentId, message, chatThreadId, proxyGameContext, gameSessionId });
+  };
 
-      // Track request ID to ignore stale completions after agent switch
-      const requestId = Date.now();
-      activeRequestIdRef.current = requestId;
-      retryCountRef.current = 0;
+  const stopStreaming = (): void => {
+    stop();
+    // reset() instead of stop() so state resets to INITIAL (isStreaming: false, connectionStatus: 'idle')
+    // matching original stopStreaming behavior (lines 168-182)
+    baseReset();
+  };
 
-      setState({
-        ...INITIAL_STATE,
-        isStreaming: true,
-        statusMessage: 'Connecting...',
-        connectionStatus: 'connecting',
-        retryCount: 0,
-      });
+  const reset = (): void => {
+    currentAnswerRef.current = '';
+    baseReset();
+  };
 
-      const abortController = new AbortController();
-      abortControllerRef.current = abortController;
-
-      // Issue #4780: Use OpenRouter proxy when gameContext is provided and env var is set
-      const useProxy =
-        !!proxyGameContext && process.env.NEXT_PUBLIC_USE_OPENROUTER_PROXY === 'true';
-
-      let url: string;
-      let body: Record<string, unknown>;
-
-      if (useProxy) {
-        url = '/api/chat-proxy';
-        body = {
-          message,
-          agentId,
-          threadId: chatThreadId,
-          gameContext: proxyGameContext,
-        };
-      } else {
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
-        url = `${baseUrl}/api/v1/agents/${agentId}/chat`;
-        body = { message };
-        if (chatThreadId) {
-          body.chatThreadId = chatThreadId;
-        }
-        if (gameSessionId) {
-          body.gameSessionId = gameSessionId;
-        }
-      }
-
-      fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        credentials: useProxy ? 'same-origin' : 'include',
-        signal: abortController.signal,
-      })
-        .then(async response => {
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-          }
-
-          const reader = response.body?.getReader();
-          if (!reader) throw new Error('No response body');
-
-          const decoder = new TextDecoder();
-          let buffer = '';
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            // Ignore events from stale requests (agent was switched)
-            if (activeRequestIdRef.current !== requestId) break;
-
-            buffer += decoder.decode(value, { stream: true });
-
-            // Process complete SSE messages (separated by \n\n)
-            const parts = buffer.split('\n\n');
-            buffer = parts.pop() || '';
-
-            for (const part of parts) {
-              if (!part.trim()) continue;
-
-              // Parse "data: {json}" format
-              const dataMatch = part.match(/data:\s*([\s\S]+)/);
-              if (!dataMatch) continue;
-
-              // Backend uses camelCase serialization (SseJsonOptions.cs)
-              let event: { type: number; data: unknown; timestamp: string };
-              try {
-                event = JSON.parse(dataMatch[1]);
-              } catch {
-                continue;
-              }
-
-              switch (event.type) {
-                case StreamingEventType.StateUpdate: {
-                  const data = event.data as { message?: string; chatThreadId?: string };
-                  setState(prev => ({
-                    ...prev,
-                    statusMessage: data?.message || null,
-                    chatThreadId: data?.chatThreadId || prev.chatThreadId,
-                    connectionStatus: 'connected',
-                  }));
-                  break;
-                }
-
-                case StreamingEventType.Token: {
-                  const data = event.data as { token?: string };
-                  if (data?.token) {
-                    setState(prev => ({
-                      ...prev,
-                      currentAnswer: prev.currentAnswer + data.token,
-                      statusMessage: null,
-                      connectionStatus: 'connected',
-                    }));
-                  }
-                  break;
-                }
-
-                case StreamingEventType.FollowUpQuestions: {
-                  const data = event.data as { questions?: string[] };
-                  setState(prev => ({
-                    ...prev,
-                    followUpQuestions: data?.questions || [],
-                  }));
-                  break;
-                }
-
-                case StreamingEventType.Complete: {
-                  // Ignore stale completions from a previous request
-                  if (activeRequestIdRef.current !== requestId) break;
-
-                  const data = event.data as {
-                    totalTokens?: number;
-                    chatThreadId?: string;
-                    completionTokens?: number;
-                    promptTokens?: number;
-                    strategyTier?: string;
-                    executionId?: string;
-                  };
-                  setState(prev => {
-                    const finalState = {
-                      ...prev,
-                      totalTokens: data?.totalTokens || 0,
-                      chatThreadId: data?.chatThreadId || prev.chatThreadId,
-                      strategyTier: data?.strategyTier || prev.strategyTier,
-                      executionId: data?.executionId || prev.executionId,
-                      isStreaming: false,
-                      statusMessage: null,
-                      connectionStatus: 'idle' as ConnectionStatus,
-                      retryCount: 0,
-                    };
-
-                    callbacksRef.current?.onComplete?.(finalState.currentAnswer, {
-                      totalTokens: finalState.totalTokens,
-                      chatThreadId: finalState.chatThreadId,
-                      followUpQuestions: prev.followUpQuestions,
-                    });
-
-                    return finalState;
-                  });
-                  break;
-                }
-
-                case StreamingEventType.Error: {
-                  const data = event.data as { errorMessage?: string; errorCode?: string };
-                  let errorMsg: string;
-                  if (data?.errorCode === 'rate_limited') {
-                    errorMsg = 'Hai raggiunto il limite di messaggi. Riprova tra qualche minuto.';
-                  } else if (data?.errorCode === 'provider_unavailable') {
-                    errorMsg =
-                      'Il servizio AI è temporaneamente non disponibile. Riprova tra poco.';
-                  } else {
-                    errorMsg = data?.errorMessage || 'Si è verificato un errore. Riprova.';
-                  }
-                  setState(prev => ({
-                    ...prev,
-                    error: errorMsg,
-                    isStreaming: false,
-                    statusMessage: null,
-                    connectionStatus: 'error',
-                  }));
-                  callbacksRef.current?.onError?.(errorMsg);
-                  break;
-                }
-
-                case StreamingEventType.Heartbeat:
-                  break;
-
-                case StreamingEventType.ModelDowngrade: {
-                  const data = event.data as {
-                    originalModel?: string;
-                    fallbackModel?: string;
-                    reason?: string;
-                    isLocalFallback?: boolean;
-                    upgradeMessage?: string | null;
-                  };
-                  setState(prev => ({
-                    ...prev,
-                    modelDowngrade: {
-                      originalModel: data?.originalModel || 'unknown',
-                      fallbackModel: data?.fallbackModel || 'unknown',
-                      reason: data?.reason || 'unknown',
-                      isLocalFallback: data?.isLocalFallback || false,
-                      upgradeMessage: data?.upgradeMessage ?? null,
-                    },
-                  }));
-                  const toastMessage =
-                    data?.reason === 'rate_limited'
-                      ? 'Modello temporaneamente cambiato per limiti di utilizzo'
-                      : 'Modello alternativo in uso per garantire la risposta';
-                  toast.info(toastMessage, { duration: 5000 });
-                  break;
-                }
-
-                // Debug pipeline events (Issue #4916) — types 10-20
-                case StreamingEventType.DebugAgentRouter:
-                case StreamingEventType.DebugStrategySelected:
-                case StreamingEventType.DebugRetrievalStart:
-                case StreamingEventType.DebugRetrievalResults:
-                case StreamingEventType.DebugPluginExecution:
-                case StreamingEventType.DebugValidationLayer:
-                case StreamingEventType.DebugPromptContext:
-                case StreamingEventType.DebugCostUpdate:
-                case StreamingEventType.DebugSearchDetails:
-                case StreamingEventType.DebugCacheCheck:
-                case StreamingEventType.DebugDocumentCheck:
-                case StreamingEventType.DebugTypologyProfile: {
-                  const payload = event.data as Record<string, unknown>;
-                  const step: DebugStep = {
-                    type: event.type,
-                    name: DEBUG_STEP_NAMES[event.type] ?? `Step ${event.type}`,
-                    payload,
-                    timestamp: event.timestamp,
-                    latencyMs:
-                      typeof payload?.latencyMs === 'number' ? payload.latencyMs : undefined,
-                  };
-                  setState(prev => ({
-                    ...prev,
-                    debugSteps: [...prev.debugSteps, step],
-                  }));
-                  break;
-                }
-
-                default:
-                  break;
-              }
-            }
-          }
-
-          // If stream ended without Complete event
-          if (activeRequestIdRef.current === requestId) {
-            setState(prev => {
-              if (prev.isStreaming) {
-                return { ...prev, isStreaming: false, statusMessage: null };
-              }
-              return prev;
-            });
-          }
-        })
-        .catch(catchError => {
-          if (catchError.name === 'AbortError') {
-            clearRetryTimeout();
-            setState(prev => ({
-              ...prev,
-              isStreaming: false,
-              statusMessage: null,
-              connectionStatus: 'idle',
-            }));
-            return;
-          }
-
-          // Use ref for retry decision to avoid side effects inside setState updaters
-          if (retryCountRef.current < MAX_RETRIES) {
-            // Check if we have partial answer — don't retry mid-response
-            let hasAnswer = false;
-            setState(prev => {
-              hasAnswer = !!prev.currentAnswer;
-              if (!hasAnswer) {
-                return {
-                  ...prev,
-                  connectionStatus: 'disconnected' as ConnectionStatus,
-                  statusMessage: 'Connessione persa, riprovo...',
-                };
-              }
-              return prev;
-            });
-
-            if (!hasAnswer) {
-              retryCountRef.current++;
-              const currentRetry = retryCountRef.current;
-              retryTimeoutRef.current = setTimeout(() => {
-                retryTimeoutRef.current = null;
-                setState(prev => ({
-                  ...prev,
-                  connectionStatus: 'reconnecting' as ConnectionStatus,
-                  statusMessage: `Riconnessione... (tentativo ${currentRetry}/${MAX_RETRIES})`,
-                  retryCount: currentRetry,
-                }));
-                sendMessage(agentId, message, chatThreadId, proxyGameContext, gameSessionId);
-              }, RETRY_DELAY_MS);
-              return;
-            }
-          }
-
-          const errorMsg = catchError instanceof Error ? catchError.message : 'Stream failed';
-          setState(prev => ({
-            ...prev,
-            error: errorMsg,
-            isStreaming: false,
-            statusMessage: null,
-            connectionStatus: 'error' as ConnectionStatus,
-          }));
-          callbacksRef.current?.onError?.(errorMsg);
-        });
-    },
-    [stopStreaming, clearRetryTimeout]
-  );
-
-  return { state, sendMessage, stopStreaming, reset };
+  return { state: merged, sendMessage, stopStreaming, reset };
 }

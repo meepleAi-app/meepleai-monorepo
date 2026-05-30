@@ -3968,6 +3968,47 @@
         "errorTitle": "Errore nella ricerca",
         "errorDescription": "La ricerca non è riuscita. Riprova tra qualche istante.",
         "retry": "Riprova"
+      },
+      "viewer": {
+        "pageLabel": "Pagina {n}",
+        "zoomIn": "Zoom in",
+        "zoomOut": "Zoom out",
+        "zoomReset": "Reset",
+        "thumbnailsLabel": "Pagine",
+        "closeLabel": "Chiudi",
+        "pageOfTotal": "{cur} / {total}"
+      },
+      "drawer": {
+        "title": "Ask the Meeple",
+        "subtitle": "Knowledge Base",
+        "closeLabel": "Chiudi",
+        "idle": {
+          "welcomeTitle": "Chiedimi qualsiasi cosa sui tuoi giochi",
+          "welcomeBody": "Cerco nei tuoi PDF e cito le pagine esatte.",
+          "suggestionsLabel": "Suggerimenti",
+          "placeholder": "Chiedi al Meeple…",
+          "sendLabel": "Invia"
+        },
+        "streaming": {
+          "statusLabel": "STREAMING",
+          "stopLabel": "Stop streaming"
+        },
+        "completed": {
+          "completedLabel": "COMPLETED",
+          "copyLabel": "Copia",
+          "regenerateLabel": "Rigenera"
+        },
+        "empty": {
+          "title": "Nessun documento nella tua libreria",
+          "body": "Carica un PDF dalla libreria per iniziare a chiedere.",
+          "cta": "Vai alla libreria"
+        },
+        "error": {
+          "connection": { "title": "Connessione persa", "body": "Retry automatico in corso…", "action": "Riprova ora" },
+          "timeout": { "title": "Risposta lenta", "body": "Vuoi continuare ad aspettare?", "action": "Continua attesa", "alt": "Cancella" },
+          "partial": { "title": "Risposta incompleta", "body": "Lo stream si è interrotto.", "action": "Ripeti query" },
+          "server": { "title": "Errore del server", "body": "Riprova tra qualche istante.", "action": "Riprova" }
+        }
       }
     }
   }

@@ -87,10 +87,10 @@ describe('PdfInlineViewer', () => {
 
   it('prev/next clamps to [1, numPages]', async () => {
     render(<PdfInlineViewer documentId="doc-1" initialPage={1} />);
-    await waitFor(() =>
-      expect(screen.getByTestId('pdf-page')).toHaveAttribute('data-page-number', '1')
-    );
-    // Prev at page 1 is disabled
+    // Wait for Document onLoadSuccess (mock fires via setTimeout 0) to populate numPages
+    // — Next button becomes enabled only when numPages > currentPage AND loading=false
+    await waitFor(() => expect(screen.getByRole('button', { name: /next/i })).not.toBeDisabled());
+    // Prev at page 1 is still disabled (currentPage <= 1)
     expect(screen.getByRole('button', { name: /prev/i })).toBeDisabled();
     // Next advances
     fireEvent.click(screen.getByRole('button', { name: /next/i }));

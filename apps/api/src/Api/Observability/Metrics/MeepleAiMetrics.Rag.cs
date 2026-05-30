@@ -260,6 +260,21 @@ internal static partial class MeepleAiMetrics
         description: "Count of system prompts that include the copyright paraphrase instruction");
 
     /// <summary>
+    /// Counter for LLM responses inspected for inline citation markers ([N]).
+    /// Issue #1703 D-1703-E — tracks production compliance with the BE prompt
+    /// instruction. Tag <c>compliant=true</c> when the response contains at least
+    /// one well-formed [N] marker whose N is within citations bounds; <c>false</c>
+    /// otherwise.
+    /// Increment site deferred: a follow-up PR will wire increment either via FE
+    /// helper or a BE post-processor scanning assembled token text at Complete-event time.
+    /// Tags: compliant (bool), agent_typology (string).
+    /// </summary>
+    public static readonly Counter<long> CitationMarkersEmittedTotal = Meter.CreateCounter<long>(
+        name: "meepleai.rag.citation_markers.emitted_total",
+        unit: "responses",
+        description: "Count of LLM responses inspected for inline [N] citation markers");
+
+    /// <summary>
     /// Counter for detected verbatim runs exceeding the configured threshold.
     /// #447 observability — drives false-positive calibration.
     /// Tags: run_length (int), document_id (string).

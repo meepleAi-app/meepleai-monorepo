@@ -12,11 +12,12 @@ vi.mock('next/navigation', async () => {
 });
 
 describe('KbDocDetailTabs', () => {
-  it('renders three tabs: Overview, Ingestion log, Used by', () => {
+  it('renders four tabs: Overview, Ingestion log, Used by, Preview', () => {
     render(<KbDocDetailTabs docId="abc" activeTab="overview" />);
     expect(screen.getByRole('link', { name: /overview/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /ingestion log/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /used by/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /preview/i })).toBeInTheDocument();
   });
 
   it('Used by link sets ?tab=used-by and preserves doc param', () => {

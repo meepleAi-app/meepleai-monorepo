@@ -214,7 +214,8 @@ internal sealed class CrossGameStreamQaQueryHandler : IStreamingQueryHandler<Cro
                 chatThread: null,
                 userTier: UserTier.Normal,
                 query.AgentLanguage,
-                ct).ConfigureAwait(false);
+                ct,
+                includeInlineCitationInstructions: true).ConfigureAwait(false);
             return (assembled, null);
         }
         catch (Exception ex)

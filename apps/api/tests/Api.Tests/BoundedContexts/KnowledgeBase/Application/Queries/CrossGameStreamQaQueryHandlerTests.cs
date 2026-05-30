@@ -142,7 +142,8 @@ public sealed class CrossGameStreamQaQueryHandlerTests
             Arg.Any<Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatThread?>(),
             Arg.Any<UserTier?>(),
             Arg.Any<string>(),
-            Arg.Any<CancellationToken>());
+            Arg.Any<CancellationToken>(),
+            Arg.Any<bool>());
     }
 
     // ── Each StreamChunk.Content from LLM → one Token event ─────────────────
@@ -303,7 +304,8 @@ public sealed class CrossGameStreamQaQueryHandlerTests
                 Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
                 Arg.Any<IReadOnlyList<ChunkCitation>>(),
                 Arg.Any<Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatThread?>(),
-                Arg.Any<UserTier?>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+                Arg.Any<UserTier?>(), Arg.Any<string>(), Arg.Any<CancellationToken>(),
+                Arg.Any<bool>())
             .Returns(new AssembledPrompt(
                 "You are a board game assistant.",
                 "Context: ...\nQuestion: ...",

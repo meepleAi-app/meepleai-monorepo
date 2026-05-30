@@ -23,7 +23,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Queries.GetKbNavCo
 /// produces the correct aggregate counts end-to-end.
 /// Issue #1655 (F3-FU-6 KbSubNav count badges).
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Issue", "1655")]
@@ -49,7 +49,7 @@ public sealed class GetKbNavCountsQueryHandlerIntegrationTests : IAsyncLifetime
         var mockEventCollector = TestDbContextFactory.CreateMockEventCollector();
 
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseNpgsql(connectionString, o => o.UseVector())
+            .UseNpgsql(connectionString, o => o.UseVector()) // Issue #3547: UseVector() required by MeepleAiDbContext model
             .EnableSensitiveDataLogging()
             .EnableDetailedErrors()
             .Options;
@@ -60,8 +60,9 @@ public sealed class GetKbNavCountsQueryHandlerIntegrationTests : IAsyncLifetime
 
     public async ValueTask DisposeAsync()
     {
-        await _dbContext.DisposeAsync();
         await _fixture.DropIsolatedDatabaseAsync(_dbName);
+        if (_dbContext is not null)
+            await _dbContext.DisposeAsync();
     }
 
     [Fact(Timeout = 30_000)]
@@ -97,6 +98,7 @@ public sealed class GetKbNavCountsQueryHandlerIntegrationTests : IAsyncLifetime
         // Seed feedback:
         //   Within 7 days (counted):   offsets 0,1,3,5,6 → 5
         //   Older (excluded):          offsets 10,30     → 2
+        // Day-offset 7 omitted to avoid boundary ambiguity in `WHERE CreatedAt >= since`
         var withinWindow = new[] { 0, 1, 3, 5, 6 };
         var outsideWindow = new[] { 10, 30 };
         foreach (var dayOffset in withinWindow)

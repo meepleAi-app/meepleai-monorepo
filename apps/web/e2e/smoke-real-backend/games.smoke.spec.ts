@@ -26,9 +26,12 @@ test.describe('SMOKE — /games redirect + /library games tab (real backend)', (
     await applySessionToPage(page, cookieHeader);
     await page.goto('/library', { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('[data-slot="library-hub-v2"]', { timeout: 30_000 });
-    // LibraryHub does not read ?tab= from the URL; click the Giochi tab to reach
+    // LibraryHub does not read ?tab= from the URL; click the games tab to reach
     // the games surface (#1566 wired the Games* components into this tab).
-    await page.getByRole('tab', { name: /giochi/i }).click();
+    // Locale-agnostic selector: Playwright CI Chrome defaults to en-US which
+    // renders the label as "Games" (not "Giochi"), so we target data-tab-key
+    // exposed by LibraryTabs.tsx — same pattern as the unit suite (#1640).
+    await page.locator('[role="tab"][data-tab-key="games"]').click();
     // The smoke fixture user has 1 library entry → expect the grid; fall back to
     // empty-state if the fixture changes. Either proves the games branch mounted.
     await page.waitForSelector(

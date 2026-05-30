@@ -401,7 +401,6 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
             filteredChunks = await TrySentenceWindowExpansionAsync(filteredChunks, profile, ct).ConfigureAwait(false);
 
             // Format chunks and track citations (with copyright annotation)
-            var sb = new StringBuilder();
             foreach (var chunk in filteredChunks)
             {
                 var citation = new ChunkCitation(
@@ -413,11 +412,10 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                     FullText = chunk.Text  // #447: preserve full text for copyright leak guard
                 };
 
-                sb.AppendLine(FormatChunkForPrompt(citation, chunk.Text));
                 citations.Add(citation);
             }
 
-            var ragContext = sb.ToString().TrimEnd();
+            var ragContext = BuildRagContextString(citations);
 
             // === Graph RAG: Inject entity context ===
             if (activeEnhancements.HasFlag(RagEnhancement.GraphTraversal))
@@ -713,7 +711,8 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
     private static string BuildSystemPrompt(
         string agentTypology, string gameTitle, GameState? gameState, string ragContext,
         bool hasExpansions = false, bool hasProtectedCitations = false,
-        string agentLanguage = "it")
+        string agentLanguage = "it",
+        bool includeInlineCitationInstructions = false)
     {
         var sb = new StringBuilder();
 
@@ -752,6 +751,19 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         sb.AppendLine("3. Explain how the rule applies to the user's specific situation.");
         sb.AppendLine("4. State your conclusion clearly.");
         sb.AppendLine();
+
+        // Issue #1703 D-1703-C: inline citation markers (only when caller opts in).
+        // Placed after Reasoning Approach so the LLM has the chain-of-thought rules
+        // in mind before being asked to emit [N] markers.
+        if (includeInlineCitationInstructions)
+        {
+            sb.AppendLine("## Citation Format");
+            sb.AppendLine("Each chunk in the documentation below is prefixed with [N] (e.g. [1], [2], [3]).");
+            sb.AppendLine("When your answer draws from a chunk, append the corresponding [N] marker immediately after the cited word(s).");
+            sb.AppendLine("Use [N,M] when a single statement is supported by multiple chunks.");
+            sb.AppendLine("You MAY still mention page numbers in prose for emphasis, but the [N] marker is required for the citation linkage.");
+            sb.AppendLine();
+        }
 
         // Copyright paraphrase instruction (when Protected citations exist)
         if (hasProtectedCitations)
@@ -857,11 +869,17 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         return sb.ToString();
     }
 
-    /// <summary>Formats a chunk with copyright annotation for the LLM system prompt.</summary>
-    public static string FormatChunkForPrompt(ChunkCitation citation, string chunkText)
+    /// <summary>
+    /// Formats a chunk with copyright annotation for the LLM system prompt.
+    /// When <paramref name="index"/> is non-null, prepends "[N] " to the header
+    /// (Issue #1703 D-1703-A — inline citation markers). Existing callers passing
+    /// no index get the legacy header shape, byte-identical to pre-#1703.
+    /// </summary>
+    public static string FormatChunkForPrompt(ChunkCitation citation, string chunkText, int? index = null)
     {
         var tierLabel = citation.CopyrightTier == CopyrightTier.Full ? "FULL" : "PROTECTED";
-        return $"[Source: Document {citation.DocumentId}, Page {citation.PageNumber}, Relevance: {citation.RelevanceScore:F2}, Copyright: {tierLabel}]\n{chunkText}\n---";
+        var prefix = index.HasValue ? $"[{index.Value}] " : string.Empty;
+        return $"{prefix}[Source: Document {citation.DocumentId}, Page {citation.PageNumber}, Relevance: {citation.RelevanceScore:F2}, Copyright: {tierLabel}]\n{chunkText}\n---";
     }
 
     /// <summary>Returns the copyright paraphrase instruction localized to agent language.</summary>
@@ -876,6 +894,78 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
     {
         // Rough estimate: ~4 characters per token (GPT-style)
         return (int)Math.Ceiling(text.Length / 4.0);
+    }
+
+    /// <summary>
+    /// Formats a list of citations into the RAG context string used in the system prompt.
+    /// Extracted from <see cref="RetrieveRagContextAsync"/> to enable reuse by
+    /// <see cref="AssembleFromContextAsync"/> on the cross-game path (#1661).
+    /// The single-game path continues to call this method internally — output is byte-identical.
+    /// </summary>
+    private static string BuildRagContextString(IReadOnlyList<ChunkCitation> citations, bool prependIndex = false)
+    {
+        if (citations.Count == 0)
+            return string.Empty;
+
+        var sb = new StringBuilder();
+        var idx = 0;
+        foreach (var citation in citations)
+        {
+            idx++;
+            // FullText is set on the single-game path; for cross-game pre-retrieved chunks
+            // SnippetPreview is the canonical text (FullText may be null — acceptable for cross-game).
+            var chunkText = citation.FullText ?? citation.SnippetPreview;
+            int? indexForPrompt = prependIndex ? idx : null;
+            sb.AppendLine(FormatChunkForPrompt(citation, chunkText, indexForPrompt));
+        }
+
+        return sb.ToString().TrimEnd();
+    }
+
+    /// <inheritdoc />
+    public Task<AssembledPrompt> AssembleFromContextAsync(
+        string agentTypology,
+        string gameTitle,
+        string userQuestion,
+        IReadOnlyList<ChunkCitation> preRetrievedChunks,
+        ChatThread? chatThread,
+        UserTier? userTier,
+        string agentLanguage,
+        CancellationToken cancellationToken,
+        bool includeInlineCitationInstructions = false)
+    {
+        ArgumentNullException.ThrowIfNull(agentTypology);
+        ArgumentNullException.ThrowIfNull(gameTitle);
+        ArgumentNullException.ThrowIfNull(userQuestion);
+        ArgumentNullException.ThrowIfNull(preRetrievedChunks);
+        ArgumentNullException.ThrowIfNull(agentLanguage);
+
+        // Build RAG context from the pre-retrieved chunks — NO retrieval services invoked.
+        var ragContext = BuildRagContextString(preRetrievedChunks, prependIndex: includeInlineCitationInstructions);
+
+        // Determine copyright instruction requirement from the supplied chunks.
+        var hasProtectedCitations = preRetrievedChunks.Any(c => c.CopyrightTier == CopyrightTier.Protected);
+
+        MeepleAiMetrics.CopyrightInstructionInjected.Add(1,
+            new KeyValuePair<string, object?>("has_protected", hasProtectedCitations),
+            new KeyValuePair<string, object?>("agent_language", agentLanguage));
+
+        // Build prompts using the same helpers as AssemblePromptAsync (behavior parity).
+        // hasExpansions = false on the cross-game path (no single-game expansion concept).
+        var systemPrompt = BuildSystemPrompt(
+            agentTypology, gameTitle, gameState: null, ragContext,
+            hasExpansions: false, hasProtectedCitations, agentLanguage,
+            includeInlineCitationInstructions: includeInlineCitationInstructions);
+
+        var userPrompt = BuildUserPrompt(userQuestion, chatThread);
+        var estimatedTokens = EstimateTokens(systemPrompt) + EstimateTokens(userPrompt);
+
+        _logger.LogInformation(
+            "AssembleFromContextAsync: {AgentType} for '{GameTitle}', {ChunkCount} pre-retrieved chunks, ~{Tokens} tokens",
+            agentTypology, gameTitle, preRetrievedChunks.Count, estimatedTokens);
+
+        return Task.FromResult(
+            new AssembledPrompt(systemPrompt, userPrompt, preRetrievedChunks.ToList(), estimatedTokens));
     }
 
     /// <summary>

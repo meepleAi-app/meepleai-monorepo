@@ -91,11 +91,15 @@ export function useInfinitePlayHistory(params: {
 
 /**
  * Fetch player statistics across all games
+ *
+ * AC-5.9: staleTime 5 minutes (300000ms) — stats are relatively stable,
+ * allows client-side cache reuse across navigations without refetch.
  */
 export function usePlayerStatistics() {
   return useQuery({
     queryKey: playRecordsKeys.statistics(),
     queryFn: () => playRecordsApi.getPlayerStatistics(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
     retry: false,
   });
 }
@@ -222,6 +226,22 @@ export function useUpdateRecord(recordId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: playRecordsKeys.detail(recordId) });
       queryClient.invalidateQueries({ queryKey: playRecordsKeys.lists() });
+    },
+  });
+}
+
+/**
+ * Delete a play record by ID (AC-4.6)
+ */
+export function useDeleteRecord(recordId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => playRecordsApi.deleteRecord(recordId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: playRecordsKeys.detail(recordId) });
+      queryClient.invalidateQueries({ queryKey: playRecordsKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: playRecordsKeys.statistics() });
     },
   });
 }

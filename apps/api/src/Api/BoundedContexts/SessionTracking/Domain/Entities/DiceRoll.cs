@@ -81,12 +81,19 @@ public class DiceRoll
     /// <param name="participantId">Participant performing the roll.</param>
     /// <param name="formula">Dice formula (e.g., "2d6+3").</param>
     /// <param name="label">Optional label for the roll.</param>
+    /// <param name="rng">
+    /// Optional source of randomness. When <c>null</c> (default) the process-wide
+    /// cryptographic singleton is used. Tests can pass a deterministic
+    /// <see cref="System.Security.Cryptography.RandomNumberGenerator"/> to assert
+    /// exact roll outcomes (issue #1693).
+    /// </param>
     /// <returns>New DiceRoll instance with results.</returns>
     public static DiceRoll Create(
         Guid sessionId,
         Guid participantId,
         string formula,
-        string? label = null)
+        string? label = null,
+        System.Security.Cryptography.RandomNumberGenerator? rng = null)
     {
         if (sessionId == Guid.Empty)
             throw new ArgumentException("Session ID cannot be empty.", nameof(sessionId));
@@ -98,7 +105,7 @@ public class DiceRoll
             throw new ArgumentException("Formula cannot be empty.", nameof(formula));
 
         var parsed = DiceFormulaParser.Parse(formula);
-        var rolls = RollDice(parsed.Count, parsed.Sides);
+        var rolls = RollDiceCore(parsed.Count, parsed.Sides, rng ?? SharedRng);
         var total = rolls.Sum() + parsed.Modifier;
 
         return new DiceRoll
@@ -134,20 +141,43 @@ public class DiceRoll
     }
 
     /// <summary>
-    /// Rolls dice using cryptographic RNG for fairness.
+    /// Process-wide cryptographic RNG. <see cref="System.Security.Cryptography.RandomNumberGenerator"/>
+    /// is thread-safe in .NET 6+, so a single shared instance avoids the per-roll allocation +
+    /// kernel handle acquisition cost of <c>RandomNumberGenerator.Create()</c> (issue #1693).
     /// </summary>
-    private static int[] RollDice(int count, int sides)
+    private static readonly System.Security.Cryptography.RandomNumberGenerator SharedRng
+        = System.Security.Cryptography.RandomNumberGenerator.Create();
+
+    /// <summary>
+    /// Pure rolling logic exposed for deterministic testing.
+    /// Uses rejection sampling to produce a uniform distribution over [1, sides] with
+    /// zero modulo bias and no <c>Math.Abs(int.MinValue)</c> overflow (issue #1691).
+    /// </summary>
+    /// <param name="count">Number of dice to roll (must be ≥ 0).</param>
+    /// <param name="sides">Number of sides per die (must be ≥ 1).</param>
+    /// <param name="rng">Source of randomness. Must produce 4-byte fills via <see cref="System.Security.Cryptography.RandomNumberGenerator.GetBytes(byte[])"/>.</param>
+    /// <returns>Array of <paramref name="count"/> integers, each in <c>[1, sides]</c>.</returns>
+    internal static int[] RollDiceCore(int count, int sides, System.Security.Cryptography.RandomNumberGenerator rng)
     {
+        // Largest multiple of `sides` that fits in [0, uint.MaxValue]. Values ≥ limit are
+        // rejected and re-sampled to eliminate modulo bias. Rejection probability is
+        // (uint.MaxValue + 1 - limit) / (uint.MaxValue + 1) ≤ (sides - 1) / 2^32 ≈ 10⁻⁹
+        // for standard dice (d4..d100) → performance impact negligible.
+        var limit = (uint.MaxValue / (uint)sides) * (uint)sides;
+
         var results = new int[count];
-        using var rng = System.Security.Cryptography.RandomNumberGenerator.Create();
-        var buffer = new byte[4];
+        Span<byte> buffer = stackalloc byte[4];
 
         for (int i = 0; i < count; i++)
         {
-            rng.GetBytes(buffer);
-            // Convert to positive integer and map to 1-sides range
-            var value = Math.Abs(BitConverter.ToInt32(buffer, 0));
-            results[i] = (value % sides) + 1;
+            uint value;
+            do
+            {
+                rng.GetBytes(buffer);
+                value = BitConverter.ToUInt32(buffer);
+            } while (value >= limit);
+
+            results[i] = (int)(value % (uint)sides) + 1;
         }
 
         return results;

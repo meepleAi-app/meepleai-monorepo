@@ -25,7 +25,8 @@
  * Hooks mocked:
  *   - `next/navigation` (useRouter/useSearchParams/usePathname)
  *   - `@/hooks/queries/useHybridHubItems` (the data layer)
- *   - `@/hooks/queries/useLibrary` (useRemoveGameFromLibrary + useLibraryActivity)
+ *   - `@/hooks/queries/useLibrary` (useRemoveGameFromLibrary)
+ *   - `@/hooks/useActivityFeed` (cross-entity rail feed — Phase 3b #1593)
  *   - `@/hooks/useMiniNavConfig` (verify call signature)
  *   - `@/hooks/useTranslation` is left real — it consumes IntlProvider seeded
  *     by the test wrapper, exercising the same react-intl path as production.
@@ -74,18 +75,11 @@ vi.mock('@/hooks/queries/useHybridHubItems', () => ({
   PER_SOURCE_CAP: 20,
 }));
 
-// ─── useRemoveGameFromLibrary + useLibraryActivity mocks ──────────────────
+// ─── useRemoveGameFromLibrary mocks ──────────────────────────────────────
 
 type MockMutationReturn = {
   mutateAsync: (gameId: string) => Promise<void>;
   isPending: boolean;
-};
-
-type MockActivityReturn = {
-  data: ReadonlyArray<unknown> | undefined;
-  isLoading: boolean;
-  isError: boolean;
-  error: Error | null;
 };
 
 type MockLibraryReturn = {
@@ -96,12 +90,6 @@ type MockLibraryReturn = {
 };
 
 const useRemoveGameFromLibraryMock = vi.fn<[], MockMutationReturn>();
-const useLibraryActivityMock = vi.fn<[], MockActivityReturn>(() => ({
-  data: [],
-  isLoading: false,
-  isError: false,
-  error: null,
-}));
 const libraryMock = vi.fn<[], MockLibraryReturn>(() => ({
   data: undefined,
   isLoading: false,
@@ -114,7 +102,6 @@ vi.mock('@/hooks/queries/useLibrary', () => ({
   // the orchestrator only pulls these two from this module directly.
   useLibrary: () => libraryMock(),
   useRemoveGameFromLibrary: () => useRemoveGameFromLibraryMock(),
-  useLibraryActivity: () => useLibraryActivityMock(),
 }));
 
 // ─── useMiniNavConfig mock (verify invocation) ────────────────────────────
@@ -123,6 +110,27 @@ const useMiniNavConfigMock = vi.fn();
 
 vi.mock('@/hooks/useMiniNavConfig', () => ({
   useMiniNavConfig: (cfg: unknown) => useMiniNavConfigMock(cfg),
+}));
+
+// ─── useActivityFeed mock (Phase 3b #1593) ────────────────────────────────
+
+type MockActivityFeedReturn = {
+  data:
+    | {
+        items: Array<{ id: string; kind: string; entityTitle: string; timestamp: string }>;
+        count: number;
+      }
+    | undefined;
+  isLoading: boolean;
+  isSuccess: boolean;
+  isError: boolean;
+  error: Error | null;
+};
+
+const useActivityFeedMock = vi.fn<[], MockActivityFeedReturn>();
+
+vi.mock('@/hooks/useActivityFeed', () => ({
+  useActivityFeed: () => useActivityFeedMock(),
 }));
 
 // ─── react-intl messages (subset matching it.json `pages.library.*`) ──────
@@ -184,7 +192,41 @@ const MESSAGES: Record<string, string> = {
   'pages.library.emptyState.error.subtitle':
     'Non siamo riusciti a recuperare la tua libreria. Riprova.',
   'pages.library.emptyState.error.cta': 'Riprova',
-  // gamesTab i18n keys (#1566)
+  // ─── RecentActivityRail keys (Phase 3b #1593) ───
+  'pages.library.activityRail.title': 'Attività recente',
+  'pages.library.activityRail.empty': 'Nessuna attività recente.',
+  'pages.library.activityRail.error': "Impossibile caricare l'attività.",
+  // ─── AdvancedFiltersDrawer header/footer keys (Phase 3a #1606) ───
+  'pages.library.filters.title': 'Più filtri',
+  'pages.library.filters.description': "Filtra la libreria per dimensioni specifiche dell'entità.",
+  'pages.library.filters.clear': 'Reimposta',
+  'pages.library.filters.apply': 'Applica',
+  'common.cancel': 'Annulla',
+  // ─── Drawer section labels — game scope ───
+  'pages.library.filters.section.state': 'Stato',
+  'pages.library.filters.section.withKb': 'Solo con Knowledge Base',
+  'pages.library.filters.section.rating': 'Rating minimo',
+  'pages.library.filters.section.players': 'Numero di giocatori',
+  'pages.library.filters.section.year': 'Anno di pubblicazione',
+  // ─── Drawer section labels — agent scope ───
+  'pages.library.filters.section.agentType': 'Tipo di agente',
+  'pages.library.filters.section.activeOnly': 'Solo attivi',
+  // ─── Drawer section labels — session scope ───
+  'pages.library.filters.section.sessionStatus': 'Stato sessione',
+  'pages.library.filters.section.sessionType': 'Tipo sessione',
+  'pages.library.filters.section.playerCount': 'Giocatori (min)',
+  // ─── Drawer section labels — kb scope ───
+  'pages.library.filters.section.processingState': 'Stato di elaborazione',
+  'pages.library.filters.kbState.ready': 'Pronto',
+  'pages.library.filters.kbState.pending': 'In elaborazione',
+  'pages.library.filters.kbState.failed': 'Errore',
+  // ─── Drawer section labels — chat scope ───
+  'pages.library.filters.section.messageCountMin': 'Messaggi (min)',
+  // ─── Drawer checkbox option labels ───
+  'pages.library.filters.state.owned': 'Posseduto',
+  'pages.library.filters.state.wishlist': 'Wishlist',
+  'pages.library.filters.state.loaned': 'In prestito',
+  // ─── gamesTab i18n keys (#1566) ───
   'pages.library.gamesTab.filters.search.placeholder': 'Cerca per titolo…',
   'pages.library.gamesTab.filters.search.ariaLabel': 'Cerca giochi nella tua libreria',
   'pages.library.gamesTab.filters.search.clearAriaLabel': 'Pulisci ricerca',
@@ -201,8 +243,7 @@ const MESSAGES: Record<string, string> = {
   'pages.library.gamesTab.filters.view.label': 'Vista',
   'pages.library.gamesTab.filters.view.options.grid': 'Griglia',
   'pages.library.gamesTab.filters.view.options.list': 'Lista',
-  'pages.library.gamesTab.filters.resultCount':
-    '{count, plural, one {# gioco} other {# giochi}}',
+  'pages.library.gamesTab.filters.resultCount': '{count, plural, one {# gioco} other {# giochi}}',
   'pages.library.gamesTab.emptyState.empty.title': 'Aggiungi il tuo primo gioco',
   'pages.library.gamesTab.emptyState.empty.subtitle': 'Costruisci la tua libreria per iniziare.',
   'pages.library.gamesTab.emptyState.empty.cta': 'Aggiungi gioco',
@@ -330,6 +371,26 @@ function renderHub(hub: UseHybridHubItemsResult) {
   return renderWithIntl(<LibraryHub />);
 }
 
+// ─── installMatchMedia — force desktop (Radix Dialog) mode ──────────────────
+// Without this, Vaul renders a bottom sheet in jsdom which exposes no
+// role="dialog". installMatchMedia(true) makes window.matchMedia return
+// matches=true so Radix Dialog (desktop path) is taken instead.
+function installMatchMedia(matches: boolean) {
+  const listeners = new Set<(e: MediaQueryListEvent) => void>();
+  const mql = {
+    matches,
+    media: '(min-width: 768px)',
+    addEventListener: (_e: string, cb: (e: MediaQueryListEvent) => void) => listeners.add(cb),
+    removeEventListener: (_e: string, cb: (e: MediaQueryListEvent) => void) => listeners.delete(cb),
+    onchange: null,
+  };
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    writable: true,
+    value: vi.fn().mockReturnValue(mql),
+  });
+}
+
 // Import after mocks declared so module resolution sees the mocked hooks.
 import { LibraryHub } from '../LibraryHub';
 
@@ -344,9 +405,10 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
       mutateAsync: vi.fn().mockResolvedValue(undefined),
       isPending: false,
     });
-    useLibraryActivityMock.mockReturnValue({
-      data: [],
+    useActivityFeedMock.mockReturnValue({
+      data: { items: [], count: 0 },
       isLoading: false,
+      isSuccess: true,
       isError: false,
       error: null,
     });
@@ -647,7 +709,11 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
 
 // ─── Games tab (#1566) ────────────────────────────────────────────────────
 
-function libEntry(id: string, title: string, extra: Partial<UserLibraryEntry> = {}): UserLibraryEntry {
+function libEntry(
+  id: string,
+  title: string,
+  extra: Partial<UserLibraryEntry> = {}
+): UserLibraryEntry {
   return {
     id,
     userId: 'u1',
@@ -704,9 +770,10 @@ describe('LibraryHub — games tab (#1566)', () => {
       mutateAsync: vi.fn().mockResolvedValue(undefined),
       isPending: false,
     });
-    useLibraryActivityMock.mockReturnValue({
-      data: [],
+    useActivityFeedMock.mockReturnValue({
+      data: { items: [], count: 0 },
       isLoading: false,
+      isSuccess: true,
       isError: false,
       error: null,
     });
@@ -797,5 +864,138 @@ describe('LibraryHub — games tab (#1566)', () => {
     await userEvent.click(screen.getByRole('tab', { name: /sessioni/i }));
     expect(document.querySelector('[data-slot="games-results-grid"]')).toBeNull();
     expect(document.querySelector('[data-slot="games-empty-state"]')).toBeNull();
+  });
+});
+
+// ─── Phase 3b — drawer + rail integration (#1593) ─────────────────────────
+// CrossEntityFilters renders the "Più filtri" chip on non-'all' non-games tabs.
+// (Games tab renders GamesFiltersInline instead; 'all' is excluded by R4 in
+// CrossEntityFilters). Here we test against the 'sessions' tab which is the
+// lightest non-'all' non-games tab that exercises the chip path.
+describe('LibraryHub — Phase 3b drawer + rail integration (#1593)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    searchParamsState.value = '';
+    hubMock.mockReturnValue(makeHub());
+    libraryMock.mockReset();
+    libraryMock.mockReturnValue({ data: undefined, isLoading: false, isError: false, error: null });
+    useRemoveGameFromLibraryMock.mockReturnValue({
+      mutateAsync: vi.fn().mockResolvedValue(undefined),
+      isPending: false,
+    });
+    useActivityFeedMock.mockReturnValue({
+      data: { items: [], count: 0 },
+      isLoading: false,
+      isSuccess: true,
+      isError: false,
+      error: null,
+    });
+    // Force Radix Dialog (desktop) mode for drawer tests.
+    installMatchMedia(true);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('does not show "Più filtri" chip on the all tab (R4)', () => {
+    renderWithIntl(<LibraryHub />);
+    // default tab is 'all' — chip must be absent.
+    expect(screen.queryByTestId('cross-entity-filters-more')).toBeNull();
+  });
+
+  it('shows "Più filtri" chip on the games tab (#1658)', async () => {
+    const user = userEvent.setup();
+    installMatchMedia(true);
+    renderWithIntl(<LibraryHub />);
+    await user.click(screen.getByRole('tab', { name: /giochi/i }));
+    expect(screen.getByTestId('games-filters-more')).toBeInTheDocument();
+  });
+
+  it('clicking "Più filtri" chip on games tab opens the AdvancedFiltersDrawer (#1658)', async () => {
+    const user = userEvent.setup();
+    installMatchMedia(true);
+    renderWithIntl(<LibraryHub />);
+    await user.click(screen.getByRole('tab', { name: /giochi/i }));
+    const chip = screen.getByTestId('games-filters-more');
+    await user.click(chip);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('shows "Più filtri" chip on the sessions tab', async () => {
+    const user = userEvent.setup();
+    renderWithIntl(<LibraryHub />);
+    await user.click(screen.getByRole('tab', { name: /sessioni/i }));
+    expect(screen.getByTestId('cross-entity-filters-more')).toBeInTheDocument();
+  });
+
+  it('clicking "Più filtri" chip opens the AdvancedFiltersDrawer', async () => {
+    const user = userEvent.setup();
+    renderWithIntl(<LibraryHub />);
+    await user.click(screen.getByRole('tab', { name: /sessioni/i }));
+    const chip = screen.getByTestId('cross-entity-filters-more');
+    await user.click(chip);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('forwards isLoading=true from useActivityFeed to the rail (skeleton state)', () => {
+    useActivityFeedMock.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isSuccess: false,
+      isError: false,
+      error: null,
+    });
+    const { container } = renderWithIntl(<LibraryHub />);
+    const rail = container.querySelector('[data-slot="library-activity-rail"]');
+    expect(rail).not.toBeNull();
+    expect(rail).toHaveAttribute('data-state', 'loading');
+    const skeletons = container.querySelectorAll('[data-testid="library-activity-skeleton"]');
+    expect(skeletons.length).toBeGreaterThan(0);
+  });
+
+  it('forwards isError=true from useActivityFeed to the rail (error state)', () => {
+    useActivityFeedMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isSuccess: false,
+      isError: true,
+      error: new Error('500'),
+    });
+    const { container } = renderWithIntl(<LibraryHub />);
+    const rail = container.querySelector('[data-slot="library-activity-rail"]');
+    expect(rail).toHaveAttribute('data-state', 'error');
+    expect(container.querySelector('[data-testid="library-activity-error"]')).toBeInTheDocument();
+  });
+
+  it('renders cross-entity activity items in the rail when data has items', () => {
+    useActivityFeedMock.mockReturnValue({
+      data: {
+        items: [
+          {
+            id: '1',
+            kind: 'agent',
+            entityTitle: 'Catan Tutor',
+            timestamp: '2026-05-28T11:00:00+00:00',
+          },
+          {
+            id: '2',
+            kind: 'kb-indexed',
+            entityTitle: 'rules.pdf',
+            timestamp: '2026-05-28T10:00:00+00:00',
+          },
+        ],
+        count: 2,
+      },
+      isLoading: false,
+      isSuccess: true,
+      isError: false,
+      error: null,
+    });
+    const { container } = renderWithIntl(<LibraryHub />);
+    const rail = container.querySelector('[data-slot="library-activity-rail"]');
+    expect(rail).toHaveAttribute('data-state', 'populated');
+    expect(screen.getByText('Catan Tutor')).toBeInTheDocument();
+    expect(screen.getByText('rules.pdf')).toBeInTheDocument();
   });
 });

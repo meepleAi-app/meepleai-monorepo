@@ -303,16 +303,18 @@ the PR review.
 | `sp4-player-detail.jsx` | `FavoriteAgentCard` | `apps/web/src/components/features/player-detail/FavoriteAgentCard.tsx` | `/players/[id]` | done | #1539 | T A V | #1544 |
 | `sp4-player-detail.jsx` | `AchievementBadgeGrid` | `apps/web/src/components/features/player-detail/AchievementBadgeGrid.tsx` | `/players/[id]` | done | #1539 | T A V | #1544 |
 
-### Toolkit detail — `/toolkits/[id]` — 6 components — **Tier M**
+### Toolkit detail — `/toolkits/[id]` — 6 components — **Tier M** ✅ done
+
+> **Status (#1479, 2026-05-28)**: route fully implemented + wired (orchestrator `ToolkitDetailView` + tab panels). All 6 components shipped via PR #1163 (`Stage 3 FE — DetailPageLayout adoption`, closes #1145) — `VersionTimeline`/`RatingBreakdown`/`PromptPreviewBlock` tested earlier (#1531), `ToolkitSummaryPanel`/`ToolkitIncludesGrid` component tests added 2026-05-28 (23 tests), `Stars` is a thin re-export of the canonical `ui/feedback/Stars` (#1469, covered by the canonical's tests).
 
 | Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
 |--------|-----------|------|-------|--------|----|----|----------|
-| `sp4-toolkit-detail.jsx` | `ToolkitSummaryPanel` | `apps/web/src/components/features/toolkit-detail/ToolkitSummaryPanel.tsx` | `/toolkits/[id]` | pending | — | T A V | — |
-| `sp4-toolkit-detail.jsx` | `ToolkitIncludesGrid` | `apps/web/src/components/features/toolkit-detail/ToolkitIncludesGrid.tsx` | `/toolkits/[id]` | pending | — | T A V | — |
+| `sp4-toolkit-detail.jsx` | `ToolkitSummaryPanel` | `apps/web/src/components/features/toolkit-detail/ToolkitSummaryPanel.tsx` | `/toolkits/[id]` | done | #1163 | T A V | — |
+| `sp4-toolkit-detail.jsx` | `ToolkitIncludesGrid` | `apps/web/src/components/features/toolkit-detail/ToolkitIncludesGrid.tsx` | `/toolkits/[id]` | done | #1163 | T A V | — |
 | `sp4-toolkit-detail.jsx` | `VersionTimeline` | `apps/web/src/components/features/toolkit-detail/VersionTimeline.tsx` | `/toolkits/[id]` | done | #1531 | T A V | — |
 | `sp4-toolkit-detail.jsx` | `RatingBreakdown` | `apps/web/src/components/features/toolkit-detail/RatingBreakdown.tsx` | `/toolkits/[id]` | done | #1531 | T A V | — |
 | `sp4-toolkit-detail.jsx` | `PromptPreviewBlock` | `apps/web/src/components/features/toolkit-detail/PromptPreviewBlock.tsx` | `/toolkits/[id]` | done | #1531 | T A V | — |
-| `sp4-toolkit-detail.jsx` | `Stars` | `apps/web/src/components/features/toolkit-detail/Stars.tsx` | `/toolkits/[id]` | pending | — | T A V | — |
+| `sp4-toolkit-detail.jsx` | `Stars` | `apps/web/src/components/features/toolkit-detail/Stars.tsx` | `/toolkits/[id]` | done | #1469 | T A V | — |
 
 ### KB detail — `/kb/[id]` — 6 components — **Tier M**
 
@@ -338,16 +340,18 @@ the PR review.
 | `sp4-game-nights-index.jsx` | `StatusPill` | `apps/web/src/components/features/game-nights/StatusPill.tsx` | `/game-nights` | done | #1173 | T A V | #1397 |
 | `sp4-game-nights-index.jsx` | `PlayerAvatars` | `apps/web/src/components/features/game-nights/PlayerAvatars.tsx` | `/game-nights` | done | #1173 | T A V | #1397 |
 
-### Discover — `/discover` — 6 components — **Tier L** ⚠️ Phase 0.5 required
+### Discover — `/discover` — 6 components — **Tier L** ✅ done
+
+> **Status (#1483, 2026-05-28)**: route fully implemented via PR #1160 (`feat(discover): 7-row Stage 3 catalog`, closes #1147) + code-split via PR #1213. BE prerequisite #728 closed (5 cross-entity row endpoints; search + nearby-events stay disabled-shell pending follow-up). Component unit tests (86 across 6 files) added 2026-05-28 to close the AC `T` gap — the 5 `useDiscover*` hooks were already tested under `hooks/queries/__tests__/`.
 
 | Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
 |--------|-----------|------|-------|--------|----|----|----------|
-| `sp4-discover.jsx` | `DiscoverHero` | `apps/web/src/components/features/discover/DiscoverHero.tsx` | `/discover` | pending | — | T A M V | — |
-| `sp4-discover.jsx` | `DiscoverSearchBox` | `apps/web/src/components/features/discover/DiscoverSearchBox.tsx` | `/discover` | pending | — | T A V | — |
-| `sp4-discover.jsx` | `EntityFilterPillBar` | `apps/web/src/components/features/discover/EntityFilterPillBar.tsx` | `/discover` | pending | — | T A V | — |
-| `sp4-discover.jsx` | `HorizontalRow` | `apps/web/src/components/features/discover/HorizontalRow.tsx` | `/discover` | pending | — | T A M V | — |
-| `sp4-discover.jsx` | `RowScroller` | `apps/web/src/components/features/discover/RowScroller.tsx` | `/discover` | pending | — | T A V | — |
-| `sp4-discover.jsx` | `FooterCTA` | `apps/web/src/components/features/discover/FooterCTA.tsx` | `/discover` | pending | — | T A V | — |
+| `sp4-discover.jsx` | `DiscoverHero` | `apps/web/src/components/features/discover/DiscoverHero.tsx` | `/discover` | done | #1160 | T A V | — |
+| `sp4-discover.jsx` | `DiscoverSearchBox` | `apps/web/src/components/features/discover/DiscoverSearchBox.tsx` | `/discover` | done | #1160 | T A V | — |
+| `sp4-discover.jsx` | `EntityFilterPillBar` | `apps/web/src/components/features/discover/EntityFilterPillBar.tsx` | `/discover` | done | #1160 | T A V | — |
+| `sp4-discover.jsx` | `HorizontalRow` | `apps/web/src/components/features/discover/HorizontalRow.tsx` | `/discover` | done | #1160 | T A V | — |
+| `sp4-discover.jsx` | `RowScroller` | `apps/web/src/components/features/discover/RowScroller.tsx` | `/discover` | done | #1160 | T A V | — |
+| `sp4-discover.jsx` | `FooterCTA` | `apps/web/src/components/features/discover/FooterCTA.tsx` | `/discover` | done | #1160 | T A V | — |
 
 ## Wave 4 — 4 routes + Toolkits/KB extension (D1 ✅ done, G2 ✅ done via SP7, E1/F1 🎨 mockup-ready)
 
@@ -410,34 +414,38 @@ the PR review.
 | `sp4-kb-hub.jsx` | `RaptorPanel` | `apps/web/src/components/features/kb-hub/RaptorPanel.tsx` | `/library/[gameId]/kb` | done | #1481 | T A V | — |
 | `sp4-kb-hub.jsx` | `DeleteDialog` | `apps/web/src/components/features/kb-hub/DeleteDialog.tsx` | `/library/[gameId]/kb` | done | #1481 | T A M V | — |
 
-### KB globale — `/knowledge-base/global` (F1b) — 10 components — **Tier L** ✅ Phase 0.5 contract delivered (#1482)
+### KB globale — `/knowledge-base/global` (F1b) — 10 components — **Tier L** ✅ Phase 0.5 contract delivered (#1482) / **Phase 1 Foundation DONE** (PR #1688)
 
 > Mockup delivered post 2026-05-10 as `sp4-kb-globale.jsx`. Global search,
 > doc viewer (desktop + mobile), inline editor, and AI drawer (4-state FSM:
 > idle/streaming/completed/error).
 > **Phase 0.5 sub-hook contract DELIVERED** (#1482): [`contracts/kb-globale-hooks.md`](contracts/kb-globale-hooks.md).
+> **Phase 1 Foundation DELIVERED** (PR #1688): `useGlobalKbSearch` hook + 5 components
+> (HeroSearch, KbHomeDesktop, KbSearchResultsDesktop, KbEmptyState, route shell + orchestrator)
+> + Zod schemas + i18n catalogs + matrix + bundle budget.
 > Route decided: `/knowledge-base/global` (canonical). Dispatch is 2-phase
-> (Foundation: search/home/results/filters/empty + `useGlobalKbSearch`;
+> (Foundation: search/home/results/filters/empty + `useGlobalKbSearch` ✅ DONE;
 > Interactions: viewer/editor/AI-drawer + `useKbAskStream` mirroring
 > `useAgentChatStream`, all lazy-split). Reuse verified: `streaming.schemas.ts`
 > (CitationSchema + StreamingEventType), `kb-chunks.schemas.ts`, `useKbDocDetail`,
-> `useKbChunksList`. Greenfield: `useGlobalKbSearch` + `useKbAskStream`.
-> **6 open questions** (BE cross-game search + kb-ask SSE endpoints, citation
-> click, RBAC, editor scope, facets) must resolve before impl dispatch — see
-> contract §7. Components remain `pending` until Foundation/Interactions PRs land.
+> `useKbChunksList`, `useUserKbDocs`. Greenfield: `useGlobalKbSearch` + `useKbAskStream`.
+> **Remaining open questions** (BE cross-game search scope, kb-ask SSE, RBAC, editor scope, facets)
+> must resolve before Interactions dispatch — see contract §7 + follow-up issues #1686 / #1687.
+> FilterAccordion, viewers, editor, drawer deferred to Phase 2.
 
 | Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
 |--------|-----------|------|-------|--------|----|----|----------|
-| `sp4-kb-globale.jsx` | `HeroSearch` | `apps/web/src/components/features/kb-globale/HeroSearch.tsx` | `/knowledge-base/global` | pending | — | T A V | — |
-| `sp4-kb-globale.jsx` | `KbHomeDesktop` | `apps/web/src/components/features/kb-globale/KbHomeDesktop.tsx` | `/knowledge-base/global` | pending | — | T A V | — |
-| `sp4-kb-globale.jsx` | `KbSearchResultsDesktop` | `apps/web/src/components/features/kb-globale/KbSearchResultsDesktop.tsx` | `/knowledge-base/global` | pending | — | T A V | — |
-| `sp4-kb-globale.jsx` | `FilterAccordion` | `apps/web/src/components/features/kb-globale/FilterAccordion.tsx` | `/knowledge-base/global` | pending | — | T A V | — |
-| `sp4-kb-globale.jsx` | `KbDocViewerDesktop` | `apps/web/src/components/features/kb-globale/KbDocViewerDesktop.tsx` | `/knowledge-base/global` | pending | — | T A M V | — |
-| `sp4-kb-globale.jsx` | `KbDocViewerMobile` | `apps/web/src/components/features/kb-globale/KbDocViewerMobile.tsx` | `/knowledge-base/global` | pending | — | T A M V | — |
-| `sp4-kb-globale.jsx` | `KbEditorDesktop` | `apps/web/src/components/features/kb-globale/KbEditorDesktop.tsx` | `/knowledge-base/global` | pending | — | T A V | — |
-| `sp4-kb-globale.jsx` | `DrawerShell` (+ `DrawerIdle` / `DrawerStreaming` / `DrawerCompleted` / `DrawerError` states) | `apps/web/src/components/features/kb-globale/Drawer*.tsx` | `/knowledge-base/global` | pending | — | T A V | — |
-| `sp4-kb-globale.jsx` | `CitationPill` | `apps/web/src/components/features/kb-globale/CitationPill.tsx` | `/knowledge-base/global` | pending | — | T A V | — |
-| `sp4-kb-globale.jsx` | `KbEmptyState` | `apps/web/src/components/features/kb-globale/KbEmptyState.tsx` | `/knowledge-base/global` | pending | — | T A V | — |
+| `sp4-kb-globale.jsx` | `HeroSearch` | `apps/web/src/components/features/kb-globale/HeroSearch.tsx` | `/knowledge-base/global` | done | #1688 | T A V | — |
+| `sp4-kb-globale.jsx` | `KbHomeDesktop` | `apps/web/src/components/features/kb-globale/KbHomeDesktop.tsx` | `/knowledge-base/global` | done | #1688 | T A V | — |
+| `sp4-kb-globale.jsx` | `KbSearchResultsDesktop` | `apps/web/src/components/features/kb-globale/KbSearchResultsDesktop.tsx` | `/knowledge-base/global` | done | #1688 | T A V | — |
+| `sp4-kb-globale.jsx` | `FilterAccordion` | `apps/web/src/components/features/kb-globale/FilterAccordion.tsx` | `/knowledge-base/global` | pending | — | T A V | #1686 deferred |
+| `sp4-kb-globale.jsx` | `KbDocViewerDesktop` | `apps/web/src/components/features/kb-globale/KbDocViewerDesktop.tsx` | `/knowledge-base/global` | done | #TBD | T A M V | — |
+| `sp4-kb-globale.jsx` | `KbDocViewerMobile` | `apps/web/src/components/features/kb-globale/KbDocViewerMobile.tsx` | `/knowledge-base/global` | done | #TBD | T A M V | — |
+| `sp4-kb-globale.jsx` | `KbEditorDesktop` | `apps/web/src/components/features/kb-globale/KbEditorDesktop.tsx` | `/knowledge-base/global` | pending | — | T A V | #1687 deferred |
+| `sp4-kb-globale.jsx` | `DrawerShell` (+ `DrawerIdle` / `DrawerStreaming` / `DrawerCompleted` / `DrawerError` states) | `apps/web/src/components/features/kb-globale/Drawer*.tsx` | `/knowledge-base/global` | done | #TBD | T A V | — |
+| `sp4-kb-globale.jsx` | `CitationPill` | `apps/web/src/components/features/kb-globale/CitationPill.tsx` | `/knowledge-base/global` | done | #TBD | T A V | — |
+| `sp4-kb-globale.jsx` | `KbEmptyState` | `apps/web/src/components/features/kb-globale/KbEmptyState.tsx` | `/knowledge-base/global` | done | #1688 | T A V | — |
+| — | Route shell + orchestrator | `apps/web/src/app/(authenticated)/knowledge-base/global/page.tsx` + `_components/KbGlobaleView.tsx` | `/knowledge-base/global` | done | #1688 | — | — |
 
 ## SP6 — Nanolith libro-game (Iter 1.B / Iter 4) — 2 components
 
@@ -656,7 +664,7 @@ instead.
 
 | Route | Mockup | Note |
 |-------|--------|------|
-| `/library` | `sp4-library-desktop.html` | Tier S done (PR #574/635/638) |
+| `/library` | `sp4-library-desktop.html` + `sp4-library-mobile.html` | Tier S done (PR #574/635/638); mobile variant SP8 brief 2026-05-30 (IA semplificata 3 tab + overflow Più=Agents/KB) |
 | `/library/wishlist` | — | gap |
 | `/library/playlists` · `/[id]` · `/shared/[token]` | — | **gap critico** (US-attiva) |
 | `/library/private` · `/add` · `/[id]` | `sp4-add-game-pdf-dedup.html` + `sp4-upload-wizard-extended.html` [partial] | — |
@@ -665,7 +673,7 @@ instead.
 | `/library/[gameId]` | `sp4-game-detail.html` + `librogame-runthrough-game-detail.html` + `librogame-runthrough-game-onboarding.html` | IA closes #871 (PR #1037); onboarding gap-coverage 2026-05-12 (pending Stage-2); libro variant audit #1551 → **0% drift** (see [libro-detail-gap-report.md](../../../admin-mockups/design_handoff/libro-detail-gap-report.md)) |
 | `/library/[gameId]/agent` | `sp4-agent-detail.html` + `sp4-game-chat-tab.html` | — |
 | `/library/[gameId]/play` | `librogame-runthrough-resume-picker.html` + `sp6-libro-game-resume-state.html` | Libro-game |
-| `/library/[gameId]/play/[campaignId]` | `librogame-runthrough-play-session.html` + `sp6-libro-game-index.html` | — |
+| `/library/[gameId]/play/[campaignId]` | `librogame-runthrough-play-session.html` + `sp6-libro-game-index.html` | 4 stati v1 congelati + 3 stati SP8 companion (state-05 diary, state-06 paragrafi-drawer, state-07 end-campaign) brief 2026-05-30; nuovo jsx twin con 3 lab interattivi; deviazione narrativa dati documentata (nuovi stati riferiscono §214/Tainted Grail/Niamh, congelati §289/Eldoria/Voidstone) |
 | `/library/[gameId]/play/[campaignId]/translate` | `librogame-runthrough-translate-viewer.html` + `sp6-libro-game-photo-upload.html` | Tier S done (PR #790) |
 | `/library/[gameId]/play/[campaignId]/encounter` | `librogame-runthrough-encounter-cheatsheet.html` | Tier S done (PR #1525, parse-centric MVP; state D deferred) |
 | `/library/[gameId]/toolbox` · `/toolkit` · `/toolkit/[sessionId]` | `sp4-toolkit-detail.html` ↻ | — |

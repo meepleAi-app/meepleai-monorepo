@@ -1,0 +1,795 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Vector Collections · Knowledge Base · MeepleAI Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+/* ═══════════════ tokens.css ═══════════════ */
+:root {
+  --c-game:    25 95% 45%;
+  --c-player:  262 83% 58%;
+  --c-session: 240 60% 55%;
+  --c-agent:   38 92% 50%;
+  --c-kb:      174 60% 40%;
+  --c-chat:    220 80% 55%;
+  --c-event:   350 89% 60%;
+  --c-toolkit: 142 70% 45%;
+  --c-tool:    195 80% 50%;
+
+  --c-success: 142 70% 45%;
+  --c-warning: 38 92% 50%;
+  --c-danger:  350 89% 60%;
+  --c-info:    220 80% 55%;
+
+  --brand: var(--c-game);
+  --brand-fg: hsl(var(--c-game));
+
+  --f-display: 'Quicksand', system-ui, sans-serif;
+  --f-body:    'Nunito', system-ui, sans-serif;
+  --f-mono:    'JetBrains Mono', ui-monospace, monospace;
+
+  --fs-xs: 11px; --fs-sm: 12px; --fs-base: 14px; --fs-md: 15px;
+  --fs-lg: 17px; --fs-xl: 20px; --fs-2xl: 24px; --fs-3xl: 32px; --fs-4xl: 40px;
+
+  --fw-reg: 400; --fw-med: 500; --fw-semi: 600; --fw-bold: 700; --fw-ext: 800;
+  --lh-tight: 1.2; --lh-snug: 1.35; --lh-body: 1.5; --lh-relax: 1.65;
+
+  --s-0: 0; --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px;
+  --s-6: 24px; --s-7: 32px; --s-8: 40px; --s-9: 48px; --s-10: 64px;
+
+  --r-xs: 4px; --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-xl: 18px; --r-2xl: 24px; --r-pill: 9999px;
+
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --ease-in-out: cubic-bezier(.65, 0, .35, 1);
+  --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+  --dur-xs: 120ms; --dur-sm: 180ms; --dur-md: 280ms; --dur-lg: 400ms; --dur-xl: 600ms;
+
+  --z-base: 0; --z-sticky: 10; --z-nav: 20; --z-overlay: 50; --z-drawer: 51; --z-modal: 60; --z-toast: 70; --z-tooltip: 80;
+}
+:root, :root[data-theme="light"] {
+  --bg: #f7f3ee; --bg-card: #ffffff; --bg-muted: #efe6d9; --bg-sunken: #ede2d0;
+  --bg-hover: rgba(180, 130, 80, 0.06);
+  --text: #2b1f12; --text-sec: #5a4a38; --text-muted: #9a8870;
+  --border: rgba(180, 130, 80, 0.18); --border-light: rgba(180, 130, 80, 0.1); --border-strong: rgba(180, 130, 80, 0.32);
+  --shadow-xs: 0 1px 2px rgba(90, 60, 20, 0.06);
+  --shadow-sm: 0 2px 8px rgba(90, 60, 20, 0.08);
+  --shadow-md: 0 4px 16px rgba(90, 60, 20, 0.1);
+  --shadow-lg: 0 12px 36px rgba(90, 60, 20, 0.14);
+  --glass-bg: rgba(255, 255, 255, 0.88);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg: #14100a; --bg-card: #1e1710; --bg-muted: #241c13; --bg-sunken: #0f0c08;
+  --bg-hover: rgba(255, 200, 130, 0.05);
+  --text: #f0e4d2; --text-sec: #c8b896; --text-muted: #8a7860;
+  --border: rgba(224, 180, 110, 0.14); --border-light: rgba(224, 180, 110, 0.08); --border-strong: rgba(224, 180, 110, 0.28);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.6);
+  --glass-bg: rgba(30, 22, 14, 0.85);
+  --glass-border: rgba(224, 180, 110, 0.14);
+  --c-game: 28 95% 58%; --c-player: 262 75% 70%; --c-session: 235 70% 70%;
+  --c-agent: 38 92% 62%; --c-kb: 174 60% 55%; --c-chat: 218 80% 68%;
+  --c-event: 350 85% 70%; --c-toolkit: 142 60% 58%; --c-tool: 195 75% 62%;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--f-body);
+  background: var(--bg); color: var(--text);
+  font-size: var(--fs-base); line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+}
+h1, h2, h3, h4, h5, h6 { font-family: var(--f-display); font-weight: var(--fw-bold); letter-spacing: -0.01em; margin: 0; line-height: var(--lh-tight); }
+button { font-family: inherit; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+code, kbd { font-family: var(--f-mono); font-size: 0.9em; }
+
+.e-game    { --e: var(--c-game); }
+.e-player  { --e: var(--c-player); }
+.e-session { --e: var(--c-session); }
+.e-agent   { --e: var(--c-agent); }
+.e-kb      { --e: var(--c-kb); }
+.e-chat    { --e: var(--c-chat); }
+.e-event   { --e: var(--c-event); }
+.e-toolkit { --e: var(--c-toolkit); }
+.e-tool    { --e: var(--c-tool); }
+.e-fg   { color: hsl(var(--e)); }
+.e-bg   { background: hsl(var(--e)); color: #fff; }
+.e-tint { background: hsl(var(--e) / 0.1); color: hsl(var(--e)); }
+.e-ring { box-shadow: 0 0 0 2px hsl(var(--e) / 0.35); }
+
+/* ═══════════════ components.css (estratto) ═══════════════ */
+.e-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px; border-radius: var(--r-sm);
+  background: hsl(var(--e) / 0.12); color: hsl(var(--e));
+  font-size: var(--fs-xs); font-weight: var(--fw-bold);
+  font-family: var(--f-display); text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.e-dot { width: 8px; height: 8px; border-radius: 50%; background: hsl(var(--e)); flex-shrink: 0; display: inline-block; }
+
+/* ═══════════════ admin-base.css ═══════════════ */
+.admin-page { background: var(--bg); color: var(--text); min-height: 100vh; font-family: var(--f-body); font-size: var(--fs-sm); line-height: 1.5; }
+.admin-shell { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+.admin-shell-3col { display: grid; grid-template-columns: 240px 1fr 360px; min-height: 100vh; }
+
+.admin-nav {
+  background: var(--bg-card); border-right: 1px solid var(--border);
+  padding: 16px 0; display: flex; flex-direction: column; gap: 2px;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+}
+.admin-nav-brand { padding: 4px 16px 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border-light); margin-bottom: 12px; }
+.admin-nav-brand-mark { width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, hsl(var(--c-game)), hsl(var(--c-event))); color: #fff; display: grid; place-items: center; font-family: var(--f-display); font-weight: 900; font-size: 14px; }
+.admin-nav-brand-name { font-family: var(--f-display); font-weight: 800; font-size: 14px; }
+.admin-nav-brand-tag { font-family: var(--f-mono); font-size: 9px; font-weight: 700; color: hsl(var(--c-event)); text-transform: uppercase; letter-spacing: .08em; padding: 2px 6px; border-radius: 4px; background: hsl(var(--c-event) / .12); margin-left: auto; }
+.admin-nav-group { padding: 10px 16px 4px; font-family: var(--f-mono); font-size: 9.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; }
+.admin-nav-item { display: flex; align-items: center; gap: 10px; padding: 7px 16px; color: var(--text-sec); font-family: var(--f-display); font-size: 13px; font-weight: 600; cursor: pointer; border-left: 2px solid transparent; text-decoration: none; }
+.admin-nav-item:hover { background: var(--bg-muted); color: var(--text); }
+.admin-nav-item.active { background: hsl(var(--c-event) / .08); color: hsl(var(--c-event)); border-left-color: hsl(var(--c-event)); }
+.admin-nav-item .em { font-size: 14px; opacity: .9; }
+.admin-nav-item .count { margin-left: auto; font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); font-weight: 700; }
+.admin-nav-foot { margin-top: auto; padding: 12px 16px; border-top: 1px solid var(--border-light); font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+.admin-nav-foot .badge { padding: 2px 6px; border-radius: 4px; background: hsl(var(--c-toolkit) / .12); color: hsl(var(--c-toolkit)); font-weight: 700; font-size: 9px; text-transform: uppercase; letter-spacing: .05em; }
+
+.admin-top { background: var(--bg); border-bottom: 1px solid var(--border-light); padding: 12px 24px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 50; backdrop-filter: blur(12px); }
+.admin-top h1 { font-family: var(--f-display); font-size: 20px; font-weight: 800; margin: 0; line-height: 1.2; }
+.admin-top .crumbs { font-family: var(--f-mono); font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.admin-top .spacer { flex: 1; }
+.admin-top-actions { display: flex; gap: 8px; align-items: center; }
+
+.admin-search { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; width: 280px; font-size: 12px; }
+.admin-search input { flex: 1; border: 0; background: transparent; color: var(--text); font-family: var(--f-body); font-size: 12.5px; outline: 0; }
+.admin-search kbd { padding: 1px 5px; border-radius: 4px; background: var(--bg-muted); border: 1px solid var(--border); font-family: var(--f-mono); font-size: 9px; color: var(--text-muted); }
+
+.btn-admin { padding: 6px 12px; border-radius: 6px; font-family: var(--f-display); font-size: 12.5px; font-weight: 700; cursor: pointer; border: 1px solid var(--border); background: var(--bg-card); color: var(--text); display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.btn-admin:hover { background: var(--bg-muted); }
+.btn-admin.primary { background: hsl(var(--c-event)); border-color: hsl(var(--c-event)); color: #fff; box-shadow: 0 2px 6px hsl(var(--c-event) / .3); }
+.btn-admin.primary:hover { filter: brightness(1.08); }
+.btn-admin.danger { background: var(--bg-card); border-color: hsl(var(--c-event) / .5); color: hsl(var(--c-event)); }
+.btn-admin.success { background: hsl(var(--c-toolkit)); border-color: hsl(var(--c-toolkit)); color: #fff; }
+.btn-admin.ghost { background: transparent; border-color: transparent; }
+.btn-admin.icon { padding: 6px; width: 28px; height: 28px; justify-content: center; }
+.btn-admin.sm { padding: 3px 8px; font-size: 11px; }
+.btn-admin kbd { padding: 1px 4px; border-radius: 3px; background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.2); font-family: var(--f-mono); font-size: 9px; margin-left: 4px; }
+.btn-admin.primary kbd { background: rgba(0,0,0,.18); border-color: rgba(0,0,0,.25); }
+
+.admin-kpi { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; min-height: 88px; position: relative; }
+.admin-kpi-label { font-family: var(--f-mono); font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+.admin-kpi-value { font-family: var(--f-display); font-size: 28px; font-weight: 800; color: var(--text); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.admin-kpi-value .u { font-size: 13px; color: var(--text-muted); font-weight: 700; margin-left: 2px; }
+.admin-kpi-trend { font-family: var(--f-mono); font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; }
+.admin-kpi-trend.up   { color: hsl(var(--c-toolkit)); }
+.admin-kpi-trend.down { color: hsl(var(--c-event)); }
+.admin-kpi-trend.flat { color: var(--text-muted); }
+.admin-kpi-spark { position: absolute; right: 12px; top: 12px; width: 70px; height: 28px; opacity: .85; }
+.admin-kpi-icon  { position: absolute; right: 14px; bottom: 12px; font-size: 22px; opacity: .35; }
+.admin-kpi.e-game    { border-left: 3px solid hsl(var(--c-game)); }
+.admin-kpi.e-player  { border-left: 3px solid hsl(var(--c-player)); }
+.admin-kpi.e-session { border-left: 3px solid hsl(var(--c-session)); }
+.admin-kpi.e-agent   { border-left: 3px solid hsl(var(--c-agent)); }
+.admin-kpi.e-kb      { border-left: 3px solid hsl(var(--c-kb)); }
+.admin-kpi.e-chat    { border-left: 3px solid hsl(var(--c-chat)); }
+.admin-kpi.e-event   { border-left: 3px solid hsl(var(--c-event)); }
+.admin-kpi.e-toolkit { border-left: 3px solid hsl(var(--c-toolkit)); }
+
+.admin-panel { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 10px; overflow: hidden; }
+.admin-panel-head { padding: 10px 14px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: 10px; background: var(--bg); }
+.admin-panel-head h3 { margin: 0; font-family: var(--f-display); font-size: 13px; font-weight: 800; }
+.admin-panel-head .meta { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); margin-left: auto; }
+.admin-panel-body { padding: 14px; }
+
+.admin-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.admin-table th { text-align: left; padding: 8px 12px; font-family: var(--f-mono); font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; border-bottom: 1px solid var(--border-light); background: var(--bg); position: sticky; top: 0; white-space: nowrap; }
+.admin-table td { padding: 8px 12px; border-bottom: 1px solid var(--border-light); vertical-align: middle; }
+.admin-table tr:hover td { background: var(--bg-muted); }
+
+.status-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-family: var(--f-mono); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+.status-chip::before { content: ''; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.status-chip.healthy { background: hsl(var(--c-toolkit) / .12); color: hsl(var(--c-toolkit)); }
+.status-chip.healthy::before { background: hsl(var(--c-toolkit)); box-shadow: 0 0 0 3px hsl(var(--c-toolkit) / .25); }
+.status-chip.warning { background: hsl(38 90% 56% / .14); color: hsl(38 90% 50%); }
+.status-chip.warning::before { background: hsl(38 90% 50%); }
+.status-chip.danger  { background: hsl(var(--c-event) / .12); color: hsl(var(--c-event)); }
+.status-chip.danger::before { background: hsl(var(--c-event)); }
+.status-chip.muted   { background: var(--bg-muted); color: var(--text-muted); }
+.status-chip.muted::before { background: var(--text-muted); }
+.status-chip.info    { background: hsl(var(--c-chat) / .12); color: hsl(var(--c-chat)); }
+.status-chip.info::before { background: hsl(var(--c-chat)); }
+.status-chip.running::before { animation: admin-pulse 1.4s ease-in-out infinite; }
+@keyframes admin-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: .5; } }
+
+.role-chip { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-family: var(--f-mono); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+
+.spark { stroke: currentColor; stroke-width: 1.5; fill: none; }
+.spark-fill { fill: currentColor; opacity: .14; }
+
+.admin-input, .admin-select, .admin-textarea { width: 100%; max-width: 360px; padding: 6px 10px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; font-family: var(--f-body); font-size: 12.5px; }
+.admin-input.mono { font-family: var(--f-mono); }
+.admin-select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--text-sec) 50%), linear-gradient(135deg, var(--text-sec) 50%, transparent 50%); background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 26px; cursor: pointer; }
+
+.admin-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.admin-tab { padding: 8px 14px; background: transparent; border: 0; font-family: var(--f-display); font-size: 13px; font-weight: 700; color: var(--text-sec); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+.admin-tab .count { padding: 1px 6px; border-radius: 999px; background: var(--bg-muted); color: var(--text-muted); font-family: var(--f-mono); font-size: 10px; font-weight: 700; }
+.admin-tab:hover { color: var(--text); }
+.admin-tab.active { color: hsl(var(--c-event)); border-bottom-color: hsl(var(--c-event)); }
+.admin-tab.active .count { background: hsl(var(--c-event) / .14); color: hsl(var(--c-event)); }
+
+.alert-banner { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: 8px; font-size: 12.5px; }
+.alert-banner.info { background: hsl(var(--c-chat) / .08); border: 1px solid hsl(var(--c-chat) / .3); color: var(--text); }
+.alert-banner .em { font-size: 18px; flex-shrink: 0; }
+.alert-banner .title { font-family: var(--f-display); font-weight: 800; margin-bottom: 2px; font-size: 13px; }
+
+@media (max-width: 880px) {
+  .admin-mobile-fallback { display: flex !important; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 32px; text-align: center; gap: 16px; }
+  .admin-mobile-fallback .em { font-size: 56px; }
+  .admin-mobile-fallback h2 { margin: 0; font-family: var(--f-display); font-size: 20px; }
+  .admin-mobile-fallback p { color: var(--text-sec); max-width: 320px; margin: 0; line-height: 1.5; }
+  .admin-shell, .admin-shell-3col { display: none; }
+}
+.admin-mobile-fallback { display: none; }
+
+.admin-body { padding: 20px 24px; }
+.admin-body-grid { display: grid; gap: 16px; }
+
+/* ═══════════════ custom da sp5-admin-kb.html (chunk + filter chip + log) ═══════════════ */
+.chunk-table-row { display: grid; grid-template-columns: 90px 1fr 60px 70px 30px; gap: 10px; padding: 7px 12px; border-bottom: 1px solid var(--border-light); font-size: 11.5px; align-items: center; }
+.chunk-table-row code { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); }
+.chunk-table-row .preview { color: var(--text-sec); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chunk-table-row .score { text-align: right; font-family: var(--f-mono); font-weight: 700; }
+.chunk-table-row .score.hi { color: hsl(var(--c-kb)); }
+.chunk-table-row .score.md { color: hsl(38 90% 50%); }
+.chunk-table-row .score.lo { color: var(--text-muted); }
+
+.filter-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; background: var(--bg-card); border: 1px solid var(--border); font-family: var(--f-mono); font-size: 10px; font-weight: 700; color: var(--text-sec); cursor: pointer; }
+.filter-chip.active { background: hsl(var(--c-kb) / .14); border-color: hsl(var(--c-kb) / .4); color: hsl(var(--c-kb)); }
+.filter-chip .x { opacity: .6; font-size: 8px; }
+
+/* ═══════════════ page-local: Vector Collections ═══════════════ */
+.kpi-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+
+.search-row { display: grid; grid-template-columns: 1fr 200px 150px auto; gap: 8px; align-items: center; }
+.search-row .admin-search { width: 100%; max-width: none; }
+.search-row .admin-select { max-width: none; }
+
+.result-row {
+  display: grid;
+  grid-template-columns: 110px 110px 1fr 70px 28px;
+  gap: 12px; padding: 10px 14px;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 11.5px; align-items: center;
+  cursor: pointer;
+}
+.result-row:last-child { border-bottom: 0; }
+.result-row:hover { background: var(--bg-muted); }
+.result-row.expanded { background: hsl(var(--c-kb) / .04); }
+.result-row .doc-id { font-family: var(--f-mono); font-size: 10.5px; color: hsl(var(--c-kb)); font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+.result-row .doc-id .e-dot { width: 6px; height: 6px; background: hsl(var(--c-game)); }
+.result-row .loc { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); }
+.result-row .snippet { color: var(--text-sec); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.result-row .snippet mark { background: hsl(var(--c-kb) / .22); color: var(--text); padding: 0 2px; border-radius: 3px; }
+.result-row .score { text-align: right; font-family: var(--f-mono); font-weight: 700; font-size: 12px; }
+.result-row .score.hi { color: hsl(var(--c-kb)); }
+.result-row .score.md { color: hsl(38 90% 50%); }
+.result-row .score.lo { color: var(--text-muted); }
+.result-row .caret { color: var(--text-muted); font-family: var(--f-mono); font-size: 12px; transition: transform .15s var(--ease-out); }
+.result-row.expanded .caret { transform: rotate(90deg); color: hsl(var(--c-kb)); }
+
+.result-expanded {
+  padding: 12px 14px 14px 14px;
+  background: var(--bg-sunken);
+  border-bottom: 1px solid var(--border-light);
+  display: grid; grid-template-columns: 1fr 280px; gap: 16px;
+}
+.result-expanded .snippet-full {
+  font-family: var(--f-body);
+  font-size: 12.5px; line-height: 1.6;
+  color: var(--text-sec);
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  border-radius: 6px; padding: 10px 12px;
+}
+.result-expanded .snippet-full mark { background: hsl(var(--c-kb) / .22); color: var(--text); padding: 0 2px; border-radius: 3px; }
+.result-expanded .meta-table { display: flex; flex-direction: column; gap: 4px; }
+.result-expanded .meta-table .row { display: flex; gap: 8px; font-family: var(--f-mono); font-size: 10.5px; align-items: center; }
+.result-expanded .meta-table .row .k { color: var(--text-muted); min-width: 90px; text-transform: uppercase; letter-spacing: .04em; font-size: 9.5px; font-weight: 700; }
+.result-expanded .meta-table .row .v { color: var(--text-sec); }
+.result-expanded .meta-table .row .v.mono-strong { color: var(--text); font-weight: 700; }
+.result-expanded .actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.result-expanded .vec-thumb {
+  height: 28px; border-radius: 4px; margin-top: 6px;
+  background: linear-gradient(90deg, hsl(var(--c-kb) / .35), hsl(var(--c-kb) / .05), hsl(var(--c-kb) / .25), hsl(var(--c-event) / .25), hsl(var(--c-kb) / .15));
+  position: relative; overflow: hidden;
+}
+.result-expanded .vec-thumb::after {
+  content: '768d · float32'; position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  font-family: var(--f-mono); font-size: 9px; color: var(--text); opacity: .75; font-weight: 700;
+}
+
+.result-table-head {
+  display: grid;
+  grid-template-columns: 110px 110px 1fr 70px 28px;
+  gap: 12px; padding: 8px 14px;
+  font-family: var(--f-mono); font-size: 9.5px; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .06em; font-weight: 700;
+  border-bottom: 1px solid var(--border-light); background: var(--bg);
+}
+
+.game-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.game-card {
+  background: var(--bg); border: 1px solid var(--border-light);
+  border-radius: 8px; padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 8px;
+  border-left: 3px solid hsl(var(--e, var(--c-game)));
+  position: relative;
+}
+.game-card .head { display: flex; align-items: center; gap: 8px; }
+.game-card .head .em { font-size: 18px; }
+.game-card .head .name { font-family: var(--f-display); font-weight: 800; font-size: 13.5px; flex: 1; }
+.game-card .head .status-chip { font-size: 9px; }
+.game-card .body { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.game-card .body .cell { display: flex; flex-direction: column; gap: 2px; }
+.game-card .body .cell .k { font-family: var(--f-mono); font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; font-weight: 700; }
+.game-card .body .cell .v { font-family: var(--f-display); font-size: 16px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.game-card .body .cell .v .u { font-size: 10px; color: var(--text-muted); font-weight: 700; margin-left: 1px; }
+.game-card .foot {
+  display: flex; align-items: center; justify-content: space-between;
+  border-top: 1px solid var(--border-light); padding-top: 6px;
+  font-family: var(--f-mono); font-size: 10px; color: var(--text-muted);
+}
+.game-card .foot a { color: hsl(var(--c-kb)); font-weight: 700; }
+.game-card .foot a:hover { text-decoration: underline; }
+
+.endpoint-note {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--f-mono); font-size: 10px; color: var(--text-muted);
+  background: var(--bg-sunken); border: 1px dashed var(--border);
+  padding: 2px 8px; border-radius: 4px;
+}
+.endpoint-note code { color: hsl(var(--c-kb)); font-weight: 700; }
+</style>
+</head>
+<body class="admin-page">
+
+<div class="admin-mobile-fallback">
+  <div class="em">🖥️</div>
+  <h2>Console solo desktop</h2>
+  <p>La console admin è ottimizzata per schermi ≥ 880px.</p>
+</div>
+
+<div class="admin-shell">
+
+  <!-- ── Sidebar nav (renderAdminNav('kb')) ─────────────────── -->
+  <nav class="admin-nav" data-admin-nav-mount>
+    <div class="admin-nav-brand">
+      <div class="admin-nav-brand-mark">M</div>
+      <div class="admin-nav-brand-name">MeepleAI</div>
+      <div class="admin-nav-brand-tag">Admin</div>
+    </div>
+
+    <div class="admin-nav-group">Overview</div>
+    <a href="/admin" class="admin-nav-item"><span class="em">⌂</span> Dashboard</a>
+    <a href="/admin/activity" class="admin-nav-item"><span class="em">⚡</span> Activity <span class="count">128</span></a>
+
+    <div class="admin-nav-group">Catalog</div>
+    <a href="/admin/games" class="admin-nav-item"><span class="em">🎲</span> Games <span class="count">48</span></a>
+    <a href="/admin/players" class="admin-nav-item"><span class="em">👥</span> Players <span class="count">3.2k</span></a>
+    <a href="/admin/sessions" class="admin-nav-item"><span class="em">🃏</span> Sessions <span class="count">912</span></a>
+
+    <div class="admin-nav-group">AI Stack</div>
+    <a href="/admin/agents" class="admin-nav-item"><span class="em">🤖</span> Agents <span class="count">14</span></a>
+    <a href="/admin/knowledge-base" class="admin-nav-item active"><span class="em">📚</span> Knowledge Base <span class="count">247</span></a>
+    <a href="/admin/chats" class="admin-nav-item"><span class="em">💬</span> Chats <span class="count">2.8k</span></a>
+    <a href="/admin/toolkits" class="admin-nav-item"><span class="em">🧰</span> Toolkits <span class="count">9</span></a>
+    <a href="/admin/tools" class="admin-nav-item"><span class="em">🔧</span> Tools <span class="count">41</span></a>
+
+    <div class="admin-nav-group">Observe</div>
+    <a href="/admin/events" class="admin-nav-item"><span class="em">📡</span> Events</a>
+    <a href="/admin/audit" class="admin-nav-item"><span class="em">🛡</span> Audit log</a>
+    <a href="/admin/settings" class="admin-nav-item"><span class="em">⚙</span> Settings</a>
+
+    <div class="admin-nav-foot">
+      <span>v2024.12.04</span>
+      <span class="badge">prod</span>
+    </div>
+  </nav>
+
+  <main>
+    <!-- ── Banda di sezione (uguale per tutte le tool-page KB) ── -->
+    <header class="admin-top">
+      <div>
+        <h1>Knowledge Base</h1>
+        <div class="crumbs">Admin · KB · Vector Collections · 9 indici · pgvector 0.7.4 · 18.487 vectors</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="admin-top-actions">
+        <div class="admin-search"><span>🔍</span><input placeholder="Search docs, chunks, games…"/><kbd>⌘K</kbd></div>
+        <a href="/admin/knowledge-base/upload" class="btn-admin primary">+ Upload PDF</a>
+      </div>
+    </header>
+
+    <div class="admin-body" data-screen-label="kb-vector-collections">
+
+      <!-- ── Sub-nav KB (8 tab) ─────────────────────────────── -->
+      <div class="admin-tabs" role="tablist" aria-label="Knowledge Base sezioni">
+        <a href="/admin/knowledge-base"            class="admin-tab" role="tab">Explorer</a>
+        <a href="/admin/knowledge-base/vectors"    class="admin-tab active" role="tab" aria-selected="true">Vector Collections</a>
+        <a href="/admin/knowledge-base/queue"      class="admin-tab" role="tab">Processing Queue <span class="count">3</span></a>
+        <a href="/admin/knowledge-base/pipeline"   class="admin-tab" role="tab">RAG Pipeline</a>
+        <a href="/admin/knowledge-base/embedding"  class="admin-tab" role="tab">Embedding</a>
+        <a href="/admin/knowledge-base/feedback"   class="admin-tab" role="tab">Feedback <span class="count">12</span></a>
+        <a href="/admin/knowledge-base/settings"   class="admin-tab" role="tab">Settings</a>
+        <a href="/admin/knowledge-base/snapshots"  class="admin-tab" role="tab">Snapshots</a>
+      </div>
+
+      <!-- ── 1. KPI strip ──────────────────────────────────── -->
+      <div class="kpi-strip">
+
+        <div class="admin-kpi e-kb">
+          <div class="admin-kpi-label">Total Vectors</div>
+          <div class="admin-kpi-value">18.487</div>
+          <div class="admin-kpi-trend up">▲ +412 last 24h</div>
+          <svg class="admin-kpi-spark" viewBox="0 0 70 28" preserveAspectRatio="none" style="color: hsl(var(--c-kb))">
+            <path class="spark-fill" d="M0,22 L6,21 L12,19 L18,20 L24,17 L30,15 L36,14 L42,11 L48,12 L54,9 L60,7 L66,5 L70,4 L70,28 L0,28 Z"/>
+            <path class="spark" d="M0,22 L6,21 L12,19 L18,20 L24,17 L30,15 L36,14 L42,11 L48,12 L54,9 L60,7 L66,5 L70,4"/>
+          </svg>
+        </div>
+
+        <div class="admin-kpi e-game">
+          <div class="admin-kpi-label">Games Indexed</div>
+          <div class="admin-kpi-value">8<span class="u">/ 48</span></div>
+          <div class="admin-kpi-trend up">▲ +1 questa settimana</div>
+          <svg class="admin-kpi-spark" viewBox="0 0 70 28" preserveAspectRatio="none" style="color: hsl(var(--c-game))">
+            <path class="spark-fill" d="M0,24 L10,24 L10,22 L20,22 L20,20 L30,20 L30,18 L40,18 L40,15 L50,15 L50,12 L60,12 L60,8 L70,8 L70,28 L0,28 Z"/>
+            <path class="spark" d="M0,24 L10,24 L10,22 L20,22 L20,20 L30,20 L30,18 L40,18 L40,15 L50,15 L50,12 L60,12 L60,8 L70,8"/>
+          </svg>
+        </div>
+
+        <div class="admin-kpi" style="border-left: 3px solid hsl(var(--c-chat))">
+          <div class="admin-kpi-label">Dimensions</div>
+          <div class="admin-kpi-value">768<span class="u">d</span></div>
+          <div class="admin-kpi-trend flat">≡ bge-base-en-v1.5</div>
+          <svg class="admin-kpi-spark" viewBox="0 0 70 28" preserveAspectRatio="none" style="color: hsl(var(--c-chat)); opacity: .5">
+            <path class="spark" d="M0,14 L8,14 L8,10 L14,10 L14,18 L22,18 L22,8 L28,8 L28,16 L36,16 L36,11 L44,11 L44,14 L52,14 L52,9 L60,9 L60,14 L70,14"/>
+          </svg>
+        </div>
+
+        <div class="admin-kpi e-toolkit">
+          <div class="admin-kpi-label">Avg Health</div>
+          <div class="admin-kpi-value">98.4<span class="u">%</span></div>
+          <div class="admin-kpi-trend up">▲ +0.6% vs. ieri</div>
+          <svg class="admin-kpi-spark" viewBox="0 0 70 28" preserveAspectRatio="none" style="color: hsl(var(--c-toolkit))">
+            <path class="spark-fill" d="M0,8 L6,10 L12,7 L18,12 L24,9 L30,11 L36,6 L42,8 L48,5 L54,7 L60,4 L66,6 L70,3 L70,28 L0,28 Z"/>
+            <path class="spark" d="M0,8 L6,10 L12,7 L18,12 L24,9 L30,11 L36,6 L42,8 L48,5 L54,7 L60,4 L66,6 L70,3"/>
+          </svg>
+        </div>
+
+      </div>
+
+      <!-- ── 2. Panel: Ricerca semantica ─────────────────────── -->
+      <section class="admin-panel" style="margin-bottom: 16px">
+        <div class="admin-panel-head">
+          <h3>🔬 Ricerca semantica</h3>
+          <span class="status-chip info">cosine · top-k</span>
+          <span class="endpoint-note"><code>POST</code> searchVectors(query, limit, gameId?)</span>
+          <span class="meta">Last query · 132ms · 8 results</span>
+          <button class="btn-admin sm" style="margin-left: 8px">⟳ Refresh</button>
+        </div>
+        <div class="admin-panel-body">
+
+          <div class="search-row">
+            <div class="admin-search">
+              <span>🔍</span>
+              <input placeholder="Cerca nei chunk… (es. «come si attiva un predatore in Wingspan»)" value="attivazione predatori in espansione Oceania"/>
+            </div>
+            <select class="admin-select" aria-label="Filtra per gioco">
+              <option>Tutti i giochi</option>
+              <option selected>🎲 Wingspan</option>
+              <option>🎲 Brass: Birmingham</option>
+              <option>🎲 Tainted Grail</option>
+              <option>🎲 Spirit Island</option>
+              <option>🎲 Ark Nova</option>
+              <option>🎲 ISS Vanguard</option>
+              <option>🎲 Gloomhaven</option>
+              <option>🎲 Lancaster</option>
+            </select>
+            <select class="admin-select" aria-label="Limit">
+              <option>limit 5</option>
+              <option selected>limit 10</option>
+              <option>limit 20</option>
+              <option>limit 50</option>
+            </select>
+            <button class="btn-admin primary">⌕ Cerca <kbd>↵</kbd></button>
+          </div>
+
+          <!-- ── 3. Risultati ──────────────────────────────── -->
+          <div style="margin-top: 14px; border: 1px solid var(--border-light); border-radius: 8px; overflow: hidden">
+
+            <div class="result-table-head">
+              <div>Doc ID</div>
+              <div>Page · Chunk</div>
+              <div>Snippet</div>
+              <div style="text-align: right">Score ↓</div>
+              <div></div>
+            </div>
+
+            <!-- result 1 — expanded -->
+            <div class="result-row expanded">
+              <div class="doc-id"><span class="e-dot"></span>a3f7c218</div>
+              <div class="loc">p.22 · ch[#218]</div>
+              <div class="snippet">"Quando più uccelli con keyword <mark>predator</mark> sono attivati nello stesso turno, l'<mark>attivazione</mark> segue l'ordine di piazzamento da sinistra a destra…"</div>
+              <div class="score hi">0.912</div>
+              <div class="caret">›</div>
+            </div>
+            <div class="result-expanded">
+              <div>
+                <div class="snippet-full">
+                  «Quando più uccelli con keyword <mark>predator</mark> sono attivati nello stesso turno, l'<mark>attivazione</mark> segue l'ordine di piazzamento da sinistra a destra nell'habitat foresta. Se l'effetto richiede un dado e il risultato non è soddisfatto, il <mark>predatore</mark> non riceve cibo ma il giocatore può comunque deporre un uovo sulla carta. In <mark>espansione Oceania</mark> alcuni uccelli sostituiscono l'<mark>attivazione</mark> a fine round con un trigger immediato.»
+                </div>
+                <div class="vec-thumb"></div>
+              </div>
+              <div class="meta-table">
+                <div class="row"><span class="k">document</span><span class="v mono-strong">Wingspan-Oceania-EN.pdf</span></div>
+                <div class="row"><span class="k">doc id</span><span class="v">a3f7c218-4d11-4b9e</span></div>
+                <div class="row"><span class="k">game</span><span class="v" style="color: hsl(var(--c-game))">🎲 Wingspan</span></div>
+                <div class="row"><span class="k">collection</span><span class="v">wingspan-v3</span></div>
+                <div class="row"><span class="k">embedding</span><span class="v">bge-base-en-v1.5 · 768d</span></div>
+                <div class="row"><span class="k">tokens</span><span class="v">387 / 512</span></div>
+                <div class="row"><span class="k">distance</span><span class="v">0.088 (cosine)</span></div>
+                <div class="actions">
+                  <button class="btn-admin sm">📋 Copy chunk</button>
+                  <button class="btn-admin sm">🔗 Apri doc</button>
+                  <button class="btn-admin sm">🤖 Test in agent</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- result 2 -->
+            <div class="result-row">
+              <div class="doc-id"><span class="e-dot"></span>a3f7c218</div>
+              <div class="loc">p.14 · ch[#142]</div>
+              <div class="snippet">"Power di tipo <mark>predator</mark> si attiva su trigger 'when activated'. In <mark>espansione Oceania</mark>, l'ordine di risoluzione è importante per i power…"</div>
+              <div class="score hi">0.847</div>
+              <div class="caret">›</div>
+            </div>
+
+            <!-- result 3 -->
+            <div class="result-row">
+              <div class="doc-id"><span class="e-dot"></span>a3f7c218</div>
+              <div class="loc">p.31 · ch[#312]</div>
+              <div class="snippet">"Tabella riepilogativa dei power per habitat: foresta (<mark>predator activation</mark>), prateria (egg lay), zona umida (food cache)…"</div>
+              <div class="score hi">0.781</div>
+              <div class="caret">›</div>
+            </div>
+
+            <!-- result 4 -->
+            <div class="result-row">
+              <div class="doc-id"><span class="e-dot"></span>b81e09f2</div>
+              <div class="loc">p.9 · ch[#086]</div>
+              <div class="snippet">"Carte uccello con keyword <mark>predator</mark> hanno priorità sull'<mark>attivazione</mark> fine round se viene innescato il trigger group simultaneo…"</div>
+              <div class="score md">0.694</div>
+              <div class="caret">›</div>
+            </div>
+
+            <!-- result 5 -->
+            <div class="result-row">
+              <div class="doc-id"><span class="e-dot"></span>4c2a18d7</div>
+              <div class="loc">p.40 · ch[#398]</div>
+              <div class="snippet">"FAQ: caso simultaneo di esaurimento cibo durante <mark>attivazione</mark> <mark>predatori</mark> (non trattato nella prima stampa, vedi errata 2024)…"</div>
+              <div class="score md">0.612</div>
+              <div class="caret">›</div>
+            </div>
+
+          </div>
+
+          <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px; font-family: var(--f-mono); font-size: 10.5px; color: var(--text-muted)">
+            <span>5 / 8 risultati · embedded in 18ms · search 114ms · rerank off</span>
+            <span style="margin-left: auto">
+              <button class="btn-admin sm">Carica altri 3 ▾</button>
+              <button class="btn-admin sm">⤓ Export JSON</button>
+            </span>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ── 4. Panel: Vettori per gioco ─────────────────────── -->
+      <section class="admin-panel">
+        <div class="admin-panel-head">
+          <h3>📦 Vettori per gioco</h3>
+          <span class="status-chip healthy">pgvector 0.7.4 · online</span>
+          <span class="endpoint-note"><code>GET</code> getVectorStats()</span>
+          <span class="meta">Ordinati per # vettori · agg. 14:38:02 CET</span>
+        </div>
+        <div class="admin-panel-body">
+
+          <div class="game-grid">
+
+            <!-- Tainted Grail -->
+            <div class="game-card e-game">
+              <div class="head">
+                <span class="em">🎲</span>
+                <span class="name">Tainted Grail</span>
+                <span class="status-chip healthy">healthy</span>
+              </div>
+              <div class="body">
+                <div class="cell"><span class="k">Vectors</span><span class="v">6.443</span></div>
+                <div class="cell"><span class="k">Docs</span><span class="v">14</span></div>
+                <div class="cell"><span class="k">Size</span><span class="v">187<span class="u">MB</span></span></div>
+              </div>
+              <div class="foot">
+                <span>768d · cos · HNSW m=16</span>
+                <a href="#">Apri →</a>
+              </div>
+            </div>
+
+            <!-- Gloomhaven -->
+            <div class="game-card e-game">
+              <div class="head">
+                <span class="em">🎲</span>
+                <span class="name">Gloomhaven</span>
+                <span class="status-chip healthy">healthy</span>
+              </div>
+              <div class="body">
+                <div class="cell"><span class="k">Vectors</span><span class="v">4.218</span></div>
+                <div class="cell"><span class="k">Docs</span><span class="v">31</span></div>
+                <div class="cell"><span class="k">Size</span><span class="v">124<span class="u">MB</span></span></div>
+              </div>
+              <div class="foot">
+                <span>768d · cos · HNSW m=16</span>
+                <a href="#">Apri →</a>
+              </div>
+            </div>
+
+            <!-- ISS Vanguard -->
+            <div class="game-card e-game">
+              <div class="head">
+                <span class="em">🎲</span>
+                <span class="name">ISS Vanguard</span>
+                <span class="status-chip warning">re-embed pendente</span>
+              </div>
+              <div class="body">
+                <div class="cell"><span class="k">Vectors</span><span class="v">3.124</span></div>
+                <div class="cell"><span class="k">Docs</span><span class="v">22</span></div>
+                <div class="cell"><span class="k">Size</span><span class="v">92<span class="u">MB</span></span></div>
+              </div>
+              <div class="foot">
+                <span>768d · cos · HNSW m=16</span>
+                <a href="#">Apri →</a>
+              </div>
+            </div>
+
+            <!-- Wingspan -->
+            <div class="game-card e-game">
+              <div class="head">
+                <span class="em">🎲</span>
+                <span class="name">Wingspan</span>
+                <span class="status-chip healthy">healthy</span>
+              </div>
+              <div class="body">
+                <div class="cell"><span class="k">Vectors</span><span class="v">1.892</span></div>
+                <div class="cell"><span class="k">Docs</span><span class="v">12</span></div>
+                <div class="cell"><span class="k">Size</span><span class="v">54<span class="u">MB</span></span></div>
+              </div>
+              <div class="foot">
+                <span>768d · cos · HNSW m=16</span>
+                <a href="#">Apri →</a>
+              </div>
+            </div>
+
+            <!-- Ark Nova -->
+            <div class="game-card e-game">
+              <div class="head">
+                <span class="em">🎲</span>
+                <span class="name">Ark Nova</span>
+                <span class="status-chip healthy">healthy</span>
+              </div>
+              <div class="body">
+                <div class="cell"><span class="k">Vectors</span><span class="v">1.247</span></div>
+                <div class="cell"><span class="k">Docs</span><span class="v">11</span></div>
+                <div class="cell"><span class="k">Size</span><span class="v">38<span class="u">MB</span></span></div>
+              </div>
+              <div class="foot">
+                <span>768d · cos · HNSW m=16</span>
+                <a href="#">Apri →</a>
+              </div>
+            </div>
+
+            <!-- Brass: Birmingham -->
+            <div class="game-card e-game">
+              <div class="head">
+                <span class="em">🎲</span>
+                <span class="name">Brass: Birmingham</span>
+                <span class="status-chip danger">1 doc failed</span>
+              </div>
+              <div class="body">
+                <div class="cell"><span class="k">Vectors</span><span class="v">876</span></div>
+                <div class="cell"><span class="k">Docs</span><span class="v">8</span></div>
+                <div class="cell"><span class="k">Size</span><span class="v">24<span class="u">MB</span></span></div>
+              </div>
+              <div class="foot">
+                <span>768d · cos · HNSW m=16</span>
+                <a href="#">Apri →</a>
+              </div>
+            </div>
+
+            <!-- Spirit Island -->
+            <div class="game-card e-game">
+              <div class="head">
+                <span class="em">🎲</span>
+                <span class="name">Spirit Island</span>
+                <span class="status-chip healthy">healthy</span>
+              </div>
+              <div class="body">
+                <div class="cell"><span class="k">Vectors</span><span class="v">521</span></div>
+                <div class="cell"><span class="k">Docs</span><span class="v">9</span></div>
+                <div class="cell"><span class="k">Size</span><span class="v">15<span class="u">MB</span></span></div>
+              </div>
+              <div class="foot">
+                <span>768d · cos · HNSW m=16</span>
+                <a href="#">Apri →</a>
+              </div>
+            </div>
+
+            <!-- Lancaster -->
+            <div class="game-card e-game">
+              <div class="head">
+                <span class="em">🎲</span>
+                <span class="name">Lancaster</span>
+                <span class="status-chip healthy">healthy</span>
+              </div>
+              <div class="body">
+                <div class="cell"><span class="k">Vectors</span><span class="v">166</span></div>
+                <div class="cell"><span class="k">Docs</span><span class="v">5</span></div>
+                <div class="cell"><span class="k">Size</span><span class="v">4.8<span class="u">MB</span></span></div>
+              </div>
+              <div class="foot">
+                <span>768d · cos · HNSW m=16</span>
+                <a href="#">Apri →</a>
+              </div>
+            </div>
+
+            <!-- aggregate / unassigned -->
+            <div class="game-card" style="--e: var(--c-event); opacity: .85">
+              <div class="head">
+                <span class="em">🗂</span>
+                <span class="name">Unassigned / orphan</span>
+                <span class="status-chip warning">cleanup</span>
+              </div>
+              <div class="body">
+                <div class="cell"><span class="k">Vectors</span><span class="v">0</span></div>
+                <div class="cell"><span class="k">Docs</span><span class="v">2</span></div>
+                <div class="cell"><span class="k">Size</span><span class="v">12<span class="u">KB</span></span></div>
+              </div>
+              <div class="foot">
+                <span>Da re-assegnare</span>
+                <a href="#">Risolvi →</a>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script>
+  /* admin-nav.js — nel repo è un file separato (src="admin-nav.js").
+     Qui inlined per mockup standalone: la sidebar è già scritta inline,
+     quindi questa funzione è no-op. */
+  window.renderAdminNav = function (activeId) { return activeId; };
+  renderAdminNav('kb');
+</script>
+</body>
+</html>

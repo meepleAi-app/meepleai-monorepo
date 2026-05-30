@@ -37,8 +37,16 @@ export const SessionPlayerSchema = z.object({
   userId: z.string().uuid().nullable(),
   displayName: z.string(),
   scores: z.array(SessionScoreSchema),
+  // #1663 Phase 1: derived from the "points" dimension (null if absent).
+  // Optional during BE rollout; tighten once the BE ships the field.
+  totalScore: z.number().int().nullable().optional(),
 });
 export type SessionPlayer = z.infer<typeof SessionPlayerSchema>;
+
+// #1663: outcome classification for a record. "competitive" when any player
+// carries a "wins" dimension; "none" for cooperative/narrative/unscored games.
+export const PlayRecordOutcomeTypeSchema = z.enum(['competitive', 'none']);
+export type PlayRecordOutcomeType = z.infer<typeof PlayRecordOutcomeTypeSchema>;
 
 // ========== DTOs ==========
 
@@ -59,6 +67,10 @@ export const PlayRecordDtoSchema = z.object({
   location: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
+  // #1663 Phase 1: derived on-read (winner = players with "wins" dimension > 0).
+  // Optional during BE rollout; tighten once the BE ships the fields.
+  winnerPlayerIds: z.array(z.string().uuid()).optional(),
+  outcomeType: PlayRecordOutcomeTypeSchema.optional(),
 });
 export type PlayRecordDto = z.infer<typeof PlayRecordDtoSchema>;
 
@@ -69,14 +81,39 @@ export const PlayRecordSummarySchema = z.object({
   duration: z.string().nullable(),
   status: PlayRecordStatusSchema,
   playerCount: z.number().int().nonnegative(),
+  // #1663 Phase 1: enable cover/deep-link + outcome badge in the list view.
+  // Optional during BE rollout; tighten once the BE ships the fields.
+  gameId: z.string().uuid().nullable().optional(),
+  winnerPlayerIds: z.array(z.string().uuid()).optional(),
+  outcomeType: PlayRecordOutcomeTypeSchema.optional(),
 });
 export type PlayRecordSummary = z.infer<typeof PlayRecordSummarySchema>;
+
+// #1663 Phase 2: per-game win/play stats keyed by gameId (gameName fallback).
+export const GameWinStatsSchema = z.object({
+  gameId: z.string().uuid().nullable(),
+  gameName: z.string(),
+  played: z.number().int().nonnegative(),
+  won: z.number().int().nonnegative(),
+});
+export type GameWinStats = z.infer<typeof GameWinStatsSchema>;
+
+export const GamePlayCountSchema = z.object({
+  gameId: z.string().uuid().nullable(),
+  gameName: z.string(),
+  plays: z.number().int().nonnegative(),
+});
+export type GamePlayCount = z.infer<typeof GamePlayCountSchema>;
 
 export const PlayerStatisticsSchema = z.object({
   totalSessions: z.number().int().nonnegative(),
   totalWins: z.number().int().nonnegative(),
   gamePlayCounts: z.record(z.string(), z.number().int()),
   averageScoresByGame: z.record(z.string(), z.number()),
+  // #1663 Phase 2: new fields, optional during BE rollout.
+  totalDurationMinutes: z.number().int().nonnegative().optional(),
+  winByGame: z.array(GameWinStatsSchema).optional(),
+  mostPlayedGames: z.array(GamePlayCountSchema).optional(),
 });
 export type PlayerStatistics = z.infer<typeof PlayerStatisticsSchema>;
 
@@ -127,32 +164,20 @@ export type PlayHistoryResponse = z.infer<typeof PlayHistoryResponseSchema>;
 
 // ========== Form Schemas (Client-side validation) ==========
 
-export const SessionCreateFormSchema = z
-  .object({
-    gameType: z.enum(['catalog', 'freeform']),
-    gameId: z.string().uuid().optional(),
-    gameName: z.string().min(1, 'Game name is required').max(255),
-    sessionDate: z.date(),
-    visibility: PlayRecordVisibilitySchema,
-    groupId: z.string().uuid().optional(),
-    enableScoring: z.boolean().optional(),
-    scoringDimensions: z.array(z.string()).optional(),
-    dimensionUnits: z.record(z.string(), z.string()).optional(),
-    notes: z.string().max(2000).optional(),
-    location: z.string().max(255).optional(),
-  })
-  .refine(
-    data => {
-      // If catalog game selected, gameId must be provided
-      if (data.gameType === 'catalog' && !data.gameId) return false;
-      // If Group visibility, groupId must be provided
-      if (data.visibility === 'Group' && !data.groupId) return false;
-      return true;
-    },
-    {
-      message: 'Invalid game or group selection',
-    }
-  );
+export const SessionCreateFormSchema = z.object({
+  gameType: z.enum(['catalog', 'freeform']),
+  gameId: z.string().uuid().optional(),
+  // Allow empty string during multi-step navigation; per-step validation enforces non-empty.
+  gameName: z.string().max(255),
+  sessionDate: z.date(),
+  visibility: PlayRecordVisibilitySchema,
+  groupId: z.string().uuid().optional(),
+  enableScoring: z.boolean().optional(),
+  scoringDimensions: z.array(z.string()).optional(),
+  dimensionUnits: z.record(z.string(), z.string()).optional(),
+  notes: z.string().max(2000).optional(),
+  location: z.string().max(255).optional(),
+});
 export type SessionCreateForm = z.infer<typeof SessionCreateFormSchema>;
 
 export const PlayerAddFormSchema = z

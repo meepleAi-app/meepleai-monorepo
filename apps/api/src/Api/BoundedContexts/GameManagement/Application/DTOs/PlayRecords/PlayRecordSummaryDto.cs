@@ -5,6 +5,7 @@ namespace Api.BoundedContexts.GameManagement.Application.DTOs.PlayRecords;
 /// <summary>
 /// DTO for play record summary in list views.
 /// Issue #3890: CQRS queries for play records.
+/// Issue #1663: Phase 1 – GameId, WinnerPlayerIds and OutcomeType computed on read.
 /// </summary>
 public record PlayRecordSummaryDto(
     Guid Id,
@@ -12,5 +13,8 @@ public record PlayRecordSummaryDto(
     DateTime SessionDate,
     TimeSpan? Duration,
     PlayRecordStatus Status,
-    int PlayerCount
+    int PlayerCount,
+    Guid? GameId,
+    IReadOnlyList<Guid> WinnerPlayerIds,
+    string OutcomeType
 );

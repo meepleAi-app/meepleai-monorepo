@@ -7,13 +7,15 @@ import { useKbGameDocuments } from '@/hooks/queries/useGameDocuments';
 import type { GameKbStatusItem } from '@/lib/api/schemas/admin-knowledge-base.schemas';
 import type { GameDocument } from '@/lib/api/schemas/game-documents.schemas';
 
+import type { SelectedDocMeta } from './explorer-types';
+
 export interface KbTreeProps {
   readonly games: ReadonlyArray<GameKbStatusItem>;
   readonly expandedGameIds: ReadonlySet<string>;
   readonly selectedDocId: string | null;
   readonly filter: string;
   readonly onToggleGame: (gameId: string) => void;
-  readonly onSelectDoc: (docId: string) => void;
+  readonly onSelectDoc: (doc: SelectedDocMeta) => void;
   readonly onFilterChange: (filter: string) => void;
 }
 
@@ -85,7 +87,7 @@ export function KbTree({
                 aria-expanded={expanded}
                 aria-label={game.gameName}
                 onClick={() => onToggleGame(game.gameId)}
-                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/70 dark:hover:bg-zinc-800/70 font-semibold text-[13px] text-left"
+                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/70 dark:hover:bg-zinc-800/70 font-semibold text-[13px] text-left text-foreground"
               >
                 <span aria-hidden="true" className="text-muted-foreground">
                   {expanded ? '▾' : '▸'}
@@ -116,7 +118,7 @@ interface KbTreeGameDocsProps {
   readonly gameId: string;
   readonly filter: string;
   readonly selectedDocId: string | null;
-  readonly onSelectDoc: (docId: string) => void;
+  readonly onSelectDoc: (doc: SelectedDocMeta) => void;
 }
 
 function KbTreeGameDocs({ gameId, filter, selectedDocId, onSelectDoc }: KbTreeGameDocsProps) {
@@ -156,7 +158,7 @@ function KbTreeGameDocs({ gameId, filter, selectedDocId, onSelectDoc }: KbTreeGa
               role="treeitem"
               aria-selected={selected}
               data-status={doc.status}
-              onClick={() => onSelectDoc(doc.id)}
+              onClick={() => onSelectDoc({ id: doc.id, title: doc.title, gameId })}
               className={[
                 'w-full text-left pl-8 pr-2 py-1 rounded-md flex items-center gap-2 text-[12px]',
                 selected

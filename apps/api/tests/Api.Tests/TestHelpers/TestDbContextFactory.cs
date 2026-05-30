@@ -42,6 +42,30 @@ public static class TestDbContextFactory
     }
 
     /// <summary>
+    /// Creates an InMemory DbContext wired to a caller-supplied collector instance.
+    /// Use when the same collector must be shared with a repository under test so that
+    /// SaveChangesAsync and the repository operate on the exact same mock object.
+    /// </summary>
+    public static MeepleAiDbContext CreateInMemoryDbContextWithCollector(
+        Mock<IDomainEventCollector> collector,
+        string? databaseName = null)
+    {
+        var dbName = databaseName ?? Guid.NewGuid().ToString();
+
+        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseInMemoryDatabase(databaseName: dbName)
+            .ConfigureWarnings(warnings =>
+            {
+                warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning);
+                warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning);
+            })
+            .Options;
+
+        var mockMediator = new Mock<IMediator>();
+        return new MeepleAiDbContext(options, mockMediator.Object, collector.Object);
+    }
+
+    /// <summary>
     /// Creates a mock IDomainEventCollector that returns empty event list.
     /// Issue #2430: Prevents NullReferenceException in SaveChangesAsync.
     /// </summary>

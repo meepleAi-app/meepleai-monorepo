@@ -27,8 +27,16 @@ import type { ReactElement } from 'react';
 import clsx from 'clsx';
 
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { useTranslation } from '@/hooks/useTranslation';
 
-export type ActivityKind = 'play' | 'add' | 'kb-indexed' | 'rating-changed' | 'removed';
+export type ActivityKind =
+  | 'play'
+  | 'add'
+  | 'kb-indexed'
+  | 'rating-changed'
+  | 'removed'
+  | 'agent'
+  | 'chat';
 
 export interface ActivityItem {
   readonly id: string;
@@ -40,6 +48,7 @@ export interface ActivityItem {
 export interface RecentActivityRailProps {
   readonly items: ReadonlyArray<ActivityItem>;
   readonly isLoading?: boolean;
+  readonly error?: Error | null;
   readonly className?: string;
 }
 
@@ -51,18 +60,26 @@ const KIND_ICON: Record<ActivityKind, string> = {
   'kb-indexed': '📖',
   'rating-changed': '⭐',
   removed: '🗑️',
+  agent: '🤖',
+  chat: '💬',
 };
+
+type RailState = 'loading' | 'empty' | 'populated' | 'error';
 
 export function RecentActivityRail({
   items,
   isLoading = false,
+  error = null,
   className,
 }: RecentActivityRailProps): ReactElement {
-  const state: 'loading' | 'empty' | 'populated' = isLoading
-    ? 'loading'
-    : items.length === 0
-      ? 'empty'
-      : 'populated';
+  const { t } = useTranslation();
+  const state: RailState = error
+    ? 'error'
+    : isLoading
+      ? 'loading'
+      : items.length === 0
+        ? 'empty'
+        : 'populated';
 
   return (
     <aside
@@ -76,7 +93,7 @@ export function RecentActivityRail({
       )}
     >
       <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        Recent activity
+        {t('pages.library.activityRail.title')}
       </h2>
 
       {state === 'loading' ? (
@@ -85,6 +102,7 @@ export function RecentActivityRail({
             <Skeleton
               key={index}
               data-slot="library-activity-skeleton"
+              data-testid="library-activity-skeleton"
               className="h-12 w-full rounded-lg"
             />
           ))}
@@ -92,8 +110,23 @@ export function RecentActivityRail({
       ) : null}
 
       {state === 'empty' ? (
-        <p className="text-sm text-muted-foreground" data-slot="library-activity-empty">
-          Activity feed prossimamente
+        <p
+          className="text-sm text-muted-foreground"
+          data-slot="library-activity-empty"
+          data-testid="library-activity-empty-text"
+        >
+          {t('pages.library.activityRail.empty')}
+        </p>
+      ) : null}
+
+      {state === 'error' ? (
+        <p
+          className="text-sm text-destructive"
+          role="alert"
+          data-slot="library-activity-error"
+          data-testid="library-activity-error"
+        >
+          {t('pages.library.activityRail.error')}
         </p>
       ) : null}
 

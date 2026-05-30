@@ -2,7 +2,10 @@ using Api.BoundedContexts.DocumentProcessing.Application.Queries.Queue;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.EstimateAgentCost;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.ExportDocumentChunks;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGamesWithoutKb;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbNavCounts;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.SearchDocumentChunks;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.Filters;
 using MediatR;
@@ -30,6 +33,16 @@ internal static class AdminKnowledgeBaseEndpoints
         })
         .WithName("GetVectorStats")
         .WithSummary("Get pgvector statistics grouped by game");
+
+        // GET /api/v1/admin/kb/nav-counts — Issue #1655 F3-FU-6
+        kbGroup.MapGet("/nav-counts", async (IMediator mediator, CancellationToken ct) =>
+        {
+            var counts = await mediator.Send(new GetKbNavCountsQuery(), ct).ConfigureAwait(false);
+            return Results.Ok(counts);
+        })
+        .WithName("GetKbNavCounts")
+        .WithSummary("Counts for KbSubNav badges (active queue + feedback last 7d).")
+        .Produces<KbNavCountsDto>(StatusCodes.Status200OK);
 
         // POST /api/v1/admin/kb/vector-search — semantic search over pgvector embeddings
         kbGroup.MapPost("/vector-search", async (
@@ -70,6 +83,59 @@ internal static class AdminKnowledgeBaseEndpoints
             var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
             return Results.Ok(result);
         });
+
+        // GET /api/v1/admin/kb/docs/{docId}/ingestion-log — Issue #1650
+        kbGroup.MapGet("/docs/{docId:guid}/ingestion-log", async (
+            Guid docId,
+            IMediator mediator,
+            CancellationToken cancellationToken) =>
+        {
+            var query = new GetLatestIngestionLogByDocumentIdQuery(docId);
+            var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("GetKbDocIngestionLog")
+        .WithSummary("Get the latest ProcessingJob (with Steps and LogEntries) for a PdfDocumentId.");
+
+        // GET /api/v1/admin/kb/docs/{docId}/chunks/export — Issue #1653 F3-FU-4
+        kbGroup.MapGet("/docs/{docId:guid}/chunks/export", async (
+            Guid docId,
+            IMediator m,
+            CancellationToken ct) =>
+        {
+            var chunks = await m.Send(new ExportDocumentChunksQuery(docId), ct).ConfigureAwait(false);
+            return Results.Ok(chunks);
+        })
+        .WithName("ExportKbDocChunks")
+        .WithSummary("Export all chunks (full content) for a document as JSON.");
+
+        // POST /api/v1/admin/kb/docs/{docId}/chunks/search — Issue #1653 F3-FU-4 (scored similarity)
+        kbGroup.MapPost("/docs/{docId:guid}/chunks/search", async (
+            Guid docId,
+            [FromBody] DocChunkSearchRequest req,
+            IMediator m,
+            CancellationToken ct) =>
+        {
+            var r = await m.Send(
+                new SearchDocumentChunksByVectorQuery(docId, req.Query, req.TopK ?? 10, req.MinScore ?? 0.0),
+                ct).ConfigureAwait(false);
+            return Results.Ok(r);
+        })
+        .WithName("SearchKbDocChunks")
+        .WithSummary("Per-document semantic chunk search (scored).");
+
+        // GET /api/v1/admin/kb/docs/{docId}/agents — Issue #1651 F3-FU-2
+        kbGroup.MapGet("/docs/{docId:guid}/agents", async (
+            Guid docId,
+            IMediator mediator,
+            CancellationToken cancellationToken) =>
+        {
+            var query = new GetConsumingAgentsByDocumentIdQuery(docId);
+            var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("GetKbDocConsumingAgents")
+        .WithSummary("List agent definitions that consume a given PDF document (KbCardIds containment).");
 
         // POST /api/v1/admin/kb/agents/estimate-cost - Pre-chat cost estimation
         kbGroup.MapPost("/agents/estimate-cost", async (
@@ -147,4 +213,14 @@ internal record EstimateAgentCostByDocumentsRequest(
     Guid GameId,
     List<Guid> DocumentIds,
     string? StrategyName
+);
+
+/// <summary>
+/// Request model for per-document semantic chunk search.
+/// Issue #1653: F3-FU-4 — per-document scored similarity-search.
+/// </summary>
+internal record DocChunkSearchRequest(
+    string Query,
+    int? TopK,
+    double? MinScore
 );

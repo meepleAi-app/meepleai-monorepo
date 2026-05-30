@@ -158,20 +158,32 @@ export const GlobalKbSearchFiltersSchema = z.object({
 export const GlobalKbSearchResultSchema = z.object({
   // mirror KbChunkSummary + doc context for cross-game display
   chunkId: z.string(),
-  docId: z.string(),
+  docId: z.string().uuid(),
   docTitle: z.string(),
-  gameId: z.string().uuid().nullable(),
-  gameName: z.string().nullable(),
-  docType: z.enum(['rulebook', 'faq', 'errata', 'guide']),
-  headingPath: z.array(z.string()),
+  // BE guarantees gameId/gameName are populated (results without a resolvable
+  // game are dropped during enrichment), so both are non-nullable.
+  gameId: z.string().uuid(),
+  gameName: z.string(),
+  // BE emits the raw DocumentType enum string (e.g. "Rulebook"); FE narrows
+  // case-insensitively if it needs the enum union.
+  docType: z.string(),
+  // Best-effort. The chunk metadata heading is not materialized in the
+  // pgvector result set yet (D2 known limitation, BE PR-1 #1672), so this
+  // ships as a nullable single string instead of a hierarchical array.
+  // Will become z.array(z.string()) once the chunk metadata is materialized.
+  headingPath: z.string().nullable(),
   snippet: z.string(),
   pageNumber: z.number().int().nullable(),
   score: z.number(),
 });
 export const GlobalKbSearchResponseSchema = z.object({
-  items: z.array(GlobalKbSearchResultSchema),
+  // Field name `results` matches the BE DTO (GlobalKbSearchResponseDto).
+  results: z.array(GlobalKbSearchResultSchema),
   nextCursor: z.string().nullable(),
-  totalCount: z.number().int().nonnegative(),
+  // The BE intentionally does NOT emit a `totalCount` for cross-game search
+  // because computing an exact count across N games is too expensive
+  // (Nygard, spec-panel D6). Use `hasMore` to drive "load more" UI.
+  hasMore: z.boolean(),
 });
 
 // kb-ask citation (extends streaming CitationSchema with chunk nav)
@@ -202,16 +214,25 @@ All pure presentational, labels-injected, DS-15 tokens, `data-slot`, jest-axe pe
 
 ## §7. Open questions (MUST resolve before Phase 1/2 dispatch)
 
-| # | Question | Owner | Blocks |
-|---|---|---|---|
-| Q1 | **Does a cross-game KB search FE endpoint exist?** BE `VectorSemanticSearchQueryHandler` supports it (source comment) but no FE client method found. Need `POST /api/v1/kb/search` route + response contract confirmed. | BE | `useGlobalKbSearch` (Foundation blocker) |
-| Q2 | **Does a kb-ask SSE endpoint exist** (`POST /api/v1/kb/ask`) or only agent-chat? If only per-agent, the AI drawer needs a kb-scoped ask endpoint. | BE | `useKbAskStream` (Interactions blocker) |
-| Q3 | **CitationPill click behavior**: nav viewer to chunk, open modal, or highlight? Recommend: deep-link `?docId=&chunkId=` + scroll. | Design | Drawer + viewer integration |
-| Q4 | **RBAC for global search**: private games included? Only shared/community? Only user's library? | Product/BE | search scope + result filtering |
-| Q5 | **Editor scope**: edit doc content (chunks) or only metadata (title/type/tags/lang)? Recommend metadata-only v1. | Product | `KbEditorDesktop` + `useUpdateKbDocMeta` |
-| Q6 | **Filter facets** beyond docType/game/language? (tags? date?) | Design | `FilterAccordion` |
+| # | Question | Owner | Status | Blocks |
+|---|---|---|---|---|
+| Q1 | **Does a cross-game KB search FE endpoint exist?** | BE | ✅ **RESOLVED** by #1661 PR-1 (`POST /api/v1/knowledge-base/search/global`, response = `GlobalKbSearchResponseDto` mirroring §5 above; cursor pagination + hasMore). | (unblocked) |
+| Q2 | **Does a kb-ask SSE endpoint exist** (`POST /api/v1/kb/ask`) or only agent-chat? | BE | ✅ **RESOLVED** by #1661 PR-2 — `POST /api/v1/knowledge-base/ask/global` emitting `RagStreamingEvent` (mirrors `useAgentChatStream` wire format). Body: `{ query: string, language?: string, topK?: number }`. RBAC-filtered (public ∪ owned ∪ all-for-admin). | `useKbAskStream` (Interactions — now UNBLOCKED) |
+| Q3 | **CitationPill click behavior**: nav viewer to chunk, open modal, or highlight? Recommend: deep-link `?docId=&chunkId=` + scroll. | Design | 🟡 **DEFERRED to Phase 2** (decision at Interactions dispatch — recommendation stands: deep-link + scroll) | Drawer + viewer integration |
+| Q4 | **RBAC for global search**: private games included? Only shared/community? Only user's library? | Product/BE | ✅ **RESOLVED** by #1661 PR-1: accessible = `SharedGame.IsRagPublic` ∪ `UserLibraryEntry.OwnershipDeclaredAt != null` (user-owned library), excludes other users' private games. Admin/SuperAdmin → all non-deleted. | (unblocked) |
+| Q5 | **Editor scope**: edit doc content (chunks) or only metadata (title/type/tags/lang)? Recommend metadata-only v1. | Product/BE | 🚧 **BE-BLOCKED** — `PATCH /kb-docs/{id}` endpoint does NOT exist (verified 2026-05-29). Opened **#1687** (metadata-only v1, mirrors recommendation). `KbEditorDesktop` (#8) **DROPPED from Phase 2 v1** until #1687 lands. | `KbEditorDesktop` deferred |
+| Q6 | **Filter facets** beyond docType/game/language? (tags? date?) | Design/BE | 🚧 **BE-BLOCKED** — see D-B below. Opened **#1686** for server-side facets. `FilterAccordion` (#4) **DEFERRED from Foundation** until #1686 lands. | `FilterAccordion` deferred |
 
-**Foundation (Phase 1) can start once Q1 + Q4 are resolved. Interactions (Phase 2) needs Q2 + Q3 + Q5.**
+### Divergences vs shipped BE (verified 2026-05-29 against #1661 merge)
+
+| # | Divergence | Decision | Impact |
+|---|---|---|---|
+| **D-A** | `ask/global` request body is `{ Query, Language?, TopK? }` — **no `gameId`** (purely cross-game). Contract §3 ipotised `scope?: { gameId? }`. | `useKbAskStream.ask(query, opts?: { language?: string; topK?: number })`. Default `language='it'`. Phase 2. | hook signature change |
+| **D-B** | `search/global` body is `{ Query, Limit, Cursor, Mode, MinScore }` — **no facet params** (docType / gameId / language). `FilterAccordion` (#4) has no BE backing. | **DEFER FilterAccordion** from Foundation v1 → BE follow-up **#1686** (server-side facets). Foundation drops from 6 → 5 components. | Foundation scope ↓ |
+| **D-C** | `search/global` accepts `Mode: SearchMode?` + `MinScore: double?` not in contract §5. | **Expose `Mode` as `SearchMode` segmented control in `HeroSearch`** (Semantic default — backed UI replaces the deferred facet panel). `MinScore` stays internal default (not exposed). | new Foundation UI |
+
+**Foundation (Phase 1) UNBLOCKED** (Q1 ✅ + Q4 ✅ + D-A/D-B/D-C resolved + D-B routed to #1686). **5-component scope congelato** — see §11 below.
+**Interactions (Phase 2) PARTIALLY UNBLOCKED**: viewer + AI drawer + CitationPill UNBLOCKED (Q2 ✅, Q3 deferred-with-default). `KbEditorDesktop` BLOCKED on #1687.
 
 ## §8. Bundle budget
 
@@ -240,7 +261,7 @@ useKbAskStream:
 useGlobalKbSearch:
   - debounced query → results
   - filters change → refetch with facets
-  - empty results → totalCount 0
+  - empty results → results=[], hasMore=false, nextCursor=null
   - error → error state
 ```
 
@@ -252,14 +273,59 @@ useGlobalKbSearch:
 
 ## §10. Acceptance criteria (for the eventual impl PRs)
 
-- [ ] Q1–Q6 resolved (this contract surfaces them; resolution may need BE issues)
-- [ ] Foundation PR: 5 components + `useGlobalKbSearch` + schemas + route shell + tests
-- [ ] Interactions PR: 5 components + `useKbAskStream` + lazy-split + tests
+- [ ] Q1–Q6 resolved (this contract surfaces them; resolution may need BE issues — Q5/Q6 routed to #1687/#1686)
+- [ ] Foundation PR: **5** components (was 6, FilterAccordion deferred per D-B) + `useGlobalKbSearch` + schemas + route shell + tests
+- [ ] Interactions PR: **4** components (was 5, KbEditorDesktop deferred per Q5/#1687) + `useKbAskStream` + lazy-split + tests
 - [ ] AI drawer 4-state FSM matches mockup; SSE mirrors `useAgentChatStream`
 - [ ] Citations reuse `streaming.schemas.ts`; viewer deep-link via `chunkId`
 - [ ] Bundle ≤ +150 KB (Interactions all lazy)
 - [ ] DS-15 + jest-axe per component
 - [ ] Matrix 10 rows pending → done; route summary updated
+
+## §11. Spec-panel decisions — 2026-05-29 (Wiegers/Fowler/Nygard/Adzic)
+
+Discussion-mode review of this contract against the BE actually shipped by #1661 (PRs #1672 + #1677). Goal: freeze Foundation scope, route deferred work to BE follow-up issues, eliminate hand-wavy components.
+
+### Frozen Foundation scope (Phase 1 — 5 components, all backed)
+
+| # | Component | Hook / data | BE backing | Notes |
+|---|---|---|---|---|
+| 1 | `HeroSearch` | local state + URL push | — | + `SearchMode` segmented control (D-C — Semantic default) |
+| 2 | `KbHomeDesktop` | `useUserKbDocs` (#1588, already in tree post-#1645) | `GET /api/v1/kb-docs?sortBy=recent&state=ready` ✅ | landing — recent docs cross-game, no new "status" hook (mirror simplification) |
+| 3 | `KbSearchResultsDesktop` | `useGlobalKbSearch` (greenfield) | `POST /api/v1/knowledge-base/search/global` ✅ | cursor pagination + `hasMore` "Load more"; no `totalCount` (Nygard D6 — too expensive cross-game) |
+| 4 | ~~`FilterAccordion`~~ | — | ❌ (deferred to #1686) | **DROPPED** from Foundation v1 — facets need server-side backing |
+| 5 | `KbEmptyState` | — | — | `no-query` (landing CTA) vs `no-results` (search returned 0) |
+| — | `useGlobalKbSearch` | greenfield | `POST /api/v1/knowledge-base/search/global` | debounced 250ms, cursor pagination, accepts `query + mode` (no facets in v1) |
+| — | `kb-globale.schemas.ts` | greenfield | mirrors `GlobalKbSearchResponseDto` + `GlobalKbSearchResultDto` (10 fields) | `Results / HasMore / NextCursor`; result fields match BE 1:1 |
+
+**Route**: create `apps/web/src/app/(authenticated)/knowledge-base/global/page.tsx` (greenfield). URL SSOT: `?q=&mode=` only (no `docType / game / lang` until #1686).
+
+### Phase 2 Interactions (deferred to a separate dispatch)
+
+- **IN**: `KbDocViewerDesktop`, `KbDocViewerMobile`, `DrawerShell` (4 AI states), `CitationPill`, `useKbAskStream`.
+- **OUT** until #1687: `KbEditorDesktop`, `useUpdateKbDocMeta`.
+- **Q3 default at dispatch**: CitationPill click → URL push `?docId=&chunkId=` + viewer scroll.
+
+### Open questions retired by this session
+
+- **Q3** → deferred (decision at Phase 2 dispatch, default = deep-link).
+- **Q5** → BE-blocked, **#1687**.
+- **Q6** → BE-blocked, **#1686**.
+- **D-A / D-B / D-C** → resolved above.
+
+### Bundle re-budget
+
+- Foundation: ~40 KB (was ~50; one less component, no facet logic).
+- Interactions v1: ~80 KB (was ~100; editor deferred).
+- Umbrella stays ≤ +150 KB.
+
+### Impl-readiness checklist (for the writing-plans handoff)
+
+- [x] All Foundation components have verified BE backing
+- [x] Zod schemas match the shipped DTO field-by-field
+- [x] Greenfield items isolated (`useGlobalKbSearch`, `kb-globale.schemas.ts`, route shell, 5 components)
+- [x] Reuse claims verified (`useUserKbDocs`, `streaming.schemas.ts`, `KbChunkSummary` not needed in Foundation)
+- [x] BE follow-up issues filed and linked (#1686, #1687)
 
 ---
 

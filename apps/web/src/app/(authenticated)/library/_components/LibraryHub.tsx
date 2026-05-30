@@ -31,6 +31,7 @@ import {
   type GamesViewKey,
 } from '@/components/features/games';
 import {
+  AdvancedFiltersDrawer,
   BulkSelectionBar,
   CrossEntityFilters,
   EmptyLibrary,
@@ -39,10 +40,10 @@ import {
   LibraryTabs,
   RecentActivityRail,
   type ActivityItem,
-  type ActivityKind,
   type BulkSelectionBarLabels,
   type EmptyLibraryLabels,
   type GameStateFilter,
+  type LibraryFilters,
   type LibraryHeroDesktopLabels,
   type LibraryHeroStat,
   type LibrarySelectionMode,
@@ -50,11 +51,8 @@ import {
   type LibraryViewMode,
 } from '@/components/features/library';
 import { useHybridHubItems } from '@/hooks/queries/useHybridHubItems';
-import {
-  useLibrary,
-  useLibraryActivity,
-  useRemoveGameFromLibrary,
-} from '@/hooks/queries/useLibrary';
+import { useLibrary, useRemoveGameFromLibrary } from '@/hooks/queries/useLibrary';
+import { useActivityFeed } from '@/hooks/useActivityFeed';
 import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
@@ -64,7 +62,7 @@ import {
   type HybridHubSources,
   type HybridHubTab,
 } from '@/lib/library/hybrid-hub.derive';
-import type { HybridHubItem } from '@/lib/library/hybrid-hub.types';
+import type { HybridHubEntity, HybridHubItem } from '@/lib/library/hybrid-hub.types';
 import type { LibrarySortKey } from '@/lib/library/library-filters';
 import { useLibraryView } from '@/lib/library/use-library-view';
 import { IS_VISUAL_TEST_BUILD } from '@/lib/library/visual-test-fixture';
@@ -105,6 +103,46 @@ export function LibraryHub(): ReactElement {
   const [gamesQuery, setGamesQuery] = useState('');
   const [gamesView, setGamesView] = useState<GamesViewKey>('grid');
 
+  // Phase 3b #1593: AdvancedFiltersDrawer state
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<LibraryFilters>({ scope: 'game' });
+
+  const drawerEntityScope = useMemo<HybridHubEntity>(() => {
+    switch (tab) {
+      case 'games':
+        return 'game';
+      case 'agents':
+        return 'agent';
+      case 'kb':
+        return 'kb';
+      case 'sessions':
+        return 'session';
+      case 'chat':
+        return 'chat';
+      case 'all':
+      default:
+        return 'game';
+    }
+  }, [tab]);
+
+  // Reset filters to the new scope's empty variant when the tab changes.
+  useEffect(() => {
+    setActiveFilters({ scope: drawerEntityScope } as LibraryFilters);
+  }, [drawerEntityScope]);
+
+  // Count non-empty filter fields (excluding the `scope` discriminant) for the chip badge.
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    for (const [key, value] of Object.entries(activeFilters)) {
+      if (key === 'scope') continue;
+      if (value === undefined || value === null) continue;
+      if (Array.isArray(value) && value.length === 0) continue;
+      if (value === false) continue;
+      count++;
+    }
+    return count;
+  }, [activeFilters]);
+
   const stateOverride = parseStateOverride(searchParams.get('state'));
 
   const hub = useHybridHubItems();
@@ -137,7 +175,7 @@ export function LibraryHub(): ReactElement {
     (stateOverride as GamesEmptyKind | null) ?? gamesKind;
 
   const removeMutation = useRemoveGameFromLibrary();
-  const activityQuery = useLibraryActivity(20);
+  const activityQuery = useActivityFeed(20);
 
   // Selection mode is game-scoped — force browse when leaving the games tab.
   useEffect(() => {
@@ -176,38 +214,10 @@ export function LibraryHub(): ReactElement {
     [hub.totalCounts]
   );
 
-  const activityItems = useMemo<readonly ActivityItem[]>(() => {
-    const raw = activityQuery.data ?? [];
-    const mapped: ActivityItem[] = [];
-    for (const event of raw) {
-      let kind: ActivityKind | null;
-      switch (event.type) {
-        case 'added':
-          kind = 'add';
-          break;
-        case 'state-changed':
-          kind = 'rating-changed';
-          break;
-        case 'session-recorded':
-          kind = 'play';
-          break;
-        case 'removed':
-          kind = 'removed';
-          break;
-        default:
-          kind = null;
-          break;
-      }
-      if (!kind) continue;
-      mapped.push({
-        id: `${event.id}:${event.type}`,
-        kind,
-        entityTitle: event.gameTitle,
-        timestamp: event.timestamp,
-      });
-    }
-    return mapped;
-  }, [activityQuery.data]);
+  const activityItems = useMemo<readonly ActivityItem[]>(
+    () => activityQuery.data?.items ?? [],
+    [activityQuery.data]
+  );
 
   // ─── Labels ───
   const heroLabels = useMemo<LibraryHeroDesktopLabels>(
@@ -459,6 +469,8 @@ export function LibraryHub(): ReactElement {
                 view={gamesView}
                 onViewChange={setGamesView}
                 resultCount={gamesFiltered.length}
+                onMoreFilters={() => setDrawerOpen(true)}
+                activeFiltersCount={activeFiltersCount}
               />
               {gamesEffectiveKind === 'default' ? (
                 <GamesResultsGrid entries={gamesFiltered} view={gamesView as GamesResultsView} />
@@ -478,6 +490,8 @@ export function LibraryHub(): ReactElement {
                 tab={tab}
                 gameStateFilter={gameStateFilter}
                 onGameStateFilterChange={setGameStateFilter}
+                onMoreFilters={() => setDrawerOpen(true)}
+                activeFiltersCount={activeFiltersCount}
               />
               <div
                 data-slot="library-toolbar"
@@ -555,7 +569,11 @@ export function LibraryHub(): ReactElement {
             </>
           )}
         </div>
-        <RecentActivityRail items={activityItems} />
+        <RecentActivityRail
+          items={activityItems}
+          isLoading={activityQuery.isLoading}
+          error={activityQuery.error}
+        />
       </div>
       {tab === 'games' && selectionMode === 'select' ? (
         <BulkSelectionBar
@@ -566,6 +584,14 @@ export function LibraryHub(): ReactElement {
           disabled={selected.size === 0 || removeMutation.isPending}
         />
       ) : null}
+      <AdvancedFiltersDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        entityScope={drawerEntityScope}
+        activeFilters={activeFilters}
+        onApply={setActiveFilters}
+        onClear={() => setActiveFilters({ scope: drawerEntityScope } as LibraryFilters)}
+      />
     </div>
   );
 }

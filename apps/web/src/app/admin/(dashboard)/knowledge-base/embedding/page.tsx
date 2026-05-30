@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
@@ -9,12 +8,8 @@ import {
   CheckCircleIcon,
   CpuIcon,
   GlobeIcon,
-  HashIcon,
   RefreshCwIcon,
-  TextIcon,
-  TimerIcon,
   XCircleIcon,
-  ZapIcon,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
@@ -24,31 +19,14 @@ import { HttpClient } from '@/lib/api/core/httpClient';
 const httpClient = new HttpClient();
 const adminClient = createAdminClient({ httpClient });
 
-function StatCard({ label, value, icon: Icon, color }: {
-  label: string;
-  value: string | number;
-  icon: React.ElementType;
-  color?: string;
-}) {
-  return (
-    <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-border dark:border-zinc-700/40">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground dark:text-muted-foreground mb-1">
-        <Icon className={`h-4 w-4 ${color ?? ''}`} />
-        {label}
-      </div>
-      <div className="text-2xl font-bold text-foreground dark:text-zinc-100">{value}</div>
-    </div>
-  );
-}
-
 function StatusBadge({ status }: { status: string }) {
   const isHealthy = status === 'healthy' || status === 'ok';
   const isUnavailable = status === 'unavailable' || status === 'unhealthy';
 
   if (isHealthy) {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-        <CheckCircleIcon className="h-3.5 w-3.5" />
+      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wide bg-entity-toolkit/12 text-entity-toolkit">
+        <CheckCircleIcon className="h-3 w-3" />
         Healthy
       </span>
     );
@@ -56,18 +34,27 @@ function StatusBadge({ status }: { status: string }) {
 
   if (isUnavailable) {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
-        <XCircleIcon className="h-3.5 w-3.5" />
+      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wide bg-entity-event/12 text-entity-event">
+        <XCircleIcon className="h-3 w-3" />
         Unavailable
       </span>
     );
   }
 
   return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-      <AlertCircleIcon className="h-3.5 w-3.5" />
+    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wide bg-amber-500/14 text-amber-600">
+      <AlertCircleIcon className="h-3 w-3" />
       {status}
     </span>
+  );
+}
+
+function KpiSkeleton() {
+  return (
+    <div className="flex flex-col gap-1 rounded-[10px] border border-border/60 bg-card p-4 border-l-4 border-l-entity-kb animate-pulse min-h-[88px]">
+      <div className="h-2.5 w-24 bg-muted rounded" />
+      <div className="h-7 w-16 bg-muted rounded mt-1" />
+    </div>
   );
 }
 
@@ -105,16 +92,8 @@ export default function EmbeddingServicePage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
-            Embedding Service
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Monitor the multilingual embedding model and throughput
-          </p>
-        </div>
+      {/* Page toolbar */}
+      <div className="flex justify-end">
         <Button
           variant="outline"
           size="sm"
@@ -129,117 +108,170 @@ export default function EmbeddingServicePage() {
 
       {/* Service Health */}
       {infoLoading ? (
-        <div className="h-32 bg-card/40 dark:bg-zinc-800/40 rounded-xl animate-pulse" />
+        <div className="h-32 bg-muted rounded-[10px] animate-pulse" />
       ) : (
-        <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-border dark:border-zinc-700/40">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground dark:text-zinc-100 flex items-center gap-2">
-              <BrainCircuitIcon className="h-5 w-5 text-violet-500" />
+        <section className="rounded-[10px] border border-border/60 bg-card overflow-hidden">
+          {/* Panel header */}
+          <div className="flex items-center gap-2.5 border-b border-border/60 bg-background px-3.5 py-2.5">
+            <BrainCircuitIcon className="h-4 w-4 text-entity-kb shrink-0" />
+            <h2 className="font-quicksand text-[13px] font-extrabold text-foreground">
               Service Status
             </h2>
             <StatusBadge status={info?.status ?? 'unknown'} />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">Model</div>
-              <div className="text-sm font-medium text-foreground dark:text-zinc-100">
-                {info?.model ?? '\u2014'}
-              </div>
+          {/* Panel body */}
+          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="flex flex-col gap-1">
+              <span className="font-mono text-[9.5px] font-bold uppercase tracking-wide text-muted-foreground">
+                Model
+              </span>
+              <span className="font-mono text-[12px] font-semibold text-entity-kb">
+                {info?.model ?? '—'}
+              </span>
             </div>
-            <div>
-              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">Device</div>
-              <div className="text-sm font-medium text-foreground dark:text-zinc-100 flex items-center gap-1.5">
-                <CpuIcon className="h-3.5 w-3.5" />
-                {info?.device?.toUpperCase() ?? '\u2014'}
-              </div>
+            <div className="flex flex-col gap-1">
+              <span className="font-mono text-[9.5px] font-bold uppercase tracking-wide text-muted-foreground">
+                Device
+              </span>
+              <span className="font-mono text-[12px] font-semibold text-foreground flex items-center gap-1.5">
+                <CpuIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                {info?.device?.toUpperCase() ?? '—'}
+              </span>
             </div>
-            <div>
-              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">Dimensions</div>
-              <div className="text-sm font-medium text-foreground dark:text-zinc-100">
-                {info?.dimension ?? '\u2014'}
-              </div>
+            <div className="flex flex-col gap-1">
+              <span className="font-mono text-[9.5px] font-bold uppercase tracking-wide text-muted-foreground">
+                Dimensions
+              </span>
+              <span className="font-mono text-[12px] font-semibold text-foreground">
+                {info?.dimension ?? '—'}
+              </span>
             </div>
-            <div>
-              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">Languages</div>
-              <div className="text-sm font-medium text-foreground dark:text-zinc-100 flex items-center gap-1.5">
-                <GlobeIcon className="h-3.5 w-3.5" />
-                {info?.supportedLanguages?.join(', ').toUpperCase() ?? '\u2014'}
-              </div>
+            <div className="flex flex-col gap-1">
+              <span className="font-mono text-[9.5px] font-bold uppercase tracking-wide text-muted-foreground">
+                Languages
+              </span>
+              <span className="font-mono text-[12px] font-semibold text-foreground flex items-center gap-1.5">
+                <GlobeIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                {info?.supportedLanguages?.join(', ').toUpperCase() ?? '—'}
+              </span>
             </div>
           </div>
 
-          <div className="mt-4 pt-4 border-t border-border/50 dark:border-zinc-700/50 grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">Max Input</div>
-              <div className="text-sm text-foreground dark:text-zinc-300">
-                {info?.maxInputChars ? `${info.maxInputChars.toLocaleString()} chars` : '\u2014'}
-              </div>
+          <div className="border-t border-border/60 px-4 py-3 grid grid-cols-1 sm:grid-cols-3 gap-4 bg-background">
+            <div className="flex flex-col gap-0.5">
+              <span className="font-mono text-[9.5px] font-bold uppercase tracking-wide text-muted-foreground">
+                Max Input
+              </span>
+              <span className="font-mono text-[11px] text-foreground">
+                {info?.maxInputChars ? `${info.maxInputChars.toLocaleString()} chars` : '—'}
+              </span>
             </div>
-            <div>
-              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">Max Batch</div>
-              <div className="text-sm text-foreground dark:text-zinc-300">
-                {info?.maxBatchSize ? `${info.maxBatchSize} texts` : '\u2014'}
-              </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="font-mono text-[9.5px] font-bold uppercase tracking-wide text-muted-foreground">
+                Max Batch
+              </span>
+              <span className="font-mono text-[11px] text-foreground">
+                {info?.maxBatchSize ? `${info.maxBatchSize} texts` : '—'}
+              </span>
             </div>
-            <div>
-              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">Auto-refresh</div>
-              <div className="text-sm text-foreground dark:text-zinc-300">Every 30s</div>
+            <div className="flex flex-col gap-0.5">
+              <span className="font-mono text-[9.5px] font-bold uppercase tracking-wide text-muted-foreground">
+                Auto-refresh
+              </span>
+              <span className="font-mono text-[11px] text-foreground">Every 30s</span>
             </div>
           </div>
-        </div>
+        </section>
       )}
 
       {/* Throughput Metrics */}
       {metricsLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-24 bg-card/40 dark:bg-zinc-800/40 rounded-lg animate-pulse" />
+            <KpiSkeleton key={i} />
           ))}
         </div>
       ) : (
         <>
-          <h2 className="text-lg font-semibold text-foreground dark:text-zinc-100 flex items-center gap-2">
-            <ActivityIcon className="h-5 w-5 text-blue-500" />
-            Throughput Metrics
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <StatCard
-              label="Total Requests"
-              value={metrics?.requestsTotal?.toLocaleString() ?? '0'}
-              icon={ZapIcon}
-              color="text-blue-500"
-            />
-            <StatCard
-              label="Total Failures"
-              value={metrics?.failuresTotal?.toLocaleString() ?? '0'}
-              icon={XCircleIcon}
-              color="text-red-500"
-            />
-            <StatCard
-              label="Failure Rate"
-              value={`${metrics?.failureRate ?? 0}%`}
-              icon={AlertCircleIcon}
-              color={metrics?.failureRate && metrics.failureRate > 5 ? 'text-red-500' : 'text-green-500'}
-            />
-            <StatCard
-              label="Avg Duration"
-              value={`${metrics?.avgDurationMs ?? 0} ms`}
-              icon={TimerIcon}
-              color="text-amber-500"
-            />
-            <StatCard
-              label="Total Duration"
-              value={`${((metrics?.durationMsSum ?? 0) / 1000).toFixed(1)} s`}
-              icon={HashIcon}
-              color="text-violet-500"
-            />
-            <StatCard
-              label="Characters Processed"
-              value={(metrics?.totalCharsSum ?? 0).toLocaleString()}
-              icon={TextIcon}
-              color="text-emerald-500"
-            />
+          <div className="flex items-center gap-2">
+            <ActivityIcon className="h-4 w-4 text-entity-kb" />
+            <h2 className="font-quicksand text-[13px] font-extrabold text-foreground">
+              Throughput Metrics
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {/* Total Requests */}
+            <div className="flex flex-col gap-1 rounded-[10px] border border-border/60 bg-card p-4 border-l-4 border-l-entity-kb min-h-[88px]">
+              <span className="font-mono text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                Total Requests
+              </span>
+              <span className="font-quicksand text-[28px] font-extrabold tabular-nums text-foreground leading-tight">
+                {metrics?.requestsTotal?.toLocaleString() ?? '0'}
+              </span>
+            </div>
+
+            {/* Total Failures */}
+            <div className="flex flex-col gap-1 rounded-[10px] border border-border/60 bg-card p-4 border-l-4 border-l-entity-event min-h-[88px]">
+              <span className="font-mono text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                Total Failures
+              </span>
+              <span className="font-quicksand text-[28px] font-extrabold tabular-nums text-entity-event leading-tight">
+                {metrics?.failuresTotal?.toLocaleString() ?? '0'}
+              </span>
+            </div>
+
+            {/* Failure Rate */}
+            <div className="flex flex-col gap-1 rounded-[10px] border border-border/60 bg-card p-4 border-l-4 border-l-entity-event min-h-[88px]">
+              <span className="font-mono text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                Failure Rate
+              </span>
+              <span
+                className={`font-quicksand text-[28px] font-extrabold tabular-nums leading-tight ${
+                  metrics?.failureRate && metrics.failureRate > 5
+                    ? 'text-entity-event'
+                    : 'text-entity-toolkit'
+                }`}
+              >
+                {`${metrics?.failureRate ?? 0}%`}
+              </span>
+            </div>
+
+            {/* Avg Duration */}
+            <div className="flex flex-col gap-1 rounded-[10px] border border-border/60 bg-card p-4 border-l-4 border-l-entity-chat min-h-[88px]">
+              <span className="font-mono text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                Avg Duration
+              </span>
+              <span className="font-quicksand text-[28px] font-extrabold tabular-nums text-foreground leading-tight">
+                {`${metrics?.avgDurationMs ?? 0}`}
+                <span className="font-quicksand text-[14px] font-bold text-muted-foreground ml-0.5">
+                  ms
+                </span>
+              </span>
+            </div>
+
+            {/* Total Duration */}
+            <div className="flex flex-col gap-1 rounded-[10px] border border-border/60 bg-card p-4 border-l-4 border-l-entity-chat min-h-[88px]">
+              <span className="font-mono text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                Total Duration
+              </span>
+              <span className="font-quicksand text-[28px] font-extrabold tabular-nums text-foreground leading-tight">
+                {`${((metrics?.durationMsSum ?? 0) / 1000).toFixed(1)}`}
+                <span className="font-quicksand text-[14px] font-bold text-muted-foreground ml-0.5">
+                  s
+                </span>
+              </span>
+            </div>
+
+            {/* Characters Processed */}
+            <div className="flex flex-col gap-1 rounded-[10px] border border-border/60 bg-card p-4 border-l-4 border-l-entity-toolkit min-h-[88px]">
+              <span className="font-mono text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                Characters Processed
+              </span>
+              <span className="font-quicksand text-[28px] font-extrabold tabular-nums text-foreground leading-tight">
+                {(metrics?.totalCharsSum ?? 0).toLocaleString()}
+              </span>
+            </div>
           </div>
         </>
       )}

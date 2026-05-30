@@ -6,7 +6,6 @@
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 
 // ── Mock Next.js Link ─────────────────────────────────────────────────────────
@@ -186,71 +185,6 @@ vi.mock('@tanstack/react-query', async importOriginal => {
       invalidateQueries: vi.fn(),
     })),
   };
-});
-
-// ── Hub page tests ────────────────────────────────────────────────────────────
-
-function renderWithQueryClient(ui: React.ReactElement) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
-}
-
-// TODO(F3-FU-3): rewrite for Explorer; pre-existing test for hub-cards landing is obsolete after F3.1 rebuild
-describe('KnowledgeBasePage — Hub Gap Fixes', () => {
-  it.skip('renders Embedding Service card with correct link', async () => {
-    const { default: KnowledgeBasePage } = await import('../page');
-    renderWithQueryClient(<KnowledgeBasePage />);
-
-    const embeddingLink = screen.getByRole('link', { name: /embedding service/i });
-    expect(embeddingLink).toBeDefined();
-    expect(embeddingLink.getAttribute('href')).toBe('/admin/knowledge-base/embedding');
-  });
-
-  it.skip('renders Usage & Costs quick link', async () => {
-    const { default: KnowledgeBasePage } = await import('../page');
-    renderWithQueryClient(<KnowledgeBasePage />);
-
-    const usageLink = screen.getByRole('link', { name: /usage.*costs/i });
-    expect(usageLink).toBeDefined();
-    expect(usageLink.getAttribute('href')).toBe('/admin/agents/usage');
-  });
-
-  it.skip('renders all 7 section cards (original 6 + Embedding)', async () => {
-    const { default: KnowledgeBasePage } = await import('../page');
-    renderWithQueryClient(<KnowledgeBasePage />);
-
-    const expectedSections = [
-      'Documents',
-      'Vector Collections',
-      'Processing Queue',
-      'Upload & Process',
-      'RAG Pipeline',
-      'Settings',
-      'Embedding Service',
-    ];
-
-    for (const section of expectedSections) {
-      expect(screen.getByText(section)).toBeDefined();
-    }
-  });
-
-  it.skip('renders 5 quick links including the new Usage & Costs', async () => {
-    const { default: KnowledgeBasePage } = await import('../page');
-    renderWithQueryClient(<KnowledgeBasePage />);
-
-    const expectedLinks = [
-      { text: /rag executions log/i, href: '/admin/agents/analytics' },
-      { text: /ai models/i, href: '/admin/agents/models' },
-      { text: /strategy config/i, href: '/admin/agents/strategy' },
-      { text: /kb settings/i, href: '/admin/knowledge-base/settings' },
-      { text: /usage.*costs/i, href: '/admin/agents/usage' },
-    ];
-
-    for (const { text, href } of expectedLinks) {
-      const link = screen.getByRole('link', { name: text });
-      expect(link.getAttribute('href')).toBe(href);
-    }
-  });
 });
 
 // ── Vector Search Panel tests ─────────────────────────────────────────────────

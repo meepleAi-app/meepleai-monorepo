@@ -33,7 +33,7 @@ const mockGetProfile = vi.hoisted(() => vi.fn());
 const mockUploadAvatar = vi.hoisted(() => vi.fn());
 const mockUseAuth = vi.hoisted(() => vi.fn());
 const mockUseRecentSessions = vi.hoisted(() => vi.fn());
-const mockUseActivityFeed = vi.hoisted(() => vi.fn());
+const mockUseDashboardActivityFeed = vi.hoisted(() => vi.fn());
 vi.mock('@/hooks/useAuth', () => ({
   useAuth: mockUseAuth,
 }));
@@ -42,8 +42,8 @@ vi.mock('@/hooks/useRecentSessions', () => ({
   useRecentSessions: mockUseRecentSessions,
 }));
 
-vi.mock('@/hooks/useActivityFeed', () => ({
-  useActivityFeed: mockUseActivityFeed,
+vi.mock('@/hooks/useDashboardActivityFeed', () => ({
+  useDashboardActivityFeed: mockUseDashboardActivityFeed,
 }));
 
 vi.mock('@/lib/api', () => ({
@@ -78,7 +78,7 @@ vi.mock('@/components/profile/EditProfileSheet', () => ({
   ),
 }));
 
-// ActivityFeed usa useActivityFeed internamente — lo stubbiamo per isolare il test
+// ActivityFeed usa useDashboardActivityFeed internamente — lo stubbiamo per isolare il test
 vi.mock('@/components/profile/ActivityFeed', () => ({
   ActivityFeed: () => <div data-testid="activity-feed">Activity</div>,
 }));
@@ -136,7 +136,7 @@ describe('ProfilePage', () => {
     mockGetProfile.mockResolvedValue(mockProfile);
     mockUploadAvatar.mockResolvedValue({ ok: true, avatarUrl: 'https://example.com/avatar.jpg' });
     mockUseRecentSessions.mockReturnValue({ sessions: [], isLoading: false, error: null });
-    mockUseActivityFeed.mockReturnValue({ items: [], isLoading: false, error: null });
+    mockUseDashboardActivityFeed.mockReturnValue({ items: [], isLoading: false, error: null });
   });
 
   it('shows user display name in header', async () => {

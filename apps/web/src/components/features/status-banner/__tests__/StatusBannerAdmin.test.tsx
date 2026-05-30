@@ -84,8 +84,14 @@ describe('StatusBannerAdmin', () => {
   it('renders the form pre-populated from the read query', async () => {
     mockGet.mockResolvedValue(SAMPLE_ADMIN);
     renderWithProviders(<StatusBannerAdmin />);
-    const textarea = (await screen.findByLabelText(/messaggio/i)) as HTMLTextAreaElement;
-    expect(textarea.value).toBe('Currently online');
+    // findByLabelText resolves when the textarea mounts, but the useEffect
+    // that maps query data → form state may fire one tick later. Wait on the
+    // value with waitFor so the assertion isn't racing the state update —
+    // surfaced as a flake on CI (#1700 release run, shard 1/3).
+    await waitFor(async () => {
+      const textarea = (await screen.findByLabelText(/messaggio/i)) as HTMLTextAreaElement;
+      expect(textarea.value).toBe('Currently online');
+    });
   });
 
   it('template buttons populate the form', async () => {

@@ -2069,6 +2069,11 @@ namespace Api.Infrastructure.Migrations
                     b.HasIndex("Status")
                         .HasDatabaseName("ix_agent_definitions_status");
 
+                    b.HasIndex("_kbCardIdsJson")
+                        .HasDatabaseName("ix_agent_definitions_kb_card_ids");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("_kbCardIdsJson"), "gin");
+
                     b.HasIndex("_typeValue")
                         .HasDatabaseName("ix_agent_definitions_type_value");
 

@@ -569,7 +569,7 @@
   --card-foreground: 30 15% 15%;
   --popover: 0 0% 100%;
   --popover-foreground: 30 15% 15%;
-  --primary: 25 95% 38%;            /* WCAG AA: Darkened to 38% for 4.5:1 contrast with white (Issue #2234) */
+  --primary: 25 95% 32%;            /* WCAG AA: 4.5:1 on canonical --bg #f7f3ee cream (was 38% calibrated for #fff — failed 4.34:1 on cream, surfaced by #1698 axe gate on /game-nights/new wizard, refs #2234). Same value as --c-game-text. */
   --primary-foreground: 0 0% 100%;
   --secondary: 142 76% 28%;         /* WCAG AA: Darkened to 28% for 4.5:1 contrast on light bg (Issue #2234) */
   --secondary-foreground: 0 0% 100%;

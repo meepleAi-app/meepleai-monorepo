@@ -1650,22 +1650,47 @@
           },
           "status": {
             "label": "Stato",
-            "options": { "all": "Tutti", "owned": "Posseduti", "wishlist": "Wishlist", "played": "Giocati" }
+            "options": {
+              "all": "Tutti",
+              "owned": "Posseduti",
+              "wishlist": "Wishlist",
+              "played": "Giocati"
+            }
           },
           "sort": {
             "label": "Ordina",
-            "options": { "last-played": "Ultima partita", "rating": "Rating", "title": "Titolo A-Z", "year": "Anno" }
+            "options": {
+              "last-played": "Ultima partita",
+              "rating": "Rating",
+              "title": "Titolo A-Z",
+              "year": "Anno"
+            }
           },
           "view": {
             "label": "Vista",
-            "options": { "grid": "Griglia", "list": "Lista" }
+            "options": {
+              "grid": "Griglia",
+              "list": "Lista"
+            }
           },
           "resultCount": "{count, plural, one {# gioco} other {# giochi}}"
         },
         "emptyState": {
-          "empty": { "title": "Aggiungi il tuo primo gioco", "subtitle": "Costruisci la tua libreria per iniziare.", "cta": "Aggiungi gioco" },
-          "filteredEmpty": { "title": "Nessun risultato", "subtitle": "Prova ad allargare i filtri o azzerarli.", "cta": "Azzera filtri" },
-          "error": { "title": "Errore di caricamento", "subtitle": "Impossibile recuperare la libreria.", "cta": "Riprova" }
+          "empty": {
+            "title": "Aggiungi il tuo primo gioco",
+            "subtitle": "Costruisci la tua libreria per iniziare.",
+            "cta": "Aggiungi gioco"
+          },
+          "filteredEmpty": {
+            "title": "Nessun risultato",
+            "subtitle": "Prova ad allargare i filtri o azzerarli.",
+            "cta": "Azzera filtri"
+          },
+          "error": {
+            "title": "Errore di caricamento",
+            "subtitle": "Impossibile recuperare la libreria.",
+            "cta": "Riprova"
+          }
         }
       },
       "selectionMode": {
@@ -1757,7 +1782,15 @@
         "subtitle": "Le ultime aggiunte e modifiche alla tua libreria.",
         "empty": "Nessuna attività recente.",
         "viewAll": "Vedi tutto",
-        "viewAllAriaLabel": "Vai allo storico completo dell'attività"
+        "viewAllAriaLabel": "Vai allo storico completo dell'attività",
+        "error": "Impossibile caricare l'attività.",
+        "fallback": {
+          "agent": "Nuovo agent creato",
+          "chat": "Nuova chat",
+          "kbIndexed": "Documento indicizzato",
+          "play": "Sessione",
+          "removed": "Rimosso dalla libreria"
+        }
       },
       "emptyState": {
         "default": {
@@ -3653,6 +3686,331 @@
       "inviteesListLabel": "Lista invitati",
       "gamesListLabel": "Lista giochi proposti",
       "previewLabel": "Anteprima invito"
+    }
+  },
+  "playRecords": {
+    "stats": {
+      "badge": {
+        "statistics": "Statistiche · /play-records/stats"
+      },
+      "title": "Le tue statistiche",
+      "subtitle": "Una panoramica delle partite registrate: quante ne hai giocate, i giochi preferiti e il tuo win-rate.",
+      "kpi": {
+        "sessions": "Partite",
+        "uniqueGames": "Giochi",
+        "winRate": "Win rate",
+        "winRateWins": "vittorie",
+        "favorite": "Preferito"
+      },
+      "mostPlayed": {
+        "title": "Giochi più giocati",
+        "meta": "top {count}",
+        "plays": "partite"
+      },
+      "winByGame": {
+        "title": "Win-rate per gioco",
+        "meta": "ordinato per %"
+      },
+      "empty": {
+        "noGames": "Nessuna partita registrata. Le statistiche appariranno qui.",
+        "noWins": "Nessun esito registrato. Gioca per vedere il tuo win-rate."
+      },
+      "cta": {
+        "newRecord": "Registra partita"
+      },
+      "headerTitle": "Statistiche",
+      "error": {
+        "title": "Impossibile caricare le statistiche",
+        "description": "Si è verificato un errore di rete. Verifica la connessione e riprova."
+      }
+    },
+    "new": {
+      "pageTitle": "Registra partita",
+      "pageSubtitle": "Wizard passo-passo per registrare una partita",
+      "stepIndicatorLabel": "Step {current} di 3",
+      "step1Label": "Gioco",
+      "step2Label": "Quando",
+      "step3Label": "Punteggi",
+      "step1": {
+        "title": "Quale gioco avete giocato?",
+        "subtitle": "Scegli dalla tua libreria. Il punteggio e i giocatori si adattano al gioco.",
+        "searchPlaceholder": "Cerca nella libreria…",
+        "emptyLibraryHint": "↑ Seleziona un gioco per continuare",
+        "freeformLabel": "Nome gioco (testo libero)",
+        "freeformPlaceholder": "Es. Catan, Puerto Rico…",
+        "freeformHint": "Inserisci il nome del gioco se non è in catalogo"
+      },
+      "step2": {
+        "title": "Quando l'avete giocata?",
+        "subtitle": "Data, ora di inizio e durata. La durata è opzionale.",
+        "dateLabel": "Data",
+        "timeLabel": "Ora di inizio",
+        "durationLabel": "Durata (opzionale)",
+        "locationLabel": "Luogo (opzionale)",
+        "locationPlaceholder": "Es. Casa di Marco",
+        "notesLabel": "Note (opzionale)",
+        "notesPlaceholder": "Aggiungi un commento sulla partita…",
+        "durationHint": "Approssimativa — usa per le statistiche ore"
+      },
+      "step3": {
+        "title": "Chi ha giocato e con che punteggio?",
+        "subtitle": "Inserisci i punteggi: il vincitore è calcolato automaticamente dal punteggio più alto.",
+        "playersLabel": "Giocatori e punteggi ({count})",
+        "addPlayerPlaceholder": "Nome giocatore…",
+        "addPlayerButton": "Aggiungi giocatore",
+        "winnerBadge": "Vincitore",
+        "noPlayersHint": "Aggiungi almeno un giocatore per salvare la partita"
+      },
+      "preview": {
+        "sectionLabel": "Anteprima live · Record partita",
+        "noGameSelected": "Seleziona un gioco",
+        "rankingLabel": "Classifica · {count} giocatori",
+        "tip": "Il vincitore è calcolato dal punteggio più alto. Si aggiorna in tempo reale mentre compili."
+      },
+      "actions": {
+        "next": "Avanti →",
+        "back": "← Indietro",
+        "save": "✓ Salva partita",
+        "saving": "Salvataggio…",
+        "cancel": "Annulla",
+        "draft": "Bozza"
+      },
+      "success": {
+        "toast": "Partita registrata",
+        "toastDescription": "La partita è stata registrata correttamente"
+      },
+      "error": {
+        "saveFailed": "Salvataggio non riuscito",
+        "saveFailedDescription": "Impossibile salvare la partita. Riprova fra un momento.",
+        "retry": "↻ Riprova salvataggio"
+      },
+      "loading": {
+        "library": "Caricamento libreria…"
+      },
+      "a11y": {
+        "wizardLabel": "Wizard registrazione partita",
+        "stepIndicatorLabel": "Avanzamento registrazione",
+        "backButton": "Torna al passo precedente",
+        "closeButton": "Chiudi",
+        "previewLabel": "Anteprima live record partita",
+        "backToList": "Torna alle partite"
+      }
+    },
+    "index": {
+      "hero": {
+        "title": "Le tue partite",
+        "subtitle": "Storico, esiti e classifiche delle partite registrate.",
+        "label": "Play records",
+        "cta": "+ Registra partita",
+        "stats": {
+          "games": "partite",
+          "wins": "vittorie",
+          "count": "giochi",
+          "hours": "totali"
+        }
+      },
+      "filters": {
+        "searchPlaceholder": "Cerca partita o gioco...",
+        "statusAll": "Tutte",
+        "statusInProgress": "● In corso",
+        "statusCompleted": "✓ Completate",
+        "statusPlanned": "📅 Pianificate",
+        "dropdownGame": "GIOCO",
+        "dropdownDate": "DATA",
+        "dropdownOutcome": "ESITO",
+        "dropdownSort": "SORT",
+        "viewList": "List · default",
+        "viewGrid": "Grid",
+        "toggleArchivedLabel": "Mostra archiviate"
+      },
+      "card": {
+        "duration": "Durata",
+        "players": "giocatori",
+        "winner": "Vincitore",
+        "resume": "▶ Riprendi",
+        "launch": "Avvia ora"
+      },
+      "empty": {
+        "firstRunTitle": "Nessuna partita registrata",
+        "firstRunMessage": "Registra la tua prima partita per tracciare punteggi, esiti e classifiche del gruppo.",
+        "firstRunCta": "+ Registra prima partita",
+        "filterTitle": "Nessuna partita per questi filtri",
+        "filterMessage": "Prova a rimuovere alcuni vincoli o cambiare periodo.",
+        "resetButton": "↻ Reset filtri"
+      },
+      "error": {
+        "title": "Errore caricamento",
+        "message": "Impossibile recuperare le partite. Verifica la connessione.",
+        "retry": "↻ Riprova"
+      },
+      "a11y": {
+        "searchRole": "search",
+        "resultsLive": "polite"
+      },
+      "headerTitle": "Partite Giocate",
+      "viewStatsLabel": "Vai alle statistiche"
+    },
+    "detail": {
+      "hero": {
+        "won": "🏆 Vittoria",
+        "tied": "🤝 Pareggio",
+        "cooperative": "🤝 Cooperativa",
+        "inprogress": "In corso",
+        "planned": "📅 Pianificata",
+        "bannerWon": "{winnerName} vince {gameName}",
+        "bannerTied": "Pareggio a {score} punti",
+        "bannerCooperative": "Partita cooperativa di {gameName}",
+        "bannerInProgress": "{gameName} in corso",
+        "bannerPlanned": "{gameName} pianificata",
+        "metaPlayers": "{count} giocatori",
+        "ctaStart": "Avvia partita"
+      },
+      "connectionBar": {
+        "label": "Collegamenti",
+        "playerCount": "{count} giocatori",
+        "chatCount": "{count} messaggi",
+        "noChat": "Nessuna chat"
+      },
+      "kpi": {
+        "title": "Statistiche partita",
+        "duration": "Durata",
+        "topScore": "Punteggio top",
+        "avg": "Media",
+        "spread": "Distacco"
+      },
+      "classifica": {
+        "title": "Classifica",
+        "winnerBadge": "Vincitore"
+      },
+      "scoreBreakdown": {
+        "title": "Dettaglio punteggi",
+        "toggleLabel": "Mostra dettaglio punteggi"
+      },
+      "loading": "Caricamento...",
+      "notFound": "Partita non trovata",
+      "retry": "Riprova",
+      "backToList": "Torna alle partite"
+    },
+    "edit": {
+      "pageTitle": "Modifica partita",
+      "pageSubtitle": "Aggiorna i dettagli della partita",
+      "banner": {
+        "gateTitle": "Modifica limitata",
+        "gateDescription": "Per modificare giocatori o punteggi, elimina e ricrea la partita",
+        "deleteAction": "Cancella partita"
+      },
+      "fields": {
+        "sessionDate": "Data partita",
+        "location": "Luogo (opzionale)",
+        "notes": "Note (opzionale)",
+        "game": "Gioco",
+        "players": "Giocatori",
+        "scores": "Punteggi"
+      },
+      "delete": {
+        "title": "Elimina partita?",
+        "description": "Questa azione non può essere annullata. La partita e tutti i dati associati verranno eliminati.",
+        "confirm": "Elimina",
+        "cancel": "Annulla"
+      },
+      "success": {
+        "toast": "Partita aggiornata",
+        "toastDescription": "Le modifiche sono state salvate",
+        "deleteToast": "Partita eliminata",
+        "deleteToastDescription": "La partita è stata eliminata correttamente"
+      },
+      "error": {
+        "loadFailed": "Impossibile caricare la partita",
+        "updateFailed": "Aggiornamento non riuscito",
+        "deleteFailed": "Eliminazione non riuscita"
+      },
+      "a11y": {
+        "formLabel": "Modulo modifica partita",
+        "readonlyFieldsLabel": "Campi non modificabili",
+        "ariaReadonly": "Questo campo non è modificabile"
+      },
+      "actions": {
+        "save": "Salva modifiche",
+        "saving": "Salvataggio…",
+        "delete": "Elimina",
+        "cancel": "Annulla",
+        "back": "← Indietro"
+      }
+    },
+    "kbGlobale": {
+      "hero": {
+        "placeholder": "Cerca nella knowledge base…",
+        "submit": "Cerca",
+        "clear": "Cancella",
+        "modeLabel": "Modalità di ricerca",
+        "modeOptions": {
+          "Semantic": "Semantica"
+        }
+      },
+      "home": {
+        "heading": "Documenti recenti",
+        "empty": {
+          "title": "Nessun documento ancora",
+          "description": "Carica un PDF dalla libreria per iniziare.",
+          "cta": "Vai alla libreria"
+        },
+        "errorTitle": "Impossibile caricare i documenti",
+        "errorDescription": "Si è verificato un errore. Riprova tra qualche istante.",
+        "retry": "Riprova"
+      },
+      "results": {
+        "loadMore": "Carica altri",
+        "loadingMore": "Caricamento…",
+        "empty": {
+          "title": "Nessun risultato",
+          "description": "Prova con termini diversi o controlla l'ortografia."
+        },
+        "errorTitle": "Errore nella ricerca",
+        "errorDescription": "La ricerca non è riuscita. Riprova tra qualche istante.",
+        "retry": "Riprova"
+      },
+      "viewer": {
+        "pageLabel": "Pagina {n}",
+        "zoomIn": "Zoom in",
+        "zoomOut": "Zoom out",
+        "zoomReset": "Reset",
+        "thumbnailsLabel": "Pagine",
+        "closeLabel": "Chiudi",
+        "pageOfTotal": "{cur} / {total}"
+      },
+      "drawer": {
+        "title": "Ask the Meeple",
+        "subtitle": "Knowledge Base",
+        "closeLabel": "Chiudi",
+        "idle": {
+          "welcomeTitle": "Chiedimi qualsiasi cosa sui tuoi giochi",
+          "welcomeBody": "Cerco nei tuoi PDF e cito le pagine esatte.",
+          "suggestionsLabel": "Suggerimenti",
+          "placeholder": "Chiedi al Meeple…",
+          "sendLabel": "Invia"
+        },
+        "streaming": {
+          "statusLabel": "STREAMING",
+          "stopLabel": "Stop streaming"
+        },
+        "completed": {
+          "completedLabel": "COMPLETED",
+          "copyLabel": "Copia",
+          "regenerateLabel": "Rigenera",
+          "inlineCitationAriaLabelTemplate": "Citazione {n}, documento {docId}, pagina {page}"
+        },
+        "empty": {
+          "title": "Nessun documento nella tua libreria",
+          "body": "Carica un PDF dalla libreria per iniziare a chiedere.",
+          "cta": "Vai alla libreria"
+        },
+        "error": {
+          "connection": { "title": "Connessione persa", "body": "Retry automatico in corso…", "action": "Riprova ora" },
+          "timeout": { "title": "Risposta lenta", "body": "Vuoi continuare ad aspettare?", "action": "Continua attesa", "alt": "Cancella" },
+          "partial": { "title": "Risposta incompleta", "body": "Lo stream si è interrotto.", "action": "Ripeti query" },
+          "server": { "title": "Errore del server", "body": "Riprova tra qualche istante.", "action": "Riprova" }
+        }
+      }
     }
   }
 }

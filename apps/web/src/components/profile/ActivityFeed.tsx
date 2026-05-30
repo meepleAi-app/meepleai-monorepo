@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { Skeleton } from '@/components/ui/feedback/skeleton';
-import { useActivityFeed } from '@/hooks/useActivityFeed';
+import { useDashboardActivityFeed } from '@/hooks/useDashboardActivityFeed';
 
 function formatRelativeDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -14,7 +14,7 @@ function formatRelativeDate(dateStr: string): string {
 }
 
 export function ActivityFeed(): React.ReactElement {
-  const { items, isLoading, error } = useActivityFeed(15);
+  const { items, isLoading, error } = useDashboardActivityFeed(15);
 
   if (isLoading) {
     return (

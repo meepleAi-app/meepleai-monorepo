@@ -1,109 +1,58 @@
 /**
- * useActivityFeed
+ * useActivityFeed — Phase 3b (#1593) cross-entity activity feed hook for the
+ * `RecentActivityRail` sidebar in LibraryHub.
  *
- * Aggregates recent play sessions and earned badges into a unified
- * activity feed sorted by timestamp descending.
+ * Calls `GET /api/v1/activity?limit=<limit>` (BE-3 #1590), applies the adapter
+ * `toActivityItem` (maps `eventType` → `ActivityKind`, derives `entityTitle`
+ * with i18n fallback when `title=null`), and returns the rail's `ActivityItem[]`.
+ *
+ * The legacy `useActivityFeed` (PlayRecords+Badges dashboard) was renamed to
+ * `useDashboardActivityFeed` (#1593 E1 prereq) to free this slot.
  */
 
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+
+import type { ActivityItem } from '@/components/features/library/RecentActivityRail';
+import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
-import type { UserBadgeDto } from '@/lib/api/schemas/badges.schemas';
-import type { PlayRecordSummary } from '@/lib/api/schemas/play-records.schemas';
+import type { ActivityFeedResponse } from '@/lib/api/schemas/activity.schemas';
+import { toActivityItem } from '@/lib/library/activity-adapter';
 
-export type ActivityItemType = 'session' | 'achievement';
-
-export interface ActivityItem {
-  id: string;
-  type: ActivityItemType;
-  title: string;
-  subtitle?: string;
-  timestamp: string;
-  iconEmoji: string;
-}
-
-export interface UseActivityFeedResult {
+export interface UseActivityFeedData {
+  /** Adapted items (DTO → rail ActivityItem). */
   items: ActivityItem[];
-  isLoading: boolean;
-  error: string | null;
+  /** Page size returned by the BE (NOT a global total). */
+  count: number;
 }
 
-function buildSessionItem(s: PlayRecordSummary): ActivityItem {
-  return {
-    id: `session-${s.id}`,
-    type: 'session',
-    title: s.gameName,
-    subtitle: s.playerCount ? `${s.playerCount} giocatori` : undefined,
-    timestamp: s.sessionDate,
-    iconEmoji: '🎲',
-  };
-}
+/**
+ * Default limit: 20 (BE-3 default).
+ */
+export function useActivityFeed(limit: number = 20): UseQueryResult<UseActivityFeedData> {
+  const { t } = useTranslation();
 
-function buildAchievementItem(a: UserBadgeDto): ActivityItem {
-  return {
-    id: `achievement-${a.id}`,
-    type: 'achievement',
-    title: a.name,
-    subtitle: 'Badge sbloccato',
-    timestamp: a.earnedAt,
-    iconEmoji: '🏆',
-  };
-}
+  const fallbacks = useMemo(
+    () => ({
+      agent: t('pages.library.activityRail.fallback.agent'),
+      chat: t('pages.library.activityRail.fallback.chat'),
+      kbIndexed: t('pages.library.activityRail.fallback.kbIndexed'),
+      play: t('pages.library.activityRail.fallback.play'),
+      removed: t('pages.library.activityRail.fallback.removed'),
+    }),
+    [t]
+  );
 
-export function useActivityFeed(limit = 10): UseActivityFeedResult {
-  const [items, setItems] = useState<ActivityItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    let sessionsFailed = false;
-    let badgesFailed = false;
-
-    const sessionsPromise = api.playRecords
-      .getHistory({ page: 1, pageSize: limit })
-      .then(data => data.records ?? [])
-      .catch(() => {
-        sessionsFailed = true;
-        return [] as PlayRecordSummary[];
-      });
-
-    const badgesPromise = api.badges.getMyBadges().catch(() => {
-      badgesFailed = true;
-      return [] as UserBadgeDto[];
-    });
-
-    Promise.all([sessionsPromise, badgesPromise])
-      .then(([sessions, badges]) => {
-        if (cancelled) return;
-
-        if (sessionsFailed && badgesFailed) {
-          setError('Errore nel caricamento delle attività');
-          setIsLoading(false);
-          return;
-        }
-
-        const sessionItems = sessions.map(buildSessionItem);
-        const achievementItems = badges.map(buildAchievementItem);
-
-        const all = [...sessionItems, ...achievementItems].sort(
-          (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-        );
-
-        setItems(all.slice(0, limit));
-        setIsLoading(false);
-      })
-      .catch(err => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Errore');
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [limit]);
-
-  return { items, isLoading, error };
+  return useQuery({
+    queryKey: ['activity', 'feed', { limit }],
+    queryFn: async () => {
+      const response: ActivityFeedResponse = await api.activity.listActivity({ limit });
+      return {
+        items: response.items.map(dto => toActivityItem(dto, fallbacks)),
+        count: response.count,
+      };
+    },
+    staleTime: 60 * 1000,
+  });
 }

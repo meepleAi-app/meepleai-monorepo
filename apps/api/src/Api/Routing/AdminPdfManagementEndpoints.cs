@@ -17,6 +17,11 @@ internal static class AdminPdfManagementEndpoints
             .WithTags("Admin - PDF Management")
             .AddEndpointFilter<RequireAdminSessionFilter>();
 
+        // Issue #1653: Admin KB document delete (agent-cascade + audit)
+        group.MapDelete("/{pdfId:guid}", DeleteKbDocument)
+            .WithName("DeleteKbDocument")
+            .WithSummary("Delete a KB document (cascade: detach from agents, remove chunks/vectors/blob, audited)");
+
         // Phase 4: Bulk operations
         group.MapPost("/bulk/delete", BulkDelete)
             .WithName("BulkDeletePdfs")
@@ -86,6 +91,15 @@ internal static class AdminPdfManagementEndpoints
         var result = await mediator.Send(new GetPdfStatusDistributionQuery(), cancellationToken)
             .ConfigureAwait(false);
         return Results.Ok(result);
+    }
+
+    private static async Task<IResult> DeleteKbDocument(
+        Guid pdfId,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        await mediator.Send(new DeleteKbDocumentCommand(pdfId), cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
     }
 }
 

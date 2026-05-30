@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- admin KB chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13b admin scope (see token-bridge-map.md for --admin-* decision deferred to DS-15). */
 'use client';
 
 import { useState } from 'react';
@@ -24,40 +23,40 @@ import { HttpClient } from '@/lib/api/core/httpClient';
 const httpClient = new HttpClient();
 const adminClient = createAdminClient({ httpClient });
 
-function statusColor(status: PipelineStageStatus) {
+function statusDotColor(status: PipelineStageStatus) {
   switch (status) {
     case 'healthy':
-      return 'bg-green-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]';
+      return 'bg-entity-toolkit shadow-[0_0_8px_hsl(var(--c-toolkit)/0.5)]';
     case 'warning':
       return 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]';
     case 'error':
-      return 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]';
+      return 'bg-entity-event shadow-[0_0_8px_hsl(var(--c-event)/0.5)]';
     default:
       return 'bg-muted-foreground';
   }
 }
 
-function statusBorder(status: PipelineStageStatus) {
+function statusBorderColor(status: PipelineStageStatus) {
   switch (status) {
     case 'healthy':
-      return 'border-green-400/40 dark:border-green-600/40';
+      return 'border-entity-toolkit/40';
     case 'warning':
-      return 'border-amber-400/40 dark:border-amber-600/40';
+      return 'border-amber-500/40';
     case 'error':
-      return 'border-red-400/40 dark:border-red-600/40';
+      return 'border-entity-event/40';
     default:
       return 'border-border/40';
   }
 }
 
 function formatDuration(ms: number | null): string {
-  if (ms === null) return '\u2014';
+  if (ms === null) return '—';
   if (ms < 1000) return `${ms}ms`;
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
 function formatRelativeTime(dateStr: string | null): string {
-  if (!dateStr) return '\u2014';
+  if (!dateStr) return '—';
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -87,10 +86,10 @@ export function RAGPipelineFlow() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="h-48 bg-card/40 dark:bg-zinc-800/40 rounded-xl animate-pulse" />
+        <div className="h-48 bg-card/40 rounded-[10px] animate-pulse" />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-20 bg-card/40 dark:bg-zinc-800/40 rounded-lg animate-pulse" />
+            <div key={i} className="h-20 bg-card/40 rounded-[10px] animate-pulse" />
           ))}
         </div>
       </div>
@@ -105,9 +104,10 @@ export function RAGPipelineFlow() {
   return (
     <div className="space-y-6">
       {/* Pipeline Flow */}
-      <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-8 border border-amber-200/50 dark:border-zinc-700/50">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="font-quicksand text-xl font-bold text-foreground dark:text-zinc-100">
+      <section className="rounded-[10px] border border-border/60 bg-card overflow-hidden">
+        {/* Panel header */}
+        <div className="flex items-center gap-2.5 border-b border-border/60 bg-background px-3.5 py-2.5">
+          <h2 className="font-quicksand text-[13px] font-extrabold text-foreground flex-1">
             RAG Pipeline Flow
           </h2>
           <Button
@@ -122,118 +122,126 @@ export function RAGPipelineFlow() {
           </Button>
         </div>
 
-        {/* Pipeline Visualization */}
-        <div className="flex items-center justify-between gap-4 mb-6 overflow-x-auto pb-4">
-          {stages.map((stage, index) => {
-            const isExpanded = expandedStage === stage.name;
-            return (
-              <div key={stage.name} className="flex items-center gap-4">
-                <div className="flex flex-col items-center">
-                  <button
-                    type="button"
-                    onClick={() => setExpandedStage(isExpanded ? null : stage.name)}
-                    className={`bg-muted dark:bg-zinc-900 rounded-lg p-4 border-2 ${statusBorder(stage.status)} min-w-[110px] transition-all hover:shadow-md hover:-translate-y-0.5 ${isExpanded ? 'ring-2 ring-blue-400/60' : ''}`}
-                  >
-                    <div className="text-center">
-                      <div className="font-semibold text-foreground dark:text-zinc-100 text-sm mb-2">
-                        {stage.name}
-                      </div>
-                      <div className={`w-3 h-3 rounded-full mx-auto ${statusColor(stage.status)} animate-pulse`} />
-                      {stage.metrics && Object.keys(stage.metrics).length > 0 && (
-                        <div className="mt-2 text-[10px] text-muted-foreground dark:text-muted-foreground leading-tight">
-                          {renderStageMetric(stage.name, stage.metrics)}
-                        </div>
-                      )}
-                      <div className="mt-2 flex justify-center">
-                        {isExpanded
-                          ? <ChevronUpIcon className="h-3 w-3 text-muted-foreground" />
-                          : <ChevronDownIcon className="h-3 w-3 text-muted-foreground" />}
-                      </div>
-                    </div>
-                  </button>
-                </div>
-                {index < stages.length - 1 && (
-                  <ArrowRightIcon className="w-6 h-6 text-amber-500 dark:text-amber-400 flex-shrink-0" />
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Stage Drill-Down Panel */}
-        {expandedStage && (() => {
-          const stage = stages.find((s) => s.name === expandedStage);
-          if (!stage) return null;
-          const metricsEntries = stage.metrics ? Object.entries(stage.metrics) : [];
-          return (
-            <div className="mb-6 bg-muted/80 dark:bg-zinc-900/60 rounded-xl border border-border/50 dark:border-zinc-700/50 p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-foreground dark:text-zinc-100 flex items-center gap-2">
-                  <span className={`w-2.5 h-2.5 rounded-full ${statusColor(stage.status)}`} />
-                  {stage.name} — Stage Details
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setExpandedStage(null)}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Close
-                </button>
-              </div>
-              {metricsEntries.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {metricsEntries.map(([key, value]) => (
-                    <div
-                      key={key}
-                      className="bg-card/70 dark:bg-zinc-800/70 rounded-lg px-3 py-2 border border-border/40 dark:border-zinc-700/40"
+        {/* Panel body */}
+        <div className="p-4 space-y-4">
+          {/* Pipeline Visualization */}
+          <div className="flex items-center justify-between gap-4 overflow-x-auto pb-2">
+            {stages.map((stage, index) => {
+              const isExpanded = expandedStage === stage.name;
+              return (
+                <div key={stage.name} className="flex items-center gap-4">
+                  <div className="flex flex-col items-center">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedStage(isExpanded ? null : stage.name)}
+                      className={`bg-muted rounded-[10px] p-4 border-2 ${statusBorderColor(stage.status)} min-w-[110px] transition-all hover:shadow-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${isExpanded ? 'ring-2 ring-ring/50' : ''}`}
                     >
-                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">
-                        {key.replace(/([A-Z])/g, ' $1').trim()}
+                      <div className="text-center">
+                        <div className="font-quicksand font-bold text-foreground text-sm mb-2">
+                          {stage.name}
+                        </div>
+                        <div
+                          className={`w-3 h-3 rounded-full mx-auto ${statusDotColor(stage.status)} animate-pulse`}
+                        />
+                        {stage.metrics && Object.keys(stage.metrics).length > 0 && (
+                          <div className="mt-2 text-[10px] text-muted-foreground leading-tight">
+                            {renderStageMetric(stage.name, stage.metrics)}
+                          </div>
+                        )}
+                        <div className="mt-2 flex justify-center">
+                          {isExpanded ? (
+                            <ChevronUpIcon className="h-3 w-3 text-muted-foreground" />
+                          ) : (
+                            <ChevronDownIcon className="h-3 w-3 text-muted-foreground" />
+                          )}
+                        </div>
                       </div>
-                      <div className="text-sm font-semibold text-foreground truncate">
-                        {value !== null && value !== undefined ? String(value) : '—'}
-                      </div>
-                    </div>
-                  ))}
+                    </button>
+                  </div>
+                  {index < stages.length - 1 && (
+                    <ArrowRightIcon className="w-6 h-6 text-entity-agent flex-shrink-0" />
+                  )}
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground italic">No detailed metrics available for this stage.</p>
-              )}
-            </div>
-          );
-        })()}
+              );
+            })}
+          </div>
 
-        {/* Health Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
-            <div className="text-sm font-medium text-green-900 dark:text-green-300 flex items-center gap-1.5">
-              <CheckCircleIcon className="h-4 w-4" />
-              Healthy Stages
+          {/* Stage Drill-Down Panel */}
+          {expandedStage &&
+            (() => {
+              const stage = stages.find(s => s.name === expandedStage);
+              if (!stage) return null;
+              const metricsEntries = stage.metrics ? Object.entries(stage.metrics) : [];
+              return (
+                <div className="bg-background rounded-[10px] border border-border/60 border-l-4 border-l-entity-kb p-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-quicksand font-bold text-foreground flex items-center gap-2">
+                      <span
+                        className={`w-2.5 h-2.5 rounded-full ${statusDotColor(stage.status)}`}
+                      />
+                      {stage.name} — Stage Details
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedStage(null)}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
+                    >
+                      Close
+                    </button>
+                  </div>
+                  {metricsEntries.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {metricsEntries.map(([key, value]) => (
+                        <div
+                          key={key}
+                          className="bg-card rounded-[10px] px-3 py-2 border border-border/60"
+                        >
+                          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5 font-mono font-bold">
+                            {key.replace(/([A-Z])/g, ' $1').trim()}
+                          </div>
+                          <div className="text-sm font-semibold text-foreground truncate font-mono">
+                            {value !== null && value !== undefined ? String(value) : '—'}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">
+                      No detailed metrics available for this stage.
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
+
+          {/* Health Summary */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="rounded-[10px] p-4 border bg-entity-toolkit/10 border-entity-toolkit/30">
+              <div className="text-sm font-medium text-entity-toolkit flex items-center gap-1.5">
+                <CheckCircleIcon className="h-4 w-4" />
+                Healthy Stages
+              </div>
+              <div className="text-2xl font-bold text-entity-toolkit">
+                {summary.healthyCount}/{stages.length}
+              </div>
             </div>
-            <div className="text-2xl font-bold text-green-700 dark:text-green-400">
-              {summary.healthyCount}/{stages.length}
+            <div className="rounded-[10px] p-4 border bg-amber-500/12 border-amber-500/30">
+              <div className="text-sm font-medium text-amber-600 flex items-center gap-1.5">
+                <AlertCircleIcon className="h-4 w-4" />
+                Warnings
+              </div>
+              <div className="text-2xl font-bold text-amber-600">{summary.warningCount}</div>
             </div>
-          </div>
-          <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4 border border-amber-200 dark:border-amber-800">
-            <div className="text-sm font-medium text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
-              <AlertCircleIcon className="h-4 w-4" />
-              Warnings
-            </div>
-            <div className="text-2xl font-bold text-amber-700 dark:text-amber-400">
-              {summary.warningCount}
-            </div>
-          </div>
-          <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
-            <div className="text-sm font-medium text-red-900 dark:text-red-300 flex items-center gap-1.5">
-              <XCircleIcon className="h-4 w-4" />
-              Errors
-            </div>
-            <div className="text-2xl font-bold text-red-700 dark:text-red-400">
-              {summary.errorCount}
+            <div className="rounded-[10px] p-4 border bg-entity-event/10 border-entity-event/30">
+              <div className="text-sm font-medium text-entity-event flex items-center gap-1.5">
+                <XCircleIcon className="h-4 w-4" />
+                Errors
+              </div>
+              <div className="text-2xl font-bold text-entity-event">{summary.errorCount}</div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Distribution Stats */}
       {distribution && (
@@ -242,92 +250,112 @@ export function RAGPipelineFlow() {
             icon={FileTextIcon}
             label="Documents"
             value={distribution.totalDocuments.toLocaleString()}
-            color="text-blue-500"
+            accent="border-l-entity-kb"
+            iconColor="text-entity-kb"
           />
           <StatCard
             icon={DatabaseIcon}
             label="Chunks"
             value={distribution.totalChunks.toLocaleString()}
-            color="text-violet-500"
+            accent="border-l-entity-chat"
+            iconColor="text-entity-chat"
           />
           <StatCard
             icon={DatabaseIcon}
             label="Vectors"
             value={distribution.vectorCount.toLocaleString()}
-            color="text-emerald-500"
+            accent="border-l-entity-agent"
+            iconColor="text-entity-agent"
           />
           <StatCard
             icon={FileTextIcon}
             label="Storage"
             value={distribution.storageSizeFormatted}
-            color="text-amber-500"
+            accent="border-l-entity-toolkit"
+            iconColor="text-entity-toolkit"
           />
         </div>
       )}
 
       {/* Recent Activity */}
-      <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-border/50 dark:border-zinc-700/50">
-        <h2 className="font-quicksand text-xl font-bold text-foreground dark:text-zinc-100 mb-4">
-          Recent Activity
-        </h2>
-        {recentActivity.length === 0 ? (
-          <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-            No recent processing activity
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {recentActivity.map((item) => (
-              <div
-                key={item.jobId}
-                className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-muted dark:hover:bg-zinc-800 transition-colors"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <JobStatusIcon status={item.status} />
-                  <span className="text-sm font-medium text-foreground dark:text-zinc-100 truncate">
-                    {item.fileName}
-                  </span>
-                </div>
-                <div className="flex items-center gap-4 text-xs text-muted-foreground dark:text-muted-foreground flex-shrink-0">
-                  {item.durationMs !== null && (
-                    <span className="flex items-center gap-1">
-                      <ClockIcon className="h-3 w-3" />
-                      {formatDuration(item.durationMs)}
+      <section className="rounded-[10px] border border-border/60 bg-card overflow-hidden">
+        {/* Panel header */}
+        <div className="flex items-center gap-2.5 border-b border-border/60 bg-background px-3.5 py-2.5">
+          <h2 className="font-quicksand text-[13px] font-extrabold text-foreground">
+            Recent Activity
+          </h2>
+        </div>
+
+        {/* Panel body */}
+        <div className="p-4">
+          {recentActivity.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No recent processing activity</p>
+          ) : (
+            <div className="space-y-1">
+              {recentActivity.map(item => (
+                <div
+                  key={item.jobId}
+                  className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-muted transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <JobStatusIcon status={item.status} />
+                    <span className="text-sm font-medium text-foreground truncate">
+                      {item.fileName}
                     </span>
-                  )}
-                  <span>{formatRelativeTime(item.completedAt)}</span>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground flex-shrink-0">
+                    {item.durationMs !== null && (
+                      <span className="flex items-center gap-1 font-mono">
+                        <ClockIcon className="h-3 w-3" />
+                        {formatDuration(item.durationMs)}
+                      </span>
+                    )}
+                    <span className="font-mono">{formatRelativeTime(item.completedAt)}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   );
 }
 
-function StatCard({ icon: Icon, label, value, color }: {
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  accent,
+  iconColor,
+}: {
   icon: React.ElementType;
   label: string;
   value: string;
-  color: string;
+  accent: string;
+  iconColor: string;
 }) {
   return (
-    <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-border dark:border-zinc-700/40">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground dark:text-muted-foreground mb-1">
-        <Icon className={`h-4 w-4 ${color}`} />
+    <div
+      className={`flex flex-col gap-1 rounded-[10px] border border-border/60 bg-card p-4 border-l-4 ${accent} min-h-[88px]`}
+    >
+      <div className="flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+        <Icon className={`h-4 w-4 ${iconColor}`} />
         {label}
       </div>
-      <div className="text-2xl font-bold text-foreground dark:text-zinc-100">{value}</div>
+      <div className="font-quicksand text-[28px] font-extrabold tabular-nums text-foreground leading-tight">
+        {value}
+      </div>
     </div>
   );
 }
 
 function JobStatusIcon({ status }: { status: string }) {
   if (status.toLowerCase() === 'completed') {
-    return <CheckCircleIcon className="h-4 w-4 text-green-500 flex-shrink-0" />;
+    return <CheckCircleIcon className="h-4 w-4 text-entity-toolkit flex-shrink-0" />;
   }
   if (status.toLowerCase() === 'failed') {
-    return <XCircleIcon className="h-4 w-4 text-red-500 flex-shrink-0" />;
+    return <XCircleIcon className="h-4 w-4 text-entity-event flex-shrink-0" />;
   }
   return <AlertCircleIcon className="h-4 w-4 text-amber-500 flex-shrink-0" />;
 }

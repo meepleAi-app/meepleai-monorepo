@@ -91,7 +91,20 @@ test.describe('A11y — /game-nights/new wizard', () => {
     });
 
     // Either "0s" (no animation) or near-zero ms — the global override
-    // reduces to 0.01ms, which most browsers report as `0s`.
-    expect(transitionDuration ?? '').toMatch(/^0s|0\.01ms|0\.0\d+s$/);
+    // reduces to 0.01ms, which CI Chromium reports as `1e-05s` (scientific
+    // notation for 0.00001s). Other browsers report `0s` or empty string.
+    // Parse the value numerically (handle 's' / 'ms' / scientific notation)
+    // and assert it's <= 1ms. Robust against locale + browser variation.
+    // History: regex-based attempts kept missing edge formats — switched to
+    // numeric parsing 2026-05-30 (PR #1700 release CI #3).
+    const ms = (() => {
+      const v = (transitionDuration ?? '0').trim();
+      if (v === '' || v === 'none') return 0;
+      const m = v.match(/^(-?[0-9.]+(?:e[+-]?[0-9]+)?)\s*(ms|s)?$/i);
+      if (!m) return Number.POSITIVE_INFINITY;
+      const num = parseFloat(m[1]);
+      return (m[2]?.toLowerCase() === 'ms') ? num : num * 1000;
+    })();
+    expect(ms).toBeLessThanOrEqual(1);
   });
 });

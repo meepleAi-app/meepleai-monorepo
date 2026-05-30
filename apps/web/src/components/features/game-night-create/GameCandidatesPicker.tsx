@@ -79,7 +79,12 @@ export function GameCandidatesPicker({
 
       <div
         data-slot="game-night-create-step4-library"
-        aria-hidden={decideAtGroup}
+        // `inert` removes the subtree from the accessibility tree AND from
+        // axe's color-contrast scan (#1700 release CI), unlike aria-hidden
+        // alone. Without this, the opacity-50 dimming on already-muted text
+        // dropped contrast below WCAG AA 4.5:1 even though the subtree is
+        // visually marked as inactive.
+        {...(decideAtGroup ? { inert: true } : {})}
         className={decideAtGroup ? 'opacity-50 pointer-events-none' : ''}
       >
         <p className="text-sm font-medium text-foreground">{labels.libraryHeader}</p>

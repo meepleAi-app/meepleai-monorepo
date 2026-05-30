@@ -72,4 +72,14 @@ public interface IAgentDefinitionRepository
     /// Issue #904: SG3 — agent slot quota.
     /// </summary>
     Task<int> CountActiveByGameIdsAsync(IReadOnlyList<Guid> gameIds, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the agent definitions whose KbCardIds explicitly contains the given document id.
+    /// Uses Postgres JSONB containment (kb_card_ids @>); soft-deleted agents are excluded.
+    /// Returns an empty list when documentId is Guid.Empty.
+    /// Issue #1651: F3-FU-2 — Used-by tab.
+    /// </summary>
+    Task<IReadOnlyList<AgentDefinition>> GetByConsumedDocumentAsync(
+        Guid documentId,
+        CancellationToken cancellationToken = default);
 }

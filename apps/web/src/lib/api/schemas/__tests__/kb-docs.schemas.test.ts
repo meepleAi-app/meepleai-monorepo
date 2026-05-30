@@ -16,6 +16,7 @@ describe('kb-docs schemas', () => {
     pageCount: 24,
     processedAt: '2026-05-28T11:00:00+00:00',
     uploadedAt: '2026-05-28T09:00:00+00:00',
+    updatedAt: '2026-05-28T11:00:00+00:00',
   };
 
   it('accepts a full Ready doc', () => {

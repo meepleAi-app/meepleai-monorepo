@@ -22,6 +22,10 @@
     "/chat/[threadId]": {
       "gzippedBytes": 659000,
       "note": "Baseline 2026-05-17 (was 631411 from 2026-04-29). +4.3% drift from #979 promotion."
+    },
+    "/knowledge-base/global": {
+      "gzippedBytes": 1024000,
+      "note": "Epic #1482 multi-Phase WIP: budget intenzionalmente generoso (1 MB) fino a Phase 4 completion per evitare per-Phase bump friction. Phase 1 measured ~632 KB (PR #1688); Phase 2 (PR #1701) adds viewer+drawer+citations. Cattura disasters (>1 MB = accidental large import), non early-warning su drift. Ridurre a `measured * 1.05` quando #1482 chiude (pattern altre Tier L route: /library 668KB, /chat 659KB)."
     }
   }
 }

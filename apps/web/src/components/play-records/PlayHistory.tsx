@@ -1,98 +1,32 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 /**
- * PlayHistory — Lista partite mobile-first con filter chips
+ * PlayHistory — Play Records Index (Task 1 Reskin)
  *
- * - Ricerca inline
- * - Filter chips orizzontali (stato, ordinamento)
- * - MeepleCard variant="list" con badge stato + vincitore
- * - Empty state e skeleton
- * - Paginazione "Carica altro"
+ * New architecture using sub-components:
+ * - RecordsHero: Hero with KPI stats (deferred load via usePlayerStatistics)
+ * - RecordFilters: Sticky filter bar with search, status chips, dropdowns, view toggle
+ * - RecordCardList / RecordCardGrid: List and grid view variants
+ * - Empty states, loading skeleton, error state
+ *
+ * Issue #1488: Play Records Index Reskin (Task 1)
  */
 
 import { useEffect, useState } from 'react';
 
-import { Search, X } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
-import { MeepleCard } from '@/components/ui/data-display/meeple-card';
-import { buildSessionConnections } from '@/components/ui/data-display/meeple-card/nav-items';
-import type { PlayRecordStatus } from '@/lib/api/schemas/play-records.schemas';
 import { usePlayHistory } from '@/lib/domain-hooks/usePlayRecords';
 import {
   usePlayRecordsStore,
   selectFilters,
   selectHasActiveFilters,
 } from '@/lib/stores/play-records-store';
-import { cn } from '@/lib/utils';
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
-
-function formatDuration(duration: string | null): string {
-  if (!duration) return '';
-  // .NET TimeSpan "HH:MM:SS" or "D.HH:MM:SS"
-  // eslint-disable-next-line security/detect-unsafe-regex
-  const dotNetMatch = duration.match(/^(?:(\d+)\.)?(\d+):(\d+):(\d+)$/);
-  if (dotNetMatch) {
-    const days = dotNetMatch[1] ? parseInt(dotNetMatch[1]) : 0;
-    const hours = parseInt(dotNetMatch[2]) + days * 24;
-    const minutes = parseInt(dotNetMatch[3]);
-    const h = hours > 0 ? `${hours}h` : '';
-    const m = minutes > 0 ? `${minutes}min` : '';
-    return [h, m].filter(Boolean).join(' ') || '';
-  }
-  // ISO 8601 "PT2H30M"
-  // eslint-disable-next-line security/detect-unsafe-regex
-  const isoMatch = duration.match(/^PT(?:(\d+)H)?(?:(\d+)M)?$/);
-  if (isoMatch) {
-    const h = isoMatch[1] ? `${isoMatch[1]}h` : '';
-    const m = isoMatch[2] ? `${isoMatch[2]}min` : '';
-    return [h, m].filter(Boolean).join(' ') || '';
-  }
-  return duration;
-}
-
-function statusLabel(status: PlayRecordStatus): string {
-  switch (status) {
-    case 'Completed':
-      return '✅ Completata';
-    case 'InProgress':
-      return '🔄 In corso';
-    case 'Planned':
-      return '📅 Pianificata';
-    case 'Archived':
-      return '🗄 Archiviata';
-  }
-}
-
-function statusBadgeColor(status: PlayRecordStatus): string {
-  switch (status) {
-    case 'Completed':
-      return 'text-emerald-400 bg-emerald-400/10';
-    case 'InProgress':
-      return 'text-blue-400 bg-blue-400/10';
-    case 'Planned':
-      return 'text-muted-foreground bg-card/5';
-    case 'Archived':
-      return 'text-muted-foreground bg-card/5';
-  }
-}
-
-// ── Filter chips config ──────────────────────────────────────────────────────
-
-const STATUS_CHIPS: { value: PlayRecordStatus | 'all'; label: string }[] = [
-  { value: 'all', label: 'Tutte' },
-  { value: 'Completed', label: 'Completate' },
-  { value: 'InProgress', label: 'In corso' },
-  { value: 'Planned', label: 'Pianificate' },
-];
-
-const SORT_CHIPS: { value: 'recent' | 'oldest' | 'game'; label: string }[] = [
-  { value: 'recent', label: 'Recenti' },
-  { value: 'oldest', label: 'Meno recenti' },
-  { value: 'game', label: 'Per gioco' },
-];
+import { RecordCardGrid } from './index/RecordCardGrid';
+import { RecordCardList } from './index/RecordCardList';
+import { RecordFilters } from './index/RecordFilters';
+import { RecordsHero } from './index/RecordsHero';
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -104,17 +38,15 @@ export interface PlayHistoryProps {
 }
 
 export function PlayHistory({ gameId: propGameId, limit }: PlayHistoryProps) {
-  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [view, setView] = useState<'list' | 'grid'>('list');
 
   const filters = usePlayRecordsStore(selectFilters);
-  const sortBy = usePlayRecordsStore(state => state.sortBy);
   const hasActiveFilters = usePlayRecordsStore(selectHasActiveFilters);
 
   const setFilter = usePlayRecordsStore(state => state.setFilter);
   const resetFilters = usePlayRecordsStore(state => state.resetFilters);
-  const setSortBy = usePlayRecordsStore(state => state.setSortBy);
 
   // Reset pagina quando cambiano i filtri
   useEffect(() => {
@@ -134,193 +66,167 @@ export function PlayHistory({ gameId: propGameId, limit }: PlayHistoryProps) {
     : allRecords;
   const hasMore = data ? currentPage < data.totalPages : false;
 
+  // AC-1.5: Empty state logic
+  const showFirstRunEmpty = !isLoading && !error && allRecords.length === 0 && !hasActiveFilters;
+  const showFilterEmpty =
+    !isLoading && !error && records.length === 0 && (hasActiveFilters || search);
+
   return (
-    <div className="flex flex-col gap-3" data-testid="play-history">
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--gaming-text-muted,#666677)]" />
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Cerca per gioco o giocatore…"
-          className="w-full rounded-xl bg-card/5 border border-border pl-9 pr-9 py-2.5 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
-          data-testid="play-history-search"
-        />
-        {search && (
-          <button
-            type="button"
-            onClick={() => setSearch('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground/80"
-            aria-label="Cancella ricerca"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
-      </div>
+    <div className="flex flex-col" data-testid="play-history">
+      {/* AC-1.1: RecordsHero with deferred KPI load */}
+      <RecordsHero isLoading={isLoading} />
 
-      {/* Filter chips — stato */}
-      <div className="flex gap-2 overflow-x-auto scrollbar-none pb-0.5">
-        {STATUS_CHIPS.map(chip => (
-          <button
-            key={chip.value}
-            type="button"
-            onClick={() => setFilter('status', chip.value as PlayRecordStatus | 'all')}
-            className={cn(
-              'flex-shrink-0 rounded-full border px-3 py-1 text-xs font-semibold transition-colors',
-              filters.status === chip.value
-                ? 'border-amber-500/40 bg-amber-500/15 text-amber-400'
-                : 'border-border bg-card/5 text-foreground/80 hover:border-border'
-            )}
-            data-testid={`filter-status-${chip.value}`}
-          >
-            {chip.label}
-          </button>
-        ))}
+      {/* AC-1.2: RecordFilters sticky top */}
+      <RecordFilters
+        statusFilter={filters.status}
+        view={view}
+        search={search}
+        onStatusChange={status => setFilter('status', status)}
+        onViewChange={setView}
+        onSearchChange={setSearch}
+      />
 
-        <div className="h-5 w-px bg-card/10 flex-shrink-0 self-center" />
-
-        {SORT_CHIPS.map(chip => (
-          <button
-            key={chip.value}
-            type="button"
-            onClick={() => setSortBy(chip.value)}
-            className={cn(
-              'flex-shrink-0 rounded-full border px-3 py-1 text-xs font-semibold transition-colors',
-              sortBy === chip.value
-                ? 'border-border bg-card/10 text-white'
-                : 'border-border bg-card/5 text-muted-foreground hover:border-border'
-            )}
-            data-testid={`sort-${chip.value}`}
-          >
-            {chip.label}
-          </button>
-        ))}
-
-        {hasActiveFilters && (
-          <button
-            type="button"
-            onClick={resetFilters}
-            className="flex-shrink-0 rounded-full border border-border bg-card/5 px-3 py-1 text-xs font-semibold text-red-400 hover:bg-red-400/10"
-            data-testid="reset-filters"
-          >
-            <X className="inline h-3 w-3 mr-1" />
-            Reset
-          </button>
-        )}
-      </div>
-
-      {/* Loading skeleton */}
-      {isLoading && (
-        <div className="flex flex-col gap-2" data-testid="play-history-loading">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-20 animate-pulse rounded-xl bg-card/5" />
-          ))}
-        </div>
-      )}
-
-      {/* Error */}
-      {!isLoading && error && (
-        <div
-          className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400"
-          data-testid="play-history-error"
-        >
-          {error instanceof Error ? error.message : 'Errore nel caricamento delle partite.'}
-        </div>
-      )}
-
-      {/* Empty */}
-      {!isLoading && !error && records.length === 0 && (
-        <div
-          className="flex flex-col items-center gap-4 py-16 text-center"
-          data-testid="play-history-empty"
-        >
-          <span className="text-5xl">🎲</span>
-          <div>
-            <p className="text-base font-bold text-white">Nessuna partita registrata</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {hasActiveFilters
-                ? 'Nessun risultato con i filtri attivi.'
-                : 'Inizia a registrare le tue partite!'}
-            </p>
+      {/* Main content area */}
+      <div className="flex-1 space-y-4 px-4 py-4 sm:px-8 sm:py-6 lg:px-12">
+        {/* AC-1.6: Loading skeleton */}
+        {isLoading && (
+          <div className="space-y-2">
+            {[...Array(5)].map((_, i) => (
+              <div
+                key={i}
+                className="h-24 animate-pulse rounded-lg bg-muted sm:h-28"
+                data-testid="skeleton-shimmer"
+              />
+            ))}
           </div>
-          {hasActiveFilters && (
+        )}
+
+        {/* AC-1.7: Error state */}
+        {!isLoading && error && (
+          <div
+            className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400"
+            data-testid="play-history-error"
+            role="alert"
+          >
+            {error instanceof Error ? error.message : 'Errore nel caricamento delle partite.'}
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="ml-2 inline-flex items-center gap-1 text-xs font-bold underline hover:no-underline"
+            >
+              ↻ Riprova
+            </button>
+          </div>
+        )}
+
+        {/* AC-1.5: First run empty state */}
+        {showFirstRunEmpty && (
+          <div
+            className="flex flex-col items-center rounded-lg border border-dashed border-border-strong bg-card px-4 py-12 text-center"
+            data-testid="play-history-empty-first-run"
+          >
+            <div
+              className="mb-3 flex h-20 w-20 items-center justify-center rounded-full sm:h-24 sm:w-24"
+              style={{
+                background: 'radial-gradient(circle, var(--c-session) 0%, transparent 70%)',
+                opacity: 0.15,
+              }}
+              aria-hidden="true"
+            >
+              <span className="text-4xl sm:text-5xl">🎯</span>
+            </div>
+            <h2 className="font-display text-lg font-extrabold text-foreground sm:text-xl">
+              Nessuna partita registrata
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground sm:text-base">
+              Registra la tua prima partita per tracciare punteggi, esiti e classifiche del gruppo.
+            </p>
+            <Link
+              href="/play-records/new"
+              className="mt-4 inline-flex items-center gap-2 rounded-md bg-entity-session px-4 py-2 font-display text-sm font-extrabold text-white shadow-lg shadow-entity-session/40 transition-all hover:bg-entity-session/90"
+            >
+              <span aria-hidden="true">+</span>
+              Registra prima partita
+            </Link>
+          </div>
+        )}
+
+        {/* AC-1.5: Filter no-results empty state */}
+        {showFilterEmpty && (
+          <div
+            className="flex flex-col items-center rounded-lg border border-dashed border-border-strong bg-card px-4 py-12 text-center"
+            data-testid="play-history-empty-filter"
+          >
+            <div
+              className="mb-3 flex h-14 w-14 items-center justify-center rounded-full sm:h-16 sm:w-16"
+              style={{ background: 'var(--bg-muted)' }}
+              aria-hidden="true"
+            >
+              <span className="text-xl sm:text-2xl">⌕</span>
+            </div>
+            <h3 className="font-display text-base font-extrabold text-foreground sm:text-lg">
+              Nessuna partita per questi filtri
+            </h3>
+            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
+              Prova a rimuovere alcuni vincoli o cambiare periodo.
+            </p>
             <button
               type="button"
               onClick={resetFilters}
-              className="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground/80 hover:bg-card/5"
+              className="mt-4 rounded-md border border-entity-session/40 px-3 py-1.5 font-display text-xs font-bold text-entity-session transition-colors hover:bg-entity-session/5 sm:px-4 sm:py-2 sm:text-sm"
             >
-              Rimuovi filtri
+              ↻ Reset filtri
             </button>
-          )}
-        </div>
-      )}
+          </div>
+        )}
 
-      {/* List */}
-      {!isLoading && !error && records.length > 0 && (
-        <div className="flex flex-col gap-2">
-          {records.map(record => {
-            const dateStr = new Date(record.sessionDate).toLocaleDateString('it-IT', {
-              day: 'numeric',
-              month: 'short',
-              year: 'numeric',
-            });
-            const dur = formatDuration(record.duration);
-
-            const metaParts = [
-              `${record.playerCount} ${record.playerCount === 1 ? 'giocatore' : 'giocatori'}`,
-              dateStr,
-              ...(dur ? [dur] : []),
-            ];
-
-            return (
-              <div key={record.id} className="relative">
-                <MeepleCard
-                  entity="session"
-                  variant="list"
-                  title={record.gameName}
-                  subtitle={dateStr}
-                  metadata={metaParts.map(label => ({ label }))}
-                  badge={record.status}
-                  connections={buildSessionConnections(
-                    {
-                      playerCount: record.playerCount,
-                      hasNotes: false,
-                      toolCount: 0,
-                      photoCount: 0,
-                    },
-                    { onPlayersClick: undefined }
-                  )}
-                  onClick={() => router.push(`/play-records/${record.id}`)}
-                  data-testid={`play-record-${record.id}`}
-                />
-                {/* Status + winner overlay */}
-                <div className="pointer-events-none absolute bottom-2.5 right-3 flex flex-col items-end gap-1">
-                  <span
-                    className={cn(
-                      'rounded-md px-2 py-0.5 text-[10px] font-semibold',
-                      statusBadgeColor(record.status)
-                    )}
-                  >
-                    {statusLabel(record.status)}
-                  </span>
-                </div>
+        {/* AC-1.3 + AC-1.4: Records list or grid */}
+        {!isLoading && !error && records.length > 0 && (
+          <>
+            {view === 'list' ? (
+              // AC-1.3: List view
+              <div
+                className="mx-auto flex max-w-5xl flex-col gap-2"
+                role="list"
+                aria-label="Play records"
+              >
+                {records.map(record => (
+                  <div key={record.id} role="listitem">
+                    <RecordCardList record={record} />
+                  </div>
+                ))}
               </div>
-            );
-          })}
-        </div>
-      )}
+            ) : (
+              // AC-1.4: Grid view (3-col desktop, 1-col mobile)
+              <div
+                className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                role="grid"
+                aria-label="Play records grid"
+              >
+                {records.map(record => (
+                  <div key={record.id} role="gridcell">
+                    <RecordCardGrid record={record} />
+                  </div>
+                ))}
+              </div>
+            )}
 
-      {/* Load more */}
-      {hasMore && (
-        <button
-          type="button"
-          onClick={() => setCurrentPage(p => p + 1)}
-          className="py-3 text-sm font-semibold text-muted-foreground hover:text-foreground/80"
-          data-testid="load-more-btn"
-        >
-          Carica altro…
-        </button>
-      )}
+            {/* Pagination: Load more button */}
+            {hasMore && (
+              <div className="flex justify-center py-4">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(p => p + 1)}
+                  className="text-sm font-bold text-muted-foreground transition-colors hover:text-foreground"
+                  data-testid="load-more-btn"
+                >
+                  Carica altro…
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

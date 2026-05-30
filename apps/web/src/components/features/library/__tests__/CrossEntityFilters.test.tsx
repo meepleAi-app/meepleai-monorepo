@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { IntlProvider } from 'react-intl';
 
@@ -11,6 +11,7 @@ const messages: Record<string, string> = {
   'pages.library.filters.stato.wishlist': 'Wishlist',
   'pages.library.filters.stato.loaned': 'In prestito',
   'pages.library.filters.stato.withKb': 'Con Knowledge Base',
+  'pages.library.filters.title': 'Più filtri',
 };
 function renderWithIntl(ui: React.ReactElement) {
   return render(
@@ -95,5 +96,71 @@ describe('CrossEntityFilters', () => {
     );
     await user.click(screen.getByRole('button', { name: /con knowledge base/i }));
     expect(onChange).toHaveBeenCalledWith({ states: [], withKb: true });
+  });
+
+  // Phase 3b (#1593) — "Più filtri" chip tests
+
+  it('renders Più filtri chip on games + agents tabs, hidden on all (R4)', () => {
+    const onMoreFilters = vi.fn();
+    const { rerender } = renderWithIntl(
+      <CrossEntityFilters
+        tab="games"
+        gameStateFilter={emptyFilter}
+        onGameStateFilterChange={noop}
+        onMoreFilters={onMoreFilters}
+      />
+    );
+    expect(screen.getByTestId('cross-entity-filters-more')).toBeInTheDocument();
+
+    rerender(
+      <IntlProvider locale="it" messages={messages}>
+        <CrossEntityFilters
+          tab="agents"
+          gameStateFilter={emptyFilter}
+          onGameStateFilterChange={noop}
+          onMoreFilters={onMoreFilters}
+        />
+      </IntlProvider>
+    );
+    expect(screen.getByTestId('cross-entity-filters-more')).toBeInTheDocument();
+
+    rerender(
+      <IntlProvider locale="it" messages={messages}>
+        <CrossEntityFilters
+          tab="all"
+          gameStateFilter={emptyFilter}
+          onGameStateFilterChange={noop}
+          onMoreFilters={onMoreFilters}
+        />
+      </IntlProvider>
+    );
+    expect(screen.queryByTestId('cross-entity-filters-more')).toBeNull();
+  });
+
+  it('invokes onMoreFilters on chip click', () => {
+    const onMoreFilters = vi.fn();
+    renderWithIntl(
+      <CrossEntityFilters
+        tab="games"
+        gameStateFilter={emptyFilter}
+        onGameStateFilterChange={noop}
+        onMoreFilters={onMoreFilters}
+      />
+    );
+    fireEvent.click(screen.getByTestId('cross-entity-filters-more'));
+    expect(onMoreFilters).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows activeFiltersCount badge when > 0', () => {
+    renderWithIntl(
+      <CrossEntityFilters
+        tab="games"
+        gameStateFilter={emptyFilter}
+        onGameStateFilterChange={noop}
+        onMoreFilters={vi.fn()}
+        activeFiltersCount={3}
+      />
+    );
+    expect(screen.getByTestId('cross-entity-filters-more')).toHaveTextContent(/\(3\)/);
   });
 });

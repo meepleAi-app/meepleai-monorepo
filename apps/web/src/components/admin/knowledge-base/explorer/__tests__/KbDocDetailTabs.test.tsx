@@ -12,11 +12,12 @@ vi.mock('next/navigation', async () => {
 });
 
 describe('KbDocDetailTabs', () => {
-  it('renders three tabs: Overview, Ingestion log, Used by', () => {
+  it('renders four tabs: Overview, Ingestion log, Used by, Preview', () => {
     render(<KbDocDetailTabs docId="abc" activeTab="overview" />);
     expect(screen.getByRole('link', { name: /overview/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /ingestion log/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /used by/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /preview/i })).toBeInTheDocument();
   });
 
   it('Used by link sets ?tab=used-by and preserves doc param', () => {
@@ -46,5 +47,18 @@ describe('KbDocDetailTabs', () => {
       'page'
     );
     expect(screen.getByRole('link', { name: /overview/i }).getAttribute('aria-current')).toBeNull();
+  });
+
+  it('renders Preview tab and marks aria-current when active', () => {
+    render(<KbDocDetailTabs docId="doc-1" activeTab="preview" />);
+    const previewLink = screen.getByRole('link', { name: /preview/i });
+    expect(previewLink).toHaveAttribute('aria-current', 'page');
+    expect(previewLink).toHaveAttribute('href', '/admin/knowledge-base?doc=doc-1&tab=preview');
+  });
+
+  it('Overview link does NOT have tab param when activeTab=preview', () => {
+    render(<KbDocDetailTabs docId="doc-1" activeTab="preview" />);
+    const overviewLink = screen.getByRole('link', { name: /overview/i });
+    expect(overviewLink).toHaveAttribute('href', '/admin/knowledge-base?doc=doc-1');
   });
 });

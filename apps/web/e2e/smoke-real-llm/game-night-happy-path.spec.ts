@@ -66,7 +66,7 @@ test.describe('SMOKE-REAL-LLM — game-night happy path (free tier)', () => {
     await expect(pdfTab).toHaveAttribute('aria-selected', 'true');
 
     const pdfBody = modal
-      .locator('[data-slot="citation-pdf-renderer"], [data-slot="citation-ownership-upsell"]')
+      .locator('[data-slot="pdf-inline-viewer"], [data-slot="citation-ownership-upsell"]')
       .first();
     await expect(pdfBody).toBeVisible({ timeout: 15_000 });
 

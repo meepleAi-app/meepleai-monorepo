@@ -9,6 +9,7 @@ import { useKbDocDetail } from '@/hooks/queries/useKbDocDetail';
 import { KbDocActions } from './actions/KbDocActions';
 import { IngestionPanel } from './ingestion/IngestionPanel';
 import { KbDocDetailTabs, type KbDocTabKey } from './KbDocDetailTabs';
+import { KbDocPreviewPanel } from './preview/KbDocPreviewPanel';
 import { KbChunkSearch } from './search/KbChunkSearch';
 import { UsedByPanel } from './used-by/UsedByPanel';
 
@@ -59,6 +60,7 @@ export function KbDocDetailPanel({ docId, selectedDocMeta }: KbDocDetailPanelPro
     const tab = searchParams?.get('tab');
     if (tab === 'ingestion') return 'ingestion';
     if (tab === 'used-by') return 'used-by';
+    if (tab === 'preview') return 'preview';
     return 'overview';
   })();
 
@@ -112,6 +114,18 @@ export function KbDocDetailPanel({ docId, selectedDocMeta }: KbDocDetailPanelPro
         <div className="border border-border/60 dark:border-zinc-700/60 rounded-lg bg-card/80 dark:bg-zinc-900/80 overflow-hidden">
           <KbDocDetailTabs docId={docId} activeTab={activeTab} />
           <UsedByPanel docId={docId} />
+        </div>
+      );
+    }
+
+    // The Preview tab is also independent of doc readiness — the download
+    // endpoint `/api/v1/pdfs/{id}/download` does NOT gate on processingStatus
+    // (T0 spike confirmed). Render the viewer for queued/processing/failed too.
+    if (activeTab === 'preview') {
+      return (
+        <div className="border border-border/60 dark:border-zinc-700/60 rounded-lg bg-card/80 dark:bg-zinc-900/80 overflow-hidden">
+          <KbDocDetailTabs docId={docId} activeTab={activeTab} />
+          <KbDocPreviewPanel docId={docId} />
         </div>
       );
     }
@@ -185,6 +199,8 @@ export function KbDocDetailPanel({ docId, selectedDocMeta }: KbDocDetailPanelPro
       )}
 
       {activeTab === 'used-by' && <UsedByPanel docId={doc.id} />}
+
+      {activeTab === 'preview' && <KbDocPreviewPanel docId={doc.id} />}
 
       {activeTab === 'overview' && (
         <>

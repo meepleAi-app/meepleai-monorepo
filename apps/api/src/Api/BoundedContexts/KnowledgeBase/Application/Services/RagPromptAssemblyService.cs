@@ -855,11 +855,17 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         return sb.ToString();
     }
 
-    /// <summary>Formats a chunk with copyright annotation for the LLM system prompt.</summary>
-    public static string FormatChunkForPrompt(ChunkCitation citation, string chunkText)
+    /// <summary>
+    /// Formats a chunk with copyright annotation for the LLM system prompt.
+    /// When <paramref name="index"/> is non-null, prepends "[N] " to the header
+    /// (Issue #1703 D-1703-A — inline citation markers). Existing callers passing
+    /// no index get the legacy header shape, byte-identical to pre-#1703.
+    /// </summary>
+    public static string FormatChunkForPrompt(ChunkCitation citation, string chunkText, int? index = null)
     {
         var tierLabel = citation.CopyrightTier == CopyrightTier.Full ? "FULL" : "PROTECTED";
-        return $"[Source: Document {citation.DocumentId}, Page {citation.PageNumber}, Relevance: {citation.RelevanceScore:F2}, Copyright: {tierLabel}]\n{chunkText}\n---";
+        var prefix = index.HasValue ? $"[{index.Value}] " : string.Empty;
+        return $"{prefix}[Source: Document {citation.DocumentId}, Page {citation.PageNumber}, Relevance: {citation.RelevanceScore:F2}, Copyright: {tierLabel}]\n{chunkText}\n---";
     }
 
     /// <summary>Returns the copyright paraphrase instruction localized to agent language.</summary>

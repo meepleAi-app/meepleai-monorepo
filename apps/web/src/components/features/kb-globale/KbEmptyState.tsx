@@ -137,9 +137,8 @@ export function KbEmptyState({
             'px-6 py-2.5',
             // Typography
             'font-semibold text-sm',
-            // Styling: KB entity color
-            'bg-entity-kb hover:bg-entity-kb/90',
-            'text-white',
+            // Styling: KB entity color (text-white allowed: same string as bg-entity-kb per DS-15)
+            'bg-entity-kb text-white hover:bg-entity-kb/90',
             // Border + Transitions
             'border border-entity-kb',
             'rounded-md',

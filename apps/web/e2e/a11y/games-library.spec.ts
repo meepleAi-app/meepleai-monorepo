@@ -2,8 +2,10 @@
  * Accessibility tests — games tab of /library (Wave B.1, Issue #633, updated #1566).
  *
  * The games surface was previously at /games?tab=library and is now reached by
- * navigating to /library and clicking the "Giochi" tab (LibraryHub initializes
- * to the 'all' tab via useState and does NOT read ?tab= from the URL).
+ * navigating to /library and clicking the games tab (LibraryHub initializes
+ * to the 'all' tab via useState and does NOT read ?tab= from the URL). The tab
+ * is selected via `data-tab-key="games"` to remain locale-agnostic — the label
+ * is "Giochi" in IT and "Games" in EN; Playwright CI runs default to en-US.
  *
  * Combines:
  *   - axe-core WCAG 2.1 AA scan su default state (results grid populato)
@@ -47,7 +49,8 @@ async function gotoLibraryReady(page: Page, search = '', waitForGrid = true): Pr
   const url = search ? `/library?${search.replace(/^\?/, '')}` : '/library';
   await page.goto(url, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('[data-slot="library-hub-v2"]', { timeout: 30_000 });
-  await page.getByRole('tab', { name: /giochi/i }).click();
+  // Locale-agnostic selector — see games.smoke.spec.ts (#1640) for rationale.
+  await page.locator('[role="tab"][data-tab-key="games"]').click();
   if (waitForGrid) {
     await page.waitForSelector('[data-slot="games-results-grid"]', { timeout: 30_000 });
   } else {

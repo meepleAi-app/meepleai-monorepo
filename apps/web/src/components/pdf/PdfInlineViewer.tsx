@@ -135,6 +135,9 @@ export function PdfInlineViewer({
   const scale =
     zoom === 'fit-width' ? Math.max(MIN_FIT_WIDTH_SCALE, containerWidth / A4_WIDTH_PT) : zoom / 100;
 
+  // Spec FR-9: fetch failure → toolbar disabled (matches loading-state gating)
+  const controlsDisabled = loading || Boolean(loadError);
+
   const goPrev = () => setCurrentPage(p => Math.max(1, p - 1));
   const goNext = () => setCurrentPage(p => Math.min(numPages, p + 1));
 
@@ -163,7 +166,7 @@ export function PdfInlineViewer({
         <button
           type="button"
           onClick={goPrev}
-          disabled={currentPage <= 1 || loading}
+          disabled={currentPage <= 1 || controlsDisabled}
           className="rounded-sm border border-border bg-card px-2 py-1 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           ← Prev
@@ -174,7 +177,7 @@ export function PdfInlineViewer({
         <button
           type="button"
           onClick={goNext}
-          disabled={currentPage >= numPages || loading}
+          disabled={currentPage >= numPages || controlsDisabled}
           className="rounded-sm border border-border bg-card px-2 py-1 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           Next →
@@ -193,8 +196,9 @@ export function PdfInlineViewer({
               min={1}
               max={numPages || undefined}
               value={jumpInput}
+              disabled={controlsDisabled}
               onChange={e => setJumpInput(e.target.value)}
-              className="w-14 rounded-sm border border-border bg-card px-1 py-0.5 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="w-14 rounded-sm border border-border bg-card px-1 py-0.5 text-center disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             />
           </form>
         )}
@@ -205,8 +209,9 @@ export function PdfInlineViewer({
             <select
               aria-label="Zoom"
               value={zoom === 'fit-width' ? 'fit-width' : String(zoom)}
+              disabled={controlsDisabled}
               onChange={handleZoomChange}
-              className="rounded-sm border border-border bg-card px-1 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="rounded-sm border border-border bg-card px-1 py-0.5 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <option value="50">50%</option>
               <option value="100">100%</option>
@@ -217,7 +222,7 @@ export function PdfInlineViewer({
         )}
 
         <div className="ml-auto flex items-center gap-2">
-          {features.openInTab && (
+          {features.openInTab && !loadError && (
             <a
               href={downloadUrl}
               target="_blank"
@@ -228,7 +233,7 @@ export function PdfInlineViewer({
               ↗ Apri in tab
             </a>
           )}
-          {features.download && (
+          {features.download && !loadError && (
             <a
               href={downloadUrl}
               download

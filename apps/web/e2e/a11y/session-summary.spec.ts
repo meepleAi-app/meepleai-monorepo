@@ -40,8 +40,36 @@ import { test, expect, type Page } from '@playwright/test';
 import { mockAuthEndpoints, seedAuthSession } from '../_helpers/seedAuthSession';
 import { seedCookieConsent } from '../_helpers/seedCookieConsent';
 
-// See sessions-index.spec.ts for rationale.
-test.use({ colorScheme: 'dark' });
+// Issue #1716 (PR #1700 follow-up): the file-level `test.use({ colorScheme:
+// 'dark' })` directive (previously copied from sessions-index.spec.ts per a
+// stale rationale tied to the pre-DS-1 dark-first palette) was removed.
+//
+// Post-DS-1 (2026-05-12 token canonicalization, see CLAUDE.md § Active
+// Freezes) the canonical default theme is light (`<html data-theme="light">`,
+// mockup cream `#f7f3ee`). next-themes (defaultTheme="light", enableSystem)
+// only swaps to `data-theme="dark"` *after* hydration; the initial SSR paint
+// keeps the light hint. Combined with `colorScheme: 'dark'`, axe scanned a
+// transient mixed-theme cross-section: light page (`min-h-dvh bg-[var(--bg)]`
+// = #f7f3ee) plus dark `--foreground` (#ece6df ≈ shadcn dark theme
+// foreground) from late-hydrating subtrees → 1.05:1 contrast violation +
+// dark-theme indigo `--c-session` (#7d86e8) on the dark `--card` background
+// inside the ShareCard toggle — 3.85:1.
+//
+// Production users only ever see one theme at a time (R-2.2 in the issue):
+// either all-light (default, no system preference) or all-dark (after
+// explicit toggle that completes a full re-render). The cross-section
+// observed in CI was a test-only artifact.
+//
+// Removing the directive aligns the test scope with the contract in
+// SessionShareCard.tsx (Theme isolation, lines 19-23 / 199): `?theme=dark`
+// only swaps the inner preview surface (hardcoded `#0f0c1e` bg, fully
+// isolated). The toggle radio group + the page shell stay in light theme.
+//
+// Other tests in this file (default / tied / empty-photos / empty-achievements
+// / diary-filter / reduced-motion / tied-aria / diary-keyboard) do not depend
+// on `colorScheme: 'dark'`; they were already verified AA-clean on light
+// theme by the DS-15/DS-16 token sweep (CLAUDE.md § A11y CI restore COMPLETE
+// 2026-05-18 — 0 color-contrast violations across 96 a11y tests).
 
 const FIXTURE_SESSION_ID = '00000000-0000-4000-8000-000000000756';
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] as const;
@@ -174,19 +202,12 @@ test.describe('Session summary — accessibility @a11y', () => {
     expect(results.violations).toEqual([]);
   });
 
-  // Skipped 2026-05-30 (PR #1700 release CI #3): the test file applies
-  // `test.use({ colorScheme: 'dark' })` to all tests but the app default
-  // theme is light (data-theme="light" on <html>). When `?theme=dark` is
-  // applied, the ShareCard preview swaps to dark tokens (#393a48 bg) while
-  // the rest of the page still uses light tokens (#f7f3ee bg). Axe reports
-  // 3 contrast violations on the mixed cross-section: cream text on cream
-  // root bg (1.05:1) + indigo accent on dark slate (3.85:1). Both are
-  // pre-existing — surfaced only now that #1700 cluster-1 fix
-  // (`fixture=default` auto-append) made this test reach the axe scan.
-  // Follow-up: align color-scheme contract — either drop the file-level
-  // `colorScheme: 'dark'` from this spec or force `data-theme="dark"` on
-  // <html> for the duration of this test.
-  test.fixme('axe-core: no WCAG 2.1 AA violations with ShareCard dark preview ?theme=dark', async ({
+  // Re-activated 2026-05-31 (Issue #1716, PR #1716): file-level
+  // `colorScheme: 'dark'` directive removed → page now renders in canonical
+  // light theme (matches the SessionShareCard contract: `?theme=dark` toggles
+  // ONLY the inner preview surface, see SessionShareCard.tsx lines 19-23).
+  // No more mixed-theme cross-section; axe scan stays AA-clean.
+  test('axe-core: no WCAG 2.1 AA violations with ShareCard dark preview ?theme=dark', async ({
     page,
   }) => {
     await gotoSummary(page, '?theme=dark');

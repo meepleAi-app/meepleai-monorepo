@@ -1,4 +1,5 @@
 using System.Reflection;
+using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.Infrastructure.DomainEventLog;
 using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
@@ -93,5 +94,24 @@ public sealed class EventTypeRegistryTests
     {
         public Guid EventId { get; } = Guid.NewGuid();
         public DateTime OccurredAt { get; } = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Issue #1687 Task 4 — the metadata-change event must be registered for
+    /// durable persistence. Without this entry the audit-log handler (D-11)
+    /// never sees the event because the mapper returns null.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "1687")]
+    public void Registry_resolves_pdf_metadata_changed_alias()
+    {
+        var ev = new PdfMetadataChangedEvent(
+            AggregateId: Guid.NewGuid(),
+            UserId: Guid.NewGuid(),
+            EditorRole: "Owner",
+            Changes: Array.Empty<MetadataChange>(),
+            GameId: null);
+
+        EventTypeRegistry.TryResolve(ev).Should().Be("pdf.metadata.changed");
     }
 }

@@ -30,8 +30,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 SECRET_FILE = REPO_ROOT / "infra" / "secrets" / "openrouter.secret"
 OUTPUT_DIR = REPO_ROOT / "claudedocs"
 
-# Fedele a apps/api/src/Api/BoundedContexts/GameToolkit/Application/Commands/ToolkitExtractionPrompts.cs
-SYSTEM_PROMPT = """You are an expert board game rules analyst. Analyze the provided rulebook excerpts
+# v1 — Fedele al ToolkitExtractionPrompts.cs PRE-spike (pre-2026-05-31)
+SYSTEM_PROMPT_V1 = """You are an expert board game rules analyst. Analyze the provided rulebook excerpts
 and extract mechanical components needed to configure a digital game toolkit.
 
 For each component type, output structured JSON. Include ONLY components explicitly
@@ -53,6 +53,112 @@ Rules:
 
 JSON schema: AiToolkitSuggestionDto with fields: ToolkitName, DiceTools, CounterTools,
 TimerTools, ScoringTemplate, TurnTemplate, Overrides, Reasoning, ExcludedTools."""
+
+# v2 — Fedele al ToolkitExtractionPrompts.cs POST-spike (2026-05-31)
+# Aggiunti: strict JSON schema (DTO field names esatti), anti-patterns section, enum value listings.
+SYSTEM_PROMPT_V2 = """You are an expert board game rules analyst. Analyze the provided rulebook excerpts
+and extract mechanical components needed to configure a digital game toolkit.
+
+For each component type, output structured JSON. Include ONLY components explicitly
+mentioned or strongly implied by the rules provided. Do not invent components.
+
+DICE: Extract dice types (D4/D6/D8/D10/D12/D20/D100/Custom), quantities, custom faces.
+COUNTERS: Extract resources, tokens, points (min/max values, IsPerPlayer=true if tracked per player).
+TIMERS: Extract time limits, turn timers (DurationSeconds, AutoStart, IsPerPlayer).
+SCORING: Extract victory conditions, points dimensions, ranking vs points system.
+TURN ORDER: Extract round structure (RoundRobin/Sequential) and phase names if present.
+EXCLUDED: List tool types NOT needed with a brief rule-based justification.
+
+Rules:
+- Set IsPerPlayer=true for anything tracked individually (e.g., player resources, player timers)
+- Use min=0 for counters unless rules specify negative values
+- DurationSeconds=0 if no explicit time limit is mentioned
+- Reasoning must cite the rule text that led to each decision
+- Return ONLY valid JSON — no markdown fences, no extra text
+
+=== EXACT JSON SCHEMA (DTO field names — DO NOT renamE) ===
+
+Root: AiToolkitSuggestionDto = {
+  "ToolkitName": string,
+  "DiceTools": [AiDiceToolSuggestion],
+  "CounterTools": [AiCounterToolSuggestion],
+  "TimerTools": [AiTimerToolSuggestion],
+  "ScoringTemplate": AiScoringTemplateSuggestion | null,
+  "TurnTemplate": AiTurnTemplateSuggestion | null,
+  "Overrides": AiOverrideSuggestion | null,
+  "Reasoning": string,        // single concatenated paragraph, NOT array NOT dict
+  "ExcludedTools": [AiExcludedToolSuggestion]
+}
+
+AiDiceToolSuggestion = {
+  "Name": string,             // e.g., "Birdfeeder Food Dice" — NOT "Type"
+  "DiceType": "D4"|"D6"|"D8"|"D10"|"D12"|"D20"|"D100"|"Custom",  // enum, NOT "Type"
+  "Quantity": int,
+  "CustomFaces": [string] | null,  // NOT "Faces"
+  "IsInteractive": bool,
+  "Color": string | null
+}
+
+AiCounterToolSuggestion = {
+  "Name": string,
+  "MinValue": int,            // NOT "Min"
+  "MaxValue": int,            // NOT "Max" (use a large int like 99 if no upper bound)
+  "DefaultValue": int,
+  "IsPerPlayer": bool,
+  "Icon": string | null,
+  "Color": string | null
+}
+
+AiTimerToolSuggestion = {
+  "Name": string,
+  "DurationSeconds": int,
+  "TimerType": "CountDown"|"CountUp"|"Chess",
+  "AutoStart": bool,
+  "Color": string | null,
+  "IsPerPlayer": bool,
+  "WarningThresholdSeconds": int | null
+}
+
+AiScoringTemplateSuggestion = {
+  "Dimensions": [string],     // e.g., ["Birds", "Bonus cards", "Eggs"] — simple flat array
+  "DefaultUnit": string,      // e.g., "points"
+  "ScoreType": "Points"|"Ranking"|"BinaryWin"|"Objectives"
+}
+
+AiTurnTemplateSuggestion = {
+  "TurnOrderType": "RoundRobin"|"Sequential"|"Simultaneous"|"Realtime"|"None",
+  "Phases": [string]          // e.g., ["Round 1", "Round 2"] or ["Action", "Draw", "Infect"]
+}
+
+AiOverrideSuggestion = {
+  "OverridesTurnOrder": bool,     // ALWAYS provide all 3 booleans
+  "OverridesScoreboard": bool,
+  "OverridesDiceSet": bool
+}
+
+AiExcludedToolSuggestion = {
+  "ToolType": string,         // NOT "Type" — e.g., "Timer", "CardDeck", "Counter"
+  "Reason": string            // NOT "Justification"
+}
+
+=== ANTI-PATTERNS — STRICTLY FORBIDDEN ===
+
+- DO NOT add a counter for game-end Points/Score/VP. Points are DERIVED at end-of-game
+  from scoring categories, NEVER tracked as a running counter during the session.
+- DO NOT add a dummy TimerTools entry with DurationSeconds=0 when no timer exists.
+  If the rules state no time limit, output "TimerTools": [] (empty array).
+- DO NOT omit the Overrides object. If the game has no custom rules requiring overrides,
+  output {"OverridesTurnOrder": false, "OverridesScoreboard": false, "OverridesDiceSet": false}.
+  When the game has custom dice/scoring/turn (e.g., Wingspan), set the relevant flag to true.
+- DO NOT structure Reasoning as an array or dict. It MUST be a single string paragraph
+  with inline citations like "[excerpt 1]", "[excerpt 4]".
+- DO NOT rename DTO fields (e.g., "Type" instead of "DiceType", "Min" instead of "MinValue",
+  "Faces" instead of "CustomFaces"). Use the exact names listed in the schema above.
+
+Return ONLY valid JSON — no markdown fences, no extra text."""
+
+# Default to v2 (post-spike)
+SYSTEM_PROMPT = SYSTEM_PROMPT_V2
 
 # Identico ai 5 excerpt del spike teorico (fedeli al rulebook Wingspan)
 WINGSPAN_EXCERPTS = [
@@ -173,7 +279,14 @@ def call_openrouter(api_key: str, model: str, system: str, user: str, timeout: i
 def main() -> int:
     parser = argparse.ArgumentParser(description="Spike LLM toolkit gen")
     parser.add_argument("--model", default=None, help="Override model (default: from secret)")
+    parser.add_argument(
+        "--prompt-version", default="v2", choices=["v1", "v2"],
+        help="System prompt version (v1=pre-spike, v2=post-spike with schema strict)"
+    )
     args = parser.parse_args()
+
+    system_prompt = SYSTEM_PROMPT_V2 if args.prompt_version == "v2" else SYSTEM_PROMPT_V1
+    print(f"Prompt version: {args.prompt_version}")
 
     print("=" * 70)
     print("Spike LLM Production - Toolkit AI Generation (Wingspan)")
@@ -186,13 +299,13 @@ def main() -> int:
 
     user_prompt = build_user_prompt("Wingspan", WINGSPAN_EXCERPTS)
     print(f"User prompt:   {len(user_prompt)} chars")
-    print(f"System prompt: {len(SYSTEM_PROMPT)} chars")
+    print(f"System prompt: {len(system_prompt)} chars")
     print()
 
     t0 = time.time()
     print("Calling OpenRouter...")
     try:
-        resp = call_openrouter(api_key, model, SYSTEM_PROMPT, user_prompt)
+        resp = call_openrouter(api_key, model, system_prompt, user_prompt)
     except requests.HTTPError as e:
         print(f"FATAL HTTP: {e.response.status_code} {e.response.text[:500]}")
         return 1
@@ -268,7 +381,8 @@ def main() -> int:
                     "parse_error": parse_err,
                 },
                 "input": {
-                    "system_prompt_chars": len(SYSTEM_PROMPT),
+                    "system_prompt_chars": len(system_prompt),
+                "prompt_version": args.prompt_version,
                     "user_prompt_chars": len(user_prompt),
                     "excerpts_count": len(WINGSPAN_EXCERPTS),
                 },

@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 /**
  * Admin AI Hub
  * Issue #5040 — Consolidate Admin Routes
@@ -61,10 +60,10 @@ type TabId = (typeof TABS)[number]['id'];
 function TabSkeleton() {
   return (
     <div className="space-y-3 pt-2">
-      <div className="h-10 w-48 rounded-lg bg-card/40 dark:bg-zinc-800/40 animate-pulse" />
+      <div className="h-10 w-48 rounded-lg bg-card/40 animate-pulse" />
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {[1, 2, 3].map(i => (
-          <div key={i} className="h-24 rounded-xl bg-card/40 dark:bg-zinc-800/40 animate-pulse" />
+          <div key={i} className="h-24 rounded-xl bg-card/40 animate-pulse" />
         ))}
       </div>
     </div>
@@ -138,17 +137,8 @@ export default async function AdminAiPage({ searchParams }: AdminAiPageProps) {
 
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div>
-        <h1 className="font-quicksand text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-          AI & Agents
-        </h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Manage AI agents, definitions, models, prompts, and RAG pipeline.
-        </p>
-      </div>
-
-      {/* Tab bar — scrollable on mobile, wraps on desktop */}
+      {/* Tab bar — scrollable on mobile, wraps on desktop. The page <h1> + crumbs
+          live in the (dashboard)/ai/layout.tsx AiTopBand (#1722 PR 1/4). */}
       <AdminHubTabBar tabs={TABS} activeTab={tab} />
       <AdminTabPersistence hubName="ai" defaultTab="agents" />
 

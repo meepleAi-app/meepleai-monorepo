@@ -37,14 +37,14 @@ export function DefinitionsTab() {
           icon={<PlusCircle />}
           label="Create New"
           description="Create a new agent definition from scratch"
-          accent="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+          accent="bg-entity-toolkit/12 text-entity-toolkit"
         />
         <AdminHubQuickLink
           href="/admin/agents/builder"
           icon={<Hammer />}
           label="Agent Builder"
           description="Visual step-by-step agent creation wizard"
-          accent="bg-amber-500/10 text-amber-600 dark:text-amber-400"
+          accent="bg-entity-agent/12 text-entity-agent"
         />
       </div>
     </div>

@@ -109,12 +109,14 @@ export function TranslateViewer({ campaignId, gameRef }: TranslateViewerProps): 
   useEffect(() => {
     if (phase !== 'uploading' && phase !== 'segmenting' && phase !== 'translating') return;
     const timerId = window.setTimeout(() => {
+      // M2 review fix: skip rollback if SSE already completed in the same tick (race guard)
+      if (sse.isComplete) return;
       sse.stop();
       setTimeoutError(LABELS.timeoutError);
       setPhase(prev => (prev === 'translating' ? 'segments_ready' : 'idle'));
     }, HARD_TIMEOUT_MS);
     return () => window.clearTimeout(timerId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only re-arm on phase change
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sse.stop is stable (useCallback); deliberate phase-only arm
   }, [phase]);
 
   const handlePickSegment = (paragraphNumber: number) => {

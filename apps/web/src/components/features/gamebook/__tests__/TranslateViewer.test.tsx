@@ -730,4 +730,49 @@ describe('TranslateViewer', () => {
       resolveUpload({ id: PHOTO_ID, segments: [] });
     });
   });
+
+  it('S9c: ocr skeleton + AbortButton state has no axe accessibility violations', async () => {
+    // Review fix M1: cover ocr state where AbortButton becomes visible (fixed-position element)
+    makeOneBookMock();
+
+    vi.mocked(uploadHook.usePhotoUpload).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn().mockResolvedValue({ id: PHOTO_ID }),
+      isPending: false,
+      isSuccess: false,
+      isError: false,
+      error: null,
+    } as never);
+
+    let resolveSegment!: (v: unknown) => void;
+    const segmentPromise = new Promise(r => {
+      resolveSegment = r;
+    });
+    vi.mocked(segmentHook.useSegmentPhoto).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn().mockReturnValue(segmentPromise),
+      isPending: false,
+      isSuccess: false,
+      isError: false,
+      error: null,
+    } as never);
+
+    const { container } = wrap(<TranslateViewer campaignId={CAMPAIGN_ID} gameRef={GAME_REF} />);
+
+    await act(async () => {
+      firePhotoInput();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('translate-skeleton-ocr')).toBeInTheDocument();
+      expect(screen.getByTestId('translate-abort-button')).toBeInTheDocument();
+    });
+
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+
+    await act(async () => {
+      resolveSegment({ id: PHOTO_ID, segments: [] });
+    });
+  });
 });

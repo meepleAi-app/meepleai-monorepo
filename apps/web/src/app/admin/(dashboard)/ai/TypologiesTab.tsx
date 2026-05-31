@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -72,10 +71,7 @@ export function TypologiesTab() {
       {loading ? (
         <div className="grid gap-2">
           {[1, 2, 3].map(i => (
-            <div
-              key={i}
-              className="h-20 rounded-xl bg-card/40 dark:bg-zinc-800/40 animate-pulse"
-            />
+            <div key={i} className="h-20 rounded-xl bg-card/40 animate-pulse" />
           ))}
         </div>
       ) : typologies.length > 0 ? (
@@ -83,7 +79,7 @@ export function TypologiesTab() {
           {typologies.map(t => (
             <div
               key={t.id}
-              className="flex flex-col gap-3 sm:flex-row sm:items-start rounded-xl border border-border/60 dark:border-zinc-700/40 bg-card/70 dark:bg-zinc-800/50 backdrop-blur-md p-3 sm:p-4"
+              className="flex flex-col gap-3 sm:flex-row sm:items-start rounded-xl border border-border/60 bg-card/70 backdrop-blur-md p-3 sm:p-4"
             >
               <div className="flex items-start gap-3 flex-1 min-w-0">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -93,11 +89,11 @@ export function TypologiesTab() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm font-medium text-foreground">{t.name}</p>
                     {t.isApproved ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-medium text-success">
                         <Check className="h-3 w-3" /> Approved
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-medium text-warning">
                         Pending
                       </span>
                     )}
@@ -113,7 +109,7 @@ export function TypologiesTab() {
                     onClick={() => handleApprove(t.id)}
                     aria-label="Approve"
                   >
-                    <Check className="h-4 w-4 text-emerald-600" />
+                    <Check className="h-4 w-4 text-success" />
                   </Button>
                 )}
                 <Button

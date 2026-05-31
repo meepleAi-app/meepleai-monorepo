@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Date** | 2026-05-30 |
+| **Date** | 2026-05-31 |
 | **Generator** | `pnpm lint:tokens` (DS-2) |
 | **Spec** | [`2026-05-12-token-canonicalization.md`](../docs/for-developers/specs/2026-05-12-token-canonicalization.md) |
 | **Rule** | `local/no-hardcoded-color-utility` |

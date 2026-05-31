@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -54,10 +53,7 @@ export function AgentsTab() {
       {loading ? (
         <div className="grid gap-2 sm:grid-cols-2">
           {[1, 2, 3, 4].map(i => (
-            <div
-              key={i}
-              className="h-16 rounded-xl bg-card/40 dark:bg-zinc-800/40 animate-pulse"
-            />
+            <div key={i} className="h-16 rounded-xl bg-card/40 animate-pulse" />
           ))}
         </div>
       ) : agents.length > 0 ? (
@@ -66,7 +62,7 @@ export function AgentsTab() {
             <Link
               key={agent.id}
               href={`/admin/agents/definitions/${agent.id}`}
-              className="flex items-center gap-3 rounded-xl border border-border/60 dark:border-zinc-700/40 bg-card/70 dark:bg-zinc-800/50 backdrop-blur-md p-3 sm:p-4 hover:border-primary/30 hover:shadow-sm transition-all duration-200"
+              className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/70 backdrop-blur-md p-3 sm:p-4 hover:border-primary/30 hover:shadow-sm transition-all duration-200"
             >
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                 <Bot className="h-4 w-4 text-primary" />

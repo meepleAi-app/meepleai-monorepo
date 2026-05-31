@@ -22,21 +22,21 @@ export function RagTab() {
           icon={<Workflow />}
           label="Pipeline Explorer"
           description="Visual pipeline diagram with step-by-step execution trace"
-          accent="bg-amber-500/10 text-amber-600 dark:text-amber-400"
+          accent="bg-entity-agent/12 text-entity-agent"
         />
         <AdminHubQuickLink
           href="/admin/agents/debug"
           icon={<Bug />}
           label="Debug Console"
           description="Waterfall chart, confidence scoring, and retrieval analysis"
-          accent="bg-rose-500/10 text-rose-600 dark:text-rose-400"
+          accent="bg-entity-event/12 text-entity-event"
         />
         <AdminHubQuickLink
           href="/admin/agents/strategy"
           icon={<BrainCircuit />}
           label="Strategy Config"
           description="Configure tier-based strategy mapping and model routing"
-          accent="bg-violet-500/10 text-violet-600 dark:text-violet-400"
+          accent="bg-entity-player/12 text-entity-player"
         />
         <AdminHubQuickLink
           href="/admin/knowledge-base"
@@ -49,14 +49,14 @@ export function RagTab() {
           icon={<Layers />}
           label="Vector Collections"
           description="pgvector embeddings, vector counts, and collection health"
-          accent="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+          accent="bg-entity-toolkit/12 text-entity-toolkit"
         />
         <AdminHubQuickLink
           href="/admin/agents/debug-chat"
           icon={<MessageSquare />}
           label="Debug Chat"
           description="Interactive RAG-instrumented chat with full pipeline trace"
-          accent="bg-blue-500/10 text-blue-600 dark:text-blue-400"
+          accent="bg-entity-session/12 text-entity-session"
         />
       </div>
     </div>

@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -137,10 +136,7 @@ export function LlmConfigTab() {
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           {[1, 2, 3, 4].map(i => (
-            <div
-              key={i}
-              className="h-40 rounded-xl bg-card/40 dark:bg-zinc-800/40 animate-pulse"
-            />
+            <div key={i} className="h-40 rounded-xl bg-card/40 animate-pulse" />
           ))}
         </div>
       </div>
@@ -187,13 +183,13 @@ export function LlmConfigTab() {
 
       {/* Status messages */}
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-200 dark:border-red-800/40 bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-700 dark:text-red-400">
+        <div className="flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
           <AlertCircle className="h-4 w-4 shrink-0" />
           {error}
         </div>
       )}
       {success && (
-        <div className="flex items-center gap-2 rounded-lg border border-emerald-200 dark:border-emerald-800/40 bg-emerald-50 dark:bg-emerald-900/20 p-3 text-sm text-emerald-700 dark:text-emerald-400">
+        <div className="flex items-center gap-2 rounded-lg border border-success/40 bg-success/10 p-3 text-sm text-success">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
           {success}
         </div>
@@ -203,7 +199,7 @@ export function LlmConfigTab() {
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <span
           className={`inline-block h-2 w-2 rounded-full ${
-            config.source === 'database' ? 'bg-emerald-500' : 'bg-amber-500'
+            config.source === 'database' ? 'bg-success' : 'bg-warning'
           }`}
         />
         Source: <span className="font-medium">{config.source}</span>
@@ -219,7 +215,7 @@ export function LlmConfigTab() {
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Layer 1: Database Config (editable) */}
         <ConfigSection
-          icon={<Database className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />}
+          icon={<Database className="h-4 w-4 text-success" />}
           title="Database Configuration"
           badge="Editable"
           badgeColor="emerald"
@@ -284,7 +280,7 @@ export function LlmConfigTab() {
               value={form.fallbackChainJson}
               onChange={e => updateField('fallbackChainJson', e.target.value)}
               rows={2}
-              className="w-full rounded-md border border-border dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-xs font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               placeholder='["OpenRouter", "Ollama"]'
             />
           </div>
@@ -292,7 +288,7 @@ export function LlmConfigTab() {
 
         {/* Layer 2: appsettings (read-only) */}
         <ConfigSection
-          icon={<FileText className="h-4 w-4 text-amber-600 dark:text-amber-400" />}
+          icon={<FileText className="h-4 w-4 text-warning" />}
           title="appsettings.json"
           badge="Requires redeploy"
           badgeColor="amber"
@@ -344,7 +340,7 @@ export function LlmConfigTab() {
 
         {/* Layer 3: Redis (operational state) */}
         <ConfigSection
-          icon={<RotateCcw className="h-4 w-4 text-blue-600 dark:text-blue-400" />}
+          icon={<RotateCcw className="h-4 w-4 text-entity-session" />}
           title="Redis Cache"
           badge="Runtime state"
           badgeColor="blue"
@@ -364,7 +360,7 @@ export function LlmConfigTab() {
 
         {/* Layer 4: Secrets (read-only) */}
         <ConfigSection
-          icon={<Shield className="h-4 w-4 text-rose-600 dark:text-rose-400" />}
+          icon={<Shield className="h-4 w-4 text-entity-event" />}
           title="Secrets"
           badge="Read-only"
           badgeColor="rose"
@@ -397,14 +393,14 @@ function ConfigSection({
   children: React.ReactNode;
 }) {
   const badgeClasses: Record<string, string> = {
-    emerald: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400',
-    amber: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
-    blue: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
-    rose: 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400',
+    emerald: 'bg-success/15 text-success',
+    amber: 'bg-warning/15 text-warning',
+    blue: 'bg-entity-session/15 text-entity-session',
+    rose: 'bg-entity-event/15 text-entity-event',
   };
 
   return (
-    <div className="rounded-xl border border-border/60 dark:border-zinc-700/40 bg-card/70 dark:bg-zinc-800/50 backdrop-blur-md p-4">
+    <div className="rounded-xl border border-border/60 bg-card/70 backdrop-blur-md p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           {icon}
@@ -451,7 +447,7 @@ function NumberField({
         min={min}
         max={max}
         step={step}
-        className="w-full rounded-md border border-border dark:border-zinc-700 bg-white dark:bg-zinc-800 px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+        className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
       />
     </div>
   );

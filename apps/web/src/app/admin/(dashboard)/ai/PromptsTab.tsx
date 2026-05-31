@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -47,10 +46,7 @@ export function PromptsTab() {
       {loading ? (
         <div className="grid gap-2">
           {[1, 2, 3].map(i => (
-            <div
-              key={i}
-              className="h-20 rounded-xl bg-card/40 dark:bg-zinc-800/40 animate-pulse"
-            />
+            <div key={i} className="h-20 rounded-xl bg-card/40 animate-pulse" />
           ))}
         </div>
       ) : prompts.length > 0 ? (
@@ -58,7 +54,7 @@ export function PromptsTab() {
           {prompts.map(p => (
             <div
               key={p.id}
-              className="flex flex-col gap-3 sm:flex-row sm:items-start rounded-xl border border-border/60 dark:border-zinc-700/40 bg-card/70 dark:bg-zinc-800/50 backdrop-blur-md p-3 sm:p-4"
+              className="flex flex-col gap-3 sm:flex-row sm:items-start rounded-xl border border-border/60 bg-card/70 backdrop-blur-md p-3 sm:p-4"
             >
               <div className="flex items-start gap-3 flex-1 min-w-0">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -72,7 +68,7 @@ export function PromptsTab() {
                   <div className="mt-1.5 flex items-center gap-2">
                     <span
                       className={`inline-block h-1.5 w-1.5 rounded-full ${
-                        p.isActive ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'
+                        p.isActive ? 'bg-success' : 'bg-muted-foreground/40'
                       }`}
                     />
                     <span className="text-[10px] text-muted-foreground">

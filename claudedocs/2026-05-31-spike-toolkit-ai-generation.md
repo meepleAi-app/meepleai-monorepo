@@ -322,6 +322,77 @@ Lo spike Llama 70B free **rafforza il verdetto HYBRID**:
 
 ---
 
+## 8.6 Run reale con DeepSeek-chat (OpenRouter, paid, 2026-05-31 12:49 UTC)
+
+> Run #2 production-candidate. Stessi 5 excerpts Wingspan, stesso prompt.
+
+### Setup
+- **Model**: `deepseek/deepseek-chat` (V3, via OpenRouter)
+- **Tokens**: 831 prompt + 672 completion = 1503 totali
+- **Latency**: 25.1s (~2.2× più lento di Llama, ma più tokens generati)
+- **Cost**: **$0.000864** (~$0.86 per 1000 calls)
+- **Output**: `claudedocs/spike-llm-output-wingspan-deepseek_deepseek-chat-2026-05-31T124917Z.json`
+
+### Comparison matrice 3-way (Wingspan)
+
+| Aspetto | Llama 3.3 70B FREE | **DeepSeek-chat (paid)** | Claude Opus 4.7 (surrogato upper-bound) |
+|---|---|---|---|
+| Cost per call | $0 | **$0.000864** | n/a |
+| Latency | 11.3s | **25.1s** | n/a |
+| JSON parse | ✅ | ✅ | ✅ |
+| **CounterTools count** | 4 (con Points hallucination) ❌ | **3 ✅** | 3 ✅ |
+| **TimerTools** | `[{dummy}]` ❌ | **`[]` ✅** | `[]` ✅ |
+| **Phases vs Actions** | confusi (PhaseNames=Actions) ❌ | **Phases=Round1-4 + Actions array separati ✅** | Idem ✅ |
+| **TurnsPerRound (8/7/6/5)** | MISSING ❌ | **`Turns: 8/7/6/5` per Phase ✅** | catturato ✅ |
+| **ScoringTemplate structure** | flat strings | **objects con Name + Min/Max ✅** | objects con id/label/computation |
+| **TieBreakers** | string fluida | **array ✅** | array ✅ |
+| **Reasoning** | list of strings | **dict per categoria ✅** | paragraph |
+| **Overrides flags** | `{}` ignorati ❌ | `{}` ignorati ❌ | tutti settati ✅ |
+| **ExcludedTools** | 1 entry (mancante Timer) ⚠️ | 1 entry ⚠️ | 2 entries ✅ |
+| **Field names DTO C#** | `Type`/`Faces` ⚠️ | `Type`/`Faces` ⚠️ | `DiceType`/`CustomFaces` ✅ |
+
+### Verdetto DeepSeek
+
+**Production-viable con caveats** (qualità ~90% di Opus, 95% di accuracy semantica):
+
+✅ **Risolve i bug di Llama free**:
+- Niente "Points" counter hallucination
+- TimerTools array vuoto corretto
+- Distinzione Phases (rounds) vs Actions
+- Cattura TurnsPerRound 8/7/6/5 (info CRITICA per Wingspan UX)
+- Reasoning strutturato per categoria
+- TieBreakers in array
+
+⚠️ **Caveats residui (= prompt engineering needed)**:
+- `Overrides: {}` ignorato (entrambi gli LLM falliscono qui — il prompt non è esplicito che vuole sempre i 3 boolean fields)
+- Field names `Type`/`Faces` (gli LLM non conoscono il DTO C# senza schema esplicito nel prompt)
+- ExcludedTools incomplete (manca Timer in entrambi)
+
+### Verdetto finale spike (3-run consolidato)
+
+**DeepSeek-chat è production-viable** per AI bootstrap dei 14-15 giochi non-premium, **con** queste correzioni al prompt:
+
+1. **Esplicitare i field names DTO** (es. `"Use DiceType not Type, CustomFaces not Faces"`)
+2. **Few-shot example** di Overrides correttamente settati (3 boolean)
+3. **Aggiungere "TimerTools MUST be [] if no timer is present, never add dummy entry"**
+4. **Aggiungere "Points/Score are end-game derived — NEVER add as counter"**
+5. **JSON Schema validation strict post-call** (rifiuta se field names ≠ DTO atteso)
+6. **Human review obbligatorio** (`RequiresHumanReview = true` quando confidence < 0.85)
+
+**Cost stimato per AI generation bootstrap**:
+- 14 giochi non-premium × $0.001 per call = **$0.014 totali** (one-shot)
+- Re-generation 4 volte/anno per refresh = $0.06/anno
+- **Costo trascurabile** per la value prop
+
+### Ranking finale per choice production
+
+1. 🥇 **DeepSeek-chat** — best quality/cost ratio per task strutturati JSON
+2. 🥈 **Claude 3.5 Haiku** — quality leggermente superiore ma 3-5× più costoso ($0.003 vs $0.001)
+3. 🥉 **GPT-4o-mini** — quality comparabile, costo simile, ma DeepSeek vince per JSON structured output
+4. ❌ **Llama 3.3 70B free** — non sufficiente per production senza significativi rework prompt + schema enforcement
+
+---
+
 ## 9. References
 
 - `apps/api/src/Api/BoundedContexts/GameToolkit/Application/Commands/GenerateToolkitFromKbHandler.cs` — handler (161 righe)

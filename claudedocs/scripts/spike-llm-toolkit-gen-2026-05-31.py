@@ -13,8 +13,10 @@ Setup:
 
 Uso:
     python claudedocs/scripts/spike-llm-toolkit-gen-2026-05-31.py
+    python claudedocs/scripts/spike-llm-toolkit-gen-2026-05-31.py --model deepseek/deepseek-chat
 """
 
+import argparse
 import json
 import os
 import sys
@@ -169,11 +171,16 @@ def call_openrouter(api_key: str, model: str, system: str, user: str, timeout: i
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description="Spike LLM toolkit gen")
+    parser.add_argument("--model", default=None, help="Override model (default: from secret)")
+    args = parser.parse_args()
+
     print("=" * 70)
-    print("Spike LLM Production — Toolkit AI Generation (Wingspan)")
+    print("Spike LLM Production - Toolkit AI Generation (Wingspan)")
     print("=" * 70)
 
-    api_key, model = load_secret()
+    api_key, default_model = load_secret()
+    model = args.model or default_model
     print(f"Model:         {model}")
     print(f"Excerpts:      {len(WINGSPAN_EXCERPTS)} (5 categorie hybrid search simulate)")
 

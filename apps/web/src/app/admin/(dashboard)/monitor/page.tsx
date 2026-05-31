@@ -15,6 +15,7 @@ import {
   Database,
   HardDrive,
   History,
+  Radio,
   Terminal,
   TestTube,
   Download,
@@ -27,6 +28,7 @@ import {
 
 import { AdminHubTabBar, type HubTab } from '@/components/admin/layout/AdminHubTabBar';
 import { AdminTabPersistence } from '@/components/admin/layout/AdminTabPersistence';
+import { LiveEventLog } from '@/components/admin/monitor';
 
 import { AlertHistoryTab } from './AlertHistoryTab';
 import { AlertsTab } from './AlertsTab';
@@ -63,6 +65,7 @@ const TABS: readonly HubTab[] = [
   { id: 'export', label: 'Bulk Export', href: '/admin/monitor?tab=export', icon: <Download /> },
   { id: 'email', label: 'Email', href: '/admin/monitor?tab=email', icon: <Mail /> },
   { id: 'history', label: 'History', href: '/admin/monitor?tab=history', icon: <History /> },
+  { id: 'events', label: 'Events', href: '/admin/monitor?tab=events', icon: <Radio /> },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -152,6 +155,12 @@ function renderTabContent(tab: TabId) {
       return (
         <Suspense fallback={<TabSkeleton />}>
           <GrafanaTab />
+        </Suspense>
+      );
+    case 'events':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <LiveEventLog height="70vh" />
         </Suspense>
       );
     default:

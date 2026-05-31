@@ -43,7 +43,7 @@ export function CircuitBreakerPanel() {
           >
             <div className="flex items-center justify-between mb-2">
               <span className="font-medium text-sm">{cb.serviceName}</span>
-              <Badge className={STATE_COLORS[cb.state] ?? 'bg-gray-100 text-gray-700'}>
+              <Badge className={STATE_COLORS[cb.state] ?? 'bg-muted text-muted-foreground'}>
                 {cb.state}
               </Badge>
             </div>

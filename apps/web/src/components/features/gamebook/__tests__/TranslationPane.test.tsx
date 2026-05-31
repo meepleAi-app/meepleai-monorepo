@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { axe, toHaveNoViolations } from 'jest-axe';
 
 import { TranslationPane } from '../TranslationPane';
+
+expect.extend(toHaveNoViolations);
 
 describe('TranslationPane', () => {
   it('renders error alert when error prop is provided', () => {
@@ -84,5 +87,63 @@ describe('TranslationPane', () => {
       />
     );
     expect(screen.getByText('You stand at the crossroads.')).toBeInTheDocument();
+  });
+
+  describe('AAA contrast + reader-mode (#1561 J + #1558 H)', () => {
+    it('body <p> uses var(--c-text-high-contrast) via inline style or class (S9)', () => {
+      render(
+        <TranslationPane
+          partialText="Test paragraph"
+          isComplete={true}
+          appliedTerms={[]}
+          sourceTextEn=""
+        />
+      );
+      const para = screen.getByText('Test paragraph');
+      // Either inline style OR via class with custom property
+      const computed = window.getComputedStyle(para);
+      // jsdom returns the literal style value; the cascade resolves at runtime in browser
+      expect(para.getAttribute('style')).toContain('var(--c-text-high-contrast)');
+    });
+
+    it('body <p> has .reader-mode-content class for parent data-attr cascading', () => {
+      render(
+        <TranslationPane partialText="Test" isComplete={true} appliedTerms={[]} sourceTextEn="" />
+      );
+      const para = screen.getByText('Test');
+      expect(para).toHaveClass('reader-mode-content');
+    });
+
+    it('has zero AAA color-contrast violations on :root (light theme) (S7)', async () => {
+      const { container } = render(
+        <TranslationPane
+          partialText="Lorem ipsum dolor sit amet"
+          isComplete={true}
+          appliedTerms={[]}
+          sourceTextEn=""
+        />
+      );
+      const results = await axe(container, {
+        rules: { 'color-contrast-enhanced': { enabled: true } },
+      });
+      expect(results).toHaveNoViolations();
+    });
+
+    it('has zero AAA color-contrast violations on [data-theme="dark"] (S8)', async () => {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      const { container } = render(
+        <TranslationPane
+          partialText="Lorem ipsum dolor sit amet"
+          isComplete={true}
+          appliedTerms={[]}
+          sourceTextEn=""
+        />
+      );
+      const results = await axe(container, {
+        rules: { 'color-contrast-enhanced': { enabled: true } },
+      });
+      expect(results).toHaveNoViolations();
+      document.documentElement.removeAttribute('data-theme');
+    });
   });
 });

@@ -61,17 +61,23 @@ ambiguity. Each route is also classified by **Tier** (S/M/L) to gate dispatch st
 > photo-upload +manual-mode entry). Spec:
 > `docs/superpowers/specs/2026-05-23-mockup-refinement-aaron-core-design.md`.
 
-> **Updated 2026-05-31** (Documentation reconciliation post-audit drift): the
-> Route → Mockup index now reflects 3 mockup cluster già canonical in
-> `admin-mockups/design_files/` ma precedentemente non mappati — `sp4-dashboard.html`
-> (closes #491, copre `/dashboard` gap critico), `sp4-play-records-{index,new,detail,edit,stats}.html`
-> + `sp4-play-records-data.js` (copre 5 routes `/play-records/*` gap critico) e
-> `sp5-profile-settings.html` (già mappato a `/profile?tab=settings`, esteso reuse
-> nota a `/profile` root + `/profile/achievements`). Le entry rimangono `pending` per
-> l'implementazione FE (stub di componenti da estrarre — TBD). Critical gaps
-> summary aggiornato: ridotti da 5 a 2 cluster (playlists + pricing) senza
-> mockup canonical. Sync companion: `admin-mockups/MOCKUPS_INDEX.md` + audit
-> `docs/for-developers/audits/2026-05-12-mockup-gaps.md` (status update inline).
+> **Updated 2026-05-31** (Documentation reconciliation cross-audit
+> 2026-05-12 + 2026-05-22): the Route → Mockup index now reflects 3 mockup
+> cluster già canonical in `admin-mockups/design_files/` ma precedentemente
+> non mappati — `sp4-dashboard.html` (closes #491 dashboard part, chat-fullscreen
+> consegnato a parte via `chat-fullscreen.html` 2026-05-23),
+> `sp4-play-records-{index,new,detail,edit,stats}.html` + `sp4-play-records-data.js`
+> (copre 5 routes `/play-records/*` gap critico) e `sp5-profile-settings.html`
+> (già mappato a `/profile?tab=settings`, esteso reuse nota a `/profile` root +
+> `/profile/achievements`). Le entry rimangono `pending` per l'implementazione
+> FE (stub di componenti da estrarre — TBD). Critical gaps summary aggiornato:
+> ridotti da 5 a **1 cluster** — `/pricing` resta l'unico gap reale.
+> `/library/playlists/*` rimosso (route inesistenti nel codebase, false-positive
+> confermato da audit 2026-05-22). `#492 community` ha avuto closure
+> false-positive — vedi audit 2026-05-22 per riapertura raccomandata.
+> Sync companion: `admin-mockups/MOCKUPS_INDEX.md` + audit
+> `docs/for-developers/audits/2026-05-12-mockup-gaps.md` (status update inline,
+> con riferimento all'audit più recente 2026-05-22).
 
 ## Scope and ground rules
 
@@ -677,8 +683,8 @@ instead.
 | Route | Mockup | Note |
 |-------|--------|------|
 | `/library` | `sp4-library-desktop.html` + `sp4-library-mobile.html` | Tier S done (PR #574/635/638); mobile variant SP8 brief 2026-05-30 (IA semplificata 3 tab + overflow Più=Agents/KB) |
-| `/library/wishlist` | — | gap |
-| `/library/playlists` · `/[id]` · `/shared/[token]` | — | **gap critico** (US-attiva) |
+| `/library/wishlist` | — | gap — issue B16 #1491 aperta (audit 2026-05-22 gap N5) |
+| `/library/playlists` · `/[id]` · `/shared/[token]` | n/a | route INESISTENTI nel codebase (false-positive audit 2026-05-12, confermato 2026-05-22) — rimosso dal scope |
 | `/library/private` · `/add` · `/[id]` | `sp4-add-game-pdf-dedup.html` + `sp4-upload-wizard-extended.html` [partial] | — |
 | `/library/private/[id]/toolkit/configure` | `sp4-toolkit-detail.html` ↻ | — |
 | `/library/proposals` · `/propose` | `sp4-add-game-bgg-step.html` | Ingestion proposta |
@@ -749,20 +755,28 @@ instead.
 
 ### Critical gaps summary
 
-> **Updated 2026-05-31**: 3 dei 5 gap critici originali (audit 2026-05-12) sono
-> stati riconciliati — `sp4-dashboard.html` (closes #491), `sp4-play-records-*`
-> (5 file canonical) e `sp5-profile-settings.html` (settings tab; `/profile` root
-> + `/profile/achievements` via `sp4-player-detail.html` reuse) sono ora mappati.
-> Restano 2 cluster senza mockup canonical né issue B-series dedicata:
+> **Updated 2026-05-31** (cross-audit 2026-05-12 + 2026-05-22): 3 dei 5 gap
+> critici originali (audit 2026-05-12) sono riconciliati — `sp4-dashboard.html`
+> (closes #491 dashboard part), `sp4-play-records-*` (5 file canonical) e
+> `sp5-profile-settings.html` (settings tab; `/profile` root +
+> `/profile/achievements` via `sp4-player-detail.html` reuse) sono ora mappati.
+> `/library/playlists/*` (originale gap #4) è **rimosso** — le route non
+> esistono nel codebase (false-positive confermato dall'audit 2026-05-22).
+> Resta **1 cluster** senza mockup canonical né issue B-series dedicata:
 
-Routes senza mockup con **alta priorità user-journey**:
+1. **`/pricing`** — landing commerciale assente (tier-upgrade funnel). Proposta `[Design v1 · B12]`.
 
-1. **`/library/playlists/*`** — 3 route feature US-attiva (Curation/Sharing). Proposta `[Design v1 · B12]`.
-2. **`/pricing`** — landing commerciale assente (tier-upgrade funnel). Proposta `[Design v1 · B13]`.
+> **Nota**: l'audit più recente `2026-05-22-mockup-gaps.md` identifica
+> ulteriori gap (P1 editor agent-proposals, toolkit sub-pages, wishlist,
+> sessions sub-pages, community follow-up) per cui sono già state aperte
+> issue B11 / B14 / B15 / B16 / B17. La riapertura di #492 (community
+> follow-up false-positive) e #491 chat full-screen (parziale, consegnato
+> via `chat-fullscreen.html`) sono follow-up del maintainer.
 
 Status delle lacune originali è tracciato in
 `docs/for-developers/audits/2026-05-12-mockup-gaps.md` (con status update
-inline 2026-05-31).
+inline 2026-05-31) — vedi anche `2026-05-22-mockup-gaps.md` per la review
+successiva.
 
 ### Cross-route state coverage (dev-fixture)
 

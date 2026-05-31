@@ -864,6 +864,84 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
         capturedDocIds.Should().BeNull();
     }
 
+    // ─── Issue #1686 Task 7: empty documentIds short-circuit (D-11) ────────────
+
+    [Fact]
+    public async Task DocTypeFacet_MatchesZeroDocs_ShortCircuitsToEmpty_NoCallToSearch()
+    {
+        // Arrange — game has only "base" PDFs; request DocType=["errata"] → no matches
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+
+        var sharedGame = new SharedGameEntity
+        {
+            Id = gameId, Title = "Empty Facet Game",
+            IsDeleted = false, IsRagPublic = true,
+            CreatedAt = DateTime.UtcNow, CreatedBy = Guid.NewGuid()
+        };
+        _db.SharedGames.Add(sharedGame);
+        _db.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = pdfId, FileName = "b.pdf", FilePath = "/f/b",
+            UploadedByUserId = userId, DocumentType = "base", SharedGameId = gameId, Language = "en"
+        });
+        await _db.SaveChangesAsync();
+
+        _ragAccessMock
+            .Setup(s => s.GetAccessibleGameIdsAsync(userId, UserRole.User, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { gameId });
+
+        var query = BuildQuery(userId, "test", limit: 10, docType: new[] { "errata" });
+        var sut = CreateSut();
+
+        // Act
+        var response = await sut.Handle(query, CancellationToken.None);
+
+        // Assert — empty response, search NEVER called (D-11 short-circuit)
+        response.Results.Should().BeEmpty();
+        response.HasMore.Should().BeFalse();
+        response.NextCursor.Should().BeNull();
+        _searchMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task LanguageFacet_MatchesZeroDocs_ShortCircuitsToEmpty()
+    {
+        // Arrange — game has only "en" PDFs; request Language="de" → no matches
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+
+        var sharedGame = new SharedGameEntity
+        {
+            Id = gameId, Title = "Lang Empty Game",
+            IsDeleted = false, IsRagPublic = true,
+            CreatedAt = DateTime.UtcNow, CreatedBy = Guid.NewGuid()
+        };
+        _db.SharedGames.Add(sharedGame);
+        _db.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = pdfId, FileName = "e.pdf", FilePath = "/f/e",
+            UploadedByUserId = userId, DocumentType = "base", SharedGameId = gameId, Language = "en"
+        });
+        await _db.SaveChangesAsync();
+
+        _ragAccessMock
+            .Setup(s => s.GetAccessibleGameIdsAsync(userId, UserRole.User, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { gameId });
+
+        var query = BuildQuery(userId, "test", limit: 10, language: "de");
+        var sut = CreateSut();
+
+        // Act
+        var response = await sut.Handle(query, CancellationToken.None);
+
+        // Assert — D-11 short-circuit
+        response.Results.Should().BeEmpty();
+        _searchMock.VerifyNoOtherCalls();
+    }
+
     // ─── Helpers ─────────────────────────────────────────────────────────────────
 
     private static GlobalKbSearchQuery BuildQuery(

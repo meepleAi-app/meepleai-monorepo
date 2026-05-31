@@ -73,7 +73,14 @@ internal sealed class GlobalKbSearchQueryHandler
         // 3. Search: probe with Limit+1 to detect hasMore (EC-4)
         var probeLimit = query.Limit + 1;
         var rawResults = await _multiGameSearch
-            .SearchAsync(query.Query, accessibleGameIds, probeLimit, query.Mode, query.MinScore, cancellationToken)
+            .SearchAsync(
+                query: query.Query,
+                gameIds: accessibleGameIds,
+                limit: probeLimit,
+                mode: query.Mode,
+                minScore: query.MinScore,
+                documentIds: null, // Issue #1686 Task 4: facets push-down lands in Task 6
+                cancellationToken: cancellationToken)
             .ConfigureAwait(false);
 
         // 4. Apply cursor filter (keyset pagination: skip items before the cursor position)

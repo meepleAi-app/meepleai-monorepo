@@ -152,12 +152,10 @@ internal static class AdminEventsEndpoints
         var (authorized, _, error) = context.RequireAdminSession();
         if (!authorized)
         {
-            var statusCode = error switch
-            {
-                _ when context.Response.StatusCode != 200 => context.Response.StatusCode,
-                _ => ExtractStatusCode(error)
-            };
-            context.Response.StatusCode = statusCode;
+            // SSE handlers cannot return IResult once the body has started, so we set the
+            // status code directly. ExtractStatusCode inspects the IResult type name to derive
+            // 401 vs 403 — safe because the response body has not started yet at this point.
+            context.Response.StatusCode = ExtractStatusCode(error);
             return;
         }
 

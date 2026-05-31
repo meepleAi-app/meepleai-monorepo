@@ -672,6 +672,198 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
             Times.Once);
     }
 
+    // ─── Issue #1686 Task 6: DocType + Language push-down via EF pre-filter ────
+
+    [Fact]
+    public async Task DocType_FacetFiltersPdfDocsBeforeSearch()
+    {
+        // Arrange — 3 PDFs in one game: 2 "base", 1 "expansion"; request DocType=["base"]
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var baseDoc1 = Guid.NewGuid();
+        var baseDoc2 = Guid.NewGuid();
+        var expansionDoc = Guid.NewGuid();
+
+        var sharedGame = new SharedGameEntity
+        {
+            Id = gameId, Title = "DocType Facet Game",
+            IsDeleted = false, IsRagPublic = true,
+            CreatedAt = DateTime.UtcNow, CreatedBy = Guid.NewGuid()
+        };
+        _db.SharedGames.Add(sharedGame);
+        _db.PdfDocuments.AddRange(
+            new PdfDocumentEntity { Id = baseDoc1, FileName = "b1.pdf", FilePath = "/f/b1", UploadedByUserId = userId, DocumentType = "base", SharedGameId = gameId, Language = "en" },
+            new PdfDocumentEntity { Id = baseDoc2, FileName = "b2.pdf", FilePath = "/f/b2", UploadedByUserId = userId, DocumentType = "base", SharedGameId = gameId, Language = "en" },
+            new PdfDocumentEntity { Id = expansionDoc, FileName = "e.pdf", FilePath = "/f/e", UploadedByUserId = userId, DocumentType = "expansion", SharedGameId = gameId, Language = "en" }
+        );
+        await _db.SaveChangesAsync();
+
+        _ragAccessMock
+            .Setup(s => s.GetAccessibleGameIdsAsync(userId, UserRole.User, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { gameId });
+
+        IReadOnlyList<Guid>? capturedDocIds = null;
+        _searchMock
+            .Setup(s => s.SearchAsync(
+                It.IsAny<string>(), It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<int>(),
+                It.IsAny<SearchMode>(), It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<string, IReadOnlyList<Guid>, int, SearchMode, double, IReadOnlyList<Guid>?, CancellationToken>(
+                (_, _, _, _, _, docIds, _) => capturedDocIds = docIds)
+            .ReturnsAsync(new List<MultiGameSearchResultItem>());
+
+        var query = BuildQuery(userId, "test", limit: 10, docType: new[] { "base" });
+        var sut = CreateSut();
+
+        // Act
+        await sut.Handle(query, CancellationToken.None);
+
+        // Assert — only the 2 "base" PDF IDs reached the search (NOT the expansion)
+        capturedDocIds.Should().NotBeNull();
+        capturedDocIds!.Should().HaveCount(2);
+        capturedDocIds.Should().Contain(baseDoc1).And.Contain(baseDoc2);
+        capturedDocIds.Should().NotContain(expansionDoc);
+    }
+
+    [Fact]
+    public async Task Language_FacetFiltersPdfDocsBeforeSearch()
+    {
+        // Arrange — 3 PDFs: 2 "en", 1 "it"; request Language="en"
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var enDoc1 = Guid.NewGuid();
+        var enDoc2 = Guid.NewGuid();
+        var itDoc = Guid.NewGuid();
+
+        var sharedGame = new SharedGameEntity
+        {
+            Id = gameId, Title = "Lang Facet Game",
+            IsDeleted = false, IsRagPublic = true,
+            CreatedAt = DateTime.UtcNow, CreatedBy = Guid.NewGuid()
+        };
+        _db.SharedGames.Add(sharedGame);
+        _db.PdfDocuments.AddRange(
+            new PdfDocumentEntity { Id = enDoc1, FileName = "e1.pdf", FilePath = "/f/e1", UploadedByUserId = userId, DocumentType = "base", SharedGameId = gameId, Language = "en" },
+            new PdfDocumentEntity { Id = enDoc2, FileName = "e2.pdf", FilePath = "/f/e2", UploadedByUserId = userId, DocumentType = "base", SharedGameId = gameId, Language = "en" },
+            new PdfDocumentEntity { Id = itDoc, FileName = "i.pdf", FilePath = "/f/i", UploadedByUserId = userId, DocumentType = "base", SharedGameId = gameId, Language = "it" }
+        );
+        await _db.SaveChangesAsync();
+
+        _ragAccessMock
+            .Setup(s => s.GetAccessibleGameIdsAsync(userId, UserRole.User, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { gameId });
+
+        IReadOnlyList<Guid>? capturedDocIds = null;
+        _searchMock
+            .Setup(s => s.SearchAsync(
+                It.IsAny<string>(), It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<int>(),
+                It.IsAny<SearchMode>(), It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<string, IReadOnlyList<Guid>, int, SearchMode, double, IReadOnlyList<Guid>?, CancellationToken>(
+                (_, _, _, _, _, docIds, _) => capturedDocIds = docIds)
+            .ReturnsAsync(new List<MultiGameSearchResultItem>());
+
+        var query = BuildQuery(userId, "test", limit: 10, language: "en");
+        var sut = CreateSut();
+
+        // Act
+        await sut.Handle(query, CancellationToken.None);
+
+        // Assert — only the 2 "en" PDF IDs reached the search
+        capturedDocIds.Should().NotBeNull();
+        capturedDocIds!.Should().HaveCount(2);
+        capturedDocIds.Should().Contain(enDoc1).And.Contain(enDoc2);
+        capturedDocIds.Should().NotContain(itDoc);
+    }
+
+    [Fact]
+    public async Task DocTypeAndLanguage_BothFacetsAppliedAsAnd()
+    {
+        // Arrange — 4 PDFs: (base,en), (base,it), (expansion,en), (expansion,it)
+        // Request DocType=["base"] AND Language="en" → only first PDF survives
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var match = Guid.NewGuid();
+        var baseIt = Guid.NewGuid();
+        var expEn = Guid.NewGuid();
+        var expIt = Guid.NewGuid();
+
+        var sharedGame = new SharedGameEntity
+        {
+            Id = gameId, Title = "Combined Facet Game",
+            IsDeleted = false, IsRagPublic = true,
+            CreatedAt = DateTime.UtcNow, CreatedBy = Guid.NewGuid()
+        };
+        _db.SharedGames.Add(sharedGame);
+        _db.PdfDocuments.AddRange(
+            new PdfDocumentEntity { Id = match, FileName = "m.pdf", FilePath = "/f/m", UploadedByUserId = userId, DocumentType = "base", SharedGameId = gameId, Language = "en" },
+            new PdfDocumentEntity { Id = baseIt, FileName = "bi.pdf", FilePath = "/f/bi", UploadedByUserId = userId, DocumentType = "base", SharedGameId = gameId, Language = "it" },
+            new PdfDocumentEntity { Id = expEn, FileName = "ee.pdf", FilePath = "/f/ee", UploadedByUserId = userId, DocumentType = "expansion", SharedGameId = gameId, Language = "en" },
+            new PdfDocumentEntity { Id = expIt, FileName = "ei.pdf", FilePath = "/f/ei", UploadedByUserId = userId, DocumentType = "expansion", SharedGameId = gameId, Language = "it" }
+        );
+        await _db.SaveChangesAsync();
+
+        _ragAccessMock
+            .Setup(s => s.GetAccessibleGameIdsAsync(userId, UserRole.User, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { gameId });
+
+        IReadOnlyList<Guid>? capturedDocIds = null;
+        _searchMock
+            .Setup(s => s.SearchAsync(
+                It.IsAny<string>(), It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<int>(),
+                It.IsAny<SearchMode>(), It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<string, IReadOnlyList<Guid>, int, SearchMode, double, IReadOnlyList<Guid>?, CancellationToken>(
+                (_, _, _, _, _, docIds, _) => capturedDocIds = docIds)
+            .ReturnsAsync(new List<MultiGameSearchResultItem>());
+
+        var query = BuildQuery(userId, "test", limit: 10, docType: new[] { "base" }, language: "en");
+        var sut = CreateSut();
+
+        // Act
+        await sut.Handle(query, CancellationToken.None);
+
+        // Assert — exactly one PDF matches both filters (D-4 AND semantics)
+        capturedDocIds.Should().NotBeNull();
+        capturedDocIds!.Should().ContainSingle().Which.Should().Be(match);
+    }
+
+    [Fact]
+    public async Task NoFacets_PassesNullDocumentIdsToSearch_BackwardCompatible()
+    {
+        // Arrange — when no facets are present, search receives documentIds=null (legacy D-3)
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+
+        _ragAccessMock
+            .Setup(s => s.GetAccessibleGameIdsAsync(userId, UserRole.User, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { gameId });
+
+        IReadOnlyList<Guid>? capturedDocIds = new[] { Guid.NewGuid() }; // sentinel - must be overwritten to null
+        _searchMock
+            .Setup(s => s.SearchAsync(
+                It.IsAny<string>(), It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<int>(),
+                It.IsAny<SearchMode>(), It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<string, IReadOnlyList<Guid>, int, SearchMode, double, IReadOnlyList<Guid>?, CancellationToken>(
+                (_, _, _, _, _, docIds, _) => capturedDocIds = docIds)
+            .ReturnsAsync(new List<MultiGameSearchResultItem>());
+
+        // Default BuildQuery has docType = null, language = null
+        var query = BuildQuery(userId, "test", limit: 10);
+        var sut = CreateSut();
+
+        // Act
+        await sut.Handle(query, CancellationToken.None);
+
+        // Assert — search received null documentIds (legacy path D-3)
+        capturedDocIds.Should().BeNull();
+    }
+
     // ─── Helpers ─────────────────────────────────────────────────────────────────
 
     private static GlobalKbSearchQuery BuildQuery(

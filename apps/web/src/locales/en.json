@@ -3925,6 +3925,40 @@
         "closeLabel": "Close",
         "pageOfTotal": "{cur} / {total}"
       },
+      "filters": {
+        "heading": "Filters",
+        "docTypeLabel": "Document type",
+        "gameIdLabel": "Game",
+        "languageLabel": "Language",
+        "clearAll": "Clear filters",
+        "docTypeOptions": {
+          "Rulebook": "Rulebook",
+          "Expansion": "Expansion",
+          "Errata": "Errata",
+          "QuickStart": "Quick Start",
+          "Reference": "Reference",
+          "PlayerAid": "Player aid",
+          "Other": "Other"
+        },
+        "languageOptions": {
+          "en": "English",
+          "it": "Italian",
+          "de": "German",
+          "fr": "French",
+          "es": "Spanish"
+        }
+      },
+      "editor": {
+        "heading": "Edit metadata",
+        "titleLabel": "Title",
+        "documentTypeLabel": "Document type",
+        "languageLabel": "Language",
+        "tagsLabel": "Tags",
+        "saveLabel": "Save",
+        "cancelLabel": "Cancel",
+        "notFoundError": "Document not found",
+        "genericError": "Generic error, please try again."
+      },
       "drawer": {
         "title": "Ask the Meeple",
         "subtitle": "Knowledge Base",

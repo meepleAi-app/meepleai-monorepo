@@ -100,9 +100,26 @@ export class ConflictError extends ApiError {
 
 /**
  * 422 Validation Error - Request validation failed
+ *
+ * Phase 3 (#1737): exposes `status` (alias for statusCode) and `fieldErrors`
+ * (first message per field, flattened from FluentValidation envelope) so that
+ * KbEditorDesktop's `isHttpFieldError` type-guard can access them uniformly.
  */
 export class ValidationError extends ApiError {
   public readonly validationErrors?: Record<string, string[]>;
+
+  /**
+   * HTTP status alias (422) for consumers using `err.status` convention.
+   * Works with KbEditorDesktop's isHttpFieldError guard (`'status' in err`).
+   */
+  public readonly status = 422 as const;
+
+  /**
+   * First validation message per field — flattened from validationErrors.
+   * Maps FluentValidation's `{ errors: { field: ["msg1", "msg2"] } }` →
+   * `{ field: "msg1" }` for inline UI display.
+   */
+  public readonly fieldErrors?: Record<string, string>;
 
   constructor(
     details: Omit<ApiErrorDetails, 'statusCode'> & {
@@ -112,12 +129,20 @@ export class ValidationError extends ApiError {
     super({ ...details, statusCode: 422 });
     this.name = 'ValidationError';
     this.validationErrors = details.validationErrors;
+
+    // Flatten: take first message per field.
+    if (details.validationErrors) {
+      this.fieldErrors = Object.fromEntries(
+        Object.entries(details.validationErrors).map(([k, msgs]) => [k, msgs[0] ?? ''])
+      );
+    }
   }
 
   public override toJSON(): Record<string, unknown> {
     return {
       ...super.toJSON(),
       validationErrors: this.validationErrors,
+      fieldErrors: this.fieldErrors,
     };
   }
 }

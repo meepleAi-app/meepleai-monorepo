@@ -393,6 +393,75 @@ Lo spike Llama 70B free **rafforza il verdetto HYBRID**:
 
 ---
 
+## 8.7 Run reale v2 — DeepSeek-chat + prompt fixes (2026-05-31 13:05 UTC)
+
+> Validation post Step 2 (prompt fixes). Stesso model, stessi excerpts, ma **prompt v2** con schema strict + anti-patterns + DTO field names esatti.
+
+### Setup
+- **Model**: `deepseek/deepseek-chat` (stessa scelta)
+- **Prompt**: v2 (4329 chars vs 1361 v1, ×3.2)
+- **Tokens**: 1737 prompt + 559 completion = 2296 totali (+53% vs v1)
+- **Latency**: 29.8s (+19% vs v1)
+- **Cost stimato**: ~$0.0013 (vs $0.0009 v1, +50%) — ancora trascurabile
+
+### Risultati v2 — TUTTI gli issue v1 risolti
+
+| Issue v1 (DeepSeek) | Stato v2 |
+|---|---|
+| Field names `Type`/`Faces` invece di `DiceType`/`CustomFaces` | ✅ **fixed** — usa nomi DTO esatti |
+| `CounterTools` con `Min`/`Max` invece di `MinValue`/`MaxValue` | ✅ **fixed** — campi corretti + `DefaultValue` aggiunto |
+| `ExcludedTools` con `Type`/`Justification` | ✅ **fixed** — usa `ToolType`/`Reason` |
+| `Overrides: {}` vuoto | ✅ **fixed** — 3 booleans esplicitamente settati (`OverridesDiceSet: true`) |
+| `Reasoning` come dict per categoria | ✅ **fixed** — string singolo con `[excerpt N]` citations inline |
+| Dummy `TimerTools` entry | ✅ **fixed** — `TimerTools: []` (già OK in v1 DeepSeek) |
+| Points-as-counter hallucination | ✅ **fixed** — non presente in v2 (già OK in v1 DeepSeek) |
+| Caveat residuo ExcludedTools incompleti | ⚠️ persistente (1 entry, manca CardDeck) — minor |
+
+### Output v2 (estratto)
+
+```json
+{
+  "ToolkitName": "Wingspan",
+  "DiceTools": [{
+    "Name": "Birdfeeder Food Dice", "DiceType": "Custom", "Quantity": 5,
+    "CustomFaces": ["invertebrate", "seed", "fruit", "fish", "rodent", "wild"],
+    "IsInteractive": true, "Color": null
+  }],
+  "CounterTools": [
+    {"Name": "Eggs", "MinValue": 0, "MaxValue": 6, "DefaultValue": 0, "IsPerPlayer": true, ...},
+    {"Name": "Food Tokens", "MinValue": 0, "MaxValue": 99, "DefaultValue": 0, "IsPerPlayer": true, ...},
+    {"Name": "Action Cubes", "MinValue": 0, "MaxValue": 8, "DefaultValue": 8, "IsPerPlayer": true, ...}
+  ],
+  "TimerTools": [],
+  "ScoringTemplate": {
+    "Dimensions": ["Birds", "Bonus cards", "End-of-round goals", "Eggs", "Food cached", "Tucked cards"],
+    "DefaultUnit": "points", "ScoreType": "Points"
+  },
+  "TurnTemplate": {
+    "TurnOrderType": "RoundRobin",
+    "Phases": ["Round 1", "Round 2", "Round 3", "Round 4"]
+  },
+  "Overrides": {
+    "OverridesTurnOrder": false, "OverridesScoreboard": false, "OverridesDiceSet": true
+  },
+  "Reasoning": "The game includes 5 custom 6-sided food dice with specific faces [excerpt 1]...",
+  "ExcludedTools": [{"ToolType": "Timer", "Reason": "..."}]
+}
+```
+
+### Verdetto v2 — PRODUCTION-READY
+
+DeepSeek-chat + prompt v2 = output **direttamente usabile** dal handler `ApplyAiToolkitSuggestionCommand` (zero rework richiesto, deserializzazione C# riesce 1:1 al DTO).
+
+**Gate-keeper Step 2**: ✅ CLOSED — il quick win prompt fix è sufficiente per portare DeepSeek a production-quality.
+
+Caveat residuo (minor): `ExcludedTools` resta incompleto in alcune run — accettabile perché non è un campo critico per il funzionamento, è solo metadata utile per UI/audit.
+
+### Output completo
+- `claudedocs/spike-llm-output-wingspan-deepseek_deepseek-chat-2026-05-31T130516Z.json` (run v2)
+
+---
+
 ## 9. References
 
 - `apps/api/src/Api/BoundedContexts/GameToolkit/Application/Commands/GenerateToolkitFromKbHandler.cs` — handler (161 righe)

@@ -73,3 +73,50 @@ describe('kb-docs schemas', () => {
     expect(() => KbDocsListResponseSchema.parse(envelope)).toThrow();
   });
 });
+
+describe('UserKbDocDtoSchema — Phase 3 #1687 metadata fields', () => {
+  const baseFixture = {
+    id: '550e8400-e29b-41d4-a716-446655440000',
+    gameId: '550e8400-e29b-41d4-a716-446655440002',
+    gameName: 'Azul',
+    fileName: 'azul-rules.pdf',
+    processingState: 'Ready' as const,
+    pageCount: 24,
+    processedAt: '2026-05-31T00:00:00Z',
+    uploadedAt: '2026-05-31T00:00:00Z',
+    updatedAt: '2026-05-31T00:00:00Z',
+  };
+
+  it('accepts title as nullable string', () => {
+    const result = UserKbDocDtoSchema.safeParse({ ...baseFixture, title: 'Azul Master Edition' });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts title as null', () => {
+    const result = UserKbDocDtoSchema.safeParse({ ...baseFixture, title: null });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts tags as string array', () => {
+    const result = UserKbDocDtoSchema.safeParse({ ...baseFixture, tags: ['strategy', 'family'] });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts tags as empty array', () => {
+    const result = UserKbDocDtoSchema.safeParse({ ...baseFixture, tags: [] });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts updatedBy as nullable uuid', () => {
+    const result = UserKbDocDtoSchema.safeParse({
+      ...baseFixture,
+      updatedBy: '550e8400-e29b-41d4-a716-446655440003',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('back-compat: validates without title/tags/updatedBy (existing payloads)', () => {
+    const result = UserKbDocDtoSchema.safeParse(baseFixture);
+    expect(result.success).toBe(true);
+  });
+});

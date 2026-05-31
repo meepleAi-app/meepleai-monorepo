@@ -3,9 +3,15 @@
 import { cn } from '@/lib/utils';
 
 export interface TrendDatapoint {
-  date: string; // YYYY-MM-DD
+  /** YYYY-MM-DD or ISO timestamp. Used as React key + sr-only table cell. */
+  date: string;
   avgLatencyMs: number;
   requestCount: number;
+  /** #1729: optional percentile series (populated by /admin/ai/metrics) */
+  p50LatencyMs?: number;
+  p95LatencyMs?: number;
+  /** #1729: optional error fraction in [0, 1]. Rendered as % on the right axis. */
+  errorRate?: number;
 }
 
 interface AiTrendChartProps {
@@ -20,22 +26,29 @@ const CHART_HEIGHT = 140;
 const PADDING = 24;
 
 /**
- * AI trend chart — inline SVG with two series:
- *   - avgLatencyMs (ms)  → entity-session line
- *   - requestCount (n)   → entity-toolkit line (scaled to right axis)
+ * AI trend chart — inline SVG.
  *
- * The mockup A4 asks for p50/p95/error series, but
- * `/api/v1/admin/model-performance?days=` only exposes daily averages
- * and aggregate success rate. The dedicated `/ai/metrics?range=`
- * endpoint (#1722 sub-task BE) will unlock that — until then we surface
- * a visible "approx" badge so reviewers know the trend is daily-avg,
- * not p50/p95.
+ * Renders avgLatency + volume by default; when the new
+ * `/api/v1/admin/ai/metrics` endpoint provides p50/p95/error series
+ * (#1729), they layer on top and the legacy "approx" badge drops.
  */
 export function AiTrendChart({ data, range, rangeOptions, onRangeChange }: AiTrendChartProps) {
   const hasData = data.length > 0;
+  // #1729: detect full-series payload — when all 3 percentile/error fields
+  // are populated on every datapoint, we can drop the "approx" badge.
+  const hasPercentileSeries =
+    hasData &&
+    data.every(
+      d => d.p50LatencyMs !== undefined && d.p95LatencyMs !== undefined && d.errorRate !== undefined
+    );
 
   const latencyPath = hasData ? buildSvgPath(data, d => d.avgLatencyMs) : '';
   const volumePath = hasData ? buildSvgPath(data, d => d.requestCount) : '';
+  const p50Path = hasPercentileSeries ? buildSvgPath(data, d => d.p50LatencyMs ?? 0) : '';
+  const p95Path = hasPercentileSeries ? buildSvgPath(data, d => d.p95LatencyMs ?? 0) : '';
+  // errorRate is in [0, 1] — scale to a latency-comparable magnitude
+  // by mapping the max into the chart range. Drawn dashed in destructive tone.
+  const errorPath = hasPercentileSeries ? buildSvgPath(data, d => (d.errorRate ?? 0) * 1000) : '';
 
   return (
     <section className="rounded-xl border border-border/60 bg-card/70 backdrop-blur-md p-4 space-y-3">
@@ -45,12 +58,16 @@ export function AiTrendChart({ data, range, rangeOptions, onRangeChange }: AiTre
             Latency &amp; volume trend
           </h3>
           <p className="font-mono text-[10px] text-muted-foreground mt-0.5">
-            avgLatencyMs (sx) · requestCount (dx)
+            {hasPercentileSeries
+              ? 'p50/p95 latency (sx) · requestCount (dx) · errorRate (dashed)'
+              : 'avgLatencyMs (sx) · requestCount (dx)'}
           </p>
         </div>
-        <span className="inline-flex items-center rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-medium text-warning">
-          approx — p50/p95/error pending
-        </span>
+        {!hasPercentileSeries && (
+          <span className="inline-flex items-center rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-medium text-warning">
+            approx — p50/p95/error pending
+          </span>
+        )}
         <div
           role="group"
           aria-label="Time range"
@@ -79,7 +96,11 @@ export function AiTrendChart({ data, range, rangeOptions, onRangeChange }: AiTre
         <>
           <svg
             role="img"
-            aria-label="Latency and request volume trend"
+            aria-label={
+              hasPercentileSeries
+                ? 'Latency p50/p95, request volume and error rate trend'
+                : 'Latency and request volume trend'
+            }
             viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
             preserveAspectRatio="none"
             className="block w-full h-32"
@@ -93,13 +114,15 @@ export function AiTrendChart({ data, range, rangeOptions, onRangeChange }: AiTre
               className="stroke-border"
               strokeWidth={1}
             />
-            <polyline
-              data-series="latency"
-              fill="none"
-              className="stroke-entity-session"
-              strokeWidth={2}
-              points={latencyPath}
-            />
+            {!hasPercentileSeries && (
+              <polyline
+                data-series="latency"
+                fill="none"
+                className="stroke-entity-session"
+                strokeWidth={2}
+                points={latencyPath}
+              />
+            )}
             <polyline
               data-series="volume"
               fill="none"
@@ -108,15 +131,48 @@ export function AiTrendChart({ data, range, rangeOptions, onRangeChange }: AiTre
               strokeDasharray="4 2"
               points={volumePath}
             />
+            {hasPercentileSeries && (
+              <>
+                <polyline
+                  data-series="p50"
+                  fill="none"
+                  className="stroke-entity-session"
+                  strokeWidth={2}
+                  points={p50Path}
+                />
+                <polyline
+                  data-series="p95"
+                  fill="none"
+                  className="stroke-entity-player"
+                  strokeWidth={2}
+                  points={p95Path}
+                />
+                <polyline
+                  data-series="error"
+                  fill="none"
+                  className="stroke-destructive"
+                  strokeWidth={1.5}
+                  strokeDasharray="2 3"
+                  points={errorPath}
+                />
+              </>
+            )}
           </svg>
           {/* sr-only data table */}
           <table className="sr-only">
-            <caption>Daily AI latency and volume</caption>
+            <caption>AI latency and volume trend</caption>
             <thead>
               <tr>
                 <th scope="col">Date</th>
                 <th scope="col">avgLatencyMs</th>
                 <th scope="col">requestCount</th>
+                {hasPercentileSeries && (
+                  <>
+                    <th scope="col">p50LatencyMs</th>
+                    <th scope="col">p95LatencyMs</th>
+                    <th scope="col">errorRate</th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -125,6 +181,13 @@ export function AiTrendChart({ data, range, rangeOptions, onRangeChange }: AiTre
                   <td>{d.date}</td>
                   <td>{Math.round(d.avgLatencyMs)}</td>
                   <td>{d.requestCount}</td>
+                  {hasPercentileSeries && (
+                    <>
+                      <td>{d.p50LatencyMs ?? 0}</td>
+                      <td>{d.p95LatencyMs ?? 0}</td>
+                      <td>{((d.errorRate ?? 0) * 100).toFixed(1)}%</td>
+                    </>
+                  )}
                 </tr>
               ))}
             </tbody>

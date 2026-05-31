@@ -49,6 +49,17 @@ internal static class AnalyticsEndpoints
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status404NotFound);
+
+        // #1729: AI metrics trend (p50/p95/error per bucket) for AiTrendChart.
+        group.MapGet("/admin/ai/metrics", HandleGetAiMetricsTrend)
+            .WithName("GetAiMetricsTrend")
+            .WithTags("Admin", "AI")
+            .WithSummary("Get AI metrics trend (latency p50/p95 + error rate) per bucket for a time range")
+            .WithDescription("Returns continuous per-bucket datapoints for the requested time range. Range values: Live (1h, 1m buckets), 1h (1m), 24h (15m), 7d (1h). Buckets without traffic surface as zeros to keep the FE chart series continuous.")
+            .Produces<object>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
     }
 
     // #1728: Endpoint handler for per-query drill.
@@ -96,6 +107,28 @@ internal static class AnalyticsEndpoints
             chunks = result.Chunks,
             breakdown = result.Breakdown,
         });
+    }
+
+    // #1729: Endpoint handler for AI metrics trend.
+    private static async Task<IResult> HandleGetAiMetricsTrend(
+        HttpContext context,
+        IMediator mediator,
+        string? range = "7d",
+        CancellationToken ct = default)
+    {
+        var (authorized, _, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        try
+        {
+            var query = new GetAiMetricsTrendQuery(range ?? "7d");
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Json(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return Results.BadRequest(new { error = "invalid_range", message = ex.Message });
+        }
     }
 
     private static void MapLlmHealthEndpoints(RouteGroupBuilder group)

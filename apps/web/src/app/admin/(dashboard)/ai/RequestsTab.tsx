@@ -13,8 +13,9 @@ import { api } from '@/lib/api';
 import type { AiQueryDrillResponse, AiRequest } from '@/lib/api/schemas';
 import { cn } from '@/lib/utils';
 
-const TREND_RANGE_OPTIONS = ['1d', '7d', '30d'] as const;
-const TREND_RANGE_DAYS: Record<string, number> = { '1d': 1, '7d': 7, '30d': 30 };
+// #1729: Range options now match the BE /admin/ai/metrics endpoint.
+// Legacy "1d/7d/30d" replaced by sub-daily granularity from percentile-based query.
+const TREND_RANGE_OPTIONS = ['Live', '1h', '24h', '7d'] as const;
 
 export function RequestsTab() {
   const router = useRouter();
@@ -47,16 +48,21 @@ export function RequestsTab() {
   }, [page]);
 
   useEffect(() => {
-    const days = TREND_RANGE_DAYS[range] ?? 7;
     let cancelled = false;
+    // #1729: swap legacy getModelPerformance(days) → getAiMetricsTrend(range).
+    // Returns p50/p95/errorRate per bucket — AiTrendChart auto-detects the
+    // full series and drops the "approx" badge.
     api.admin
-      .getModelPerformance(days)
+      .getAiMetricsTrend(range)
       .then(data => {
         if (cancelled) return;
-        const points = (data?.dailyStats ?? []).map(d => ({
-          date: d.date,
+        const points = (data?.datapoints ?? []).map(d => ({
+          date: d.timestamp,
           avgLatencyMs: d.avgLatencyMs,
           requestCount: d.requestCount,
+          p50LatencyMs: d.p50LatencyMs,
+          p95LatencyMs: d.p95LatencyMs,
+          errorRate: d.errorRate,
         }));
         setTrend(points);
       })
@@ -66,6 +72,28 @@ export function RequestsTab() {
     return () => {
       cancelled = true;
     };
+  }, [range]);
+
+  // #1729: Live range polls every 10s for near-real-time updates.
+  useEffect(() => {
+    if (range !== 'Live') return undefined;
+    const handle = setInterval(() => {
+      api.admin
+        .getAiMetricsTrend('Live')
+        .then(data => {
+          const points = (data?.datapoints ?? []).map(d => ({
+            date: d.timestamp,
+            avgLatencyMs: d.avgLatencyMs,
+            requestCount: d.requestCount,
+            p50LatencyMs: d.p50LatencyMs,
+            p95LatencyMs: d.p95LatencyMs,
+            errorRate: d.errorRate,
+          }));
+          setTrend(points);
+        })
+        .catch(() => {});
+    }, 10_000);
+    return () => clearInterval(handle);
   }, [range]);
 
   const setRange = (next: string) => {

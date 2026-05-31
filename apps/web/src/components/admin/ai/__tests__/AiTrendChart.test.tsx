@@ -36,7 +36,7 @@ describe('AiTrendChart', () => {
     expect(screen.getByRole('img', { name: /latency/i })).toBeInTheDocument();
   });
 
-  it('renders one polyline per series (avgLatencyMs + requestCount)', () => {
+  it('renders one polyline per series (avgLatencyMs + requestCount) when percentile fields absent', () => {
     const { container } = render(
       <AiTrendChart
         data={sample}
@@ -47,6 +47,48 @@ describe('AiTrendChart', () => {
     );
     const polylines = container.querySelectorAll('polyline[data-series]');
     expect(polylines).toHaveLength(2);
+  });
+
+  it('renders 4 polylines (volume + p50 + p95 + error) when full percentile series provided (#1729)', () => {
+    const fullSample: TrendDatapoint[] = sample.map(d => ({
+      ...d,
+      p50LatencyMs: d.avgLatencyMs - 50,
+      p95LatencyMs: d.avgLatencyMs + 200,
+      errorRate: 0.05,
+    }));
+    const { container } = render(
+      <AiTrendChart
+        data={fullSample}
+        range="7d"
+        onRangeChange={vi.fn()}
+        rangeOptions={['Live', '1h', '24h', '7d']}
+      />
+    );
+    const polylines = container.querySelectorAll('polyline[data-series]');
+    // No legacy "latency" series — replaced by p50/p95
+    expect(polylines).toHaveLength(4);
+    expect(container.querySelector('polyline[data-series="p50"]')).toBeInTheDocument();
+    expect(container.querySelector('polyline[data-series="p95"]')).toBeInTheDocument();
+    expect(container.querySelector('polyline[data-series="error"]')).toBeInTheDocument();
+    expect(container.querySelector('polyline[data-series="latency"]')).not.toBeInTheDocument();
+  });
+
+  it('hides the "approx" badge when full percentile series provided (#1729)', () => {
+    const fullSample: TrendDatapoint[] = sample.map(d => ({
+      ...d,
+      p50LatencyMs: 100,
+      p95LatencyMs: 500,
+      errorRate: 0,
+    }));
+    render(
+      <AiTrendChart
+        data={fullSample}
+        range="1h"
+        onRangeChange={vi.fn()}
+        rangeOptions={['Live', '1h', '24h', '7d']}
+      />
+    );
+    expect(screen.queryByText(/approx/i)).not.toBeInTheDocument();
   });
 
   it('exposes a screen-reader table mirroring the datapoints', () => {

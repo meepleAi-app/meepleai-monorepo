@@ -16,6 +16,12 @@ const mocks = vi.hoisted(() => ({
     models: [],
     dailyStats: [],
   }),
+  // #1729: RequestsTab now drives the trend chart via getAiMetricsTrend
+  getAiMetricsTrend: vi.fn().mockResolvedValue({
+    range: '7d',
+    bucketSize: '1h',
+    datapoints: [],
+  }),
   deletePrompt: vi.fn().mockResolvedValue(undefined),
   approveAgentTypology: vi.fn().mockResolvedValue(undefined),
   deleteAgentTypology: vi.fn().mockResolvedValue(undefined),

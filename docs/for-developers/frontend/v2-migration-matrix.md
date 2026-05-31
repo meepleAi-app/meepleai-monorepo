@@ -61,6 +61,18 @@ ambiguity. Each route is also classified by **Tier** (S/M/L) to gate dispatch st
 > photo-upload +manual-mode entry). Spec:
 > `docs/superpowers/specs/2026-05-23-mockup-refinement-aaron-core-design.md`.
 
+> **Updated 2026-05-31 #3** (B19-4b skeleton mockup delivery): generic
+> session skeleton consegnato via Claude Design Web — 7 file in
+> `admin-mockups/design_files/` (`sp4-session-skeleton-{live,renderers,parts,data}.jsx`
+> + `sp4-session-skeleton-live.html` + `sp4-session-summary-skeleton.{html,jsx}`).
+> Renderizza dinamicamente qualsiasi gioco consumando `AiToolkitSuggestionDto`
+> polimorficamente (mirror dei FE renderers `ScoringPanelRenderer` +
+> `TurnIndicatorRenderer` di PR #1763). Demo side-by-side Wingspan
+> (Points + RoundRobin) vs Paleo (BinaryWin + Simultaneous). Hybrid strategy
+> confermata: skeleton copre i 13-14 giochi non-premium, i 6 premium
+> (Wingspan done, Puerto Rico + Catan + Power Grid + Zombicide GH + Paleo
+> + Codenames pending) restano ad-hoc. Closes issue #1750.
+
 > **Updated 2026-05-31 #2** (Sessions sub-routes consolidation via tabs,
 > closes gap N7 audit 2026-05-22): Option B+ hybrid consolidation accettata
 > e shipped — 7 sub-route Sessions confluiscono in `?tab=` deep-link

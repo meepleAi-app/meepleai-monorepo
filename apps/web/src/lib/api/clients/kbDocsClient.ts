@@ -7,7 +7,16 @@
  * this client is scoped to the new cross-game user listing endpoint).
  */
 
-import { KbDocsListResponseSchema, type KbDocsListResponse } from '../schemas/kb-docs.schemas';
+import {
+  type PatchKbDocMetadataRequest,
+  PatchKbDocMetadataRequestSchema,
+} from '../schemas/kb-docs-patch.schemas';
+import {
+  KbDocsListResponseSchema,
+  type KbDocsListResponse,
+  UserKbDocDtoSchema,
+  type UserKbDocDto,
+} from '../schemas/kb-docs.schemas';
 import {
   GlobalKbSearchResponseSchema,
   type GlobalKbSearchRequest,
@@ -32,6 +41,7 @@ export interface ListUserKbDocsParams {
 export interface KbDocsClient {
   listUserKbDocs(params?: ListUserKbDocsParams): Promise<KbDocsListResponse>;
   searchGlobal(req: GlobalKbSearchRequest): Promise<GlobalKbSearchResponse>;
+  patchKbDocMetadata(id: string, body: PatchKbDocMetadataRequest): Promise<UserKbDocDto>;
 }
 
 export function createKbDocsClient({ httpClient }: CreateKbDocsClientParams): KbDocsClient {
@@ -57,6 +67,18 @@ export function createKbDocsClient({ httpClient }: CreateKbDocsClientParams): Kb
         GlobalKbSearchResponseSchema
       );
       return response ?? { results: [], hasMore: false, nextCursor: null };
+    },
+
+    async patchKbDocMetadata(id: string, body: PatchKbDocMetadataRequest): Promise<UserKbDocDto> {
+      // Client-side pre-validation: short-circuit invalid payloads (e.g. tag >50 chars,
+      // >20 tags) before the network call, matching plan Task 2 Step 3 spec.
+      const validated = PatchKbDocMetadataRequestSchema.parse(body);
+      const response = await httpClient.patch<UserKbDocDto>(
+        `/api/v1/kb-docs/${id}`,
+        validated,
+        UserKbDocDtoSchema
+      );
+      return response;
     },
   };
 }

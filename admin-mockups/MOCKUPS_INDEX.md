@@ -89,6 +89,13 @@
 | `sp4-play-records-stats.html` | page-mock | `/play-records/stats` |
 | `sp4-player-detail.html` | page-mock | `/players/[id]`, `/players/[id]/{achievements,games,sessions,stats}` |
 | `sp4-players-index.html` | page-mock | `/players` |
+| `sp4-session-puerto-rico-data.jsx` | component-mock | Puerto Rico-specific dataset (role-selection state, 5 goods, plantations + buildings grids). Premium #2/7. |
+| `sp4-session-puerto-rico-flavor.jsx` | component-mock | Puerto Rico flavor components — `RoleSelectionBoard`, `PlantationGrid`, `BuildingGrid`, `GalleonsShipping`, `TradingHouseSlots`, `ColonistShip`. |
+| `sp4-session-puerto-rico-live.html` | page-mock | `/sessions/[id]/live` Puerto Rico demo (heavy euro role-selection, 3-5 players, ~120min). Extends skeleton (mockup #1) with PR-specific panels. |
+| `sp4-session-puerto-rico-live.jsx` | component-mock | Root component for `sp4-session-puerto-rico-live.html` — wires skeleton + PR flavor + RightColumnTabs (Scoring, Roles, Trade, Ship, Chat). |
+| `sp4-session-puerto-rico-parts.jsx` | component-mock | Shared parts for Puerto Rico — player mat, role cards, role action flow. |
+| `sp4-session-puerto-rico-summary.html` | page-mock | `/sessions/[id]` Puerto Rico post-game (final VP breakdown: buildings + shipped goods + large building bonuses). Premium #2/7. |
+| `sp4-session-puerto-rico-summary.jsx` | component-mock | Root component for PR summary — hero + tabs (Scoreboard / Final Board / Round Recap / Stats). |
 | `sp4-session-skeleton-data.jsx` | component-mock | Demo datasets (Wingspan + Paleo) for the generic session skeleton — `window.SkelData`. Used only inside `sp4-session-skeleton-*` mockup to validate polymorphic rendering side-by-side. |
 | `sp4-session-skeleton-live.html` | page-mock | `/sessions/[id]/live` **generic skeleton** (universal renderer for any game). Consumes `AiToolkitSuggestionDto` polymorphically. Demo shows side-by-side Wingspan (Points+RoundRobin) vs Paleo (BinaryWin+Simultaneous). Closes #1750 (B19-4b). |
 | `sp4-session-skeleton-live.jsx` | component-mock | Root component for `sp4-session-skeleton-live.html` — wires top-bar + ChatAgent + `RightColumnTabs` polymorphic. |
@@ -168,10 +175,10 @@
 
 | Type | Count |
 |------|------:|
-| page-mock | 57 |
-| component-mock | 25 |
+| page-mock | 59 |
+| component-mock | 30 |
 | dev-fixture | 12 |
-| **Total** | **94** |
+| **Total** | **101** |
 
 > The `*.jsx` twins of `*.html` files are not double-counted (the JSX is the
 > implementation companion of the HTML reference). Listing them separately

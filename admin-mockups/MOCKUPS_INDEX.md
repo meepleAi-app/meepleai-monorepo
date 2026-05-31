@@ -89,6 +89,13 @@
 | `sp4-play-records-stats.html` | page-mock | `/play-records/stats` |
 | `sp4-player-detail.html` | page-mock | `/players/[id]`, `/players/[id]/{achievements,games,sessions,stats}` |
 | `sp4-players-index.html` | page-mock | `/players` |
+| `sp4-session-catan-data.jsx` | component-mock | Catan-specific dataset (hex board 19-tiles, resources, settlements/cities/roads, dev cards). Premium #3/7. |
+| `sp4-session-catan-flavor.jsx` | component-mock | Catan flavor components — `HexBoard`, `RobberOverlay`, `DiceDisplay`, `TradePanel`, `DevCardsPanel`, `ResourceHandBar`. |
+| `sp4-session-catan-live.html` | page-mock | `/sessions/[id]/live` Catan demo (medium euro + trading, 3-4 players, ~75-90 min). Extends skeleton with Catan-specific panels. |
+| `sp4-session-catan-live.jsx` | component-mock | Root component for `sp4-session-catan-live.html` — wires skeleton + hex board + RightColumnTabs (Scoring, Trade, Dev, Build, Chat). |
+| `sp4-session-catan-parts.jsx` | component-mock | Shared parts for Catan — player rail with hand counts + dev cards + pieces remaining. |
+| `sp4-session-catan-summary.html` | page-mock | `/sessions/[id]` Catan post-game (final VP: settlements + cities + Longest Road + Largest Army + VP dev cards). Premium #3/7. |
+| `sp4-session-catan-summary.jsx` | component-mock | Root component for Catan summary — hero + tabs (Scoreboard / Final Board / Stats). |
 | `sp4-session-puerto-rico-data.jsx` | component-mock | Puerto Rico-specific dataset (role-selection state, 5 goods, plantations + buildings grids). Premium #2/7. |
 | `sp4-session-puerto-rico-flavor.jsx` | component-mock | Puerto Rico flavor components — `RoleSelectionBoard`, `PlantationGrid`, `BuildingGrid`, `GalleonsShipping`, `TradingHouseSlots`, `ColonistShip`. |
 | `sp4-session-puerto-rico-live.html` | page-mock | `/sessions/[id]/live` Puerto Rico demo (heavy euro role-selection, 3-5 players, ~120min). Extends skeleton (mockup #1) with PR-specific panels. |
@@ -175,10 +182,10 @@
 
 | Type | Count |
 |------|------:|
-| page-mock | 59 |
-| component-mock | 30 |
+| page-mock | 61 |
+| component-mock | 35 |
 | dev-fixture | 12 |
-| **Total** | **101** |
+| **Total** | **108** |
 
 > The `*.jsx` twins of `*.html` files are not double-counted (the JSX is the
 > implementation companion of the HTML reference). Listing them separately

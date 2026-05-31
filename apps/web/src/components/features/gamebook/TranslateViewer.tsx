@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } 
 import { AbortButton } from '@/components/features/gamebook/AbortButton';
 import { BookPicker } from '@/components/features/gamebook/BookPicker';
 import { LoadingSkeleton } from '@/components/features/gamebook/LoadingSkeleton';
+import { ReaderModeToggle } from '@/components/features/gamebook/ReaderModeToggle';
 import { SegmentPicker } from '@/components/features/gamebook/SegmentPicker';
 import {
   deriveUiStep,
@@ -16,6 +17,7 @@ import { useGameBooks } from '@/hooks/useGameBooks';
 import { GameBookRole, hasRole, type GameRef } from '@/lib/api/gamebook';
 import type { GamebookPhotoArtifact, GamebookSegment } from '@/lib/api/gamebook-photos';
 import { usePhotoUpload } from '@/lib/gamebook/hooks/usePhotoUpload';
+import { useReaderMode } from '@/lib/gamebook/hooks/useReaderMode';
 import { useSegmentPhoto } from '@/lib/gamebook/hooks/useSegmentPhoto';
 import { useTranslateSegmentSSE } from '@/lib/gamebook/hooks/useTranslateSegmentSSE';
 
@@ -45,6 +47,8 @@ export function TranslateViewer({ campaignId, gameRef }: TranslateViewerProps): 
   const [artifact, setArtifact] = useState<GamebookPhotoArtifact | null>(null);
   const [activeSegment, setActiveSegment] = useState<GamebookSegment | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { isReaderMode, toggle: toggleReaderMode } = useReaderMode();
 
   // C4/C5 (multi-book generalization 2026-05-19): book selection replaces the
   // legacy Storybook/Encounter `pageType` dropdown.
@@ -140,9 +144,12 @@ export function TranslateViewer({ campaignId, gameRef }: TranslateViewerProps): 
   const cameraDisabled = isBusy || !effectiveBookId;
 
   return (
-    <div className="grid gap-4 px-4 py-6 sm:px-6">
+    <div className="grid gap-4 px-4 py-6 sm:px-6" data-reader-mode={String(isReaderMode)}>
       <header className="flex flex-wrap items-center gap-3">
-        <h1 className="text-xl font-semibold text-[var(--c-game)]">Traduci pagina libro game</h1>
+        <div className="flex flex-1 items-center justify-between gap-2">
+          <h1 className="text-xl font-semibold text-[var(--c-game)]">Traduci pagina libro game</h1>
+          <ReaderModeToggle isReaderMode={isReaderMode} onToggle={toggleReaderMode} />
+        </div>
       </header>
 
       {narrativeBooks.length > 1 && (

@@ -4,9 +4,17 @@ import { X } from 'lucide-react';
 
 import type { AiRequest } from '@/lib/api/schemas';
 
+import { LatencyBreakdownBar, type LatencyBreakdown } from './LatencyBreakdownBar';
+
 interface QueryDrillPanelProps {
   query: AiRequest | null;
   onClose: () => void;
+  /**
+   * Per-stage latency split. Today the `/api/v1/admin/requests`
+   * payload doesn't include it — pass `null` to render the fallback
+   * caption. PR-wired prop ready for #1722 sub-task BE drill endpoint.
+   */
+  breakdown?: LatencyBreakdown | null;
 }
 
 /**
@@ -18,7 +26,7 @@ interface QueryDrillPanelProps {
  * then we render a "limited drill" badge and surface only what the
  * `/api/v1/admin/requests` payload already exposes.
  */
-export function QueryDrillPanel({ query, onClose }: QueryDrillPanelProps) {
+export function QueryDrillPanel({ query, onClose, breakdown = null }: QueryDrillPanelProps) {
   if (!query) return null;
 
   return (
@@ -65,6 +73,8 @@ export function QueryDrillPanel({ query, onClose }: QueryDrillPanelProps) {
           {query.responseSnippet ?? '—'}
         </p>
       </Section>
+
+      <LatencyBreakdownBar breakdown={breakdown} totalMs={query.latencyMs} />
 
       <Section label="Metadata">
         <dl className="grid grid-cols-2 gap-2 text-[11px]">

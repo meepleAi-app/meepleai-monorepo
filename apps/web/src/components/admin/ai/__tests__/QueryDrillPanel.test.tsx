@@ -54,7 +54,9 @@ describe('QueryDrillPanel', () => {
     render(<QueryDrillPanel query={sampleRequest} onClose={vi.fn()} />);
     expect(screen.getByText(sampleRequest.endpoint)).toBeInTheDocument();
     expect(screen.getByText(/gpt-4o-mini/)).toBeInTheDocument();
-    expect(screen.getByText(/842\s*ms/)).toBeInTheDocument();
+    // 842ms appears in both the header summary AND the breakdown bar
+    // total caption — assert that at least one occurrence is present.
+    expect(screen.getAllByText(/842\s*ms/).length).toBeGreaterThan(0);
   });
 
   it('surfaces a "limited drill" badge when chunks are unavailable', () => {
@@ -73,5 +75,22 @@ describe('QueryDrillPanel', () => {
     render(<QueryDrillPanel query={sampleRequest} onClose={onClose} />);
     await user.click(screen.getByRole('button', { name: /close drill/i }));
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('renders the latency breakdown bar fallback when no breakdown is passed', () => {
+    render(<QueryDrillPanel query={sampleRequest} onClose={vi.fn()} />);
+    expect(screen.getByText(/breakdown unavailable/i)).toBeInTheDocument();
+  });
+
+  it('renders the latency breakdown segments when breakdown is provided', () => {
+    render(
+      <QueryDrillPanel
+        query={sampleRequest}
+        onClose={vi.fn()}
+        breakdown={{ retrievalMs: 100, rerankMs: 50, llmMs: 600, postMs: 92 }}
+      />
+    );
+    expect(screen.getByRole('list', { name: /latency breakdown/i })).toBeInTheDocument();
+    expect(screen.getByText(/600\s*ms/)).toBeInTheDocument();
   });
 });

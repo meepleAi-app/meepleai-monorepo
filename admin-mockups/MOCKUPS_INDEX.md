@@ -89,6 +89,13 @@
 | `sp4-play-records-stats.html` | page-mock | `/play-records/stats` |
 | `sp4-player-detail.html` | page-mock | `/players/[id]`, `/players/[id]/{achievements,games,sessions,stats}` |
 | `sp4-players-index.html` | page-mock | `/players` |
+| `sp4-session-skeleton-data.jsx` | component-mock | Demo datasets (Wingspan + Paleo) for the generic session skeleton — `window.SkelData`. Used only inside `sp4-session-skeleton-*` mockup to validate polymorphic rendering side-by-side. |
+| `sp4-session-skeleton-live.html` | page-mock | `/sessions/[id]/live` **generic skeleton** (universal renderer for any game). Consumes `AiToolkitSuggestionDto` polymorphically. Demo shows side-by-side Wingspan (Points+RoundRobin) vs Paleo (BinaryWin+Simultaneous). Closes #1750 (B19-4b). |
+| `sp4-session-skeleton-live.jsx` | component-mock | Root component for `sp4-session-skeleton-live.html` — wires top-bar + ChatAgent + `RightColumnTabs` polymorphic. |
+| `sp4-session-skeleton-parts.jsx` | component-mock | Shared building blocks for the skeleton (TopBar, ChatAgentPanel, ActionLog, RightColumnTabs container, DesktopFrame, PhoneShell side-by-side wrapper). Game-agnostic. |
+| `sp4-session-skeleton-renderers.jsx` | component-mock | **Polymorphic renderers** — `ScoringPanelRenderer` (switch on ScoreType: Points/Ranking/BinaryWin/Objectives), `TurnIndicatorRenderer` (switch on TurnOrderType: 7 variants), `WidgetRenderer` (6 WidgetType dispatch). Zero game-specific code. Mirrors FE renderers shipped in PR #1763 (B19-4a). |
+| `sp4-session-summary-skeleton.html` | page-mock | `/sessions/[id]` **generic post-game skeleton** (universal summary). Demo shows side-by-side Wingspan vs Paleo. Closes #1750 (B19-4b). |
+| `sp4-session-summary-skeleton.jsx` | component-mock | Root component for `sp4-session-summary-skeleton.html` — hero result + tabbed review (scoreboard / diary / photos / chat highlights / stats). Game-agnostic. |
 | `sp4-session-wingspan-live-parts.jsx` | component-mock | Sub-components of `/sessions/[id]/live` Wingspan demo — `window.LiveSessionParts1`. **Wingspan-specific** (scoring categories hard-coded). Generic skeleton tracked in B19. |
 | `sp4-session-wingspan-live-tabs.jsx` | component-mock | `window.LiveTabs` — 4 new consolidated tabs (scores · photos · agent · players) × 5 stati each (default · empty · loading · error · sse). **Wingspan-flavored content**. See consolidation ADR `claudedocs/2026-05-31-sessions-consolidation-adr.md` + spike `claudedocs/2026-05-31-spike-toolkit-ai-generation.md`. |
 | `sp4-session-wingspan-live.html` | page-mock | `/sessions/[id]/live` Wingspan demo + consolidated tabs `?tab=scores\|photos\|agent\|players\|chat\|tools\|notes` (was 4 separate sub-routes pre-2026-05-31, see ADR). Also reuses for `/sessions/live/[sessionId]/*`. **Wingspan-specific** — generic session skeleton in B19. |
@@ -161,10 +168,10 @@
 
 | Type | Count |
 |------|------:|
-| page-mock | 55 |
-| component-mock | 20 |
+| page-mock | 57 |
+| component-mock | 25 |
 | dev-fixture | 12 |
-| **Total** | **87** |
+| **Total** | **94** |
 
 > The `*.jsx` twins of `*.html` files are not double-counted (the JSX is the
 > implementation companion of the HTML reference). Listing them separately

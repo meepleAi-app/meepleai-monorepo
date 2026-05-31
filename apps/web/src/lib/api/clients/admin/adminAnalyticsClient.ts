@@ -12,6 +12,7 @@ import {
   AdminStatsSchema,
   AdminOverviewStatsSchema,
   AiRequestsResponseSchema,
+  AiQueryDrillResponseSchema,
   DashboardStatsSchema,
   GetUserActivityResultSchema,
   TokenBalanceSchema,
@@ -26,6 +27,7 @@ import {
   type AdminStats,
   type AdminOverviewStats,
   type AiRequest,
+  type AiQueryDrillResponse,
   type DashboardStats,
   type GetUserActivityResult,
   type RecentActivityDto,
@@ -192,6 +194,17 @@ export function createAdminAnalyticsClient(http: HttpClient) {
         AiRequestsResponseSchema
       );
       return result ?? { requests: [], totalCount: 0 };
+    },
+
+    /**
+     * #1728: Per-query drill (chunks + per-stage breakdown) for QueryDrillPanel.
+     * Returns null when the id does not exist (BE responds 404 → http.get → null).
+     */
+    async getAiQueryDrill(id: string): Promise<AiQueryDrillResponse | null> {
+      return http.get(
+        `/api/v1/admin/ai/queries/${encodeURIComponent(id)}/drill`,
+        AiQueryDrillResponseSchema
+      );
     },
 
     async getChatAnalytics(days: number = 30): Promise<ChatAnalyticsDto | null> {

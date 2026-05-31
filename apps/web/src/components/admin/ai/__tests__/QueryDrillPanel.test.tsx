@@ -59,9 +59,53 @@ describe('QueryDrillPanel', () => {
     expect(screen.getAllByText(/842\s*ms/).length).toBeGreaterThan(0);
   });
 
-  it('surfaces a "limited drill" badge when chunks are unavailable', () => {
+  it('surfaces a "limited drill" badge when the drill endpoint has not resolved', () => {
     render(<QueryDrillPanel query={sampleRequest} onClose={vi.fn()} />);
     expect(screen.getByText(/limited drill/i)).toBeInTheDocument();
+  });
+
+  it('hides the "limited drill" badge once drillReady is true', () => {
+    render(<QueryDrillPanel query={sampleRequest} onClose={vi.fn()} drillReady chunks={[]} />);
+    expect(screen.queryByText(/limited drill/i)).not.toBeInTheDocument();
+  });
+
+  it('renders the chunks section with the empty state when drillReady + chunks=[]', () => {
+    render(<QueryDrillPanel query={sampleRequest} onClose={vi.fn()} drillReady chunks={[]} />);
+    expect(screen.getByText(/Retrieved chunks \(0\)/)).toBeInTheDocument();
+    expect(screen.getByText(/no chunks recorded/i)).toBeInTheDocument();
+  });
+
+  it('renders one item per chunk when chunks are provided', () => {
+    render(
+      <QueryDrillPanel
+        query={sampleRequest}
+        onClose={vi.fn()}
+        drillReady
+        chunks={[
+          {
+            id: 'chunk-1',
+            score: 0.91,
+            text: 'A player draws cards at the end of each turn.',
+            page: 12,
+            chunkIndex: 4,
+            pdfName: 'rulebook.pdf',
+            used: true,
+          },
+          {
+            id: 'chunk-2',
+            score: 0.74,
+            text: 'Discard down to the hand limit.',
+            page: 14,
+            chunkIndex: 7,
+            pdfName: 'rulebook.pdf',
+            used: true,
+          },
+        ]}
+      />
+    );
+    expect(screen.getByText(/Retrieved chunks \(2\)/)).toBeInTheDocument();
+    expect(screen.getByText(/A player draws cards/)).toBeInTheDocument();
+    expect(screen.getByText(/Discard down to/)).toBeInTheDocument();
   });
 
   it('renders the panel with the region role and a descriptive label', () => {

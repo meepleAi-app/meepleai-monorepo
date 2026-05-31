@@ -1,8 +1,8 @@
 'use client';
 
-import { X } from 'lucide-react';
+import { X, FileText } from 'lucide-react';
 
-import type { AiRequest } from '@/lib/api/schemas';
+import type { AiRequest, RetrievedChunkDto } from '@/lib/api/schemas';
 
 import { LatencyBreakdownBar, type LatencyBreakdown } from './LatencyBreakdownBar';
 
@@ -10,24 +10,44 @@ interface QueryDrillPanelProps {
   query: AiRequest | null;
   onClose: () => void;
   /**
-   * Per-stage latency split. Today the `/api/v1/admin/requests`
-   * payload doesn't include it — pass `null` to render the fallback
-   * caption. PR-wired prop ready for #1722 sub-task BE drill endpoint.
+   * Per-stage latency split. Populated by #1728 drill endpoint when
+   * the pipeline has been instrumented; null otherwise (FE renders
+   * "breakdown unavailable" fallback).
    */
   breakdown?: LatencyBreakdown | null;
+  /**
+   * Retrieved chunks for this query. Populated by #1728 drill
+   * endpoint when the pipeline captured them. Empty array surfaces
+   * the "no chunks recorded" empty state without the "limited drill"
+   * badge.
+   */
+  chunks?: readonly RetrievedChunkDto[] | null;
+  /**
+   * True when the drill endpoint has resolved successfully (even if
+   * chunks is empty). Controls the "limited drill" badge — hides it
+   * when the BE has spoken, surfaces it when we only have the base
+   * `/admin/requests` payload.
+   */
+  drillReady?: boolean;
 }
 
 /**
  * Right-side drill-down panel for a single AI request.
  *
- * Shows the prompt, response snippet, and metadata grid. Chunks +
- * latency breakdown require the dedicated drill endpoint (#1722
- * sub-task BE — `GET /api/v1/admin/ai/queries/{id}/drill`); until
- * then we render a "limited drill" badge and surface only what the
- * `/api/v1/admin/requests` payload already exposes.
+ * When the dedicated drill endpoint (`GET /api/v1/admin/ai/queries/{id}/drill`)
+ * has resolved (`drillReady=true`), surfaces chunks + breakdown. Falls
+ * back to a "limited drill" badge for legacy callers that only have
+ * the `/admin/requests` payload.
  */
-export function QueryDrillPanel({ query, onClose, breakdown = null }: QueryDrillPanelProps) {
+export function QueryDrillPanel({
+  query,
+  onClose,
+  breakdown = null,
+  chunks = null,
+  drillReady = false,
+}: QueryDrillPanelProps) {
   if (!query) return null;
+  const showLimitedBadge = !drillReady;
 
   return (
     <aside
@@ -42,9 +62,11 @@ export function QueryDrillPanel({ query, onClose, breakdown = null }: QueryDrill
               {query.endpoint}
             </span>
             <StatusPill status={query.status} />
-            <span className="ml-auto inline-flex items-center rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-medium text-warning">
-              limited drill
-            </span>
+            {showLimitedBadge && (
+              <span className="ml-auto inline-flex items-center rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-medium text-warning">
+                limited drill
+              </span>
+            )}
           </div>
           <div className="mt-1 flex items-center gap-3 text-[11px] text-muted-foreground tabular-nums">
             <span>{query.model ?? '—'}</span>
@@ -75,6 +97,36 @@ export function QueryDrillPanel({ query, onClose, breakdown = null }: QueryDrill
       </Section>
 
       <LatencyBreakdownBar breakdown={breakdown} totalMs={query.latencyMs} />
+
+      {drillReady && (
+        <Section label={`Retrieved chunks (${chunks?.length ?? 0})`}>
+          {chunks && chunks.length > 0 ? (
+            <ul className="space-y-2">
+              {chunks.map(c => (
+                <li
+                  key={c.id}
+                  className="rounded-md border border-border/60 bg-background p-2 space-y-1"
+                >
+                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                    <FileText className="h-3 w-3" />
+                    <span className="font-mono truncate">{c.pdfName}</span>
+                    <span className="ml-auto font-mono tabular-nums">p.{c.page}</span>
+                    <span className="font-mono tabular-nums">#{c.chunkIndex}</span>
+                    <span className="font-mono tabular-nums">{c.score.toFixed(2)}</span>
+                  </div>
+                  <p className="text-[12px] text-foreground/85 line-clamp-3 break-words">
+                    {c.text}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="rounded-md border border-dashed border-border/60 bg-muted/30 px-2 py-1.5 text-[11px] text-muted-foreground">
+              no chunks recorded for this query
+            </p>
+          )}
+        </Section>
+      )}
 
       <Section label="Metadata">
         <dl className="grid grid-cols-2 gap-2 text-[11px]">

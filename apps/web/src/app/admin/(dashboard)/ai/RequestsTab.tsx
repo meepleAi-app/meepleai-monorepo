@@ -10,7 +10,7 @@ import { QueryDrillPanel } from '@/components/admin/ai/QueryDrillPanel';
 import { AdminHubEmptyState } from '@/components/admin/layout/AdminHubEmptyState';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
-import type { AiRequest } from '@/lib/api/schemas';
+import type { AiQueryDrillResponse, AiRequest } from '@/lib/api/schemas';
 import { cn } from '@/lib/utils';
 
 const TREND_RANGE_OPTIONS = ['1d', '7d', '30d'] as const;
@@ -26,6 +26,10 @@ export function RequestsTab() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [trend, setTrend] = useState<TrendDatapoint[]>([]);
+  // #1728: drill payload fetched from /api/v1/admin/ai/queries/{id}/drill
+  // when a row is selected. Null = not requested yet / clearing; undefined
+  // = endpoint resolved with 404 (rare).
+  const [drill, setDrill] = useState<AiQueryDrillResponse | null>(null);
 
   const fetchRequests = (pageNum: number) => {
     setLoading(true);
@@ -70,6 +74,27 @@ export function RequestsTab() {
     if (!params.get('tab')) params.set('tab', 'requests');
     router.replace(`?${params.toString()}`, { scroll: false });
   };
+
+  // #1728: fetch drill payload (chunks + breakdown) when a row is selected.
+  // Keeps the panel "limited drill" badge visible until the BE responds.
+  useEffect(() => {
+    if (!selectedId) {
+      setDrill(null);
+      return;
+    }
+    let cancelled = false;
+    api.admin
+      .getAiQueryDrill(selectedId)
+      .then(data => {
+        if (!cancelled) setDrill(data);
+      })
+      .catch(() => {
+        if (!cancelled) setDrill(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId]);
 
   const selectedQuery = useMemo<AiRequest | null>(() => {
     if (!selectedId) return null;
@@ -254,7 +279,13 @@ export function RequestsTab() {
 
         {hasDrill && (
           <div className="hidden lg:block">
-            <QueryDrillPanel query={selectedQuery} onClose={closeDrill} />
+            <QueryDrillPanel
+              query={selectedQuery}
+              onClose={closeDrill}
+              breakdown={drill?.breakdown ?? null}
+              chunks={drill?.chunks ?? null}
+              drillReady={drill !== null}
+            />
           </div>
         )}
       </div>

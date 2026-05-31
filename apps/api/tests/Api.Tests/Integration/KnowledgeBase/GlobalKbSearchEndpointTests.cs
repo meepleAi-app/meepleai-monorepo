@@ -739,6 +739,93 @@ public sealed class GlobalKbSearchEndpointTests : IAsyncLifetime
             ids.Should().NotBeNull("DocType facet active → documentIds push-down on every page"));
     }
 
+    // ─── Issue #1731 Part A extra coverage (M-1 panel finding) ──────────────────
+
+    /// <summary>
+    /// Extra coverage (D-11 short-circuit): facets that match ZERO documents
+    /// → handler returns 200 empty WITHOUT invoking the search service.
+    /// Per seed (Task 5): DocType=["homerule"] + Language="it" matches 0 docs
+    /// in Alice's accessible scope (homerule docs are all "en").
+    /// </summary>
+    [Fact]
+    public async Task Returns_empty_when_facets_yield_zero_documentIds()
+    {
+        _capturedGameIds.Clear();
+        _capturedDocumentIds.Clear();
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            Endpoint,
+            _aliceToken,
+            new
+            {
+                Query = "rules",
+                Limit = 20,
+                DocType = new[] { "homerule" },
+                Language = "it"
+            });
+
+        var response = await _client.SendAsync(request, TestCancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var payload = await response.Content.ReadFromJsonAsync<GlobalKbSearchResponseDto>(
+            TestCancellationToken);
+        payload.Should().NotBeNull();
+        payload!.Results.Should().BeEmpty();
+        payload.HasMore.Should().BeFalse();
+        payload.NextCursor.Should().BeNull();
+
+        // D-11 short-circuit: search service NEVER called when facets yield empty allowlist.
+        _capturedGameIds.Should().BeEmpty(
+            "D-11 short-circuit: search must not be invoked when facets yield zero documentIds");
+        _capturedDocumentIds.Should().BeEmpty(
+            "D-11 short-circuit: no search call → no documentIds capture");
+    }
+
+    /// <summary>
+    /// Extra coverage (D-5 ∩ facet=zero): GameId is accessible BUT combined facets
+    /// yield zero. Per seed (Task 5): GameId=alice (accessible) + DocType=["homerule"]
+    /// → alice owned scope has 0 homerule docs → 200 empty via D-11 short-circuit.
+    /// Counter expectation: gameId=applied (D-5 accepted) but docType=applied
+    /// NOT incremented (D-11 short-circuit bypasses the applied increment).
+    /// </summary>
+    [Fact]
+    public async Task Returns_empty_when_GameId_accessible_but_facets_zero()
+    {
+        _capturedGameIds.Clear();
+        _capturedDocumentIds.Clear();
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            Endpoint,
+            _aliceToken,
+            new
+            {
+                Query = "rules",
+                Limit = 20,
+                GameId = _gameAliceOwnedId,           // accessible
+                DocType = new[] { "homerule" }        // 0 matches in alice scope
+            });
+
+        var response = await _client.SendAsync(request, TestCancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var payload = await response.Content.ReadFromJsonAsync<GlobalKbSearchResponseDto>(
+            TestCancellationToken);
+        payload.Should().NotBeNull();
+        payload!.Results.Should().BeEmpty();
+        payload.HasMore.Should().BeFalse();
+        payload.NextCursor.Should().BeNull();
+
+        // D-11 short-circuit fires AFTER D-5 GameId narrowing.
+        // Search service NEVER called because facetDocumentIds.Count == 0.
+        _capturedGameIds.Should().BeEmpty(
+            "D-11 short-circuit applies even after D-5 narrowing: search not invoked");
+        _capturedDocumentIds.Should().BeEmpty();
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────────────
 
     /// <summary>

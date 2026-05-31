@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 /**
  * MAU Monitoring Dashboard
  *
@@ -58,7 +57,7 @@ export function MauDashboard() {
 
   if (error) {
     return (
-      <Card className="rounded-xl border bg-card/70 backdrop-blur-md dark:bg-zinc-900/70">
+      <Card className="rounded-xl border bg-card/70 backdrop-blur-md">
         <CardContent className="p-6">
           <p className="text-red-600">{error}</p>
           <Button className="mt-2" variant="outline" onClick={() => fetchData(period)}>
@@ -122,7 +121,7 @@ export function MauDashboard() {
 
       {/* Daily Trend */}
       {data && data.dailyBreakdown.length > 0 && (
-        <Card className="rounded-xl border bg-card/70 backdrop-blur-md dark:bg-zinc-900/70">
+        <Card className="rounded-xl border bg-card/70 backdrop-blur-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5" />
@@ -184,14 +183,14 @@ function KpiCard({
   isLoading: boolean;
 }) {
   return (
-    <Card className="rounded-xl border bg-card/70 backdrop-blur-md dark:bg-zinc-900/70">
+    <Card className="rounded-xl border bg-card/70 backdrop-blur-md">
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs text-muted-foreground">{title}</p>
             <p className="mt-1 text-2xl font-bold">
               {isLoading ? (
-                <span className="inline-block h-7 w-12 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
+                <span className="inline-block h-7 w-12 animate-pulse rounded bg-muted" />
               ) : (
                 (value ?? 0).toLocaleString()
               )}

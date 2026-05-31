@@ -295,7 +295,7 @@ function ServiceCard({ service }: { service: ServiceData }) {
           <StatusIndicator status={service.status} />
         </div>
 
-        <h3 className="font-mono text-sm font-medium text-slate-200 mb-1">{service.name}</h3>
+        <h3 className="font-mono text-sm font-medium text-foreground mb-1">{service.name}</h3>
 
         <div className="flex items-center justify-between text-xs">
           <span className={cn('font-mono uppercase tracking-wider', colors.text)}>
@@ -373,8 +373,10 @@ function MetricCard({ metric, index }: { metric: SystemMetric; index: number }) 
       </p>
 
       <div className="flex items-baseline gap-2">
-        <span className="text-2xl font-bold text-slate-100 font-mono">{metric.value}</span>
-        {metric.unit && <span className="text-sm text-muted-foreground font-mono">{metric.unit}</span>}
+        <span className="text-2xl font-bold text-foreground font-mono">{metric.value}</span>
+        {metric.unit && (
+          <span className="text-sm text-muted-foreground font-mono">{metric.unit}</span>
+        )}
       </div>
 
       {metric.trend !== undefined && (
@@ -402,7 +404,7 @@ function AlertItem({ alert, index }: { alert: AlertData; index: number }) {
     >
       <Icon className={cn('w-5 h-5 mt-0.5 flex-shrink-0', styles.text)} />
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-slate-300">{alert.message}</p>
+        <p className="text-sm text-foreground">{alert.message}</p>
         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground font-mono">
           <span>{alert.source}</span>
           <span>•</span>
@@ -439,7 +441,7 @@ function PendingActionCard({ action }: { action: PendingAction }) {
             <Icon className={cn('w-5 h-5', style.color)} />
           </div>
           <div>
-            <p className="text-sm font-medium text-slate-200">{action.title}</p>
+            <p className="text-sm font-medium text-foreground">{action.title}</p>
             <p className="text-xs text-muted-foreground font-mono uppercase tracking-wider">
               {action.type}
             </p>
@@ -570,7 +572,7 @@ export function CommandCenterDashboard({ className }: CommandCenterDashboardProp
   };
 
   return (
-    <div className={cn('min-h-screen bg-card text-slate-100', 'font-sans', className)}>
+    <div className={cn('min-h-screen bg-card text-foreground', 'font-sans', className)}>
       {/* Subtle grid background */}
       <div
         className="fixed inset-0 opacity-[0.02] pointer-events-none"
@@ -594,7 +596,9 @@ export function CommandCenterDashboard({ className }: CommandCenterDashboardProp
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold tracking-tight">Command Center</h1>
-                  <p className="text-sm text-muted-foreground font-mono">MeepleAI Admin Dashboard</p>
+                  <p className="text-sm text-muted-foreground font-mono">
+                    MeepleAI Admin Dashboard
+                  </p>
                 </div>
               </div>
             </div>
@@ -623,7 +627,7 @@ export function CommandCenterDashboard({ className }: CommandCenterDashboardProp
               {mounted && currentTime && (
                 <div className="hidden md:flex items-center gap-2 px-4 py-2 rounded-lg bg-card border border-border/50">
                   <Clock className="w-4 h-4 text-muted-foreground" />
-                  <span className="font-mono text-sm text-slate-300">
+                  <span className="font-mono text-sm text-muted-foreground">
                     {currentTime.toLocaleDateString('it-IT')}
                   </span>
                   <span className="font-mono text-sm text-cyan-400 font-bold">
@@ -660,7 +664,7 @@ export function CommandCenterDashboard({ className }: CommandCenterDashboardProp
             </h2>
             <Link
               href="/admin/infrastructure"
-              className="text-sm text-muted-foreground hover:text-slate-300 transition-colors flex items-center gap-1"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
             >
               View Details <ChevronRight className="w-4 h-4" />
             </Link>
@@ -708,7 +712,7 @@ export function CommandCenterDashboard({ className }: CommandCenterDashboardProp
               </h2>
               <Link
                 href="/admin/alerts"
-                className="text-sm text-muted-foreground hover:text-slate-300 transition-colors flex items-center gap-1"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
               >
                 View All <ChevronRight className="w-4 h-4" />
               </Link>

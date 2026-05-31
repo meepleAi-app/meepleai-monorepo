@@ -165,15 +165,6 @@ export default async function AdminMonitorPage({ searchParams }: AdminMonitorPag
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="font-quicksand text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-          Monitoraggio
-        </h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Stato del sistema, alert, cache, infrastruttura e operazioni.
-        </p>
-      </div>
-
       <AdminHubTabBar tabs={TABS} activeTab={tab} />
       <AdminTabPersistence hubName="monitor" defaultTab="alerts" />
 

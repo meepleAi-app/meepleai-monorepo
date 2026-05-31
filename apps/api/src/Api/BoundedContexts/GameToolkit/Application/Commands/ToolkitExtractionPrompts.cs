@@ -9,6 +9,11 @@ namespace Api.BoundedContexts.GameToolkit.Application.Commands;
 /// section (Points-as-counter / dummy timer / Overrides ignored), and explicit
 /// enum value listings. Validated on Llama 3.3 70B free + DeepSeek-chat
 /// (DeepSeek produces 90% accurate output; Llama free requires schema validation).
+///
+/// **v3 — 2026-05-31** (B19-3a + B19-3b, issues #1745 + #1746):
+/// extended AiTurnTemplateSuggestion with Rounds/TurnsPerRound/TurnActions/Direction
+/// (additive, optional) for rich games like Wingspan, and AiScoringTemplateSuggestion
+/// with structured Categories[] (per-category Computation enum) for polymorphic UI.
 /// </summary>
 internal static class ToolkitExtractionPrompts
 {
@@ -80,14 +85,27 @@ internal static class ToolkitExtractionPrompts
         }
 
         AiScoringTemplateSuggestion = {
-          "Dimensions": [string],     // e.g., ["Birds", "Bonus cards", "Eggs"] — simple flat array
+          "Dimensions": [string],     // legacy: simple labels e.g., ["Birds", "Bonus cards"]
           "DefaultUnit": string,      // e.g., "points"
-          "ScoreType": "Points"|"Ranking"|"BinaryWin"|"Objectives"
+          "ScoreType": "Points"|"Ranking"|"BinaryWin"|"Objectives",
+          "Categories": [AiScoringCategorySuggestion] | null  // v2: structured per-category computation (preferred for rich games)
+        }
+
+        AiScoringCategorySuggestion = {                       // v2 (B19-3b)
+          "Id": string,               // stable identifier, e.g., "birds", "bonus-cards", "round-goals"
+          "Label": string,            // user-visible label
+          "Computation": "Count"|"Sum"|"RankBased"|"Custom",  // how to compute the category
+          "Weight": int,              // multiplier (default 1)
+          "Description": string | null
         }
 
         AiTurnTemplateSuggestion = {
           "TurnOrderType": "RoundRobin"|"Sequential"|"Simultaneous"|"Realtime"|"None",
-          "Phases": [string]          // e.g., ["Round 1", "Round 2"] or ["Action", "Draw", "Infect"]
+          "Phases": [string],         // e.g., ["Round 1", "Round 2"] or ["Action", "Draw", "Infect"]
+          "Rounds": int | null,       // v2 (B19-3a): total round count if game has fixed structure (e.g., Wingspan=4)
+          "TurnsPerRound": [int] | null,  // v2: turn count per round if variable (e.g., Wingspan=[8,7,6,5])
+          "TurnActions": [string] | null, // v2: actions available per turn (e.g., ["play-bird","get-food","lay-eggs","draw-cards"])
+          "Direction": "clockwise"|"counterclockwise"|"none" | null  // v2: turn order direction
         }
 
         AiOverrideSuggestion = {

@@ -355,6 +355,76 @@ public class MultiGameHybridSearchServiceTests
     }
 
     // ---------------------------------------------------------------------------
+    // Issue #1686 — documentIds parameter is forwarded to each per-game IHybridSearchService call
+    // ---------------------------------------------------------------------------
+
+    [Fact]
+    public async Task DocumentIds_PassedThrough_ToPerGameSearch()
+    {
+        // Arrange
+        var gameId1 = Guid.NewGuid();
+        var gameId2 = Guid.NewGuid();
+        var docA = Guid.NewGuid();
+        var docB = Guid.NewGuid();
+        var documentIds = new List<Guid> { docA, docB };
+
+        // Setup with explicit documentIds match — both per-game calls receive the same allowlist
+        _hybridSearchMock
+            .Setup(s => s.SearchAsync(
+                It.IsAny<string>(), It.IsAny<Guid>(),
+                It.IsAny<SearchMode>(), It.IsAny<int>(),
+                It.Is<List<Guid>?>(d => d != null && d.SequenceEqual(documentIds)),
+                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
+                It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<HybridSearchResult>());
+
+        var sut = CreateSut();
+
+        // Act — call with documentIds allowlist
+        await sut.SearchAsync(
+            "test",
+            new[] { gameId1, gameId2 },
+            limit: 10,
+            mode: SearchMode.Hybrid,
+            minScore: 0.0,
+            documentIds: documentIds,
+            cancellationToken: CancellationToken.None);
+
+        // Assert — each game received the same documentIds allowlist
+        _hybridSearchMock.Verify(
+            s => s.SearchAsync(
+                It.IsAny<string>(), It.IsAny<Guid>(),
+                It.IsAny<SearchMode>(), It.IsAny<int>(),
+                It.Is<List<Guid>?>(d => d != null && d.Count == 2 && d.Contains(docA) && d.Contains(docB)),
+                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
+                It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task DocumentIds_Null_ForwardedAsNull_BackwardCompatible()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        SetupHybridSearchForGame(gameId, count: 1, baseScore: 0.8f);
+
+        var sut = CreateSut();
+
+        // Act — call WITHOUT documentIds (legacy path, default null)
+        await sut.SearchAsync("test", new[] { gameId }, limit: 10);
+
+        // Assert — per-game search receives documentIds=null (preserves legacy behaviour, D-3)
+        _hybridSearchMock.Verify(
+            s => s.SearchAsync(
+                It.IsAny<string>(), gameId,
+                It.IsAny<SearchMode>(), It.IsAny<int>(),
+                null,  // explicit null — backward-compatible default
+                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
+                It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    // ---------------------------------------------------------------------------
     // Helper methods
     // ---------------------------------------------------------------------------
 

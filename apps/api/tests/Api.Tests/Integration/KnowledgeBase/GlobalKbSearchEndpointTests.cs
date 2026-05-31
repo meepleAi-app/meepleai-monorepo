@@ -287,6 +287,118 @@ public sealed class GlobalKbSearchEndpointTests : IAsyncLifetime
         }
     }
 
+    // ── Issue #1686: facet validation + push-down end-to-end ────────────────
+
+    /// <summary>
+    /// Issue #1686 — request with unknown DocType value → 422 UnprocessableEntity
+    /// (validator allowlist enforced + middleware maps FluentValidation to 422).
+    /// </summary>
+    [Fact]
+    public async Task Returns_422_when_DocType_unknown()
+    {
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            Endpoint,
+            _aliceToken,
+            new { Query = "rules", Limit = 5, DocType = new[] { "banana" } });
+
+        var response = await _client.SendAsync(request, TestCancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+    }
+
+    /// <summary>
+    /// Issue #1686 — request with unknown Language → 422 UnprocessableEntity.
+    /// </summary>
+    [Fact]
+    public async Task Returns_422_when_Language_unknown()
+    {
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            Endpoint,
+            _aliceToken,
+            new { Query = "rules", Limit = 5, Language = "xx" });
+
+        var response = await _client.SendAsync(request, TestCancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+    }
+
+    /// <summary>
+    /// Issue #1686 — request with DocType list above the 10-element cap → 422.
+    /// </summary>
+    [Fact]
+    public async Task Returns_422_when_DocType_list_above_cap()
+    {
+        var oversized = Enumerable.Repeat("base", 11).ToArray();
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            Endpoint,
+            _aliceToken,
+            new { Query = "rules", Limit = 5, DocType = oversized });
+
+        var response = await _client.SendAsync(request, TestCancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+    }
+
+    /// <summary>
+    /// Issue #1686 D-5 — requesting a GameId not in accessible set returns 200 empty
+    /// (NOT 403 — avoids info leak).
+    /// </summary>
+    [Fact]
+    public async Task GameId_OfPrivateUnowned_Returns_200_Empty()
+    {
+        // Alice does NOT own gameBobOwned. RBAC sees public + gameAliceOwned, NOT gameBobOwned.
+        // Requesting GameId = gameBobOwned must return 200 empty per D-5.
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            Endpoint,
+            _aliceToken,
+            new { Query = "rules", Limit = 5, GameId = _gameBobOwnedId });
+
+        var response = await _client.SendAsync(request, TestCancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var payload = await response.Content.ReadFromJsonAsync<GlobalKbSearchResponseDto>(
+            TestCancellationToken);
+
+        payload.Should().NotBeNull();
+        payload!.Results.Should().BeEmpty();
+        payload.HasMore.Should().BeFalse();
+        payload.NextCursor.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Issue #1686 D-5 — requesting a GameId IS accessible narrows the search.
+    /// We verify via the capturedGameIds bag that only the requested GameId
+    /// was passed to the vector search layer.
+    /// </summary>
+    [Fact]
+    public async Task GameId_OfAccessibleGame_NarrowsSearchToThatGame()
+    {
+        _capturedGameIds.Clear();
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            Endpoint,
+            _aliceToken,
+            new { Query = "rules", Limit = 5, GameId = _gameAliceOwnedId });
+
+        var response = await _client.SendAsync(request, TestCancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Each capture must contain ONLY the requested game (search invoked with [gameAliceOwned] singleton).
+        _capturedGameIds.Should().NotBeEmpty();
+        _capturedGameIds.Should().AllSatisfy(ids =>
+        {
+            ids.Should().ContainSingle();
+            ids.Should().Contain(_gameAliceOwnedId);
+        });
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -444,9 +556,10 @@ public sealed class GlobalKbSearchEndpointTests : IAsyncLifetime
                 It.IsAny<int>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<CancellationToken>()))
-            .Callback<string, IReadOnlyList<Guid>, int, SearchMode, double, CancellationToken>(
-                (_, gameIds, _, _, _, _) =>
+            .Callback<string, IReadOnlyList<Guid>, int, SearchMode, double, IReadOnlyList<Guid>?, CancellationToken>(
+                (_, gameIds, _, _, _, _, _) =>
                 {
                     // Capture the gameIds the handler asked the search to run on. This is what
                     // RBAC enforcement actually controls — verifying the post-enrichment Results
@@ -460,6 +573,7 @@ public sealed class GlobalKbSearchEndpointTests : IAsyncLifetime
                 int limit,
                 SearchMode mode,
                 double minScore,
+                IReadOnlyList<Guid>? _,
                 CancellationToken _) =>
             {
                 // Return one synthetic result per accessible game (up to limit).

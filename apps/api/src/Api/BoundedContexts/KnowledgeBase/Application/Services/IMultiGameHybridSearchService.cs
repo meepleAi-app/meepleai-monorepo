@@ -30,6 +30,12 @@ internal interface IMultiGameHybridSearchService
     /// <param name="limit">Maximum number of results to return (hard cap, EC-7).</param>
     /// <param name="mode">Search mode forwarded to each per-game call.</param>
     /// <param name="minScore">Minimum hybrid score; results below this threshold are discarded.</param>
+    /// <param name="documentIds">
+    /// Optional document allowlist (Issue #1686, D-4). When non-null, each per-game search
+    /// restricts its hit set to <c>PdfDocumentEntity.Id</c> values in this list. Forwarded to
+    /// <see cref="IHybridSearchService.SearchAsync"/>'s <c>documentIds</c> parameter.
+    /// When null, no document filter is applied (legacy behaviour, D-3).
+    /// </param>
     /// <param name="cancellationToken">Propagated to all parallel per-game calls (EC-3 resource safety).</param>
     /// <returns>
     /// Ranked list of <see cref="MultiGameSearchResultItem"/> ordered by
@@ -41,6 +47,7 @@ internal interface IMultiGameHybridSearchService
         int limit,
         SearchMode mode = SearchMode.Hybrid,
         double minScore = 0.0,
+        IReadOnlyList<Guid>? documentIds = null,
         CancellationToken cancellationToken = default);
 }
 

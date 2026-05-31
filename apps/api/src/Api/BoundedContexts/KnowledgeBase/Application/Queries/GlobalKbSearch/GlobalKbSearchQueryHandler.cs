@@ -62,6 +62,48 @@ internal sealed class GlobalKbSearchQueryHandler
             return new GlobalKbSearchResponseDto(Array.Empty<GlobalKbSearchResultDto>(), false, null);
         }
 
+        // Issue #1686 D-5: GameId facet intersects with RBAC.
+        // When provided AND ∉ accessibleGameIds → 200 empty (NOT 403, avoid info leak).
+        // When provided AND ∈ accessibleGameIds → narrow search to that game only.
+        if (query.GameId.HasValue)
+        {
+            if (!accessibleGameIds.Contains(query.GameId.Value))
+            {
+                _logger.LogDebug(
+                    "[GlobalKbSearch] UserId={UserId} requested GameId={GameId} not in accessible set — returning empty (D-5)",
+                    query.UserId, query.GameId.Value);
+                return new GlobalKbSearchResponseDto(Array.Empty<GlobalKbSearchResultDto>(), false, null);
+            }
+
+            // Narrow the accessible set to exactly the requested game.
+            accessibleGameIds = new[] { query.GameId.Value };
+        }
+
+        // Issue #1686 D-4: push-down DocType + Language facets BEFORE vector search.
+        // When ANY of these is set, compute an allowlist of PdfDocument.Id values via a
+        // single EF query filtered by (SharedGameId ∈ accessibleGameIds) AND (DocumentType IN docTypes)
+        // AND (Language == language). Forwarded to IMultiGameHybridSearchService.SearchAsync
+        // as the documentIds parameter, which each per-game hybrid search uses to restrict its hits.
+        IReadOnlyList<Guid>? facetDocumentIds = null;
+        var hasDocTypeFacet = query.DocType is { Count: > 0 };
+        var hasLanguageFacet = !string.IsNullOrWhiteSpace(query.Language);
+
+        if (hasDocTypeFacet || hasLanguageFacet)
+        {
+            facetDocumentIds = await BuildFacetDocumentIdsAsync(
+                accessibleGameIds, query.DocType, query.Language, cancellationToken)
+                .ConfigureAwait(false);
+
+            // D-11: empty documentIds → short-circuit to 200 empty (no wasted RPC).
+            if (facetDocumentIds.Count == 0)
+            {
+                _logger.LogDebug(
+                    "[GlobalKbSearch] UserId={UserId} facets matched zero documents — returning empty (D-11)",
+                    query.UserId);
+                return new GlobalKbSearchResponseDto(Array.Empty<GlobalKbSearchResultDto>(), false, null);
+            }
+        }
+
         // 2. Decode cursor (best-effort; invalid cursor → start from beginning)
         var cursorScore = double.MaxValue;
         var cursorChunkId = string.Empty;
@@ -73,7 +115,14 @@ internal sealed class GlobalKbSearchQueryHandler
         // 3. Search: probe with Limit+1 to detect hasMore (EC-4)
         var probeLimit = query.Limit + 1;
         var rawResults = await _multiGameSearch
-            .SearchAsync(query.Query, accessibleGameIds, probeLimit, query.Mode, query.MinScore, cancellationToken)
+            .SearchAsync(
+                query: query.Query,
+                gameIds: accessibleGameIds,
+                limit: probeLimit,
+                mode: query.Mode,
+                minScore: query.MinScore,
+                documentIds: facetDocumentIds, // Issue #1686 D-4: push-down allowlist (null when no facets)
+                cancellationToken: cancellationToken)
             .ConfigureAwait(false);
 
         // 4. Apply cursor filter (keyset pagination: skip items before the cursor position)
@@ -159,6 +208,76 @@ internal sealed class GlobalKbSearchQueryHandler
     }
 
     // ─── Private helpers ─────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Issue #1686 D-4: computes the document allowlist for the push-down facet filter.
+    /// Single EF query against <c>PdfDocuments</c> filtered by
+    /// <c>SharedGameId ∈ accessibleGameIds</c> AND (when provided)
+    /// <c>DocumentType ∈ docType</c> AND <c>Language == language</c>.
+    /// Values are normalised to lower-case before comparison (D-8).
+    /// </summary>
+    /// <param name="accessibleGameIds">RBAC-resolved game set (post D-5 intersection).</param>
+    /// <param name="docType">Optional list of doc types (case-insensitive). Null/empty = no filter.</param>
+    /// <param name="language">Optional ISO 639-1 language code (case-insensitive). Null = no filter.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>List of matching <c>PdfDocument.Id</c> values (may be empty).</returns>
+    private async Task<IReadOnlyList<Guid>> BuildFacetDocumentIdsAsync(
+        IReadOnlyList<Guid> accessibleGameIds,
+        IReadOnlyList<string>? docType,
+        string? language,
+        CancellationToken cancellationToken)
+    {
+        // Materialise normalised filter values once. The entity already stores DocumentType
+        // and Language in lower-case (see PdfDocumentEntity defaults: "base", "en", …), and the
+        // validator's allowlist match is case-insensitive. So we normalise user input to
+        // lower-case in-memory and compare to entity values WITHOUT EF-side ToLower() — keeping
+        // the SQL provider-agnostic (CA1311-safe).
+        List<string>? docTypesLower = null;
+        if (docType is { Count: > 0 })
+        {
+            docTypesLower = docType
+                .Where(d => !string.IsNullOrWhiteSpace(d))
+                .Select(d => d.Trim().ToLowerInvariant())
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+
+            // After dedup, the list might be empty if all entries were whitespace; treat as no filter.
+            if (docTypesLower.Count == 0)
+            {
+                docTypesLower = null;
+            }
+        }
+
+        string? languageLower = null;
+        if (!string.IsNullOrWhiteSpace(language))
+        {
+            languageLower = language.Trim().ToLowerInvariant();
+        }
+
+        // Composable query: start with the RBAC invariant, then conditionally narrow.
+        var q = _db.PdfDocuments
+            .AsNoTracking()
+            .Where(p => p.SharedGameId.HasValue && accessibleGameIds.Contains(p.SharedGameId.Value));
+
+        if (docTypesLower != null)
+        {
+            // EF translates Contains() → SQL IN (...). Entity values are already lower-case.
+            q = q.Where(p => docTypesLower.Contains(p.DocumentType));
+        }
+
+        if (languageLower != null)
+        {
+            // Entity stores ISO 639-1 in lower-case already.
+            q = q.Where(p => p.Language == languageLower);
+        }
+
+        var ids = await q
+            .Select(p => p.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return ids;
+    }
 
     /// <summary>
     /// Executes a single EF query that joins VectorDocument → PdfDocument → SharedGame

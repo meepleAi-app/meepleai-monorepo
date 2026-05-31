@@ -22,6 +22,21 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries.GlobalKbSearch;
 /// <param name="MinScore">Minimum hybrid score; results below threshold are discarded.</param>
 /// <param name="UserId">Authenticated user ID (for RBAC resolution).</param>
 /// <param name="Role">Authenticated user role (for RBAC resolution).</param>
+/// <param name="DocType">
+/// Optional facet (Issue #1686, D-1/D-7): list of document types from the allowlist
+/// <c>{ "base", "expansion", "errata", "homerule" }</c> (case-insensitive). When null
+/// or empty, no filter is applied (legacy behaviour, D-3). Hard cap of 10 elements.
+/// </param>
+/// <param name="GameId">
+/// Optional facet (Issue #1686, D-5): single SharedGame.Id to narrow results to.
+/// When provided AND ∈ accessibleGameIds, the search runs only on that game.
+/// When provided AND ∉ accessibleGameIds, returns 200 empty (no info leak).
+/// </param>
+/// <param name="Language">
+/// Optional facet (Issue #1686, D-2): ISO 639-1 code from the allowlist
+/// <c>{ "en", "it", "de", "fr", "es" }</c> (case-insensitive). When null, no
+/// language filter is applied.
+/// </param>
 internal sealed record GlobalKbSearchQuery(
     string Query,
     int Limit,
@@ -29,4 +44,7 @@ internal sealed record GlobalKbSearchQuery(
     SearchMode Mode,
     double MinScore,
     Guid UserId,
-    UserRole Role) : IQuery<GlobalKbSearchResponseDto>;
+    UserRole Role,
+    IReadOnlyList<string>? DocType = null,
+    Guid? GameId = null,
+    string? Language = null) : IQuery<GlobalKbSearchResponseDto>;

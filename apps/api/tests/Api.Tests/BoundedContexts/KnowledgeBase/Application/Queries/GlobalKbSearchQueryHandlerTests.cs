@@ -83,6 +83,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
                 It.IsAny<int>(),
                 SearchMode.Hybrid,
                 It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MultiGameSearchResultItem>());
 
@@ -101,6 +102,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
                 It.IsAny<int>(),
                 SearchMode.Hybrid,
                 It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -157,7 +159,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
         _searchMock
             .Setup(s => s.SearchAsync(
                 It.IsAny<string>(), It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<int>(),
-                It.IsAny<SearchMode>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
+                It.IsAny<SearchMode>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MultiGameSearchResultItem> { searchResult });
 
         var query = BuildQuery(userId, "test", limit: 10);
@@ -196,7 +198,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
         _searchMock
             .Setup(s => s.SearchAsync(
                 It.IsAny<string>(), It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<int>(),
-                It.IsAny<SearchMode>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
+                It.IsAny<SearchMode>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MultiGameSearchResultItem> { orphanResult });
 
         var query = BuildQuery(userId, "test", limit: 10);
@@ -259,6 +261,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
                 limit + 1, // handler must call with limit+1
                 It.IsAny<SearchMode>(),
                 It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(searchResults);
 
@@ -310,7 +313,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
         _searchMock
             .Setup(s => s.SearchAsync(
                 It.IsAny<string>(), It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<int>(),
-                It.IsAny<SearchMode>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
+                It.IsAny<SearchMode>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MultiGameSearchResultItem>
             {
                 BuildSearchResult(gameId, pdfId.ToString(), pdfId.ToString(), chunkIndex: 0, score: 0.8f)
@@ -371,7 +374,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
         _searchMock
             .Setup(s => s.SearchAsync(
                 It.IsAny<string>(), It.IsAny<IReadOnlyList<Guid>>(), limit + 1,
-                It.IsAny<SearchMode>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
+                It.IsAny<SearchMode>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(results);
 
         var query = BuildQuery(userId, "test", limit: limit);
@@ -415,6 +418,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
                 It.IsAny<int>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MultiGameSearchResultItem>());
 
@@ -432,6 +436,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
                 It.IsAny<int>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
 
@@ -444,6 +449,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
                 It.IsAny<int>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -534,7 +540,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
         _searchMock
             .Setup(s => s.SearchAsync(
                 It.IsAny<string>(), It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<int>(),
-                It.IsAny<SearchMode>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
+                It.IsAny<SearchMode>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MultiGameSearchResultItem>
             {
                 BuildSearchResult(gameId, pdfId.ToString(), pdfId.ToString(), chunkIndex: 0, score: 0.8f)
@@ -551,6 +557,391 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
         response.Results[0].HeadingPath.Should().BeNull();
     }
 
+    // ─── Issue #1686 Task 5: GameId facet intersects with RBAC ──────────────────
+
+    [Fact]
+    public async Task GameId_InAccessibleSet_NarrowsSearchToThatGameOnly()
+    {
+        // Arrange — accessible = [A, B, C]; request GameId = B → only B is searched
+        var userId = Guid.NewGuid();
+        var gameA = Guid.NewGuid();
+        var gameB = Guid.NewGuid();
+        var gameC = Guid.NewGuid();
+
+        _ragAccessMock
+            .Setup(s => s.GetAccessibleGameIdsAsync(userId, UserRole.User, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { gameA, gameB, gameC });
+
+        _searchMock
+            .Setup(s => s.SearchAsync(
+                It.IsAny<string>(),
+                It.IsAny<IReadOnlyList<Guid>>(),
+                It.IsAny<int>(),
+                It.IsAny<SearchMode>(),
+                It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<MultiGameSearchResultItem>());
+
+        var query = BuildQuery(userId, "test", limit: 10, gameId: gameB);
+        var sut = CreateSut();
+
+        // Act
+        await sut.Handle(query, CancellationToken.None);
+
+        // Assert — search called with ONLY gameB (intersection of accessible and requested)
+        _searchMock.Verify(
+            s => s.SearchAsync(
+                It.IsAny<string>(),
+                It.Is<IReadOnlyList<Guid>>(ids => ids.Count == 1 && ids.Contains(gameB)),
+                It.IsAny<int>(),
+                It.IsAny<SearchMode>(),
+                It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GameId_NotInAccessibleSet_ReturnsEmpty_NoCallToSearch()
+    {
+        // Arrange — accessible = [A, B]; request GameId = rogueC → 200 empty, NOT 403
+        var userId = Guid.NewGuid();
+        var gameA = Guid.NewGuid();
+        var gameB = Guid.NewGuid();
+        var rogueC = Guid.NewGuid();
+
+        _ragAccessMock
+            .Setup(s => s.GetAccessibleGameIdsAsync(userId, UserRole.User, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { gameA, gameB });
+
+        var query = BuildQuery(userId, "test", limit: 10, gameId: rogueC);
+        var sut = CreateSut();
+
+        // Act
+        var response = await sut.Handle(query, CancellationToken.None);
+
+        // Assert — empty response, search NEVER called (RBAC-safe: no info leak D-5)
+        response.Results.Should().BeEmpty();
+        response.HasMore.Should().BeFalse();
+        response.NextCursor.Should().BeNull();
+        _searchMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GameId_Null_KeepsAllAccessibleGames_BackwardCompatible()
+    {
+        // Arrange — accessible = [A, B]; gameId = null → search receives all accessible
+        var userId = Guid.NewGuid();
+        var gameA = Guid.NewGuid();
+        var gameB = Guid.NewGuid();
+
+        _ragAccessMock
+            .Setup(s => s.GetAccessibleGameIdsAsync(userId, UserRole.User, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { gameA, gameB });
+
+        _searchMock
+            .Setup(s => s.SearchAsync(
+                It.IsAny<string>(),
+                It.IsAny<IReadOnlyList<Guid>>(),
+                It.IsAny<int>(),
+                It.IsAny<SearchMode>(),
+                It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<MultiGameSearchResultItem>());
+
+        // Default BuildQuery has gameId = null
+        var query = BuildQuery(userId, "test", limit: 10);
+        var sut = CreateSut();
+
+        // Act
+        await sut.Handle(query, CancellationToken.None);
+
+        // Assert — search receives both accessible games (legacy D-3 behaviour)
+        _searchMock.Verify(
+            s => s.SearchAsync(
+                It.IsAny<string>(),
+                It.Is<IReadOnlyList<Guid>>(ids =>
+                    ids.Count == 2 && ids.Contains(gameA) && ids.Contains(gameB)),
+                It.IsAny<int>(),
+                It.IsAny<SearchMode>(),
+                It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    // ─── Issue #1686 Task 6: DocType + Language push-down via EF pre-filter ────
+
+    [Fact]
+    public async Task DocType_FacetFiltersPdfDocsBeforeSearch()
+    {
+        // Arrange — 3 PDFs in one game: 2 "base", 1 "expansion"; request DocType=["base"]
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var baseDoc1 = Guid.NewGuid();
+        var baseDoc2 = Guid.NewGuid();
+        var expansionDoc = Guid.NewGuid();
+
+        var sharedGame = new SharedGameEntity
+        {
+            Id = gameId, Title = "DocType Facet Game",
+            IsDeleted = false, IsRagPublic = true,
+            CreatedAt = DateTime.UtcNow, CreatedBy = Guid.NewGuid()
+        };
+        _db.SharedGames.Add(sharedGame);
+        _db.PdfDocuments.AddRange(
+            new PdfDocumentEntity { Id = baseDoc1, FileName = "b1.pdf", FilePath = "/f/b1", UploadedByUserId = userId, DocumentType = "base", SharedGameId = gameId, Language = "en" },
+            new PdfDocumentEntity { Id = baseDoc2, FileName = "b2.pdf", FilePath = "/f/b2", UploadedByUserId = userId, DocumentType = "base", SharedGameId = gameId, Language = "en" },
+            new PdfDocumentEntity { Id = expansionDoc, FileName = "e.pdf", FilePath = "/f/e", UploadedByUserId = userId, DocumentType = "expansion", SharedGameId = gameId, Language = "en" }
+        );
+        await _db.SaveChangesAsync();
+
+        _ragAccessMock
+            .Setup(s => s.GetAccessibleGameIdsAsync(userId, UserRole.User, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { gameId });
+
+        IReadOnlyList<Guid>? capturedDocIds = null;
+        _searchMock
+            .Setup(s => s.SearchAsync(
+                It.IsAny<string>(), It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<int>(),
+                It.IsAny<SearchMode>(), It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<string, IReadOnlyList<Guid>, int, SearchMode, double, IReadOnlyList<Guid>?, CancellationToken>(
+                (_, _, _, _, _, docIds, _) => capturedDocIds = docIds)
+            .ReturnsAsync(new List<MultiGameSearchResultItem>());
+
+        var query = BuildQuery(userId, "test", limit: 10, docType: new[] { "base" });
+        var sut = CreateSut();
+
+        // Act
+        await sut.Handle(query, CancellationToken.None);
+
+        // Assert — only the 2 "base" PDF IDs reached the search (NOT the expansion)
+        capturedDocIds.Should().NotBeNull();
+        capturedDocIds!.Should().HaveCount(2);
+        capturedDocIds.Should().Contain(baseDoc1).And.Contain(baseDoc2);
+        capturedDocIds.Should().NotContain(expansionDoc);
+    }
+
+    [Fact]
+    public async Task Language_FacetFiltersPdfDocsBeforeSearch()
+    {
+        // Arrange — 3 PDFs: 2 "en", 1 "it"; request Language="en"
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var enDoc1 = Guid.NewGuid();
+        var enDoc2 = Guid.NewGuid();
+        var itDoc = Guid.NewGuid();
+
+        var sharedGame = new SharedGameEntity
+        {
+            Id = gameId, Title = "Lang Facet Game",
+            IsDeleted = false, IsRagPublic = true,
+            CreatedAt = DateTime.UtcNow, CreatedBy = Guid.NewGuid()
+        };
+        _db.SharedGames.Add(sharedGame);
+        _db.PdfDocuments.AddRange(
+            new PdfDocumentEntity { Id = enDoc1, FileName = "e1.pdf", FilePath = "/f/e1", UploadedByUserId = userId, DocumentType = "base", SharedGameId = gameId, Language = "en" },
+            new PdfDocumentEntity { Id = enDoc2, FileName = "e2.pdf", FilePath = "/f/e2", UploadedByUserId = userId, DocumentType = "base", SharedGameId = gameId, Language = "en" },
+            new PdfDocumentEntity { Id = itDoc, FileName = "i.pdf", FilePath = "/f/i", UploadedByUserId = userId, DocumentType = "base", SharedGameId = gameId, Language = "it" }
+        );
+        await _db.SaveChangesAsync();
+
+        _ragAccessMock
+            .Setup(s => s.GetAccessibleGameIdsAsync(userId, UserRole.User, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { gameId });
+
+        IReadOnlyList<Guid>? capturedDocIds = null;
+        _searchMock
+            .Setup(s => s.SearchAsync(
+                It.IsAny<string>(), It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<int>(),
+                It.IsAny<SearchMode>(), It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<string, IReadOnlyList<Guid>, int, SearchMode, double, IReadOnlyList<Guid>?, CancellationToken>(
+                (_, _, _, _, _, docIds, _) => capturedDocIds = docIds)
+            .ReturnsAsync(new List<MultiGameSearchResultItem>());
+
+        var query = BuildQuery(userId, "test", limit: 10, language: "en");
+        var sut = CreateSut();
+
+        // Act
+        await sut.Handle(query, CancellationToken.None);
+
+        // Assert — only the 2 "en" PDF IDs reached the search
+        capturedDocIds.Should().NotBeNull();
+        capturedDocIds!.Should().HaveCount(2);
+        capturedDocIds.Should().Contain(enDoc1).And.Contain(enDoc2);
+        capturedDocIds.Should().NotContain(itDoc);
+    }
+
+    [Fact]
+    public async Task DocTypeAndLanguage_BothFacetsAppliedAsAnd()
+    {
+        // Arrange — 4 PDFs: (base,en), (base,it), (expansion,en), (expansion,it)
+        // Request DocType=["base"] AND Language="en" → only first PDF survives
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var match = Guid.NewGuid();
+        var baseIt = Guid.NewGuid();
+        var expEn = Guid.NewGuid();
+        var expIt = Guid.NewGuid();
+
+        var sharedGame = new SharedGameEntity
+        {
+            Id = gameId, Title = "Combined Facet Game",
+            IsDeleted = false, IsRagPublic = true,
+            CreatedAt = DateTime.UtcNow, CreatedBy = Guid.NewGuid()
+        };
+        _db.SharedGames.Add(sharedGame);
+        _db.PdfDocuments.AddRange(
+            new PdfDocumentEntity { Id = match, FileName = "m.pdf", FilePath = "/f/m", UploadedByUserId = userId, DocumentType = "base", SharedGameId = gameId, Language = "en" },
+            new PdfDocumentEntity { Id = baseIt, FileName = "bi.pdf", FilePath = "/f/bi", UploadedByUserId = userId, DocumentType = "base", SharedGameId = gameId, Language = "it" },
+            new PdfDocumentEntity { Id = expEn, FileName = "ee.pdf", FilePath = "/f/ee", UploadedByUserId = userId, DocumentType = "expansion", SharedGameId = gameId, Language = "en" },
+            new PdfDocumentEntity { Id = expIt, FileName = "ei.pdf", FilePath = "/f/ei", UploadedByUserId = userId, DocumentType = "expansion", SharedGameId = gameId, Language = "it" }
+        );
+        await _db.SaveChangesAsync();
+
+        _ragAccessMock
+            .Setup(s => s.GetAccessibleGameIdsAsync(userId, UserRole.User, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { gameId });
+
+        IReadOnlyList<Guid>? capturedDocIds = null;
+        _searchMock
+            .Setup(s => s.SearchAsync(
+                It.IsAny<string>(), It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<int>(),
+                It.IsAny<SearchMode>(), It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<string, IReadOnlyList<Guid>, int, SearchMode, double, IReadOnlyList<Guid>?, CancellationToken>(
+                (_, _, _, _, _, docIds, _) => capturedDocIds = docIds)
+            .ReturnsAsync(new List<MultiGameSearchResultItem>());
+
+        var query = BuildQuery(userId, "test", limit: 10, docType: new[] { "base" }, language: "en");
+        var sut = CreateSut();
+
+        // Act
+        await sut.Handle(query, CancellationToken.None);
+
+        // Assert — exactly one PDF matches both filters (D-4 AND semantics)
+        capturedDocIds.Should().NotBeNull();
+        capturedDocIds!.Should().ContainSingle().Which.Should().Be(match);
+    }
+
+    [Fact]
+    public async Task NoFacets_PassesNullDocumentIdsToSearch_BackwardCompatible()
+    {
+        // Arrange — when no facets are present, search receives documentIds=null (legacy D-3)
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+
+        _ragAccessMock
+            .Setup(s => s.GetAccessibleGameIdsAsync(userId, UserRole.User, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { gameId });
+
+        IReadOnlyList<Guid>? capturedDocIds = new[] { Guid.NewGuid() }; // sentinel - must be overwritten to null
+        _searchMock
+            .Setup(s => s.SearchAsync(
+                It.IsAny<string>(), It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<int>(),
+                It.IsAny<SearchMode>(), It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<string, IReadOnlyList<Guid>, int, SearchMode, double, IReadOnlyList<Guid>?, CancellationToken>(
+                (_, _, _, _, _, docIds, _) => capturedDocIds = docIds)
+            .ReturnsAsync(new List<MultiGameSearchResultItem>());
+
+        // Default BuildQuery has docType = null, language = null
+        var query = BuildQuery(userId, "test", limit: 10);
+        var sut = CreateSut();
+
+        // Act
+        await sut.Handle(query, CancellationToken.None);
+
+        // Assert — search received null documentIds (legacy path D-3)
+        capturedDocIds.Should().BeNull();
+    }
+
+    // ─── Issue #1686 Task 7: empty documentIds short-circuit (D-11) ────────────
+
+    [Fact]
+    public async Task DocTypeFacet_MatchesZeroDocs_ShortCircuitsToEmpty_NoCallToSearch()
+    {
+        // Arrange — game has only "base" PDFs; request DocType=["errata"] → no matches
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+
+        var sharedGame = new SharedGameEntity
+        {
+            Id = gameId, Title = "Empty Facet Game",
+            IsDeleted = false, IsRagPublic = true,
+            CreatedAt = DateTime.UtcNow, CreatedBy = Guid.NewGuid()
+        };
+        _db.SharedGames.Add(sharedGame);
+        _db.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = pdfId, FileName = "b.pdf", FilePath = "/f/b",
+            UploadedByUserId = userId, DocumentType = "base", SharedGameId = gameId, Language = "en"
+        });
+        await _db.SaveChangesAsync();
+
+        _ragAccessMock
+            .Setup(s => s.GetAccessibleGameIdsAsync(userId, UserRole.User, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { gameId });
+
+        var query = BuildQuery(userId, "test", limit: 10, docType: new[] { "errata" });
+        var sut = CreateSut();
+
+        // Act
+        var response = await sut.Handle(query, CancellationToken.None);
+
+        // Assert — empty response, search NEVER called (D-11 short-circuit)
+        response.Results.Should().BeEmpty();
+        response.HasMore.Should().BeFalse();
+        response.NextCursor.Should().BeNull();
+        _searchMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task LanguageFacet_MatchesZeroDocs_ShortCircuitsToEmpty()
+    {
+        // Arrange — game has only "en" PDFs; request Language="de" → no matches
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+
+        var sharedGame = new SharedGameEntity
+        {
+            Id = gameId, Title = "Lang Empty Game",
+            IsDeleted = false, IsRagPublic = true,
+            CreatedAt = DateTime.UtcNow, CreatedBy = Guid.NewGuid()
+        };
+        _db.SharedGames.Add(sharedGame);
+        _db.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = pdfId, FileName = "e.pdf", FilePath = "/f/e",
+            UploadedByUserId = userId, DocumentType = "base", SharedGameId = gameId, Language = "en"
+        });
+        await _db.SaveChangesAsync();
+
+        _ragAccessMock
+            .Setup(s => s.GetAccessibleGameIdsAsync(userId, UserRole.User, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { gameId });
+
+        var query = BuildQuery(userId, "test", limit: 10, language: "de");
+        var sut = CreateSut();
+
+        // Act
+        var response = await sut.Handle(query, CancellationToken.None);
+
+        // Assert — D-11 short-circuit
+        response.Results.Should().BeEmpty();
+        _searchMock.VerifyNoOtherCalls();
+    }
+
     // ─── Helpers ─────────────────────────────────────────────────────────────────
 
     private static GlobalKbSearchQuery BuildQuery(
@@ -558,7 +949,10 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
         string query,
         int limit = 10,
         string? cursor = null,
-        SearchMode mode = SearchMode.Hybrid) =>
+        SearchMode mode = SearchMode.Hybrid,
+        IReadOnlyList<string>? docType = null,
+        Guid? gameId = null,
+        string? language = null) =>
         new(
             Query: query,
             Limit: limit,
@@ -566,7 +960,10 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
             Mode: mode,
             MinScore: 0.0,
             UserId: userId,
-            Role: UserRole.User);
+            Role: UserRole.User,
+            DocType: docType,
+            GameId: gameId,
+            Language: language);
 
     private static MultiGameSearchResultItem BuildSearchResult(
         Guid gameId,

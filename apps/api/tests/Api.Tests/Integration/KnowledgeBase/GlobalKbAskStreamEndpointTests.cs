@@ -475,15 +475,17 @@ public sealed class GlobalKbAskStreamEndpointTests : IAsyncLifetime
                 It.IsAny<int>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<CancellationToken>()))
-            .Callback<string, IReadOnlyList<Guid>, int, SearchMode, double, CancellationToken>(
-                (_, gameIds, _, _, _, _) => _capturedSearchGameIds.Add(gameIds))
+            .Callback<string, IReadOnlyList<Guid>, int, SearchMode, double, IReadOnlyList<Guid>?, CancellationToken>(
+                (_, gameIds, _, _, _, _, _) => _capturedSearchGameIds.Add(gameIds))
             .ReturnsAsync((
                 string _,
                 IReadOnlyList<Guid> gameIds,
                 int limit,
                 SearchMode mode,
                 double _,
+                IReadOnlyList<Guid>? _,
                 CancellationToken _) =>
             {
                 var results = new List<MultiGameSearchResultItem>();

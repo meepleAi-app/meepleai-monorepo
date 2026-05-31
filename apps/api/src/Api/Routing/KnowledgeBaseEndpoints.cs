@@ -125,7 +125,10 @@ internal static class KnowledgeBaseEndpoints
             Mode: request.Mode ?? SearchMode.Hybrid,
             MinScore: request.MinScore ?? 0.0,
             UserId: userId,
-            Role: userRole);
+            Role: userRole,
+            DocType: request.DocType,
+            GameId: request.GameId,
+            Language: request.Language);
 
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);
@@ -1410,13 +1413,36 @@ internal sealed record SearchKbChunksRequest(string Query, int? Skip, int? Take)
 /// <summary>
 /// Request body for POST /api/v1/knowledge-base/search/global (cross-game search, Issue #1661).
 /// User/Role are NOT in the request — they are resolved from the authenticated session.
+/// Issue #1686 added optional facet fields (DocType, GameId, Language).
 /// </summary>
+/// <param name="Query">Natural-language search query (required, max 500 chars).</param>
+/// <param name="Limit">Max results per page (default 20, hard cap 50).</param>
+/// <param name="Cursor">Opaque pagination cursor from a previous response.</param>
+/// <param name="Mode">Search mode (Hybrid by default).</param>
+/// <param name="MinScore">Minimum hybrid score; results below threshold are discarded.</param>
+/// <param name="DocType">
+/// Optional facet (Issue #1686, D-6): list of canonical <c>DocumentCategory</c> values from the allowlist
+/// <c>{ "Rulebook", "Expansion", "Errata", "QuickStart", "Reference", "PlayerAid", "Other" }</c>
+/// (case-insensitive). Hard cap of 10 elements. Null or empty = no filter (D-3 byte-identical legacy).
+/// </param>
+/// <param name="GameId">
+/// Optional facet (Issue #1686, D-5): single SharedGame.Id to narrow results to.
+/// When provided AND accessible, search runs only on that game.
+/// When provided AND NOT accessible, returns 200 empty (no info leak).
+/// </param>
+/// <param name="Language">
+/// Optional facet (Issue #1686, D-2): ISO 639-1 code from the allowlist
+/// <c>{ "en", "it", "de", "fr", "es" }</c> (case-insensitive). Null = no filter.
+/// </param>
 internal sealed record GlobalKbSearchRequest(
     string Query,
     int Limit = 20,
     string? Cursor = null,
     SearchMode? Mode = null,
-    double? MinScore = null);
+    double? MinScore = null,
+    IReadOnlyList<string>? DocType = null,
+    Guid? GameId = null,
+    string? Language = null);
 
 /// <summary>
 /// Request body for POST /api/v1/knowledge-base/ask/global (cross-game SSE ask, Issue #1661 PR-2).

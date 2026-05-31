@@ -1,7 +1,6 @@
 using System.Text.Json;
 using Api.BoundedContexts.Administration.Application.Queries.AdminEvents;
 using Api.Extensions;
-using Api.Infrastructure.EventBroadcasting;
 using MediatR;
 
 namespace Api.Routing;
@@ -17,13 +16,16 @@ namespace Api.Routing;
 ///
 /// All endpoints require Admin or SuperAdmin session (gate via <c>context.RequireAdminSession()</c>).
 ///
-/// SSE endpoint design:
+/// SSE endpoint design (CQRS-compliant — all subscription/backfill/dedup logic lives in
+/// <see cref="GetAdminEventsStreamQueryHandler"/>):
 /// <list type="number">
-///   <item>Subscribe eagerly to <see cref="IEventBroadcaster"/> (so no events are lost during backfill).</item>
-///   <item>If <c>Last-Event-ID</c> header present, backfill events from DB newer than that cursor.</item>
-///   <item>Stream channel events in W3C SSE format: <c>id: {guid}\ndata: {json}\n\n</c>.</item>
-///   <item>Heartbeat comment <c>:hb\n\n</c> every 15 seconds to keep proxy connections alive.</item>
-///   <item>Clean unsubscribe on HTTP client disconnect (CT cancellation).</item>
+///   <item>Parse <c>Last-Event-ID</c> header and construct <see cref="GetAdminEventsStreamQuery"/>.</item>
+///   <item>Dispatch via <c>IMediator.CreateStream</c> — handler subscribes eagerly to
+///         <c>IEventBroadcaster</c>, backfills from DB if cursor is present, then streams live events.</item>
+///   <item>Write each yielded <see cref="DomainEventDto"/> in W3C SSE format:
+///         <c>id: {guid}\ndata: {json}\n\n</c>.</item>
+///   <item>Heartbeat comment <c>:hb\n\n</c> every 15 seconds (transport-level, stays in endpoint).</item>
+///   <item>Clean unsubscribe on HTTP client disconnect (CT cancellation propagated to handler).</item>
 /// </list>
 /// </summary>
 internal static class AdminEventsEndpoints
@@ -140,7 +142,6 @@ internal static class AdminEventsEndpoints
 
     private static async Task HandleGetEventsStream(
         HttpContext context,
-        IEventBroadcaster broadcaster,
         IMediator mediator,
         string? eventTypes,
         string? aggregateTypes,
@@ -159,18 +160,6 @@ internal static class AdminEventsEndpoints
             return;
         }
 
-        // ── Build per-connection filter from query params ──
-        var filter = new EventBroadcastFilter(
-            EventTypes: ParseCommaSeparated(eventTypes),
-            AggregateTypes: ParseCommaSeparated(aggregateTypes),
-            UserId: userId,
-            AggregateId: aggregateId);
-
-        // ── Subscribe EAGERLY before writing headers or backfilling ──
-        // This ensures events published during backfill are buffered in the channel
-        // and will be delivered after backfill completes (no gap).
-        var stream = broadcaster.Subscribe(filter, ct);
-
         // ── Set SSE response headers ──
         context.Response.Headers.ContentType = "text/event-stream";
         context.Response.Headers.CacheControl = "no-cache";
@@ -186,58 +175,19 @@ internal static class AdminEventsEndpoints
         await context.Response.WriteAsync(":ok\n\n", ct).ConfigureAwait(false);
         await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
 
-        // ── Last-Event-ID backfill (W3C SSE spec reconnect) ──
-        // Strategy: subscribe FIRST (above), then backfill from DB.
-        // Events that arrived between subscribe and backfill query are buffered in the channel.
-        // We track backfill Ids to skip any duplicates that also arrive via the live channel.
-        var seenIds = new HashSet<Guid>();
-
+        // ── Parse Last-Event-ID for reconnect backfill (W3C SSE spec) ──
         var lastEventIdHeader = context.Request.Headers["Last-Event-ID"].FirstOrDefault();
-        if (Guid.TryParse(lastEventIdHeader, out var lastGuid))
-        {
-            // Fetch the LoggedAt for the cursor event so we can use time-based filtering.
-            // The handler uses `Since` as "LoggedAt < Since" cursor.
-            // We want all events NEWER than lastGuid, so we fetch the row's LoggedAt
-            // and pass it as the `Since` parameter (exclusive — backfill starts just after it).
-            // Backfill window: query the 200 most recent events.
-            //
-            // EDGE CASE: If more than 200 events accumulated since the client's last seen event,
-            // the cursor (`lastGuid`) may not appear in the result. `TakeWhile` will then yield
-            // all 200 events (interpreting them as backfill, not stopping at the cursor).
-            //
-            // This is acceptable for an admin monitor: 200 events represents a substantial
-            // realtime gap; clients reconnecting after such a gap should treat the missed
-            // events as a known operational limitation and rely on the polling endpoint
-            // (`GET /api/v1/admin/events?since=...`) for guaranteed cursor-anchored pagination.
-            //
-            // To eliminate this edge case in a future iteration: pass Last-Event-ID's
-            // `LoggedAt` as `Since` after a separate single-row DB lookup.
-            var backfillQuery = new GetAdminEventsQuery(
-                Since: null,   // No time cursor for backfill — we want all newer than lastGuid
-                Limit: 200,
-                EventTypes: ParseCommaSeparated(eventTypes),
-                AggregateTypes: ParseCommaSeparated(aggregateTypes),
-                UserId: userId,
-                AggregateId: aggregateId);
+        Guid? lastEventId = Guid.TryParse(lastEventIdHeader, out var parsed) ? parsed : null;
 
-            var backfill = await mediator.Send(backfillQuery, ct).ConfigureAwait(false);
+        // ── Build streaming query — handler owns subscribe-eagerly + backfill + dedup ──
+        var query = new GetAdminEventsStreamQuery(
+            LastEventId: lastEventId,
+            EventTypes: ParseCommaSeparated(eventTypes),
+            AggregateTypes: ParseCommaSeparated(aggregateTypes),
+            UserId: userId,
+            AggregateId: aggregateId);
 
-            // Events ordered DESC — find the position of lastGuid and stream everything before it
-            // (i.e., events that are NEWER than the last seen event).
-            var backfillEvents = backfill.Events
-                .TakeWhile(e => e.Id != lastGuid) // stop when we hit the already-seen event
-                .Reverse()                          // send oldest-first for proper ordering
-                .ToList();
-
-            foreach (var evt in backfillEvents)
-            {
-                if (ct.IsCancellationRequested) return;
-                seenIds.Add(evt.Id);
-                await WriteSseEventAsync(context, evt, ct).ConfigureAwait(false);
-            }
-        }
-
-        // ── Start heartbeat task ──
+        // ── Start heartbeat task (transport-level: SSE comment, not a domain event) ──
         // Runs concurrently with the main consumer loop.
         // On cancellation, the Task.Delay throws OperationCanceledException which exits the loop.
         var heartbeatTask = Task.Run(async () =>
@@ -263,14 +213,11 @@ internal static class AdminEventsEndpoints
             }
         }, ct);
 
-        // ── Main consumer loop — stream channel events ──
+        // ── Main consumer loop — delegate all event logic to the stream handler ──
         try
         {
-            await foreach (var evt in stream.WithCancellation(ct).ConfigureAwait(false))
+            await foreach (var evt in mediator.CreateStream(query, ct).ConfigureAwait(false))
             {
-                // Dedup: skip events already sent in backfill
-                if (seenIds.Contains(evt.Id)) continue;
-
                 await WriteSseEventAsync(context, evt, ct).ConfigureAwait(false);
             }
         }

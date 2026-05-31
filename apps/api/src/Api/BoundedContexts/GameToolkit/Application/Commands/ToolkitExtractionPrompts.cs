@@ -100,7 +100,7 @@ internal static class ToolkitExtractionPrompts
         }
 
         AiTurnTemplateSuggestion = {
-          "TurnOrderType": "RoundRobin"|"Sequential"|"Simultaneous"|"Realtime"|"None",
+          "TurnOrderType": "RoundRobin"|"Sequential"|"Simultaneous"|"Realtime"|"None"|"Custom"|"Free",
           "Phases": [string],         // e.g., ["Round 1", "Round 2"] or ["Action", "Draw", "Infect"]
           "Rounds": int | null,       // v2 (B19-3a): total round count if game has fixed structure (e.g., Wingspan=4)
           "TurnsPerRound": [int] | null,  // v2: turn count per round if variable (e.g., Wingspan=[8,7,6,5])

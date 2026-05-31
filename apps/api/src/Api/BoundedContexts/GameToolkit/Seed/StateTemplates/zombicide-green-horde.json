@@ -1,0 +1,26 @@
+{
+  "ToolkitName": "Zombicide Green Horde",
+  "DiceTools": [
+    {
+      "Name": "Combat dice",
+      "DiceType": "D6",
+      "Quantity": 6,
+      "CustomFaces": null,
+      "IsInteractive": true,
+      "Color": "#27ae60"
+    }
+  ],
+  "CounterTools": [],
+  "TimerTools": [],
+  "ScoringTemplate": null,
+  "TurnTemplate": null,
+  "Overrides": {
+    "OverridesTurnOrder": false,
+    "OverridesScoreboard": false,
+    "OverridesDiceSet": true
+  },
+  "Reasoning": "STUB — pending manual curation by domain expert. Zombicide Green Horde is a co-op miniatures dungeon-crawler (1-6 players, ~60-90 min/scenario). Key mechanics to model: scenario-based (no fixed scoring), each survivor has unique skill tree (Blue→Yellow→Orange→Red dangerous levels), action points per turn (3 standard, modified by skills), combat resolution with custom dice (typically D6 hit on 4+ but varies by weapon), zombie spawn phases at end of each player round driven by Danger Level. Loss conditions: all survivors dead OR mission failure. Use GenerateToolkitFromKbCommand for bootstrap of base mechanics.",
+  "ExcludedTools": [
+    { "ToolType": "Timer", "Reason": "No time limit per turn." }
+  ]
+}

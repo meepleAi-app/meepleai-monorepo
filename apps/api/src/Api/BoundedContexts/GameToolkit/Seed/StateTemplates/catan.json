@@ -1,0 +1,55 @@
+{
+  "ToolkitName": "Coloni di Catan",
+  "DiceTools": [
+    {
+      "Name": "Production dice",
+      "DiceType": "D6",
+      "Quantity": 2,
+      "CustomFaces": null,
+      "IsInteractive": true,
+      "Color": "#c0392b"
+    }
+  ],
+  "CounterTools": [
+    { "Name": "Victory Points", "MinValue": 0, "MaxValue": 13, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "star", "Color": "#f1c40f" },
+    { "Name": "Settlements built", "MinValue": 0, "MaxValue": 5, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "house", "Color": null },
+    { "Name": "Cities built", "MinValue": 0, "MaxValue": 4, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "castle", "Color": null },
+    { "Name": "Roads built", "MinValue": 0, "MaxValue": 15, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "road", "Color": null },
+    { "Name": "Wood", "MinValue": 0, "MaxValue": 19, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "tree", "Color": "#27ae60" },
+    { "Name": "Brick", "MinValue": 0, "MaxValue": 19, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "brick", "Color": "#c0392b" },
+    { "Name": "Sheep", "MinValue": 0, "MaxValue": 19, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "sheep", "Color": "#ecf0f1" },
+    { "Name": "Wheat", "MinValue": 0, "MaxValue": 19, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "wheat", "Color": "#f1c40f" },
+    { "Name": "Ore", "MinValue": 0, "MaxValue": 19, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "ore", "Color": "#7f8c8d" }
+  ],
+  "TimerTools": [],
+  "ScoringTemplate": {
+    "Dimensions": ["Settlements", "Cities", "Longest Road", "Largest Army", "Victory Point cards"],
+    "DefaultUnit": "points",
+    "ScoreType": "Points",
+    "Categories": [
+      { "Id": "settlements", "Label": "Settlements", "Computation": "Count", "Weight": 1, "Description": "1 point per settlement (max 5)." },
+      { "Id": "cities", "Label": "Cities", "Computation": "Count", "Weight": 2, "Description": "2 points per city (max 4)." },
+      { "Id": "longest-road", "Label": "Longest Road bonus", "Computation": "Custom", "Weight": 2, "Description": "2 points to holder of longest road ≥5 segments." },
+      { "Id": "largest-army", "Label": "Largest Army bonus", "Computation": "Custom", "Weight": 2, "Description": "2 points to holder of largest army ≥3 knights." },
+      { "Id": "vp-cards", "Label": "Victory Point dev cards", "Computation": "Sum", "Weight": 1, "Description": "1 point per VP development card held secretly." }
+    ]
+  },
+  "TurnTemplate": {
+    "TurnOrderType": "RoundRobin",
+    "Phases": ["Roll dice (production)", "Trade", "Build / develop"],
+    "Rounds": null,
+    "TurnsPerRound": null,
+    "TurnActions": ["roll-dice", "trade-with-player", "trade-with-bank", "build-road", "build-settlement", "build-city", "buy-dev-card", "play-dev-card", "end-turn"],
+    "Direction": "clockwise"
+  },
+  "Overrides": {
+    "OverridesTurnOrder": false,
+    "OverridesScoreboard": true,
+    "OverridesDiceSet": false
+  },
+  "Reasoning": "Curated 2026-05-31 from Catan base game (3-4 players). 2D6 dice drive resource production each turn. First to 10 VP wins (checked after their own turn). Resources tracked per player (wood/brick/sheep/wheat/ore). Longest Road + Largest Army are dynamic bonuses (2 VP each, can be stolen). Trade phase between players inter-turn is core mechanic. No timer.",
+  "ExcludedTools": [
+    { "ToolType": "Timer", "Reason": "No time limit per turn in base rules." },
+    { "ToolType": "CardDeck", "Reason": "Development cards form a shuffled deck — but managed via specialized widget, not generic card deck (each card type has distinct interaction)." }
+  ]
+}

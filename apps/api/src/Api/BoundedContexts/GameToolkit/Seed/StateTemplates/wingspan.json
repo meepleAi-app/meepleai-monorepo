@@ -1,0 +1,50 @@
+{
+  "ToolkitName": "Wingspan",
+  "DiceTools": [
+    {
+      "Name": "Birdfeeder Food Dice",
+      "DiceType": "Custom",
+      "Quantity": 5,
+      "CustomFaces": ["invertebrate", "seed", "fruit", "fish", "rodent", "wild"],
+      "IsInteractive": true,
+      "Color": "#7a3d1a"
+    }
+  ],
+  "CounterTools": [
+    { "Name": "Eggs", "MinValue": 0, "MaxValue": 6, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "egg", "Color": null },
+    { "Name": "Food tokens", "MinValue": 0, "MaxValue": 99, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "food", "Color": null },
+    { "Name": "Action cubes", "MinValue": 0, "MaxValue": 8, "DefaultValue": 8, "IsPerPlayer": true, "Icon": "cube", "Color": null }
+  ],
+  "TimerTools": [],
+  "ScoringTemplate": {
+    "Dimensions": ["Birds", "Bonus cards", "End-of-round goals", "Eggs", "Food cached", "Tucked cards"],
+    "DefaultUnit": "points",
+    "ScoreType": "Points",
+    "Categories": [
+      { "Id": "birds", "Label": "Birds played", "Computation": "Sum", "Weight": 1, "Description": "Variable points printed on each bird card (1-9)." },
+      { "Id": "bonus-cards", "Label": "Bonus cards", "Computation": "Sum", "Weight": 1, "Description": "Variable points per personal bonus card objective." },
+      { "Id": "round-goals", "Label": "End-of-round goals", "Computation": "RankBased", "Weight": 1, "Description": "5/2/1 or 4/2/1 points per round based on rank in goal." },
+      { "Id": "eggs", "Label": "Eggs", "Computation": "Count", "Weight": 1, "Description": "1 point per egg laid." },
+      { "Id": "cached-food", "Label": "Food cached", "Computation": "Count", "Weight": 1, "Description": "1 point per food cached on a bird card." },
+      { "Id": "tucked-cards", "Label": "Tucked cards", "Computation": "Count", "Weight": 1, "Description": "1 point per card tucked under a bird for ability." }
+    ]
+  },
+  "TurnTemplate": {
+    "TurnOrderType": "RoundRobin",
+    "Phases": ["Round 1", "Round 2", "Round 3", "Round 4"],
+    "Rounds": 4,
+    "TurnsPerRound": [8, 7, 6, 5],
+    "TurnActions": ["play-bird", "get-food", "lay-eggs", "draw-cards"],
+    "Direction": "clockwise"
+  },
+  "Overrides": {
+    "OverridesTurnOrder": true,
+    "OverridesScoreboard": true,
+    "OverridesDiceSet": true
+  },
+  "Reasoning": "Curated 2026-05-31 from Wingspan rulebook (data/rulebook/wingspan_en_rulebook.pdf). 5 custom food dice with 6 faces, 4-round structure with decreasing turn count (8/7/6/5), 6 additive scoring categories with mix of Count/Sum/RankBased computations. Tiebreakers: bonus card points then total food.",
+  "ExcludedTools": [
+    { "ToolType": "Timer", "Reason": "Rulebook explicitly states no time limit per turn or round." },
+    { "ToolType": "CardDeck", "Reason": "Bird cards use a fixed 3-card display + discard, not a generic shuffled deck. Bird display is a game-specific widget." }
+  ]
+}

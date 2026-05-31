@@ -1,0 +1,42 @@
+{
+  "ToolkitName": "Paleo",
+  "DiceTools": [],
+  "CounterTools": [
+    { "Name": "Wood", "MinValue": 0, "MaxValue": 30, "DefaultValue": 0, "IsPerPlayer": false, "Icon": "wood", "Color": "#7a4a1a" },
+    { "Name": "Stone", "MinValue": 0, "MaxValue": 30, "DefaultValue": 0, "IsPerPlayer": false, "Icon": "stone", "Color": "#7f8c8d" },
+    { "Name": "Food", "MinValue": 0, "MaxValue": 30, "DefaultValue": 0, "IsPerPlayer": false, "Icon": "food", "Color": "#d35400" },
+    { "Name": "Skulls (lose tribe → lose game)", "MinValue": 0, "MaxValue": 5, "DefaultValue": 0, "IsPerPlayer": false, "Icon": "skull", "Color": "#2c3e50" },
+    { "Name": "Knowledge cards collected", "MinValue": 0, "MaxValue": 99, "DefaultValue": 0, "IsPerPlayer": false, "Icon": "scroll", "Color": null },
+    { "Name": "Cave painting progress (0-5)", "MinValue": 0, "MaxValue": 5, "DefaultValue": 0, "IsPerPlayer": false, "Icon": "art", "Color": null },
+    { "Name": "Tribe members alive", "MinValue": 0, "MaxValue": 8, "DefaultValue": 4, "IsPerPlayer": false, "Icon": "person", "Color": null }
+  ],
+  "TimerTools": [],
+  "ScoringTemplate": {
+    "Dimensions": ["Win condition", "Cave paintings"],
+    "DefaultUnit": "result",
+    "ScoreType": "BinaryWin",
+    "Categories": [
+      { "Id": "cave-painting", "Label": "Cave painting completed", "Computation": "Count", "Weight": 1, "Description": "Complete the cave painting (5 hand prints) to win." },
+      { "Id": "skulls", "Label": "Skulls accumulated", "Computation": "Count", "Weight": -1, "Description": "5 skulls = instant loss for entire tribe." },
+      { "Id": "tribe-extinct", "Label": "Tribe extinct (all members died)", "Computation": "Custom", "Weight": 0, "Description": "Tribe loss condition — all members dead." }
+    ]
+  },
+  "TurnTemplate": {
+    "TurnOrderType": "Simultaneous",
+    "Phases": ["Morning (draw + choose cards)", "Day (resolve actions simultaneously)", "Night (return tribe, check end conditions)"],
+    "Rounds": null,
+    "TurnsPerRound": null,
+    "TurnActions": ["explore", "hunt", "craft", "develop", "rest"],
+    "Direction": "none"
+  },
+  "Overrides": {
+    "OverridesTurnOrder": true,
+    "OverridesScoreboard": true,
+    "OverridesDiceSet": false
+  },
+  "Reasoning": "Curated 2026-05-31 from Paleo base rules. Co-op simultaneous play (no individual turn). Win condition: complete cave painting (5 hand prints) before tribe dies or skulls accumulate. Player count 1-4, but scoring is collective. Multiple modules (resources, weather, hunger, skills) add variety but core loop remains 3-phase day cycle.",
+  "ExcludedTools": [
+    { "ToolType": "Dice", "Reason": "Paleo is deterministic card-driven, no dice." },
+    { "ToolType": "Timer", "Reason": "No time limit per turn (co-op discussion welcomed)." }
+  ]
+}

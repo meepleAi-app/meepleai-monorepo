@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -13,9 +14,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260531074336_AddDrillPayloadToAiRequestLogs")]
+    partial class AddDrillPayloadToAiRequestLogs
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -8632,26 +8635,6 @@ namespace Api.Infrastructure.Migrations
                     b.Property<int?>("TableCount")
                         .HasColumnType("integer");
 
-                    b.PrimitiveCollection<List<string>>("Tags")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text[]")
-                        .HasColumnName("tags")
-                        .HasDefaultValueSql("'{}'::text[]");
-
-                    b.Property<string>("Title")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("title");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<Guid?>("UpdatedBy")
-                        .HasColumnType("uuid")
-                        .HasColumnName("updated_by");
-
                     b.Property<DateTime>("UploadedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -8682,11 +8665,6 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("ix_pdf_documents_is_active_for_rag");
 
                     b.HasIndex("PrivateGameId");
-
-                    b.HasIndex("Tags")
-                        .HasDatabaseName("IX_pdf_documents_tags_gin");
-
-                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Tags"), "gin");
 
                     b.HasIndex("CollectionId", "SortOrder");
 

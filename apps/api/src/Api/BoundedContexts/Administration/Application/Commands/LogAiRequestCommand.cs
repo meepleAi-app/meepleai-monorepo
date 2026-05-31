@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.Models;
 using Api.SharedKernel.Application.Interfaces;
 
@@ -25,5 +26,10 @@ internal record LogAiRequestCommand(
     string? Model = null,
     string? FinishReason = null,
     string? ApiKeyId = null,
-    QualityScores? QualityScores = null
+    QualityScores? QualityScores = null,
+    // #1728: Drill payload (jsonb). Both nullable; pipelines that did not
+    // record chunks/breakdown leave them null and the QueryDrillPanel
+    // surfaces "limited drill" / "breakdown unavailable" fallbacks.
+    IReadOnlyList<RetrievedChunkDto>? Chunks = null,
+    LatencyBreakdownDto? Breakdown = null
 ) : ICommand;

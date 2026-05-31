@@ -61,6 +61,18 @@ ambiguity. Each route is also classified by **Tier** (S/M/L) to gate dispatch st
 > photo-upload +manual-mode entry). Spec:
 > `docs/superpowers/specs/2026-05-23-mockup-refinement-aaron-core-design.md`.
 
+> **Updated 2026-05-31** (Documentation reconciliation post-audit drift): the
+> Route → Mockup index now reflects 3 mockup cluster già canonical in
+> `admin-mockups/design_files/` ma precedentemente non mappati — `sp4-dashboard.html`
+> (closes #491, copre `/dashboard` gap critico), `sp4-play-records-{index,new,detail,edit,stats}.html`
+> + `sp4-play-records-data.js` (copre 5 routes `/play-records/*` gap critico) e
+> `sp5-profile-settings.html` (già mappato a `/profile?tab=settings`, esteso reuse
+> nota a `/profile` root + `/profile/achievements`). Le entry rimangono `pending` per
+> l'implementazione FE (stub di componenti da estrarre — TBD). Critical gaps
+> summary aggiornato: ridotti da 5 a 2 cluster (playlists + pricing) senza
+> mockup canonical. Sync companion: `admin-mockups/MOCKUPS_INDEX.md` + audit
+> `docs/for-developers/audits/2026-05-12-mockup-gaps.md` (status update inline).
+
 ## Scope and ground rules
 
 - **In scope**: 83 feature components extracted from `admin-mockups/design_files/sp4-*.jsx`
@@ -653,9 +665,9 @@ instead.
 | Route | Mockup | Note |
 |-------|--------|------|
 | `/onboarding` · `/setup` | `onboarding.html` | — |
-| `/dashboard` | — | **gap critico** (oggi inferito da `02-desktop-patterns.html` pattern lib) |
+| `/dashboard` | `sp4-dashboard.html` | Mockup canonical (forward-design Pre-Stage-3, closes #491); FE stubs pending |
 | `/discover` | `sp4-discover.html` | Tier L, pending |
-| `/profile` · `/profile/achievements` | — | **gap critico** |
+| `/profile` · `/profile/achievements` | `sp4-player-detail.html` ↻ + `sp5-profile-settings.html` [partial] | `/profile?tab=settings` coperto da sp5; self-view + achievements via sp4-player-detail reuse |
 | `/settings` (+ `/ai-consent`, `/api-keys`, `/notifications`, `/preferences`, `/profile`, `/security`, `/services`) | `settings.html` | Shell unica per 7 sub-route |
 | `/notifications` · `/notifications/preferences` | `notifications.html` | — |
 | `/versions` | — | gap (changelog) |
@@ -712,7 +724,7 @@ instead.
 
 | Route | Mockup | Note |
 |-------|--------|------|
-| `/play-records` · `/new` · `/[id]` · `/[id]/edit` · `/stats` | — | **gap critico** (P1 sprint, 5 route) |
+| `/play-records` · `/new` · `/[id]` · `/[id]/edit` · `/stats` | `sp4-play-records-{index,new,detail,edit,stats}.html` (+ `sp4-play-records-data.js` dev-fixture) | 5 mockup canonical per 5 routes; FE stubs pending |
 | `/toolkit` · `/play` · `/history` · `/stats` · `/templates` · `/[sessionId]` | `sp4-toolkit-detail.html` ↻ | Shell unica |
 | `/gamebook` · `/gamebook/upload` | `sp6-libro-game-index.html` + `sp4-upload-wizard-extended.html` | done (PR #792/794+) |
 | `/agents` · `/agents/[id]` | `sp4-agents-index.html` + `sp4-agent-detail.html` | Tier S+L done |
@@ -737,15 +749,20 @@ instead.
 
 ### Critical gaps summary
 
-Routes senza mockup con **alta priorità user-journey** (audit 2026-05-12):
+> **Updated 2026-05-31**: 3 dei 5 gap critici originali (audit 2026-05-12) sono
+> stati riconciliati — `sp4-dashboard.html` (closes #491), `sp4-play-records-*`
+> (5 file canonical) e `sp5-profile-settings.html` (settings tab; `/profile` root
+> + `/profile/achievements` via `sp4-player-detail.html` reuse) sono ora mappati.
+> Restano 2 cluster senza mockup canonical né issue B-series dedicata:
 
-1. **`/dashboard`** — hub post-login, oggi inferito da pattern lib non-page-level
-2. **`/play-records/*`** — 5 route P1 sprint senza copertura
-3. **`/library/playlists/*`** — 3 route feature US-attiva
-4. **`/profile/*`** — 2 route standard utente (esiste solo `settings.html`)
-5. **`/pricing`** — landing commerciale assente
+Routes senza mockup con **alta priorità user-journey**:
 
-Status di queste 5 lacune è tracciato in `docs/for-developers/audits/2026-05-12-mockup-gaps.md`.
+1. **`/library/playlists/*`** — 3 route feature US-attiva (Curation/Sharing). Proposta `[Design v1 · B12]`.
+2. **`/pricing`** — landing commerciale assente (tier-upgrade funnel). Proposta `[Design v1 · B13]`.
+
+Status delle lacune originali è tracciato in
+`docs/for-developers/audits/2026-05-12-mockup-gaps.md` (con status update
+inline 2026-05-31).
 
 ### Cross-route state coverage (dev-fixture)
 

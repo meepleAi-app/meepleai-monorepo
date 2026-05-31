@@ -61,6 +61,20 @@ ambiguity. Each route is also classified by **Tier** (S/M/L) to gate dispatch st
 > photo-upload +manual-mode entry). Spec:
 > `docs/superpowers/specs/2026-05-23-mockup-refinement-aaron-core-design.md`.
 
+> **Updated 2026-05-31 #2** (Sessions sub-routes consolidation via tabs,
+> closes gap N7 audit 2026-05-22): Option B+ hybrid consolidation accettata
+> e shipped — 7 sub-route Sessions confluiscono in `?tab=` deep-link
+> sui mockup canonical esistenti (cluster Live: 4 tabs nuove in
+> `sp4-session-live.jsx` `RightColumnTabs` esteso a 7; cluster Post-game
+> Review: 3 tabs nuove in `sp4-session-summary.jsx` con nuovo
+> `RightColumnTabs`). 4 file mockup nuovi shipped: `sp4-parts-common.jsx`
+> (shared runtime), `sp4-session-live-tabs.jsx` (`window.LiveTabs`),
+> `sp4-session-summary-sections.jsx`, `sp4-session-summary-tabs.jsx`
+> (`window.SummaryReviewTabs`). `/sessions/[id]/join` reuse `sp3-join.html`
+> (no design). 8th sub-route `/sessions/[id]/play` non in scope ADR (rimane
+> route fisica). ADR: `claudedocs/2026-05-31-sessions-consolidation-adr.md`.
+> Issue #1492.
+
 > **Updated 2026-05-31** (Documentation reconciliation cross-audit
 > 2026-05-12 + 2026-05-22): the Route → Mockup index now reflects 3 mockup
 > cluster già canonical in `admin-mockups/design_files/` ma precedentemente
@@ -718,10 +732,13 @@ instead.
 | `/sessions` | `sp4-sessions-index.html` | — |
 | `/sessions/new` | `librogame-runthrough-setup-wizard.html` | — |
 | `/sessions/join` | `sp3-join.html` ↻ | Reuse |
-| `/sessions/[id]` | `sp4-session-summary.html` | Tier M-L done (PR #762) |
-| `/sessions/[id]/live` | `sp4-session-live.html` | Tier L+ pending |
-| `/sessions/[id]/{play,notes,players,scoreboard,join}` | `sp4-session-live.html` [partial] | Sub-views |
-| `/sessions/live/[id]` (+ `/agent`, `/photos`, `/players`, `/scores`) | `sp4-session-live.html` + `librogame-runthrough-session-end.html` | — |
+| `/sessions/[id]` | `sp4-session-summary.html` + `sp4-session-summary-{parts,sections,tabs}.jsx` | Tier M-L done (PR #762); 2026-05-31 consolidation +3 tabs `?tab=scoreboard\|notes\|players` (closes gap N7 audit 2026-05-22) |
+| `/sessions/[id]/live` | `sp4-session-live.html` + `sp4-session-live-{parts,tabs}.jsx` + `sp4-parts-common.jsx` | Tier L+ pending impl; 2026-05-31 consolidation +4 tabs `?tab=scores\|photos\|agent\|players` (closes gap N7) — vedi ADR `claudedocs/2026-05-31-sessions-consolidation-adr.md` |
+| `/sessions/[id]/{scoreboard,notes,players}` | `sp4-session-summary.html` ↻ tabs | Consolidated 2026-05-31 — route da deletare, redirect 301/308 a `?tab=` equivalente |
+| `/sessions/[id]/{scores,photos,agent,players}` | `sp4-session-live.html` ↻ tabs | Consolidated 2026-05-31 — route da deletare, redirect 301/308 a `?tab=` equivalente. NOTA: `/sessions/[id]/players` esiste sia post-game (summary tab) sia live (live tab) — context-dependent |
+| `/sessions/[id]/join` | `sp3-join.html` ↻ | Reuse — non consolidato (flow distinto) |
+| `/sessions/[id]/play` | — | Route esistente, NON in scope ADR 2026-05-31 — gap residuo |
+| `/sessions/live/[id]` (+ `/agent`, `/photos`, `/players`, `/scores`) | `sp4-session-live.html` + `librogame-runthrough-session-end.html` | Consolidation 2026-05-31 applicabile (stesso pattern `?tab=`); coexistenza route fisiche da pianificare |
 | `/game-nights` | `sp4-game-nights-index.html` | Tier L pending |
 | `/game-nights/new` | `sp7-game-night-create.html` | Tier L+ DONE (PR #1297 components, PR #1302 orchestrator, PR #1305 W4 E2E + a11y + conformity entry); baseline PNGs auto-generated post-merge via bootstrap workflows |
 | `/game-nights/[id]` · `/[id]/edit` | `sp7-game-night-detail-rsvp.html` + `nanolith-game-night-storyboard.html` | Tier M done (PR #1171, RSVP cluster); tabbed/host surfaces pending |

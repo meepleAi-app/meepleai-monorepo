@@ -81,6 +81,7 @@
 | `sp4-kb-hub.html` | page-mock | `/knowledge-base` |
 | `sp4-library-desktop.html` | page-mock | `/library` (Wave B.3 done) |
 | `sp4-library-mobile.html` | page-mock | `/library` (mobile <768px variant, SP8 brief 2026-05-30, IA semplificata 3 tab + overflow) |
+| `sp4-parts-common.jsx` | component-mock | Shared mockup runtime — `window.MAI` (entity helpers, StateBlock/Shimmer/SseBanner, fake dataset). Re-derived for sessions consolidation (2026-05-31). Replace with codebase modules at integration time. |
 | `sp4-play-records-detail.html` | page-mock | `/play-records/[id]` |
 | `sp4-play-records-edit.html` | page-mock | `/play-records/[id]/edit` |
 | `sp4-play-records-index.html` | page-mock | `/play-records` |
@@ -88,10 +89,13 @@
 | `sp4-play-records-stats.html` | page-mock | `/play-records/stats` |
 | `sp4-player-detail.html` | page-mock | `/players/[id]`, `/players/[id]/{achievements,games,sessions,stats}` |
 | `sp4-players-index.html` | page-mock | `/players` |
-| `sp4-session-live-parts.jsx` | component-mock | Sub-components of `/sessions/[id]/live` Foundation sub-PR |
-| `sp4-session-live.html` | page-mock | `/sessions/[id]/live`, `/sessions/live/[sessionId]/*` |
-| `sp4-session-summary-parts.jsx` | component-mock | Sub-components of `/sessions/[id]` Wave D.3 |
-| `sp4-session-summary.html` | page-mock | `/sessions/[id]` |
+| `sp4-session-live-parts.jsx` | component-mock | Sub-components of `/sessions/[id]/live` Foundation sub-PR — `window.LiveSessionParts1` |
+| `sp4-session-live-tabs.jsx` | component-mock | `window.LiveTabs` — 4 new consolidated tabs (scores · photos · agent · players) × 5 stati each (default · empty · loading · error · sse). See consolidation ADR `claudedocs/2026-05-31-sessions-consolidation-adr.md`. |
+| `sp4-session-live.html` | page-mock | `/sessions/[id]/live` + consolidated tabs `?tab=scores\|photos\|agent\|players\|chat\|tools\|notes` (was 4 separate sub-routes pre-2026-05-31, see ADR). Also reuses for `/sessions/live/[sessionId]/*`. |
+| `sp4-session-summary-parts.jsx` | component-mock | Sub-components of `/sessions/[id]` Wave D.3 — `window.SummaryParts` |
+| `sp4-session-summary-sections.jsx` | component-mock | Celebrative body sections of `/sessions/[id]` (podium, KPI, diary, photos, chat highlights, share) — unchanged in 2026-05-31 consolidation. |
+| `sp4-session-summary-tabs.jsx` | component-mock | `window.SummaryReviewTabs` — 3 new consolidated tabs (scoreboard · notes · players) × 5 stati each (default · empty · loading · error · offline). See consolidation ADR. |
+| `sp4-session-summary.html` | page-mock | `/sessions/[id]` + consolidated tabs `?tab=scoreboard\|notes\|players` (was 3 separate sub-routes pre-2026-05-31, see ADR). |
 | `sp4-sessions-index.html` | page-mock | `/sessions`, `/games/[id]/sessions` (reuse) |
 | `sp4-toolkit-detail.html` | page-mock | `/toolkit` + sub-routes, `/library/[gameId]/toolbox`, `/library/[gameId]/toolkit`, `/library/private/[id]/toolkit/configure` |
 | `sp4-upload-wizard-extended.html` | page-mock | `/upload`, `/gamebook/upload` (partial) |
@@ -158,9 +162,9 @@
 | Type | Count |
 |------|------:|
 | page-mock | 55 |
-| component-mock | 16 |
+| component-mock | 20 |
 | dev-fixture | 12 |
-| **Total** | **83** |
+| **Total** | **87** |
 
 > The `*.jsx` twins of `*.html` files are not double-counted (the JSX is the
 > implementation companion of the HTML reference). Listing them separately

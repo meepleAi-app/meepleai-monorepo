@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
   getAgentTypologies: vi.fn().mockResolvedValue([]),
   getPrompts: vi.fn().mockResolvedValue([]),
   getAiModels: vi.fn().mockResolvedValue({ items: [] }),
-  getAiRequests: vi.fn().mockResolvedValue({ items: [] }),
+  getAiRequests: vi.fn().mockResolvedValue({ requests: [], totalCount: 0 }),
   deletePrompt: vi.fn().mockResolvedValue(undefined),
   approveAgentTypology: vi.fn().mockResolvedValue(undefined),
   deleteAgentTypology: vi.fn().mockResolvedValue(undefined),
@@ -17,6 +17,16 @@ vi.mock('@/lib/api', () => ({
   api: {
     admin: mocks,
   },
+}));
+
+// RequestsTab uses next/navigation router/searchParams to drive the
+// QueryDrillPanel deep-link (#1722 PR 2/4).
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    replace: vi.fn(),
+    push: vi.fn(),
+  }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 vi.mock('@/components/ui/primitives/button', () => ({

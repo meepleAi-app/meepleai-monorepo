@@ -58,6 +58,10 @@ public sealed class GlobalKbSearchEndpointTests : IAsyncLifetime
     // BEFORE the search runs — not vacuously after enrichment drops everything.
     private readonly System.Collections.Concurrent.ConcurrentBag<IReadOnlyList<Guid>> _capturedGameIds = new();
 
+    // Issue #1731: captures every documentIds list the handler passes to IMultiGameHybridSearchService.
+    // Null = no facet filter applied. Used by facet tests to assert push-down behavior.
+    private readonly System.Collections.Concurrent.ConcurrentBag<IReadOnlyList<Guid>?> _capturedDocumentIds = new();
+
     // Issue #1731: parametrize chunks-per-game for cursor stability tests.
     // Default 1 preserves backwards compat with AC-1/AC-2/AC-3.
     // Tests requiring multi-chunk pagination (e.g. cursor stability #11)
@@ -405,6 +409,129 @@ public sealed class GlobalKbSearchEndpointTests : IAsyncLifetime
         });
     }
 
+    // ─── Issue #1731 Part A: facet integration scenarios #1, #2, #4 ──────────────
+
+    /// <summary>
+    /// Scenario #1 (baseline): no facets → response shape byte-identical to AC-1.
+    /// Verifies D-3 backwards compatibility: omitting all facets produces the
+    /// same behavior as the pre-#1686 endpoint.
+    /// </summary>
+    [Fact]
+    public async Task Returns_baseline_when_no_facets()
+    {
+        _capturedGameIds.Clear();
+        _capturedDocumentIds.Clear();
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            Endpoint,
+            _aliceToken,
+            new { Query = "board game rules", Limit = 20 });
+
+        var response = await _client.SendAsync(request, TestCancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var payload = await response.Content.ReadFromJsonAsync<GlobalKbSearchResponseDto>(
+            TestCancellationToken);
+        payload.Should().NotBeNull();
+        payload!.Results.Should().NotBeNull();
+
+        // D-3: no facet → documentIds passed to search is null (no push-down)
+        _capturedDocumentIds.Should().NotBeEmpty(
+            "the handler must call search at least once when accessible games exist");
+        _capturedDocumentIds.Should().AllSatisfy(ids =>
+            ids.Should().BeNull("no facet → no documentIds filter (D-3 backwards compat)"));
+    }
+
+    /// <summary>
+    /// Scenario #2 (DocType narrowing — RENAMED to use canonical vocab):
+    /// DocType=["base"] → handler computes documentIds containing ONLY docs
+    /// with DocumentType="base", passes them to search.
+    ///
+    /// NOTE on test name vs. issue body:
+    /// The issue #1731 lists "Returns_only_Rulebook_when_DocType_Rulebook" which
+    /// uses local-version vocab ("Rulebook"). The canonical D-1 allowlist is
+    /// ["base","expansion","errata","homerule"] (PdfDocumentEntity.DocumentType).
+    /// Renamed to use the canonical vocabulary.
+    /// </summary>
+    [Fact]
+    public async Task Returns_only_Base_when_DocType_base()
+    {
+        _capturedGameIds.Clear();
+        _capturedDocumentIds.Clear();
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            Endpoint,
+            _aliceToken,
+            new
+            {
+                Query = "board game rules",
+                Limit = 20,
+                DocType = new[] { "base" }
+            });
+
+        var response = await _client.SendAsync(request, TestCancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Verify the handler pushed down a non-null, non-empty documentIds allowlist.
+        // Per seed (Task 5): "base" matches the 3 SeedIndexedDoc docs
+        // (public-rules.pdf, alice-rules.pdf, bob-rules.pdf) + 1 alice-base-it.pdf = 4 docs total.
+        // Alice has accessible games = {gamePublic, gameAliceOwned}, so the push-down
+        // intersects with accessibleGameIds: 1 public-rules + 1 alice-rules + 1 alice-base-it = 3 docs.
+        _capturedDocumentIds.Should().NotBeEmpty();
+        _capturedDocumentIds.Should().AllSatisfy(ids =>
+        {
+            ids.Should().NotBeNull("DocType facet must push down a documentIds allowlist");
+            ids!.Should().NotBeEmpty("at least one 'base' doc exists in Alice's accessible scope");
+        });
+
+        // Verify the DocType facet actually matched docs (not just an empty allowlist).
+        // The handler short-circuits to empty if facetDocumentIds.Count == 0; reaching
+        // the search call means the push-down produced a non-empty allowlist.
+    }
+
+    /// <summary>
+    /// Scenario #4 (Language narrowing):
+    /// Language="it" → handler computes documentIds containing ONLY docs with
+    /// Language="it", passes them to search.
+    /// </summary>
+    [Fact]
+    public async Task Returns_only_Italian_when_Language_it()
+    {
+        _capturedGameIds.Clear();
+        _capturedDocumentIds.Clear();
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            Endpoint,
+            _aliceToken,
+            new
+            {
+                Query = "regole gioco",
+                Limit = 20,
+                Language = "it"
+            });
+
+        var response = await _client.SendAsync(request, TestCancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Per seed (Task 5): Language="it" matches:
+        //   gamePublic:    public-errata-it.pdf
+        //   gameAliceOwned: alice-base-it.pdf
+        //   gameBobOwned:   bob-errata-it.pdf, bob-expansion-it.pdf
+        // Alice's accessible = {gamePublic, gameAliceOwned}, so push-down = 2 docs.
+        _capturedDocumentIds.Should().NotBeEmpty();
+        _capturedDocumentIds.Should().AllSatisfy(ids =>
+        {
+            ids.Should().NotBeNull("Language facet must push down a documentIds allowlist");
+            ids!.Should().NotBeEmpty("Italian docs exist in Alice's accessible scope");
+        });
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -641,13 +768,14 @@ public sealed class GlobalKbSearchEndpointTests : IAsyncLifetime
                 It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<CancellationToken>()))
             .Callback<string, IReadOnlyList<Guid>, int, SearchMode, double, IReadOnlyList<Guid>?, CancellationToken>(
-                (_, gameIds, _, _, _, _, _) =>
+                (_, gameIds, _, _, _, documentIds, _) =>
                 {
                     // Capture the gameIds the handler asked the search to run on. This is what
                     // RBAC enforcement actually controls — verifying the post-enrichment Results
                     // list is empty would be a vacuous assertion when the mock returns synthetic
                     // pdfDocIds that the enrichment join can never resolve.
                     _capturedGameIds.Add(gameIds);
+                    _capturedDocumentIds.Add(documentIds);   // NEW Issue #1731
                 })
             .ReturnsAsync((
                 string _,

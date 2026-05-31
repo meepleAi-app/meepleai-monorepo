@@ -37,14 +37,15 @@ export function useSessionInlineChat(
 
       try {
         let thread;
-        if (!threadIdRef.current) {
+        const currentThreadId = threadIdRef.current;
+        if (!currentThreadId) {
           thread = await api.chat.createThread({
             gameId: gameId ?? null,
             initialMessage: text,
           });
           threadIdRef.current = thread.id;
         } else {
-          thread = await api.chat.addMessage(threadIdRef.current!, { content: text, role: 'user' });
+          thread = await api.chat.addMessage(currentThreadId, { content: text, role: 'user' });
         }
 
         // Extract the last assistant message from the returned thread

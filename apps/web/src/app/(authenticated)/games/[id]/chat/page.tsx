@@ -1,10 +1,11 @@
 // TODO: implement this route (see docs/superpowers/specs/route-gap-analysis.md)
 // Mockup: sp4-game-chat-tab — AI chat tab embedded in the game detail view.
 // Redirects to the parent /games/[id] until chat is implemented as a sub-tab.
-"use client";
+'use client';
 
-import { useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useEffect } from 'react';
+
+import { useRouter, useParams } from 'next/navigation';
 
 export default function GameChatPlaceholderPage() {
   const router = useRouter();

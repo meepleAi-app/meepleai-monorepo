@@ -227,13 +227,22 @@ export function ChatMessageList({
                   />
                 )}
 
-                {/* Continue button — when backend signals truncated response */}
-                {msg.role === 'assistant' && msg.continuationToken && onContinue && (
-                  <ContinueButton
-                    onContinue={() => onContinue(msg.continuationToken!)}
-                    isLoading={isSending ?? false}
-                  />
-                )}
+                {/* Continue button — when backend signals truncated response.
+                    Bind the token to a const so the arrow callback below
+                    captures a guaranteed non-null value (TS can't preserve
+                    the `msg.continuationToken` narrow into the closure). */}
+                {msg.role === 'assistant' &&
+                  msg.continuationToken &&
+                  onContinue &&
+                  (() => {
+                    const token = msg.continuationToken;
+                    return (
+                      <ContinueButton
+                        onContinue={() => onContinue(token)}
+                        isLoading={isSending ?? false}
+                      />
+                    );
+                  })()}
 
                 {/* Strategy tier badge — only on last assistant message, not streaming */}
                 {isLastAssistant && streamState.strategyTier && (

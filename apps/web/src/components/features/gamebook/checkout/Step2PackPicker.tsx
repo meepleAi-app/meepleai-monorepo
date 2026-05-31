@@ -6,7 +6,12 @@ import type { ReactElement } from 'react';
 
 import clsx from 'clsx';
 
-import { CHECKOUT_PACKS, formatEur, type CheckoutPackId } from '@/lib/gamebook/checkout-packs';
+import {
+  CHECKOUT_PACKS,
+  formatEur,
+  getCheckoutPack,
+  type CheckoutPackId,
+} from '@/lib/gamebook/checkout-packs';
 
 export interface Step2Labels {
   readonly heading: string;
@@ -33,7 +38,7 @@ export function Step2PackPicker({
   onSelect,
   onContinue,
 }: Step2PackPickerProps): ReactElement {
-  const selectedPack = CHECKOUT_PACKS.find((p) => p.id === selectedId)!;
+  const selectedPack = getCheckoutPack(selectedId);
   return (
     <div data-slot="checkout-step-2" className="flex flex-col gap-4 p-5">
       <div className="flex flex-col gap-1">
@@ -45,7 +50,7 @@ export function Step2PackPicker({
         aria-label="Scelta pacchetto crediti"
         className="flex flex-col gap-2.5"
       >
-        {CHECKOUT_PACKS.map((pack) => {
+        {CHECKOUT_PACKS.map(pack => {
           const selected = pack.id === selectedId;
           const badgeKind = pack.badge;
           const badgeLabel = badgeKind ? labels.packBadges[badgeKind] : null;
@@ -100,7 +105,9 @@ export function Step2PackPicker({
                 aria-hidden="true"
                 className={clsx(
                   'col-start-3 row-span-3 flex h-5 w-5 items-center justify-center self-center justify-self-end rounded-full border-2 transition-colors',
-                  selected ? 'border-entity-toolkit bg-entity-toolkit' : 'border-border bg-transparent'
+                  selected
+                    ? 'border-entity-toolkit bg-entity-toolkit'
+                    : 'border-border bg-transparent'
                 )}
               >
                 {selected && <span className="h-2 w-2 rounded-full bg-white" />}

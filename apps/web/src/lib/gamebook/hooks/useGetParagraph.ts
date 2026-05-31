@@ -169,10 +169,14 @@ export function useGetParagraph(
 
   return useQuery<Paragraph, Error>({
     queryKey,
+    // `enabled: !!batchId && ...` gates the queryFn — the non-null assertions
+    // on batchId are safe under that invariant.
     queryFn: () =>
       paragraphRef.type === 'page'
-        ? getParagraph(batchId!, paragraphRef.value, hint)
-        : getParagraphByParagraphNumber(batchId!, paragraphRef.value, hint),
+        ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- gated by enabled
+          getParagraph(batchId!, paragraphRef.value, hint)
+        : // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- gated by enabled
+          getParagraphByParagraphNumber(batchId!, paragraphRef.value, hint),
     enabled: enabled && !!batchId && paragraphRef.value > 0,
     staleTime: 5 * 60_000,
     retry: false,

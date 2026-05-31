@@ -9,8 +9,9 @@
 
 'use client';
 
-import Link from 'next/link';
 import type { JSX } from 'react';
+
+import Link from 'next/link';
 
 import type { PlayerProfileFixture } from '@/lib/player-detail/player-detail-visual-test-fixture';
 

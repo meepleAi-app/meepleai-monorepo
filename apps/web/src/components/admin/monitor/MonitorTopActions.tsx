@@ -1,3 +1,5 @@
+'use client';
+
 import { PauseCircle, Download } from 'lucide-react';
 
 export function MonitorTopActions() {

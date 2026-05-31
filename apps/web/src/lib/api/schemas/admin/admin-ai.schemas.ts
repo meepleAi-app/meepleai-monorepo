@@ -70,6 +70,27 @@ export const AiQueryDrillResponseSchema = z.object({
 
 export type AiQueryDrillResponse = z.infer<typeof AiQueryDrillResponseSchema>;
 
+// ========== AI Metrics Trend (#1729) ==========
+
+export const AiMetricsDatapointSchema = z.object({
+  timestamp: z.string().datetime({ offset: true }),
+  requestCount: z.number().int().nonnegative(),
+  avgLatencyMs: z.number().int().nonnegative(),
+  p50LatencyMs: z.number().int().nonnegative(),
+  p95LatencyMs: z.number().int().nonnegative(),
+  errorRate: z.number().min(0).max(1),
+});
+
+export type AiMetricsDatapoint = z.infer<typeof AiMetricsDatapointSchema>;
+
+export const AiMetricsTrendResponseSchema = z.object({
+  range: z.string(),
+  bucketSize: z.string(),
+  datapoints: z.array(AiMetricsDatapointSchema),
+});
+
+export type AiMetricsTrendResponse = z.infer<typeof AiMetricsTrendResponseSchema>;
+
 // ========== Prompt Version Activation ==========
 
 export const ActivateVersionResponseSchema = z.object({

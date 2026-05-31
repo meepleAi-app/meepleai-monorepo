@@ -13,6 +13,7 @@ import {
   AdminOverviewStatsSchema,
   AiRequestsResponseSchema,
   AiQueryDrillResponseSchema,
+  AiMetricsTrendResponseSchema,
   DashboardStatsSchema,
   GetUserActivityResultSchema,
   TokenBalanceSchema,
@@ -28,6 +29,7 @@ import {
   type AdminOverviewStats,
   type AiRequest,
   type AiQueryDrillResponse,
+  type AiMetricsTrendResponse,
   type DashboardStats,
   type GetUserActivityResult,
   type RecentActivityDto,
@@ -204,6 +206,17 @@ export function createAdminAnalyticsClient(http: HttpClient) {
       return http.get(
         `/api/v1/admin/ai/queries/${encodeURIComponent(id)}/drill`,
         AiQueryDrillResponseSchema
+      );
+    },
+
+    /**
+     * #1729: AI metrics trend (p50/p95/error per bucket) for AiTrendChart.
+     * range ∈ {"Live", "1h", "24h", "7d"}. Invalid values bubble up as 400 from BE.
+     */
+    async getAiMetricsTrend(range: string): Promise<AiMetricsTrendResponse | null> {
+      return http.get(
+        `/api/v1/admin/ai/metrics?range=${encodeURIComponent(range)}`,
+        AiMetricsTrendResponseSchema
       );
     },
 

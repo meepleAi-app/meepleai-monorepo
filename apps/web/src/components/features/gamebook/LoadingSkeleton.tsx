@@ -34,7 +34,7 @@ export function LoadingSkeleton({ uiStep }: LoadingSkeletonProps): ReactElement 
       role="status"
       aria-busy="true"
       aria-live="polite"
-      className="space-y-2 max-w-[65ch]"
+      className="space-y-2 max-w-[65ch] reader-mode-content"
       data-testid={`translate-skeleton-${uiStep}`}
     >
       <p className="text-sm text-muted-foreground" data-testid="translate-step-label">

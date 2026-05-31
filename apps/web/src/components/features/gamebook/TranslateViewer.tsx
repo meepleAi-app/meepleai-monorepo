@@ -173,6 +173,7 @@ export function TranslateViewer({ campaignId, gameRef }: TranslateViewerProps): 
           type="file"
           accept="image/*"
           capture="environment"
+          aria-label="Seleziona foto da tradurre"
           onChange={e => {
             const f = e.target.files?.[0];
             if (f) void handleFile(f);

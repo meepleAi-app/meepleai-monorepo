@@ -485,12 +485,9 @@ public sealed class GlobalKbSearchEndpointTests : IAsyncLifetime
         _capturedDocumentIds.Should().AllSatisfy(ids =>
         {
             ids.Should().NotBeNull("DocType facet must push down a documentIds allowlist");
-            ids!.Should().NotBeEmpty("at least one 'base' doc exists in Alice's accessible scope");
+            ids!.Should().HaveCount(3,
+                "Alice's accessible 'base' docs: public-rules + alice-rules + alice-base-it");
         });
-
-        // Verify the DocType facet actually matched docs (not just an empty allowlist).
-        // The handler short-circuits to empty if facetDocumentIds.Count == 0; reaching
-        // the search call means the push-down produced a non-empty allowlist.
     }
 
     /// <summary>
@@ -528,7 +525,8 @@ public sealed class GlobalKbSearchEndpointTests : IAsyncLifetime
         _capturedDocumentIds.Should().AllSatisfy(ids =>
         {
             ids.Should().NotBeNull("Language facet must push down a documentIds allowlist");
-            ids!.Should().NotBeEmpty("Italian docs exist in Alice's accessible scope");
+            ids!.Should().HaveCount(2,
+                "Alice's accessible Italian docs: public-errata-it + alice-base-it");
         });
     }
 

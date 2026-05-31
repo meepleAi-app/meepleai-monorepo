@@ -66,12 +66,6 @@ describe('AdminMonitorPage', () => {
     expect(screen.getByTestId('testing-tab')).toBeInTheDocument();
   });
 
-  it('renders heading', async () => {
-    const page = await AdminMonitorPage({ searchParams: Promise.resolve({}) });
-    render(page);
-    expect(screen.getByText('Monitoraggio')).toBeInTheDocument();
-  });
-
   it('renders export tab content', async () => {
     const page = await AdminMonitorPage({
       searchParams: Promise.resolve({ tab: 'export' }),

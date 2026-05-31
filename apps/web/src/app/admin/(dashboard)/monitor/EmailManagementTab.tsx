@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useState } from 'react';
@@ -34,7 +33,7 @@ function StatCard({
   color: string;
 }) {
   return (
-    <div className="rounded-2xl border border-border/60 dark:border-zinc-700/40 bg-card/70 dark:bg-zinc-800/50 backdrop-blur-sm p-5">
+    <div className="rounded-2xl border border-border/60 bg-card/70 backdrop-blur-sm p-5">
       <div className="flex items-center gap-3">
         <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${color}`}>
           <Icon className="h-5 w-5" />
@@ -186,7 +185,7 @@ export function EmailManagementTab() {
       </div>
 
       {/* Send Test Email */}
-      <div className="rounded-2xl border border-border/60 dark:border-zinc-700/40 bg-card/70 dark:bg-zinc-800/50 backdrop-blur-sm p-5">
+      <div className="rounded-2xl border border-border/60 bg-card/70 backdrop-blur-sm p-5">
         <h2 className="font-quicksand text-sm font-semibold text-foreground mb-3">
           Send Test Email
         </h2>
@@ -196,7 +195,7 @@ export function EmailManagementTab() {
             value={testEmailTo}
             onChange={e => setTestEmailTo(e.target.value)}
             placeholder="recipient@example.com"
-            className="flex-1 rounded-lg border border-border/60 dark:border-zinc-700/40 bg-card/50 dark:bg-zinc-900/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+            className="flex-1 rounded-lg border border-border/60 bg-card/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-400/40"
           />
           <button
             onClick={() => testEmailTo && sendTestMutation.mutate(testEmailTo)}
@@ -234,11 +233,11 @@ export function EmailManagementTab() {
             </button>
           )}
         </div>
-        <div className="rounded-2xl border border-border/60 dark:border-zinc-700/40 bg-card/70 dark:bg-zinc-800/50 backdrop-blur-sm overflow-hidden">
+        <div className="rounded-2xl border border-border/60 bg-card/70 backdrop-blur-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border/60 dark:border-zinc-700/40">
+                <tr className="border-b border-border/60">
                   <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
                     Recipient
                   </th>
@@ -270,10 +269,7 @@ export function EmailManagementTab() {
                 {deadLetters.map((email: EmailQueueItem) => {
                   const isRetrying = retryingId === email.id;
                   return (
-                    <tr
-                      key={email.id}
-                      className="border-b border-border/60 dark:border-zinc-800/40 last:border-0"
-                    >
+                    <tr key={email.id} className="border-b border-border/60 last:border-0">
                       <td className="px-4 py-3 font-medium text-foreground">{email.to}</td>
                       <td className="px-4 py-3 text-muted-foreground max-w-[200px] truncate">
                         {email.subject}
@@ -324,15 +320,15 @@ export function EmailManagementTab() {
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               placeholder="Search by email or subject..."
-              className="w-full rounded-lg border border-border/60 dark:border-zinc-700/40 bg-card/50 dark:bg-zinc-900/50 pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+              className="w-full rounded-lg border border-border/60 bg-card/50 pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-400/40"
             />
           </div>
         </div>
-        <div className="rounded-2xl border border-border/60 dark:border-zinc-700/40 bg-card/70 dark:bg-zinc-800/50 backdrop-blur-sm overflow-hidden">
+        <div className="rounded-2xl border border-border/60 bg-card/70 backdrop-blur-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border/60 dark:border-zinc-700/40">
+                <tr className="border-b border-border/60">
                   <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
                     Recipient
                   </th>
@@ -359,10 +355,7 @@ export function EmailManagementTab() {
                   </tr>
                 )}
                 {history.map((email: EmailQueueItem) => (
-                  <tr
-                    key={email.id}
-                    className="border-b border-border/60 dark:border-zinc-800/40 last:border-0"
-                  >
+                  <tr key={email.id} className="border-b border-border/60 last:border-0">
                     <td className="px-4 py-3 font-medium text-foreground">{email.to}</td>
                     <td className="px-4 py-3 text-muted-foreground max-w-[250px] truncate">
                       {email.subject}

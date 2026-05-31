@@ -2,9 +2,9 @@
 
 - **Data**: 2026-05-31
 - **Tipo**: Gate-keeper spike (decisione architetturale dipende dall'output)
-- **Esecutore**: Claude Code (LLM surrogato)
+- **Esecutore**: 2 run — (1) Claude Code Opus 4.7 in-context come surrogato upper-bound, (2) **Llama 3.3 70B via OpenRouter** come surrogato production
 - **Scope**: Validare se `GenerateToolkitFromKbCommand` produce JSON usabile da rulebook chunks
-- **Verdetto**: ⚠️ **Partial pass** — il prompt funziona ma lo schema DTO è leaky abstraction
+- **Verdetto unificato**: ⚠️ **Partial pass + production gap** — prompt funziona ma lo schema DTO è leaky abstraction E il LLM free-tier non rispetta lo schema con fedeltà; production deve usare modello premium + JSON schema validation + human review obbligatorio
 
 ---
 
@@ -257,6 +257,71 @@ Lo spike fa cadere l'ipotesi "Universal polimorfico puro" (D2=a originale). Prop
 
 ---
 
+## 8.5 Run reale con Llama 3.3 70B (OpenRouter, free-tier, 2026-05-31 12:41 UTC)
+
+> Aggiornamento post user-request: spike eseguito con LLM production via `claudedocs/scripts/spike-llm-toolkit-gen-2026-05-31.py`.
+
+### Setup
+- **Model**: `meta-llama/llama-3.3-70b-instruct` (free tier OpenRouter)
+- **Input**: stessi 5 excerpts Wingspan del run Opus surrogato (consistency)
+- **API**: OpenRouter `chat/completions` con `response_format=json_object`, `temperature=0.0`
+- **Tokens**: 858 prompt + 547 completion = 1405 totali
+- **Latency**: 11.3s
+- **Cost**: $0 (free tier)
+- **Output completo**: `claudedocs/spike-llm-output-wingspan-meta-llama_llama-3.3-70b-instruct-2026-05-31T124105Z.json`
+
+### Confronto JSON: Llama 3.3 70B vs Claude Opus 4.7
+
+| Aspetto | Llama 3.3 70B (production candidate) | Claude Opus (upper-bound) |
+|---|---|---|
+| Schema field names | ⚠️ `Type`/`Faces` invece di `DiceType`/`CustomFaces` | ✅ matcha schema DTO |
+| **Hallucinations** | ❌ aggiunge `"Points"` come counter (errore: è end-game score) | ✅ nessuna |
+| **Dummy entries** | ❌ crea `TimerTools: [{DurationSeconds:0}]` (prompt richiedeva array vuoto) | ✅ `TimerTools: []` |
+| 4-round structure | ❌ MISSING (Rounds/TurnsPerRound assenti — info CRITICA per UI) | ✅ catturata completa |
+| **Semantic confusion** | ❌ `PhaseNames: ["Play bird", "Get food"...]` (sono ACTIONS, non phases) | ✅ Phases vs Actions distinti |
+| Overrides flags | ❌ `{}` vuoto, ignorati | ✅ tutti settati correttamente |
+| ExcludedTools | ⚠️ 1 entry (manca Timer, l'ha messo come dummy entry sopra) | ✅ 2 entry (Timer + CardDeck) |
+| Reasoning citations | ✅ 5 bullets con rule refs | ✅ paragraph con multi-rule refs |
+
+### Verdetto run Llama
+
+**Pass parziale grave**:
+- Output JSON-valido ✓ (parsing successful)
+- Adesione schema DTO ✗ (field names diversi, missing fields)
+- Accuracy semantica ✗ (Points-as-counter hallucination, PhaseNames-as-Actions confusion)
+- Completezza ✗ (manca 4-round structure)
+- Override flags ✗ (ignorati)
+
+### Implicazioni dirette per production
+
+1. **Llama 3.3 70B free NON è production-ready** per il toolkit extraction senza:
+   - JSON Schema validation strict (post-call rejection se field names non matchano)
+   - Function calling / structured output forzato (es. via OpenRouter tools API)
+   - Few-shot examples nel system prompt (3-5 esempi di giochi diversi)
+   - Human review obbligatorio (`RequiresHumanReview = true` sempre, no auto-apply)
+
+2. **Modelli premium raccomandati** per production:
+   - `anthropic/claude-3.5-haiku` (~$1/M input, qualità simile a Opus per task strutturati)
+   - `deepseek-chat` (~$0.14/M, cinese ma molto buono su task strutturati JSON)
+   - `openai/gpt-4o-mini` (~$0.15/M, buon trade-off)
+
+3. **Prompt engineering migliorabile**:
+   - Aggiungere 2-3 esempi few-shot di output JSON canonici (Wingspan + Catan + Codenames)
+   - Esplicitare i field names esatti del DTO C# nel system prompt (es. `DiceType` non `Type`)
+   - Aggiungere "NEVER add a counter for end-game score — points are derived, not tracked"
+   - Aggiungere "If no timer is present, TimerTools MUST be an empty array []"
+
+4. **Run repeat su modelli premium** raccomandato prima di chiudere B19 prereq. Costo: ~$0.001 a call.
+
+### Aggiornamento raccomandazione B19
+
+Lo spike Llama 70B free **rafforza il verdetto HYBRID**:
+- Auto-generated toolkit per i 15 giochi non-premium **deve** essere flag "draft, review required"
+- I 5-6 top game (Wingspan + Puerto Rico + Catan + Power Grid + Zombicide + Paleo + Codenames se incluso) → toolkit manuale curato dall'admin, NON AI
+- AI generation = bootstrap helper, NON source of truth
+
+---
+
 ## 9. References
 
 - `apps/api/src/Api/BoundedContexts/GameToolkit/Application/Commands/GenerateToolkitFromKbHandler.cs` — handler (161 righe)
@@ -265,5 +330,7 @@ Lo spike fa cadere l'ipotesi "Universal polimorfico puro" (D2=a originale). Prop
 - `apps/api/tests/Api.Tests/BoundedContexts/GameToolkit/Application/Handlers/GenerateToolkitFromKbHandlerTests.cs` — unit tests (con mock)
 - `data/rulebook/wingspan_en_rulebook.pdf` — PDF source
 - `claudedocs/2026-05-31-sessions-consolidation-adr.md` — ADR consolidation (companion)
+- `claudedocs/scripts/spike-llm-toolkit-gen-2026-05-31.py` — script di esecuzione spike (repeatable)
+- `claudedocs/spike-llm-output-wingspan-meta-llama_llama-3.3-70b-instruct-2026-05-31T124105Z.json` — output JSON raw
 - PR #1738 — reconciliation + B17 delivery
-- Issue B19 (TBD) — game-agnostic skeleton + premium mockups
+- Issue #1742 (B19) — game-agnostic skeleton + premium mockups (incorpora findings spike)

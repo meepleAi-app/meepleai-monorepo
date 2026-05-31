@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.ContextEngineering.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.ContextEngineering.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 
+using Api.BoundedContexts.KnowledgeBase.Application.Commands.UpdateKbDocMetadata;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.CrossGameStreamQa;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGameDocuments;
@@ -1160,6 +1161,21 @@ internal static class KnowledgeBaseEndpoints
             .Produces<KbDocsListResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status422UnprocessableEntity);
+
+        // Issue #1687: partial-update PATCH for editable KB doc metadata (KbEditorDesktop).
+        group.MapPatch("/kb-docs/{id:guid}", HandleUpdateKbDocMetadata)
+            .WithName("UpdateKbDocMetadata")
+            .RequireSession()
+            .WithTags("KnowledgeBase")
+            .WithSummary("Update editable metadata (title, documentType, language, tags) for one KB document.")
+            .WithDescription(
+                "PATCH /api/v1/kb-docs/{id}. JSON null on any field = no-op (partial update); empty string clears Title; " +
+                "empty array clears Tags. Owner OR Admin/SuperAdmin only. Returns 404 (NOT 403) when the caller cannot " +
+                "see the doc — anti-info-leak per D-2 of the spec panel.")
+            .Produces<UserKbDocDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status422UnprocessableEntity);
     }
 
     private static async Task<IResult> HandleListUserKbDocs(
@@ -1189,6 +1205,44 @@ internal static class KnowledgeBaseEndpoints
             State: state);
 
         var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    /// <summary>
+    /// Issue #1687: handler for <c>PATCH /api/v1/kb-docs/{id}</c>. Editable metadata
+    /// (title / documentType / language / tags) — partial update via the
+    /// <see cref="UpdateKbDocMetadataCommand"/> + handler pipeline.
+    ///
+    /// Authorization is enforced inside the handler so 404 anti-info-leak (D-2)
+    /// is single-sourced. The endpoint only resolves the session principal and
+    /// the actor role string.
+    /// </summary>
+    private static async Task<IResult> HandleUpdateKbDocMetadata(
+        Guid id,
+        UpdateKbDocMetadataRequest req,
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var session = context.Items[nameof(SessionStatusDto)] as SessionStatusDto;
+        if (session?.Principal?.Subject?.Id is not Guid userId
+            || userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
+        var role = session.Principal!.EffectiveActor.Role ?? "User";
+
+        var command = new UpdateKbDocMetadataCommand(
+            DocId: id,
+            EditorUserId: userId,
+            EditorRole: role,
+            Title: req.Title,
+            DocumentType: req.DocumentType,
+            Language: req.Language,
+            Tags: req.Tags);
+
+        var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
 
@@ -1376,6 +1430,24 @@ internal record KnowledgeBaseSearchRequest(
 /// </summary>
 internal record UpdateChatThreadTitleRequest(
     string Title
+);
+
+/// <summary>
+/// Issue #1687: Request model for PATCH /api/v1/kb-docs/{id}. Each field is
+/// optional; JSON null means "no-op" (partial update / D-4). Empty string
+/// clears <see cref="Title"/>; empty array clears <see cref="Tags"/>.
+/// </summary>
+/// <param name="Title">User-editable display title; max 200 chars after trim.</param>
+/// <param name="DocumentType">Case-insensitive <c>DocumentCategory</c> enum value
+/// (Rulebook|Expansion|Errata|QuickStart|Reference|PlayerAid|Other).</param>
+/// <param name="Language">Case-insensitive ISO 639-1 code from the LanguageCode whitelist
+/// (en, it, de, fr, es, pt, pl, nl, ja, zh).</param>
+/// <param name="Tags">Replacement tag set; deduped+lowercased+sorted on persist; max 20 / 50 chars.</param>
+internal record UpdateKbDocMetadataRequest(
+    string? Title,
+    string? DocumentType,
+    string? Language,
+    IReadOnlyList<string>? Tags
 );
 
 /// <summary>

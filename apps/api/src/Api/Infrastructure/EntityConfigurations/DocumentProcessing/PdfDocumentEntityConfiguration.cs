@@ -196,5 +196,34 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         builder.HasIndex(e => new { e.UploadedByUserId, e.ProcessedAt })
             .IsDescending(false, true)
             .HasDatabaseName("ix_pdf_documents_uploaded_by_user_id_processed_at_desc");
+
+        // Issue #1687: User-editable display title (varchar(200) NULL).
+        builder.Property(e => e.Title)
+            .HasMaxLength(200)
+            .HasColumnName("title")
+            .IsRequired(false);
+
+        // Issue #1687: Tags stored as PG text[] for native array operators
+        // (@>, &&, ANY). Forward-compat with #1686 server-side facets.
+        builder.Property(e => e.Tags)
+            .HasColumnName("tags")
+            .HasColumnType("text[]")
+            .IsRequired()
+            .HasDefaultValueSql("'{}'::text[]");
+
+        // Issue #1687: Audit columns (last-write-wins per D-3, no RowVersion in v1).
+        builder.Property(e => e.UpdatedAt)
+            .HasColumnName("updated_at")
+            .IsRequired(false);
+
+        builder.Property(e => e.UpdatedBy)
+            .HasColumnName("updated_by")
+            .IsRequired(false);
+
+        // Issue #1687: GIN index on tags array for fast containment queries.
+        // Forward-compat with #1686 facets (?tags=strategy filter) — cheap to add now.
+        builder.HasIndex(e => e.Tags)
+            .HasDatabaseName("IX_pdf_documents_tags_gin")
+            .HasMethod("gin");
     }
 }

@@ -93,6 +93,16 @@ public class PdfDocumentEntity
     // Issue #5447: User-editable version label
     public string? VersionLabel { get; set; }
 
+    // Issue #1687: User-editable display title (distinct from immutable FileName).
+    public string? Title { get; set; }
+
+    // Issue #1687: User-curated tags (deduped + lowercased + sorted on write).
+    public List<string> Tags { get; set; } = new();
+
+    // Issue #1687: Audit columns set by metadata-edit handlers (last-write-wins per D-3).
+    public DateTime? UpdatedAt { get; set; }
+    public Guid? UpdatedBy { get; set; }
+
     // Admin Wizard: Processing priority (Normal=0, Admin=10)
     public string ProcessingPriority { get; set; } = "Normal";
 

@@ -88,12 +88,31 @@ internal static class KnowledgeBaseEndpoints
             .WithName("GlobalKbSearch")
             .RequireSession()
             .WithTags("KnowledgeBase")
-            .WithSummary("Cross-game knowledge base search (RBAC-filtered)")
+            .WithSummary("Cross-game knowledge base search (RBAC-filtered, optional facets)")
             .WithDescription(
                 "Searches the knowledge base across all games accessible to the authenticated user " +
                 "(public games + library-owned games). Admins see all games. " +
                 "Returns ranked results with cursor-based pagination (hasMore + nextCursor). " +
-                "Issue #1661.")
+                "\n\n" +
+                "Optional facets narrow within the RBAC-accessible set (Issue #1686 / canonical D-1..D-2):\n" +
+                "- `DocType` (list, max 10): canonical PdfDocumentEntity.DocumentType allowlist " +
+                "{ base, expansion, errata, homerule } — case-insensitive.\n" +
+                "- `GameId` (single Guid): narrows to that single SharedGame.Id if accessible; " +
+                "non-accessible IDs are silently dropped (200 empty, no info leak).\n" +
+                "- `Language` (single string): ISO 639-1 allowlist { en, it, de, fr, es } — case-insensitive.\n" +
+                "Empty list ≡ null (no filter). Combined facets are AND-ed. " +
+                "Unknown values → 422 with allowlist enumerated in the error message.\n\n" +
+                "Example request body (Issue #1731 / D-15):\n" +
+                "```json\n" +
+                "{\n" +
+                "  \"query\": \"movement rules\",\n" +
+                "  \"limit\": 20,\n" +
+                "  \"docType\": [\"base\", \"expansion\"],\n" +
+                "  \"gameId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n" +
+                "  \"language\": \"it\"\n" +
+                "}\n" +
+                "```\n\n" +
+                "Issues: #1661, #1686, #1731.")
             .Produces<GlobalKbSearchResponseDto>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status422UnprocessableEntity);
@@ -1493,8 +1512,8 @@ internal sealed record SearchKbChunksRequest(string Query, int? Skip, int? Take)
 /// <param name="Mode">Search mode (Hybrid by default).</param>
 /// <param name="MinScore">Minimum hybrid score; results below threshold are discarded.</param>
 /// <param name="DocType">
-/// Optional facet (Issue #1686, D-6): list of canonical <c>DocumentCategory</c> values from the allowlist
-/// <c>{ "Rulebook", "Expansion", "Errata", "QuickStart", "Reference", "PlayerAid", "Other" }</c>
+/// Optional facet (Issue #1686, canonical D-1): list of <c>PdfDocumentEntity.DocumentType</c> values
+/// from the allowlist <c>{ "base", "expansion", "errata", "homerule" }</c>
 /// (case-insensitive). Hard cap of 10 elements. Null or empty = no filter (D-3 byte-identical legacy).
 /// </param>
 /// <param name="GameId">

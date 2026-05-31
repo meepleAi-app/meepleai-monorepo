@@ -942,6 +942,152 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
         _searchMock.VerifyNoOtherCalls();
     }
 
+    // ─── Issue #1731 / D-14: Prometheus counter increments ───────────────────────
+
+    [Fact]
+    public async Task Handle_GameIdRejected_IncrementsCounterRejected()
+    {
+        // Arrange: GameId NOT in accessible set → handler rejects per D-5
+        var userId = Guid.NewGuid();
+        var accessibleGameId = Guid.NewGuid();
+        var unaccessibleGameId = Guid.NewGuid();
+
+        _ragAccessMock
+            .Setup(s => s.GetAccessibleGameIdsAsync(userId, UserRole.User, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { accessibleGameId });
+
+        var query = BuildQuery(userId, "rules", limit: 10, gameId: unaccessibleGameId);
+        var sut = CreateSut();
+
+        using var capture = new FacetCapture();
+
+        // Act
+        await sut.Handle(query, CancellationToken.None);
+
+        // Assert: exactly one rejected event for gameId, NO applied events
+        capture.Events.Should().ContainSingle()
+            .Which.Should().Be(("gameId", "rejected"));
+        _searchMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task Handle_GameIdApplied_IncrementsCounterApplied()
+    {
+        // Arrange: GameId IS in accessible set → handler narrows per D-5
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+
+        _ragAccessMock
+            .Setup(s => s.GetAccessibleGameIdsAsync(userId, UserRole.User, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { gameId });
+
+        _searchMock
+            .Setup(s => s.SearchAsync(
+                It.IsAny<string>(),
+                It.IsAny<IReadOnlyList<Guid>>(),
+                It.IsAny<int>(),
+                It.IsAny<SearchMode>(),
+                It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<MultiGameSearchResultItem>());
+
+        var query = BuildQuery(userId, "rules", limit: 10, gameId: gameId);
+        var sut = CreateSut();
+
+        using var capture = new FacetCapture();
+
+        // Act
+        await sut.Handle(query, CancellationToken.None);
+
+        // Assert: exactly one applied event for gameId
+        capture.Events.Should().Contain(("gameId", "applied"));
+        capture.Events.Should().NotContain(e => e.State == "rejected");
+    }
+
+    [Fact]
+    public async Task Handle_NoFacets_NoCounterEvents()
+    {
+        // Arrange: query without facets — counter must remain untouched
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+
+        _ragAccessMock
+            .Setup(s => s.GetAccessibleGameIdsAsync(userId, UserRole.User, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { gameId });
+
+        _searchMock
+            .Setup(s => s.SearchAsync(
+                It.IsAny<string>(),
+                It.IsAny<IReadOnlyList<Guid>>(),
+                It.IsAny<int>(),
+                It.IsAny<SearchMode>(),
+                It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<MultiGameSearchResultItem>());
+
+        var query = BuildQuery(userId, "rules", limit: 10); // no facets
+        var sut = CreateSut();
+
+        using var capture = new FacetCapture();
+
+        // Act
+        await sut.Handle(query, CancellationToken.None);
+
+        // Assert: no counter events
+        capture.Events.Should().BeEmpty();
+    }
+
+    // ─── Helper for capturing facet counter events ──────────────────────────────
+
+    /// <summary>
+    /// Captures Counter measurements for the kb global search facet instrument and
+    /// exposes a list of (Facet, State) tag pairs for assertion.
+    /// Mirror of FallbackCapture pattern from RagPromptAssemblyServiceFallbackMetricsTests.
+    /// </summary>
+    private sealed class FacetCapture : IDisposable
+    {
+        private const string CounterName = "meepleai.kb.global_search.facet.total";
+        private readonly System.Diagnostics.Metrics.MeterListener _listener;
+        public List<(string Facet, string State)> Events { get; } = new();
+
+        public FacetCapture()
+        {
+            _listener = new System.Diagnostics.Metrics.MeterListener
+            {
+                InstrumentPublished = (instrument, l) =>
+                {
+                    if (instrument.Meter.Name == Api.Observability.MeepleAiMetrics.MeterName
+                        && instrument.Name == CounterName)
+                    {
+                        l.EnableMeasurementEvents(instrument);
+                    }
+                }
+            };
+            _listener.SetMeasurementEventCallback<long>((instrument, _, tags, _) =>
+            {
+                string facet = "<missing>";
+                string state = "<missing>";
+                foreach (var tag in tags)
+                {
+                    if (tag.Key == "facet" && tag.Value is string f)
+                    {
+                        facet = f;
+                    }
+                    else if (tag.Key == "state" && tag.Value is string s)
+                    {
+                        state = s;
+                    }
+                }
+                Events.Add((facet, state));
+            });
+            _listener.Start();
+        }
+
+        public void Dispose() => _listener.Dispose();
+    }
+
     // ─── Helpers ─────────────────────────────────────────────────────────────────
 
     private static GlobalKbSearchQuery BuildQuery(

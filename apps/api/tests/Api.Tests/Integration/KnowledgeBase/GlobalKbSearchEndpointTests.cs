@@ -58,6 +58,12 @@ public sealed class GlobalKbSearchEndpointTests : IAsyncLifetime
     // BEFORE the search runs — not vacuously after enrichment drops everything.
     private readonly System.Collections.Concurrent.ConcurrentBag<IReadOnlyList<Guid>> _capturedGameIds = new();
 
+    // Issue #1731: parametrize chunks-per-game for cursor stability tests.
+    // Default 1 preserves backwards compat with AC-1/AC-2/AC-3.
+    // Tests requiring multi-chunk pagination (e.g. cursor stability #11)
+    // override this in their setup via a property-set before HTTP call.
+    private int _mockChunksPerGame = 1;
+
     private const string Endpoint = "/api/v1/knowledge-base/search/global";
 
     public GlobalKbSearchEndpointTests(SharedTestcontainersFixture fixture)
@@ -576,24 +582,37 @@ public sealed class GlobalKbSearchEndpointTests : IAsyncLifetime
                 IReadOnlyList<Guid>? _,
                 CancellationToken _) =>
             {
-                // Return one synthetic result per accessible game (up to limit).
-                // Note: pdfDocId is a fresh Guid that the handler's enrichment join cannot
-                // resolve — Results will end up empty regardless of RBAC. RBAC assertions
-                // must therefore inspect `_capturedGameIds`, not `payload.Results`.
+                // Issue #1731: generate _mockChunksPerGame chunks per game (default 1 for
+                // backwards compat with AC-1/AC-2/AC-3 + 5 existing facet tests).
+                // Deterministic HybridScore = 0.95 - (chunkIdx * 0.05) - (gameIdx * 0.001)
+                // ensures stable ordering across calls — required for cursor stability test #11.
                 var results = new List<MultiGameSearchResultItem>();
-                foreach (var gameId in gameIds.Take(limit))
+                var gameIdxCounter = 0;
+                foreach (var gameId in gameIds)
                 {
                     var fakePdfDocId = Guid.NewGuid().ToString();
-                    results.Add(new MultiGameSearchResultItem
+                    for (var chunkIdx = 0; chunkIdx < _mockChunksPerGame; chunkIdx++)
                     {
-                        GameId = gameId,
-                        ChunkId = $"{fakePdfDocId}_0",
-                        PdfDocumentId = fakePdfDocId,
-                        ChunkIndex = 0,
-                        Content = $"Synthetic chunk content for game {gameId}",
-                        HybridScore = 0.85f - (results.Count * 0.01f),
-                        Mode = mode
-                    });
+                        if (results.Count >= limit)
+                        {
+                            break;
+                        }
+                        results.Add(new MultiGameSearchResultItem
+                        {
+                            GameId = gameId,
+                            ChunkId = $"{fakePdfDocId}_{chunkIdx}",
+                            PdfDocumentId = fakePdfDocId,
+                            ChunkIndex = chunkIdx,
+                            Content = $"Synthetic chunk content {chunkIdx} for game {gameId}",
+                            HybridScore = 0.95f - (chunkIdx * 0.05f) - (gameIdxCounter * 0.001f),
+                            Mode = mode
+                        });
+                    }
+                    gameIdxCounter++;
+                    if (results.Count >= limit)
+                    {
+                        break;
+                    }
                 }
                 return (IReadOnlyList<MultiGameSearchResultItem>)results.AsReadOnly();
             });

@@ -168,7 +168,7 @@ Il handoff sovrastima massicciamente lo sforzo: dei ~38 componenti "nuovi", **~3
 | A1 Overview | KPI+activity+alerts+charts | ✅ | `admin/(dashboard)/overview/page.tsx` (+`activity/`, `system/`) |
 | A2 Users | lista+drill+impersonate+suspend+delete | 🟡 | `users/page.tsx` + `users/[id]/page.tsx` (impersonate endpoint BE ✅; wiring FE delete/impersonate **da verificare**) |
 | A3 Content moderation | queue approve/reject | 🟡 | `content/page.tsx` è gestione giochi/KB, **non** moderation queue |
-| A4 AI/RAG quality | metrics + query drill-down | ✅ | `rag-quality/page.tsx` + `agents/inspector/page.tsx` + `ai?tab=rag` |
+| A4 AI/RAG quality | metrics + query drill-down | ✅ full | `ai/layout.tsx` AiTopBand + 9 tab token-reskinned + QueryDrillPanel split + AiTrendChart + LatencyBreakdownBar (F3-FU-7 #1722). Sub-task BE: drill ricco endpoint pending. |
 | A5 KB management | tree + viewer + chunk table | ✅ | `knowledge-base/page.tsx` (hub) + `documents/`, `vectors/` |
 | A5b KB upload flow | FSM 5 stati + SSE | ✅ | `knowledge-base/upload/page.tsx` |
 | A6 Catalog ingestion | runs + run-now | ✅ | `catalog-ingestion/page.tsx` |

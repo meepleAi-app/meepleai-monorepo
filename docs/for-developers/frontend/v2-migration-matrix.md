@@ -732,10 +732,10 @@ instead.
 | `/sessions` | `sp4-sessions-index.html` | — |
 | `/sessions/new` | `librogame-runthrough-setup-wizard.html` | — |
 | `/sessions/join` | `sp3-join.html` ↻ | Reuse |
-| `/sessions/[id]` | `sp4-session-summary.html` + `sp4-session-summary-{parts,sections,tabs}.jsx` | Tier M-L done (PR #762); 2026-05-31 consolidation +3 tabs `?tab=scoreboard\|notes\|players` (closes gap N7 audit 2026-05-22) |
-| `/sessions/[id]/live` | `sp4-session-live.html` + `sp4-session-live-{parts,tabs}.jsx` + `sp4-parts-common.jsx` | Tier L+ pending impl; 2026-05-31 consolidation +4 tabs `?tab=scores\|photos\|agent\|players` (closes gap N7) — vedi ADR `claudedocs/2026-05-31-sessions-consolidation-adr.md` |
-| `/sessions/[id]/{scoreboard,notes,players}` | `sp4-session-summary.html` ↻ tabs | Consolidated 2026-05-31 — route da deletare, redirect 301/308 a `?tab=` equivalente |
-| `/sessions/[id]/{scores,photos,agent,players}` | `sp4-session-live.html` ↻ tabs | Consolidated 2026-05-31 — route da deletare, redirect 301/308 a `?tab=` equivalente. NOTA: `/sessions/[id]/players` esiste sia post-game (summary tab) sia live (live tab) — context-dependent |
+| `/sessions/[id]` | `sp4-session-wingspan-summary.html` + `sp4-session-wingspan-summary-{parts,sections,tabs}.jsx` | Tier M-L done (PR #762); 2026-05-31 consolidation +3 tabs `?tab=scoreboard\|notes\|players` (closes gap N7 audit 2026-05-22). ⚠️ **Wingspan-specific demo** — generic skeleton tracked in B19 |
+| `/sessions/[id]/live` | `sp4-session-wingspan-live.html` + `sp4-session-wingspan-live-{parts,tabs}.jsx` + `sp4-parts-common.jsx` | Tier L+ pending impl; 2026-05-31 consolidation +4 tabs `?tab=scores\|photos\|agent\|players` (closes gap N7) — vedi ADR `claudedocs/2026-05-31-sessions-consolidation-adr.md`. ⚠️ **Wingspan-specific demo** — generic skeleton tracked in B19 |
+| `/sessions/[id]/{scoreboard,notes,players}` | `sp4-session-wingspan-summary.html` ↻ tabs | Consolidated 2026-05-31 — route da deletare, redirect 301/308 a `?tab=` equivalente |
+| `/sessions/[id]/{scores,photos,agent,players}` | `sp4-session-wingspan-live.html` ↻ tabs | Consolidated 2026-05-31 — route da deletare, redirect 301/308 a `?tab=` equivalente. NOTA: `/sessions/[id]/players` esiste sia post-game (summary tab) sia live (live tab) — context-dependent |
 | `/sessions/[id]/join` | `sp3-join.html` ↻ | Reuse — non consolidato (flow distinto) |
 | `/sessions/[id]/play` | — | Route esistente, NON in scope ADR 2026-05-31 — gap residuo |
 | `/sessions/live/[id]` (+ `/agent`, `/photos`, `/players`, `/scores`) | `sp4-session-live.html` + `librogame-runthrough-session-end.html` | Consolidation 2026-05-31 applicabile (stesso pattern `?tab=`); coexistenza route fisiche da pianificare |

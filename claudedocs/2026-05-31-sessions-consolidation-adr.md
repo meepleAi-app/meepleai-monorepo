@@ -1,10 +1,11 @@
 # ADR — Consolidamento sub-route Sessions in RightColumnTabs
 
 - **Data:** 2026-05-31
-- **Stato:** Accettato
+- **Stato:** Accettato (consolidation pattern); ⚠️ **Mockup files rinominati `sp4-session-wingspan-*` 2026-05-31 #2** post spike — sono **Wingspan-specific demo**, NON generic template
 - **Scope:** SP4 wave 2 · Sessions cluster
 - **Decisione:** Option B+ (hybrid consolidation) — già approvata nel brief
 - **Autore:** Claude Design (mockup) → owner FE per implementazione
+- **Follow-up:** Spike AI generation `claudedocs/2026-05-31-spike-toolkit-ai-generation.md` ha confermato che **lo schema generico non cattura le meccaniche "flavor"** dei giochi specifici. Issue B19 traccia il generic session skeleton.
 
 ---
 
@@ -166,16 +167,21 @@ replica la struttura (registry tab + `StateSwitch` + tabpanel).
 
 ## File prodotti (mockup)
 
+> ⚠️ **Rinominati 2026-05-31 #2** dopo spike AI generation. I file consegnati da
+> Claude Design contengono dati Wingspan-specifici (5 dadi food, 4 round con
+> turn count decrescente, 6 scoring categories di Wingspan). Il rename riflette
+> onestamente lo scope. Generic session skeleton è scope di issue B19.
+
 ```
 design_files/
-  sp4-session-live.html / .jsx          (RightColumnTabs esteso: +4 tab)
-  sp4-session-live-parts.jsx            (window.LiveSessionParts1)
-  sp4-session-live-tabs.jsx             (window.LiveTabs — 4 tab × 5 stati)
-  sp4-session-summary.html / .jsx       (nuovo RightColumnTabs: 3 tab)
-  sp4-session-summary-parts.jsx         (window.SummaryParts)
-  sp4-session-summary-sections.jsx      (corpo celebrativo, invariato)
-  sp4-session-summary-tabs.jsx          (window.SummaryReviewTabs — 3 tab × 5 stati)
-  sp4-parts-common.jsx                  (entityHsl + data + reuse components)
+  sp4-session-wingspan-live.html / .jsx          (RightColumnTabs esteso: +4 tab, Wingspan-flavored)
+  sp4-session-wingspan-live-parts.jsx            (window.LiveSessionParts1)
+  sp4-session-wingspan-live-tabs.jsx             (window.LiveTabs — 4 tab × 5 stati, Wingspan content)
+  sp4-session-wingspan-summary.html / .jsx       (nuovo RightColumnTabs: 3 tab, Wingspan-flavored)
+  sp4-session-wingspan-summary-parts.jsx         (window.SummaryParts)
+  sp4-session-wingspan-summary-sections.jsx      (corpo celebrativo, Wingspan-themed)
+  sp4-session-wingspan-summary-tabs.jsx          (window.SummaryReviewTabs — 3 tab × 5 stati)
+  sp4-parts-common.jsx                           (entityHsl + data + reuse components — REUSABILE generico)
 ```
 
 > Nota: i runtime helper originali (`data.js`, `*-parts.jsx`, `sp4-sessions-index.jsx`)

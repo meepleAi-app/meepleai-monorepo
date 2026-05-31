@@ -62,6 +62,23 @@ internal sealed class GlobalKbSearchQueryHandler
             return new GlobalKbSearchResponseDto(Array.Empty<GlobalKbSearchResultDto>(), false, null);
         }
 
+        // Issue #1686 D-5: GameId facet intersects with RBAC.
+        // When provided AND ∉ accessibleGameIds → 200 empty (NOT 403, avoid info leak).
+        // When provided AND ∈ accessibleGameIds → narrow search to that game only.
+        if (query.GameId.HasValue)
+        {
+            if (!accessibleGameIds.Contains(query.GameId.Value))
+            {
+                _logger.LogDebug(
+                    "[GlobalKbSearch] UserId={UserId} requested GameId={GameId} not in accessible set — returning empty (D-5)",
+                    query.UserId, query.GameId.Value);
+                return new GlobalKbSearchResponseDto(Array.Empty<GlobalKbSearchResultDto>(), false, null);
+            }
+
+            // Narrow the accessible set to exactly the requested game.
+            accessibleGameIds = new[] { query.GameId.Value };
+        }
+
         // 2. Decode cursor (best-effort; invalid cursor → start from beginning)
         var cursorScore = double.MaxValue;
         var cursorChunkId = string.Empty;

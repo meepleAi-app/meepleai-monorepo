@@ -151,4 +151,72 @@ public sealed class GlobalKbSearchQueryValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName == "Query");
     }
+
+    // ─── Language: null passes ───────────────────────────────────────────────
+
+    [Fact]
+    public async Task NullLanguage_Passes()
+    {
+        var validator = new GlobalKbSearchQueryValidator();
+        var result = await validator.ValidateAsync(BuildQuery(language: null));
+        result.IsValid.Should().BeTrue();
+    }
+
+    // ─── Language: allowlist values pass ─────────────────────────────────────
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("it")]
+    [InlineData("de")]
+    [InlineData("fr")]
+    [InlineData("es")]
+    public async Task LanguageAllowlistValue_Passes(string allowedCode)
+    {
+        var validator = new GlobalKbSearchQueryValidator();
+        var result = await validator.ValidateAsync(BuildQuery(language: allowedCode));
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task LanguageMixedCase_Passes()
+    {
+        var validator = new GlobalKbSearchQueryValidator();
+        var result = await validator.ValidateAsync(BuildQuery(language: "IT"));
+        result.IsValid.Should().BeTrue();
+    }
+
+    // ─── Language: unknown / empty / whitespace fail ─────────────────────────
+
+    [Fact]
+    public async Task LanguageUnknown_FailsValidation()
+    {
+        var validator = new GlobalKbSearchQueryValidator();
+        var result = await validator.ValidateAsync(BuildQuery(language: "xx"));
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e =>
+            e.PropertyName == "Language");
+        // D-12: error message enumerates allowed values
+        result.Errors.Should().Contain(e =>
+            e.ErrorMessage.Contains("en", StringComparison.OrdinalIgnoreCase) &&
+            e.ErrorMessage.Contains("it", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task LanguageEmptyString_FailsValidation()
+    {
+        var validator = new GlobalKbSearchQueryValidator();
+        var result = await validator.ValidateAsync(BuildQuery(language: string.Empty));
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == "Language");
+    }
+
+    [Fact]
+    public async Task LanguageWhitespace_FailsValidation()
+    {
+        var validator = new GlobalKbSearchQueryValidator();
+        var result = await validator.ValidateAsync(BuildQuery(language: "   "));
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == "Language");
+    }
 }

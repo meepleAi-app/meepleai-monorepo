@@ -27,6 +27,17 @@ internal sealed class GlobalKbSearchQueryValidator : AbstractValidator<GlobalKbS
             "base", "expansion", "errata", "homerule"
         };
 
+    /// <summary>
+    /// Allowlist for the <see cref="GlobalKbSearchQuery.Language"/> facet (D-2).
+    /// Mirrors <c>PdfDocumentEntity.Language</c> supported ISO 639-1 codes.
+    /// Comparison is case-insensitive (D-8).
+    /// </summary>
+    internal static readonly HashSet<string> AllowedLanguages =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "en", "it", "de", "fr", "es"
+        };
+
     public GlobalKbSearchQueryValidator()
     {
         RuleFor(x => x.Query)
@@ -59,6 +70,14 @@ internal sealed class GlobalKbSearchQueryValidator : AbstractValidator<GlobalKbS
             .WithMessage(
                 $"DocType must be one of: {string.Join(", ", AllowedDocTypes)}.")
             .When(x => x.DocType != null);
+
+        // Issue #1686 — Language facet validation (D-2, D-8, D-12).
+        // When non-null, must be in the allowlist (case-insensitive). Null is "no filter" (D-3).
+        RuleFor(x => x.Language)
+            .Must(IsAllowedLanguage)
+            .WithMessage(
+                $"Language must be one of: {string.Join(", ", AllowedLanguages)}.")
+            .When(x => x.Language != null);
     }
 
     /// <summary>
@@ -73,5 +92,20 @@ internal sealed class GlobalKbSearchQueryValidator : AbstractValidator<GlobalKbS
         }
 
         return AllowedDocTypes.Contains(value.Trim());
+    }
+
+    /// <summary>
+    /// Returns <c>true</c> when <paramref name="value"/> (after trimming) is in the
+    /// <see cref="AllowedLanguages"/> allowlist. Case-insensitive (D-8).
+    /// Empty / whitespace returns <c>false</c> (D-12 actionable error).
+    /// </summary>
+    private static bool IsAllowedLanguage(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return AllowedLanguages.Contains(value.Trim());
     }
 }

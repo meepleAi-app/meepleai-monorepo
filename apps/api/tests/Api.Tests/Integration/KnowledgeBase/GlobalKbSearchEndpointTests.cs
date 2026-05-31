@@ -504,9 +504,31 @@ public sealed class GlobalKbSearchEndpointTests : IAsyncLifetime
         });
 
         // 5. Seed PdfDocuments + VectorDocuments for each game (so enrichment queries work)
+        // 5a. Base docs (AC-1/AC-2/AC-3 baseline — DocumentType="base")
         SeedIndexedDoc(db, _gamePublicId, seedUserId, "public-rules.pdf");
         SeedIndexedDoc(db, _gameAliceOwnedId, _aliceId, "alice-rules.pdf");
         SeedIndexedDoc(db, _gameBobOwnedId, _bobId, "bob-rules.pdf");
+
+        // 5b. Issue #1731 facet-rich extras: 9 docs across 3 games
+        //     covering all DocumentType values + 2 Languages.
+        //     Distribution (3 per game):
+        //       gamePublic:    expansion-en, errata-it, homerule-en
+        //       gameAliceOwned: expansion-en, errata-en, base-it
+        //       gameBobOwned:   errata-it, homerule-en, expansion-it
+        //     Resulting totals (incl. the 3 base from 5a):
+        //       DocumentType: base×4, expansion×3, errata×3, homerule×2 = 12
+        //       Language:     en×8, it×4 = 12
+        SeedFacetedDoc(db, _gamePublicId, seedUserId, "public-expansion-en.pdf", "expansion", "en");
+        SeedFacetedDoc(db, _gamePublicId, seedUserId, "public-errata-it.pdf", "errata", "it");
+        SeedFacetedDoc(db, _gamePublicId, seedUserId, "public-homerule-en.pdf", "homerule", "en");
+
+        SeedFacetedDoc(db, _gameAliceOwnedId, _aliceId, "alice-expansion-en.pdf", "expansion", "en");
+        SeedFacetedDoc(db, _gameAliceOwnedId, _aliceId, "alice-errata-en.pdf", "errata", "en");
+        SeedFacetedDoc(db, _gameAliceOwnedId, _aliceId, "alice-base-it.pdf", "base", "it");
+
+        SeedFacetedDoc(db, _gameBobOwnedId, _bobId, "bob-errata-it.pdf", "errata", "it");
+        SeedFacetedDoc(db, _gameBobOwnedId, _bobId, "bob-homerule-en.pdf", "homerule", "en");
+        SeedFacetedDoc(db, _gameBobOwnedId, _bobId, "bob-expansion-it.pdf", "expansion", "it");
 
         await db.SaveChangesAsync(TestCancellationToken);
     }
@@ -528,6 +550,60 @@ public sealed class GlobalKbSearchEndpointTests : IAsyncLifetime
             ProcessedAt = DateTime.UtcNow,
             IsActiveForRag = true,
             DocumentType = "base"
+        });
+
+        db.VectorDocuments.Add(new VectorDocumentEntity
+        {
+            Id = Guid.NewGuid(),
+            PdfDocumentId = pdfId,
+            GameId = gameId,
+            ChunkCount = 5,
+            TotalCharacters = 2500,
+            IndexingStatus = "completed",
+            IndexedAt = DateTime.UtcNow,
+            EmbeddingModel = "test-embed",
+            EmbeddingDimensions = 768
+        });
+
+        return pdfId;
+    }
+
+    /// <summary>
+    /// Issue #1731: seeds a PdfDocument + VectorDocument with parametrized DocumentType
+    /// and Language for facet test coverage. Mirrors SeedIndexedDoc but exposes
+    /// the facet-relevant entity fields.
+    /// </summary>
+    /// <param name="db">DB context.</param>
+    /// <param name="gameId">Owning SharedGame.Id.</param>
+    /// <param name="uploadedBy">User who uploaded (sets UploadedByUserId).</param>
+    /// <param name="fileName">File name.</param>
+    /// <param name="documentType">DocumentType allowlist value: base|expansion|errata|homerule.</param>
+    /// <param name="language">ISO 639-1 code: en|it|de|fr|es.</param>
+    /// <returns>The generated PdfDocument.Id.</returns>
+    private static Guid SeedFacetedDoc(
+        MeepleAiDbContext db,
+        Guid gameId,
+        Guid uploadedBy,
+        string fileName,
+        string documentType,
+        string language)
+    {
+        var pdfId = Guid.NewGuid();
+        db.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = pdfId,
+            SharedGameId = gameId,
+            FileName = fileName,
+            FilePath = $"/test/{fileName}",
+            FileSizeBytes = 1024,
+            ContentType = "application/pdf",
+            UploadedAt = DateTime.UtcNow,
+            UploadedByUserId = uploadedBy,
+            ProcessingState = "Ready",
+            ProcessedAt = DateTime.UtcNow,
+            IsActiveForRag = true,
+            DocumentType = documentType,
+            Language = language
         });
 
         db.VectorDocuments.Add(new VectorDocumentEntity

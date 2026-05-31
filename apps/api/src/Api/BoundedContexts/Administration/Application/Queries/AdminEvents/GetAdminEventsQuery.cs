@@ -40,7 +40,7 @@ namespace Api.BoundedContexts.Administration.Application.Queries.AdminEvents;
 /// <param name="AggregateId">
 /// Optional equality filter on <c>AggregateId</c>.
 /// </param>
-public record GetAdminEventsQuery(
+internal sealed record GetAdminEventsQuery(
     DateTime? Since = null,
     int Limit = 100,
     IReadOnlyList<string>? EventTypes = null,

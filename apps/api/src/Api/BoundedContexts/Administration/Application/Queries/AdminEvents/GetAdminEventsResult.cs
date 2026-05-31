@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Administration.Application.Queries.AdminEvents;
 /// <param name="Events">
 /// Domain event rows ordered by <c>LoggedAt DESC</c>, limited to the requested page size.
 /// </param>
-public record GetAdminEventsResult(IReadOnlyList<DomainEventDto> Events);
+internal sealed record GetAdminEventsResult(IReadOnlyList<DomainEventDto> Events);
 
 /// <summary>
 /// Admin-facing projection of a <c>domain_event_logs</c> row.
@@ -28,7 +28,7 @@ public record GetAdminEventsResult(IReadOnlyList<DomainEventDto> Events);
 /// <param name="PayloadVersion">Schema version of the payload (1 for all current events).</param>
 /// <param name="OccurredAt">Domain clock when the event was raised.</param>
 /// <param name="LoggedAt">Server timestamp when the row was persisted.</param>
-public record DomainEventDto(
+internal sealed record DomainEventDto(
     Guid Id,
     Guid EventId,
     string EventType,

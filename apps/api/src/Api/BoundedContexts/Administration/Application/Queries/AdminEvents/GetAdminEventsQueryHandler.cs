@@ -31,10 +31,12 @@ internal sealed class GetAdminEventsQueryHandler
     private const int MaxLimit = 1000;
 
     private readonly MeepleAiDbContext _db;
+    private readonly TimeProvider _timeProvider;
 
-    public GetAdminEventsQueryHandler(MeepleAiDbContext db)
+    public GetAdminEventsQueryHandler(MeepleAiDbContext db, TimeProvider timeProvider)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task<GetAdminEventsResult> Handle(
@@ -43,7 +45,7 @@ internal sealed class GetAdminEventsQueryHandler
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var retentionCutoff = DateTime.UtcNow.AddDays(-RetentionDays);
+        var retentionCutoff = _timeProvider.GetUtcNow().UtcDateTime.AddDays(-RetentionDays);
 
         var query = _db.DomainEventLogs
             .AsNoTracking()

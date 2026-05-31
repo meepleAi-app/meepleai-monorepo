@@ -6,6 +6,7 @@ using Api.Tests.Constants;
 using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
 
@@ -74,8 +75,15 @@ public sealed class GetAdminEventsQueryHandlerTests
         };
     }
 
+    /// <summary>
+    /// Creates a handler with a <see cref="FakeTimeProvider"/> anchored at <see cref="_now"/>.
+    /// All retention-window calculations in the handler are deterministic regardless of wall-clock.
+    /// </summary>
     private static GetAdminEventsQueryHandler CreateHandler(MeepleAiDbContext db)
-        => new(db);
+        => new(db, new FakeTimeProvider(new DateTimeOffset(_now)));
+
+    private static GetAdminEventsQueryHandler CreateHandler(MeepleAiDbContext db, TimeProvider timeProvider)
+        => new(db, timeProvider);
 
     // -------------------------------------------------------------------------
     // Test 1: ORDER BY LoggedAt DESC
@@ -117,25 +125,31 @@ public sealed class GetAdminEventsQueryHandlerTests
         // Arrange
         await using var db = CreateDb();
 
+        // Handler uses FakeTimeProvider anchored at _now (2026-05-31T12:00:00Z).
+        // retentionCutoff = _now.AddDays(-90) = 2026-03-02T12:00:00Z.
+        // Boundary: LoggedAt >= retentionCutoff → _now-89d and _now-90d are included;
+        //           _now-91d is strictly before cutoff → excluded.
+        // This test is deterministic forever regardless of wall-clock. (Issue #1718 fix.)
         var within = MakeEvent(loggedAt: _now.AddDays(-89));    // inside retention window
-        var exact = MakeEvent(loggedAt: _now.AddDays(-90));     // boundary — EF InMemory: >= cutoff → included (cutoff = UtcNow - 90d)
-        var tooOld = MakeEvent(loggedAt: _now.AddDays(-91));    // outside window
+        var exact = MakeEvent(loggedAt: _now.AddDays(-90));     // boundary — == cutoff → included
+        var tooOld = MakeEvent(loggedAt: _now.AddDays(-91));    // strictly before cutoff → excluded
 
         db.DomainEventLogs.AddRange(within, exact, tooOld);
         await db.SaveChangesAsync();
 
         var handler = CreateHandler(db);
 
-        // Use an explicit Since far in the future so the cursor doesn't interfere;
-        // retention is the only filter here (no EventTypes, no UserId, etc.)
+        // Retention is the only filter here (no EventTypes, no UserId, etc.)
         var query = new GetAdminEventsQuery(Limit: 1000);
 
         // Act
         var result = await handler.Handle(query, CancellationToken.None);
 
-        // Assert — tooOld (91d) excluded; within + exact included
+        // Assert — tooOld (91d before _now) excluded; within + exact included
         result.Events.Should().HaveCount(2);
         result.Events.Select(e => e.LoggedAt).Should().NotContain(_now.AddDays(-91));
+        result.Events.Select(e => e.LoggedAt).Should().Contain(_now.AddDays(-89));
+        result.Events.Select(e => e.LoggedAt).Should().Contain(_now.AddDays(-90));
     }
 
     // -------------------------------------------------------------------------

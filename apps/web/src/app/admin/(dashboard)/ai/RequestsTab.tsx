@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Activity, RefreshCw } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+import { AiTrendChart, type TrendDatapoint } from '@/components/admin/ai/AiTrendChart';
 import { QueryDrillPanel } from '@/components/admin/ai/QueryDrillPanel';
 import { AdminHubEmptyState } from '@/components/admin/layout/AdminHubEmptyState';
 import { Button } from '@/components/ui/primitives/button';
@@ -12,14 +13,19 @@ import { api } from '@/lib/api';
 import type { AiRequest } from '@/lib/api/schemas';
 import { cn } from '@/lib/utils';
 
+const TREND_RANGE_OPTIONS = ['1d', '7d', '30d'] as const;
+const TREND_RANGE_DAYS: Record<string, number> = { '1d': 1, '7d': 7, '30d': 30 };
+
 export function RequestsTab() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedId = searchParams?.get('queryId') ?? null;
+  const range = searchParams?.get('range') ?? '7d';
 
   const [requests, setRequests] = useState<AiRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [trend, setTrend] = useState<TrendDatapoint[]>([]);
 
   const fetchRequests = (pageNum: number) => {
     setLoading(true);
@@ -35,6 +41,35 @@ export function RequestsTab() {
   useEffect(() => {
     fetchRequests(page);
   }, [page]);
+
+  useEffect(() => {
+    const days = TREND_RANGE_DAYS[range] ?? 7;
+    let cancelled = false;
+    api.admin
+      .getModelPerformance(days)
+      .then(data => {
+        if (cancelled) return;
+        const points = (data?.dailyStats ?? []).map(d => ({
+          date: d.date,
+          avgLatencyMs: d.avgLatencyMs,
+          requestCount: d.requestCount,
+        }));
+        setTrend(points);
+      })
+      .catch(() => {
+        if (!cancelled) setTrend([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [range]);
+
+  const setRange = (next: string) => {
+    const params = new URLSearchParams(searchParams?.toString() ?? '');
+    params.set('range', next);
+    if (!params.get('tab')) params.set('tab', 'requests');
+    router.replace(`?${params.toString()}`, { scroll: false });
+  };
 
   const selectedQuery = useMemo<AiRequest | null>(() => {
     if (!selectedId) return null;
@@ -76,6 +111,13 @@ export function RequestsTab() {
           <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Refresh
         </Button>
       </div>
+
+      <AiTrendChart
+        data={trend}
+        range={range}
+        rangeOptions={TREND_RANGE_OPTIONS}
+        onRangeChange={setRange}
+      />
 
       <div
         className={cn(

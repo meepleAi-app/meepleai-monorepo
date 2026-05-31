@@ -19,6 +19,7 @@
 import { type JSX, useState, useId } from 'react';
 
 import { useUpdateKbDocMeta } from '@/hooks/mutations/useUpdateKbDocMeta';
+import { ApiError } from '@/lib/api/core/errors';
 import type { PatchKbDocMetadataRequest } from '@/lib/api/schemas/kb-docs-patch.schemas';
 import type { UserKbDocDto } from '@/lib/api/schemas/kb-docs.schemas';
 
@@ -59,7 +60,11 @@ function isHttpFieldError(err: unknown): err is HttpFieldError {
 }
 
 function is404Error(err: unknown): boolean {
+  // Primary: real NotFoundError from httpClient (ApiError with statusCode=404).
+  if (err instanceof ApiError && err.statusCode === 404) return true;
+  // Secondary: ValidationError or other Error subclass exposing `status=404`.
   if (isHttpFieldError(err) && err.status === 404) return true;
+  // Fallback: tests/mocks that throw plain `new Error('HTTP 404')` (no statusCode).
   if (err instanceof Error && err.message.includes('404')) return true;
   return false;
 }

@@ -7,7 +7,10 @@
  * this client is scoped to the new cross-game user listing endpoint).
  */
 
-import { type PatchKbDocMetadataRequest } from '../schemas/kb-docs-patch.schemas';
+import {
+  type PatchKbDocMetadataRequest,
+  PatchKbDocMetadataRequestSchema,
+} from '../schemas/kb-docs-patch.schemas';
 import {
   KbDocsListResponseSchema,
   type KbDocsListResponse,
@@ -67,9 +70,12 @@ export function createKbDocsClient({ httpClient }: CreateKbDocsClientParams): Kb
     },
 
     async patchKbDocMetadata(id: string, body: PatchKbDocMetadataRequest): Promise<UserKbDocDto> {
+      // Client-side pre-validation: short-circuit invalid payloads (e.g. tag >50 chars,
+      // >20 tags) before the network call, matching plan Task 2 Step 3 spec.
+      const validated = PatchKbDocMetadataRequestSchema.parse(body);
       const response = await httpClient.patch<UserKbDocDto>(
         `/api/v1/kb-docs/${id}`,
-        body,
+        validated,
         UserKbDocDtoSchema
       );
       return response;

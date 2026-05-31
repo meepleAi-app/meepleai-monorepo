@@ -42,7 +42,14 @@ public sealed record KbDocsListResponse(
 /// <param name="PageCount">Number of pages; null until extraction completes.</param>
 /// <param name="ProcessedAt">Timestamp of the most recent processing state transition; null for Pending docs that never started.</param>
 /// <param name="UploadedAt">Upload timestamp; always non-null. Used as the sort fallback when <paramref name="ProcessedAt"/> is null.</param>
-/// <param name="UpdatedAt">Explicit recency signal: ProcessedAt ?? UploadedAt. Mirrors the canonical sort key from the handler. Issue #1645.</param>
+/// <param name="UpdatedAt">
+///   Explicit recency signal: <c>doc.UpdatedAt ?? ProcessedAt ?? UploadedAt</c>. Issue #1687 D-13 promotes the
+///   metadata-edit timestamp to override the processing one, so a user-driven title change beats a stale
+///   pipeline transition for display purposes.
+/// </param>
+/// <param name="Title">User-editable display title (Issue #1687 D-5); null = fall back to FileName for display.</param>
+/// <param name="Tags">User-curated tag set (Issue #1687 D-8); deduped+lowercased+sorted. Empty when no tags.</param>
+/// <param name="UpdatedBy">Identifier of the last editor (Issue #1687 D-13); null when never edited.</param>
 public sealed record UserKbDocDto(
     Guid Id,
     Guid? GameId,
@@ -52,4 +59,7 @@ public sealed record UserKbDocDto(
     int? PageCount,
     DateTime? ProcessedAt,
     DateTime UploadedAt,
-    DateTime UpdatedAt);
+    DateTime UpdatedAt,
+    string? Title,
+    IReadOnlyList<string> Tags,
+    Guid? UpdatedBy);

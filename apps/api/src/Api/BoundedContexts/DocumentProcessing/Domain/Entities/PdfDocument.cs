@@ -736,6 +736,31 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             throw new ArgumentException("Editor id cannot be empty", nameof(editorId));
     }
 
+    /// <summary>
+    /// Raises a <see cref="PdfMetadataChangedEvent"/> with the supplied change diff. Intended for the
+    /// <c>UpdateKbDocMetadataCommandHandler</c> only — it knows the cross-field diff (old/new tuples)
+    /// while individual aggregate mutators only see their own field.
+    /// Issue #1687 D-9 / Task 6.
+    /// </summary>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="changes"/> is empty.</exception>
+    public void RaiseMetadataChangedEvent(IReadOnlyList<MetadataChange> changes, Guid editorId, string editorRole)
+    {
+        ArgumentNullException.ThrowIfNull(changes);
+        if (changes.Count == 0)
+            throw new ArgumentException("At least one change must be present to emit the metadata-changed event", nameof(changes));
+
+        EnsureValidEditorId(editorId);
+        if (string.IsNullOrWhiteSpace(editorRole))
+            throw new ArgumentException("Editor role must be non-empty", nameof(editorRole));
+
+        AddDomainEvent(new PdfMetadataChangedEvent(
+            AggregateId: Id,
+            UserId: editorId,
+            EditorRole: editorRole,
+            Changes: changes,
+            GameId: SharedGameId));
+    }
+
     // Issue #2029: Update detected language after processing
     public void UpdateLanguage(LanguageCode languageCode)
     {

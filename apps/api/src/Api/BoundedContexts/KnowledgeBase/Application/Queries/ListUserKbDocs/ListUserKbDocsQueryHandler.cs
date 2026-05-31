@@ -119,7 +119,11 @@ internal sealed class ListUserKbDocsQueryHandler
                 p.ProcessingState,
                 p.PageCount,
                 p.ProcessedAt,
-                p.UploadedAt
+                p.UploadedAt,
+                p.Title,
+                p.Tags,
+                p.UpdatedAt,
+                p.UpdatedBy
             })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -148,7 +152,11 @@ internal sealed class ListUserKbDocsQueryHandler
             PageCount: r.PageCount,
             ProcessedAt: r.ProcessedAt,
             UploadedAt: r.UploadedAt,
-            UpdatedAt: r.ProcessedAt ?? r.UploadedAt)).ToList();
+            // Issue #1687 D-13: an explicit user edit beats the processing transition for display.
+            UpdatedAt: r.UpdatedAt ?? r.ProcessedAt ?? r.UploadedAt,
+            Title: r.Title,
+            Tags: r.Tags ?? new List<string>(),
+            UpdatedBy: r.UpdatedBy)).ToList();
 
         return new KbDocsListResponse(
             Items: items,

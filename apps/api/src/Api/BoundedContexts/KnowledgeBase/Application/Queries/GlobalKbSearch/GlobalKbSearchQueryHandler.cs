@@ -2,6 +2,7 @@ using System.Text;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Infrastructure;
+using Api.Observability;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -72,11 +73,17 @@ internal sealed class GlobalKbSearchQueryHandler
                 _logger.LogDebug(
                     "[GlobalKbSearch] UserId={UserId} requested GameId={GameId} not in accessible set — returning empty (D-5)",
                     query.UserId, query.GameId.Value);
+                MeepleAiMetrics.RecordKbGlobalSearchFacet(
+                    MeepleAiMetrics.KbGlobalSearchFacetTypes.GameId,
+                    MeepleAiMetrics.KbGlobalSearchFacetStates.Rejected);
                 return new GlobalKbSearchResponseDto(Array.Empty<GlobalKbSearchResultDto>(), false, null);
             }
 
             // Narrow the accessible set to exactly the requested game.
             accessibleGameIds = new[] { query.GameId.Value };
+            MeepleAiMetrics.RecordKbGlobalSearchFacet(
+                MeepleAiMetrics.KbGlobalSearchFacetTypes.GameId,
+                MeepleAiMetrics.KbGlobalSearchFacetStates.Applied);
         }
 
         // Issue #1686 D-4: push-down DocType + Language facets BEFORE vector search.
@@ -95,12 +102,30 @@ internal sealed class GlobalKbSearchQueryHandler
                 .ConfigureAwait(false);
 
             // D-11: empty documentIds → short-circuit to 200 empty (no wasted RPC).
+            // D-14: D-11 short-circuit does NOT increment applied — the facet matched zero docs,
+            // providing no narrowing value. Counter signal stays meaningful: high applied count
+            // = real adoption; low count + many requests = facet UI rarely used.
             if (facetDocumentIds.Count == 0)
             {
                 _logger.LogDebug(
                     "[GlobalKbSearch] UserId={UserId} facets matched zero documents — returning empty (D-11)",
                     query.UserId);
                 return new GlobalKbSearchResponseDto(Array.Empty<GlobalKbSearchResultDto>(), false, null);
+            }
+
+            // facetDocumentIds.Count > 0 here — facets actually narrow the candidate set (D-14).
+            if (hasDocTypeFacet)
+            {
+                MeepleAiMetrics.RecordKbGlobalSearchFacet(
+                    MeepleAiMetrics.KbGlobalSearchFacetTypes.DocType,
+                    MeepleAiMetrics.KbGlobalSearchFacetStates.Applied);
+            }
+
+            if (hasLanguageFacet)
+            {
+                MeepleAiMetrics.RecordKbGlobalSearchFacet(
+                    MeepleAiMetrics.KbGlobalSearchFacetTypes.Language,
+                    MeepleAiMetrics.KbGlobalSearchFacetStates.Applied);
             }
         }
 

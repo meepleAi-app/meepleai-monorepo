@@ -6,7 +6,7 @@
 >
 > **Audience**: developers looking for "which mockup file do I need for route X?".
 >
-> **Last updated**: 2026-05-30. Keep in sync with
+> **Last updated**: 2026-05-31. Keep in sync with
 > [`docs/for-developers/frontend/v2-migration-matrix.md`](../docs/for-developers/frontend/v2-migration-matrix.md)
 > Route Index section.
 
@@ -35,6 +35,7 @@
 | `components.css` | dev-fixture | Shared component CSS (phone frame, nav, cards) |
 | `data.js` | dev-fixture | Fake dataset, 9 cross-referenced entities |
 | `mobile-app.jsx` | dev-fixture | Full mobile-app React prototype (~870 lines) |
+| `sp4-play-records-data.js` | dev-fixture | Fake dataset for `sp4-play-records-*` page-mocks (shared across 5 frames) |
 | `tokens.css` | dev-fixture | **Source of truth for design tokens** (port first) |
 | `state-matrix.html` | dev-fixture | State matrix cross-route (8 route × 5 stati = 40 cell) — riusabile per Phase 2/3 |
 
@@ -70,6 +71,7 @@
 | `sp4-agent-detail.html` | page-mock | `/agents/[id]`, `/library/[gameId]/agent` |
 | `sp4-agents-index.html` | page-mock | `/agents`, `/editor/agent-proposals/*` (partial), `/chat/agents/create` (partial) |
 | `sp4-citation-pdf-viewer.html` | component-mock | Citation overlay used by `/chat/[threadId]` and game-chat tabs |
+| `sp4-dashboard.html` | page-mock | `/dashboard` (forward-design Pre-Stage-3, closes #491) |
 | `sp4-discover.html` | page-mock | `/discover` |
 | `sp4-game-chat-tab.html` | component-mock | Chat tab embedded in `/library/[gameId]/agent`, `/games/[id]` |
 | `sp4-game-detail.html` | page-mock | `/games/[id]`, `/library/[gameId]`, `/private-games/[id]` |
@@ -79,12 +81,21 @@
 | `sp4-kb-hub.html` | page-mock | `/knowledge-base` |
 | `sp4-library-desktop.html` | page-mock | `/library` (Wave B.3 done) |
 | `sp4-library-mobile.html` | page-mock | `/library` (mobile <768px variant, SP8 brief 2026-05-30, IA semplificata 3 tab + overflow) |
+| `sp4-parts-common.jsx` | component-mock | Shared mockup runtime — `window.MAI` (entity helpers, StateBlock/Shimmer/SseBanner, fake dataset). Re-derived for sessions consolidation (2026-05-31). Replace with codebase modules at integration time. |
+| `sp4-play-records-detail.html` | page-mock | `/play-records/[id]` |
+| `sp4-play-records-edit.html` | page-mock | `/play-records/[id]/edit` |
+| `sp4-play-records-index.html` | page-mock | `/play-records` |
+| `sp4-play-records-new.html` | page-mock | `/play-records/new` |
+| `sp4-play-records-stats.html` | page-mock | `/play-records/stats` |
 | `sp4-player-detail.html` | page-mock | `/players/[id]`, `/players/[id]/{achievements,games,sessions,stats}` |
 | `sp4-players-index.html` | page-mock | `/players` |
-| `sp4-session-live-parts.jsx` | component-mock | Sub-components of `/sessions/[id]/live` Foundation sub-PR |
-| `sp4-session-live.html` | page-mock | `/sessions/[id]/live`, `/sessions/live/[sessionId]/*` |
-| `sp4-session-summary-parts.jsx` | component-mock | Sub-components of `/sessions/[id]` Wave D.3 |
-| `sp4-session-summary.html` | page-mock | `/sessions/[id]` |
+| `sp4-session-wingspan-live-parts.jsx` | component-mock | Sub-components of `/sessions/[id]/live` Wingspan demo — `window.LiveSessionParts1`. **Wingspan-specific** (scoring categories hard-coded). Generic skeleton tracked in B19. |
+| `sp4-session-wingspan-live-tabs.jsx` | component-mock | `window.LiveTabs` — 4 new consolidated tabs (scores · photos · agent · players) × 5 stati each (default · empty · loading · error · sse). **Wingspan-flavored content**. See consolidation ADR `claudedocs/2026-05-31-sessions-consolidation-adr.md` + spike `claudedocs/2026-05-31-spike-toolkit-ai-generation.md`. |
+| `sp4-session-wingspan-live.html` | page-mock | `/sessions/[id]/live` Wingspan demo + consolidated tabs `?tab=scores\|photos\|agent\|players\|chat\|tools\|notes` (was 4 separate sub-routes pre-2026-05-31, see ADR). Also reuses for `/sessions/live/[sessionId]/*`. **Wingspan-specific** — generic session skeleton in B19. |
+| `sp4-session-wingspan-summary-parts.jsx` | component-mock | Sub-components of `/sessions/[id]` Wingspan demo — `window.SummaryParts`. **Wingspan-flavored**. |
+| `sp4-session-wingspan-summary-sections.jsx` | component-mock | Celebrative body sections of `/sessions/[id]` Wingspan demo (podium, KPI, diary, photos, chat highlights, share) — unchanged in 2026-05-31 consolidation. **Wingspan-flavored content**. |
+| `sp4-session-wingspan-summary-tabs.jsx` | component-mock | `window.SummaryReviewTabs` — 3 new consolidated tabs (scoreboard · notes · players) × 5 stati each (default · empty · loading · error · offline). **Wingspan scoring categories hard-coded**. See consolidation ADR. |
+| `sp4-session-wingspan-summary.html` | page-mock | `/sessions/[id]` Wingspan demo + consolidated tabs `?tab=scoreboard\|notes\|players` (was 3 separate sub-routes pre-2026-05-31, see ADR). **Wingspan-specific**. |
 | `sp4-sessions-index.html` | page-mock | `/sessions`, `/games/[id]/sessions` (reuse) |
 | `sp4-toolkit-detail.html` | page-mock | `/toolkit` + sub-routes, `/library/[gameId]/toolbox`, `/library/[gameId]/toolkit`, `/library/private/[id]/toolkit/configure` |
 | `sp4-upload-wizard-extended.html` | page-mock | `/upload`, `/gamebook/upload` (partial) |
@@ -150,10 +161,10 @@
 
 | Type | Count |
 |------|------:|
-| page-mock | 49 |
-| component-mock | 16 |
-| dev-fixture | 11 |
-| **Total** | **76** |
+| page-mock | 55 |
+| component-mock | 20 |
+| dev-fixture | 12 |
+| **Total** | **87** |
 
 > The `*.jsx` twins of `*.html` files are not double-counted (the JSX is the
 > implementation companion of the HTML reference). Listing them separately

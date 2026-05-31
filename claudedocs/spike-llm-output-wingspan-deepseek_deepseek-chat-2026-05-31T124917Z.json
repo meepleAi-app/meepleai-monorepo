@@ -1,0 +1,151 @@
+{
+  "metadata": {
+    "model": "deepseek/deepseek-chat",
+    "timestamp_utc": "2026-05-31T124917Z",
+    "elapsed_seconds": 25.1,
+    "usage": {
+      "prompt_tokens": 831,
+      "completion_tokens": 672,
+      "total_tokens": 1503,
+      "cost": 0.000864,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.000864,
+        "upstream_inference_prompt_cost": 0.00026592,
+        "upstream_inference_completions_cost": 0.00059808
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "parse_success": true,
+    "parse_error": null
+  },
+  "input": {
+    "system_prompt_chars": 1361,
+    "user_prompt_chars": 2002,
+    "excerpts_count": 5
+  },
+  "raw_content": "{\n  \"ToolkitName\": \"Wingspan\",\n  \"DiceTools\": [\n    {\n      \"Type\": \"Custom\",\n      \"Quantity\": 5,\n      \"Faces\": [\n        \"invertebrate\",\n        \"seed\",\n        \"fruit\",\n        \"fish\",\n        \"rodent\",\n        \"wild\"\n      ]\n    }\n  ],\n  \"CounterTools\": [\n    {\n      \"Name\": \"Eggs\",\n      \"Min\": 0,\n      \"Max\": 6,\n      \"IsPerPlayer\": true\n    },\n    {\n      \"Name\": \"Food tokens\",\n      \"Min\": 0,\n      \"IsPerPlayer\": true\n    },\n    {\n      \"Name\": \"Action cubes\",\n      \"Min\": 0,\n      \"Max\": 8,\n      \"IsPerPlayer\": true\n    }\n  ],\n  \"TimerTools\": [],\n  \"ScoringTemplate\": {\n    \"VictoryCondition\": \"Highest total points\",\n    \"PointsDimensions\": [\n      {\n        \"Name\": \"Birds\",\n        \"Min\": 1,\n        \"Max\": 9\n      },\n      {\n        \"Name\": \"Bonus cards\",\n        \"Min\": 0\n      },\n      {\n        \"Name\": \"End-of-round goals\",\n        \"Min\": 1,\n        \"Max\": 5\n      },\n      {\n        \"Name\": \"Eggs\",\n        \"Min\": 0\n      },\n      {\n        \"Name\": \"Food cached\",\n        \"Min\": 0\n      },\n      {\n        \"Name\": \"Tucked cards\",\n        \"Min\": 0\n      }\n    ],\n    \"TieBreakers\": [\n      \"Most bonus card points\",\n      \"Most food\"\n    ]\n  },\n  \"TurnTemplate\": {\n    \"RoundStructure\": \"RoundRobin\",\n    \"Phases\": [\n      {\n        \"Name\": \"Round 1\",\n        \"Turns\": 8\n      },\n      {\n        \"Name\": \"Round 2\",\n        \"Turns\": 7\n      },\n      {\n        \"Name\": \"Round 3\",\n        \"Turns\": 6\n      },\n      {\n        \"Name\": \"Round 4\",\n        \"Turns\": 5\n      }\n    ],\n    \"Actions\": [\n      \"Play bird\",\n      \"Get food\",\n      \"Lay eggs\",\n      \"Draw cards\"\n    ]\n  },\n  \"Overrides\": {},\n  \"Reasoning\": {\n    \"DiceTools\": \"Rule [1] describes 5 custom 6-sided food dice with specific faces.\",\n    \"CounterTools\": \"Rule [2] mentions eggs, food tokens, and action cubes tracked per player.\",\n    \"TimerTools\": \"Rule [3] explicitly states there are no timers.\",\n    \"ScoringTemplate\": \"Rule [4] details the 6 scoring categories and tie-breakers.\",\n    \"TurnTemplate\": \"Rule [5] outlines the 4 rounds with decreasing turns and round-robin turn order.\"\n  },\n  \"ExcludedTools\": [\n    {\n      \"ToolType\": \"Timer\",\n      \"Reason\": \"Rule [3] states there is no time limit per turn or per round.\"\n    }\n  ]\n}",
+  "parsed_json": {
+    "ToolkitName": "Wingspan",
+    "DiceTools": [
+      {
+        "Type": "Custom",
+        "Quantity": 5,
+        "Faces": [
+          "invertebrate",
+          "seed",
+          "fruit",
+          "fish",
+          "rodent",
+          "wild"
+        ]
+      }
+    ],
+    "CounterTools": [
+      {
+        "Name": "Eggs",
+        "Min": 0,
+        "Max": 6,
+        "IsPerPlayer": true
+      },
+      {
+        "Name": "Food tokens",
+        "Min": 0,
+        "IsPerPlayer": true
+      },
+      {
+        "Name": "Action cubes",
+        "Min": 0,
+        "Max": 8,
+        "IsPerPlayer": true
+      }
+    ],
+    "TimerTools": [],
+    "ScoringTemplate": {
+      "VictoryCondition": "Highest total points",
+      "PointsDimensions": [
+        {
+          "Name": "Birds",
+          "Min": 1,
+          "Max": 9
+        },
+        {
+          "Name": "Bonus cards",
+          "Min": 0
+        },
+        {
+          "Name": "End-of-round goals",
+          "Min": 1,
+          "Max": 5
+        },
+        {
+          "Name": "Eggs",
+          "Min": 0
+        },
+        {
+          "Name": "Food cached",
+          "Min": 0
+        },
+        {
+          "Name": "Tucked cards",
+          "Min": 0
+        }
+      ],
+      "TieBreakers": [
+        "Most bonus card points",
+        "Most food"
+      ]
+    },
+    "TurnTemplate": {
+      "RoundStructure": "RoundRobin",
+      "Phases": [
+        {
+          "Name": "Round 1",
+          "Turns": 8
+        },
+        {
+          "Name": "Round 2",
+          "Turns": 7
+        },
+        {
+          "Name": "Round 3",
+          "Turns": 6
+        },
+        {
+          "Name": "Round 4",
+          "Turns": 5
+        }
+      ],
+      "Actions": [
+        "Play bird",
+        "Get food",
+        "Lay eggs",
+        "Draw cards"
+      ]
+    },
+    "Overrides": {},
+    "Reasoning": {
+      "DiceTools": "Rule [1] describes 5 custom 6-sided food dice with specific faces.",
+      "CounterTools": "Rule [2] mentions eggs, food tokens, and action cubes tracked per player.",
+      "TimerTools": "Rule [3] explicitly states there are no timers.",
+      "ScoringTemplate": "Rule [4] details the 6 scoring categories and tie-breakers.",
+      "TurnTemplate": "Rule [5] outlines the 4 rounds with decreasing turns and round-robin turn order."
+    },
+    "ExcludedTools": [
+      {
+        "ToolType": "Timer",
+        "Reason": "Rule [3] states there is no time limit per turn or per round."
+      }
+    ]
+  }
+}

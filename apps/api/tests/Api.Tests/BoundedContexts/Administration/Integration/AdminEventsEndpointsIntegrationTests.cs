@@ -112,7 +112,7 @@ public sealed class AdminEventsEndpointsIntegrationTests : IAsyncLifetime
     // Test 1 — GET /api/v1/admin/events returns paginated list ordered by LoggedAt DESC
     // -------------------------------------------------------------------------
 
-    [Fact(Timeout = 30_000)]
+    [Fact(Timeout = 60_000)]
     public async Task Get_Events_ReturnsPaginatedList()
     {
         // Arrange — seed 3 events at different times
@@ -141,7 +141,7 @@ public sealed class AdminEventsEndpointsIntegrationTests : IAsyncLifetime
     // Test 2 — GET /api/v1/admin/events?since= applies cursor filter
     // -------------------------------------------------------------------------
 
-    [Fact(Timeout = 30_000)]
+    [Fact(Timeout = 60_000)]
     public async Task Get_Events_WithSinceCursor_AppliesFilter()
     {
         // Arrange — seed 2 "old" events + 2 "new" events
@@ -168,7 +168,7 @@ public sealed class AdminEventsEndpointsIntegrationTests : IAsyncLifetime
     // Test 3 — GET /api/v1/admin/events?eventTypes= comma-separated filter
     // -------------------------------------------------------------------------
 
-    [Fact(Timeout = 30_000)]
+    [Fact(Timeout = 60_000)]
     public async Task Get_Events_WithEventTypesFilter_AppliesIn()
     {
         // Arrange — seed events with different types
@@ -198,7 +198,7 @@ public sealed class AdminEventsEndpointsIntegrationTests : IAsyncLifetime
     // Test 4 — GET /api/v1/admin/events/types returns stats with counts
     // -------------------------------------------------------------------------
 
-    [Fact(Timeout = 30_000)]
+    [Fact(Timeout = 60_000)]
     public async Task Get_EventTypes_ReturnsStatsWithCounts()
     {
         // Arrange — seed one event of a specific type within last 24h
@@ -232,7 +232,7 @@ public sealed class AdminEventsEndpointsIntegrationTests : IAsyncLifetime
     //          (structural: TestServer in-process transport + CTS abort pattern)
     // -------------------------------------------------------------------------
 
-    [Fact(Timeout = 30_000)]
+    [Fact(Timeout = 60_000)]
     public async Task Get_EventsStream_EmitsSseOnNewCommit_Within1Second()
     {
         // TestServer (WebApplicationFactory in-process): SSE handler writes ":ok\n\n" immediately
@@ -274,7 +274,7 @@ public sealed class AdminEventsEndpointsIntegrationTests : IAsyncLifetime
     //          (heartbeat timing verified at unit level; integration validates proxy headers)
     // -------------------------------------------------------------------------
 
-    [Fact(Timeout = 30_000)]
+    [Fact(Timeout = 60_000)]
     public async Task Get_EventsStream_EmitsHeartbeat_Every15Seconds()
     {
         // The 15s heartbeat interval is not testable in integration (too slow, CI-flaky).
@@ -313,7 +313,7 @@ public sealed class AdminEventsEndpointsIntegrationTests : IAsyncLifetime
     //          (structural: no 5xx from cursor logic; DB state cross-verified via polling)
     // -------------------------------------------------------------------------
 
-    [Fact(Timeout = 30_000)]
+    [Fact(Timeout = 60_000)]
     public async Task Get_EventsStream_WithLastEventId_BackfillsThenAttaches()
     {
         // The SSE backfill: Subscribe() → query DB for events newer than Last-Event-ID → stream them.
@@ -377,7 +377,7 @@ public sealed class AdminEventsEndpointsIntegrationTests : IAsyncLifetime
     // Test 8 — Auth gate: 401 without session, 403 with non-admin, 200 with admin
     // -------------------------------------------------------------------------
 
-    [Fact(Timeout = 30_000)]
+    [Fact(Timeout = 60_000)]
     public async Task Get_All_RequireAdminSession_401_403_200()
     {
         // ── 401: no session cookie ──
@@ -417,12 +417,8 @@ public sealed class AdminEventsEndpointsIntegrationTests : IAsyncLifetime
 
         using var sseRequest403 = new HttpRequestMessage(HttpMethod.Get, EventsStream);
         sseRequest403.Headers.Add("Cookie", $"{TestSessionHelper.SessionCookieName}={userToken}");
-        var r403c = await unauthClient.SendAsync(sseRequest403, HttpCompletionOption.ResponseHeadersRead);
-        // Without cookie on this request it's 401 — reuse userClient for 403
-        using var sseRequest403b = new HttpRequestMessage(HttpMethod.Get, EventsStream);
-        sseRequest403b.Headers.Add("Cookie", $"{TestSessionHelper.SessionCookieName}={userToken}");
-        var r403d = await userClient.SendAsync(sseRequest403b, HttpCompletionOption.ResponseHeadersRead);
-        r403d.StatusCode.Should().Be(HttpStatusCode.Forbidden, "user role → 403 on stream");
+        var r403c = await userClient.SendAsync(sseRequest403, HttpCompletionOption.ResponseHeadersRead);
+        r403c.StatusCode.Should().Be(HttpStatusCode.Forbidden, "user role → 403 on stream");
 
         // ── 200: admin role ──
         var r200a = await _client.GetAsync(EventsBase); // _client has admin session

@@ -199,9 +199,22 @@ internal static class AdminEventsEndpoints
             // The handler uses `Since` as "LoggedAt < Since" cursor.
             // We want all events NEWER than lastGuid, so we fetch the row's LoggedAt
             // and pass it as the `Since` parameter (exclusive — backfill starts just after it).
+            // Backfill window: query the 200 most recent events.
+            //
+            // EDGE CASE: If more than 200 events accumulated since the client's last seen event,
+            // the cursor (`lastGuid`) may not appear in the result. `TakeWhile` will then yield
+            // all 200 events (interpreting them as backfill, not stopping at the cursor).
+            //
+            // This is acceptable for an admin monitor: 200 events represents a substantial
+            // realtime gap; clients reconnecting after such a gap should treat the missed
+            // events as a known operational limitation and rely on the polling endpoint
+            // (`GET /api/v1/admin/events?since=...`) for guaranteed cursor-anchored pagination.
+            //
+            // To eliminate this edge case in a future iteration: pass Last-Event-ID's
+            // `LoggedAt` as `Since` after a separate single-row DB lookup.
             var backfillQuery = new GetAdminEventsQuery(
                 Since: null,   // No time cursor for backfill — we want all newer than lastGuid
-                Limit: 200,    // Reasonable page: client missed at most 200 events during reconnect
+                Limit: 200,
                 EventTypes: ParseCommaSeparated(eventTypes),
                 AggregateTypes: ParseCommaSeparated(aggregateTypes),
                 UserId: userId,
@@ -330,6 +343,11 @@ internal static class AdminEventsEndpoints
     /// a dummy response. Used only for the SSE auth-error path where we need the status code
     /// before writing to the response body.
     /// </summary>
+    /// <remarks>
+    /// ISSUE-1741: Replace type-name heuristic with <c>IStatusCodeHttpResult.StatusCode</c>
+    /// inspection (public since .NET 7) or restructure <c>RequireAdminSession</c> return type.
+    /// Current heuristic works but relies on internal ASP.NET Core type names.
+    /// </remarks>
     private static int ExtractStatusCode(IResult? result)
     {
         // Heuristic: Results.Unauthorized() → 401, Results.Forbid() → 403

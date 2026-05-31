@@ -245,41 +245,44 @@ describe('useLiveEvents', () => {
 
     const es1 = MockEventSource.instances[0];
 
-    // First failure — no backoff yet (below threshold)
+    // First failure — below BACKOFF_THRESHOLD, schedules 500 ms reconnect
     act(() => {
       es1.simulateError();
     });
 
+    // Advance 500 ms to let the throttled reconnect fire → instance #2
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(MockEventSource.instances.length).toBeGreaterThanOrEqual(2);
+
     // Second failure
     act(() => {
-      vi.advanceTimersByTime(1);
+      MockEventSource.instances[MockEventSource.instances.length - 1].simulateError();
     });
-    if (MockEventSource.instances.length > 1) {
-      act(() => {
-        MockEventSource.instances[MockEventSource.instances.length - 1].simulateError();
-      });
-    }
 
-    // Third failure — at this point backoff of 1000ms should be scheduled
+    // Advance 500 ms to let the throttled reconnect fire → instance #3
     act(() => {
-      vi.advanceTimersByTime(1);
+      vi.advanceTimersByTime(500);
     });
-    if (MockEventSource.instances.length > 2) {
-      act(() => {
-        MockEventSource.instances[MockEventSource.instances.length - 1].simulateError();
-      });
-    }
+    expect(MockEventSource.instances.length).toBeGreaterThanOrEqual(3);
 
-    // Record the instance count BEFORE advancing past backoff delay
+    // Third failure — consecutiveFailures reaches BACKOFF_THRESHOLD (3),
+    // so next reconnect uses exponential backoff starting at 1000 ms
+    act(() => {
+      MockEventSource.instances[MockEventSource.instances.length - 1].simulateError();
+    });
+
+    // Record the instance count BEFORE advancing past the backoff delay
     const countBeforeBackoff = MockEventSource.instances.length;
 
-    // Advancing less than 1s should NOT create a new instance
+    // Advancing less than 1 s should NOT create a new instance
     act(() => {
       vi.advanceTimersByTime(999);
     });
     expect(MockEventSource.instances.length).toBe(countBeforeBackoff);
 
-    // Advancing past 1s SHOULD create a new instance (first backoff fires)
+    // Advancing past 1 s SHOULD create a new instance (first backoff fires)
     act(() => {
       vi.advanceTimersByTime(1);
     });
@@ -345,7 +348,71 @@ describe('useLiveEvents', () => {
   });
 
   /**
-   * 8. Refetch resets events and re-runs backfill + attaches a new SSE
+   * 8. Reconnect below BACKOFF_THRESHOLD uses 500 ms throttle (not synchronous)
+   */
+  it('useLiveEvents_ImmediateReconnect_Uses500msThrottle', async () => {
+    mockFetchSuccess([]);
+
+    const { result } = renderHook(() => useLiveEvents());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    const es1 = MockEventSource.instances[0];
+    const countBefore = MockEventSource.instances.length;
+
+    // First failure — below BACKOFF_THRESHOLD, so should schedule at 500 ms
+    act(() => {
+      es1.simulateError();
+    });
+
+    // No new instance before 500 ms
+    act(() => {
+      vi.advanceTimersByTime(499);
+    });
+    expect(MockEventSource.instances.length).toBe(countBefore);
+
+    // Instance appears after 500 ms
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(MockEventSource.instances.length).toBeGreaterThan(countBefore);
+  });
+
+  /**
+   * 9. Resume sets isStreaming=true synchronously (optimistic) before onopen fires
+   */
+  it('useLiveEvents_Resume_SetsIsStreamingOptimistically', async () => {
+    const backfillEvents = [makeDomainEventDto({ id: 'initial' })];
+    mockFetchSuccess(backfillEvents);
+
+    const { result } = renderHook(() => useLiveEvents());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    const es = MockEventSource.instances[0];
+    act(() => {
+      es.simulateOpen();
+    });
+
+    // Pause first
+    act(() => {
+      result.current.pause();
+    });
+    expect(result.current.isStreaming).toBe(false);
+
+    // Resume — isStreaming must flip to true immediately, before onopen fires
+    act(() => {
+      result.current.resume();
+    });
+    expect(result.current.isStreaming).toBe(true);
+  });
+
+  /**
+   * 10. Refetch resets events and re-runs backfill + attaches a new SSE
    */
   it('useLiveEvents_Refetch_ResetsAndBackfills', async () => {
     // First backfill

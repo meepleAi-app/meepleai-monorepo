@@ -111,6 +111,7 @@ export function useLiveEvents(options: UseLiveEventsOptions = {}): UseLiveEvents
   const consecutiveFailuresRef = useRef<number>(0);
   const backoffTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pausedRef = useRef<boolean>(false);
+  const isMountedRef = useRef<boolean>(true);
   /** Mirror of the events state for access inside SSE callbacks without closure stale reads. */
   const eventsRef = useRef<DomainEventDto[]>([]);
   /** Generation counter incremented on each refetch to abort stale async callbacks. */
@@ -165,11 +166,13 @@ export function useLiveEvents(options: UseLiveEventsOptions = {}): UseLiveEvents
       eventSourceRef.current = es;
 
       es.onopen = () => {
+        if (!isMountedRef.current) return;
         consecutiveFailuresRef.current = 0;
         setIsStreaming(true);
       };
 
       es.onmessage = (evt: MessageEvent<string>) => {
+        if (!isMountedRef.current) return;
         if (pausedRef.current) return;
         try {
           const incoming = JSON.parse(evt.data) as DomainEventDto;
@@ -180,6 +183,7 @@ export function useLiveEvents(options: UseLiveEventsOptions = {}): UseLiveEvents
       };
 
       es.onerror = () => {
+        if (!isMountedRef.current) return;
         es.close();
         if (eventSourceRef.current === es) {
           eventSourceRef.current = null;
@@ -187,19 +191,19 @@ export function useLiveEvents(options: UseLiveEventsOptions = {}): UseLiveEvents
         setIsStreaming(false);
         consecutiveFailuresRef.current += 1;
 
-        if (consecutiveFailuresRef.current >= BACKOFF_THRESHOLD) {
-          const delay = backoffDelay(consecutiveFailuresRef.current);
-          backoffTimerRef.current = setTimeout(() => {
-            if (!pausedRef.current) {
-              attachEventSource(eventsRef.current[0]?.id);
-            }
-          }, delay);
-        } else {
-          // Immediate reconnect below threshold
-          if (!pausedRef.current) {
+        // Always schedule reconnect via setTimeout — even for failures below
+        // BACKOFF_THRESHOLD — to prevent a synchronous EventSource storm when
+        // the server closes the connection immediately (rate-limit, transient 401).
+        const delay =
+          consecutiveFailuresRef.current >= BACKOFF_THRESHOLD
+            ? backoffDelay(consecutiveFailuresRef.current)
+            : 500; // throttled reconnect for failures 1-2
+
+        backoffTimerRef.current = setTimeout(() => {
+          if (!pausedRef.current && isMountedRef.current) {
             attachEventSource(eventsRef.current[0]?.id);
           }
-        }
+        }, delay);
       };
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -285,6 +289,7 @@ export function useLiveEvents(options: UseLiveEventsOptions = {}): UseLiveEvents
 
     return () => {
       // Cleanup on unmount or dep change
+      isMountedRef.current = false;
       closeEventSource();
       clearBackoffTimer();
     };
@@ -302,8 +307,11 @@ export function useLiveEvents(options: UseLiveEventsOptions = {}): UseLiveEvents
   }, [closeEventSource, clearBackoffTimer]);
 
   const resume = useCallback(() => {
+    if (!pausedRef.current) return; // idempotent — already streaming
     pausedRef.current = false;
     attachEventSource(eventsRef.current[0]?.id);
+    setIsStreaming(true); // optimistic: overrides closeEventSource(false) inside attachEventSource;
+    // prevents rapid double-click during connect latency before onopen fires
   }, [attachEventSource]);
 
   const refetch = useCallback(() => {

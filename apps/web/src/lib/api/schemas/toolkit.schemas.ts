@@ -114,15 +114,60 @@ export const AiTimerToolSuggestionSchema = z.object({
   warningThresholdSeconds: z.number().nullable().optional(),
 });
 
+/**
+ * v3 (B19-3b, 2026-05-31): structured scoring category for polymorphic UI rendering.
+ * Computation enum drives the per-category UI variant (Count counter,
+ * Sum input, RankBased pills, Custom manual entry).
+ */
+export const ScoringComputationSchema = z.enum(['Count', 'Sum', 'RankBased', 'Custom']);
+export type ScoringComputation = z.infer<typeof ScoringComputationSchema>;
+
+export const AiScoringCategorySuggestionSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  computation: ScoringComputationSchema,
+  weight: z.number().int().default(1),
+  description: z.string().nullable().optional(),
+});
+export type AiScoringCategorySuggestion = z.infer<typeof AiScoringCategorySuggestionSchema>;
+
+/**
+ * ScoreType enum extended v2 (B19-3b): BinaryWin + Objectives for co-op + goal-oriented games.
+ */
+export const ScoreTypeSchema = z.enum(['Points', 'Ranking', 'BinaryWin', 'Objectives']);
+export type ScoreType = z.infer<typeof ScoreTypeSchema>;
+
+/**
+ * TurnOrderType enum extended v2 (B19-3a): Sequential/Simultaneous/Realtime/None for
+ * non-circular turn patterns (Codenames, Paleo, Captain Sonar).
+ */
+export const TurnOrderTypeSchema = z.enum([
+  'RoundRobin',
+  'Custom',
+  'Free',
+  'Sequential',
+  'Simultaneous',
+  'Realtime',
+  'None',
+]);
+export type TurnOrderType = z.infer<typeof TurnOrderTypeSchema>;
+
 export const AiScoringTemplateSuggestionSchema = z.object({
   dimensions: z.array(z.string()),
   defaultUnit: z.string(),
-  scoreType: z.string(),
+  scoreType: z.string(), // legacy: kept as string for back-compat; new code should use ScoreTypeSchema
+  // v3 (B19-3b, additive): structured per-category computation
+  categories: z.array(AiScoringCategorySuggestionSchema).nullable().optional(),
 });
 
 export const AiTurnTemplateSuggestionSchema = z.object({
-  turnOrderType: z.string(),
+  turnOrderType: z.string(), // legacy: kept as string for back-compat
   phases: z.array(z.string()),
+  // v3 (B19-3a, additive): rich turn structure for Wingspan-like games
+  rounds: z.number().int().nullable().optional(),
+  turnsPerRound: z.array(z.number().int()).nullable().optional(),
+  turnActions: z.array(z.string()).nullable().optional(),
+  direction: z.string().nullable().optional(),
 });
 
 export const AiOverrideSuggestionSchema = z.object({

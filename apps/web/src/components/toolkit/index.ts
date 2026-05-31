@@ -15,3 +15,8 @@ export { NoteManagerWidget } from './NoteManagerWidget';
 export { WhiteboardWidget } from './WhiteboardWidget';
 export { CardDeckTool } from './CardDeckTool';
 export { CounterTool } from './CounterTool';
+// Polymorphic renderers (B19-4a, issue #1749)
+export { ScoringPanelRenderer } from './ScoringPanelRenderer';
+export type { ScoringPanelRendererProps } from './ScoringPanelRenderer';
+export { TurnIndicatorRenderer } from './TurnIndicatorRenderer';
+export type { TurnIndicatorRendererProps } from './TurnIndicatorRenderer';

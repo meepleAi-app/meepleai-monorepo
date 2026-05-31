@@ -89,6 +89,43 @@ PR #1672 shipped `POST /api/v1/knowledge-base/search/global` accepting `{ Query,
 
 **Rationale (Adzic/Fowler)**: specification by example. The response shape IS the FE contract — pin it.
 
+### D-14 — Prometheus counter for facet usage observability
+
+**Decision** (added in follow-up #1731): Extend `MeepleAiMetrics.Rag` partial class with a counter `kb_global_search_facet_total{facet="docType|gameId|language", state="applied|rejected"}`.
+
+- `applied`: increments when a facet is provided AND survives RBAC intersection (narrows the candidate set).
+- `rejected`: increments when a GameId facet is provided but rejected by RBAC (D-5 silent drop → 200 empty).
+
+Cardinality: 3 facet × 2 state = 6 series (bounded, safe). NO label of facet value (would explode cardinality with gameId UUIDs).
+
+**Rationale (Nygard, Fowler)**: ops needs 30-day visibility on facet adoption. Counter is best-effort (P116/P117 mapper-convention pattern from BE-3 #1641). Extending the existing `Rag.cs` partial class preserves convention with 28 existing metric files.
+
+**Test pattern**: counter idempotency via delta-assertion (read counter value pre-call + post-call; assert delta == expected). No global registry reset → safe in parallel xUnit runs.
+
+**Mapping vs issue text**: Issue #1731 calls this "D-12" using local-version numbering — canonical D-12 is "Validator error messages enumerate allowed values" (unrelated). The canonical decision number is **D-14**.
+
+### D-15 — OpenAPI/Scalar request-body example
+
+**Decision** (added in follow-up #1731): Extend `MapGlobalSearchEndpoint` (in `KnowledgeBaseEndpoints.cs`) with a Scalar request-body example via `WithOpenApi(op => op.RequestBody.Content["application/json"].Example = ...)`.
+
+Example payload uses **canonical vocab** (matches D-1/D-2 allowlists):
+
+```json
+{
+  "query": "movement rules",
+  "limit": 20,
+  "docType": ["base", "expansion"],
+  "gameId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "language": "it"
+}
+```
+
+**Rationale (Doumont, Wiegers)**: Scalar examples ARE part of the API contract — testers copy-paste from the UI. Using canonical vocab (`base`, `expansion`, NOT `Rulebook`/`Errata` from the issue text's local-vocab drift) keeps API doc aligned with the actual allowlist.
+
+**AC**: `dotnet run` → `/scalar/v1` renders the example with all 3 facets populated. Manual verify + screenshot in PR body.
+
+**Mapping vs issue text**: Issue #1731 calls this "D-10" using local-version numbering — canonical D-10 is "RBAC composes on top of facets" (unrelated). The canonical decision number is **D-15**.
+
 ## Out of scope (deferred to follow-up issues)
 
 - **Facet aggregation counts** (e.g. "Rulebook (12)"): would require an extra COUNT query per facet. Separate issue (likely #1687).

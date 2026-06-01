@@ -1,5 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
+using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -7,12 +9,26 @@ using Microsoft.EntityFrameworkCore;
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
 /// <summary>
-/// Handler for ReindexDocumentCommand.
-/// Deletes chunks, resets state to Pending, and enqueues for re-processing.
-/// PDF Storage Management Hub: Phase 5.
+/// Handler for ReindexDocumentCommand. Issue #1673 estende il flusso con:
+/// 1. Risoluzione versione: <c>command.IndexerVersion ?? pdf.IndexerVersion ?? Current</c>.
+/// 2. Conflict guard: se il documento è in pipeline (stati non-terminali), 409 Conflict.
+/// 3. Persistenza della versione risolta su <c>pdf.IndexerVersion</c>.
+/// 4. Audit via <c>[AuditableAction("DocumentReindex", "Document", Level=2)]</c> sul command.
 /// </summary>
 internal sealed class ReindexDocumentCommandHandler : ICommandHandler<ReindexDocumentCommand>
 {
+    // Stati pre-terminali. Reindex bloccato finché non si raggiunge Ready o Failed.
+    private static readonly HashSet<string> InFlightStates =
+        new(StringComparer.Ordinal)
+        {
+            "Pending",
+            "Uploading",
+            "Extracting",
+            "Chunking",
+            "Embedding",
+            "Indexing",
+        };
+
     private readonly MeepleAiDbContext _dbContext;
     private readonly IMediator _mediator;
     private readonly ILogger<ReindexDocumentCommandHandler> _logger;
@@ -37,10 +53,22 @@ internal sealed class ReindexDocumentCommandHandler : ICommandHandler<ReindexDoc
 
         if (pdf is null)
         {
-            throw new KeyNotFoundException($"PDF document {command.PdfId} not found");
+            throw new NotFoundException("PdfDocument", command.PdfId.ToString());
         }
 
-        // Delete associated text chunks
+        // Conflict guard: rifiuta il reindex se la pipeline è in-flight.
+        if (InFlightStates.Contains(pdf.ProcessingState))
+        {
+            throw new ConflictException(
+                $"Document {command.PdfId} is currently being processed (state={pdf.ProcessingState}); cannot reindex until it reaches Ready or Failed.");
+        }
+
+        // Risoluzione versione: explicit → stored → current.
+        var resolvedVersion = command.IndexerVersion
+            ?? pdf.IndexerVersion
+            ?? IndexerVersionRegistry.Current.Version;
+
+        // Cancella chunks associati.
         var chunks = await _dbContext.TextChunks
             .Where(tc => tc.PdfDocumentId == command.PdfId)
             .ToListAsync(cancellationToken)
@@ -51,24 +79,27 @@ internal sealed class ReindexDocumentCommandHandler : ICommandHandler<ReindexDoc
             _dbContext.TextChunks.RemoveRange(chunks);
         }
 
-        // Reset processing state to Pending for re-processing
+        // Reset state + scrive la versione risolta.
         pdf.ProcessingState = "Pending";
         pdf.ProcessedAt = null;
         pdf.ProcessingError = null;
         pdf.RetryCount = 0;
         pdf.ErrorCategory = null;
         pdf.FailedAtState = null;
+        pdf.IndexerVersion = resolvedVersion;
 
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        // Enqueue for Quartz-based processing (ensures the job is picked up)
+        // Enqueue Quartz.
         try
         {
             var userId = pdf.UploadedByUserId;
             await _mediator.Send(
                 new EnqueuePdfCommand(command.PdfId, userId, Priority: 0),
                 cancellationToken).ConfigureAwait(false);
-            _logger.LogInformation("Reindexed PDF {PdfId} enqueued for processing", command.PdfId);
+            _logger.LogInformation(
+                "Reindexed PDF {PdfId} with version {IndexerVersion} enqueued for processing",
+                command.PdfId, resolvedVersion);
         }
 #pragma warning disable CA1031 // Best-effort enqueue
         catch (Exception ex)

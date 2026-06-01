@@ -110,6 +110,13 @@
 | `sp4-session-wingspan-summary-sections.jsx` | component-mock | Celebrative body sections of `/sessions/[id]` Wingspan demo (podium, KPI, diary, photos, chat highlights, share) — unchanged in 2026-05-31 consolidation. **Wingspan-flavored content**. |
 | `sp4-session-wingspan-summary-tabs.jsx` | component-mock | `window.SummaryReviewTabs` — 3 new consolidated tabs (scoreboard · notes · players) × 5 stati each (default · empty · loading · error · offline). **Wingspan scoring categories hard-coded**. See consolidation ADR. |
 | `sp4-session-wingspan-summary.html` | page-mock | `/sessions/[id]` Wingspan demo + consolidated tabs `?tab=scoreboard\|notes\|players` (was 3 separate sub-routes pre-2026-05-31, see ADR). **Wingspan-specific**. |
+| `sp4-session-zombicide-data.jsx` | component-mock | Zombicide Green Horde-specific dataset (survivors w/ skill trees, zombie counts per type, scenario objectives). Premium #5/7. |
+| `sp4-session-zombicide-flavor.jsx` | component-mock | Zombicide GH flavor components — `SurvivorCard` (skill tree Blue→Yellow→Orange→Red + equipment + wounds + AP), `BoardStatePanel`, `CombatDicePanel`, `SpawnDeckIndicator`, `PhaseTimeline` (3-phase round), `MapTilesGrid`. |
+| `sp4-session-zombicide-live.html` | page-mock | `/sessions/[id]/live` Zombicide GH demo (co-op miniatures dungeon-crawler, 1-6 players, ~60-90 min/scenario). Extends skeleton + accordion-extended for game panels. |
+| `sp4-session-zombicide-live.jsx` | component-mock | Root component for `sp4-session-zombicide-live.html` — wires skeleton + Zombicide flavor + RightColumnTabs (Scoring, Dice, Board, Equip, Chat). |
+| `sp4-session-zombicide-parts.jsx` | component-mock | Shared parts for Zombicide — SectionCard accordion (16 utilizzi), helper `sec(id)` per accordion state machine across survivors/board/spawn panels. |
+| `sp4-session-zombicide-summary.html` | page-mock | `/sessions/[id]` Zombicide post-game (VICTORY/DEFEAT banner + mission objectives + survivors final state + XP totals + kill stats). Premium #5/7. |
+| `sp4-session-zombicide-summary.jsx` | component-mock | Root component for Zombicide summary — hero + tabs (Scoreboard / Survivors / Board final / Stats). |
 | `sp4-sessions-index.html` | page-mock | `/sessions`, `/games/[id]/sessions` (reuse) |
 | `sp4-toolkit-detail.html` | page-mock | `/toolkit` + sub-routes, `/library/[gameId]/toolbox`, `/library/[gameId]/toolkit`, `/library/private/[id]/toolkit/configure` |
 | `sp4-upload-wizard-extended.html` | page-mock | `/upload`, `/gamebook/upload` (partial) |
@@ -175,10 +182,10 @@
 
 | Type | Count |
 |------|------:|
-| page-mock | 59 |
-| component-mock | 30 |
+| page-mock | 61 |
+| component-mock | 35 |
 | dev-fixture | 12 |
-| **Total** | **101** |
+| **Total** | **108** |
 
 > The `*.jsx` twins of `*.html` files are not double-counted (the JSX is the
 > implementation companion of the HTML reference). Listing them separately

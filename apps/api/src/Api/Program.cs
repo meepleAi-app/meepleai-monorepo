@@ -340,6 +340,11 @@ builder.Services.AddMediatR(cfg =>
         cfg.LicenseKey = mediatrLicenseKey;
 });
 
+// Issue #1534: the open-generic DomainEventAuditHandler<TEvent> is auto-registered by
+// MediatR's RegisterServicesFromAssembly above. No explicit AddTransient registration
+// is needed — MediatR honours the `where TEvent : IDomainEvent` constraint, so only
+// IDomainEvent notifications resolve this handler.
+
 // Application services (Domain, AI, Admin)
 builder.Services.AddVectorSearchServices(builder.Configuration);
 builder.Services.AddDomainServices();

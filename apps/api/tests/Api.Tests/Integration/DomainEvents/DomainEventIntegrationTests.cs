@@ -38,12 +38,15 @@ public class DomainEventIntegrationTests : IAsyncLifetime
             .UseInMemoryDatabase(databaseName: databaseName)
             .Options;
 
-        // Create mediator with real handler registration
+        // Create mediator with real handler registration. Issue #1534: RegisterServicesFromAssemblyContaining
+        // also auto-registers the open-generic DomainEventAuditHandler<TEvent> (same assembly as
+        // PasswordChangedEventHandler), so no explicit AddTransient call is needed.
         var services = new ServiceCollection();
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<PasswordChangedEventHandler>());
         services.AddSingleton(options);
         services.AddScoped<MeepleAiDbContext>(sp => new MeepleAiDbContext(options, sp.GetRequiredService<IMediator>(), sp.GetRequiredService<IDomainEventCollector>()));
         services.AddScoped<IDomainEventCollector, DomainEventCollector>();
+        services.AddScoped<Api.Services.AuditService>();
         services.AddLogging();
 
         var serviceProvider = services.BuildServiceProvider();
@@ -103,16 +106,17 @@ public class DomainEventIntegrationTests : IAsyncLifetime
         await _mediator.Publish(passwordChangedEvent, CancellationToken.None);
         user.ClearDomainEvents();
 
-        // Assert - Audit log should be created
-        var auditLogs = await _dbContext.AuditLogs.ToListAsync(CancellationToken.None);
-        auditLogs.Should().HaveCount(1);
+        // Assert — Issue #1534: audit is now enqueued to audit_outbox (single-path).
+        // AuditOutboxProcessor materializes the row into audit_logs asynchronously; we assert
+        // on the outbox directly to keep the test deterministic without polling the processor.
+        var outboxRows = await _dbContext.AuditOutbox.ToListAsync(CancellationToken.None);
+        outboxRows.Should().HaveCount(1);
 
-        var auditLog = auditLogs.ElementAt(0);
-        auditLog.UserId.Should().Be(user.Id);
-        auditLog.Action.Should().Contain("PasswordChangedEvent");
-        auditLog.Resource.Should().Be("PasswordChangedEvent");
-        auditLog.Result.Should().Be("Success");
-        auditLog.Details.Should().Contain("UserId");
+        var outboxRow = outboxRows[0];
+        outboxRow.PayloadJson.Should().Contain("\"Action\":\"DomainEvent.PasswordChangedEvent\"");
+        outboxRow.PayloadJson.Should().Contain("\"Resource\":\"PasswordChangedEvent\"");
+        outboxRow.PayloadJson.Should().Contain("\"Result\":\"Success\"");
+        outboxRow.PayloadJson.Should().Contain(user.Id.ToString());
     }
 
     [Fact]

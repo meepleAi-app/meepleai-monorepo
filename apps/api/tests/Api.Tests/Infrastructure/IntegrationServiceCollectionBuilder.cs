@@ -67,7 +67,10 @@ internal static class IntegrationServiceCollectionBuilder
         services.AddScoped<IDomainEventCollector, DomainEventCollector>();
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
 
-        // MediatR — registers ALL handlers from the assembly including event handlers
+        // MediatR — registers ALL handlers from the assembly including event handlers.
+        // Issue #1534: the open-generic DomainEventAuditHandler<TEvent> is also auto-registered
+        // by RegisterServicesFromAssembly (MediatR maps open-generic INotificationHandler<>
+        // implementations directly). No explicit AddTransient line needed.
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 
         // Stub services for event handlers that fire during SaveChangesAsync.

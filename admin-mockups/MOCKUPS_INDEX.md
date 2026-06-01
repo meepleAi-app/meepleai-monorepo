@@ -89,6 +89,14 @@
 | `sp4-play-records-stats.html` | page-mock | `/play-records/stats` |
 | `sp4-player-detail.html` | page-mock | `/players/[id]`, `/players/[id]/{achievements,games,sessions,stats}` |
 | `sp4-players-index.html` | page-mock | `/players` |
+| `sp4-session-codenames-bodies.jsx` | component-mock | Codenames body layouts — DesktopBody + MobileBody composition. |
+| `sp4-session-codenames-data.jsx` | component-mock | Codenames-specific dataset (5x5 word grid, key card pattern, team agents 9/8, clue history). Premium #7/7. |
+| `sp4-session-codenames-flavor.jsx` | component-mock | Codenames flavor components — `WordGrid`, `WordCard` (5 states: covered/red/blue/neutral/assassin), `SpymasterKeyCardOverlay`, `TeamPanel`, `CurrentCluePanel`, `ClueHistoryTimeline`, `RoleAvatar`. |
+| `sp4-session-codenames-live.html` | page-mock | `/sessions/[id]/live` Codenames demo (team deduction party game, 2-8+ players in 2 teams, ~15 min). Extends skeleton with Codenames-specific panels + accordion-extended. |
+| `sp4-session-codenames-live.jsx` | component-mock | Root component for `sp4-session-codenames-live.html` — wires skeleton + word grid + RightColumnTabs (Scoring Ranking, Board, Clue history, Teams, Chat). |
+| `sp4-session-codenames-parts.jsx` | component-mock | Shared parts for Codenames — SectionCard accordion, helper sec(id). Mirrors skeleton + Power Grid extension. |
+| `sp4-session-codenames-summary.html` | page-mock | `/sessions/[id]` Codenames post-game (WINNER team banner + Red/Blue agents found + assassin status + clue analysis). Premium #7/7. |
+| `sp4-session-codenames-summary.jsx` | component-mock | Root component for Codenames summary — hero + tabs (Scoreboard / Final Board / Clue Analysis / Stats). |
 | `sp4-session-power-grid-data.jsx` | component-mock | Power Grid-specific dataset (Elektro, 4 resources market, 8 plants, 5 phases, 3 game steps). Premium #4/7. |
 | `sp4-session-power-grid-flavor.jsx` | component-mock | Power Grid flavor components — `PhaseTimeline`, `PowerPlantMarket`, `ResourceMarket`, `AuctionOverlay`, `NetworkMap`, `PlantsRail`, `TurnOrderStrip` (reverse-aware). |
 | `sp4-session-power-grid-live.html` | page-mock | `/sessions/[id]/live` Power Grid demo (heavy euro auction + network, 2-6 players, ~120 min). Extends skeleton with PG-specific panels + accordion-extended for game sections (auction/market/resources). |
@@ -189,10 +197,10 @@
 
 | Type | Count |
 |------|------:|
-| page-mock | 61 |
-| component-mock | 35 |
+| page-mock | 63 |
+| component-mock | 41 |
 | dev-fixture | 12 |
-| **Total** | **108** |
+| **Total** | **116** |
 
 > The `*.jsx` twins of `*.html` files are not double-counted (the JSX is the
 > implementation companion of the HTML reference). Listing them separately

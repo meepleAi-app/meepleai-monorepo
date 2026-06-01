@@ -72,9 +72,13 @@ internal sealed class SegmentGamebookPhotoCommandHandler : IRequestHandler<Segme
             try
             {
                 langResult = _langDetection.Detect(ocr.FullText);
+                // #1559 T8: record result metric on success path (before null-coerce below).
+                MeepleAiMetrics.RecordGamebookLangDetectionResult(langResult.Lang, langResult.Confidence);
             }
-            catch
+            catch (Exception detEx)
             {
+                // #1559 T8: record failure metric before safe-default assignment.
+                MeepleAiMetrics.RecordGamebookLangDetectionFailure(detEx.GetType().Name);
                 langResult = new LanguageDetectionResult(null, 0.0);
             }
 

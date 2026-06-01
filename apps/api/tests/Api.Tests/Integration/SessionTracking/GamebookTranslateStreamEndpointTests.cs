@@ -212,4 +212,159 @@ public sealed class GamebookTranslateStreamEndpointTests : IAsyncLifetime
         response.StatusCode.Should().NotBe(HttpStatusCode.NotFound,
             "owner request must not hit the NotFoundException pre-flush branch");
     }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Issue #1559 T8: sourceLangOverride endpoint validator + backward compat
+    // ──────────────────────────────────────────────────────────────────────────
+
+    private static string BuildUrlWithOverride(
+        Guid campaignId, Guid photoId, Guid gameBookId,
+        int paragraphNumber = 1, string? sourceLangOverride = null)
+    {
+        var url = BuildUrl(campaignId, photoId, gameBookId, paragraphNumber);
+        return sourceLangOverride is not null
+            ? $"{url}&sourceLangOverride={Uri.EscapeDataString(sourceLangOverride)}"
+            : url;
+    }
+
+    /// <summary>
+    /// Seeds a campaign owned by the returned user, with a segmented photo artifact
+    /// that carries explicit lang detection fields (T3 overload).
+    /// </summary>
+    private async Task<(Guid OwnerUserId, string SessionToken, Guid CampaignId, Guid PhotoId, Guid GameBookId)>
+        SeedOwnedCampaignWithLangDetectionAsync(string? detectedLang = "EN", double confidence = 0.93)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        var sharedGameId = Guid.NewGuid();
+        var session = GamebookCampaignSession.Create(GameRef.Shared(sharedGameId), userId, "Issue 1559 T8 test");
+        var book = GameBook.CreateCommunity(
+            GameRef.Shared(sharedGameId),
+            "Press Start T8",
+            GameBookRole.Tutorial,
+            ParagraphScheme.ParagraphNumber,
+            "en",
+            sequentialRead: false,
+            kbSourceDocId: null,
+            physicalOnly: false,
+            createdBy: userId);
+
+        await dbContext.GamebookCampaignSessions.AddAsync(session);
+        await dbContext.GameBooks.AddAsync(book);
+        await dbContext.SaveChangesAsync();
+
+        var photo = GamebookPhotoArtifact.Create(session.Id, book.Id, "test/s3/key-t8.jpg");
+        // Use the T3 4-param overload to persist lang detection fields.
+        photo.RecordSegments(
+            new[] { GamebookSegment.Create(paragraphNumber: 1, sourceText: "The Hive awakens.", boundingBox: null) },
+            ocrFullText: "The Hive awakens.",
+            detectedSourceLang: detectedLang,
+            langDetectionConfidence: detectedLang is not null ? confidence : null);
+        await dbContext.GamebookPhotoArtifacts.AddAsync(photo);
+        await dbContext.SaveChangesAsync();
+
+        return (userId, sessionToken, session.Id, photo.Id, book.Id);
+    }
+
+    /// <summary>
+    /// Scenario 5a–5d: invalid sourceLangOverride values must return 400 BEFORE any SSE
+    /// header is written. Validation runs before the ownership pre-flight so even
+    /// anonymous requests receive 400 (no auth needed — bad request is caught first).
+    /// </summary>
+    [Theory]
+    [InlineData("XYZ")]
+    [InlineData("english")]
+    [InlineData("EN-US")]
+    [InlineData("PL")]
+    [InlineData("  ")]
+    public async Task Translate_InvalidSourceLangOverride_Returns400_BeforeAuth(string invalid)
+    {
+        // Use non-existent ids — validation fires before ownership guard.
+        var url = BuildUrlWithOverride(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), sourceLangOverride: invalid);
+        var response = await _client.GetAsync(url);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest,
+            $"invalid sourceLangOverride '{invalid}' should yield 400 before auth/ownership checks");
+        response.Content.Headers.ContentType?.MediaType.Should().NotBe("text/event-stream",
+            "a 400 must never produce an SSE stream");
+        var body = await response.Content.ReadAsStringAsync();
+        body.Should().Contain("sourceLangOverride must be one of EN, FR, DE, ES, IT",
+            "error message must reference the full allowlist");
+    }
+
+    /// <summary>
+    /// Scenario 6: valid sourceLangOverride values must NOT be rejected with 400.
+    /// The request may still yield 401 (unauthenticated) — that is accepted because
+    /// the test intentionally omits auth to keep it lightweight. The key assertion is
+    /// that 400 is never returned for a valid code.
+    /// </summary>
+    [Theory]
+    [InlineData("EN")]
+    [InlineData("FR")]
+    [InlineData("DE")]
+    [InlineData("ES")]
+    [InlineData("IT")]
+    [InlineData("en")]  // lowercase — normalized to uppercase by endpoint
+    [InlineData("it")]  // lowercase — normalized to uppercase by endpoint
+    public async Task Translate_ValidSourceLangOverride_DoesNotReturn400(string valid)
+    {
+        var url = BuildUrlWithOverride(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), sourceLangOverride: valid);
+        var response = await _client.GetAsync(url);
+
+        response.StatusCode.Should().NotBe(HttpStatusCode.BadRequest,
+            $"valid sourceLangOverride '{valid}' must not be rejected by the validator");
+    }
+
+    /// <summary>
+    /// Scenario 7: backward compat — no sourceLangOverride param must continue to work.
+    /// An authenticated owner request without the param must not yield 400.
+    /// </summary>
+    [Fact]
+    public async Task Translate_NoSourceLangOverride_BackwardCompat_OwnerDoesNotReturn400()
+    {
+        var owned = await SeedOwnedCampaignWithLangDetectionAsync();
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            BuildUrl(owned.CampaignId, owned.PhotoId, owned.GameBookId),
+            owned.SessionToken);
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().NotBe(HttpStatusCode.BadRequest,
+            "omitting sourceLangOverride must preserve backward compat");
+        // Accept OK (SSE stream) or 401 (cookie not honored in test pipeline)
+        (response.StatusCode == HttpStatusCode.OK ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue(
+            $"backward-compat owner request yielded unexpected status {response.StatusCode}");
+    }
+
+    /// <summary>
+    /// Scenario 8: authenticated owner with valid sourceLangOverride must not be rejected.
+    /// Response is either 200 (SSE opens) or 401 (cookie not honored in test pipeline);
+    /// 400 and 403 are both forbidden outcomes.
+    /// </summary>
+    [Fact]
+    public async Task Translate_OwnerWithValidOverride_DoesNotReturn400Or403()
+    {
+        var owned = await SeedOwnedCampaignWithLangDetectionAsync();
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            BuildUrlWithOverride(owned.CampaignId, owned.PhotoId, owned.GameBookId, sourceLangOverride: "IT"),
+            owned.SessionToken);
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().NotBe(HttpStatusCode.BadRequest,
+            "valid sourceLangOverride 'IT' must pass the validator");
+        response.StatusCode.Should().NotBe(HttpStatusCode.Forbidden,
+            "owner with valid override must not hit the pre-flight forbidden branch");
+        (response.StatusCode == HttpStatusCode.OK ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue(
+            $"expected OK or Unauthorized for owner+valid override, got {response.StatusCode}");
+    }
 }

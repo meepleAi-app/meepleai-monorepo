@@ -81,9 +81,10 @@ public sealed class NTextCatLanguageDetectionServiceTests
         // "Si." — 3 chars, ambiguous. NTextCat gap≈1 unit → tanh-confidence ≈ 0.048.
         var result = sut.Detect("Si.");
 
-        // Either null lang OR confidence < 0.5 acceptable per DEC-2 ambiguous short text
-        if (result.Lang is not null)
-            result.Confidence.Should().BeLessThan(0.5);
+        // Either null lang OR confidence < 0.5 acceptable per DEC-2 ambiguous short text.
+        // Unconditional assertion guards against false-pass when Lang==null bypasses inner check.
+        (result.Lang is null || result.Confidence < 0.5).Should().BeTrue(
+            "short ambiguous text should yield null lang or confidence < 0.5");
     }
 
     [Fact]

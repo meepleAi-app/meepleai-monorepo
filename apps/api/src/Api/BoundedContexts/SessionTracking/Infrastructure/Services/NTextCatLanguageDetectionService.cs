@@ -20,13 +20,12 @@ namespace Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 /// </summary>
 internal sealed class NTextCatLanguageDetectionService : ILanguageDetectionService
 {
-    private static readonly IReadOnlySet<string> Allowlist =
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "EN", "FR", "DE", "ES", "IT" };
-
     /// <summary>
     /// NTextCat ISO 639-3 (3-letter) to ISO 639-1 (2-letter) mapping for Core14 allowlist langs.
     /// Core14 comment in profile XML lists: dan, deu, eng, fra, ita, jpn, kor, nld, nor, por, rus, spa, swe, zho.
-    /// We only map the 5 product-supported langs (DEC-3).
+    /// We only map the 5 product-supported langs (DEC-3) — this map IS the allowlist projection;
+    /// any addition here MUST correspond to a product decision to support a new lang. TryGetValue
+    /// failure → null lang per DEC-3 (out-of-allowlist).
     /// </summary>
     private static readonly IReadOnlyDictionary<string, string> Iso639To2Letter =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -81,8 +80,9 @@ internal sealed class NTextCatLanguageDetectionService : ILanguageDetectionServi
             var bestIso3 = best.Item1.Iso639_3;
             var confidence = NormalizeConfidence(ranked);
 
-            if (Iso639To2Letter.TryGetValue(bestIso3, out var twoLetter)
-                && Allowlist.Contains(twoLetter))
+            // Iso639To2Letter is the allowlist projection: all values are guaranteed to be in Allowlist
+            // (mapping defined per DEC-3 to map ONLY supported langs). TryGetValue is the gate.
+            if (Iso639To2Letter.TryGetValue(bestIso3, out var twoLetter))
             {
                 return new LanguageDetectionResult(twoLetter, confidence);
             }

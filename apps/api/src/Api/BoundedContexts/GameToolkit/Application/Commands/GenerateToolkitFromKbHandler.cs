@@ -1,10 +1,12 @@
 using Api.BoundedContexts.GameToolkit.Application.DTOs;
+using Api.BoundedContexts.GameToolkit.Application.Validators;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Infrastructure.Entities;
 using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application;
 using Api.SharedKernel.Domain.ValueObjects;
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -36,6 +38,7 @@ internal class GenerateToolkitFromKbHandler
     private readonly ILlmService _llmService;
     private readonly IRagAccessService _ragAccessService;
     private readonly IGameCoreDataProvider _gameCoreData;
+    private readonly IValidator<AiToolkitSuggestionDto> _suggestionValidator;
     private readonly ILogger<GenerateToolkitFromKbHandler> _logger;
 
     public GenerateToolkitFromKbHandler(
@@ -43,13 +46,17 @@ internal class GenerateToolkitFromKbHandler
         ILlmService llmService,
         IRagAccessService ragAccessService,
         IGameCoreDataProvider gameCoreData,
-        ILogger<GenerateToolkitFromKbHandler> logger)
+        ILogger<GenerateToolkitFromKbHandler> logger,
+        IValidator<AiToolkitSuggestionDto>? suggestionValidator = null)
     {
         _hybridSearchService = hybridSearchService ?? throw new ArgumentNullException(nameof(hybridSearchService));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _gameCoreData = gameCoreData ?? throw new ArgumentNullException(nameof(gameCoreData));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        // Validator is optional with default fallback to allow legacy DI registrations
+        // (existing tests didn't pass a validator). Use AiToolkitSuggestionValidator as default.
+        _suggestionValidator = suggestionValidator ?? new AiToolkitSuggestionValidator();
     }
 
     public async Task<AiToolkitSuggestionDto> Handle(
@@ -127,17 +134,35 @@ internal class GenerateToolkitFromKbHandler
             throw new InvalidOperationException(
                 $"LLM failed to generate a valid toolkit suggestion for game {command.GameId} after retry.");
 
+        // 7b. Validate LLM output against schema invariants (issue #1747 B19-3c).
+        // We do NOT throw on validation failure — we log, force human review, and return the
+        // suggestion anyway so an admin can correct it via ApplyAiToolkitSuggestionCommand.
+        var validation = await _suggestionValidator
+            .ValidateAsync(suggestion, cancellationToken)
+            .ConfigureAwait(false);
+
+        var validationFailed = !validation.IsValid;
+        if (validationFailed)
+        {
+            var errors = string.Join(" | ",
+                validation.Errors.Select(e => $"{e.PropertyName}: {e.ErrorMessage}"));
+            _logger.LogWarning(
+                "AI toolkit suggestion failed schema validation for game {GameId}. Errors: {ValidationErrors}. Forcing RequiresHumanReview=true.",
+                command.GameId, errors);
+        }
+
         // 8. Compute confidence metrics
         var avgScore = uniqueChunks.Count > 0
             ? uniqueChunks.Average(c => c.HybridScore)
             : 0f;
         var coverageFactor = Math.Min(1f, (float)uniqueChunks.Count / MinChunksForFullConfidence);
         var confidenceScore = avgScore * coverageFactor;
-        var requiresHumanReview = confidenceScore < ConfidenceThreshold;
+        // Force review if either confidence is low OR schema validation failed.
+        var requiresHumanReview = confidenceScore < ConfidenceThreshold || validationFailed;
 
         _logger.LogInformation(
-            "GenerateToolkitFromKb: game={GameId} chunks={Chunks} avgScore={AvgScore:F2} confidence={Confidence:F2} requiresReview={RequiresReview}",
-            command.GameId, uniqueChunks.Count, avgScore, confidenceScore, requiresHumanReview);
+            "GenerateToolkitFromKb: game={GameId} chunks={Chunks} avgScore={AvgScore:F2} confidence={Confidence:F2} validationOk={ValidationOk} requiresReview={RequiresReview}",
+            command.GameId, uniqueChunks.Count, avgScore, confidenceScore, !validationFailed, requiresHumanReview);
 
         return suggestion with
         {

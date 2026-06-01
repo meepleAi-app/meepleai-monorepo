@@ -197,8 +197,12 @@ public class GenerateToolkitFromKbHandlerTests
             .Setup(l => l.GenerateJsonAsync<AiToolkitSuggestionDto>(
                 It.IsAny<string>(), It.IsAny<string>(),
                 RequestSource.RagPipeline, It.IsAny<CancellationToken>()))
+            // Updated 2026-05-31 (B19-3c #1747): Overrides must be provided
+            // (validator enforces it). High-confidence path requires schema-valid output.
             .ReturnsAsync(new AiToolkitSuggestionDto(
-                "Catan", [], [], [], null, null, null, "High coverage."));
+                "Catan", [], [], [], null, null,
+                new AiOverrideSuggestion(false, false, false),
+                "High coverage."));
 
         var result = await _handler.Handle(
             new GenerateToolkitFromKbCommand(GameId, UserId),

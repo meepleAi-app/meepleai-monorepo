@@ -89,6 +89,13 @@
 | `sp4-play-records-stats.html` | page-mock | `/play-records/stats` |
 | `sp4-player-detail.html` | page-mock | `/players/[id]`, `/players/[id]/{achievements,games,sessions,stats}` |
 | `sp4-players-index.html` | page-mock | `/players` |
+| `sp4-session-power-grid-data.jsx` | component-mock | Power Grid-specific dataset (Elektro, 4 resources market, 8 plants, 5 phases, 3 game steps). Premium #4/7. |
+| `sp4-session-power-grid-flavor.jsx` | component-mock | Power Grid flavor components — `PhaseTimeline`, `PowerPlantMarket`, `ResourceMarket`, `AuctionOverlay`, `NetworkMap`, `PlantsRail`, `TurnOrderStrip` (reverse-aware). |
+| `sp4-session-power-grid-live.html` | page-mock | `/sessions/[id]/live` Power Grid demo (heavy euro auction + network, 2-6 players, ~120 min). Extends skeleton with PG-specific panels + accordion-extended for game sections (auction/market/resources). |
+| `sp4-session-power-grid-live.jsx` | component-mock | Root component for `sp4-session-power-grid-live.html` — wires skeleton + PG flavor + RightColumnTabs (Scoring, Market, Network, Plants, Chat). |
+| `sp4-session-power-grid-parts.jsx` | component-mock | Shared parts for Power Grid — `SectionCard` accordion, player rail, helper `sec(id)` for accordion state machine across 5 phases. |
+| `sp4-session-power-grid-summary.html` | page-mock | `/sessions/[id]` Power Grid post-game (final: cities powered + Elektro tiebreaker + plants capacity). Premium #4/7. |
+| `sp4-session-power-grid-summary.jsx` | component-mock | Root component for PG summary — hero + tabs (Scoreboard / Network snapshot / Step transitions / Stats). |
 | `sp4-session-puerto-rico-data.jsx` | component-mock | Puerto Rico-specific dataset (role-selection state, 5 goods, plantations + buildings grids). Premium #2/7. |
 | `sp4-session-puerto-rico-flavor.jsx` | component-mock | Puerto Rico flavor components — `RoleSelectionBoard`, `PlantationGrid`, `BuildingGrid`, `GalleonsShipping`, `TradingHouseSlots`, `ColonistShip`. |
 | `sp4-session-puerto-rico-live.html` | page-mock | `/sessions/[id]/live` Puerto Rico demo (heavy euro role-selection, 3-5 players, ~120min). Extends skeleton (mockup #1) with PR-specific panels. |
@@ -175,10 +182,10 @@
 
 | Type | Count |
 |------|------:|
-| page-mock | 59 |
-| component-mock | 30 |
+| page-mock | 61 |
+| component-mock | 35 |
 | dev-fixture | 12 |
-| **Total** | **101** |
+| **Total** | **108** |
 
 > The `*.jsx` twins of `*.html` files are not double-counted (the JSX is the
 > implementation companion of the HTML reference). Listing them separately

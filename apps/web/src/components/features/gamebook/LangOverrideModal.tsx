@@ -51,7 +51,8 @@ export function LangOverrideModal({
     >
       <Dialog.Portal>
         <Dialog.Overlay
-          className="fixed inset-0 z-50 bg-black/40 data-[state=open]:animate-in data-[state=open]:fade-in"
+          // eslint-disable-next-line local/no-hardcoded-color-utility -- modal scrim canonical pattern, mirrors apps/web/src/components/ui/drawer/drawer.tsx OVERLAY_CLS
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in"
           data-testid="lang-override-scrim"
         />
         <Dialog.Content

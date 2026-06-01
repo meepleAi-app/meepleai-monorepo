@@ -241,6 +241,8 @@ function ErrorShell({
   return (
     <div
       data-slot="player-detail-error"
+      role="status"
+      aria-live="polite"
       className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-4 text-center sm:p-8"
     >
       <span aria-hidden="true" className="text-4xl">
@@ -274,6 +276,8 @@ function NotFoundShell({
   return (
     <div
       data-slot="player-detail-not-found"
+      role="status"
+      aria-live="polite"
       className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-4 text-center sm:p-8"
     >
       <span aria-hidden="true" className="text-5xl">

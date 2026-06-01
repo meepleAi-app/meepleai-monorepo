@@ -9,6 +9,7 @@
  */
 
 import { render, screen } from '@testing-library/react';
+import { axe } from 'jest-axe';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 // ─── Mock i18n ───────────────────────────────────────────────────────────────
@@ -302,5 +303,53 @@ describe('PlayerDetailView', () => {
     const { container } = renderView('sara-rossi');
     expect(getBySlot(container, 'sessions-tab-panel')).toBeDefined();
     mockSearchParams.delete('tab');
+  });
+
+  // ── a11y (#1547): FSM transition announcements for AT users ──────────────────
+  // Loading shell already has aria-busy + aria-live="polite". Error and not-found
+  // shells were silent transitions for screen readers; #1547 adds role="status" +
+  // aria-live="polite" so AT users get the same announcement consistency.
+
+  describe('a11y (#1547): FSM transition announcements', () => {
+    it('ErrorShell exposes role="status" + aria-live="polite"', () => {
+      mockStatsQuery.mockReturnValue({
+        isLoading: false,
+        isError: true,
+        data: undefined,
+        refetch: vi.fn(),
+      });
+
+      const { container } = renderView('sara-rossi');
+      const shell = getBySlot(container, 'player-detail-error');
+      expect(shell).toHaveAttribute('role', 'status');
+      expect(shell).toHaveAttribute('aria-live', 'polite');
+    });
+
+    it('NotFoundShell exposes role="status" + aria-live="polite"', () => {
+      const { container } = renderView(null); // null playerId → not-found
+
+      const shell = getBySlot(container, 'player-detail-not-found');
+      expect(shell).toHaveAttribute('role', 'status');
+      expect(shell).toHaveAttribute('aria-live', 'polite');
+    });
+
+    it('ErrorShell passes axe a11y scan', async () => {
+      mockStatsQuery.mockReturnValue({
+        isLoading: false,
+        isError: true,
+        data: undefined,
+        refetch: vi.fn(),
+      });
+
+      const { container } = renderView('sara-rossi');
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('NotFoundShell passes axe a11y scan', async () => {
+      const { container } = renderView(null);
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
   });
 });

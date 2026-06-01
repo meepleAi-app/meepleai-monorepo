@@ -59,12 +59,33 @@ internal record AiTimerToolSuggestion(
 internal record AiScoringTemplateSuggestion(
     string[] Dimensions,
     string DefaultUnit,
-    ScoreType ScoreType
+    ScoreType ScoreType,
+    // v2 (B19-3b, 2026-05-31): structured Categories for richer UI rendering.
+    // Optional/additive; legacy Dimensions[] preserved for back-compat.
+    AiScoringCategorySuggestion[]? Categories = null
 );
 
 internal record AiTurnTemplateSuggestion(
     TurnOrderType TurnOrderType,
-    string[] Phases
+    string[] Phases,
+    // v2 (B19-3a, 2026-05-31): multi-round + actions + direction for rich games like Wingspan.
+    // Optional/additive; legacy Phases[] preserved for back-compat.
+    int? Rounds = null,
+    int[]? TurnsPerRound = null,
+    string[]? TurnActions = null,
+    string? Direction = null
+);
+
+/// <summary>
+/// v2 (B19-3b): structured scoring category for polymorphic UI rendering.
+/// Each category has its own computation rule (Count/Sum/RankBased/Custom).
+/// </summary>
+internal record AiScoringCategorySuggestion(
+    string Id,                  // stable identifier, e.g., "birds", "bonus-cards"
+    string Label,               // user-visible, e.g., "Birds played"
+    ScoringComputation Computation,
+    int Weight = 1,
+    string? Description = null
 );
 
 internal record AiOverrideSuggestion(

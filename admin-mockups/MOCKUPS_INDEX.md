@@ -89,6 +89,13 @@
 | `sp4-play-records-stats.html` | page-mock | `/play-records/stats` |
 | `sp4-player-detail.html` | page-mock | `/players/[id]`, `/players/[id]/{achievements,games,sessions,stats}` |
 | `sp4-players-index.html` | page-mock | `/players` |
+| `sp4-session-paleo-data.jsx` | component-mock | Paleo-specific dataset (tribe state, day phases, mission deck, BinaryWin co-op simultaneous). Premium #6/7. |
+| `sp4-session-paleo-flavor.jsx` | component-mock | Paleo flavor components — `TribePanel`, `DayPhaseIndicator`, `CardsDeckPanel`, `PlayerHandPanel`, `ActionRevealOverlay`, `CavePaintingProgress`, `SkullCluster`. |
+| `sp4-session-paleo-live.html` | page-mock | `/sessions/[id]/live` Paleo demo (co-op preistorico Simultaneous, 1-4 players, ~45-60 min). Extends skeleton with accordion-extended for game panels. |
+| `sp4-session-paleo-live.jsx` | component-mock | Root component for `sp4-session-paleo-live.html` — wires skeleton + Paleo flavor + RightColumnTabs (Scoring, Tribe, Cards, Skills, Chat). |
+| `sp4-session-paleo-parts.jsx` | component-mock | Shared parts for Paleo — SectionCard accordion (11 utilizzi), helper sec(id) per accordion state machine. Mirrors Power Grid pattern. |
+| `sp4-session-paleo-summary.html` | page-mock | `/sessions/[id]` Paleo post-game (VICTORY 5 cave paintings / DEFEAT 5 skulls or tribe extinct + cause-of-loss + tribe journey). Premium #6/7. |
+| `sp4-session-paleo-summary.jsx` | component-mock | Root component for Paleo summary — hero VICTORY/DEFEAT + tabs (Scoreboard / Tribe Journey / Cards played / Stats). |
 | `sp4-session-power-grid-data.jsx` | component-mock | Power Grid-specific dataset (Elektro, 4 resources market, 8 plants, 5 phases, 3 game steps). Premium #4/7. |
 | `sp4-session-power-grid-flavor.jsx` | component-mock | Power Grid flavor components — `PhaseTimeline`, `PowerPlantMarket`, `ResourceMarket`, `AuctionOverlay`, `NetworkMap`, `PlantsRail`, `TurnOrderStrip` (reverse-aware). |
 | `sp4-session-power-grid-live.html` | page-mock | `/sessions/[id]/live` Power Grid demo (heavy euro auction + network, 2-6 players, ~120 min). Extends skeleton with PG-specific panels + accordion-extended for game sections (auction/market/resources). |
@@ -189,10 +196,10 @@
 
 | Type | Count |
 |------|------:|
-| page-mock | 61 |
-| component-mock | 35 |
+| page-mock | 63 |
+| component-mock | 40 |
 | dev-fixture | 12 |
-| **Total** | **108** |
+| **Total** | **115** |
 
 > The `*.jsx` twins of `*.html` files are not double-counted (the JSX is the
 > implementation companion of the HTML reference). Listing them separately

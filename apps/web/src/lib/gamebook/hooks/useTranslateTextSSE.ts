@@ -49,7 +49,7 @@ export function useTranslateTextSSE() {
           credentials: 'include',
           signal: ac.signal,
         });
-      } catch (e) {
+      } catch {
         if (ac.signal.aborted) return;
         setState(s => ({ ...s, error: 'network_error' }));
         return;
@@ -114,7 +114,7 @@ export function useTranslateTextSSE() {
             }
           }
         }
-      } catch (e) {
+      } catch {
         if (!ac.signal.aborted) setState(s => ({ ...s, error: 'stream_error' }));
       }
     },

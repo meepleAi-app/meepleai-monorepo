@@ -167,7 +167,9 @@ internal sealed class GetKbDocumentByIdHandler : IQueryHandler<GetKbDocumentById
             PageCount: data.pdf.PageCount,
             Language: string.IsNullOrWhiteSpace(data.pdf.Language) ? "it" : data.pdf.Language,
             // Gate B v1 carryover — PdfDocumentEntity has no Tags column yet.
-            Tags: Array.Empty<string>()
+            Tags: Array.Empty<string>(),
+            // #1676 scope (a) F1: Size in bytes — mockup sp5-admin-kb.html L147
+            FileSize: data.pdf.FileSizeBytes
         );
 
         return new KbDocResultContainer(

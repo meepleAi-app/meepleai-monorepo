@@ -49,6 +49,7 @@ import {
   type PlayerTopGamesCardLabels,
 } from '@/components/features/player-detail';
 import { DetailPageLayout } from '@/components/ui/detail-layout';
+import { useAchievements } from '@/hooks/queries/useAchievements';
 import { usePlayerStatistics } from '@/hooks/queries/usePlayersFromRecords';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { PlayerStatistics } from '@/lib/api/schemas/play-records.schemas';
@@ -320,16 +321,22 @@ export function PlayerDetailView({ playerId }: PlayerDetailViewProps): ReactElem
     return tryLoadVisualTestFixture('default');
   }, [stateOverride]);
 
-  // ── Data hook (current user only — schema reality v1 carryover) ──────────
+  // ── Data hooks (current user only — schema reality v1 carryover) ─────────
   const statsQuery = usePlayerStatistics();
+  // #1542: pull achievements list to derive `achievementCount` from the real
+  // unlock count instead of the legacy hardcoded `0`. Graceful degrade: if the
+  // achievements query is still loading or errored, achievementCount stays 0.
+  const achievementsQuery = useAchievements();
 
   // ── Derived profile (fixture takes priority over real data) ─────────────
   const profile = useMemo<PlayerProfileFixture | null>(() => {
     if (fixture != null) return fixture;
     if (playerId == null) return null;
     if (statsQuery.data == null) return null;
-    return mapStatsToProfile(playerId, statsQuery.data);
-  }, [fixture, playerId, statsQuery.data]);
+    const base = mapStatsToProfile(playerId, statsQuery.data);
+    const unlockedCount = achievementsQuery.data?.filter(a => a.isUnlocked).length ?? 0;
+    return { ...base, achievementCount: unlockedCount };
+  }, [fixture, playerId, statsQuery.data, achievementsQuery.data]);
 
   // ── FSM state derivation ─────────────────────────────────────────────────
   const realKind = useMemo(() => {

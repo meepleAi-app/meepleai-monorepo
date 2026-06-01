@@ -191,7 +191,7 @@
     "@bgotink/playwright-coverage": "^0.3.2",
     "@chromatic-com/playwright": "^0.14.3",
     "@chromatic-com/storybook": "5.2.1",
-    "@commitlint/cli": "^20.4.3",
+    "@commitlint/cli": "^21.0.2",
     "@commitlint/config-conventional": "^21.0.1",
     "@eslint/eslintrc": "^3.3.5",
     "@eslint/js": "^9.39.4",

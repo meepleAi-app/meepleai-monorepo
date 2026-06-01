@@ -46,6 +46,7 @@ import {
   type PlayerHeroLabels,
   type PlayerLeaderboardCardLabels,
   type PlayerStatsGridLabels,
+  type PlayerTopGamesCardLabels,
 } from '@/components/features/player-detail';
 import { DetailPageLayout } from '@/components/ui/detail-layout';
 import { usePlayerStatistics } from '@/hooks/queries/usePlayersFromRecords';
@@ -56,6 +57,7 @@ import {
   IS_VISUAL_TEST_BUILD,
   tryLoadVisualTestFixture,
   type PlayerProfileFixture,
+  type TopGameItem,
 } from '@/lib/player-detail/player-detail-visual-test-fixture';
 
 import { GamesTabPanel, type GamesTabPanelLabels } from './GamesTabPanel';
@@ -106,12 +108,62 @@ export interface PlayerDetailViewProps {
 // ─── Schema mapping ─────────────────────────────────────────────────────────
 
 /**
+ * Derives the ranked top-N games list for `PlayerTopGamesCard`.
+ *
+ * Source priority (#1663 Phase 2 evolution — optional during BE rollout):
+ *   1. `stats.mostPlayedGames` if present (BE pre-sorted, has gameId).
+ *   2. Fallback: derive from `stats.gamePlayCounts` (always present).
+ *
+ * `winCount` is joined from `stats.winByGame` (optional) by gameId when both
+ * sides have one, otherwise by gameName. Returns `null` when no join hits —
+ * the card then gracefully hides the win-rate badge (never shows "0%").
+ */
+function deriveTopGames(stats: PlayerStatistics, maxItems = 5): ReadonlyArray<TopGameItem> {
+  // Build a winByGame lookup: prefer gameId, fall back to gameName.
+  const winsByGameId = new Map<string, number>();
+  const winsByGameName = new Map<string, number>();
+  for (const entry of stats.winByGame ?? []) {
+    if (entry.gameId != null) winsByGameId.set(entry.gameId, entry.won);
+    winsByGameName.set(entry.gameName, entry.won);
+  }
+
+  const resolveWins = (gameId: string | null, gameName: string): number | null => {
+    if (gameId != null && winsByGameId.has(gameId)) return winsByGameId.get(gameId) ?? null;
+    if (winsByGameName.has(gameName)) return winsByGameName.get(gameName) ?? null;
+    return null;
+  };
+
+  // Priority 1: mostPlayedGames (BE-sorted, structured).
+  if (stats.mostPlayedGames && stats.mostPlayedGames.length > 0) {
+    return stats.mostPlayedGames.slice(0, maxItems).map(g => ({
+      gameId: g.gameId,
+      gameName: g.gameName,
+      playCount: g.plays,
+      winCount: resolveWins(g.gameId, g.gameName),
+    }));
+  }
+
+  // Fallback: derive from gamePlayCounts (Record<gameName, count>).
+  return Object.entries(stats.gamePlayCounts)
+    .map<TopGameItem>(([gameName, playCount]) => ({
+      gameId: null,
+      gameName,
+      playCount,
+      winCount: resolveWins(null, gameName),
+    }))
+    .sort((a, b) => b.playCount - a.playCount)
+    .slice(0, maxItems);
+}
+
+/**
  * Maps usePlayerStatistics data + URL slug → PlayerProfileFixture-like shape.
  *
  * Schema reality (v1 carryover):
  *   - displayName derived from URL slug (decodeURIComponent + replace dashes)
  *   - winRate = totalWins / totalSessions (0 when totalSessions === 0)
  *   - favoriteGameName = max-count entry from gamePlayCounts (null when empty)
+ *   - topGames = top-N derived from mostPlayedGames (or gamePlayCounts fallback)
+ *     joined with winByGame for per-game wins
  *   - achievementCount / leaderboardRank / favoriteAgentName defaulted to
  *     0 / null / null (TBD backend schema extensions)
  */
@@ -140,6 +192,7 @@ function mapStatsToProfile(playerId: string, stats: PlayerStatistics): PlayerPro
     favoriteAgentName: null, // TBD: no favorite agent data in current schema
     achievementCount: 0, // TBD: no achievement data in current schema
     leaderboardRank: null, // TBD: no leaderboard data in current schema
+    topGames: deriveTopGames(stats),
   };
 }
 
@@ -329,6 +382,18 @@ export function PlayerDetailView({ playerId }: PlayerDetailViewProps): ReactElem
     [t]
   );
 
+  const topGamesLabels = useMemo<PlayerTopGamesCardLabels>(
+    () => ({
+      title: t('pages.playerDetail.sections.topGames.title'),
+      playsLabel: t('pages.playerDetail.sections.topGames.playsLabel'),
+      playsLabelWithWins: t('pages.playerDetail.sections.topGames.playsLabelWithWins'),
+      winRateLabel: t('pages.playerDetail.sections.topGames.winRateLabel'),
+      rankAriaLabel: t('pages.playerDetail.sections.topGames.rankAriaLabel'),
+      empty: t('pages.playerDetail.sections.topGames.empty'),
+    }),
+    [t]
+  );
+
   const achievementLabels = useMemo<AchievementBadgeGridLabels>(
     () => ({
       title: t('pages.playerDetail.sections.achievements.title'),
@@ -418,6 +483,7 @@ export function PlayerDetailView({ playerId }: PlayerDetailViewProps): ReactElem
     stats: statsLabels,
     leaderboard: leaderboardLabels,
     favoriteAgent: favoriteAgentLabels,
+    topGames: topGamesLabels,
   };
 
   const sessionsLabels: SessionsTabPanelLabels = {

@@ -2428,6 +2428,14 @@
           "none": "Nessun agente usato ancora",
           "ariaLabel": "Apri {agentName}"
         },
+        "topGames": {
+          "title": "Top giochi",
+          "playsLabel": "{count} partite",
+          "playsLabelWithWins": "{count} partite · {wins} vittorie",
+          "winRateLabel": "WIN RATE",
+          "rankAriaLabel": "Posizione {rank}",
+          "empty": "Nessun gioco giocato ancora"
+        },
         "achievements": {
           "title": "Achievement",
           "viewAll": "Vedi tutti",

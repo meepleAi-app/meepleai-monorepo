@@ -14,9 +14,11 @@ import {
   FavoriteAgentCard,
   PlayerLeaderboardCard,
   PlayerStatsGrid,
+  PlayerTopGamesCard,
   type FavoriteAgentCardLabels,
   type PlayerLeaderboardCardLabels,
   type PlayerStatsGridLabels,
+  type PlayerTopGamesCardLabels,
 } from '@/components/features/player-detail';
 import type { PlayerProfileFixture } from '@/lib/player-detail/player-detail-visual-test-fixture';
 
@@ -24,6 +26,7 @@ export interface PlayerOverviewRegionLabels {
   readonly stats: PlayerStatsGridLabels;
   readonly leaderboard: PlayerLeaderboardCardLabels;
   readonly favoriteAgent: FavoriteAgentCardLabels;
+  readonly topGames: PlayerTopGamesCardLabels;
 }
 
 export interface PlayerOverviewRegionProps {
@@ -58,6 +61,7 @@ export function PlayerOverviewRegion({
           labels={labels.favoriteAgent}
         />
       </div>
+      <PlayerTopGamesCard items={stats.topGames} labels={labels.topGames} />
     </div>
   );
 }

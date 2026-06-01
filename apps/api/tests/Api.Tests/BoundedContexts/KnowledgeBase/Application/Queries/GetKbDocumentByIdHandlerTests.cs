@@ -195,6 +195,41 @@ public sealed class GetKbDocumentByIdHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ReadyDoc_ReturnsFileSizeFromEntity()
+    {
+        // #1676 scope (a) F1: FileSize must be mapped from PdfDocumentEntity.FileSizeBytes.
+        var docId = Guid.NewGuid();
+        const long expectedSize = 8_808_038L; // 8.4 MB — mockup sp5-admin-kb.html L147
+        var pdf = SeedPdf(id: docId, processingState: "Ready", fileSizeBytes: expectedSize);
+        _dbContext.PdfDocuments.Add(pdf);
+        SeedUploader(pdf.UploadedByUserId);
+        await _dbContext.SaveChangesAsync();
+
+        var dto = await _handler.Handle(
+            new GetKbDocumentByIdQuery(docId, pdf.UploadedByUserId, UserIsAdmin: false),
+            CancellationToken.None);
+
+        dto.FileSize.Should().Be(expectedSize);
+    }
+
+    [Fact]
+    public async Task Handle_ReadyDocWithZeroSize_ReturnsZeroFileSize()
+    {
+        // Defensive: pre-existing rows without size data should not break the handler.
+        var docId = Guid.NewGuid();
+        var pdf = SeedPdf(id: docId, processingState: "Ready"); // fileSizeBytes defaults to 0
+        _dbContext.PdfDocuments.Add(pdf);
+        SeedUploader(pdf.UploadedByUserId);
+        await _dbContext.SaveChangesAsync();
+
+        var dto = await _handler.Handle(
+            new GetKbDocumentByIdQuery(docId, pdf.UploadedByUserId, UserIsAdmin: false),
+            CancellationToken.None);
+
+        dto.FileSize.Should().Be(0L);
+    }
+
+    [Fact]
     public async Task Handle_DocNotFound_Throws404()
     {
         var query = new GetKbDocumentByIdQuery(Guid.NewGuid(), RequestingUserId: Guid.NewGuid(), UserIsAdmin: false);
@@ -263,7 +298,8 @@ public sealed class GetKbDocumentByIdHandlerTests
         Guid? sharedGameId = null,
         int? pageCount = null,
         bool isPublic = true,
-        string language = "it") => new()
+        string language = "it",
+        long fileSizeBytes = 0) => new()
         {
             Id = id,
             FileName = fileName,
@@ -275,7 +311,8 @@ public sealed class GetKbDocumentByIdHandlerTests
             Language = language,
             UploadedByUserId = Guid.NewGuid(),
             FilePath = "/tmp/test.pdf",
-            IsPublic = isPublic
+            IsPublic = isPublic,
+            FileSizeBytes = fileSizeBytes
         };
 
     private void SeedUploader(Guid userId, string? displayName = "Test User")

@@ -54,5 +54,6 @@ internal sealed record KbDocumentDto(
     int ChunkCount,
     int? PageCount,
     string Language,
-    IReadOnlyList<string> Tags
+    IReadOnlyList<string> Tags,
+    long FileSize
 );

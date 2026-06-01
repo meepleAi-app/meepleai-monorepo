@@ -96,6 +96,14 @@
 | `sp4-session-catan-parts.jsx` | component-mock | Shared parts for Catan — player rail with hand counts + dev cards + pieces remaining. |
 | `sp4-session-catan-summary.html` | page-mock | `/sessions/[id]` Catan post-game (final VP: settlements + cities + Longest Road + Largest Army + VP dev cards). Premium #3/7. |
 | `sp4-session-catan-summary.jsx` | component-mock | Root component for Catan summary — hero + tabs (Scoreboard / Final Board / Stats). |
+| `sp4-session-codenames-bodies.jsx` | component-mock | Codenames body layouts — DesktopBody + MobileBody composition. |
+| `sp4-session-codenames-data.jsx` | component-mock | Codenames-specific dataset (5x5 word grid, key card pattern, team agents 9/8, clue history). Premium #7/7. |
+| `sp4-session-codenames-flavor.jsx` | component-mock | Codenames flavor components — `WordGrid`, `WordCard` (5 states: covered/red/blue/neutral/assassin), `SpymasterKeyCardOverlay`, `TeamPanel`, `CurrentCluePanel`, `ClueHistoryTimeline`, `RoleAvatar`. |
+| `sp4-session-codenames-live.html` | page-mock | `/sessions/[id]/live` Codenames demo (team deduction party game, 2-8+ players in 2 teams, ~15 min). Extends skeleton with Codenames-specific panels + accordion-extended. |
+| `sp4-session-codenames-live.jsx` | component-mock | Root component for `sp4-session-codenames-live.html` — wires skeleton + word grid + RightColumnTabs (Scoring Ranking, Board, Clue history, Teams, Chat). |
+| `sp4-session-codenames-parts.jsx` | component-mock | Shared parts for Codenames — SectionCard accordion, helper sec(id). Mirrors skeleton + Power Grid extension. |
+| `sp4-session-codenames-summary.html` | page-mock | `/sessions/[id]` Codenames post-game (WINNER team banner + Red/Blue agents found + assassin status + clue analysis). Premium #7/7. |
+| `sp4-session-codenames-summary.jsx` | component-mock | Root component for Codenames summary — hero + tabs (Scoreboard / Final Board / Clue Analysis / Stats). |
 | `sp4-session-paleo-data.jsx` | component-mock | Paleo-specific dataset (tribe state, day phases, mission deck, BinaryWin co-op simultaneous). Premium #6/7. |
 | `sp4-session-paleo-flavor.jsx` | component-mock | Paleo flavor components — `TribePanel`, `DayPhaseIndicator`, `CardsDeckPanel`, `PlayerHandPanel`, `ActionRevealOverlay`, `CavePaintingProgress`, `SkullCluster`. |
 | `sp4-session-paleo-live.html` | page-mock | `/sessions/[id]/live` Paleo demo (co-op preistorico Simultaneous, 1-4 players, ~45-60 min). Extends skeleton with accordion-extended for game panels. |
@@ -203,10 +211,10 @@
 
 | Type | Count |
 |------|------:|
-| page-mock | 65 |
-| component-mock | 45 |
+| page-mock | 67 |
+| component-mock | 51 |
 | dev-fixture | 12 |
-| **Total** | **122** |
+| **Total** | **130** |
 
 > The `*.jsx` twins of `*.html` files are not double-counted (the JSX is the
 > implementation companion of the HTML reference). Listing them separately

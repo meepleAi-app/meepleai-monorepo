@@ -5,6 +5,8 @@ import { axe } from 'jest-axe';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
+import * as analyticsModule from '@/lib/analytics/track-event';
+
 // Mock all four hooks before importing the component
 vi.mock('@/lib/gamebook/hooks/usePhotoUpload');
 vi.mock('@/lib/gamebook/hooks/useSegmentPhoto');
@@ -836,6 +838,321 @@ describe('TranslateViewer', () => {
       const { container } = wrap(<TranslateViewer campaignId={CAMPAIGN_ID} gameRef={GAME_REF} />);
       const results = await axe(container);
       expect(results).toHaveNoViolations();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // #1559 — Lang detection + override modal (T6: S1, S2, S3, S5, S7, S8)
+  // ---------------------------------------------------------------------------
+
+  /** Helper: set up upload + segment to resolve to FAKE_ARTIFACT. */
+  function makeUploadAndSegmentMocks() {
+    makeOneBookMock();
+    vi.mocked(uploadHook.usePhotoUpload).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn().mockResolvedValue({ id: PHOTO_ID, segments: [] }),
+      isPending: false,
+      isSuccess: false,
+      isError: false,
+      error: null,
+    } as never);
+    vi.mocked(segmentHook.useSegmentPhoto).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn().mockResolvedValue(FAKE_ARTIFACT),
+      isPending: false,
+      isSuccess: false,
+      isError: false,
+      error: null,
+    } as never);
+  }
+
+  describe('#1559 — S1: tier=high badge + no auto-modal + analytics lang_detected', () => {
+    it('renders LangBadge "Sorgente: EN" + SegmentPicker enabled + no auto-modal + fires lang_detected', async () => {
+      makeUploadAndSegmentMocks();
+      // SSE completes with EN high-confidence detection
+      vi.mocked(sseHook.useTranslateSegmentSSE).mockReturnValue({
+        partialText: 'Apri la porta.',
+        isComplete: true,
+        appliedTerms: [],
+        error: undefined,
+        detectedSourceLang: 'EN',
+        langDetectionConfidence: 0.92,
+        start: vi.fn(),
+        stop: vi.fn(),
+      } as never);
+
+      const trackSpy = vi.spyOn(analyticsModule, 'trackEvent');
+
+      wrap(<TranslateViewer campaignId={CAMPAIGN_ID} gameRef={GAME_REF} />);
+      await act(async () => {
+        firePhotoInput();
+      });
+
+      // Wait for segments_ready (artifact set, SegmentPicker visible)
+      await waitFor(() => {
+        expect(screen.getByTestId('segment-picker')).toBeInTheDocument();
+      });
+
+      // LangBadge visible with "Sorgente: EN"
+      expect(screen.getByTestId('lang-badge')).toBeInTheDocument();
+      expect(screen.getByText(/sorgente: EN/i)).toBeInTheDocument();
+
+      // No auto-modal (tier=high does not auto-open)
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+      // SegmentPicker enabled (no segmentBlockedByLang for tier=high)
+      expect(screen.queryByTestId('translate-viewer-lang-block-hint')).not.toBeInTheDocument();
+
+      // Analytics: lang_detected fired
+      expect(trackSpy).toHaveBeenCalledWith(
+        'translate.lang_detected',
+        expect.objectContaining({ lang: 'EN', tier: 'high' })
+      );
+    });
+  });
+
+  describe('#1559 — S2: tier=medium SegmentPicker blocked + tap opens modal', () => {
+    it('badge "Conferma: FR?" + SegmentPicker DISABLED + tap opens modal with FR preselect', async () => {
+      makeUploadAndSegmentMocks();
+      const startMock = vi.fn();
+      vi.mocked(sseHook.useTranslateSegmentSSE).mockReturnValue({
+        partialText: '',
+        isComplete: true,
+        appliedTerms: [],
+        error: undefined,
+        detectedSourceLang: 'FR',
+        langDetectionConfidence: 0.65,
+        start: startMock,
+        stop: vi.fn(),
+      } as never);
+
+      const trackSpy = vi.spyOn(analyticsModule, 'trackEvent');
+      const user = userEvent.setup();
+
+      wrap(<TranslateViewer campaignId={CAMPAIGN_ID} gameRef={GAME_REF} />);
+      await act(async () => {
+        firePhotoInput();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('segment-picker')).toBeInTheDocument();
+      });
+
+      // Badge shows "Conferma: FR?"
+      expect(screen.getByText(/conferma: FR\?/i)).toBeInTheDocument();
+
+      // SegmentPicker blocked: hint visible
+      expect(screen.getByTestId('translate-viewer-lang-block-hint')).toBeInTheDocument();
+
+      // Click badge → modal opens with FR preselected
+      await user.click(screen.getByTestId('lang-badge'));
+
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      });
+
+      // FR radio should be checked
+      expect(screen.getByLabelText('Francese')).toBeChecked();
+
+      // Analytics: lang_modal_opened fired with mode='auto-medium-tap'
+      expect(trackSpy).toHaveBeenCalledWith(
+        'translate.lang_modal_opened',
+        expect.objectContaining({ tier: 'medium', mode: 'auto-medium-tap' })
+      );
+
+      // Confirm → modal closes, hint disappears (confirmedLang set)
+      await user.click(screen.getByRole('button', { name: /conferma e ritraduci/i }));
+
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      });
+
+      // After confirm, hint gone (segmentBlockedByLang = false)
+      expect(screen.queryByTestId('translate-viewer-lang-block-hint')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('#1559 — S3: tier=low auto-modal + S5: dismiss keeps picker blocked', () => {
+    it('S3: auto-opens modal (mode=auto-low, no preselect) + SegmentPicker DISABLED', async () => {
+      makeUploadAndSegmentMocks();
+      vi.mocked(sseHook.useTranslateSegmentSSE).mockReturnValue({
+        partialText: '',
+        isComplete: true,
+        appliedTerms: [],
+        error: undefined,
+        detectedSourceLang: null,
+        langDetectionConfidence: 0.31,
+        start: vi.fn(),
+        stop: vi.fn(),
+      } as never);
+
+      const trackSpy = vi.spyOn(analyticsModule, 'trackEvent');
+
+      wrap(<TranslateViewer campaignId={CAMPAIGN_ID} gameRef={GAME_REF} />);
+      await act(async () => {
+        firePhotoInput();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('segment-picker')).toBeInTheDocument();
+      });
+
+      // Modal auto-opens
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      });
+
+      // No radio preselected (lang=null means no preselect)
+      expect(screen.queryByRole('radio', { checked: true } as never)).not.toBeInTheDocument();
+
+      // SegmentPicker blocked hint visible (behind modal, but in DOM)
+      expect(screen.getByTestId('translate-viewer-lang-block-hint')).toBeInTheDocument();
+
+      // Analytics: lang_detected fired
+      expect(trackSpy).toHaveBeenCalledWith(
+        'translate.lang_detected',
+        expect.objectContaining({ lang: null, tier: 'low' })
+      );
+
+      // Analytics: lang_modal_opened with mode=auto-low
+      expect(trackSpy).toHaveBeenCalledWith(
+        'translate.lang_modal_opened',
+        expect.objectContaining({ tier: 'low', mode: 'auto-low' })
+      );
+
+      // User picks DE + confirms
+      const user = userEvent.setup();
+      await user.click(screen.getByLabelText('Tedesco'));
+      await user.click(screen.getByRole('button', { name: /conferma e ritraduci/i }));
+
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      });
+
+      // Analytics: lang_overridden fired
+      expect(trackSpy).toHaveBeenCalledWith(
+        'translate.lang_overridden',
+        expect.objectContaining({ fromLang: null, toLang: 'DE' })
+      );
+
+      // Hint gone (confirmedLang set)
+      expect(screen.queryByTestId('translate-viewer-lang-block-hint')).not.toBeInTheDocument();
+    });
+
+    it('S5: dismiss auto-low modal keeps SegmentPicker DISABLED + fires lang_modal_dismissed', async () => {
+      makeUploadAndSegmentMocks();
+      vi.mocked(sseHook.useTranslateSegmentSSE).mockReturnValue({
+        partialText: '',
+        isComplete: true,
+        appliedTerms: [],
+        error: undefined,
+        detectedSourceLang: null,
+        langDetectionConfidence: 0.31,
+        start: vi.fn(),
+        stop: vi.fn(),
+      } as never);
+
+      const trackSpy = vi.spyOn(analyticsModule, 'trackEvent');
+      const user = userEvent.setup();
+
+      wrap(<TranslateViewer campaignId={CAMPAIGN_ID} gameRef={GAME_REF} />);
+      await act(async () => {
+        firePhotoInput();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      });
+
+      // Dismiss via Chiudi button (dismissable=true)
+      await user.click(screen.getByRole('button', { name: /chiudi/i }));
+
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      });
+
+      // Analytics: lang_modal_dismissed fired
+      expect(trackSpy).toHaveBeenCalledWith(
+        'translate.lang_modal_dismissed',
+        expect.objectContaining({ tier: 'low' })
+      );
+
+      // SegmentPicker still blocked (confirmedLang still null)
+      expect(screen.getByTestId('translate-viewer-lang-block-hint')).toBeInTheDocument();
+
+      // Badge still shows low-tier "Sorgente richiesta"
+      expect(screen.getByTestId('lang-badge')).toBeInTheDocument();
+      expect(screen.getByText(/sorgente richiesta/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('#1559 — S7: legacy backward compat (no lang fields)', () => {
+    it('SSE without lang fields → tier=none, no badge, no modal, SegmentPicker enabled', async () => {
+      makeUploadAndSegmentMocks();
+      // SSE without detectedSourceLang / langDetectionConfidence (legacy)
+      vi.mocked(sseHook.useTranslateSegmentSSE).mockReturnValue({
+        partialText: 'Text.',
+        isComplete: true,
+        appliedTerms: [],
+        error: undefined,
+        // no detectedSourceLang, no langDetectionConfidence
+        start: vi.fn(),
+        stop: vi.fn(),
+      } as never);
+
+      wrap(<TranslateViewer campaignId={CAMPAIGN_ID} gameRef={GAME_REF} />);
+      await act(async () => {
+        firePhotoInput();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('segment-picker')).toBeInTheDocument();
+      });
+
+      // No badge rendered (tier=none)
+      expect(screen.queryByTestId('lang-badge')).not.toBeInTheDocument();
+
+      // No modal
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+      // No segment block hint
+      expect(screen.queryByTestId('translate-viewer-lang-block-hint')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('#1559 — S8: out-of-allowlist null lang + high confidence → tier=none', () => {
+    it('SSE {detectedSourceLang: null, langDetectionConfidence: 0.85} → no badge, picker enabled', async () => {
+      makeUploadAndSegmentMocks();
+      // BE emits null lang with high confidence (out-of-allowlist, DEC-FE-10)
+      vi.mocked(sseHook.useTranslateSegmentSSE).mockReturnValue({
+        partialText: '',
+        isComplete: true,
+        appliedTerms: [],
+        error: undefined,
+        detectedSourceLang: null,
+        langDetectionConfidence: 0.85,
+        start: vi.fn(),
+        stop: vi.fn(),
+      } as never);
+
+      wrap(<TranslateViewer campaignId={CAMPAIGN_ID} gameRef={GAME_REF} />);
+      await act(async () => {
+        firePhotoInput();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('segment-picker')).toBeInTheDocument();
+      });
+
+      // effectiveTier: getLangTier(0.85)='high' but lang=null → 'none'
+      // So no badge rendered
+      expect(screen.queryByTestId('lang-badge')).not.toBeInTheDocument();
+
+      // No block hint (tier=none means segmentBlockedByLang=false)
+      expect(screen.queryByTestId('translate-viewer-lang-block-hint')).not.toBeInTheDocument();
+
+      // No auto-modal
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
   });
 });

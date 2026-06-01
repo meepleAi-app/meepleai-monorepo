@@ -7,6 +7,7 @@ namespace Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 /// </summary>
 internal interface ILanguageDetectionService
 {
+    /// <summary>Detects the language of the given OCR text using heuristic NLP.</summary>
     /// <param name="text">OCR-extracted text. Implementation must handle empty, single-char, very long inputs gracefully.</param>
     /// <returns>Detection result. On library exception, implementation returns (null, 0.0) — never throws.</returns>
     LanguageDetectionResult Detect(string text);

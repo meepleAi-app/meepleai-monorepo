@@ -1087,7 +1087,7 @@ describe('TranslateViewer', () => {
   });
 
   describe('#1559 — S7: legacy backward compat (no lang fields)', () => {
-    it('SSE without lang fields → tier=none, no badge, no modal, SegmentPicker enabled', async () => {
+    it('SSE without lang fields → tier=none, no badge, no modal, SegmentPicker enabled, no lang_detected audit', async () => {
       makeUploadAndSegmentMocks();
       // SSE without detectedSourceLang / langDetectionConfidence (legacy)
       vi.mocked(sseHook.useTranslateSegmentSSE).mockReturnValue({
@@ -1099,6 +1099,8 @@ describe('TranslateViewer', () => {
         start: vi.fn(),
         stop: vi.fn(),
       } as never);
+
+      const trackSpy = vi.spyOn(analyticsModule, 'trackEvent');
 
       wrap(<TranslateViewer campaignId={CAMPAIGN_ID} gameRef={GAME_REF} />);
       await act(async () => {
@@ -1117,6 +1119,11 @@ describe('TranslateViewer', () => {
 
       // No segment block hint
       expect(screen.queryByTestId('translate-viewer-lang-block-hint')).not.toBeInTheDocument();
+
+      // M2 fix (final-review): DEC-FE-12 — legacy SSE (both lang fields === undefined) MUST NOT emit
+      // lang_detected audit event. This pins the contract vs. S7 spec copy which said "(audit)".
+      // DEC-FE-12 wins: legacy callers must not pollute analytics with synthetic null events.
+      expect(trackSpy).not.toHaveBeenCalledWith('translate.lang_detected', expect.anything());
     });
   });
 
@@ -1243,6 +1250,14 @@ describe('TranslateViewer', () => {
       // sse.start called 2nd time with 5th arg = 'FR' (sourceLangOverride)
       expect(startMock).toHaveBeenCalledTimes(2);
       expect(startMock.mock.calls[1][4]).toBe('FR');
+
+      // M1 fix (final-review): lang_modal_dismissed must NOT fire on confirm-path.
+      // Pins the contract: handleModalConfirm closes modal via setModalState (not handleModalOpenChange),
+      // and Radix controlled mode does NOT call onOpenChange(false) when parent flips `open` prop.
+      expect(trackSpy).not.toHaveBeenCalledWith(
+        'translate.lang_modal_dismissed',
+        expect.anything()
+      );
     });
 
     it('user opens modal + confirms same lang → no lang_overridden + sse.start NOT called again', async () => {
@@ -1303,6 +1318,12 @@ describe('TranslateViewer', () => {
 
       // sse.start still only 1 call (no re-translate on same lang)
       expect(startMock).toHaveBeenCalledTimes(1);
+
+      // M1 fix (final-review): lang_modal_dismissed must NOT fire on confirm-path (even same-lang confirm).
+      expect(trackSpy).not.toHaveBeenCalledWith(
+        'translate.lang_modal_dismissed',
+        expect.anything()
+      );
     });
   });
 

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } 
 
 import { AbortButton } from '@/components/features/gamebook/AbortButton';
 import { BookPicker } from '@/components/features/gamebook/BookPicker';
+import { EnterManualLink } from '@/components/features/gamebook/EnterManualLink';
 import { LangBadge } from '@/components/features/gamebook/LangBadge';
 import { LangOverrideModal } from '@/components/features/gamebook/LangOverrideModal';
 import { LoadingSkeleton } from '@/components/features/gamebook/LoadingSkeleton';
@@ -68,6 +69,7 @@ export function TranslateViewer({ campaignId, gameRef }: TranslateViewerProps): 
   const [phase, setPhase] = useState<Phase>('idle');
   const [artifact, setArtifact] = useState<GamebookPhotoArtifact | null>(null);
   const [activeSegment, setActiveSegment] = useState<GamebookSegment | null>(null);
+  const [kebabOpen, setKebabOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { isReaderMode, toggle: toggleReaderMode } = useReaderMode();
@@ -290,7 +292,30 @@ export function TranslateViewer({ campaignId, gameRef }: TranslateViewerProps): 
       <header className="flex flex-wrap items-center gap-3">
         <div className="flex flex-1 items-center justify-between gap-2">
           <h1 className="text-xl font-semibold text-[var(--c-game)]">Traduci pagina libro game</h1>
-          <ReaderModeToggle isReaderMode={isReaderMode} onToggle={toggleReaderMode} />
+          <div className="flex items-center gap-1">
+            <ReaderModeToggle isReaderMode={isReaderMode} onToggle={toggleReaderMode} />
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setKebabOpen(o => !o)}
+                aria-label="Menu opzioni"
+                aria-expanded={kebabOpen}
+                aria-haspopup="menu"
+                className="rounded-md p-2 hover:bg-muted"
+                data-testid="translate-kebab-button"
+              >
+                ⋮
+              </button>
+              {kebabOpen && (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-full z-10 mt-1 w-48 rounded-md border border-border bg-card shadow-lg"
+                >
+                  <EnterManualLink entryPoint="kebab" campaignId={campaignId} />
+                </div>
+              )}
+            </div>
+          </div>
         </div>
         {showBadge && (
           <LangBadge
@@ -350,12 +375,22 @@ export function TranslateViewer({ campaignId, gameRef }: TranslateViewerProps): 
         >
           {phase === 'idle' || phase === 'translated' ? 'Scatta o scegli foto' : 'In corso…'}
         </button>
+        {phase === 'idle' && !artifact && (
+          <EnterManualLink entryPoint="empty_state" campaignId={campaignId} />
+        )}
         {uiStep && <LoadingSkeleton uiStep={uiStep} />}
         {isAbortableStep(uiStep) && <AbortButton onClick={handleAbort} />}
         {errorMessage && (
-          <p className="text-sm text-destructive" role="alert" data-testid="translate-viewer-error">
-            {errorMessage}
-          </p>
+          <>
+            <p
+              className="text-sm text-destructive"
+              role="alert"
+              data-testid="translate-viewer-error"
+            >
+              {errorMessage}
+            </p>
+            <EnterManualLink entryPoint="error_cta" campaignId={campaignId} />
+          </>
         )}
         {segmentBlockedByLang && (
           <p

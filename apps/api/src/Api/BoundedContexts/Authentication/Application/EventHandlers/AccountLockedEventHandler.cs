@@ -11,6 +11,24 @@ namespace Api.BoundedContexts.Authentication.Application.EventHandlers;
 /// <summary>
 /// Event handler for AccountLockedEvent.
 /// Issue #3676: Sends email notification and creates audit log when account is locked.
+///
+/// Issue #1534 review note (2026-06-01): this handler intentionally retains direct
+/// <see cref="AuditService.LogAsync"/> calls AFTER the audit-path collapse refactor.
+/// The audit rows written here capture the EMAIL-NOTIFICATION SIDE EFFECT (action
+/// "ACCOUNT_LOCKED" / "ACCOUNT_LOCKED_EMAIL_FAILED", details carry EmailSent flag) —
+/// information that is NOT in the domain event itself and therefore NOT captured by
+/// the new <c>DomainEventAuditHandler&lt;AccountLockedEvent&gt;</c>.
+///
+/// Net effect: AccountLockedEvent produces TWO audit rows by design:
+///   1. <c>audit_outbox</c> row from <c>DomainEventAuditHandler</c> (Action=
+///      "DomainEvent.AccountLockedEvent", Resource="AccountLockedEvent") = the domain
+///      fact that lockout occurred
+///   2. <c>audit_logs</c> row from this handler (Action="ACCOUNT_LOCKED" or
+///      "ACCOUNT_LOCKED_EMAIL_FAILED", Resource="User") = the side effect (email send
+///      success/failure)
+///
+/// These are complementary, not duplicate. The two rows can be correlated via
+/// <c>resource_id</c> (UserId) + temporal proximity (~ms apart).
 /// </summary>
 internal sealed class AccountLockedEventHandler : INotificationHandler<AccountLockedEvent>
 {

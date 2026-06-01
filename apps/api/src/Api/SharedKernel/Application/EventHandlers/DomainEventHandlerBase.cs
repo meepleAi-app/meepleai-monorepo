@@ -88,17 +88,25 @@ internal abstract class DomainEventHandlerBase<TEvent> : INotificationHandler<TE
 
     /// <summary>
     /// Gets the user ID associated with the event, if any.
-    /// Retained for subclass use; no longer invoked by the base <see cref="Handle"/> flow
-    /// (audit user-id resolution is performed via convention-based reflection in
-    /// <see cref="DomainEventAuditHandler{TEvent}"/>).
+    ///
+    /// ⚠️ DEAD HOOK (issue #1534, 2026-06-01): no longer invoked by the base <see cref="Handle"/>
+    /// flow after the audit-path collapse. Audit user-id resolution is performed via
+    /// convention-based reflection in <see cref="DomainEventAuditHandler{TEvent}"/>'s
+    /// <c>ActorPropertyNames</c> list. Existing subclass overrides in the 65 handler classes
+    /// are compiled but never called; they will be removed in a follow-up cleanup PR. New
+    /// handlers should NOT override this method — add the property name to
+    /// <c>DomainEventAuditHandler.ActorPropertyNames</c> instead.
     /// </summary>
     protected virtual Guid? GetUserId(TEvent domainEvent) => null;
 
     /// <summary>
     /// Gets additional metadata for audit logging.
-    /// Retained for subclass use; no longer invoked by the base <see cref="Handle"/> flow —
-    /// <see cref="DomainEventAuditHandler{TEvent}"/> serializes the whole event into the
-    /// payload's <c>Details</c> field via <c>JsonSerializer</c>.
+    ///
+    /// ⚠️ DEAD HOOK (issue #1534, 2026-06-01): same status as <see cref="GetUserId"/> —
+    /// no longer invoked by the base <see cref="Handle"/> flow. <see cref="DomainEventAuditHandler{TEvent}"/>
+    /// serializes the whole event into the payload's <c>Details</c> field via <c>JsonSerializer</c>,
+    /// so all event properties are captured automatically without per-handler metadata override.
+    /// Existing subclass overrides will be removed in a follow-up cleanup PR.
     /// </summary>
     protected virtual Dictionary<string, object?>? GetAuditMetadata(TEvent domainEvent) => null;
 }

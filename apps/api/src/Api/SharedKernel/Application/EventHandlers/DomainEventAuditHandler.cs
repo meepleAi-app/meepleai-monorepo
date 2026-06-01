@@ -80,24 +80,61 @@ internal sealed class DomainEventAuditHandler<TEvent> : INotificationHandler<TEv
     }
 
     /// <summary>
-    /// Convention-based UserId extraction: looks for a public <c>UserId</c> property of type
-    /// <see cref="Guid"/> (or nullable Guid) on the event type. Returns <c>null</c> when absent —
-    /// system-scoped events (no user actor) are valid and remain auditable without a user id.
+    /// Convention-based UserId extraction: probes a priority-ordered list of common actor
+    /// property names on the event type, returning the first <see cref="Guid"/> value found.
+    /// Returns <c>null</c> when none match — system-scoped events (no user actor) are valid
+    /// and remain auditable without a user id.
+    ///
+    /// The probe list covers the actor naming conventions present in MeepleAI's domain events:
+    /// <list type="bullet">
+    ///   <item><c>UserId</c> — Authentication, AgentMemory, KnowledgeBase (most common)</item>
+    ///   <item><c>ActorId</c> — SharedGameCatalog (mechanic analysis admin actions)</item>
+    ///   <item><c>AdminId</c> — Administration, SharedGameCatalog share-request admin actions</item>
+    ///   <item><c>OrganizerId</c> — GameManagement (game night events)</item>
+    ///   <item><c>CreatedByUserId</c>, <c>CreatedBy</c>, <c>ModifiedBy</c>, <c>DeletedBy</c>,
+    ///     <c>ApprovedBy</c>, <c>ApprovedByUserId</c>, <c>RejectedBy</c>, <c>PublishedBy</c>,
+    ///     <c>ArchivedBy</c>, <c>SubmittedBy</c>, <c>RequestedBy</c> — SharedGameCatalog content
+    ///     lifecycle + Authentication access requests + SystemConfiguration + WorkflowIntegration</item>
+    /// </list>
+    /// Issue #1534 review fix: original implementation matched only <c>UserId</c>, dropping
+    /// attribution silently for ~22 admin/content-lifecycle events (security audit gap).
     /// </summary>
+    private static readonly string[] ActorPropertyNames =
+    [
+        "UserId",
+        "ActorId",
+        "AdminId",
+        "OrganizerId",
+        "CreatedByUserId",
+        "ApprovedByUserId",
+        "CreatedBy",
+        "ModifiedBy",
+        "DeletedBy",
+        "ApprovedBy",
+        "RejectedBy",
+        "PublishedBy",
+        "ArchivedBy",
+        "SubmittedBy",
+        "RequestedBy",
+    ];
+
     private static Guid? TryExtractUserId(TEvent notification)
     {
-        var property = typeof(TEvent).GetProperty("UserId");
-        if (property is null)
+        foreach (var name in ActorPropertyNames)
         {
-            return null;
+            var property = typeof(TEvent).GetProperty(name);
+            if (property is null)
+            {
+                continue;
+            }
+
+            var value = property.GetValue(notification);
+            if (value is Guid id && id != Guid.Empty)
+            {
+                return id;
+            }
         }
 
-        var value = property.GetValue(notification);
-        return value switch
-        {
-            Guid id => id,
-            null => null,
-            _ => null,
-        };
+        return null;
     }
 }

@@ -1155,4 +1155,238 @@ describe('TranslateViewer', () => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // #1559 — T7: S4 re-translate + S6 jest-axe full viewer states
+  // ---------------------------------------------------------------------------
+
+  describe('#1559 — S4: re-translate via sourceLangOverride after manual modal', () => {
+    it('user opens modal + changes lang → trackEvent lang_overridden + sse.start called with override', async () => {
+      makeUploadAndSegmentMocks();
+      const startMock = vi.fn();
+      // SSE already complete with EN detection so badge shows + effects fire on segment arrival
+      vi.mocked(sseHook.useTranslateSegmentSSE).mockReturnValue({
+        partialText: 'Apri la porta.',
+        isComplete: true,
+        appliedTerms: [],
+        error: undefined,
+        detectedSourceLang: 'EN',
+        langDetectionConfidence: 0.92,
+        start: startMock,
+        stop: vi.fn(),
+      } as never);
+
+      const trackSpy = vi.spyOn(analyticsModule, 'trackEvent');
+      const user = userEvent.setup();
+
+      wrap(<TranslateViewer campaignId={CAMPAIGN_ID} gameRef={GAME_REF} />);
+      await act(async () => {
+        firePhotoInput();
+      });
+
+      // segments_ready: SegmentPicker + badge visible (showBadge = segments_ready + artifact + tier!=none)
+      await waitFor(() => {
+        expect(screen.getByTestId('segment-picker')).toBeInTheDocument();
+      });
+
+      // Badge visible: tier=high, lang=EN
+      expect(screen.getByTestId('lang-badge')).toBeInTheDocument();
+      expect(screen.getByText(/sorgente: EN/i)).toBeInTheDocument();
+
+      // Click segment §1 → handlePickSegment sets activeSegment + phase='translating'
+      // Then immediate flip: phase='translating' + sse.isComplete=true → phase='translated'
+      // sse.start called with no override (1st call, arg[4]=undefined)
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('segment-picker-translate-1'));
+      });
+
+      // Wait for translated phase (TranslationPane visible)
+      await waitFor(() => {
+        expect(screen.getByTestId('translation-pane-it')).toBeInTheDocument();
+      });
+
+      // sse.start called once (arg[4] = undefined, no override)
+      expect(startMock).toHaveBeenCalledTimes(1);
+      expect(startMock.mock.calls[0][4]).toBeUndefined();
+
+      // lang_detected analytics fired when artifact was set + isComplete=true
+      expect(trackSpy).toHaveBeenCalledWith(
+        'translate.lang_detected',
+        expect.objectContaining({ lang: 'EN', tier: 'high' })
+      );
+
+      // User taps badge → modal opens mode='manual', preselect='EN'
+      await user.click(screen.getByTestId('lang-badge'));
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      });
+
+      expect(trackSpy).toHaveBeenCalledWith(
+        'translate.lang_modal_opened',
+        expect.objectContaining({ mode: 'manual', tier: 'high' })
+      );
+
+      // User selects FR + confirms
+      await user.click(screen.getByLabelText('Francese'));
+      await user.click(screen.getByRole('button', { name: /conferma e ritraduci/i }));
+
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      });
+
+      // lang_overridden fired
+      expect(trackSpy).toHaveBeenCalledWith(
+        'translate.lang_overridden',
+        expect.objectContaining({ fromLang: 'EN', toLang: 'FR' })
+      );
+
+      // sse.start called 2nd time with 5th arg = 'FR' (sourceLangOverride)
+      expect(startMock).toHaveBeenCalledTimes(2);
+      expect(startMock.mock.calls[1][4]).toBe('FR');
+    });
+
+    it('user opens modal + confirms same lang → no lang_overridden + sse.start NOT called again', async () => {
+      makeUploadAndSegmentMocks();
+      const startMock = vi.fn();
+      vi.mocked(sseHook.useTranslateSegmentSSE).mockReturnValue({
+        partialText: 'Apri la porta.',
+        isComplete: true,
+        appliedTerms: [],
+        error: undefined,
+        detectedSourceLang: 'EN',
+        langDetectionConfidence: 0.92,
+        start: startMock,
+        stop: vi.fn(),
+      } as never);
+
+      const trackSpy = vi.spyOn(analyticsModule, 'trackEvent');
+      const user = userEvent.setup();
+
+      wrap(<TranslateViewer campaignId={CAMPAIGN_ID} gameRef={GAME_REF} />);
+      await act(async () => {
+        firePhotoInput();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('segment-picker')).toBeInTheDocument();
+      });
+
+      // Click segment → 1st sse.start call (activeSegment set)
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('segment-picker-translate-1'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('translation-pane-it')).toBeInTheDocument();
+      });
+
+      expect(startMock).toHaveBeenCalledTimes(1);
+
+      // Open modal + confirm same EN lang (preselect='EN', user doesn't change)
+      await user.click(screen.getByTestId('lang-badge'));
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      });
+
+      // EN is preselected
+      expect(screen.getByLabelText('Inglese')).toBeChecked();
+
+      // Confirm without changing (chosen=EN, previous=EN → same)
+      await user.click(screen.getByRole('button', { name: /conferma e ritraduci/i }));
+
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      });
+
+      // No lang_overridden (same lang confirmed)
+      expect(trackSpy).not.toHaveBeenCalledWith('translate.lang_overridden', expect.anything());
+
+      // sse.start still only 1 call (no re-translate on same lang)
+      expect(startMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('#1559 — S6: jest-axe a11y full viewer states', () => {
+    it('axe: zero violations with tier=high badge + modal closed', async () => {
+      makeUploadAndSegmentMocks();
+      vi.mocked(sseHook.useTranslateSegmentSSE).mockReturnValue({
+        partialText: 'Apri la porta.',
+        isComplete: true,
+        appliedTerms: [],
+        error: undefined,
+        detectedSourceLang: 'EN',
+        langDetectionConfidence: 0.92,
+        start: vi.fn(),
+        stop: vi.fn(),
+      } as never);
+
+      const { container } = wrap(<TranslateViewer campaignId={CAMPAIGN_ID} gameRef={GAME_REF} />);
+      await act(async () => {
+        firePhotoInput();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('segment-picker')).toBeInTheDocument();
+      });
+
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('axe: zero violations with tier=low + auto-low modal open', async () => {
+      makeUploadAndSegmentMocks();
+      vi.mocked(sseHook.useTranslateSegmentSSE).mockReturnValue({
+        partialText: '',
+        isComplete: true,
+        appliedTerms: [],
+        error: undefined,
+        detectedSourceLang: null,
+        langDetectionConfidence: 0.31,
+        start: vi.fn(),
+        stop: vi.fn(),
+      } as never);
+
+      const { container } = wrap(<TranslateViewer campaignId={CAMPAIGN_ID} gameRef={GAME_REF} />);
+      await act(async () => {
+        firePhotoInput();
+      });
+
+      // Modal auto-opens for tier=low
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      });
+
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('axe: zero violations with tier=medium badge + SegmentPicker blocked', async () => {
+      makeUploadAndSegmentMocks();
+      vi.mocked(sseHook.useTranslateSegmentSSE).mockReturnValue({
+        partialText: '',
+        isComplete: true,
+        appliedTerms: [],
+        error: undefined,
+        detectedSourceLang: 'FR',
+        langDetectionConfidence: 0.65,
+        start: vi.fn(),
+        stop: vi.fn(),
+      } as never);
+
+      const { container } = wrap(<TranslateViewer campaignId={CAMPAIGN_ID} gameRef={GAME_REF} />);
+      await act(async () => {
+        firePhotoInput();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('segment-picker')).toBeInTheDocument();
+      });
+
+      // No auto-modal for medium (only badge shown, picker blocked)
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+  });
 });

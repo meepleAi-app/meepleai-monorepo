@@ -21,7 +21,7 @@ The 4 issues are NOT a single deliverable. Each lands as its own PR, on its own 
 
 | Issue | Title | Foundation required | Risk |
 |-------|-------|--------------------|------|
-| **#1676** | Hero metadata enrichment | DTO extension + 4 new entity columns (mostly nullable, backfilled async) | Low — additive, no behavioral change |
+| **#1676** | Hero metadata enrichment | DTO extension + 5 new entity columns (3 on PdfDocument, 2 on TextChunk; all nullable, backfilled async) | Low — additive, no behavioral change |
 | **#1673** | Re-index with version selector | Indexer-versioning column (`pdf_documents.indexer_version`) + version registry + admin selector | Medium — must guarantee re-runnability of historical versions |
 | **#1675** | Per-doc quality eval | Per-doc eval pipeline (currently only global `/admin/rag-quality/report`) + result storage table | Medium — compute cost per eval run; storage growth |
 | **#1674** | Per-doc embeddings viewer | Per-doc embeddings retrieval API + access control + view-mode strategy | **High — corpus reconstruction / data leak (Newman)** |
@@ -82,7 +82,7 @@ heroMetadata: {
 
 #### Effort estimate
 
-- Migration: 2 columns on `PdfDocumentEntity`, 2 columns on `TextChunkEntity` → ~30 min
+- Migration: 3 columns on `PdfDocumentEntity` (`OcrApplied`, `IndexerVersion`, `LastReindexedAt`) + 2 columns on `TextChunkEntity` (`TokenCount`, `ConfidenceScore`) → ~45 min
 - DTO + endpoint: extend `GetKbDocDetailQuery` → +1 LEFT JOIN aggregate on `TextChunks` → ~1h
 - FE wiring: 5 new fields in hero card → ~1h
 - Tests: integration test for query + unit test for hero render → ~2h
@@ -192,10 +192,10 @@ GET /api/v1/admin/kb/docs/{docId}/eval/runs/{runId} → detail
 A per-doc eval needs a per-doc **goldset** (gold-standard Q&A pairs). MeepleAI today has corpus-wide goldsets only. Options:
 
 1. Tag existing goldset entries with `pdfDocumentId` (manual curation effort)
-2. Auto-derive a "smoke" goldset from existing user feedback (chat threads with thumbs-up + citations from this doc) — fast but noisy
-3. LLM-generated goldset (chunk → 3 Q&A pairs per chunk) — fastest, lowest quality
+2. Auto-derive a "smoke" goldset from existing user feedback (chat threads with thumbs-up + citations from this doc) — **⚠️ requires net-new infrastructure**: `KbUserFeedback` (`KbUserFeedback.cs:11-19`) today captures only `Outcome` keyed to `MessageId + ChatSessionId + GameId` — NO `PdfDocumentId` link, NO citation storage on the feedback entity. Resolving which doc a "helpful" message cited requires joining feedback → message → citation → chunk → pdf, none of which is persisted on the feedback path. Implementation gates on adding `PdfDocumentId[]` (or citation ref) to `KbUserFeedback` first.
+3. LLM-generated goldset (chunk → 3 Q&A pairs per chunk) — fastest, lowest quality, NO infrastructure dependency
 
-**Recommendation**: ship with **option 2** (auto-smoke goldset, mark `quality=experimental` in UI), let admins curate option 1 over time.
+**Recommendation**: ship with **option 3 (LLM-generated)** as the actual minimal-friction starter (option 2 was the originally-planned starter but the citation-linkage prerequisite makes it heavier than #1675 itself). Curate option 1 entries over time once #1675 has shipped + admins identify high-value docs. **Decision flipped 2026-06-01** post-spec-panel review of PR #1790.
 
 #### Compute cost
 
@@ -271,6 +271,8 @@ This gives admins:
 
 **Without exposing the vectors themselves.**
 
+**Residual risk acknowledgment (spec-panel review 2026-06-01)**: `nearestNeighborsPreview` returns cross-doc `chunkId` + similarity scores. This exposes partial corpus topology — repeated probing across docs builds a similarity graph of the corpus. Risk is **meaningfully lower than M3/M4** (no raw vectors → embedding-inversion attacks still require the embedding model running independently, which an external attacker doesn't have), but non-zero. Mitigations to consider at implementation time: (1) cap NN preview to same-doc-only (drop `fromSameDoc:false` results), (2) apply k-anonymity by aggregating NN clusters instead of individual chunks, (3) add rate limit per resource (5 NN previews per doc per hour per admin). Recommendation: ship M2 with cap #1 (same-doc-only) as the default and revisit if cross-doc visibility proves essential.
+
 #### Authorization (regardless of M2/M3/M4 choice)
 
 - Endpoint: `GET /api/v1/admin/kb/docs/{docId}/embeddings/summary` (M2 shape)
@@ -315,14 +317,14 @@ Suggested order:
 |----|----------|-----------|
 | D-A | #1676 first | Smallest foundation; unblocks #1673/#1675 column |
 | D-B | #1673 strategy registry = code-resident (Option 1) | ≤3 versions = no need for container infra |
-| D-C | #1675 goldset = auto-smoke (Option 2) | Curated goldsets are aspirational; smoke unblocks ship |
+| D-C | #1675 goldset = LLM-generated (Option 3) | Originally Option 2 (auto-smoke from feedback) but flipped post-spec-panel review (PR #1790) — `KbUserFeedback` has no `PdfDocumentId`/citation link, so Option 2 has net-new infra cost ≥ Option 3 |
 | D-D | #1674 starter = M2 aggregated views | Lowest risk; covers ~80% of debugging use cases |
 | D-E | All 4 issues retain P3 priority | No business demand surfaced; foundational work for future deep-dive admin debug workflows |
 
 ## 6. Open questions (deferred to plan phase per issue)
 
 - **OQ-1 (#1676)**: backfill `OcrApplied` retroactively from logs, or accept "—" for historical docs?
-- **OQ-2 (#1673)**: when does a historical indexer version get **deprecated** (removed from registry)? Need owner + retention SLA.
+- **~~OQ-2 (#1673)~~** ✅ ANSWERED 2026-06-01 (spec-panel review of PR #1790): historical indexer version deprecation owner = **#1673 implementation PR author + reviewer** (set at code-review time); retention SLA = **18 months post-supersession by a newer version** (matches MeepleAI's broader API deprecation policy). Rationale: without an explicit deprecation policy the code-resident registry grows unbounded and forces the container-registry migration D-B explicitly wants to avoid. The 18m window lets at-rest historical re-indexes (compliance, audit replay) cover typical retention needs without bloating the strategy registry past the ≤3-version assumption.
 - **OQ-3 (#1675)**: who curates per-doc goldsets long-term? Tooling-only or part of contributor workflow?
 - **OQ-4 (#1674)**: if M2 proves insufficient, what's the threshold to escalate to M4? Define measurable signal (e.g. "≥3 admin debug sessions per month blocked by lack of raw vectors").
 
@@ -337,4 +339,4 @@ Suggested order:
 - FU-4 spec: `docs/superpowers/specs/2026-05-29-sp5-admin-kb-f3-fu4-doc-actions-design.md`
 - FU-4 implementation: PR #1653 (merged 2026-05-30, addendum sections describe the exact persistence model the spin-outs reference)
 - spec-panel review 2026-05-29 (Newman risk identification for #1674)
-- embedding inversion attack references: Morris et al. 2023 ("Text Embeddings Reveal (Almost) As Much As Text"), Pan et al. 2024
+- embedding inversion attack reference: Morris, Kuleshov, Shmatikov, Rush (2023), "Text Embeddings Reveal (Almost) As Much As Text", ACL 2023 — establishes baseline that ~70-90% text recovery is possible from embedding vectors when the embedding model is known to the attacker. Additional academic references should be sourced and verified at the time #1674 enters plan-phase (do not pre-cite uncited authors in this design doc).

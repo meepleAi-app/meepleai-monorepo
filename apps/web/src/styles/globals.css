@@ -806,3 +806,49 @@
     opacity: 1;
   }
 }
+
+/* ============================================================================
+ * Translate-Viewer reader-mode (#1558 H · Aaron CORE spec 2026-05-23 §1b)
+ * ============================================================================
+ *
+ * Toggle (.reader-mode-toggle) and content scaling (.reader-mode-content)
+ * scoped via [data-reader-mode="true"] attribute on TranslateViewer root.
+ *
+ * Default (toggle off): font-size inherits (16px base), line-height 1.55,
+ * max-width 60ch, padding var(--s-4).
+ *
+ * Active (toggle on): 24px / 1.7 / 65ch / var(--s-6) padding.
+ * ============================================================================ */
+
+.reader-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-1) var(--s-3);
+  border-radius: var(--r-pill);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--f-mono);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+
+.reader-mode-toggle.active {
+  background: hsl(var(--c-kb) / 0.15);
+  border-color: hsl(var(--c-kb));
+  color: hsl(var(--c-kb));
+  font-weight: var(--fw-bold);
+}
+
+.reader-mode-toggle .ico {
+  font-size: 14px;
+}
+
+[data-reader-mode="true"] .reader-mode-content {
+  font-size: 24px;
+  line-height: 1.7;
+  padding: var(--s-6);
+  max-width: 65ch;
+  margin-inline: auto;
+}

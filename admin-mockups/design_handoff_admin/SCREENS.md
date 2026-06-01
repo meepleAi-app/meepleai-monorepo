@@ -200,7 +200,7 @@ Mockup per le funzioni admin reali prive di mockup SP5 (vedi `SURPLUS_DESIGN_PRO
 ### Sprint 5 — Operations (settimana 5)
 - A6 Catalog ingestion
 - A7 Config / Flags
-- A8 Monitor + LiveEventLog SSE — **tracciato F4.1 #1718** (mockup `admin/sp5-admin-monitor.html`)
+- A8 Monitor + LiveEventLog SSE — **✅ completato F4.1 #1718** (PR #1740+#1764+#1768+#PR-integration-TBD)
 
 ### Sprint 6 — Content & Tools (settimana 6)
 - A9 Notifications + TemplateEditor

@@ -24,3 +24,15 @@ describe('entity tokens alignment (post-#807 AA, post DS-16)', () => {
     expect(css).toMatch(/--c-toolkit:\s*142\s+70%\s+30%/);
   });
 });
+
+describe('--c-text-high-contrast (AAA contrast)', () => {
+  const css = fs.readFileSync(path.join(__dirname, '../design-tokens-canonical.css'), 'utf8');
+
+  it('exists in :root (light theme) with HSL 32 36% 4% (#0f0a05 ≈15:1 on cream)', () => {
+    expect(css).toMatch(/:root\s*\{[\s\S]*--c-text-high-contrast:\s*32\s+36%\s+4%/);
+  });
+
+  it('exists in [data-theme="dark"] with HSL 0 0% 100% (#ffffff ≈18:1 on dark)', () => {
+    expect(css).toMatch(/\[data-theme="dark"\]\s*\{[\s\S]*--c-text-high-contrast:\s*0\s+0%\s+100%/);
+  });
+});

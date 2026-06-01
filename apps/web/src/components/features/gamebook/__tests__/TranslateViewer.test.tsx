@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -773,6 +774,68 @@ describe('TranslateViewer', () => {
 
     await act(async () => {
       resolveSegment({ id: PHOTO_ID, segments: [] });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // reader-mode integration (#1558 H)
+  // ---------------------------------------------------------------------------
+  describe('reader-mode integration (#1558 H)', () => {
+    beforeEach(() => {
+      window.localStorage.clear();
+    });
+
+    afterEach(() => {
+      window.localStorage.clear();
+    });
+
+    it('renders the ReaderModeToggle in the header', () => {
+      wrap(<TranslateViewer campaignId={CAMPAIGN_ID} gameRef={GAME_REF} />);
+      expect(screen.getByRole('button', { name: /reader mode/i })).toBeInTheDocument();
+    });
+
+    it('root wrapper has data-reader-mode="false" by default (S1)', () => {
+      const { container } = wrap(<TranslateViewer campaignId={CAMPAIGN_ID} gameRef={GAME_REF} />);
+      const root = container.querySelector('[data-reader-mode]');
+      expect(root).toHaveAttribute('data-reader-mode', 'false');
+    });
+
+    it('clicking toggle sets data-reader-mode="true" + writes localStorage (S1)', async () => {
+      const user = userEvent.setup();
+      const { container } = wrap(<TranslateViewer campaignId={CAMPAIGN_ID} gameRef={GAME_REF} />);
+      await user.click(screen.getByRole('button', { name: /attiva reader mode/i }));
+      expect(container.querySelector('[data-reader-mode]')).toHaveAttribute(
+        'data-reader-mode',
+        'true'
+      );
+      expect(window.localStorage.getItem('reader-mode-enabled')).toBe('true');
+    });
+
+    it('applies reader-mode from localStorage on mount (S2 persistence)', async () => {
+      window.localStorage.setItem('reader-mode-enabled', 'true');
+      const { container } = wrap(<TranslateViewer campaignId={CAMPAIGN_ID} gameRef={GAME_REF} />);
+      // useReaderMode reads localStorage in a useEffect (SSR-safe), so we wait for it
+      await waitFor(() => {
+        expect(container.querySelector('[data-reader-mode]')).toHaveAttribute(
+          'data-reader-mode',
+          'true'
+        );
+      });
+    });
+
+    it('reader-mode wrapper contains the camera section (S3 cascade scope)', () => {
+      const { container } = wrap(<TranslateViewer campaignId={CAMPAIGN_ID} gameRef={GAME_REF} />);
+      const wrapper = container.querySelector('[data-reader-mode]');
+      expect(wrapper).toBeInTheDocument();
+      // The camera button lives inside the data-reader-mode wrapper
+      const cameraBtn = screen.getByTestId('open-camera-button');
+      expect(wrapper).toContainElement(cameraBtn);
+    });
+
+    it('has zero a11y violations with reader-mode toggle rendered (S6)', async () => {
+      const { container } = wrap(<TranslateViewer campaignId={CAMPAIGN_ID} gameRef={GAME_REF} />);
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
     });
   });
 });

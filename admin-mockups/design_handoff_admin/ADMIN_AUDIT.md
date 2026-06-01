@@ -29,7 +29,7 @@ Il handoff sovrastima massicciamente lo sforzo: dei ~38 componenti "nuovi", **~3
 |---|---|---|
 | 1 | Esiste già una sezione admin? Dove/quali pagine | **Sì, estesa**. `apps/web/src/app/admin/(dashboard)/`: overview, users, ai, agents (~25 route), analytics, config, content, knowledge-base, monitor, catalog-ingestion, shared-games, rag-quality, providers, notifications. |
 | 2 | Modello RBAC oggi? Compatibile con user/admin/superadmin? | **Parzialmente**. Esistono `user`/`admin`/`superadmin` (✅) ma anche `editor`/`creator`; **`premium` NON esiste come ruolo** (è `UserTier`). Gate admin+superadmin già attivo. |
-| 3 | Esistono `AdminDataTable`, `KPISparkline`, `LiveEventLog`? | `DataTable` ✅ (`ui/data-display/data-table.tsx`, senza pagination/virtualization); KPI cards ✅ (no "Sparkline" dedicato, Recharts disponibile); LiveEventLog 🚧 **in corso F4.1 #1718** (BE outbox `DomainEventLog` esiste post-S1 PR #1532; gap solo SSE broadcast `events/live` admin-scoped; FE component ex-novo, mockup `sp5-admin-monitor.html`). |
+| 3 | Esistono `AdminDataTable`, `KPISparkline`, `LiveEventLog`? | `DataTable` ✅ (`ui/data-display/data-table.tsx`, senza pagination/virtualization); KPI cards ✅ (no "Sparkline" dedicato, Recharts disponibile); LiveEventLog ✅ **completato F4.1 #1718** (PR #1740 BE + PR #1764 FE + PR #1768 component + #PR-integration-TBD integration). |
 | 4 | Quali endpoint admin esistono / mancano? | Vasta copertura sotto `/api/v1/admin/*`. **Mancano**: moderation (0%), editor/versions generico, SSE `events/live` globale, `force-logout`, `flag-hallucination`, `kb/tree`, `idempotency-check`. Dettaglio §5. |
 | 5 | Schermata pilota? | **A1 Overview** (P0, già full, basso rischio → valida shell + design-system SP5), poi **A2 Users** come stress-test sicurezza. §10. |
 
@@ -173,7 +173,7 @@ Il handoff sovrastima massicciamente lo sforzo: dei ~38 componenti "nuovi", **~3
 | A5b KB upload flow | FSM 5 stati + SSE | ✅ | `knowledge-base/upload/page.tsx` |
 | A6 Catalog ingestion | runs + run-now | ✅ | `catalog-ingestion/page.tsx` |
 | A7 Config/Flags | rows + dirty bar + apply | ✅ | `config/page.tsx?tab=flags` (dirty-bar **da verificare**) |
-| A8 Monitor | metrics + LiveEventLog SSE | 🚧 in corso #1718 | `monitor/page.tsx` (12 tab consolidati #5040/#5053; **NB:** `LogsTab` = Loki app logs, NON LiveEventLog. F4.1 aggiunge 13° tab "events" su `DomainEventLog` outbox + SSE). |
+| A8 Monitor | metrics + LiveEventLog SSE | ✅ completato #1718 | `monitor/page.tsx` (13 tab consolidati; tab "events" wired a `LiveEventLog` component; BE SSE `events/live` PR #1740; FE re-skin PR #1764; LiveEventLog component PR #1768; integration #PR-integration-TBD). |
 | A9 Notifications | template list + editor + test-send | 🟡 | solo `notifications/compose/page.tsx`; template in `content/email-templates` (scollegato) |
 | B1 Editor | block editor + version history | 🟡 | `(authenticated)/editor/page.tsx` — **fuori da /admin**, `?gameId=` non `[type]/[id]` |
 | B2 Pipeline builder | canvas + nodes | 🟡 | `(authenticated)/pipeline-builder/page.tsx` — fuori da /admin, no `[id]` |
@@ -202,7 +202,7 @@ Il handoff sovrastima massicciamente lo sforzo: dei ~38 componenti "nuovi", **~3
 
 Riuso diretto/quasi-diretto (✅): AdminShell, AdminTopbar (`TopBar`), BulkActionsBar (`BulkActionBar`), AdminKPICard (`KPICard`/`KPIStatCard`), AdminPanel (`Card`), AdminTabs (`Tabs`/`AdminHubTabBar`), RoleChip (`UserRoleBadge`, 5 ruoli), StatusChip (`Badge`+status-badge), Admin{Input,Select,Toggle,Textarea} (primitives), AdminFormRow (`Form`/`settings-row`), RetrievalChunkList (`RetrievedChunkCard`), LatencyBreakdownBar (`WaterfallChart`), DocumentViewer (`PdfViewerModal`), ProcessingTimeline (`PdfStatusTimeline`), ConfirmModal (`AdminConfirmationDialog`), AuditLogTimeline (`AuditTab`/`UserActivityTimeline`), VersionHistory/Timeline, VersionDiffViewer (`components/diff/`), FlowCanvas/NodePalette/NodeConfigPanel (ReactFlow `@xyflow/react`, **2 impl. esistenti**), TemplateEditor/BlockEditor (Tiptap `RichTextEditor`), FlagRow (`FeatureFlagsTab`).
 
-Adattamento/estensione (🟡): AdminSidebar (drawer→sidebar persistente, **se richiesta**), AdminDataTable (+pagination +virtualization), KPISparkline (wrapper Recharts), EnvPill, StatusDot, QueryDrillDown, ChunkTable, IngestionLog, SyncStatusHero, DirtyStateBar, LiveEventLog (UI + SSE — tracciato F4.1 #1718, mockup `admin/sp5-admin-monitor.html`), TimeRangePicker (`DateRangePicker`+presets), PreviewFrame, PublishChecklist (`setup-checklist`), ScenarioPicker/StoreInspector, DangerZoneBox.
+Adattamento/estensione (🟡): AdminSidebar (drawer→sidebar persistente, **se richiesta**), AdminDataTable (+pagination +virtualization), KPISparkline (wrapper Recharts), EnvPill, StatusDot, QueryDrillDown, ChunkTable, IngestionLog, SyncStatusHero, DirtyStateBar, LiveEventLog ✅ F4.1 #1718 mergiato, TimeRangePicker (`DateRangePicker`+presets), PreviewFrame, PublishChecklist (`setup-checklist`), ScenarioPicker/StoreInspector, DangerZoneBox.
 
 Da creare ex-novo (❌, ~2-3): **KBTree** (tree-view generico file/cartelle), **MobileFallback** "desktop-only gate" (se richiesto come componente), eventuale **density system** admin-wide.
 

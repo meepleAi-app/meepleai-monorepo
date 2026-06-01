@@ -96,6 +96,13 @@
 | `sp4-session-catan-parts.jsx` | component-mock | Shared parts for Catan — player rail with hand counts + dev cards + pieces remaining. |
 | `sp4-session-catan-summary.html` | page-mock | `/sessions/[id]` Catan post-game (final VP: settlements + cities + Longest Road + Largest Army + VP dev cards). Premium #3/7. |
 | `sp4-session-catan-summary.jsx` | component-mock | Root component for Catan summary — hero + tabs (Scoreboard / Final Board / Stats). |
+| `sp4-session-power-grid-data.jsx` | component-mock | Power Grid-specific dataset (Elektro, 4 resources market, 8 plants, 5 phases, 3 game steps). Premium #4/7. |
+| `sp4-session-power-grid-flavor.jsx` | component-mock | Power Grid flavor components — `PhaseTimeline`, `PowerPlantMarket`, `ResourceMarket`, `AuctionOverlay`, `NetworkMap`, `PlantsRail`, `TurnOrderStrip` (reverse-aware). |
+| `sp4-session-power-grid-live.html` | page-mock | `/sessions/[id]/live` Power Grid demo (heavy euro auction + network, 2-6 players, ~120 min). Extends skeleton with PG-specific panels + accordion-extended for game sections (auction/market/resources). |
+| `sp4-session-power-grid-live.jsx` | component-mock | Root component for `sp4-session-power-grid-live.html` — wires skeleton + PG flavor + RightColumnTabs (Scoring, Market, Network, Plants, Chat). |
+| `sp4-session-power-grid-parts.jsx` | component-mock | Shared parts for Power Grid — `SectionCard` accordion, player rail, helper `sec(id)` for accordion state machine across 5 phases. |
+| `sp4-session-power-grid-summary.html` | page-mock | `/sessions/[id]` Power Grid post-game (final: cities powered + Elektro tiebreaker + plants capacity). Premium #4/7. |
+| `sp4-session-power-grid-summary.jsx` | component-mock | Root component for PG summary — hero + tabs (Scoreboard / Network snapshot / Step transitions / Stats). |
 | `sp4-session-puerto-rico-data.jsx` | component-mock | Puerto Rico-specific dataset (role-selection state, 5 goods, plantations + buildings grids). Premium #2/7. |
 | `sp4-session-puerto-rico-flavor.jsx` | component-mock | Puerto Rico flavor components — `RoleSelectionBoard`, `PlantationGrid`, `BuildingGrid`, `GalleonsShipping`, `TradingHouseSlots`, `ColonistShip`. |
 | `sp4-session-puerto-rico-live.html` | page-mock | `/sessions/[id]/live` Puerto Rico demo (heavy euro role-selection, 3-5 players, ~120min). Extends skeleton (mockup #1) with PR-specific panels. |
@@ -117,6 +124,13 @@
 | `sp4-session-wingspan-summary-sections.jsx` | component-mock | Celebrative body sections of `/sessions/[id]` Wingspan demo (podium, KPI, diary, photos, chat highlights, share) — unchanged in 2026-05-31 consolidation. **Wingspan-flavored content**. |
 | `sp4-session-wingspan-summary-tabs.jsx` | component-mock | `window.SummaryReviewTabs` — 3 new consolidated tabs (scoreboard · notes · players) × 5 stati each (default · empty · loading · error · offline). **Wingspan scoring categories hard-coded**. See consolidation ADR. |
 | `sp4-session-wingspan-summary.html` | page-mock | `/sessions/[id]` Wingspan demo + consolidated tabs `?tab=scoreboard\|notes\|players` (was 3 separate sub-routes pre-2026-05-31, see ADR). **Wingspan-specific**. |
+| `sp4-session-zombicide-data.jsx` | component-mock | Zombicide Green Horde-specific dataset (survivors w/ skill trees, zombie counts per type, scenario objectives). Premium #5/7. |
+| `sp4-session-zombicide-flavor.jsx` | component-mock | Zombicide GH flavor components — `SurvivorCard` (skill tree Blue→Yellow→Orange→Red + equipment + wounds + AP), `BoardStatePanel`, `CombatDicePanel`, `SpawnDeckIndicator`, `PhaseTimeline` (3-phase round), `MapTilesGrid`. |
+| `sp4-session-zombicide-live.html` | page-mock | `/sessions/[id]/live` Zombicide GH demo (co-op miniatures dungeon-crawler, 1-6 players, ~60-90 min/scenario). Extends skeleton + accordion-extended for game panels. |
+| `sp4-session-zombicide-live.jsx` | component-mock | Root component for `sp4-session-zombicide-live.html` — wires skeleton + Zombicide flavor + RightColumnTabs (Scoring, Dice, Board, Equip, Chat). |
+| `sp4-session-zombicide-parts.jsx` | component-mock | Shared parts for Zombicide — SectionCard accordion (16 utilizzi), helper `sec(id)` per accordion state machine across survivors/board/spawn panels. |
+| `sp4-session-zombicide-summary.html` | page-mock | `/sessions/[id]` Zombicide post-game (VICTORY/DEFEAT banner + mission objectives + survivors final state + XP totals + kill stats). Premium #5/7. |
+| `sp4-session-zombicide-summary.jsx` | component-mock | Root component for Zombicide summary — hero + tabs (Scoreboard / Survivors / Board final / Stats). |
 | `sp4-sessions-index.html` | page-mock | `/sessions`, `/games/[id]/sessions` (reuse) |
 | `sp4-toolkit-detail.html` | page-mock | `/toolkit` + sub-routes, `/library/[gameId]/toolbox`, `/library/[gameId]/toolkit`, `/library/private/[id]/toolkit/configure` |
 | `sp4-upload-wizard-extended.html` | page-mock | `/upload`, `/gamebook/upload` (partial) |
@@ -182,10 +196,10 @@
 
 | Type | Count |
 |------|------:|
-| page-mock | 61 |
-| component-mock | 35 |
+| page-mock | 63 |
+| component-mock | 40 |
 | dev-fixture | 12 |
-| **Total** | **108** |
+| **Total** | **115** |
 
 > The `*.jsx` twins of `*.html` files are not double-counted (the JSX is the
 > implementation companion of the HTML reference). Listing them separately

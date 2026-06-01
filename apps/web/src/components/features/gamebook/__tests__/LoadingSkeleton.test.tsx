@@ -51,4 +51,13 @@ describe('LoadingSkeleton', () => {
     const container = screen.getByTestId('translate-skeleton-translating');
     expect(container).toHaveAttribute('role', 'status');
   });
+
+  describe('reader-mode cascade (#1558 H · DEC-5)', () => {
+    it('root element has .reader-mode-content class for parent data-attr cascading', () => {
+      const { container } = render(<LoadingSkeleton uiStep="ocr" />);
+      // Root element should expose the cascade hook
+      const root = container.firstChild as HTMLElement;
+      expect(root).toHaveClass('reader-mode-content');
+    });
+  });
 });

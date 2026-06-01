@@ -75,6 +75,7 @@
     <PackageReference Include="MediatR" Version="14.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.11" />
     <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="10.0.8" />
+    <PackageReference Include="NTextCat" Version="0.3.65" />
     <!-- Issue #613: Polly v8 ResiliencePipeline for cache invalidation retry -->
     <PackageReference Include="Polly.Core" Version="8.6.6" />
     <PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.14.0-beta.2" />
@@ -174,5 +175,9 @@
   <ItemGroup Condition="'$(Configuration)' == 'Release'">
     <Compile Remove="DevTools/**/*.cs" />
     <None Remove="DevTools/**/*.cs" />
+  </ItemGroup>
+  <!-- NTextCat language model embedded resource (DEC-1 #1559) -->
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\LanguageDetection\Core14.profile.xml" />
   </ItemGroup>
 </Project>

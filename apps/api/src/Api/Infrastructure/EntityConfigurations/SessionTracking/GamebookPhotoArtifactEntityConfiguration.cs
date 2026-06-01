@@ -31,6 +31,17 @@ internal class GamebookPhotoArtifactEntityConfiguration : IEntityTypeConfigurati
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
         builder.Property(e => e.ExpiresAt).HasColumnName("expires_at").IsRequired();
 
+        // #1559 DEC-9: lang detection persistence (additive, nullable for backward compat)
+        builder.Property(e => e.DetectedSourceLang)
+            .HasColumnName("detected_source_lang")
+            .HasMaxLength(2)
+            .IsRequired(false);
+
+        builder.Property(e => e.LangDetectionConfidence)
+            .HasColumnName("lang_detection_confidence")
+            .HasColumnType("double precision")
+            .IsRequired(false);
+
         builder.Property(e => e.Segments)
             .HasColumnName("segments")
             .HasColumnType("jsonb")

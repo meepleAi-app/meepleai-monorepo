@@ -137,6 +137,7 @@ internal static class GamebookPhotoEndpoints
             [FromQuery] Guid photoId,
             [FromQuery] int paragraphNumber,
             [FromQuery] Guid gameBookId,
+            [FromQuery] string? sourceLangOverride,
             IMediator mediator,
             ICampaignOwnershipGuard ownershipGuard,
             HttpContext context,
@@ -146,6 +147,20 @@ internal static class GamebookPhotoEndpoints
             var (authenticated, session, error) = context.TryGetAuthenticatedUser();
             if (!authenticated) return error!;
             if (!TryGetUserId(context, session, out var userId)) return Results.Unauthorized();
+
+            // #1559 DEC-12: validate sourceLangOverride BEFORE the ownership check and BEFORE
+            // SSE headers are flushed, so a 400 can be returned as a proper HTTP error.
+            // Allowlist: EN, FR, DE, ES, IT (covers the 5 languages NTextCat is trained for).
+            if (sourceLangOverride is not null)
+            {
+                var normalized = sourceLangOverride.Trim().ToUpperInvariant();
+                if (normalized.Length == 0 ||
+                    (normalized is not "EN" and not "FR" and not "DE" and not "ES" and not "IT"))
+                {
+                    return Results.BadRequest(new { error = "sourceLangOverride must be one of EN, FR, DE, ES, IT" });
+                }
+                sourceLangOverride = normalized;
+            }
 
             // Issue #1415: pre-flight ownership check BEFORE writing SSE headers so middleware
             // can translate ForbiddenException/NotFoundException into proper HTTP 403/404.
@@ -157,7 +172,8 @@ internal static class GamebookPhotoEndpoints
             context.Response.Headers["Connection"] = "keep-alive";
 
             // C2 (2026-05-19): gameBookId scopes the per-book progress update.
-            var query = new TranslateGamebookSegmentQuery(campaignId, photoId, paragraphNumber, userId, gameBookId);
+            // DEC-12 (#1559): sourceLangOverride is nullable; null = use detected lang from cache.
+            var query = new TranslateGamebookSegmentQuery(campaignId, photoId, paragraphNumber, userId, gameBookId, sourceLangOverride);
 
             try
             {
@@ -214,13 +230,14 @@ internal static class GamebookPhotoEndpoints
         })
         .RequireAuthenticatedUser()
         .Produces(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest)
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status403Forbidden)
         .Produces(StatusCodes.Status404NotFound)
         .Produces(StatusCodes.Status504GatewayTimeout)
         .WithTags("Gamebook")
         .WithSummary("Stream paragraph translation as SSE")
-        .WithDescription("Server-Sent Events stream of TranslateChunk events. Must be GET for EventSource compatibility. Pass photoId and paragraphNumber as query params. Final chunk has IsComplete=true with ParagraphId. Non-owner callers receive HTTP 403 BEFORE the stream opens (Issue #1415).")
+        .WithDescription("Server-Sent Events stream of TranslateChunk events. Must be GET for EventSource compatibility. Pass photoId and paragraphNumber as query params. Optional sourceLangOverride (EN/FR/DE/ES/IT) overrides auto-detected source language. Final chunk has IsComplete=true with ParagraphId. Non-owner callers receive HTTP 403 BEFORE the stream opens (Issue #1415).")
         .WithOpenApi();
     }
 

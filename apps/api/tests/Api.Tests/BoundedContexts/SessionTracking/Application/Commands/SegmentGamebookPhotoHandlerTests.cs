@@ -3,10 +3,15 @@ using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.BoundedContexts.SessionTracking.Domain.ValueObjects;
+using Api.BoundedContexts.SessionTracking.Infrastructure.Caching;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 using Api.SharedKernel.Domain.ValueObjects;
 using FluentAssertions;
+using Moq;
 using Xunit;
+// Aliases to disambiguate from Api.Services.ILanguageDetectionService (unrelated shared-kernel service)
+using IHybridCacheService = Api.Services.IHybridCacheService;
+using ILangDetect = Api.BoundedContexts.SessionTracking.Infrastructure.Services.ILanguageDetectionService;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Application.Commands;
 
@@ -90,13 +95,18 @@ public sealed class SegmentGamebookPhotoHandlerTests
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static (SegmentGamebookPhotoCommandHandler handler, FakeCampaignRepo campaignRepo, FakeArtifactRepo artifactRepo, FakeOcrService ocr)
-        BuildSut()
+        BuildSut(
+            ILangDetect? langDetection = null,
+            IHybridCacheService? cache = null)
     {
         var campaignRepo = new FakeCampaignRepo();
         var artifactRepo = new FakeArtifactRepo();
         var storage = new FakeStorage();
         var ocr = new FakeOcrService();
-        var handler = new SegmentGamebookPhotoCommandHandler(campaignRepo, artifactRepo, storage, ocr);
+        var resolvedLang = langDetection ?? Mock.Of<ILangDetect>(s =>
+            s.Detect(It.IsAny<string>()) == new LanguageDetectionResult("IT", 0.88));
+        var resolvedCache = cache ?? Mock.Of<IHybridCacheService>();
+        var handler = new SegmentGamebookPhotoCommandHandler(campaignRepo, artifactRepo, storage, ocr, resolvedLang, resolvedCache);
         return (handler, campaignRepo, artifactRepo, ocr);
     }
 
@@ -153,7 +163,9 @@ public sealed class SegmentGamebookPhotoHandlerTests
 
         var throwingOcr = new ThrowingOcrService();
         var handler = new SegmentGamebookPhotoCommandHandler(
-            campaignRepo, artifactRepo, new FakeStorage(), throwingOcr);
+            campaignRepo, artifactRepo, new FakeStorage(), throwingOcr,
+            Mock.Of<ILanguageDetectionService>(),
+            Mock.Of<IHybridCacheService>());
 
         var cmd = new SegmentGamebookPhotoCommand(campaign.Id, artifact.Id, ownerId);
 
@@ -191,5 +203,106 @@ public sealed class SegmentGamebookPhotoHandlerTests
         ocr.CallCount.Should().Be(0);
         dto.Status.Should().Be("Segmented");
         dto.Segments.Should().HaveCount(1);
+    }
+
+    // ── #1559 T5: lang detection + cache integration ───────────────────────
+
+    [Fact]
+    public async Task Handle_OcrSucceeds_InvokesLangDetectionAndPersistsResult()
+    {
+        // Arrange
+        var langMock = new Mock<ILangDetect>();
+        langMock
+            .Setup(s => s.Detect(It.IsAny<string>()))
+            .Returns(new LanguageDetectionResult("EN", 0.92));
+
+        var (handler, campaignRepo, artifactRepo, _) = BuildSut(langDetection: langMock.Object);
+        var ownerId = Guid.NewGuid();
+        var campaign = BuildCampaign(ownerId);
+        campaignRepo.Store.Add(campaign);
+
+        var artifact = BuildArtifact(campaign.Id);
+        artifactRepo.Store.Add(artifact);
+
+        var cmd = new SegmentGamebookPhotoCommand(campaign.Id, artifact.Id, ownerId);
+
+        // Act
+        await handler.Handle(cmd, CancellationToken.None);
+
+        // Assert — lang detection was called exactly once with the OCR full text
+        langMock.Verify(s => s.Detect(It.IsAny<string>()), Times.Once);
+
+        // Domain entity must reflect the detected language + confidence
+        artifact.DetectedSourceLang.Should().Be("EN");
+        artifact.LangDetectionConfidence.Should().BeApproximately(0.92, 0.001);
+        artifact.Status.Should().Be(PhotoArtifactStatus.Segmented);
+    }
+
+    [Fact]
+    public async Task Handle_OcrSucceeds_PopulatesHybridCacheWithOcrSnapshot()
+    {
+        // Arrange
+        var cacheMock = new Mock<IHybridCacheService>();
+        cacheMock
+            .Setup(c => c.GetOrCreateAsync(
+                It.IsAny<string>(),
+                It.IsAny<Func<CancellationToken, Task<PhotoOcrCacheValue>>>(),
+                It.IsAny<string[]?>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<CancellationToken>()))
+            .Returns<string, Func<CancellationToken, Task<PhotoOcrCacheValue>>, string[]?, TimeSpan?, CancellationToken>(
+                (key, factory, tags, expiry, ct) => factory(ct));
+
+        var (handler, campaignRepo, artifactRepo, _) = BuildSut(cache: cacheMock.Object);
+        var ownerId = Guid.NewGuid();
+        var campaign = BuildCampaign(ownerId);
+        campaignRepo.Store.Add(campaign);
+
+        var artifact = BuildArtifact(campaign.Id);
+        artifactRepo.Store.Add(artifact);
+
+        var cmd = new SegmentGamebookPhotoCommand(campaign.Id, artifact.Id, ownerId);
+
+        // Act
+        await handler.Handle(cmd, CancellationToken.None);
+
+        // Assert — cache was populated with the expected key and a 24h TTL
+        var expectedKey = GamebookCacheKeys.PhotoOcr(artifact.Id);
+        cacheMock.Verify(c => c.GetOrCreateAsync(
+            expectedKey,
+            It.IsAny<Func<CancellationToken, Task<PhotoOcrCacheValue>>>(),
+            It.IsAny<string[]?>(),
+            TimeSpan.FromHours(24),
+            It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_LangDetectionThrows_DoesNotFailOcrPersistence()
+    {
+        // Arrange
+        var langMock = new Mock<ILangDetect>();
+        langMock
+            .Setup(s => s.Detect(It.IsAny<string>()))
+            .Throws(new InvalidOperationException("simulated NTextCat crash"));
+
+        var (handler, campaignRepo, artifactRepo, _) = BuildSut(langDetection: langMock.Object);
+        var ownerId = Guid.NewGuid();
+        var campaign = BuildCampaign(ownerId);
+        campaignRepo.Store.Add(campaign);
+
+        var artifact = BuildArtifact(campaign.Id);
+        artifactRepo.Store.Add(artifact);
+
+        var cmd = new SegmentGamebookPhotoCommand(campaign.Id, artifact.Id, ownerId);
+
+        // Act — must NOT throw even though lang detection explodes
+        var dto = await handler.Handle(cmd, CancellationToken.None);
+
+        // Assert — OCR still succeeded; artifact is Segmented; lang fields are null/empty
+        dto.Status.Should().Be("Segmented");
+        artifact.Status.Should().Be(PhotoArtifactStatus.Segmented);
+        artifact.DetectedSourceLang.Should().BeNull();
+        artifact.LangDetectionConfidence.Should().BeNull();
     }
 }

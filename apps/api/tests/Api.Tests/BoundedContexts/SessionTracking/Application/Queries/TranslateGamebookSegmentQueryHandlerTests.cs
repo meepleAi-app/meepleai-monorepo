@@ -5,6 +5,7 @@ using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.BoundedContexts.SessionTracking.Domain.ValueObjects;
+using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 using Api.Models;
 using Api.Services;
 using Api.Services.LlmClients;
@@ -176,6 +177,81 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
             => Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Fake LLM that captures the systemPrompt argument and yields a fixed Italian translation.
+    /// Used by T7 tests to verify the dynamic prompt content.
+    /// </summary>
+    private sealed class CapturingFakeLlmService : ILlmService
+    {
+        public string? CapturedSystemPrompt { get; private set; }
+
+        public async IAsyncEnumerable<StreamChunk> GenerateCompletionStreamAsync(
+            string systemPrompt,
+            string userPrompt,
+            RequestSource source = RequestSource.Manual,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+        {
+            CapturedSystemPrompt = systemPrompt;
+            yield return new StreamChunk("L'Alveare si risveglia.", IsFinal: false);
+            await Task.Yield();
+            yield return new StreamChunk(null, IsFinal: true, Usage: new LlmUsage(50, 10, 60));
+        }
+
+        public Task<LlmCompletionResult> GenerateCompletionAsync(string s, string u, RequestSource r = RequestSource.Manual, CancellationToken ct = default)
+            => Task.FromResult(LlmCompletionResult.CreateSuccess(string.Empty));
+
+        public Task<T?> GenerateJsonAsync<T>(string s, string u, RequestSource r = RequestSource.Manual, CancellationToken ct = default) where T : class
+            => Task.FromResult<T?>(null);
+
+        public Task<LlmCompletionResult> GenerateMultimodalCompletionAsync(IReadOnlyList<LlmMessage> messages, RequestSource source = RequestSource.Manual, CancellationToken ct = default)
+            => Task.FromResult(LlmCompletionResult.CreateSuccess(string.Empty));
+
+        public async IAsyncEnumerable<StreamChunk> GenerateMultimodalCompletionStreamAsync(
+            IReadOnlyList<LlmMessage> messages,
+            RequestSource source = RequestSource.Manual,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+        {
+            yield return new StreamChunk(null, IsFinal: true);
+            await Task.CompletedTask;
+        }
+
+        public Task<LlmCompletionResult> GenerateCompletionWithModelAsync(string explicitModel, string systemPrompt, string userPrompt, RequestSource source = RequestSource.Manual, int? maxTokens = null, CancellationToken ct = default)
+            => Task.FromResult(LlmCompletionResult.CreateSuccess(string.Empty));
+    }
+
+    /// <summary>
+    /// Fake IHybridCacheService for T7 tests.
+    /// If CachedValue is set, GetOrCreateAsync returns it directly (cache hit).
+    /// If CachedValue is null, GetOrCreateAsync invokes the factory (cache miss).
+    /// </summary>
+    private sealed class FakeHybridCache : IHybridCacheService
+    {
+        /// <summary>
+        /// Pre-set to simulate a cache hit. Null = cache miss (factory is invoked).
+        /// </summary>
+        public PhotoOcrCacheValue? CachedValue { get; set; }
+
+        public Task<T> GetOrCreateAsync<T>(
+            string cacheKey,
+            Func<CancellationToken, Task<T>> factory,
+            string[]? tags = null,
+            TimeSpan? expiration = null,
+            CancellationToken ct = default) where T : class
+        {
+            if (CachedValue is T hit)
+                return Task.FromResult(hit);
+
+            // Cache miss: invoke the factory (simulates repo fallback path).
+            return factory(ct);
+        }
+
+        public Task RemoveAsync(string cacheKey, CancellationToken ct = default) => Task.CompletedTask;
+        public Task<int> RemoveByTagAsync(string tag, CancellationToken ct = default) => Task.FromResult(0);
+        public Task<int> RemoveByTagsAsync(string[] tags, CancellationToken ct = default) => Task.FromResult(0);
+        public Task<HybridCacheStats> GetStatsAsync(CancellationToken ct = default)
+            => Task.FromResult(new HybridCacheStats());
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static TranslateGamebookSegmentQueryHandler BuildHandler(
@@ -185,7 +261,8 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
         FakeGlossaryRepo glossaryRepo,
         FakeProgressRepo progressRepo,
         ILlmService? llm = null,
-        ICampaignOwnershipGuard? ownershipGuard = null) =>
+        ICampaignOwnershipGuard? ownershipGuard = null,
+        IHybridCacheService? cache = null) =>
         new(
             campaignRepo,
             artifactRepo,
@@ -194,6 +271,7 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
             progressRepo,
             llm ?? new FakeLlmService(),
             ownershipGuard ?? new AlwaysOwnedGuard(),
+            cache ?? new FakeHybridCache(),
             NullLogger<TranslateGamebookSegmentQueryHandler>.Instance);
 
     // ── Tests ─────────────────────────────────────────────────────────────────
@@ -267,5 +345,200 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
         progressRow.CampaignSessionId.Should().Be(campaign.Id);
         progressRow.GameBookId.Should().Be(bookId);
         progressRow.LastLocation.Should().Be("§47");
+    }
+
+    // ── T7: DEC-13 cache-first + DEC-14 dynamic prompt + DEC-15 SourceLangOverride ──
+
+    [Fact]
+    public async Task Handle_CacheHit_UsesDetectedLangInPrompt()
+    {
+        // Arrange
+        var campaignRepo = new FakeCampaignRepo();
+        var artifactRepo = new FakeArtifactRepo(); // not consulted on cache hit
+        var paragraphRepo = new FakeParagraphRepo();
+        var glossaryRepo = new FakeGlossaryRepo();
+        var progressRepo = new FakeProgressRepo();
+        var capturingLlm = new CapturingFakeLlmService();
+
+        var ownerId = Guid.NewGuid();
+        var campaign = GamebookCampaignSession.Create(GameRef.Shared(Guid.NewGuid()), ownerId, "EN Campaign");
+        campaignRepo.Store.Add(campaign);
+        var bookId = Guid.NewGuid();
+
+        // Pre-seed cache with EN-detected photo OCR (cache hit — artifact repo empty).
+        var photoId = Guid.NewGuid();
+        var cachedOcr = new PhotoOcrCacheValue(
+            FullText: "The Hive awakens.",
+            Paragraphs: new List<OcrParagraphCacheEntry> { new(1, "The Hive awakens.") },
+            AverageConfidence: 95.0,
+            DetectedSourceLang: "EN",
+            LangDetectionConfidence: 0.92);
+
+        var fakeCache = new FakeHybridCache { CachedValue = cachedOcr };
+
+        var handler = BuildHandler(
+            campaignRepo, artifactRepo, paragraphRepo, glossaryRepo, progressRepo,
+            llm: capturingLlm, cache: fakeCache);
+
+        var query = new TranslateGamebookSegmentQuery(campaign.Id, photoId, 1, ownerId, bookId);
+
+        // Act
+        var chunks = new List<TranslateChunk>();
+        await foreach (var chunk in handler.Handle(query, CancellationToken.None))
+            chunks.Add(chunk);
+
+        // Assert — system prompt mentions "English to Italian"
+        capturingLlm.CapturedSystemPrompt.Should().NotBeNull();
+        capturingLlm.CapturedSystemPrompt.Should().Contain("English to Italian",
+            "detected lang EN must drive prompt language direction");
+
+        // Final chunk carries audit fields from cache
+        var finalChunk = chunks.Single(c => c.IsComplete);
+        finalChunk.DetectedSourceLang.Should().Be("EN");
+        finalChunk.LangDetectionConfidence.Should().BeApproximately(0.92, 1e-9);
+    }
+
+    [Fact]
+    public async Task Handle_SourceLangOverride_UsesOverrideInPromptButPreservesDetectedAuditField()
+    {
+        // Arrange
+        var campaignRepo = new FakeCampaignRepo();
+        var artifactRepo = new FakeArtifactRepo();
+        var paragraphRepo = new FakeParagraphRepo();
+        var glossaryRepo = new FakeGlossaryRepo();
+        var progressRepo = new FakeProgressRepo();
+        var capturingLlm = new CapturingFakeLlmService();
+
+        var ownerId = Guid.NewGuid();
+        var campaign = GamebookCampaignSession.Create(GameRef.Shared(Guid.NewGuid()), ownerId, "FR Override Campaign");
+        campaignRepo.Store.Add(campaign);
+        var bookId = Guid.NewGuid();
+
+        // Cache says EN detected, but query overrides to FR.
+        var photoId = Guid.NewGuid();
+        var cachedOcr = new PhotoOcrCacheValue(
+            FullText: "The Hive awakens.",
+            Paragraphs: new List<OcrParagraphCacheEntry> { new(1, "The Hive awakens.") },
+            AverageConfidence: 90.0,
+            DetectedSourceLang: "EN",
+            LangDetectionConfidence: 0.80);
+
+        var fakeCache = new FakeHybridCache { CachedValue = cachedOcr };
+        var handler = BuildHandler(
+            campaignRepo, artifactRepo, paragraphRepo, glossaryRepo, progressRepo,
+            llm: capturingLlm, cache: fakeCache);
+
+        // SourceLangOverride = "FR"
+        var query = new TranslateGamebookSegmentQuery(
+            campaign.Id, photoId, 1, ownerId, bookId, SourceLangOverride: "FR");
+
+        // Act
+        var chunks = new List<TranslateChunk>();
+        await foreach (var chunk in handler.Handle(query, CancellationToken.None))
+            chunks.Add(chunk);
+
+        // Assert — override drives prompt to French
+        capturingLlm.CapturedSystemPrompt.Should().Contain("French to Italian",
+            "SourceLangOverride='FR' must override prompt lang direction");
+        capturingLlm.CapturedSystemPrompt.Should().NotContain("English to Italian");
+
+        // Final chunk audit field preserves cache-detected EN (NOT the override)
+        var finalChunk = chunks.Single(c => c.IsComplete);
+        finalChunk.DetectedSourceLang.Should().Be("EN",
+            "audit field must reflect what OCR detected, not the caller override");
+        finalChunk.LangDetectionConfidence.Should().BeApproximately(0.80, 1e-9);
+    }
+
+    [Fact]
+    public async Task Handle_CacheMiss_FallsBackToRepository()
+    {
+        // Arrange
+        var campaignRepo = new FakeCampaignRepo();
+        var artifactRepo = new FakeArtifactRepo();
+        var paragraphRepo = new FakeParagraphRepo();
+        var glossaryRepo = new FakeGlossaryRepo();
+        var progressRepo = new FakeProgressRepo();
+        var capturingLlm = new CapturingFakeLlmService();
+
+        var ownerId = Guid.NewGuid();
+        var campaign = GamebookCampaignSession.Create(GameRef.Shared(Guid.NewGuid()), ownerId, "FR Repo Campaign");
+        campaignRepo.Store.Add(campaign);
+        var bookId = Guid.NewGuid();
+
+        // Artifact in repo with DetectedSourceLang = "FR".
+        var artifact = GamebookPhotoArtifact.Create(campaign.Id, bookId, $"gamebook-photos/{campaign.Id}/photo-fr");
+        artifact.RecordSegments(
+            new[] { GamebookSegment.Create(3, "La Ruche s'éveille.", null) },
+            "La Ruche s'éveille.",
+            detectedSourceLang: "FR",
+            langDetectionConfidence: 0.97);
+        artifactRepo.Store.Add(artifact);
+
+        // FakeHybridCache with no CachedValue → invokes factory → repo fallback.
+        var fakeCache = new FakeHybridCache(); // CachedValue = null (default)
+        var handler = BuildHandler(
+            campaignRepo, artifactRepo, paragraphRepo, glossaryRepo, progressRepo,
+            llm: capturingLlm, cache: fakeCache);
+
+        var query = new TranslateGamebookSegmentQuery(campaign.Id, artifact.Id, 3, ownerId, bookId);
+
+        // Act
+        var chunks = new List<TranslateChunk>();
+        await foreach (var chunk in handler.Handle(query, CancellationToken.None))
+            chunks.Add(chunk);
+
+        // Assert — repo-loaded FR drives prompt
+        capturingLlm.CapturedSystemPrompt.Should().Contain("French to Italian",
+            "repo-loaded DetectedSourceLang='FR' must drive prompt direction on cache miss");
+
+        var finalChunk = chunks.Single(c => c.IsComplete);
+        finalChunk.DetectedSourceLang.Should().Be("FR");
+        finalChunk.LangDetectionConfidence.Should().BeApproximately(0.97, 1e-9);
+    }
+
+    [Fact]
+    public async Task Handle_CacheMissAndNullDetectedLang_FallsBackToEnglishDefault()
+    {
+        // Arrange
+        var campaignRepo = new FakeCampaignRepo();
+        var artifactRepo = new FakeArtifactRepo();
+        var paragraphRepo = new FakeParagraphRepo();
+        var glossaryRepo = new FakeGlossaryRepo();
+        var progressRepo = new FakeProgressRepo();
+        var capturingLlm = new CapturingFakeLlmService();
+
+        var ownerId = Guid.NewGuid();
+        var campaign = GamebookCampaignSession.Create(GameRef.Shared(Guid.NewGuid()), ownerId, "Legacy Campaign");
+        campaignRepo.Store.Add(campaign);
+        var bookId = Guid.NewGuid();
+
+        // Legacy artifact: no DetectedSourceLang (pre-#1559 photo).
+        var artifact = GamebookPhotoArtifact.Create(campaign.Id, bookId, $"gamebook-photos/{campaign.Id}/photo-legacy");
+        artifact.RecordSegments(
+            new[] { GamebookSegment.Create(1, "The ancient hall.", null) },
+            "The ancient hall.");
+        // DetectedSourceLang is null by default (not set on artifact).
+        artifactRepo.Store.Add(artifact);
+
+        var fakeCache = new FakeHybridCache(); // cache miss → factory invoked
+        var handler = BuildHandler(
+            campaignRepo, artifactRepo, paragraphRepo, glossaryRepo, progressRepo,
+            llm: capturingLlm, cache: fakeCache);
+
+        var query = new TranslateGamebookSegmentQuery(campaign.Id, artifact.Id, 1, ownerId, bookId);
+
+        // Act
+        var chunks = new List<TranslateChunk>();
+        await foreach (var chunk in handler.Handle(query, CancellationToken.None))
+            chunks.Add(chunk);
+
+        // Assert — defaults to English when detection unavailable
+        capturingLlm.CapturedSystemPrompt.Should().Contain("English to Italian",
+            "null DetectedSourceLang must fall back to 'EN' default (legacy pre-#1559 photos)");
+
+        var finalChunk = chunks.Single(c => c.IsComplete);
+        finalChunk.DetectedSourceLang.Should().BeNull(
+            "no lang was detected — audit field must remain null");
+        finalChunk.LangDetectionConfidence.Should().BeNull();
     }
 }

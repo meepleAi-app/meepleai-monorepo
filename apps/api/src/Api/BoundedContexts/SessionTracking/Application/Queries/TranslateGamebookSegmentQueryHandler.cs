@@ -14,6 +14,7 @@ using Api.Models;
 using Api.Observability;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Translation;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.SessionTracking.Application.Queries;
@@ -21,17 +22,8 @@ namespace Api.BoundedContexts.SessionTracking.Application.Queries;
 internal sealed class TranslateGamebookSegmentQueryHandler
     : IStreamingQueryHandler<TranslateGamebookSegmentQuery, TranslateChunk>
 {
-    // DEC-14 (#1559): Maps ISO-639-1 upper-cased codes to English language names for prompt construction.
-    // Extend this dictionary if new source languages are detected by NTextCat.
-    private static readonly IReadOnlyDictionary<string, string> LangNameByCode =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["EN"] = "English",
-            ["FR"] = "French",
-            ["DE"] = "German",
-            ["ES"] = "Spanish",
-            ["IT"] = "Italian",
-        };
+    // DEC-14 (#1559): Language code → name mapping moved to Api.SharedKernel.Translation.LanguageCodes
+    // per DEC-BE-10 (#1774). Extend LanguageCodes.LangNameByCode to add new source languages.
 
     private readonly IGamebookCampaignSessionRepository _campaigns;
     private readonly IGamebookPhotoArtifactRepository _photos;
@@ -142,8 +134,7 @@ internal sealed class TranslateGamebookSegmentQueryHandler
             // DEC-14 (#1559): dynamic prompt — effective lang is: override > detected > "EN" default.
             var effectiveSourceLangCode =
                 (query.SourceLangOverride ?? detectedSourceLang ?? "EN").ToUpperInvariant();
-            var sourceLangName = LangNameByCode.TryGetValue(effectiveSourceLangCode, out var name)
-                ? name : "English";
+            var sourceLangName = LanguageCodes.TryGetLanguageName(effectiveSourceLangCode) ?? "English";
 
             var systemPrompt =
                 $"You are a translator from {sourceLangName} to Italian for a tabletop RPG storybook. " +

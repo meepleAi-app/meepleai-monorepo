@@ -7,6 +7,8 @@ using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
+using Api.BoundedContexts.SessionTracking.Infrastructure.Caching;
+using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.Observability;
@@ -19,6 +21,18 @@ namespace Api.BoundedContexts.SessionTracking.Application.Queries;
 internal sealed class TranslateGamebookSegmentQueryHandler
     : IStreamingQueryHandler<TranslateGamebookSegmentQuery, TranslateChunk>
 {
+    // DEC-14 (#1559): Maps ISO-639-1 upper-cased codes to English language names for prompt construction.
+    // Extend this dictionary if new source languages are detected by NTextCat.
+    private static readonly IReadOnlyDictionary<string, string> LangNameByCode =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["EN"] = "English",
+            ["FR"] = "French",
+            ["DE"] = "German",
+            ["ES"] = "Spanish",
+            ["IT"] = "Italian",
+        };
+
     private readonly IGamebookCampaignSessionRepository _campaigns;
     private readonly IGamebookPhotoArtifactRepository _photos;
     private readonly ITranslatedParagraphRepository _paragraphs;
@@ -26,6 +40,7 @@ internal sealed class TranslateGamebookSegmentQueryHandler
     private readonly ISessionBookProgressRepository _progress;
     private readonly ILlmService _llm;
     private readonly ICampaignOwnershipGuard _ownershipGuard;
+    private readonly IHybridCacheService _cache;
     private readonly ILogger<TranslateGamebookSegmentQueryHandler> _logger;
 
     public TranslateGamebookSegmentQueryHandler(
@@ -36,6 +51,7 @@ internal sealed class TranslateGamebookSegmentQueryHandler
         ISessionBookProgressRepository progress,
         ILlmService llm,
         ICampaignOwnershipGuard ownershipGuard,
+        IHybridCacheService cache,
         ILogger<TranslateGamebookSegmentQueryHandler> logger)
     {
         ArgumentNullException.ThrowIfNull(campaigns);
@@ -45,6 +61,7 @@ internal sealed class TranslateGamebookSegmentQueryHandler
         ArgumentNullException.ThrowIfNull(progress);
         ArgumentNullException.ThrowIfNull(llm);
         ArgumentNullException.ThrowIfNull(ownershipGuard);
+        ArgumentNullException.ThrowIfNull(cache);
         ArgumentNullException.ThrowIfNull(logger);
         _campaigns = campaigns;
         _photos = photos;
@@ -53,6 +70,7 @@ internal sealed class TranslateGamebookSegmentQueryHandler
         _progress = progress;
         _llm = llm;
         _ownershipGuard = ownershipGuard;
+        _cache = cache;
         _logger = logger;
     }
 
@@ -83,28 +101,60 @@ internal sealed class TranslateGamebookSegmentQueryHandler
             var campaign = await _campaigns.GetByIdAsync(query.CampaignId, cancellationToken).ConfigureAwait(false)
                 ?? throw new NotFoundException($"Campaign {query.CampaignId} not found");
 
-            var artifact = await _photos.GetByIdAsync(query.PhotoId, cancellationToken).ConfigureAwait(false)
-                ?? throw new NotFoundException($"Photo {query.PhotoId} not found");
+            // #1559 DEC-13: cache-first lookup with repo fallback (graceful degrade).
+            // Cache is populated by SegmentGamebookPhotoCommandHandler immediately after OCR; on
+            // a cold start (cache evicted or legacy photo) we reconstruct from the repo artifact.
+            var cacheValue = await _cache.GetOrCreateAsync<PhotoOcrCacheValue>(
+                GamebookCacheKeys.PhotoOcr(query.PhotoId),
+                factory: async ct2 =>
+                {
+                    var artifact = await _photos.GetByIdAsync(query.PhotoId, ct2).ConfigureAwait(false)
+                        ?? throw new NotFoundException($"Photo {query.PhotoId} not found");
 
-            if (artifact.CampaignId != query.CampaignId)
-                throw new ConflictException("Photo does not belong to this campaign");
+                    if (artifact.CampaignId != query.CampaignId)
+                        throw new ConflictException("Photo does not belong to this campaign");
 
-            var segment = artifact.Segments.FirstOrDefault(s => s.ParagraphNumber == query.ParagraphNumber)
+                    return new PhotoOcrCacheValue(
+                        FullText: artifact.OcrFullText ?? string.Empty,
+                        Paragraphs: artifact.Segments
+                            .Select(s => new OcrParagraphCacheEntry(s.ParagraphNumber, s.SourceText))
+                            .ToList(),
+                        AverageConfidence: 0.0, // not persisted on artifact directly
+                        DetectedSourceLang: artifact.DetectedSourceLang,
+                        LangDetectionConfidence: artifact.LangDetectionConfidence);
+                },
+                tags: null,
+                expiration: TimeSpan.FromHours(24),
+                ct: cancellationToken).ConfigureAwait(false);
+
+            // DEC-13: cacheValue is guaranteed non-null here (factory throws NotFoundException on
+            // missing artifact; GetOrCreateAsync propagates factory exceptions to the caller).
+            var detectedSourceLang = cacheValue.DetectedSourceLang;
+            var langDetectionConfidence = cacheValue.LangDetectionConfidence;
+
+            var segmentSourceText = cacheValue.Paragraphs
+                .FirstOrDefault(p => p.Number == query.ParagraphNumber)?.Text
                 ?? throw new NotFoundException($"Segment §{query.ParagraphNumber} not found in photo");
 
             var glossaryEntries = await _glossary.ListByCampaignAsync(query.CampaignId, cancellationToken).ConfigureAwait(false);
             var glossaryTable = string.Join("\n", glossaryEntries.Select(g => $"- {g.TermEn} → {g.TermIt}"));
 
+            // DEC-14 (#1559): dynamic prompt — effective lang is: override > detected > "EN" default.
+            var effectiveSourceLangCode =
+                (query.SourceLangOverride ?? detectedSourceLang ?? "EN").ToUpperInvariant();
+            var sourceLangName = LangNameByCode.TryGetValue(effectiveSourceLangCode, out var name)
+                ? name : "English";
+
             var systemPrompt =
-                "You are a translator from English to Italian for a tabletop RPG storybook. " +
+                $"You are a translator from {sourceLangName} to Italian for a tabletop RPG storybook. " +
                 "Preserve narrative tone, use formal pronouns (voi/lei) when addressing players. " +
-                "Apply this glossary EXACTLY (English term → Italian term) without rephrasing the Italian:\n" +
+                $"Apply this glossary EXACTLY ({sourceLangName} term → Italian term) without rephrasing the Italian:\n" +
                 (glossaryTable.Length > 0 ? glossaryTable : "(no glossary entries yet)") + "\n" +
                 "Output ONLY the Italian translation — no preamble, no notes.";
 
             var fullText = new StringBuilder();
             await foreach (var chunk in _llm.GenerateCompletionStreamAsync(
-                systemPrompt, segment.SourceText, RequestSource.Manual, cancellationToken).ConfigureAwait(false))
+                systemPrompt, segmentSourceText, RequestSource.Manual, cancellationToken).ConfigureAwait(false))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (!string.IsNullOrEmpty(chunk.Content))
@@ -133,7 +183,7 @@ internal sealed class TranslateGamebookSegmentQueryHandler
             // Issue #833 metric: meepleai.gamebook.glossary_consistency_rate
             foreach (var entry in glossaryEntries)
             {
-                if (segment.SourceText.Contains(entry.TermEn, StringComparison.OrdinalIgnoreCase))
+                if (segmentSourceText.Contains(entry.TermEn, StringComparison.OrdinalIgnoreCase))
                 {
                     totalApplicableTerms++;
                     if (translatedIt.Contains(entry.TermIt, StringComparison.OrdinalIgnoreCase))
@@ -143,14 +193,14 @@ internal sealed class TranslateGamebookSegmentQueryHandler
                 }
             }
             var appliedTerms = glossaryEntries
-                .Where(g => segment.SourceText.Contains(g.TermEn, StringComparison.OrdinalIgnoreCase)
+                .Where(g => segmentSourceText.Contains(g.TermEn, StringComparison.OrdinalIgnoreCase)
                             && translatedIt.Contains(g.TermIt, StringComparison.OrdinalIgnoreCase))
                 .Select(g => g.TermEn)
                 .ToList();
 
             var paragraph = TranslatedParagraph.Create(
                 query.CampaignId, query.GameBookId, query.PhotoId, query.ParagraphNumber,
-                segment.SourceText, translatedIt, appliedTerms, query.CallerUserId);
+                segmentSourceText, translatedIt, appliedTerms, query.CallerUserId);
 
             await _paragraphs.AddAsync(paragraph, cancellationToken).ConfigureAwait(false);
             await _paragraphs.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -176,7 +226,14 @@ internal sealed class TranslateGamebookSegmentQueryHandler
             campaign.Touch(query.CallerUserId);
             await _campaigns.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-            yield return new TranslateChunk(string.Empty, IsComplete: true, paragraph.Id, appliedTerms);
+            // DEC-10 (#1559): DetectedSourceLang / LangDetectionConfidence in final chunk only.
+            yield return new TranslateChunk(
+                Delta: string.Empty,
+                IsComplete: true,
+                ParagraphId: paragraph.Id,
+                AppliedTerms: appliedTerms,
+                DetectedSourceLang: detectedSourceLang,
+                LangDetectionConfidence: langDetectionConfidence);
             status = "success";
         }
         finally

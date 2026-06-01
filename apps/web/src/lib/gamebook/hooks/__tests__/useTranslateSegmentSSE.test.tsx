@@ -155,4 +155,99 @@ describe('useTranslateSegmentSSE', () => {
     expect(lastInstance?.url).toContain('paragraphNumber=7');
     expect(lastInstance?.url).toContain(`gameBookId=${BOOK_ID}`);
   });
+
+  // ---------------------------------------------------------------------------
+  // #1559 — lang detection fields + sourceLangOverride
+  // ---------------------------------------------------------------------------
+
+  it('captures detectedSourceLang and langDetectionConfidence from final chunk', () => {
+    const { result } = renderHook(() => useTranslateSegmentSSE());
+
+    act(() => result.current.start(CAMPAIGN_ID, PHOTO_ID, 1, BOOK_ID));
+    act(() =>
+      lastInstance!.simulateMessage({
+        delta: 'Apri la porta.',
+        isComplete: true,
+        paragraphId: PARA_ID,
+        appliedTerms: [],
+        detectedSourceLang: 'EN',
+        langDetectionConfidence: 0.92,
+      })
+    );
+
+    expect(result.current.detectedSourceLang).toBe('EN');
+    expect(result.current.langDetectionConfidence).toBe(0.92);
+    expect(result.current.isComplete).toBe(true);
+  });
+
+  it('exposes null lang fields when BE emits them (out-of-allowlist or legacy)', () => {
+    const { result } = renderHook(() => useTranslateSegmentSSE());
+
+    act(() => result.current.start(CAMPAIGN_ID, PHOTO_ID, 1, BOOK_ID));
+    act(() =>
+      lastInstance!.simulateMessage({
+        delta: 'X.',
+        isComplete: true,
+        paragraphId: PARA_ID,
+        appliedTerms: [],
+        detectedSourceLang: null,
+        langDetectionConfidence: 0.31,
+      })
+    );
+
+    expect(result.current.detectedSourceLang).toBeNull();
+    expect(result.current.langDetectionConfidence).toBe(0.31);
+  });
+
+  it('exposes undefined lang fields when BE omits them (backward compat)', () => {
+    const { result } = renderHook(() => useTranslateSegmentSSE());
+
+    act(() => result.current.start(CAMPAIGN_ID, PHOTO_ID, 1, BOOK_ID));
+    act(() =>
+      lastInstance!.simulateMessage({
+        delta: 'Legacy.',
+        isComplete: true,
+        paragraphId: PARA_ID,
+        appliedTerms: [],
+      })
+    );
+
+    expect(result.current.detectedSourceLang).toBeUndefined();
+    expect(result.current.langDetectionConfidence).toBeUndefined();
+  });
+
+  it('appends sourceLangOverride to URL when provided', () => {
+    const { result } = renderHook(() => useTranslateSegmentSSE());
+
+    act(() => result.current.start(CAMPAIGN_ID, PHOTO_ID, 4, BOOK_ID, 'FR'));
+
+    expect(lastInstance?.url).toContain('sourceLangOverride=FR');
+  });
+
+  it('omits sourceLangOverride from URL when not provided', () => {
+    const { result } = renderHook(() => useTranslateSegmentSSE());
+
+    act(() => result.current.start(CAMPAIGN_ID, PHOTO_ID, 4, BOOK_ID));
+
+    expect(lastInstance?.url).not.toContain('sourceLangOverride');
+  });
+
+  it('resets lang fields on new start() call', () => {
+    const { result } = renderHook(() => useTranslateSegmentSSE());
+
+    act(() => result.current.start(CAMPAIGN_ID, PHOTO_ID, 1, BOOK_ID));
+    act(() =>
+      lastInstance!.simulateMessage({
+        delta: 'old',
+        isComplete: true,
+        detectedSourceLang: 'EN',
+        langDetectionConfidence: 0.92,
+      })
+    );
+
+    act(() => result.current.start(CAMPAIGN_ID, PHOTO_ID, 2, BOOK_ID, 'DE'));
+
+    expect(result.current.detectedSourceLang).toBeUndefined();
+    expect(result.current.langDetectionConfidence).toBeUndefined();
+  });
 });

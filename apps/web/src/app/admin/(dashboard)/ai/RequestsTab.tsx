@@ -75,12 +75,15 @@ export function RequestsTab() {
   }, [range]);
 
   // #1729: Live range polls every 10s for near-real-time updates.
+  // #1735 B4: cancelled guard prevents stale tick from overwriting a newer range's data.
   useEffect(() => {
     if (range !== 'Live') return undefined;
+    let cancelled = false;
     const handle = setInterval(() => {
       api.admin
         .getAiMetricsTrend('Live')
         .then(data => {
+          if (cancelled) return;
           const points = (data?.datapoints ?? []).map(d => ({
             date: d.timestamp,
             avgLatencyMs: d.avgLatencyMs,
@@ -93,7 +96,10 @@ export function RequestsTab() {
         })
         .catch(() => {});
     }, 10_000);
-    return () => clearInterval(handle);
+    return () => {
+      cancelled = true;
+      clearInterval(handle);
+    };
   }, [range]);
 
   const setRange = (next: string) => {

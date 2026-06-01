@@ -165,7 +165,7 @@ internal sealed class TranslateGamebookSegmentQueryHandler
                         streamingLatencySec = stopwatch.Elapsed.TotalSeconds;
                     }
                     fullText.Append(chunk.Content);
-                    yield return new TranslateChunk(chunk.Content, IsComplete: false);
+                    yield return new TranslateChunk(Delta: chunk.Content, IsComplete: false);
                 }
                 if (chunk.IsFinal && chunk.Usage is not null)
                 {

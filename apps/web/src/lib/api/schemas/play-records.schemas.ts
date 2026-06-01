@@ -105,6 +105,13 @@ export const GamePlayCountSchema = z.object({
 });
 export type GamePlayCount = z.infer<typeof GamePlayCountSchema>;
 
+// #1550 Phase 2: monthly win-rate trend bucket (ISO YYYY-MM key, rate in [0, 1]).
+export const MonthlyWinRateSchema = z.object({
+  month: z.string().regex(/^\d{4}-\d{2}$/),
+  winRate: z.number().min(0).max(1),
+});
+export type MonthlyWinRate = z.infer<typeof MonthlyWinRateSchema>;
+
 export const PlayerStatisticsSchema = z.object({
   totalSessions: z.number().int().nonnegative(),
   totalWins: z.number().int().nonnegative(),
@@ -114,6 +121,13 @@ export const PlayerStatisticsSchema = z.object({
   totalDurationMinutes: z.number().int().nonnegative().optional(),
   winByGame: z.array(GameWinStatsSchema).optional(),
   mostPlayedGames: z.array(GamePlayCountSchema).optional(),
+  // #1540 / #1541 / #1550: extended for /players/[id] v2 surface, optional during
+  // BE rollout. `leaderboardRank` is `null` for unranked users (0 sessions);
+  // `favoriteAgentName` is `null` when the user has 0 chat threads with an agent;
+  // `winRateTrend` is empty when there are no completed sessions in the last 6 months.
+  leaderboardRank: z.number().int().nullable().optional(),
+  favoriteAgentName: z.string().nullable().optional(),
+  winRateTrend: z.array(MonthlyWinRateSchema).optional(),
 });
 export type PlayerStatistics = z.infer<typeof PlayerStatisticsSchema>;
 

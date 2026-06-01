@@ -2378,6 +2378,14 @@
           "none": "No agent used yet",
           "ariaLabel": "Open {agentName}"
         },
+        "topGames": {
+          "title": "Top games",
+          "playsLabel": "{count} plays",
+          "playsLabelWithWins": "{count} plays · {wins} wins",
+          "winRateLabel": "WIN RATE",
+          "rankAriaLabel": "Rank {rank}",
+          "empty": "No games played yet"
+        },
         "achievements": {
           "title": "Achievements",
           "viewAll": "View all",

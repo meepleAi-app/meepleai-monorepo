@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactElement } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 
 import { useGameBooks } from '@/hooks/useGameBooks';
 import { trackEvent } from '@/lib/analytics/track-event';
@@ -41,7 +41,38 @@ export function ManualInputView({ campaignId, gameRef }: ManualInputViewProps): 
   const len = text.length;
   const overLimit = len > MAX_CHARS;
   const warn = len >= WARN_THRESHOLD && !overLimit;
-  const canSubmit = len > 0 && !overLimit && !!bookId;
+  // M2 review fix (#1560): include `!sse.isComplete` guard per plan T4 spec —
+  // disables re-submit after success until user modifies text.
+  const canSubmit = len > 0 && !overLimit && !!bookId && !sse.isComplete;
+
+  // M2 review fix (#1560): emit DEC-FE-M-10 lifecycle analytics events.
+  // `manual_completed` on SSE final chunk, `manual_failed` on SSE error.
+  const submitStartRef = useRef<number | null>(null);
+  const completedFiredRef = useRef(false);
+  const failedFiredRef = useRef(false);
+
+  useEffect(() => {
+    if (!bookId) return;
+    if (sse.isComplete && !completedFiredRef.current) {
+      completedFiredRef.current = true;
+      const durationMs = submitStartRef.current ? Date.now() - submitStartRef.current : null;
+      trackEvent('translate.manual_completed', {
+        campaignId,
+        sourceLang,
+        gameBookId: bookId,
+        durationMs,
+      });
+    }
+    if (sse.error && !failedFiredRef.current) {
+      failedFiredRef.current = true;
+      trackEvent('translate.manual_failed', {
+        campaignId,
+        sourceLang,
+        gameBookId: bookId,
+        errorCode: sse.error,
+      });
+    }
+  }, [sse.isComplete, sse.error, campaignId, sourceLang, bookId]);
 
   const counterClass = `manual-char-counter${overLimit ? ' over' : warn ? ' warn' : ''}`;
 
@@ -53,6 +84,10 @@ export function ManualInputView({ campaignId, gameRef }: ManualInputViewProps): 
 
   const handleSubmit = () => {
     if (!canSubmit || !bookId) return;
+    // M2 review fix: reset lifecycle event guards for re-translate scenarios
+    completedFiredRef.current = false;
+    failedFiredRef.current = false;
+    submitStartRef.current = Date.now();
     trackEvent('translate.manual_submit', {
       campaignId,
       textLength: len,

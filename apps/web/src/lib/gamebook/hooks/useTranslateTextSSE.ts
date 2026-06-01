@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { SourceLangCode } from '@/lib/gamebook/lang-codes';
 
@@ -24,6 +24,15 @@ export function useTranslateTextSSE() {
   const stop = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
+  }, []);
+
+  // M1 review fix (#1560): abort on unmount to prevent resource leak when user
+  // navigates away mid-translate (browser back, route change, etc.). Otherwise
+  // the fetch + reader stay open against the server until the stream closes.
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
   }, []);
 
   const start = useCallback(

@@ -79,4 +79,54 @@ public class GamebookPhotoArtifactTests
         artifact.Status.Should().Be(PhotoArtifactStatus.Failed);
         artifact.FailureReason.Should().Be("OCR service timeout");
     }
+
+    [Fact]
+    public void RecordSegments_WithLangDetection_SetsDetectedSourceLangAndConfidence()
+    {
+        var artifact = GamebookPhotoArtifact.Create(Guid.NewGuid(), Guid.NewGuid(), "s3/key");
+        var segments = new[] { GamebookSegment.Create(1, "You wake up.", null) };
+
+        artifact.RecordSegments(segments, "You wake up.", detectedSourceLang: "EN", langDetectionConfidence: 0.92);
+
+        artifact.DetectedSourceLang.Should().Be("EN");
+        artifact.LangDetectionConfidence.Should().Be(0.92);
+        artifact.Status.Should().Be(PhotoArtifactStatus.Segmented);
+    }
+
+    [Fact]
+    public void RecordSegments_WithoutLangDetection_LeavesLangFieldsNull()
+    {
+        var artifact = GamebookPhotoArtifact.Create(Guid.NewGuid(), Guid.NewGuid(), "s3/key");
+        var segments = new[] { GamebookSegment.Create(1, "Test text.", null) };
+
+        artifact.RecordSegments(segments, "Test text.");
+
+        artifact.DetectedSourceLang.Should().BeNull();
+        artifact.LangDetectionConfidence.Should().BeNull();
+    }
+
+    [Fact]
+    public void RecordSegments_WithNullLangButValidConfidence_PersistsBothFields()
+    {
+        var artifact = GamebookPhotoArtifact.Create(Guid.NewGuid(), Guid.NewGuid(), "s3/key");
+        var segments = new[] { GamebookSegment.Create(1, "Si.", null) };
+
+        artifact.RecordSegments(segments, "Si.", detectedSourceLang: null, langDetectionConfidence: 0.42);
+
+        artifact.DetectedSourceLang.Should().BeNull();
+        artifact.LangDetectionConfidence.Should().Be(0.42);
+    }
+
+    [Theory]
+    [InlineData(-0.01)]
+    [InlineData(1.01)]
+    public void RecordSegments_WithConfidenceOutOfBounds_Throws(double invalidConfidence)
+    {
+        var artifact = GamebookPhotoArtifact.Create(Guid.NewGuid(), Guid.NewGuid(), "s3/key");
+        var segments = new[] { GamebookSegment.Create(1, "Text.", null) };
+
+        var act = () => artifact.RecordSegments(segments, "Text.", detectedSourceLang: "EN", langDetectionConfidence: invalidConfidence);
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
 }

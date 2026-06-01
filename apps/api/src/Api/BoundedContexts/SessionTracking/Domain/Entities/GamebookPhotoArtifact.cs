@@ -26,6 +26,18 @@ public sealed class GamebookPhotoArtifact
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset ExpiresAt { get; private set; }
 
+    /// <summary>
+    /// DEC-9 (#1559): ISO 639-1 2-letter UPPERCASE detected lang (EN/FR/DE/ES/IT) or null
+    /// if outside allowlist or detection failed. Set by RecordSegments overload.
+    /// </summary>
+    public string? DetectedSourceLang { get; private set; }
+
+    /// <summary>
+    /// DEC-4 (#1559): Raw NLP confidence [0,1] from NTextCat. NOT clipped to threshold —
+    /// FE decides UX tier. Null when no detection was attempted (old foto pre-#1559).
+    /// </summary>
+    public double? LangDetectionConfidence { get; private set; }
+
     // EF parameterless constructor
     private GamebookPhotoArtifact() { }
 
@@ -53,15 +65,34 @@ public sealed class GamebookPhotoArtifact
 
     /// <summary>
     /// Records OCR segments and transitions status from Uploaded to Segmented.
+    /// Backward-compat overload: no lang detection performed.
     /// </summary>
     public void RecordSegments(IEnumerable<GamebookSegment> segments, string ocrFullText)
+        => RecordSegments(segments, ocrFullText, detectedSourceLang: null, langDetectionConfidence: null);
+
+    /// <summary>
+    /// Records OCR segments + optional lang detection result. Transitions status from
+    /// Uploaded to Segmented.
+    /// DEC-9 (#1559): Lang fields are additive; nullable for backward compat with foto pre-#1559.
+    /// </summary>
+    public void RecordSegments(
+        IEnumerable<GamebookSegment> segments,
+        string ocrFullText,
+        string? detectedSourceLang,
+        double? langDetectionConfidence)
     {
         if (Status != PhotoArtifactStatus.Uploaded)
             throw new InvalidOperationException(
                 $"RecordSegments can only be called when Status is Uploaded. Current status: {Status}");
 
+        if (langDetectionConfidence is { } c && (c < 0.0 || c > 1.0))
+            throw new ArgumentOutOfRangeException(nameof(langDetectionConfidence),
+                c, "Confidence must be in [0, 1] or null.");
+
         Segments = segments != null ? segments.ToList().AsReadOnly() : (IReadOnlyList<GamebookSegment>)Array.Empty<GamebookSegment>();
         OcrFullText = ocrFullText;
+        DetectedSourceLang = string.IsNullOrWhiteSpace(detectedSourceLang) ? null : detectedSourceLang.ToUpperInvariant();
+        LangDetectionConfidence = langDetectionConfidence;
         Status = PhotoArtifactStatus.Segmented;
     }
 

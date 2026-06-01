@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.Validators;
+using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.Tests.Constants;
 using FluentAssertions;
 using FluentValidation.TestHelper;
@@ -31,16 +32,18 @@ public sealed class ReindexDocumentCommandValidatorTests
     [Fact]
     public void IndexerVersion_Current_Passes()
     {
-        var result = _validator.TestValidate(new ReindexDocumentCommand(Guid.NewGuid(), "v1.0"));
+        var current = IndexerVersionRegistry.Current.Version;
+        var result = _validator.TestValidate(new ReindexDocumentCommand(Guid.NewGuid(), current));
         result.ShouldNotHaveValidationErrorFor(c => c.IndexerVersion);
     }
 
     [Fact]
     public void IndexerVersion_LegacyV0_FailsAsNotSelectable()
     {
-        var result = _validator.TestValidate(new ReindexDocumentCommand(Guid.NewGuid(), "v0"));
+        var legacy = IndexerVersionRegistry.Legacy.Version;
+        var result = _validator.TestValidate(new ReindexDocumentCommand(Guid.NewGuid(), legacy));
         result.ShouldHaveValidationErrorFor(c => c.IndexerVersion)
-            .WithErrorMessage("Indexer version 'v0' is not selectable (legacy marker).");
+            .WithErrorMessage($"Indexer version '{legacy}' is not selectable (legacy marker).");
     }
 
     [Fact]

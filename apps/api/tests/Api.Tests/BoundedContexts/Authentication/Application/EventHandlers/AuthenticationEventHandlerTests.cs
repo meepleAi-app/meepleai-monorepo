@@ -1,52 +1,24 @@
 using Api.BoundedContexts.Authentication.Application.EventHandlers;
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
-using Api.SharedKernel.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
-using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.EventHandlers;
 
 /// <summary>
 /// Unit tests for Authentication domain event handlers.
-/// Issue #2645: Event handler tests for EmailChanged, OAuth events.
+/// Issue #1534: Audit persistence is now centralised in <c>DomainEventAuditHandler</c> and is covered
+/// by <c>DomainEventAuditHandlerTests</c>. Per-handler logger smoke tests are retained here.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public class AuthenticationEventHandlerTests
 {
-    #region EmailChangedEventHandler Tests
-
     [Fact]
-    public async Task EmailChangedEventHandler_Handle_CreatesAuditLog()
-    {
-        // Arrange
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var logger = new Mock<ILogger<EmailChangedEventHandler>>();
-        var handler = new EmailChangedEventHandler(dbContext, logger.Object);
-
-        var userId = Guid.NewGuid();
-        var oldEmail = Email.Parse("old@example.com");
-        var newEmail = Email.Parse("new@example.com");
-        var @event = new EmailChangedEvent(userId, oldEmail, newEmail);
-
-        // Act
-        await handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLog = dbContext.AuditLogs.FirstOrDefault(a => a.Action.Contains("EmailChangedEvent"));
-        auditLog.Should().NotBeNull();
-        auditLog.UserId.Should().Be(userId);
-        auditLog.Details.Should().Contain("EmailChanged");
-        auditLog.Details.Should().Contain("old@example.com");
-        auditLog.Details.Should().Contain("new@example.com");
-    }
-
-    [Fact]
-    public async Task EmailChangedEventHandler_Handle_StoresOldAndNewEmail()
+    public async Task EmailChangedEventHandler_Handle_LogsHandlingInformation()
     {
         // Arrange
         var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
@@ -55,258 +27,92 @@ public class AuthenticationEventHandlerTests
 
         var @event = new EmailChangedEvent(
             Guid.NewGuid(),
-            Email.Parse("previous@test.com"),
-            Email.Parse("current@test.com"));
+            Email.Parse("old@example.com"),
+            Email.Parse("new@example.com"));
 
         // Act
         await handler.Handle(@event, CancellationToken.None);
 
         // Assert
-        var auditLog = dbContext.AuditLogs.Single();
-        auditLog.Details.Should().Contain("previous@test.com");
-        auditLog.Details.Should().Contain("current@test.com");
+        logger.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Successfully handled")),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
 
     [Fact]
-    public async Task EmailChangedEventHandler_Handle_NormalizesEmailInMetadata()
-    {
-        // Arrange
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var logger = new Mock<ILogger<EmailChangedEventHandler>>();
-        var handler = new EmailChangedEventHandler(dbContext, logger.Object);
-
-        // Emails with mixed case - Email value object normalizes to lowercase
-        var @event = new EmailChangedEvent(
-            Guid.NewGuid(),
-            Email.Parse("OLD@EXAMPLE.COM"),
-            Email.Parse("NEW@EXAMPLE.COM"));
-
-        // Act
-        await handler.Handle(@event, CancellationToken.None);
-
-        // Assert - Emails should be normalized to lowercase
-        var auditLog = dbContext.AuditLogs.Single();
-        auditLog.Details.Should().Contain("old@example.com");
-        auditLog.Details.Should().Contain("new@example.com");
-    }
-
-    #endregion
-
-    #region OAuthAccountLinkedEventHandler Tests
-
-    [Fact]
-    public async Task OAuthAccountLinkedEventHandler_Handle_CreatesAuditLog()
+    public async Task OAuthAccountLinkedEventHandler_Handle_LogsHandlingInformation()
     {
         // Arrange
         var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = new Mock<ILogger<OAuthAccountLinkedEventHandler>>();
         var handler = new OAuthAccountLinkedEventHandler(dbContext, logger.Object);
 
-        var userId = Guid.NewGuid();
-        var provider = "google";
-        var providerUserId = "google-user-123";
-        var @event = new OAuthAccountLinkedEvent(userId, provider, providerUserId);
+        var @event = new OAuthAccountLinkedEvent(Guid.NewGuid(), "google", "google-user-123");
 
         // Act
         await handler.Handle(@event, CancellationToken.None);
 
         // Assert
-        var auditLog = dbContext.AuditLogs.FirstOrDefault(a => a.Action.Contains("OAuthAccountLinkedEvent"));
-        auditLog.Should().NotBeNull();
-        auditLog.UserId.Should().Be(userId);
-        auditLog.Details.Should().Contain("OAuthAccountLinked");
-        auditLog.Details.Should().Contain("google");
+        logger.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Successfully handled")),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
 
     [Fact]
-    public async Task OAuthAccountLinkedEventHandler_Handle_StoresProviderDetails()
-    {
-        // Arrange
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var logger = new Mock<ILogger<OAuthAccountLinkedEventHandler>>();
-        var handler = new OAuthAccountLinkedEventHandler(dbContext, logger.Object);
-
-        var @event = new OAuthAccountLinkedEvent(Guid.NewGuid(), "discord", "discord-id-456");
-
-        // Act
-        await handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLog = dbContext.AuditLogs.Single();
-        auditLog.Details.Should().Contain("discord");
-        auditLog.Details.Should().Contain("discord-id-456");
-    }
-
-    [Theory]
-    [InlineData("google", "google-123")]
-    [InlineData("github", "github-456")]
-    [InlineData("discord", "discord-789")]
-    public async Task OAuthAccountLinkedEventHandler_Handle_SupportsMultipleProviders(string provider, string providerUserId)
-    {
-        // Arrange
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var logger = new Mock<ILogger<OAuthAccountLinkedEventHandler>>();
-        var handler = new OAuthAccountLinkedEventHandler(dbContext, logger.Object);
-
-        var @event = new OAuthAccountLinkedEvent(Guid.NewGuid(), provider, providerUserId);
-
-        // Act
-        await handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLog = dbContext.AuditLogs.Single();
-        auditLog.Details.Should().Contain(provider);
-        auditLog.Details.Should().Contain(providerUserId);
-    }
-
-    #endregion
-
-    #region OAuthAccountUnlinkedEventHandler Tests
-
-    [Fact]
-    public async Task OAuthAccountUnlinkedEventHandler_Handle_CreatesAuditLog()
+    public async Task OAuthAccountUnlinkedEventHandler_Handle_LogsHandlingInformation()
     {
         // Arrange
         var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = new Mock<ILogger<OAuthAccountUnlinkedEventHandler>>();
         var handler = new OAuthAccountUnlinkedEventHandler(dbContext, logger.Object);
 
-        var userId = Guid.NewGuid();
-        var provider = "google";
-        var @event = new OAuthAccountUnlinkedEvent(userId, provider);
+        var @event = new OAuthAccountUnlinkedEvent(Guid.NewGuid(), "google");
 
         // Act
         await handler.Handle(@event, CancellationToken.None);
 
         // Assert
-        var auditLog = dbContext.AuditLogs.FirstOrDefault(a => a.Action.Contains("OAuthAccountUnlinkedEvent"));
-        auditLog.Should().NotBeNull();
-        auditLog.UserId.Should().Be(userId);
-        auditLog.Details.Should().Contain("OAuthAccountUnlinked");
+        logger.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Successfully handled")),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
 
     [Fact]
-    public async Task OAuthAccountUnlinkedEventHandler_Handle_StoresProviderName()
-    {
-        // Arrange
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var logger = new Mock<ILogger<OAuthAccountUnlinkedEventHandler>>();
-        var handler = new OAuthAccountUnlinkedEventHandler(dbContext, logger.Object);
-
-        var @event = new OAuthAccountUnlinkedEvent(Guid.NewGuid(), "github");
-
-        // Act
-        await handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLog = dbContext.AuditLogs.Single();
-        auditLog.Details.Should().Contain("github");
-    }
-
-    [Theory]
-    [InlineData("google")]
-    [InlineData("github")]
-    [InlineData("discord")]
-    public async Task OAuthAccountUnlinkedEventHandler_Handle_SupportsMultipleProviders(string provider)
-    {
-        // Arrange
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var logger = new Mock<ILogger<OAuthAccountUnlinkedEventHandler>>();
-        var handler = new OAuthAccountUnlinkedEventHandler(dbContext, logger.Object);
-
-        var @event = new OAuthAccountUnlinkedEvent(Guid.NewGuid(), provider);
-
-        // Act
-        await handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLog = dbContext.AuditLogs.Single();
-        auditLog.Details.Should().Contain(provider);
-    }
-
-    #endregion
-
-    #region OAuthTokensRefreshedEventHandler Tests
-
-    [Fact]
-    public async Task OAuthTokensRefreshedEventHandler_Handle_CreatesAuditLog()
+    public async Task OAuthTokensRefreshedEventHandler_Handle_LogsHandlingInformation()
     {
         // Arrange
         var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = new Mock<ILogger<OAuthTokensRefreshedEventHandler>>();
         var handler = new OAuthTokensRefreshedEventHandler(dbContext, logger.Object);
 
-        var oauthAccountId = Guid.NewGuid();
-        var provider = "google";
-        var expiresAt = DateTime.UtcNow.AddHours(1);
-        var @event = new OAuthTokensRefreshedEvent(oauthAccountId, provider, expiresAt);
+        var @event = new OAuthTokensRefreshedEvent(Guid.NewGuid(), "google", DateTime.UtcNow.AddHours(1));
 
         // Act
         await handler.Handle(@event, CancellationToken.None);
 
         // Assert
-        var auditLog = dbContext.AuditLogs.FirstOrDefault(a => a.Action.Contains("OAuthTokensRefreshedEvent"));
-        auditLog.Should().NotBeNull();
-        auditLog.UserId.Should().BeNull(); // Token refresh is OAuth account event, not user-specific
-        auditLog.Details.Should().Contain("OAuthTokensRefreshed");
+        logger.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Successfully handled")),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
-
-    [Fact]
-    public async Task OAuthTokensRefreshedEventHandler_Handle_StoresTokenExpirationTime()
-    {
-        // Arrange
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var logger = new Mock<ILogger<OAuthTokensRefreshedEventHandler>>();
-        var handler = new OAuthTokensRefreshedEventHandler(dbContext, logger.Object);
-
-        var expiresAt = new DateTime(2025, 12, 31, 23, 59, 59, DateTimeKind.Utc);
-        var @event = new OAuthTokensRefreshedEvent(Guid.NewGuid(), "google", expiresAt);
-
-        // Act
-        await handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLog = dbContext.AuditLogs.Single();
-        auditLog.Details.Should().Contain("2025"); // Verify expiration year is in metadata
-    }
-
-    [Fact]
-    public async Task OAuthTokensRefreshedEventHandler_Handle_HasNoUserId()
-    {
-        // Arrange
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var logger = new Mock<ILogger<OAuthTokensRefreshedEventHandler>>();
-        var handler = new OAuthTokensRefreshedEventHandler(dbContext, logger.Object);
-
-        var @event = new OAuthTokensRefreshedEvent(Guid.NewGuid(), "github", DateTime.UtcNow);
-
-        // Act
-        await handler.Handle(@event, CancellationToken.None);
-
-        // Assert - UserId should be null for OAuth token refresh (account-level, not user-level)
-        var auditLog = dbContext.AuditLogs.Single();
-        auditLog.UserId.Should().BeNull();
-    }
-
-    [Fact]
-    public async Task OAuthTokensRefreshedEventHandler_Handle_StoresOAuthAccountId()
-    {
-        // Arrange
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var logger = new Mock<ILogger<OAuthTokensRefreshedEventHandler>>();
-        var handler = new OAuthTokensRefreshedEventHandler(dbContext, logger.Object);
-
-        var oauthAccountId = Guid.NewGuid();
-        var @event = new OAuthTokensRefreshedEvent(oauthAccountId, "discord", DateTime.UtcNow);
-
-        // Act
-        await handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLog = dbContext.AuditLogs.Single();
-        auditLog.Details.Should().Contain(oauthAccountId.ToString());
-    }
-
-    #endregion
-
 }

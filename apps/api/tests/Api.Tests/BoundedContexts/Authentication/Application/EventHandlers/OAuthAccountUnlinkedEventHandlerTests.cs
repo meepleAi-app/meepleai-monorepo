@@ -2,8 +2,6 @@ using Api.BoundedContexts.Authentication.Application.EventHandlers;
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
-using FluentAssertions;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -12,7 +10,8 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.EventHandlers;
 
 /// <summary>
 /// Unit tests for <see cref="OAuthAccountUnlinkedEventHandler"/>.
-/// Tests audit logging for OAuth account unlinking events.
+/// Issue #1534: Audit persistence is now centralised in <c>DomainEventAuditHandler</c> and is covered
+/// by <c>DomainEventAuditHandlerTests</c>. Handler-specific tests only verify logging hooks here.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public class OAuthAccountUnlinkedEventHandlerTests : IDisposable
@@ -30,81 +29,7 @@ public class OAuthAccountUnlinkedEventHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Handle_WithGoogleProvider_CreatesAuditLogEntry()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var provider = "google";
-        var @event = new OAuthAccountUnlinkedEvent(userId, provider);
-
-        // Act
-        await _handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLogs = await _dbContext.AuditLogs.ToListAsync();
-        auditLogs.Should().HaveCount(1);
-
-        var auditLog = auditLogs.First();
-        auditLog.UserId.Should().Be(userId);
-        auditLog.Resource.Should().Be(nameof(OAuthAccountUnlinkedEvent));
-        auditLog.Action.Should().Contain("OAuthAccountUnlinkedEvent");
-        auditLog.Result.Should().Be("Success");
-        auditLog.Details.Should().Contain("google");
-    }
-
-    [Fact]
-    public async Task Handle_WithDiscordProvider_CreatesAuditLogEntry()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var provider = "discord";
-        var @event = new OAuthAccountUnlinkedEvent(userId, provider);
-
-        // Act
-        await _handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLog = await _dbContext.AuditLogs.FirstAsync();
-        auditLog.Details.Should().Contain("discord");
-        auditLog.Details.Should().Contain("OAuthAccountUnlinked");
-    }
-
-    [Fact]
-    public async Task Handle_WithGitHubProvider_CreatesAuditLogEntry()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var provider = "github";
-        var @event = new OAuthAccountUnlinkedEvent(userId, provider);
-
-        // Act
-        await _handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLog = await _dbContext.AuditLogs.FirstAsync();
-        auditLog.Details.Should().Contain("github");
-    }
-
-    [Fact]
-    public async Task Handle_CapturesUserIdAndProvider()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var @event = new OAuthAccountUnlinkedEvent(userId, "google");
-
-        // Act
-        await _handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLog = await _dbContext.AuditLogs.FirstAsync();
-        auditLog.UserId.Should().Be(userId);
-        auditLog.Details.Should().Contain(userId.ToString());
-        auditLog.Details.Should().Contain("google");
-        auditLog.Details.Should().Contain("Action");
-    }
-
-    [Fact]
-    public async Task Handle_LogsSuccessfulEventHandling()
+    public async Task Handle_LogsHandlingInformation()
     {
         // Arrange
         var @event = new OAuthAccountUnlinkedEvent(Guid.NewGuid(), "google");

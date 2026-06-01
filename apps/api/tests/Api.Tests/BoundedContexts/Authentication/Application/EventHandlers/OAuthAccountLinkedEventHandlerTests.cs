@@ -2,8 +2,6 @@ using Api.BoundedContexts.Authentication.Application.EventHandlers;
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
-using FluentAssertions;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -12,7 +10,8 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.EventHandlers;
 
 /// <summary>
 /// Unit tests for <see cref="OAuthAccountLinkedEventHandler"/>.
-/// Tests audit logging for OAuth account linking events.
+/// Issue #1534: Audit persistence is now centralised in <c>DomainEventAuditHandler</c> and is covered
+/// by <c>DomainEventAuditHandlerTests</c>. Handler-specific tests only verify logging hooks here.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public class OAuthAccountLinkedEventHandlerTests : IDisposable
@@ -30,69 +29,7 @@ public class OAuthAccountLinkedEventHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Handle_WithGoogleProvider_CreatesAuditLogEntry()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var provider = "google";
-        var providerUserId = "google-user-12345";
-        var @event = new OAuthAccountLinkedEvent(userId, provider, providerUserId);
-
-        // Act
-        await _handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLogs = await _dbContext.AuditLogs.ToListAsync();
-        auditLogs.Should().HaveCount(1);
-
-        var auditLog = auditLogs.First();
-        auditLog.UserId.Should().Be(userId);
-        auditLog.Resource.Should().Be(nameof(OAuthAccountLinkedEvent));
-        auditLog.Action.Should().Contain("OAuthAccountLinkedEvent");
-        auditLog.Result.Should().Be("Success");
-        auditLog.Details.Should().Contain("google");
-        auditLog.Details.Should().Contain("google-user-12345");
-    }
-
-    [Fact]
-    public async Task Handle_WithDiscordProvider_CreatesAuditLogEntry()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var provider = "discord";
-        var providerUserId = "discord-123456789";
-        var @event = new OAuthAccountLinkedEvent(userId, provider, providerUserId);
-
-        // Act
-        await _handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLog = await _dbContext.AuditLogs.FirstAsync();
-        auditLog.Details.Should().Contain("discord");
-        auditLog.Details.Should().Contain("discord-123456789");
-        auditLog.Details.Should().Contain("OAuthAccountLinked");
-    }
-
-    [Fact]
-    public async Task Handle_WithGitHubProvider_CreatesAuditLogEntry()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var provider = "github";
-        var providerUserId = "github-user-98765";
-        var @event = new OAuthAccountLinkedEvent(userId, provider, providerUserId);
-
-        // Act
-        await _handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLog = await _dbContext.AuditLogs.FirstAsync();
-        auditLog.Details.Should().Contain("github");
-        auditLog.Details.Should().Contain("github-user-98765");
-    }
-
-    [Fact]
-    public async Task Handle_LogsEventHandlingWithProviderInfo()
+    public async Task Handle_LogsHandlingInformation()
     {
         // Arrange
         var @event = new OAuthAccountLinkedEvent(
@@ -112,24 +49,6 @@ public class OAuthAccountLinkedEventHandlerTests : IDisposable
                 It.IsAny<Exception?>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
-    }
-
-    [Fact]
-    public async Task Handle_CapturesAllMetadataFields()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var @event = new OAuthAccountLinkedEvent(userId, "google", "user-123");
-
-        // Act
-        await _handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLog = await _dbContext.AuditLogs.FirstAsync();
-        auditLog.Details.Should().Contain("UserId");
-        auditLog.Details.Should().Contain("Provider");
-        auditLog.Details.Should().Contain("ProviderUserId");
-        auditLog.Details.Should().Contain("Action");
     }
 
     public void Dispose()

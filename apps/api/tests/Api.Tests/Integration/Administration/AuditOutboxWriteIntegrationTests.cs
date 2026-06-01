@@ -136,16 +136,25 @@ public sealed class AuditOutboxWriteIntegrationTests : IAsyncLifetime
         var act = () => mediator.Send(command, TestCancellationToken);
         await act.Should().NotThrowAsync("the command should succeed for a valid user with valid role change");
 
-        // Assert: exactly one Pending row in audit_outbox
+        // Assert: filter outbox rows to the [AuditableAction] path (Resource="User"). Issue #1534:
+        // ChangeUserRoleCommand also raises RoleChangedEvent, which now writes a separate outbox row
+        // via the open-generic DomainEventAuditHandler (Resource="RoleChangedEvent", Action="DomainEvent.*").
+        // Both rows are expected — this test scopes to the command-path row, which carries the
+        // [Auditable] entity snapshot. The domain-event row is asserted independently in
+        // DomainEventAuditHandlerTests + DomainEventDispatcherIntegrationTests.
         db.ChangeTracker.Clear();
-        var outboxRows = await db.AuditOutbox
+        var allRows = await db.AuditOutbox
             .AsNoTracking()
             .ToListAsync(TestCancellationToken);
 
-        outboxRows.Should().HaveCount(1,
-            because: "AuditLoggingBehavior must write exactly one outbox row for the [AuditableAction] command");
+        var commandRows = allRows
+            .Where(r => r.PayloadJson.Contains("\"Resource\": \"User\"") || r.PayloadJson.Contains("\"Resource\":\"User\""))
+            .ToList();
 
-        var row = outboxRows[0];
+        commandRows.Should().HaveCount(1,
+            because: "AuditLoggingBehavior must write exactly one outbox row for the [AuditableAction] command (Resource=User)");
+
+        var row = commandRows[0];
         row.Status.Should().Be(Api.Infrastructure.Entities.OutboxStatus.Pending,
             because: "the row should be Pending — the T4 processor has not run yet");
 
@@ -205,13 +214,19 @@ public sealed class AuditOutboxWriteIntegrationTests : IAsyncLifetime
         await act.Should().NotThrowAsync("the command should succeed for a valid user with valid role change");
 
         db.ChangeTracker.Clear();
-        var outboxRows = await db.AuditOutbox
+        // Issue #1534: filter to the [AuditableAction] command row (Resource="User"); the
+        // RoleChangedEvent row written by DomainEventAuditHandler is asserted elsewhere.
+        var allRows = await db.AuditOutbox
             .AsNoTracking()
             .ToListAsync(TestCancellationToken);
 
-        outboxRows.Should().HaveCount(1);
+        var commandRows = allRows
+            .Where(r => r.PayloadJson.Contains("\"Resource\": \"User\"") || r.PayloadJson.Contains("\"Resource\":\"User\""))
+            .ToList();
 
-        var payload = JsonSerializer.Deserialize<AuditOutboxPayload>(outboxRows[0].PayloadJson);
+        commandRows.Should().HaveCount(1, because: "the [AuditableAction] command must write exactly one outbox row with Resource=User");
+
+        var payload = JsonSerializer.Deserialize<AuditOutboxPayload>(commandRows[0].PayloadJson);
         payload.Should().NotBeNull();
 
         // Key assertion: the interceptor captured a UserEntity snapshot (Update operation)

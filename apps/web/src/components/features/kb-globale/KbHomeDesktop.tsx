@@ -48,6 +48,8 @@ export interface KbHomeDesktopLabels {
   retry?: string;
   /** Aria-label factory for each doc card (used for a11y) */
   docCardAriaLabel: (doc: KbDoc) => string;
+  /** Phase 3 (#1737): label for the per-card edit button (optional; if absent no edit button) */
+  editLabel?: string;
 }
 
 export interface KbHomeDesktopProps {
@@ -65,6 +67,12 @@ export interface KbHomeDesktopProps {
   onEmptyCtaClick?: () => void;
   /** Called when the error banner retry button is clicked */
   onRetry?: () => void;
+  /**
+   * Phase 3 (#1737): called with the doc when the per-card Edit button is clicked.
+   * DEC-3: only provide this from KbGlobaleView home branch (owned docs only).
+   * When absent, no Edit button is rendered.
+   */
+  onEditClick?: (doc: KbDoc) => void;
   /** Extra CSS classes on the root element */
   className?: string;
 }
@@ -92,10 +100,19 @@ interface DocCardProps {
   doc: KbDoc;
   ariaLabel: string;
   onDocClick?: (docId: string) => void;
+  /** Phase 3 (#1737): when provided, an Edit button is rendered (DEC-3 owner-only) */
+  onEditClick?: (doc: KbDoc) => void;
+  editLabel?: string;
 }
 
 /** Single doc card — rendered as <button> when onDocClick provided, <div> otherwise */
-function DocCard({ doc, ariaLabel, onDocClick }: DocCardProps): JSX.Element {
+function DocCard({
+  doc,
+  ariaLabel,
+  onDocClick,
+  onEditClick,
+  editLabel,
+}: DocCardProps): JSX.Element {
   const gameName = doc.gameName ?? '(senza gioco)';
 
   // Format date — simple locale date, no extra library required
@@ -132,6 +149,27 @@ function DocCard({ doc, ariaLabel, onDocClick }: DocCardProps): JSX.Element {
             </>
           )}
         </div>
+
+        {/* Phase 3 (#1737): edit affordance — owner-only (DEC-3) */}
+        {onEditClick && editLabel && (
+          <div className="mt-2">
+            <button
+              type="button"
+              onClick={e => {
+                e.stopPropagation();
+                onEditClick(doc);
+              }}
+              className={cn(
+                'inline-flex items-center rounded px-2 py-0.5 text-xs font-medium',
+                'border border-border text-muted-foreground hover:bg-muted',
+                'focus:outline-none focus:ring-2 focus:ring-entity-kb/40 focus:ring-offset-1',
+                'transition-colors duration-150'
+              )}
+            >
+              {editLabel}
+            </button>
+          </div>
+        )}
       </div>
     </>
   );
@@ -220,6 +258,7 @@ export function KbHomeDesktop({
   onDocClick,
   onEmptyCtaClick,
   onRetry,
+  onEditClick,
   className,
 }: KbHomeDesktopProps): JSX.Element {
   const isEmpty = recentDocs.length === 0 && !isLoading && !error;
@@ -256,6 +295,8 @@ export function KbHomeDesktop({
               doc={doc}
               ariaLabel={labels.docCardAriaLabel(doc)}
               onDocClick={onDocClick}
+              onEditClick={onEditClick}
+              editLabel={labels.editLabel}
             />
           ))}
         </div>

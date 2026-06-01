@@ -136,3 +136,42 @@ describe('KB Globale Schemas', () => {
     expect(request.query).toBe('test');
   });
 });
+
+describe('GlobalKbSearchRequestSchema — filters (Phase 3 #1737)', () => {
+  it('accepts docType as string[]', () => {
+    const result = GlobalKbSearchRequestSchema.safeParse({
+      query: 'azul',
+      docType: ['Rulebook', 'Errata'],
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.docType).toEqual(['Rulebook', 'Errata']);
+    }
+  });
+
+  it('accepts gameId as uuid[]', () => {
+    const result = GlobalKbSearchRequestSchema.safeParse({
+      query: 'azul',
+      gameId: ['550e8400-e29b-41d4-a716-446655440001'],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects gameId with non-uuid string', () => {
+    const result = GlobalKbSearchRequestSchema.safeParse({
+      query: 'azul',
+      gameId: ['not-a-uuid'],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts language as single string', () => {
+    const result = GlobalKbSearchRequestSchema.safeParse({ query: 'azul', language: 'it' });
+    expect(result.success).toBe(true);
+  });
+
+  it('allows all filter fields to be omitted (backwards-compat)', () => {
+    const result = GlobalKbSearchRequestSchema.safeParse({ query: 'azul' });
+    expect(result.success).toBe(true);
+  });
+});

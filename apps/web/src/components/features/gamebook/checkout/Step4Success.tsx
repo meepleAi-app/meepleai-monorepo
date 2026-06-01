@@ -116,9 +116,16 @@ export function Step4Success({
         >
           {labels.backToGameCta}
         </button>
-        <a href="#" className="self-center text-xs text-muted-foreground hover:text-foreground">
+        <button
+          type="button"
+          className="self-center text-xs text-muted-foreground hover:text-foreground"
+          // TODO(#953): wire to receipt download endpoint once checkout BE is implemented.
+          onClick={() => {
+            // no-op placeholder — checkout flow is currently 100% frontend (no real Stripe).
+          }}
+        >
           {labels.receiptLink}
-        </a>
+        </button>
       </div>
     </div>
   );

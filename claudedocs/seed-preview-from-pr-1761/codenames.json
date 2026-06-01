@@ -1,0 +1,40 @@
+{
+  "ToolkitName": "Codenames",
+  "DiceTools": [],
+  "CounterTools": [
+    { "Name": "Red tiles remaining", "MinValue": 0, "MaxValue": 9, "DefaultValue": 9, "IsPerPlayer": false, "Icon": "tile", "Color": "#c0392b" },
+    { "Name": "Blue tiles remaining", "MinValue": 0, "MaxValue": 8, "DefaultValue": 8, "IsPerPlayer": false, "Icon": "tile", "Color": "#2980b9" },
+    { "Name": "Guesses remaining this turn", "MinValue": 0, "MaxValue": 9, "DefaultValue": 0, "IsPerPlayer": false, "Icon": "hint", "Color": null }
+  ],
+  "TimerTools": [
+    { "Name": "Clue giving timer (optional)", "DurationSeconds": 120, "TimerType": "CountDown", "AutoStart": false, "Color": null, "IsPerPlayer": false, "WarningThresholdSeconds": 30 },
+    { "Name": "Guessing timer (optional)", "DurationSeconds": 60, "TimerType": "CountDown", "AutoStart": false, "Color": null, "IsPerPlayer": false, "WarningThresholdSeconds": 15 }
+  ],
+  "ScoringTemplate": {
+    "Dimensions": ["Win condition"],
+    "DefaultUnit": "result",
+    "ScoreType": "Ranking",
+    "Categories": [
+      { "Id": "agents-found", "Label": "Agents revealed by team", "Computation": "Count", "Weight": 1, "Description": "First team to reveal all their agents wins." },
+      { "Id": "assassin-touched", "Label": "Assassin revealed", "Computation": "Custom", "Weight": 0, "Description": "Instant loss for team that reveals assassin (1 of 25 tiles)." }
+    ]
+  },
+  "TurnTemplate": {
+    "TurnOrderType": "Sequential",
+    "Phases": ["Red Spymaster gives clue", "Red operatives guess", "Blue Spymaster gives clue", "Blue operatives guess"],
+    "Rounds": null,
+    "TurnsPerRound": null,
+    "TurnActions": ["give-clue", "guess-tile", "end-turn"],
+    "Direction": "none"
+  },
+  "Overrides": {
+    "OverridesTurnOrder": true,
+    "OverridesScoreboard": true,
+    "OverridesDiceSet": false
+  },
+  "Reasoning": "Curated 2026-05-31 from Codenames base rules. Team-based deduction (2 teams: red 9 agents, blue 8 agents). No points scoring — win/lose race + instant-loss on assassin. Optional timers per phase (community variant). Custom turn order alternates between teams with Spymaster→Operatives sequence.",
+  "ExcludedTools": [
+    { "ToolType": "Dice", "Reason": "Codenames is purely deductive, no dice involved." },
+    { "ToolType": "CardDeck", "Reason": "Word cards form a 5x5 grid layout, not a deck. Layout is game-specific widget." }
+  ]
+}

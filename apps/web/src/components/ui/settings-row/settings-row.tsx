@@ -122,14 +122,17 @@ export function SettingsRow({
           {body}
         </button>
       ) : useLink ? (
-        <a
-          href={disabled ? undefined : href}
-          className={innerClasses}
-          aria-disabled={disabled || undefined}
-          aria-current={ariaCurrent}
-        >
-          {body}
-        </a>
+        disabled ? (
+          // When the row is disabled, render a non-interactive <span> so that
+          // we never emit an <a> without an href (jsx-a11y/anchor-is-valid).
+          <span className={innerClasses} aria-disabled="true" aria-current={ariaCurrent}>
+            {body}
+          </span>
+        ) : (
+          <a href={href} className={innerClasses} aria-current={ariaCurrent}>
+            {body}
+          </a>
+        )
       ) : (
         <div className={innerClasses} aria-current={ariaCurrent}>
           {body}

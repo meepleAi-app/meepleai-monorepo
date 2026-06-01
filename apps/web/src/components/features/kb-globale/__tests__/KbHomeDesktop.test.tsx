@@ -14,7 +14,7 @@
  * A11y: jest-axe on loaded / loading / empty states
  */
 
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { describe, expect, it, vi } from 'vitest';
@@ -255,5 +255,21 @@ describe('KbHomeDesktop', () => {
     );
     const results = await axe(container);
     expect(results).toHaveNoViolations();
+  });
+
+  // ── 13. Phase 3 #1737: edit affordance per card (DEC-3) ───────────────
+  it('Phase 3 #1737: renders Edit button per recent doc when onEditClick provided', () => {
+    const onEditClick = vi.fn();
+    render(
+      <KbHomeDesktop
+        {...defaultProps({
+          recentDocs: [THREE_DOCS[0]],
+          labels: { ...LABELS, editLabel: 'Modifica' },
+          onEditClick,
+        })}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: /modifica/i }));
+    expect(onEditClick).toHaveBeenCalledWith(THREE_DOCS[0]);
   });
 });

@@ -67,6 +67,7 @@ export function ChatInputBar({
         <div className="mb-3 flex flex-wrap gap-2">
           {images.map((img, idx) => (
             <div key={img.previewUrl} className="group relative">
+              {/* eslint-disable-next-line @next/next/no-img-element -- previewUrl is a local blob: URL from URL.createObjectURL(); next/image cannot consume blob URLs (no loader support) */}
               <img
                 src={img.previewUrl}
                 alt={`Allegato ${idx + 1}`}

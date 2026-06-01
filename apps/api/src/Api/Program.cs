@@ -888,6 +888,7 @@ v1Api.MapGameBookEndpoints();          // Phase E1 — GameBook catalog (multi-b
 // Audit & Analytics
 v1Api.MapAuditEndpoints();             // Audit log retrieval & search
 v1Api.MapAdminAuditLogEndpoints();     // Issue #3691: Admin audit log system
+v1Api.MapAdminEventsEndpoints();       // F4.1 #1718: admin domain event log (GET, stream SSE, types)
 v1Api.MapUserActivityEndpoints();      // Issue #4652: User activity log for Admin Dashboard
 v1Api.MapAdminAgentAnalyticsEndpoints(); // Issue #4653: Agents analytics for Admin Dashboard
 v1Api.MapAdminAnalyticsEndpoints();      // Admin analytics: overview, chat, PDF, model performance, MAU

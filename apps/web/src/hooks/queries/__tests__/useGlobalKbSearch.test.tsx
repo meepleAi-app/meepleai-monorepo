@@ -221,4 +221,82 @@ describe('useGlobalKbSearch', () => {
     expect(result.current.error?.message).toBe('Network failure');
     expect(result.current.results).toHaveLength(0);
   });
+
+  // Phase 3 #1737: filter propagation + queryKey identity tests
+  describe('useGlobalKbSearch — filters (Phase 3 #1737)', () => {
+    it('passes docType filter to client call', async () => {
+      mockSearchGlobal.mockResolvedValue({
+        results: [],
+        hasMore: false,
+        nextCursor: null,
+      });
+      renderHook(() => useGlobalKbSearch({ query: 'azul', filters: { docType: ['Rulebook'] } }), {
+        wrapper,
+      });
+      await waitFor(() =>
+        expect(mockSearchGlobal).toHaveBeenCalledWith(
+          expect.objectContaining({ docType: ['Rulebook'] })
+        )
+      );
+    });
+
+    it('passes all filter fields to client call', async () => {
+      mockSearchGlobal.mockResolvedValue({
+        results: [],
+        hasMore: false,
+        nextCursor: null,
+      });
+      renderHook(
+        () =>
+          useGlobalKbSearch({
+            query: 'azul',
+            filters: {
+              docType: ['Rulebook'],
+              gameId: ['00000000-0000-0000-0000-000000000001'],
+              language: 'it',
+            },
+          }),
+        { wrapper }
+      );
+      await waitFor(() =>
+        expect(mockSearchGlobal).toHaveBeenCalledWith(
+          expect.objectContaining({
+            docType: ['Rulebook'],
+            gameId: ['00000000-0000-0000-0000-000000000001'],
+            language: 'it',
+          })
+        )
+      );
+    });
+
+    it('queryKey includes filters (different filters = different cache entry)', async () => {
+      mockSearchGlobal.mockResolvedValue({
+        results: [],
+        hasMore: false,
+        nextCursor: null,
+      });
+      const { rerender } = renderHook(
+        ({ filters }: { filters: { docType?: readonly string[] } }) =>
+          useGlobalKbSearch({ query: 'azul', filters }),
+        { wrapper, initialProps: { filters: { docType: ['Rulebook'] } } }
+      );
+      await waitFor(() => expect(mockSearchGlobal).toHaveBeenCalledTimes(1));
+      rerender({ filters: { docType: ['Errata'] } });
+      await waitFor(() => expect(mockSearchGlobal).toHaveBeenCalledTimes(2));
+    });
+
+    it('omitted filters are not sent (backwards-compat with Phase 1+2 callers)', async () => {
+      mockSearchGlobal.mockResolvedValue({
+        results: [],
+        hasMore: false,
+        nextCursor: null,
+      });
+      renderHook(() => useGlobalKbSearch({ query: 'azul' }), { wrapper });
+      await waitFor(() => expect(mockSearchGlobal).toHaveBeenCalled());
+      const call = mockSearchGlobal.mock.calls[0]?.[0];
+      expect(call).not.toHaveProperty('docType');
+      expect(call).not.toHaveProperty('gameId');
+      expect(call).not.toHaveProperty('language');
+    });
+  });
 });

@@ -1,14 +1,23 @@
 'use client';
 
-import { useMemo, useRef, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 
+import { AbortButton } from '@/components/features/gamebook/AbortButton';
 import { BookPicker } from '@/components/features/gamebook/BookPicker';
+import { LoadingSkeleton } from '@/components/features/gamebook/LoadingSkeleton';
+import { ReaderModeToggle } from '@/components/features/gamebook/ReaderModeToggle';
 import { SegmentPicker } from '@/components/features/gamebook/SegmentPicker';
+import {
+  deriveUiStep,
+  isAbortableStep,
+  LABELS,
+} from '@/components/features/gamebook/TranslateViewer.steps';
 import { TranslationPane } from '@/components/features/gamebook/TranslationPane';
 import { useGameBooks } from '@/hooks/useGameBooks';
 import { GameBookRole, hasRole, type GameRef } from '@/lib/api/gamebook';
 import type { GamebookPhotoArtifact, GamebookSegment } from '@/lib/api/gamebook-photos';
 import { usePhotoUpload } from '@/lib/gamebook/hooks/usePhotoUpload';
+import { useReaderMode } from '@/lib/gamebook/hooks/useReaderMode';
 import { useSegmentPhoto } from '@/lib/gamebook/hooks/useSegmentPhoto';
 import { useTranslateSegmentSSE } from '@/lib/gamebook/hooks/useTranslateSegmentSSE';
 
@@ -25,13 +34,21 @@ export interface TranslateViewerProps {
   gameRef: GameRef;
 }
 
-type Phase = 'idle' | 'uploading' | 'segmenting' | 'segments_ready' | 'translating' | 'translated';
+export type Phase =
+  | 'idle'
+  | 'uploading'
+  | 'segmenting'
+  | 'segments_ready'
+  | 'translating'
+  | 'translated';
 
 export function TranslateViewer({ campaignId, gameRef }: TranslateViewerProps): ReactElement {
   const [phase, setPhase] = useState<Phase>('idle');
   const [artifact, setArtifact] = useState<GamebookPhotoArtifact | null>(null);
   const [activeSegment, setActiveSegment] = useState<GamebookSegment | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { isReaderMode, toggle: toggleReaderMode } = useReaderMode();
 
   // C4/C5 (multi-book generalization 2026-05-19): book selection replaces the
   // legacy Storybook/Encounter `pageType` dropdown.
@@ -53,11 +70,18 @@ export function TranslateViewer({ campaignId, gameRef }: TranslateViewerProps): 
   const segment = useSegmentPhoto(campaignId);
   const sse = useTranslateSegmentSSE();
 
+  // T5 — DEC-4: Hard timeout state. Merged into errorMessage below.
+  const [timeoutError, setTimeoutError] = useState<string | null>(null);
+
+  // DEC-1: Derive user-facing UI step from internal FSM phase + SSE signals.
+  const uiStep = deriveUiStep(phase, sse);
+
   const handleFile = async (file: File) => {
     if (!effectiveBookId) {
       // Defensive: button should be disabled when no book selectable.
       return;
     }
+    setTimeoutError(null); // Clear timeout error on new operation start.
     setPhase('uploading');
     setArtifact(null);
     setActiveSegment(null);
@@ -73,6 +97,32 @@ export function TranslateViewer({ campaignId, gameRef }: TranslateViewerProps): 
     }
   };
 
+  // T4 — DEC-3: Abort handler. Rolls back FSM per phase:
+  //   uploading   → idle          (photo discarded, camera available)
+  //   segmenting  → idle          (photo + OCR discarded, camera available)
+  //   translating → segments_ready (artifact preserved, user can pick another segment)
+  const handleAbort = useCallback(() => {
+    sse.stop();
+    setTimeoutError(null);
+    setPhase(prev => (prev === 'translating' ? 'segments_ready' : 'idle'));
+  }, [sse]);
+
+  // T5 — DEC-4: Hard timeout 20s. Soft target 17s (Aaron CORE §1b lines 122-123 — no UI feedback).
+  const HARD_TIMEOUT_MS = 20_000;
+
+  useEffect(() => {
+    if (phase !== 'uploading' && phase !== 'segmenting' && phase !== 'translating') return;
+    const timerId = window.setTimeout(() => {
+      // M2 review fix: skip rollback if SSE already completed in the same tick (race guard)
+      if (sse.isComplete) return;
+      sse.stop();
+      setTimeoutError(LABELS.timeoutError);
+      setPhase(prev => (prev === 'translating' ? 'segments_ready' : 'idle'));
+    }, HARD_TIMEOUT_MS);
+    return () => window.clearTimeout(timerId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sse.stop is stable (useCallback); deliberate phase-only arm
+  }, [phase]);
+
   const handlePickSegment = (paragraphNumber: number) => {
     if (!artifact || !effectiveBookId) return;
     const seg = artifact.segments.find(s => s.paragraphNumber === paragraphNumber);
@@ -87,15 +137,19 @@ export function TranslateViewer({ campaignId, gameRef }: TranslateViewerProps): 
     setPhase('translated');
   }
 
-  const errorMessage = upload.error?.message ?? segment.error?.message ?? sse.error;
+  const errorMessage =
+    upload.error?.message ?? segment.error?.message ?? sse.error ?? timeoutError ?? undefined;
 
   const isBusy = phase === 'uploading' || phase === 'segmenting' || phase === 'translating';
   const cameraDisabled = isBusy || !effectiveBookId;
 
   return (
-    <div className="grid gap-4 px-4 py-6 sm:px-6">
+    <div className="grid gap-4 px-4 py-6 sm:px-6" data-reader-mode={String(isReaderMode)}>
       <header className="flex flex-wrap items-center gap-3">
-        <h1 className="text-xl font-semibold text-[var(--c-game)]">Traduci pagina libro game</h1>
+        <div className="flex flex-1 items-center justify-between gap-2">
+          <h1 className="text-xl font-semibold text-[var(--c-game)]">Traduci pagina libro game</h1>
+          <ReaderModeToggle isReaderMode={isReaderMode} onToggle={toggleReaderMode} />
+        </div>
       </header>
 
       {narrativeBooks.length > 1 && (
@@ -128,6 +182,7 @@ export function TranslateViewer({ campaignId, gameRef }: TranslateViewerProps): 
           type="file"
           accept="image/*"
           capture="environment"
+          aria-label="Seleziona foto da tradurre"
           onChange={e => {
             const f = e.target.files?.[0];
             if (f) void handleFile(f);
@@ -144,10 +199,8 @@ export function TranslateViewer({ campaignId, gameRef }: TranslateViewerProps): 
         >
           {phase === 'idle' || phase === 'translated' ? 'Scatta o scegli foto' : 'In corso…'}
         </button>
-        {phase === 'uploading' && <p className="text-sm text-muted-foreground">Upload in corso…</p>}
-        {phase === 'segmenting' && (
-          <p className="text-sm text-muted-foreground">OCR in corso (estrazione paragrafi)…</p>
-        )}
+        {uiStep && <LoadingSkeleton uiStep={uiStep} />}
+        {isAbortableStep(uiStep) && <AbortButton onClick={handleAbort} />}
         {errorMessage && (
           <p className="text-sm text-destructive" role="alert" data-testid="translate-viewer-error">
             {errorMessage}

@@ -210,8 +210,11 @@ export default function MechanicAnalysesPage() {
   });
 
   // ========== Polling: analysis status ==========
+  // The queryFn only runs when `enabled: !!analysisId` is true; the non-null
+  // assertion is gated by that invariant.
   const statusQuery = useQuery<MechanicAnalysisStatusDto | null>({
     queryKey: ['mechanic-analysis', analysisId],
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- `enabled: !!analysisId` gates execution
     queryFn: () => adminClient.getMechanicAnalysisStatus(analysisId!),
     enabled: !!analysisId,
     // Poll every 2s while the pipeline is running.
@@ -251,7 +254,12 @@ export default function MechanicAnalysesPage() {
   });
 
   const submitReviewMutation = useMutation({
-    mutationFn: () => adminClient.submitMechanicAnalysisForReview(analysisId!),
+    mutationFn: () => {
+      if (analysisId == null) {
+        throw new Error('analysisId is required to submit for review');
+      }
+      return adminClient.submitMechanicAnalysisForReview(analysisId);
+    },
     onSuccess: () => {
       setLifecycleError(null);
       queryClient.invalidateQueries({ queryKey: ['mechanic-analysis', analysisId] });
@@ -262,7 +270,12 @@ export default function MechanicAnalysesPage() {
   });
 
   const approveMutation = useMutation({
-    mutationFn: () => adminClient.approveMechanicAnalysis(analysisId!),
+    mutationFn: () => {
+      if (analysisId == null) {
+        throw new Error('analysisId is required to approve');
+      }
+      return adminClient.approveMechanicAnalysis(analysisId);
+    },
     onSuccess: () => {
       setLifecycleError(null);
       queryClient.invalidateQueries({ queryKey: ['mechanic-analysis', analysisId] });
@@ -273,11 +286,15 @@ export default function MechanicAnalysesPage() {
   });
 
   const suppressMutation = useMutation({
-    mutationFn: () =>
-      adminClient.suppressMechanicAnalysis(analysisId!, {
+    mutationFn: () => {
+      if (analysisId == null) {
+        throw new Error('analysisId is required to suppress');
+      }
+      return adminClient.suppressMechanicAnalysis(analysisId, {
         reason: suppressReason,
         requestSource: suppressSource,
-      }),
+      });
+    },
     onSuccess: () => {
       setLifecycleError(null);
       setSuppressOpen(false);

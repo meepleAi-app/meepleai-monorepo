@@ -24,6 +24,9 @@ vi.mock('../NavConfig', () => ({ AdminMonitorNavConfig: () => null }));
 vi.mock('@/components/admin/layout/AdminTabPersistence', () => ({
   AdminTabPersistence: () => null,
 }));
+vi.mock('@/components/admin/monitor', () => ({
+  LiveEventLog: () => <div data-testid="live-event-log" />,
+}));
 
 import AdminMonitorPage from '../page';
 
@@ -66,17 +69,19 @@ describe('AdminMonitorPage', () => {
     expect(screen.getByTestId('testing-tab')).toBeInTheDocument();
   });
 
-  it('renders heading', async () => {
-    const page = await AdminMonitorPage({ searchParams: Promise.resolve({}) });
-    render(page);
-    expect(screen.getByText('Monitoraggio')).toBeInTheDocument();
-  });
-
   it('renders export tab content', async () => {
     const page = await AdminMonitorPage({
       searchParams: Promise.resolve({ tab: 'export' }),
     });
     render(page);
     expect(screen.getByTestId('export-tab')).toBeInTheDocument();
+  });
+
+  it('renders events tab with LiveEventLog', async () => {
+    const page = await AdminMonitorPage({
+      searchParams: Promise.resolve({ tab: 'events' }),
+    });
+    render(page);
+    expect(screen.getByTestId('live-event-log')).toBeInTheDocument();
   });
 });

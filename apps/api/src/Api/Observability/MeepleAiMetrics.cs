@@ -19,6 +19,7 @@ namespace Api.Observability;
 ///   - MeepleAiMetrics.Evaluation.cs   — RAG evaluation and grid search
 ///   - MeepleAiMetrics.Slack.cs        — Slack delivery counters, rate limit, token revocations
 ///   - MeepleAiMetrics.SharedGameDetail.cs — Shared-game detail-page requests, cache hits, render and fan-out durations (#614)
+///   - MeepleAiMetrics.AdminMonitor.cs    — SSE broadcast drop counter for Admin Monitor LiveEventLog (F4.1 #1718)
 /// </summary>
 internal static partial class MeepleAiMetrics
 {

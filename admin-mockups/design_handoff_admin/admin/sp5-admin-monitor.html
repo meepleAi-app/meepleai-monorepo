@@ -3,193 +3,613 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>SP5 A8 · Admin Monitor / Analytics · /admin/monitor</title>
-<!-- @v2 TimeRangePicker · KPISparkline · LiveEventLog · AdminChartPanel reuse -->
-<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<title>Monitor · Events · MeepleAI Admin</title>
+<!-- Admin Console → 'monitor' (gruppo Admin Console · em 📈 · href sp5-admin-monitor.html)
+     Tab attivo: events. LiveEventLog è il componente nuovo (Fase 1), trasversale (riuso da C1 Infra).
+     Endpoints (realismo):
+       GET /api/v1/admin/events/stream                  (SSE, nuovo Fase 1)
+       GET /api/v1/admin/events?since=<cursor>&limit=100 (backfill polling)
+       GET /api/v1/admin/events/types                    (lista tipi per filter chips)
+     Role: admin -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="tokens.css"/><link rel="stylesheet" href="components.css"/><link rel="stylesheet" href="admin-base.css"/>
+
+<!-- ═══════════════════ INLINED DS (tokens + components subset + admin-base) ═══════════════════ -->
 <style>
-  .kpi-strip { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
-  .admin-kpi.tiny { min-height: 64px; padding: 8px 10px; }
-  .admin-kpi.tiny .admin-kpi-value { font-size: 18px; }
-  .admin-kpi.tiny .admin-kpi-spark { width: 50px; height: 22px; right: 8px; top: 8px; }
+/* ── tokens.css ─────────────────────────────────────────────────── */
+:root{
+  --c-game:25 95% 45%;--c-player:262 83% 58%;--c-session:240 60% 55%;--c-agent:38 92% 50%;
+  --c-kb:174 60% 40%;--c-chat:220 80% 55%;--c-event:350 89% 60%;--c-toolkit:142 70% 45%;--c-tool:195 80% 50%;
+  --c-success:142 70% 45%;--c-warning:38 92% 50%;--c-danger:350 89% 60%;--c-info:220 80% 55%;
+  --brand:var(--c-game);--brand-fg:hsl(var(--c-game));
+  --f-display:'Quicksand',system-ui,sans-serif;--f-body:'Nunito',system-ui,sans-serif;--f-mono:'JetBrains Mono',ui-monospace,monospace;
+  --fs-xs:11px;--fs-sm:12px;--fs-base:14px;--fs-md:15px;--fs-lg:17px;--fs-xl:20px;--fs-2xl:24px;--fs-3xl:32px;--fs-4xl:40px;
+  --fw-reg:400;--fw-med:500;--fw-semi:600;--fw-bold:700;--fw-ext:800;
+  --lh-tight:1.2;--lh-snug:1.35;--lh-body:1.5;--lh-relax:1.65;
+  --s-0:0;--s-1:4px;--s-2:8px;--s-3:12px;--s-4:16px;--s-5:20px;--s-6:24px;--s-7:32px;--s-8:40px;--s-9:48px;--s-10:64px;
+  --r-xs:4px;--r-sm:6px;--r-md:10px;--r-lg:14px;--r-xl:18px;--r-2xl:24px;--r-pill:9999px;
+  --ease-out:cubic-bezier(.16,1,.3,1);--ease-in-out:cubic-bezier(.65,0,.35,1);--ease-spring:cubic-bezier(.34,1.56,.64,1);
+  --dur-xs:120ms;--dur-sm:180ms;--dur-md:280ms;--dur-lg:400ms;--dur-xl:600ms;
+  --z-base:0;--z-sticky:10;--z-nav:20;--z-overlay:50;--z-drawer:51;--z-modal:60;--z-toast:70;--z-tooltip:80;
+}
+:root,:root[data-theme="light"]{
+  --bg:#f7f3ee;--bg-card:#fff;--bg-muted:#efe6d9;--bg-sunken:#ede2d0;--bg-hover:rgba(180,130,80,.06);
+  --text:#2b1f12;--text-sec:#5a4a38;--text-muted:#9a8870;
+  --border:rgba(180,130,80,.18);--border-light:rgba(180,130,80,.1);--border-strong:rgba(180,130,80,.32);
+  --shadow-xs:0 1px 2px rgba(90,60,20,.06);--shadow-sm:0 2px 8px rgba(90,60,20,.08);--shadow-md:0 4px 16px rgba(90,60,20,.1);
+  --shadow-lg:0 12px 36px rgba(90,60,20,.14);--shadow-drawer:0 -8px 32px rgba(90,60,20,.12);
+  --glass-bg:rgba(255,255,255,.88);--glass-border:rgba(255,255,255,.6);color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --bg:#14100a;--bg-card:#1e1710;--bg-muted:#241c13;--bg-sunken:#0f0c08;--bg-hover:rgba(255,200,130,.05);
+  --text:#f0e4d2;--text-sec:#c8b896;--text-muted:#8a7860;
+  --border:rgba(224,180,110,.14);--border-light:rgba(224,180,110,.08);--border-strong:rgba(224,180,110,.28);
+  --shadow-xs:0 1px 2px rgba(0,0,0,.3);--shadow-sm:0 2px 8px rgba(0,0,0,.4);--shadow-md:0 4px 16px rgba(0,0,0,.5);
+  --shadow-lg:0 12px 36px rgba(0,0,0,.6);--shadow-drawer:0 -8px 32px rgba(0,0,0,.5);
+  --glass-bg:rgba(30,22,14,.85);--glass-border:rgba(224,180,110,.14);
+  --c-game:28 95% 58%;--c-player:262 75% 70%;--c-session:235 70% 70%;--c-agent:38 92% 62%;--c-kb:174 60% 55%;
+  --c-chat:218 80% 68%;--c-event:350 85% 70%;--c-toolkit:142 60% 58%;--c-tool:195 75% 62%;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}html,body{margin:0;padding:0}
+body{font-family:var(--f-body);background:var(--bg);color:var(--text);font-size:var(--fs-base);line-height:var(--lh-body);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;transition:background var(--dur-md) var(--ease-out),color var(--dur-md) var(--ease-out)}
+h1,h2,h3,h4,h5,h6{font-family:var(--f-display);font-weight:var(--fw-bold);letter-spacing:-.01em;margin:0;line-height:var(--lh-tight)}
+button{font-family:inherit;cursor:pointer}a{color:inherit;text-decoration:none}
+code,kbd{font-family:var(--f-mono);font-size:.9em}
+.e-game{--e:var(--c-game)}.e-player{--e:var(--c-player)}.e-session{--e:var(--c-session)}.e-agent{--e:var(--c-agent)}
+.e-kb{--e:var(--c-kb)}.e-chat{--e:var(--c-chat)}.e-event{--e:var(--c-event)}.e-toolkit{--e:var(--c-toolkit)}.e-tool{--e:var(--c-tool)}
+.e-fg{color:hsl(var(--e))}.e-bg{background:hsl(var(--e));color:#fff}
+.e-tint{background:hsl(var(--e)/.1);color:hsl(var(--e))}.e-ring{box-shadow:0 0 0 2px hsl(var(--e)/.35)}
 
-  .charts-2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .chart-big { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 10px; padding: 14px; height: 240px; display: flex; flex-direction: column; }
-  .chart-big h3 { margin: 0; font-family: var(--f-display); font-size: 13px; font-weight: 800; }
-  .chart-big .sub { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); margin-top: 2px; }
-  .chart-big svg { flex: 1; width: 100%; margin-top: 10px; }
+/* ── components.css (subset rilevante) ─────────────────────────── */
+.e-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:var(--r-sm);background:hsl(var(--e)/.12);color:hsl(var(--e));font-size:var(--fs-xs);font-weight:var(--fw-bold);font-family:var(--f-display);text-transform:uppercase;letter-spacing:.04em}
+.e-dot{width:8px;height:8px;border-radius:50%;background:hsl(var(--e));flex-shrink:0;display:inline-block}
+.spark{stroke:currentColor;stroke-width:1.5;fill:none}.spark-fill{fill:currentColor;opacity:.14}
 
-  .event-log {
-    background: var(--bg-card); border: 1px solid var(--border-light);
-    border-radius: 10px; max-height: 280px; overflow-y: auto;
-    font-family: var(--f-mono); font-size: 11px;
-  }
-  .event-log .row {
-    display: grid; grid-template-columns: 80px 80px 80px 1fr;
-    gap: 10px; padding: 5px 14px; border-bottom: 1px solid var(--border-light);
-    line-height: 1.4;
-  }
-  .event-log .row:hover { background: var(--bg-muted); }
-  .event-log .ts { color: var(--text-muted); }
-  .event-log .lvl { font-weight: 700; }
-  .event-log .lvl.info { color: hsl(var(--c-chat)); }
-  .event-log .lvl.warn { color: hsl(38 90% 50%); }
-  .event-log .lvl.err  { color: hsl(var(--c-event)); }
-  .event-log .lvl.ok   { color: hsl(var(--c-toolkit)); }
-  .event-log .route { color: hsl(var(--c-agent)); }
+/* ── admin-base.css ─────────────────────────────────────────────── */
+.admin-page{background:var(--bg);color:var(--text);min-height:100vh;font-family:var(--f-body);font-size:var(--fs-sm);line-height:1.5}
+.admin-shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+.admin-nav{background:var(--bg-card);border-right:1px solid var(--border);padding:16px 0;display:flex;flex-direction:column;gap:2px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.admin-nav-brand{padding:4px 16px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border-light);margin-bottom:12px}
+.admin-nav-brand-mark{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,hsl(var(--c-game)),hsl(var(--c-event)));color:#fff;display:grid;place-items:center;font-family:var(--f-display);font-weight:900;font-size:14px}
+.admin-nav-brand-name{font-family:var(--f-display);font-weight:800;font-size:14px}
+.admin-nav-brand-tag{font-family:var(--f-mono);font-size:9px;font-weight:700;color:hsl(var(--c-event));text-transform:uppercase;letter-spacing:.08em;padding:2px 6px;border-radius:4px;background:hsl(var(--c-event)/.12);margin-left:auto}
+.admin-nav-group{padding:10px 16px 4px;font-family:var(--f-mono);font-size:9.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em}
+.admin-nav-item{display:flex;align-items:center;gap:10px;padding:7px 16px;color:var(--text-sec);font-family:var(--f-display);font-size:13px;font-weight:600;cursor:pointer;border-left:2px solid transparent;text-decoration:none}
+.admin-nav-item:hover{background:var(--bg-muted);color:var(--text)}
+.admin-nav-item.active{background:hsl(var(--c-event)/.08);color:hsl(var(--c-event));border-left-color:hsl(var(--c-event))}
+.admin-nav-item .em{font-size:14px;opacity:.9}
+.admin-nav-item .count{margin-left:auto;font-family:var(--f-mono);font-size:10px;color:var(--text-muted);font-weight:700}
+.admin-nav-foot{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border-light);font-family:var(--f-mono);font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:8px}
+.admin-nav-foot .badge{padding:2px 6px;border-radius:4px;background:hsl(var(--c-toolkit)/.12);color:hsl(var(--c-toolkit));font-weight:700;font-size:9px;text-transform:uppercase;letter-spacing:.05em}
+.admin-top{background:var(--bg);border-bottom:1px solid var(--border-light);padding:12px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:50;backdrop-filter:blur(12px)}
+.admin-top h1{font-family:var(--f-display);font-size:20px;font-weight:800;margin:0;line-height:1.2}
+.admin-top .crumbs{font-family:var(--f-mono);font-size:11px;color:var(--text-muted);margin-top:2px}
+.admin-top .spacer{flex:1}.admin-top-actions{display:flex;gap:8px;align-items:center}
+.admin-search{display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;width:280px;font-size:12px}
+.admin-search input{flex:1;border:0;background:transparent;color:var(--text);font-family:var(--f-body);font-size:12.5px;outline:0}
+.admin-search kbd{padding:1px 5px;border-radius:4px;background:var(--bg-muted);border:1px solid var(--border);font-family:var(--f-mono);font-size:9px;color:var(--text-muted)}
+.btn-admin{padding:6px 12px;border-radius:6px;font-family:var(--f-display);font-size:12.5px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--bg-card);color:var(--text);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-admin:hover{background:var(--bg-muted)}
+.btn-admin.primary{background:hsl(var(--c-event));border-color:hsl(var(--c-event));color:#fff;box-shadow:0 2px 6px hsl(var(--c-event)/.3)}
+.btn-admin.primary:hover{filter:brightness(1.08)}
+.btn-admin.danger{background:var(--bg-card);border-color:hsl(var(--c-event)/.5);color:hsl(var(--c-event))}
+.btn-admin.success{background:hsl(var(--c-toolkit));border-color:hsl(var(--c-toolkit));color:#fff}
+.btn-admin.ghost{background:transparent;border-color:transparent}
+.btn-admin.icon{padding:6px;width:28px;height:28px;justify-content:center}
+.btn-admin.sm{padding:3px 8px;font-size:11px}
+.btn-admin kbd{padding:1px 4px;border-radius:3px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);font-family:var(--f-mono);font-size:9px;margin-left:4px}
+.btn-admin.primary kbd{background:rgba(0,0,0,.18);border-color:rgba(0,0,0,.25)}
+.admin-kpi{background:var(--bg-card);border:1px solid var(--border-light);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-height:88px;position:relative}
+.admin-kpi-label{font-family:var(--f-mono);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em}
+.admin-kpi-value{font-family:var(--f-display);font-size:28px;font-weight:800;color:var(--text);line-height:1.1;font-variant-numeric:tabular-nums}
+.admin-kpi-trend{font-family:var(--f-mono);font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:3px}
+.admin-kpi-trend.up{color:hsl(var(--c-toolkit))}.admin-kpi-trend.down{color:hsl(var(--c-event))}.admin-kpi-trend.flat{color:var(--text-muted)}
+.admin-kpi-spark{position:absolute;right:12px;top:12px;width:70px;height:28px;opacity:.85}
+.admin-kpi.e-event{border-left:3px solid hsl(var(--c-event))}
+.admin-kpi.e-chat{border-left:3px solid hsl(var(--c-chat))}
+.admin-kpi.e-toolkit{border-left:3px solid hsl(var(--c-toolkit))}
+.admin-kpi.e-agent{border-left:3px solid hsl(var(--c-agent))}
+.admin-panel{background:var(--bg-card);border:1px solid var(--border-light);border-radius:10px;overflow:hidden}
+.admin-panel-head{padding:10px 14px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:10px;background:var(--bg)}
+.admin-panel-head h3{margin:0;font-family:var(--f-display);font-size:13px;font-weight:800}
+.admin-panel-head .meta{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);margin-left:auto}
+.admin-panel-body{padding:14px}
+.status-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-family:var(--f-mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.status-chip::before{content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.status-chip.healthy{background:hsl(var(--c-toolkit)/.12);color:hsl(var(--c-toolkit))}
+.status-chip.healthy::before{background:hsl(var(--c-toolkit));box-shadow:0 0 0 3px hsl(var(--c-toolkit)/.25)}
+.status-chip.ok{background:hsl(var(--c-toolkit)/.12);color:hsl(var(--c-toolkit))}
+.status-chip.ok::before{background:hsl(var(--c-toolkit))}
+.status-chip.warning{background:hsl(38 90% 56%/.14);color:hsl(38 90% 50%)}
+.status-chip.warning::before{background:hsl(38 90% 50%)}
+.status-chip.danger{background:hsl(var(--c-event)/.12);color:hsl(var(--c-event))}
+.status-chip.danger::before{background:hsl(var(--c-event))}
+.status-chip.muted{background:var(--bg-muted);color:var(--text-muted)}
+.status-chip.muted::before{background:var(--text-muted)}
+.status-chip.info{background:hsl(var(--c-chat)/.12);color:hsl(var(--c-chat))}
+.status-chip.info::before{background:hsl(var(--c-chat))}
+.status-chip.running{background:hsl(var(--c-toolkit)/.12);color:hsl(var(--c-toolkit))}
+.status-chip.running::before{background:hsl(var(--c-toolkit));animation:admin-pulse 1.4s ease-in-out infinite}
+@keyframes admin-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.5}}
+.admin-tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:16px;overflow-x:auto}
+.admin-tab{padding:8px 14px;background:transparent;border:0;font-family:var(--f-display);font-size:13px;font-weight:700;color:var(--text-sec);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.admin-tab .count{padding:1px 6px;border-radius:999px;background:var(--bg-muted);color:var(--text-muted);font-family:var(--f-mono);font-size:10px;font-weight:700}
+.admin-tab:hover{color:var(--text)}
+.admin-tab.active{color:hsl(var(--c-event));border-bottom-color:hsl(var(--c-event))}
+.admin-tab.active .count{background:hsl(var(--c-event)/.14);color:hsl(var(--c-event))}
+.admin-input,.admin-select,.admin-textarea{width:100%;max-width:360px;padding:6px 10px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;font-family:var(--f-body);font-size:12.5px}
+.admin-input.mono{font-family:var(--f-mono)}
+@media (max-width:880px){
+  .admin-mobile-fallback{display:flex !important;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px;text-align:center;gap:16px}
+  .admin-mobile-fallback .em{font-size:56px}
+  .admin-mobile-fallback h2{margin:0;font-family:var(--f-display);font-size:20px}
+  .admin-mobile-fallback p{color:var(--text-sec);max-width:320px;margin:0;line-height:1.5}
+  .admin-shell{display:none}
+}
+.admin-mobile-fallback{display:none}
+.admin-body{padding:20px 24px}
+.kbd-hint{display:inline-flex;align-items:center;gap:4px;font-family:var(--f-mono);font-size:10px;color:var(--text-muted)}
+.kbd-hint kbd{padding:1px 5px;border-radius:4px;background:var(--bg-muted);border:1px solid var(--border)}
 
-  .time-pills { display: flex; gap: 4px; padding: 3px; background: var(--bg-muted); border-radius: 6px; }
-  .time-pills button { padding: 4px 10px; background: transparent; border: 0; cursor: pointer; font-family: var(--f-mono); font-size: 11px; font-weight: 700; color: var(--text-sec); border-radius: 4px; }
-  .time-pills button.active { background: hsl(var(--c-event)); color: #fff; }
+/* ── event-log + live-pill (PATTERN da sp5-admin-infra.html) ────── */
+.event-log{background:var(--bg-sunken,var(--bg));border-top:1px solid var(--border-light);max-height:560px;overflow-y:auto;font-family:var(--f-mono);font-size:11px}
+.event-log .row{display:grid;grid-template-columns:96px 60px 1fr;gap:12px;padding:5px 14px;border-bottom:1px solid var(--border-light);line-height:1.45;align-items:center;cursor:pointer}
+.event-log .row:hover{background:var(--bg-muted)}
+.event-log .row:last-child{border-bottom:0}
+.event-log .row.selected{background:hsl(var(--c-event)/.08);box-shadow:inset 2px 0 0 hsl(var(--c-event))}
+.event-log .ts{color:var(--text-muted)}
+.event-log .lvl{font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:10px}
+.event-log .lvl.info{color:hsl(var(--c-chat))}
+.event-log .lvl.warn{color:hsl(38 90% 50%)}
+.event-log .lvl.err{color:hsl(var(--c-event))}
+.event-log .lvl.ok{color:hsl(var(--c-toolkit))}
+.event-log .msg{color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.event-log .msg .et{color:var(--text);font-weight:700}
+.event-log .msg .k{color:var(--text-muted)}
+.event-log .msg .v-game{color:hsl(var(--c-game));font-weight:700}
+.event-log .msg .v-kb{color:hsl(var(--c-kb));font-weight:700}
+.event-log .msg .v-agent{color:hsl(var(--c-agent));font-weight:700}
+.event-log .msg .v-tool{color:hsl(var(--c-tool));font-weight:700}
+.event-log .msg .v-session{color:hsl(var(--c-session));font-weight:700}
+.event-log .msg .v-chat{color:hsl(var(--c-chat));font-weight:700}
+.event-log .msg .v-player{color:hsl(var(--c-player));font-weight:700}
+.event-log .msg .pct{color:hsl(var(--c-toolkit));font-weight:700}
+
+.live-pill{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:999px;background:hsl(var(--c-toolkit)/.12);color:hsl(var(--c-toolkit));font-family:var(--f-mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.live-pill::before{content:'';width:6px;height:6px;border-radius:50%;background:hsl(var(--c-toolkit));animation:admin-pulse 1.4s ease-in-out infinite}
+
+.head-cluster{display:inline-flex;align-items:center;gap:10px;margin-left:auto}
+.head-cluster .sep{width:1px;height:14px;background:var(--border-light)}
+
+/* ── Page-specific: KPI strip ──────────────────────────────────── */
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.admin-kpi-value .sub{font-size:14px;color:var(--text-muted);font-weight:600}
+
+/* ── Page-specific: sub-nav live count ─────────────────────────── */
+.admin-tab .count.live,.admin-tab.active .count.live{display:inline-flex;align-items:center;gap:4px;background:hsl(var(--c-toolkit)/.14);color:hsl(var(--c-toolkit))}
+.admin-tab .count.live .dot{width:5px;height:5px;border-radius:50%;background:hsl(var(--c-toolkit));animation:admin-pulse 1.4s ease-in-out infinite}
+
+/* ── Page-specific: filter bar ─────────────────────────────────── */
+.filter-grid{display:flex;flex-direction:column;gap:12px}
+.filter-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.filter-label{font-family:var(--f-mono);font-size:9.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;min-width:84px;flex-shrink:0}
+.admin-search.wide{width:100%;max-width:none}
+.filter-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;border:1px solid var(--border);background:var(--bg);color:var(--text-sec);font-family:var(--f-display);font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap}
+.filter-chip:hover{background:var(--bg-muted);color:var(--text)}
+.filter-chip .c{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);font-weight:700;padding:0 5px;border-radius:999px;background:var(--bg-muted)}
+.filter-chip.active{background:hsl(var(--c-event)/.1);border-color:hsl(var(--c-event)/.4);color:hsl(var(--c-event))}
+.filter-chip.active .c{color:hsl(var(--c-event));background:hsl(var(--c-event)/.15)}
+.filter-chip.ghost{border-style:dashed;color:var(--text-muted);background:transparent}
+.filter-chip.ghost:hover{color:var(--text);border-color:var(--border-strong)}
+.time-select{display:inline-flex;align-items:center;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg)}
+.time-select button{padding:4px 11px;background:transparent;border:0;border-right:1px solid var(--border-light);font-family:var(--f-mono);font-size:11px;font-weight:700;color:var(--text-sec)}
+.time-select button:last-child{border-right:0}
+.time-select button:hover{background:var(--bg-muted);color:var(--text)}
+.time-select button.active{background:hsl(var(--c-toolkit)/.14);color:hsl(var(--c-toolkit))}
+
+/* ── Page-specific: stream + drawer layout ─────────────────────── */
+.evt-layout{display:grid;grid-template-columns:1fr 350px;gap:14px;align-items:start}
+.evt-detail-body{padding:14px;display:flex;flex-direction:column;gap:14px}
+.evt-hero{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.evt-hero .et-badge{font-family:var(--f-mono);font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px;background:hsl(var(--c-event)/.12);color:hsl(var(--c-event));border:1px solid hsl(var(--c-event)/.3)}
+.evt-hero .agg-chip{font-family:var(--f-mono);font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;background:hsl(var(--e,var(--c-agent))/.12);color:hsl(var(--e,var(--c-agent)));border:1px solid hsl(var(--e,var(--c-agent))/.25)}
+.kv-list{display:flex;flex-direction:column;gap:0}
+.kv-row{display:grid;grid-template-columns:108px 1fr;gap:8px;padding:6px 0;border-bottom:1px solid var(--border-light);align-items:baseline}
+.kv-row:last-child{border-bottom:0}
+.kv-row .k{font-family:var(--f-mono);font-size:9.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em}
+.kv-row .v{font-family:var(--f-mono);font-size:11px;color:var(--text);font-weight:600;word-break:break-all}
+.kv-row .v.accent{color:hsl(var(--c-event))}
+.payload-block{display:flex;flex-direction:column;gap:6px}
+.payload-block .label{display:flex;align-items:center;justify-content:space-between}
+.payload-block .label span{font-family:var(--f-mono);font-size:9.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em}
+.payload-block pre{margin:0;background:var(--bg-sunken,var(--bg));border:1px solid var(--border-light);border-radius:6px;padding:10px;font-family:var(--f-mono);font-size:10.5px;line-height:1.5;color:var(--text-sec);overflow-x:auto;white-space:pre-wrap;word-break:break-word}
+.payload-block pre .pk{color:hsl(var(--c-chat))}
+.payload-block pre .ps{color:hsl(var(--c-toolkit))}
+.payload-block pre .pn{color:hsl(var(--c-agent))}
+.drawer-hint{font-family:var(--f-mono);font-size:9.5px;color:var(--text-muted);display:flex;align-items:center;gap:5px}
 </style>
 </head>
 <body class="admin-page">
-<div class="admin-mobile-fallback"><span class="em">🖥️</span><h2>Console solo desktop</h2></div>
-<div class="admin-shell">
-  <div data-admin-nav-mount></div>
-  <main>
-    <header class="admin-top">
-      <div><h1>Monitor &amp; Analytics</h1><div class="crumbs">Admin · Live · refresh ogni 5s · 487 metriche</div></div>
-      <div class="spacer"></div>
-      <div class="admin-top-actions">
-        <div class="time-pills">
-          <button>1h</button>
-          <button class="active">24h</button>
-          <button>7gg</button>
-          <button>30gg</button>
-          <button>Custom</button>
-        </div>
-        <button class="btn-admin">📈 Open Grafana</button>
-      </div>
-    </header>
 
-    <div class="admin-body" style="display: flex; flex-direction: column; gap: 14px">
+  <div class="admin-mobile-fallback">
+    <div class="em">🖥️</div>
+    <h2>Console solo desktop</h2>
+    <p>La console admin è ottimizzata per schermi ≥ 880px. Aprila da desktop.</p>
+  </div>
 
-      <div class="kpi-strip">
-        <div class="admin-kpi tiny e-chat"><div class="admin-kpi-label">API P95</div><div class="admin-kpi-value">324<span style="font-size:11px;color:var(--text-muted)">ms</span></div>
-          <svg class="admin-kpi-spark" viewBox="0 0 50 22"><polyline points="0,12 8,11 16,14 24,10 32,8 40,9 50,7" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
-        </div>
-        <div class="admin-kpi tiny e-kb"><div class="admin-kpi-label">DB P95</div><div class="admin-kpi-value">42<span style="font-size:11px;color:var(--text-muted)">ms</span></div>
-          <svg class="admin-kpi-spark" viewBox="0 0 50 22"><polyline points="0,14 8,13 16,12 24,14 32,11 40,10 50,11" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
-        </div>
-        <div class="admin-kpi tiny e-event"><div class="admin-kpi-label">Redis ops/s</div><div class="admin-kpi-value">3.8<span style="font-size:11px;color:var(--text-muted)">k</span></div>
-          <svg class="admin-kpi-spark" viewBox="0 0 50 22"><polyline points="0,16 8,14 16,12 24,10 32,8 40,6 50,5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
-        </div>
-        <div class="admin-kpi tiny e-agent"><div class="admin-kpi-label">AI tok/min</div><div class="admin-kpi-value">847<span style="font-size:11px;color:var(--text-muted)">k</span></div>
-          <svg class="admin-kpi-spark" viewBox="0 0 50 22"><polyline points="0,18 8,15 16,14 24,12 32,10 40,9 50,8" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
-        </div>
-        <div class="admin-kpi tiny e-toolkit"><div class="admin-kpi-label">PDF queue</div><div class="admin-kpi-value">12</div>
-          <svg class="admin-kpi-spark" viewBox="0 0 50 22"><polyline points="0,15 8,18 16,14 24,12 32,15 40,13 50,11" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
-        </div>
-        <div class="admin-kpi tiny e-player"><div class="admin-kpi-label">Err rate</div><div class="admin-kpi-value">0.18<span style="font-size:11px;color:var(--text-muted)">%</span></div>
-          <svg class="admin-kpi-spark" viewBox="0 0 50 22"><polyline points="0,16 8,14 16,16 24,14 32,15 40,16 50,15" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
-        </div>
-      </div>
+  <div class="admin-shell">
+    <div data-admin-nav-mount></div>
 
-      <div class="charts-2x2">
-        <div class="chart-big" style="color: hsl(var(--c-chat))">
-          <h3 style="color: var(--text)">Request rate by endpoint · stacked area · 24h</h3>
-          <div class="sub">Top 5 endpoints · req/min</div>
-          <svg viewBox="0 0 700 160" preserveAspectRatio="none">
-            <polygon points="0,140 50,135 100,128 150,120 200,115 250,118 300,110 350,108 400,105 450,100 500,95 550,90 600,88 650,85 700,82 700,160 0,160" fill="hsl(var(--c-chat) / .3)"/>
-            <polygon points="0,120 50,115 100,108 150,102 200,98 250,100 300,92 350,90 400,86 450,80 500,75 550,70 600,68 650,65 700,62 700,160 0,160" fill="hsl(var(--c-agent) / .3)"/>
-            <polygon points="0,100 50,95 100,88 150,82 200,78 250,80 300,72 350,70 400,66 450,60 500,55 550,50 600,48 650,45 700,42 700,160 0,160" fill="hsl(var(--c-kb) / .3)"/>
-            <polygon points="0,80 50,75 100,68 150,62 200,58 250,60 300,52 350,50 400,46 450,40 500,35 550,30 600,28 650,25 700,22 700,160 0,160" fill="hsl(var(--c-event) / .3)"/>
-          </svg>
-          <div style="margin-top: 6px; display: flex; gap: 10px; font-family: var(--f-mono); font-size: 10px; flex-wrap: wrap">
-            <span style="color: hsl(var(--c-event))">■ /agents/*/query (1.2k)</span>
-            <span style="color: hsl(var(--c-kb))">■ /kb/search (840)</span>
-            <span style="color: hsl(var(--c-agent))">■ /games/* (620)</span>
-            <span style="color: hsl(var(--c-chat))">■ /sessions/* (380)</span>
+    <main>
+      <header class="admin-top">
+        <div>
+          <h1>Monitor</h1>
+          <div class="crumbs">Admin · Monitor · 2 alerts · 1.4k events/h · 14 containers</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="admin-top-actions">
+          <div class="admin-search"><span>🔍</span><input placeholder="Search events, jobs, services…"/><kbd>⌘K</kbd></div>
+          <button class="btn-admin sm ghost">⏸ Pause stream</button>
+          <button class="btn-admin sm ghost">⤓ Export ndjson</button>
+        </div>
+      </header>
+
+      <div class="admin-body" data-screen-label="Monitor · Events" style="display:flex;flex-direction:column;gap:14px">
+
+        <!-- ────────── Sub-nav: 13 tab (events .active) ────────── -->
+        <div class="admin-tabs" role="tablist" aria-label="Monitor sezioni">
+          <button class="admin-tab" role="tab">alerts <span class="count">2</span></button>
+          <button class="admin-tab" role="tab">cache</button>
+          <button class="admin-tab" role="tab">infra</button>
+          <button class="admin-tab" role="tab">command</button>
+          <button class="admin-tab" role="tab">testing</button>
+          <button class="admin-tab" role="tab">mau</button>
+          <button class="admin-tab" role="tab">containers <span class="count">14</span></button>
+          <button class="admin-tab" role="tab">logs</button>
+          <button class="admin-tab" role="tab">grafana</button>
+          <button class="admin-tab" role="tab">export</button>
+          <button class="admin-tab" role="tab">email</button>
+          <button class="admin-tab" role="tab">history</button>
+          <button class="admin-tab active" role="tab" aria-selected="true">events <span class="count live"><span class="dot"></span>live</span></button>
+        </div>
+
+        <!-- ────────── 1) KPI strip ────────── -->
+        <section class="kpi-strip">
+
+          <div class="admin-kpi e-event">
+            <div class="admin-kpi-label">Events / min</div>
+            <div class="admin-kpi-value">247</div>
+            <div class="admin-kpi-trend up">▲ +12% vs 15m fa</div>
+            <svg class="admin-kpi-spark e-event" viewBox="0 0 70 28">
+              <path class="spark-fill e-fg" d="M0,20 L8,21 L16,18 L24,19 L32,16 L40,17 L48,13 L56,15 L64,9 L70,8 L70,28 L0,28 Z"/>
+              <path class="spark e-fg" d="M0,20 L8,21 L16,18 L24,19 L32,16 L40,17 L48,13 L56,15 L64,9 L70,8"/>
+            </svg>
           </div>
-        </div>
 
-        <div class="chart-big" style="color: hsl(var(--c-event))">
-          <h3 style="color: var(--text)">Error rate breakdown · by route · 24h</h3>
-          <div class="sub">5 routes con più errori</div>
-          <svg viewBox="0 0 700 160" preserveAspectRatio="none">
-            <g>
-              <rect x="20" y="40" width="100" height="20" fill="hsl(var(--c-event) / .6)" rx="2"/>
-              <text x="130" y="55" fill="var(--text)" font-family="var(--f-mono)" font-size="12">POST /agents/query · 0.84% (1.8k err)</text>
-              <rect x="20" y="68" width="68" height="20" fill="hsl(var(--c-event) / .5)" rx="2"/>
-              <text x="98" y="83" fill="var(--text)" font-family="var(--f-mono)" font-size="12">POST /pdf/upload · 0.52%</text>
-              <rect x="20" y="96" width="42" height="20" fill="hsl(var(--c-event) / .4)" rx="2"/>
-              <text x="72" y="111" fill="var(--text)" font-family="var(--f-mono)" font-size="12">GET /games/* · 0.18%</text>
-              <rect x="20" y="124" width="22" height="20" fill="hsl(var(--c-event) / .3)" rx="2"/>
-              <text x="52" y="139" fill="var(--text)" font-family="var(--f-mono)" font-size="12">POST /sessions · 0.09%</text>
-            </g>
-          </svg>
-        </div>
-
-        <div class="chart-big" style="color: hsl(var(--c-player))">
-          <h3 style="color: var(--text)">User signups &amp; session starts · trend 24h</h3>
-          <div class="sub">Signup +148 · session start 4.8k</div>
-          <svg viewBox="0 0 700 160" preserveAspectRatio="none">
-            <polyline points="0,80 50,75 100,70 150,68 200,72 250,65 300,60 350,58 400,52 450,48 500,45 550,42 600,40 650,38 700,35" fill="none" stroke="hsl(var(--c-player))" stroke-width="2"/>
-            <polyline points="0,120 50,115 100,110 150,108 200,105 250,100 300,95 350,92 400,88 450,82 500,78 550,72 600,68 650,62 700,55" fill="none" stroke="hsl(var(--c-session))" stroke-width="2"/>
-          </svg>
-          <div style="margin-top: 4px; display: flex; gap: 12px; font-family: var(--f-mono); font-size: 10px">
-            <span style="color: hsl(var(--c-player))">■ Signup +148</span>
-            <span style="color: hsl(var(--c-session))">■ Session start 4.8k</span>
+          <div class="admin-kpi e-chat">
+            <div class="admin-kpi-label">Events / h</div>
+            <div class="admin-kpi-value">14.823</div>
+            <div class="admin-kpi-trend up">▲ +3.2% vs 24h</div>
+            <svg class="admin-kpi-spark e-chat" viewBox="0 0 70 28">
+              <path class="spark-fill e-fg" d="M0,18 L8,17 L16,19 L24,15 L32,16 L40,12 L48,14 L56,11 L64,12 L70,10 L70,28 L0,28 Z"/>
+              <path class="spark e-fg" d="M0,18 L8,17 L16,19 L24,15 L32,16 L40,12 L48,14 L56,11 L64,12 L70,10"/>
+            </svg>
           </div>
+
+          <div class="admin-kpi e-toolkit">
+            <div class="admin-kpi-label">Errors / min</div>
+            <div class="admin-kpi-value">0.4</div>
+            <div class="admin-kpi-trend"><span class="status-chip ok">OK · entro soglia</span></div>
+            <svg class="admin-kpi-spark e-toolkit" viewBox="0 0 70 28">
+              <path class="spark-fill e-fg" d="M0,24 L8,24 L16,23 L24,24 L32,22 L40,24 L48,23 L56,24 L64,23 L70,24 L70,28 L0,28 Z"/>
+              <path class="spark e-fg" d="M0,24 L8,24 L16,23 L24,24 L32,22 L40,24 L48,23 L56,24 L64,23 L70,24"/>
+            </svg>
+          </div>
+
+          <div class="admin-kpi e-agent">
+            <div class="admin-kpi-label">SSE clients</div>
+            <div class="admin-kpi-value">3</div>
+            <div class="admin-kpi-trend flat">▬ 2 admin · 1 system</div>
+            <svg class="admin-kpi-spark e-agent" viewBox="0 0 70 28">
+              <path class="spark-fill e-fg" d="M0,22 L14,22 L14,16 L28,16 L28,16 L42,16 L42,10 L56,10 L56,10 L70,10 L70,28 L0,28 Z"/>
+              <path class="spark e-fg" d="M0,22 L14,22 L14,16 L28,16 L42,16 L42,10 L56,10 L70,10"/>
+            </svg>
+          </div>
+
+        </section>
+
+        <!-- ────────── 2) Filter bar ────────── -->
+        <section class="admin-panel">
+          <div class="admin-panel-head">
+            <h3>Filtri</h3>
+            <span class="live-pill">● streaming · SSE</span>
+            <div class="head-cluster">
+              <span class="meta">/admin/events/types · 7 tipi · 2 entity filter attivi</span>
+              <button class="btn-admin sm ghost">⤓ Salva vista</button>
+            </div>
+          </div>
+          <div class="admin-panel-body">
+            <div class="filter-grid">
+
+              <div class="admin-search wide"><span>🔍</span><input placeholder="Filter by aggregateId, userId, payload…"/><kbd>/</kbd></div>
+
+              <div class="filter-row">
+                <span class="filter-label">EventType</span>
+                <button class="filter-chip">agent.created <span class="c">12</span></button>
+                <button class="filter-chip">kb.doc.indexed <span class="c">8</span></button>
+                <button class="filter-chip active">chat.session.created <span class="c">234</span></button>
+                <button class="filter-chip">session.created <span class="c">45</span></button>
+                <button class="filter-chip">session.finalized <span class="c">38</span></button>
+                <button class="filter-chip">library.entry.removed <span class="c">4</span></button>
+                <button class="filter-chip">library.session.recorded <span class="c">87</span></button>
+                <button class="filter-chip ghost">＋ aggiungi filtro</button>
+              </div>
+
+              <div class="filter-row">
+                <span class="filter-label">EntityType</span>
+                <button class="filter-chip">Agent</button>
+                <button class="filter-chip active">ChatSession</button>
+                <button class="filter-chip">PdfDocument</button>
+                <button class="filter-chip">Session</button>
+                <button class="filter-chip">UserLibraryEntry</button>
+              </div>
+
+              <div class="filter-row">
+                <span class="filter-label">Time range</span>
+                <div class="time-select" role="group" aria-label="Time range">
+                  <button class="active">Live</button>
+                  <button>15m</button>
+                  <button>1h</button>
+                  <button>24h</button>
+                  <button>7d</button>
+                </div>
+                <div class="head-cluster">
+                  <span class="kbd-hint">backfill <kbd>?since=cursor</kbd> · limit 100</span>
+                  <button class="btn-admin sm ghost">✕ Clear all filters</button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        <!-- ────────── 3) LiveEventLog + 4) Detail drawer ────────── -->
+        <div class="evt-layout">
+
+          <!-- LiveEventLog -->
+          <section class="admin-panel">
+            <div class="admin-panel-head">
+              <h3>Live event stream <span style="font-family:var(--f-mono);font-weight:500;color:var(--text-muted);font-size:11px;margin-left:6px">/api/v1/admin/events/stream</span></h3>
+              <span class="live-pill">● streaming · SSE</span>
+              <div class="head-cluster">
+                <span class="meta">12.487 events · last 60m</span>
+                <button class="btn-admin sm ghost" title="Pausa stream">⏸</button>
+                <button class="btn-admin sm ghost" title="Export ndjson">⤓</button>
+              </div>
+            </div>
+
+            <div class="event-log" role="log" aria-live="polite">
+
+              <div class="row selected">
+                <span class="ts">14:23:08.412</span>
+                <span class="lvl info">INFO</span>
+                <span class="msg"><span class="et">agent.created</span> <span class="k">aggregateType=</span><span class="v-agent">Agent</span> <span class="k">id=</span>ag_8f3a21 <span class="k">user=</span><span class="v-session">alice</span></span>
+              </div>
+
+              <div class="row">
+                <span class="ts">14:23:07.918</span>
+                <span class="lvl ok">OK</span>
+                <span class="msg"><span class="et">kb.doc.indexed</span> <span class="k">aggregateType=</span><span class="v-kb">PdfDocument</span> <span class="k">file=</span>wingspan-rulebook-v3.pdf <span class="k">pages=</span>96 <span class="k">duration=</span>4.812s</span>
+              </div>
+
+              <div class="row">
+                <span class="ts">14:23:06.553</span>
+                <span class="lvl info">INFO</span>
+                <span class="msg"><span class="et">chat.session.created</span> <span class="k">aggregateType=</span><span class="v-chat">ChatSession</span> <span class="k">gameId=</span><span class="v-game">catan</span> <span class="k">model=</span><span class="v-agent">bge-m3</span> <span class="k">user=</span><span class="v-session">dave</span></span>
+              </div>
+
+              <div class="row">
+                <span class="ts">14:23:05.204</span>
+                <span class="lvl info">INFO</span>
+                <span class="msg"><span class="et">session.created</span> <span class="k">aggregateType=</span><span class="v-session">Session</span> <span class="k">host=</span><span class="v-session">bob</span> <span class="k">players=</span>4 <span class="k">game=</span><span class="v-game">brass</span></span>
+              </div>
+
+              <div class="row">
+                <span class="ts">14:23:03.871</span>
+                <span class="lvl ok">OK</span>
+                <span class="msg"><span class="et">session.finalized</span> <span class="k">aggregateType=</span><span class="v-session">Session</span> <span class="k">duration=</span>2h14m <span class="k">winner=</span><span class="v-player">charlie</span> <span class="k">game=</span><span class="v-game">brass</span></span>
+              </div>
+
+              <div class="row">
+                <span class="ts">14:23:02.503</span>
+                <span class="lvl info">INFO</span>
+                <span class="msg"><span class="et">library.session.recorded</span> <span class="k">aggregateType=</span><span class="v-player">UserLibraryEntry</span> <span class="k">game=</span><span class="v-game">wingspan</span> <span class="k">playCount=</span>12 <span class="k">lastPlayed=</span>2026-05-30</span>
+              </div>
+
+              <div class="row">
+                <span class="ts">14:23:01.166</span>
+                <span class="lvl err">ERR</span>
+                <span class="msg"><span class="et">chat.session.created</span> <span class="k">aggregateType=</span><span class="v-chat">ChatSession</span> <span class="k">gameId=</span><span class="v-game">terraforming-mars</span> <span class="k">error=</span>timeout <span class="k">retry=</span>2/3</span>
+              </div>
+
+              <div class="row">
+                <span class="ts">14:22:59.940</span>
+                <span class="lvl info">INFO</span>
+                <span class="msg"><span class="et">chat.session.created</span> <span class="k">aggregateType=</span><span class="v-chat">ChatSession</span> <span class="k">gameId=</span><span class="v-game">7-wonders</span> <span class="k">model=</span><span class="v-agent">bge-m3</span> <span class="k">user=</span><span class="v-session">erin</span></span>
+              </div>
+
+              <div class="row">
+                <span class="ts">14:22:58.118</span>
+                <span class="lvl warn">WARN</span>
+                <span class="msg"><span class="et">library.entry.removed</span> <span class="k">aggregateType=</span><span class="v-player">UserLibraryEntry</span> <span class="k">game=</span><span class="v-game">scythe</span> <span class="k">user=</span><span class="v-session">frank</span> <span class="k">reason=</span>user-request</span>
+              </div>
+
+              <div class="row">
+                <span class="ts">14:22:55.702</span>
+                <span class="lvl ok">OK</span>
+                <span class="msg"><span class="et">kb.doc.indexed</span> <span class="k">aggregateType=</span><span class="v-kb">PdfDocument</span> <span class="k">file=</span>gloomhaven-faq-2024.pdf <span class="k">pages=</span>22 <span class="k">duration=</span>1.204s</span>
+              </div>
+
+              <div class="row">
+                <span class="ts">14:22:53.331</span>
+                <span class="lvl info">INFO</span>
+                <span class="msg"><span class="et">session.created</span> <span class="k">aggregateType=</span><span class="v-session">Session</span> <span class="k">host=</span><span class="v-session">grace</span> <span class="k">players=</span>3 <span class="k">game=</span><span class="v-game">azul</span></span>
+              </div>
+
+              <div class="row">
+                <span class="ts">14:22:51.087</span>
+                <span class="lvl info">INFO</span>
+                <span class="msg"><span class="et">agent.created</span> <span class="k">aggregateType=</span><span class="v-agent">Agent</span> <span class="k">id=</span>ag_8f3a18 <span class="k">user=</span><span class="v-session">heidi</span> <span class="k">template=</span>rules-explainer</span>
+              </div>
+
+              <div class="row">
+                <span class="ts">14:22:48.640</span>
+                <span class="lvl ok">OK</span>
+                <span class="msg"><span class="et">session.finalized</span> <span class="k">aggregateType=</span><span class="v-session">Session</span> <span class="k">duration=</span>48m <span class="k">winner=</span><span class="v-player">ivan</span> <span class="k">game=</span><span class="v-game">azul</span></span>
+              </div>
+
+              <div class="row">
+                <span class="ts">14:22:46.215</span>
+                <span class="lvl info">INFO</span>
+                <span class="msg"><span class="et">library.session.recorded</span> <span class="k">aggregateType=</span><span class="v-player">UserLibraryEntry</span> <span class="k">game=</span><span class="v-game">catan</span> <span class="k">playCount=</span>31 <span class="k">lastPlayed=</span>2026-05-31</span>
+              </div>
+
+              <div class="row">
+                <span class="ts">14:22:44.902</span>
+                <span class="lvl info">INFO</span>
+                <span class="msg"><span class="et">chat.session.created</span> <span class="k">aggregateType=</span><span class="v-chat">ChatSession</span> <span class="k">gameId=</span><span class="v-game">wingspan</span> <span class="k">model=</span><span class="v-agent">bge-m3</span> <span class="k">user=</span><span class="v-session">judy</span></span>
+              </div>
+
+            </div>
+          </section>
+
+          <!-- Detail drawer placeholder -->
+          <aside class="admin-panel">
+            <div class="admin-panel-head">
+              <h3>Event detail</h3>
+              <span class="status-chip running">● selected</span>
+            </div>
+            <div class="evt-detail-body">
+
+              <div class="evt-hero">
+                <span class="et-badge">agent.created</span>
+                <span class="agg-chip e-agent">Agent</span>
+                <span class="status-chip info">info</span>
+              </div>
+
+              <div class="kv-list">
+                <div class="kv-row"><span class="k">EventId</span><span class="v accent">7f1c9e02-3a4b-4d11-9c8e-1b2a3c4d5e6f</span></div>
+                <div class="kv-row"><span class="k">AggregateId</span><span class="v">ag_8f3a21</span></div>
+                <div class="kv-row"><span class="k">UserId</span><span class="v">usr_a14c · alice</span></div>
+                <div class="kv-row"><span class="k">OccurredAt</span><span class="v">2026-05-31T14:23:08.412Z</span></div>
+                <div class="kv-row"><span class="k">LoggedAt</span><span class="v">2026-05-31T14:23:08.418Z</span></div>
+                <div class="kv-row"><span class="k">PayloadVer</span><span class="v">v2</span></div>
+              </div>
+
+              <div class="payload-block">
+                <div class="label">
+                  <span>PayloadJson · truncated 300</span>
+                  <span class="kbd-hint"><kbd>1.2 KB</kbd></span>
+                </div>
+                <pre>{
+  <span class="pk">"agentId"</span>: <span class="ps">"ag_8f3a21"</span>,
+  <span class="pk">"name"</span>: <span class="ps">"Catan Rules Explainer"</span>,
+  <span class="pk">"template"</span>: <span class="ps">"rules-explainer"</span>,
+  <span class="pk">"gameId"</span>: <span class="ps">"catan"</span>,
+  <span class="pk">"embedModel"</span>: <span class="ps">"bge-m3"</span>,
+  <span class="pk">"createdBy"</span>: <span class="ps">"usr_a14c"</span>,
+  <span class="pk">"kbDocs"</span>: <span class="pn">3</span>,
+  <span class="pk">"toolkits"</span>: [<span class="ps">"bgg-import"</span>, …</pre>
+                <button class="btn-admin ghost sm">⤢ Show full payload</button>
+              </div>
+
+              <div class="drawer-hint">🔒 PII redatto in payload · audit su /admin/events?eventId=…</div>
+
+            </div>
+          </aside>
+
         </div>
 
-        <div class="chart-big" style="color: hsl(var(--c-session))">
-          <h3 style="color: var(--text)">Game-session duration · histogram</h3>
-          <div class="sub">Median 87 min · P95 4.2h · 487 sessions chiuse</div>
-          <svg viewBox="0 0 700 160" preserveAspectRatio="none">
-            <g>
-              <rect x="0"   y="120" width="50" height="40" fill="hsl(var(--c-session) / .8)"/>
-              <rect x="55"  y="80"  width="50" height="80" fill="hsl(var(--c-session) / .8)"/>
-              <rect x="110" y="40"  width="50" height="120" fill="hsl(var(--c-session) / .8)"/>
-              <rect x="165" y="20"  width="50" height="140" fill="hsl(var(--c-session))"/>
-              <rect x="220" y="50"  width="50" height="110" fill="hsl(var(--c-session) / .8)"/>
-              <rect x="275" y="80"  width="50" height="80" fill="hsl(var(--c-session) / .8)"/>
-              <rect x="330" y="100" width="50" height="60" fill="hsl(var(--c-session) / .7)"/>
-              <rect x="385" y="110" width="50" height="50" fill="hsl(var(--c-session) / .7)"/>
-              <rect x="440" y="120" width="50" height="40" fill="hsl(var(--c-session) / .6)"/>
-              <rect x="495" y="130" width="50" height="30" fill="hsl(var(--c-session) / .6)"/>
-              <rect x="550" y="135" width="50" height="25" fill="hsl(var(--c-session) / .5)"/>
-              <rect x="605" y="145" width="50" height="15" fill="hsl(var(--c-session) / .4)"/>
-            </g>
-            <g font-family="var(--f-mono)" font-size="9" fill="var(--text-muted)">
-              <text x="25" y="156" text-anchor="middle">15m</text>
-              <text x="80" y="156" text-anchor="middle">30m</text>
-              <text x="135" y="156" text-anchor="middle">60m</text>
-              <text x="190" y="156" text-anchor="middle">90m</text>
-              <text x="245" y="156" text-anchor="middle">2h</text>
-              <text x="355" y="156" text-anchor="middle">3h</text>
-              <text x="465" y="156" text-anchor="middle">4h</text>
-              <text x="630" y="156" text-anchor="middle">8h+</text>
-            </g>
-          </svg>
-        </div>
       </div>
+    </main>
+  </div>
 
-      <div>
-        <div class="admin-panel-head" style="background: var(--bg-card); border: 1px solid var(--border-light); border-bottom: 0; border-radius: 10px 10px 0 0; padding: 10px 14px;">
-          <h3>📡 Live event log <span class="status-chip running info" style="margin-left: 8px">SSE streaming</span></h3>
-          <span class="meta" style="margin-left: auto">487 eventi/min · filter applied: level≥warn</span>
-        </div>
-        <div class="event-log" style="border-top: 0; border-radius: 0 0 10px 10px">
-          <div class="row"><span class="ts">14:23:42</span><span class="lvl ok">OK</span><span class="route">POST /agents/.../query</span><span>200 · 1.32s · agent=a-wingspan · user=u-marco · cost=$0.004</span></div>
-          <div class="row"><span class="ts">14:23:41</span><span class="lvl warn">WARN</span><span class="route">POST /pdf/upload</span><span>OCR low confidence p.47 · doc=d-tg-scan · retry queued</span></div>
-          <div class="row"><span class="ts">14:23:40</span><span class="lvl info">INFO</span><span class="route">SSE /agents/.../stream</span><span>connected · sid=s-7f8a · agent=a-brass-rules</span></div>
-          <div class="row"><span class="ts">14:23:38</span><span class="lvl err">ERROR</span><span class="route">POST /agents/.../query</span><span>500 · LLM timeout 30s · gpt-4o-mini · retry exhausted</span></div>
-          <div class="row"><span class="ts">14:23:37</span><span class="lvl ok">OK</span><span class="route">GET /games/g-wingspan</span><span>200 · 18ms · cached · user=u-davide</span></div>
-          <div class="row"><span class="ts">14:23:36</span><span class="lvl warn">WARN</span><span class="route">SCHED rate-limit-monitor</span><span>IP 82.84.211.17 · 47 req/min · auto-block 15min applied</span></div>
-          <div class="row"><span class="ts">14:23:35</span><span class="lvl info">INFO</span><span class="route">POST /sessions</span><span>created s-spirit-island-3 · 4 players · host=u-marco</span></div>
-          <div class="row"><span class="ts">14:23:34</span><span class="lvl ok">OK</span><span class="route">PATCH /game-nights/.../rsvp</span><span>200 · gn-saturday-3 · u-davide → yes</span></div>
-          <div class="row"><span class="ts">14:23:33</span><span class="lvl info">INFO</span><span class="route">JOB indexer.run</span><span>completed · doc=Wingspan-Oceania-EN · 412 chunks · 13.4s</span></div>
-          <div class="row"><span class="ts">14:23:32</span><span class="lvl warn">WARN</span><span class="route">POST /kb/search</span><span>SmolDocling pool exhausted · degraded mode · 12 in queue</span></div>
-          <div class="row"><span class="ts">14:23:30</span><span class="lvl ok">OK</span><span class="route">POST /auth/login</span><span>200 · u-aaron · 2FA bypassed (superadmin) · ip=… session=… </span></div>
-          <div class="row"><span class="ts">14:23:29</span><span class="lvl err">ERROR</span><span class="route">POST /agents/.../query</span><span>503 · pinecone timeout · index=wingspan-v3</span></div>
-        </div>
-      </div>
+  <!-- ═══════════════════ admin-nav (inlined · drop-in renderAdminNav) ═══════════════════ -->
+  <script>
+  /* renderAdminNav(activeId): monta la sidebar canonica a 4 gruppi su [data-admin-nav-mount].
+     Sostituibile verbatim col admin-nav.js canonico — stesso contratto. */
+  (function(){
+    var NAV = [
+      { group: 'Admin Console', items: [
+        { id:'dashboard', em:'🏠', label:'Dashboard',   href:'sp5-admin-dashboard.html' },
+        { id:'players',   em:'👤', label:'Players',     href:'sp5-admin-players.html', count:'2.4k' },
+        { id:'games',     em:'🎲', label:'Games',       href:'sp5-admin-games.html', count:'186' },
+        { id:'monitor',   em:'📈', label:'Monitor',     href:'sp5-admin-monitor.html', count:'live' },
+        { id:'audit',     em:'📜', label:'Audit log',   href:'sp5-admin-audit.html' }
+      ]},
+      { group: 'Power-User Tools', items: [
+        { id:'command',   em:'⌘',  label:'Command palette', href:'sp5-admin-command.html' },
+        { id:'testing',   em:'🧪', label:'Testing console', href:'sp5-admin-testing.html' },
+        { id:'bulk',      em:'📦', label:'Bulk operations', href:'sp5-admin-bulk.html' }
+      ]},
+      { group: 'Platform & Operations', items: [
+        { id:'infra',      em:'🖥️', label:'Infrastructure', href:'sp5-admin-infra.html' },
+        { id:'alerts',     em:'🔔', label:'Alerting',       href:'sp5-admin-alerts.html', count:'2' },
+        { id:'containers', em:'🐳', label:'Containers',     href:'sp5-admin-containers.html', count:'14' },
+        { id:'cache',      em:'⚡', label:'Cache & queues', href:'sp5-admin-cache.html' }
+      ]},
+      { group: 'AI Tooling & Data Quality', items: [
+        { id:'kb',         em:'📚', label:'Knowledge base', href:'sp5-admin-kb.html' },
+        { id:'embeddings', em:'🧠', label:'Embeddings',     href:'sp5-admin-embeddings.html' },
+        { id:'rageval',    em:'✓',  label:'RAG eval',       href:'sp5-admin-rageval.html' },
+        { id:'toolkits',   em:'🧰', label:'Toolkits',       href:'sp5-admin-toolkits.html' }
+      ]}
+    ];
 
-    </div>
-  </main>
-</div>
-<script src="admin-nav.js"></script><script>renderAdminNav('monitor');</script>
-</body></html>
+    window.renderAdminNav = function(activeId){
+      var mount = document.querySelector('[data-admin-nav-mount]');
+      if(!mount) return;
+      var nav = document.createElement('nav');
+      nav.className = 'admin-nav';
+
+      var brand = document.createElement('div');
+      brand.className = 'admin-nav-brand';
+      brand.innerHTML = '<div class="admin-nav-brand-mark">M</div>'
+        + '<div class="admin-nav-brand-name">MeepleAI</div>'
+        + '<div class="admin-nav-brand-tag">admin</div>';
+      nav.appendChild(brand);
+
+      NAV.forEach(function(section){
+        var g = document.createElement('div');
+        g.className = 'admin-nav-group';
+        g.textContent = section.group;
+        nav.appendChild(g);
+
+        section.items.forEach(function(it){
+          var a = document.createElement('a');
+          a.className = 'admin-nav-item' + (it.id === activeId ? ' active' : '');
+          a.href = it.href;
+          a.innerHTML = '<span class="em">' + it.em + '</span>'
+            + '<span class="lbl">' + it.label + '</span>'
+            + (it.count ? '<span class="count">' + it.count + '</span>' : '');
+          nav.appendChild(a);
+        });
+      });
+
+      var foot = document.createElement('div');
+      foot.className = 'admin-nav-foot';
+      foot.innerHTML = '<span class="badge">SP5</span><span>build 2.4.1 · node-01.fra</span>';
+      nav.appendChild(foot);
+
+      mount.replaceWith(nav);
+    };
+  })();
+
+  document.addEventListener('DOMContentLoaded', function(){
+    renderAdminNav('monitor');
+  });
+  </script>
+</body>
+</html>

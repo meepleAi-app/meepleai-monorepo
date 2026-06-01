@@ -28,6 +28,10 @@ function escapeRegex(input: string): string {
 export function highlight(text: string, query: string): ReactNode {
   if (!query || !query.trim()) return text;
   const q = query.trim();
+  // The dynamic argument to RegExp is fully escaped upstream by `escapeRegex`,
+  // so every metacharacter becomes a literal — no ReDoS / pattern-injection
+  // risk remains. The eslint rule cannot follow the escape, hence the disable.
+  // eslint-disable-next-line security/detect-non-literal-regexp -- input sanitized by escapeRegex
   const re = new RegExp(`(${escapeRegex(q)})`, 'gi');
   const parts = text.split(re);
   return createElement(

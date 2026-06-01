@@ -32,6 +32,12 @@ export function toKbDoc(dto: UserKbDocDto): KbDoc {
 export interface UseUserKbDocsResult {
   /** Adapted items (DTO → KbDoc) — what the mapper consumes. */
   items: KbDoc[];
+  /**
+   * Raw DTO items before mapping — exposed for Phase 3 (#1737) KbEditorDesktop
+   * which needs the full UserKbDocDto (title/tags/updatedBy) not available in KbDoc.
+   * Additive, no breaking change to existing consumers.
+   */
+  rawItems: UserKbDocDto[];
   total: number;
   page: number;
   pageSize: number;
@@ -49,6 +55,7 @@ export function useUserKbDocs(): UseQueryResult<UseUserKbDocsResult> {
       });
       return {
         items: response.items.map(toKbDoc),
+        rawItems: response.items,
         total: response.total,
         page: response.page,
         pageSize: response.pageSize,

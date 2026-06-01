@@ -26,6 +26,13 @@ import {
   RecentRequestsTable,
   type RecentRequestsFilters,
 } from '@/components/admin/usage/RecentRequestsTable';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
+import { Button } from '@/components/ui/primitives/button';
+import { createAdminClient } from '@/lib/api/clients/adminClient';
+import { isNotFoundError } from '@/lib/api/core/errors';
+import { HttpClient } from '@/lib/api/core/httpClient';
+
+import { TokenBalanceTab } from './token-balance-tab';
 
 const CostBreakdownPanel = dynamic(
   () => import('@/components/admin/usage/CostBreakdownPanel').then(m => m.CostBreakdownPanel),
@@ -35,13 +42,6 @@ const RequestTimelineChart = dynamic(
   () => import('@/components/admin/usage/RequestTimelineChart').then(m => m.RequestTimelineChart),
   { ssr: false, loading: () => <div className="h-48 animate-pulse rounded-lg bg-muted" /> }
 );
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
-import { Button } from '@/components/ui/primitives/button';
-import { createAdminClient } from '@/lib/api/clients/adminClient';
-import { isNotFoundError } from '@/lib/api/core/errors';
-import { HttpClient } from '@/lib/api/core/httpClient';
-
-import { TokenBalanceTab } from './token-balance-tab';
 
 // ─── Module-level client (stable reference, avoids re-creation on every render) ─
 

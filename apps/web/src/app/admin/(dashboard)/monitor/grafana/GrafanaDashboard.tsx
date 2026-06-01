@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 /**
@@ -155,7 +154,7 @@ function DashboardCard({
         'hover:border-primary/40 hover:shadow-sm',
         isSelected
           ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
-          : 'border-border bg-card/50 dark:bg-zinc-900/50'
+          : 'border-border bg-card/50'
       )}
       onClick={onSelect}
       data-testid={`dashboard-card-${dashboard.id}`}
@@ -216,7 +215,7 @@ function CategorySection({
 function GrafanaNotConfigured() {
   return (
     <div
-      className="rounded-xl border border-dashed border-muted-foreground/30 bg-card/70 dark:bg-zinc-900/70 backdrop-blur-md p-8 text-center"
+      className="rounded-xl border border-dashed border-muted-foreground/30 bg-card/70 backdrop-blur-md p-8 text-center"
       data-testid="grafana-not-configured"
     >
       <BarChart3 className="mx-auto h-10 w-10 text-muted-foreground/50 mb-3" />
@@ -296,7 +295,7 @@ export function GrafanaDashboard() {
   return (
     <div className="space-y-5" data-testid="grafana-dashboard">
       {/* Dashboard Selector */}
-      <div className="rounded-xl border bg-card/70 dark:bg-zinc-900/70 backdrop-blur-md p-4 space-y-4">
+      <div className="rounded-xl border bg-card/70 backdrop-blur-md p-4 space-y-4">
         <div className="flex items-center justify-between">
           <p className="text-sm font-medium text-foreground">Select Dashboard</p>
           {selectedDashboard && (
@@ -322,7 +321,7 @@ export function GrafanaDashboard() {
       {/* Controls bar — shown only when a dashboard is selected */}
       {selectedId && (
         <div
-          className="flex flex-wrap items-center gap-3 rounded-xl border bg-card/70 dark:bg-zinc-900/70 backdrop-blur-md px-4 py-3"
+          className="flex flex-wrap items-center gap-3 rounded-xl border bg-card/70 backdrop-blur-md px-4 py-3"
           data-testid="grafana-controls"
         >
           {/* Time range */}
@@ -372,7 +371,7 @@ export function GrafanaDashboard() {
       {/* Iframe / Placeholder */}
       {selectedId ? (
         <div
-          className="rounded-xl border bg-card/70 dark:bg-zinc-900/70 backdrop-blur-md overflow-hidden"
+          className="rounded-xl border bg-card/70 backdrop-blur-md overflow-hidden"
           data-testid="grafana-iframe-container"
         >
           <iframe
@@ -387,7 +386,7 @@ export function GrafanaDashboard() {
         </div>
       ) : (
         <div
-          className="rounded-xl border border-dashed border-muted-foreground/20 bg-card/70 dark:bg-zinc-900/70 backdrop-blur-md p-10 text-center"
+          className="rounded-xl border border-dashed border-muted-foreground/20 bg-card/70 backdrop-blur-md p-10 text-center"
           data-testid="grafana-empty-state"
         >
           <BarChart3 className="mx-auto h-8 w-8 text-muted-foreground/40 mb-2" />

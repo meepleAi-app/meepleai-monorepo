@@ -7,6 +7,14 @@ import type { ReactNode } from 'react';
 
 import * as analyticsModule from '@/lib/analytics/track-event';
 
+// Mock next/navigation for EnterManualLink (used by T6 entry points)
+const mockRouterPush = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: vi.fn(() => ({ push: mockRouterPush })),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
+  usePathname: vi.fn(() => '/library/g/play/c/translate'),
+}));
+
 // Mock all four hooks before importing the component
 vi.mock('@/lib/gamebook/hooks/usePhotoUpload');
 vi.mock('@/lib/gamebook/hooks/useSegmentPhoto');
@@ -1323,6 +1331,87 @@ describe('TranslateViewer', () => {
       expect(trackSpy).not.toHaveBeenCalledWith(
         'translate.lang_modal_dismissed',
         expect.anything()
+      );
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // #1560 — Triple-entry CTAs for manual mode
+  // ---------------------------------------------------------------------------
+
+  describe('#1560 — Triple-entry CTAs for manual mode', () => {
+    it('S4: empty-state EnterManualLink visible in idle phase + click navigates + analytics', async () => {
+      makeOneBookMock();
+      mockRouterPush.mockClear();
+      const trackSpy = vi.spyOn(analyticsModule, 'trackEvent');
+
+      wrap(<TranslateViewer campaignId={CAMPAIGN_ID} gameRef={GAME_REF} />);
+
+      // In idle phase with no artifact, EnterManualLink empty_state should be visible
+      const emptyStateCta = await screen.findByTestId('enter-manual-empty-state');
+      expect(emptyStateCta).toBeInTheDocument();
+
+      fireEvent.click(emptyStateCta);
+
+      expect(mockRouterPush).toHaveBeenCalledWith(expect.stringContaining('mode=manual'));
+      expect(trackSpy).toHaveBeenCalledWith(
+        'translate.manual_entry_click',
+        expect.objectContaining({ entryPoint: 'empty_state', campaignId: CAMPAIGN_ID })
+      );
+    });
+
+    it('S5: kebab menu opens + "Digita manualmente" navigates + analytics', async () => {
+      mockRouterPush.mockClear();
+      const trackSpy = vi.spyOn(analyticsModule, 'trackEvent');
+      const user = userEvent.setup();
+
+      wrap(<TranslateViewer campaignId={CAMPAIGN_ID} gameRef={GAME_REF} />);
+
+      const kebabBtn = screen.getByTestId('translate-kebab-button');
+      await user.click(kebabBtn);
+
+      // Menu should be open
+      const menu = await screen.findByRole('menu');
+      expect(menu).toBeInTheDocument();
+
+      const kebabLink = screen.getByTestId('enter-manual-kebab');
+      await user.click(kebabLink);
+
+      expect(mockRouterPush).toHaveBeenCalledWith(expect.stringContaining('mode=manual'));
+      expect(trackSpy).toHaveBeenCalledWith(
+        'translate.manual_entry_click',
+        expect.objectContaining({ entryPoint: 'kebab', campaignId: CAMPAIGN_ID })
+      );
+    });
+
+    it('S6: error CTA visible when errorMessage rendered + click navigates + analytics', async () => {
+      mockRouterPush.mockClear();
+      vi.mocked(uploadHook.usePhotoUpload).mockReturnValue({
+        mutate: vi.fn(),
+        mutateAsync: vi.fn(),
+        isPending: false,
+        isSuccess: false,
+        isError: true,
+        error: new Error('upload failed'),
+      } as never);
+
+      const trackSpy = vi.spyOn(analyticsModule, 'trackEvent');
+
+      wrap(<TranslateViewer campaignId={CAMPAIGN_ID} gameRef={GAME_REF} />);
+
+      // Error message should be visible
+      expect(screen.getByTestId('translate-viewer-error')).toHaveTextContent('upload failed');
+
+      // Error CTA should be rendered alongside the error
+      const errorCta = screen.getByTestId('enter-manual-error-cta');
+      expect(errorCta).toBeInTheDocument();
+
+      fireEvent.click(errorCta);
+
+      expect(mockRouterPush).toHaveBeenCalledWith(expect.stringContaining('mode=manual'));
+      expect(trackSpy).toHaveBeenCalledWith(
+        'translate.manual_entry_click',
+        expect.objectContaining({ entryPoint: 'error_cta', campaignId: CAMPAIGN_ID })
       );
     });
   });

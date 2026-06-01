@@ -118,6 +118,9 @@ export { NanolithCampaignCTA } from '@/components/features/gamebook/NanolithCamp
 export type { NanolithCampaignCTAProps } from '@/components/features/gamebook/NanolithCampaignCTA';
 
 // Iter 1.B — translate viewer + sub-components
+export { ManualInputView } from '@/components/features/gamebook/ManualInputView';
+export type { ManualInputViewProps } from '@/components/features/gamebook/ManualInputView';
+
 export { TranslateViewer } from '@/components/features/gamebook/TranslateViewer';
 export type { TranslateViewerProps } from '@/components/features/gamebook/TranslateViewer';
 

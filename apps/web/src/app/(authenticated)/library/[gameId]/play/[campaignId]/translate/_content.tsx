@@ -2,7 +2,9 @@
 
 import { useMemo, type ReactElement } from 'react';
 
-import { TranslateViewer } from '@/components/features/gamebook';
+import { useSearchParams } from 'next/navigation';
+
+import { ManualInputView, TranslateViewer } from '@/components/features/gamebook';
 import { GameRefKind, type GameRef } from '@/lib/api/gamebook';
 import { useGamebookCampaign } from '@/lib/gamebook/hooks/useGamebookCampaign';
 
@@ -12,6 +14,9 @@ import { useGamebookCampaign } from '@/lib/gamebook/hooks/useGamebookCampaign';
  * campaign DTO so private-game campaigns route correctly. Fallback to Shared +
  * route gameId while the campaign is still loading — the BookPicker endpoint
  * gracefully returns an empty list for unknown gameIds.
+ *
+ * #1560: when `?mode=manual` query param is present, render ManualInputView
+ * instead of TranslateViewer (DEC-FE-M-2).
  */
 export function Content({
   gameId,
@@ -33,9 +38,17 @@ export function Content({
     }
     return { id: gameId, kind: GameRefKind.Shared };
   }, [campaign, gameId]);
+
+  const searchParams = useSearchParams();
+  const isManualMode = searchParams?.get('mode') === 'manual';
+
   return (
     <main className="min-h-[calc(100vh-var(--app-topbar-height,64px))]">
-      <TranslateViewer campaignId={campaignId} gameRef={gameRef} />
+      {isManualMode ? (
+        <ManualInputView campaignId={campaignId} gameRef={gameRef} />
+      ) : (
+        <TranslateViewer campaignId={campaignId} gameRef={gameRef} />
+      )}
     </main>
   );
 }

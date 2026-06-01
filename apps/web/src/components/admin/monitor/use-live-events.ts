@@ -100,6 +100,12 @@ export function useLiveEvents(options: UseLiveEventsOptions = {}): UseLiveEvents
   // --- Derived filter object (stable ref guard handled via JSON-key deps) ---
   const filters: LiveEventFilters = { eventTypes, aggregateTypes, userId, aggregateId };
 
+  // Stable string keys for useCallback deps — extracting the `?.join(',')` expressions
+  // out of the dependency arrays satisfies react-hooks/exhaustive-deps (which forbids
+  // complex expressions as deps because it can't statically analyse them).
+  const eventTypesKey = eventTypes?.join(',');
+  const aggregateTypesKey = aggregateTypes?.join(',');
+
   // --- State ---
   const [events, setEvents] = useState<DomainEventDto[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -212,8 +218,8 @@ export function useLiveEvents(options: UseLiveEventsOptions = {}): UseLiveEvents
       closeEventSource,
       clearBackoffTimer,
       updateEvents,
-      eventTypes?.join(','),
-      aggregateTypes?.join(','),
+      eventTypesKey,
+      aggregateTypesKey,
       userId,
       aggregateId,
     ]
@@ -258,14 +264,7 @@ export function useLiveEvents(options: UseLiveEventsOptions = {}): UseLiveEvents
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      initialLimit,
-      attachEventSource,
-      eventTypes?.join(','),
-      aggregateTypes?.join(','),
-      userId,
-      aggregateId,
-    ]
+    [initialLimit, attachEventSource, eventTypesKey, aggregateTypesKey, userId, aggregateId]
   );
 
   // -------------------------------------------------------------------------

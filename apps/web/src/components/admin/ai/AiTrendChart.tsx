@@ -46,9 +46,13 @@ export function AiTrendChart({ data, range, rangeOptions, onRangeChange }: AiTre
   const volumePath = hasData ? buildSvgPath(data, d => d.requestCount) : '';
   const p50Path = hasPercentileSeries ? buildSvgPath(data, d => d.p50LatencyMs ?? 0) : '';
   const p95Path = hasPercentileSeries ? buildSvgPath(data, d => d.p95LatencyMs ?? 0) : '';
-  // errorRate is in [0, 1] — scale to a latency-comparable magnitude
-  // by mapping the max into the chart range. Drawn dashed in destructive tone.
-  const errorPath = hasPercentileSeries ? buildSvgPath(data, d => (d.errorRate ?? 0) * 1000) : '';
+  // #1735 B6: errorRate ∈ [0, 1] now uses an explicit fixed axis (0..1) instead of
+  // the prior cosmetic `* 1000` magic number. Each polyline still has its own Y-axis
+  // (auto-scaled by buildSvgPath), but a fixed [0, 1] range for error guarantees the
+  // polyline stays within the viewBox and reads as a stable percentage scale.
+  const errorPath = hasPercentileSeries
+    ? buildSvgPath(data, d => d.errorRate ?? 0, { fixedMin: 0, fixedMax: 1 })
+    : '';
 
   return (
     <section className="rounded-xl border border-border/60 bg-card/70 backdrop-blur-md p-4 space-y-3">
@@ -202,7 +206,11 @@ export function AiTrendChart({ data, range, rangeOptions, onRangeChange }: AiTre
   );
 }
 
-function buildSvgPath(data: TrendDatapoint[], pick: (d: TrendDatapoint) => number): string {
+function buildSvgPath(
+  data: TrendDatapoint[],
+  pick: (d: TrendDatapoint) => number,
+  options?: { fixedMin?: number; fixedMax?: number }
+): string {
   if (data.length === 0) return '';
   const innerWidth = CHART_WIDTH - PADDING * 2;
   const innerHeight = CHART_HEIGHT - PADDING * 2;
@@ -210,9 +218,15 @@ function buildSvgPath(data: TrendDatapoint[], pick: (d: TrendDatapoint) => numbe
     data.length === 1 ? PADDING + innerWidth / 2 : PADDING + (i / (data.length - 1)) * innerWidth
   );
   const ys = data.map(d => pick(d));
-  const maxY = Math.max(...ys, 1);
-  const minY = Math.min(...ys, 0);
+  // #1735 B6: callers may pass fixed bounds (e.g. {0, 1} for errorRate) to anchor
+  // the polyline to a stable axis. Values outside the range are clamped so the
+  // polyline never escapes the viewBox.
+  const maxY = options?.fixedMax ?? Math.max(...ys, 1);
+  const minY = options?.fixedMin ?? Math.min(...ys, 0);
   const range = Math.max(maxY - minY, 1);
-  const mapped = ys.map(y => CHART_HEIGHT - PADDING - ((y - minY) / range) * innerHeight);
+  const mapped = ys.map(y => {
+    const clamped = Math.min(Math.max(y, minY), maxY);
+    return CHART_HEIGHT - PADDING - ((clamped - minY) / range) * innerHeight;
+  });
   return data.map((_, i) => `${xs[i].toFixed(1)},${mapped[i].toFixed(1)}`).join(' ');
 }

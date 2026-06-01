@@ -156,4 +156,63 @@ describe('AiTrendChart', () => {
     const active = screen.getByRole('button', { name: '7d', pressed: true });
     expect(active).toBeInTheDocument();
   });
+
+  // #1735 B6: error polyline used to scale errorRate ∈ [0, 1] via `* 1000`
+  // (cosmetic, since buildSvgPath auto-scales per-series). The fix anchors the
+  // error series to a fixed [0, 1] axis and clamps out-of-range values, so the
+  // polyline is guaranteed to stay within the SVG viewBox (Y between PADDING=24
+  // and CHART_HEIGHT-PADDING=116) regardless of the errorRate magnitude.
+  it('clamps the error polyline within the viewBox even with high errorRate (#1735 B6)', () => {
+    const extreme: TrendDatapoint[] = [
+      {
+        date: '2026-05-24',
+        avgLatencyMs: 100,
+        requestCount: 10,
+        p50LatencyMs: 80,
+        p95LatencyMs: 120,
+        errorRate: 0,
+      },
+      {
+        date: '2026-05-25',
+        avgLatencyMs: 105,
+        requestCount: 11,
+        p50LatencyMs: 82,
+        p95LatencyMs: 125,
+        errorRate: 0.5,
+      },
+      {
+        date: '2026-05-26',
+        avgLatencyMs: 110,
+        requestCount: 12,
+        p50LatencyMs: 85,
+        p95LatencyMs: 130,
+        errorRate: 1,
+      },
+    ];
+    const { container } = render(
+      <AiTrendChart
+        data={extreme}
+        range="Live"
+        onRangeChange={vi.fn()}
+        rangeOptions={['Live', '1h', '24h', '7d']}
+      />
+    );
+    const errorPolyline = container.querySelector('polyline[data-series="error"]');
+    expect(errorPolyline).toBeInTheDocument();
+    const points = errorPolyline?.getAttribute('points') ?? '';
+    const ys = points
+      .split(' ')
+      .map(pair => Number.parseFloat(pair.split(',')[1] ?? 'NaN'))
+      .filter(n => !Number.isNaN(n));
+    expect(ys).toHaveLength(3);
+    // CHART_HEIGHT=140, PADDING=24 → valid Y range [24, 116]
+    ys.forEach(y => {
+      expect(y).toBeGreaterThanOrEqual(24);
+      expect(y).toBeLessThanOrEqual(116);
+    });
+    // errorRate=1 (max) should map to the top edge (Y=PADDING=24),
+    // errorRate=0 should map to the bottom edge (Y=CHART_HEIGHT-PADDING=116).
+    expect(ys[0]).toBeCloseTo(116, 0);
+    expect(ys[2]).toBeCloseTo(24, 0);
+  });
 });

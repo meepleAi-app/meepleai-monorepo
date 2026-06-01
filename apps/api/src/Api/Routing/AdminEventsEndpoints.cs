@@ -154,8 +154,8 @@ internal static class AdminEventsEndpoints
         if (!authorized)
         {
             // SSE handlers cannot return IResult once the body has started, so we set the
-            // status code directly. ExtractStatusCode inspects the IResult type name to derive
-            // 401 vs 403 — safe because the response body has not started yet at this point.
+            // status code directly. ExtractStatusCode reads the public IStatusCodeHttpResult
+            // interface (#1741) — safe because the response body has not started yet at this point.
             context.Response.StatusCode = ExtractStatusCode(error);
             return;
         }
@@ -286,25 +286,19 @@ internal static class AdminEventsEndpoints
     }
 
     /// <summary>
-    /// Extracts the HTTP status code from an <see cref="IResult"/> by executing it against
-    /// a dummy response. Used only for the SSE auth-error path where we need the status code
-    /// before writing to the response body.
+    /// Extracts the HTTP status code from an <see cref="IResult"/> for the SSE auth-error path
+    /// where we need the status code before writing to the response body.
     /// </summary>
     /// <remarks>
-    /// ISSUE-1741: Replace type-name heuristic with <c>IStatusCodeHttpResult.StatusCode</c>
-    /// inspection (public since .NET 7) or restructure <c>RequireAdminSession</c> return type.
-    /// Current heuristic works but relies on internal ASP.NET Core type names.
+    /// #1741: Uses the public <see cref="IStatusCodeHttpResult"/> contract (ASP.NET Core ≥7),
+    /// replacing the previous type-name heuristic that depended on internal result-type names
+    /// (<c>UnauthorizedHttpResult</c> / <c>ForbidHttpResult</c>) which are not part of the
+    /// public API contract.
     /// </remarks>
     private static int ExtractStatusCode(IResult? result)
     {
-        // Heuristic: Results.Unauthorized() → 401, Results.Forbid() → 403
-        // We can't easily inspect IResult without executing it.
-        // Check the type name as a lightweight fallback.
-        if (result is null) return 401;
-        var name = result.GetType().Name;
-        if (name.Contains("Unauthorized", StringComparison.OrdinalIgnoreCase)) return 401;
-        if (name.Contains("Forbid", StringComparison.OrdinalIgnoreCase)) return 403;
-        return 401; // safe default
+        if (result is IStatusCodeHttpResult sc) return sc.StatusCode ?? 401;
+        return 401; // safe default for null or non-status results
     }
 
     /// <summary>

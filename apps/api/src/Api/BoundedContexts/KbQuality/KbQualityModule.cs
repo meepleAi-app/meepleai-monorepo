@@ -2,6 +2,7 @@ using Api.BoundedContexts.KbQuality.Application.Configuration;
 using Api.BoundedContexts.KbQuality.Application.Ports;
 using Api.BoundedContexts.KbQuality.Application.Services;
 using Api.BoundedContexts.KbQuality.Infrastructure;
+using Api.BoundedContexts.KbQuality.Infrastructure.Adapters;
 using Api.BoundedContexts.KbQuality.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,6 +31,13 @@ public static class KbQualityModule
         services.AddScoped<IEvaluationRepository>(sp => sp.GetRequiredService<EvaluationRepository>());
         services.AddScoped<IEvaluationRateLimitStore>(sp => sp.GetRequiredService<EvaluationRepository>());
         services.AddScoped<IEvalCostBudgetChecker>(sp => sp.GetRequiredService<EvaluationRepository>());
+
+        // Cross-BC adapters (Task 18). IAuditLogger has no current consumer — the audit log for
+        // the Triggered event is emitted by the global AuditLoggingBehavior via the
+        // [AuditableAction] on StartEvaluationCommand. The port + adapter remain unwritten
+        // until a runtime caller needs them.
+        services.AddScoped<IKbSearchProvider, KbSearchProviderAdapter>();
+        services.AddScoped<IPdfDocumentReadModel, PdfDocumentReadModelAdapter>();
 
         return services;
     }

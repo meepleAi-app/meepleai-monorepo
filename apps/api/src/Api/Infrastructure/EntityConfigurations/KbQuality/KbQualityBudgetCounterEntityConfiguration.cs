@@ -19,5 +19,9 @@ internal sealed class KbQualityBudgetCounterEntityConfiguration
         builder.Property(e => e.YearMonth).HasMaxLength(7).IsRequired();  // "yyyy-MM" = 7 chars
         builder.Property(e => e.SpentUsd).HasPrecision(10, 4).IsRequired();
         builder.HasIndex(e => e.YearMonth);  // for monthly reset job
+
+        // Issue #1675: optimistic concurrency via Postgres xmin. Nullable byte[] mirrors
+        // the convention adopted for PdfDocumentEntity.RowVersion (#1802 landmine workaround).
+        builder.Property(e => e.RowVersion).IsRowVersion();
     }
 }

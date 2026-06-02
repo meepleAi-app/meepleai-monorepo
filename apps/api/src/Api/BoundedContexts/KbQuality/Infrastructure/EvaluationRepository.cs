@@ -158,28 +158,44 @@ internal sealed class EvaluationRepository
 
     public async Task IncrementSpentAsync(Guid tenantId, decimal amountUsd, CancellationToken ct)
     {
-        var yearMonth = CurrentYearMonth();
-
-        var counter = await _db.KbQualityBudgetCounters
-            .FirstOrDefaultAsync(c => c.TenantId == tenantId && c.YearMonth == yearMonth, ct)
-            .ConfigureAwait(false);
-
-        if (counter is null)
+        // Bounded retry loop on optimistic concurrency conflicts: concurrent evals from the
+        // same tenant racing on the same monthly counter would otherwise silently lose updates.
+        // The RowVersion column (xmin) makes the conflict observable; we re-load and replay
+        // the increment on top of the fresh value. Retry budget kept low (3) because the
+        // critical section is a single increment + the SQL boundary makes contention rare.
+        const int maxAttempts = 3;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
-            counter = new KbQualityBudgetCounter
+            var yearMonth = CurrentYearMonth();
+
+            var counter = await _db.KbQualityBudgetCounters
+                .FirstOrDefaultAsync(c => c.TenantId == tenantId && c.YearMonth == yearMonth, ct)
+                .ConfigureAwait(false);
+
+            if (counter is null)
             {
-                TenantId = tenantId,
-                YearMonth = yearMonth,
-                SpentUsd = amountUsd,
-            };
-            await _db.KbQualityBudgetCounters.AddAsync(counter, ct).ConfigureAwait(false);
-        }
-        else
-        {
-            counter.SpentUsd += amountUsd;
-        }
+                counter = KbQualityBudgetCounter.Create(tenantId, yearMonth, amountUsd);
+                await _db.KbQualityBudgetCounters.AddAsync(counter, ct).ConfigureAwait(false);
+            }
+            else
+            {
+                counter.IncrementSpent(amountUsd);
+            }
 
-        await _db.SaveChangesAsync(ct).ConfigureAwait(false);
+            try
+            {
+                await _db.SaveChangesAsync(ct).ConfigureAwait(false);
+                return;
+            }
+            catch (DbUpdateConcurrencyException) when (attempt < maxAttempts)
+            {
+                // Detach the stale entity so the next iteration re-reads fresh state.
+                if (counter is not null)
+                {
+                    _db.Entry(counter).State = EntityState.Detached;
+                }
+            }
+        }
     }
 
     public async Task<int> DeleteBudgetCountersOlderThanAsync(string yearMonthExclusive, CancellationToken ct)

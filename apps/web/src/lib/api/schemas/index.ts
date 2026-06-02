@@ -143,3 +143,6 @@ export * from './ownership.schemas';
 
 // Agent Documents schemas (user-scoped document selection)
 export * from './agent-documents.schemas';
+
+// Indexer Versions schemas (Issue #1673)
+export * from './indexer-versions.schemas';

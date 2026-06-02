@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -38,7 +39,7 @@ internal sealed class PurgeStaleDocumentsCommandHandler
         foreach (var doc in staleDocs)
         {
             var originalState = doc.ProcessingState;
-            doc.ProcessingState = "Failed";
+            doc.ProcessingState = nameof(PdfProcessingState.Failed);
             doc.ProcessingError = "Processing timed out (stale) - purged by admin";
             doc.ErrorCategory = "Service";
             doc.FailedAtState = originalState;

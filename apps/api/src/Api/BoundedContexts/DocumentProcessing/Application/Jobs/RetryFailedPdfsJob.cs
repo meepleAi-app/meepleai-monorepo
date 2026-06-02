@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Infrastructure;
+using Api.Observability;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -119,6 +120,17 @@ internal sealed class RetryFailedPdfsJob : IJob
                             pdf.Id,
                             result.Message);
                     }
+                }
+                catch (DbUpdateConcurrencyException ex)
+                {
+                    skipCount++;
+                    MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                        nameof(RetryFailedPdfsJob),
+                        MeepleAiMetrics.PdfConcurrencyCategories.C);
+                    _logger.LogDebug(ex,
+                        "Skipped PdfDocument {PdfId} in {Handler} (Category C) — concurrent admin mutation",
+                        pdf.Id, nameof(RetryFailedPdfsJob));
+                    // No re-throw. Maintenance job is best-effort; continue to next item.
                 }
                 catch (Exception ex)
                 {

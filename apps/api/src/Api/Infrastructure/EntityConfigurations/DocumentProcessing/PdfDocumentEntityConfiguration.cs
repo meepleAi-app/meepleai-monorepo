@@ -174,6 +174,11 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         builder.HasIndex(e => e.IndexerVersion)
             .HasDatabaseName("ix_pdf_documents_indexer_version");
 
+        // Issue #1802: Optimistic concurrency via xmin (PostgreSQL system column).
+        // Pattern matches RuleSpecEntityConfiguration:38-39 — Npgsql auto-maps to xmin.
+        builder.Property(e => e.RowVersion)
+            .IsRowVersion();
+
         // E5-1: Language confidence and override
         builder.Property(e => e.LanguageConfidence)
             .HasColumnName("language_confidence")

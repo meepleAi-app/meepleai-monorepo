@@ -1,3 +1,5 @@
+using System.Globalization;
+using Api.BoundedContexts.KbQuality.Application.Behaviors;
 using Api.BoundedContexts.KbQuality.Application.Commands.StartEvaluation;
 using Api.BoundedContexts.KbQuality.Application.Queries.GetEvaluation;
 using Api.BoundedContexts.KbQuality.Application.Queries.ListEvaluations;
@@ -64,9 +66,15 @@ public static class AdminKbQualityEndpoints
                 new StartEvaluationCommand(docId, body.GoldsetVersion, body.OverrideCostCap),
                 ct).ConfigureAwait(false);
 
+            // Overlay the live quota values that the pipeline behaviors wrote into
+            // HttpContext.Items so the response body + standard headers reflect actuals
+            // rather than the handler's hardcoded zeros.
+            var enriched = OverlayQuotaFromHttpItems(result, httpContext);
+            WriteQuotaHeaders(httpContext, enriched);
+
             return Results.Accepted(
-                uri: $"/api/v1/admin/kb/docs/{docId}/evaluations/{result.EvaluationId}",
-                value: result);
+                uri: $"/api/v1/admin/kb/docs/{docId}/evaluations/{enriched.EvaluationId}",
+                value: enriched);
         }
         catch (InvalidGoldsetVersionException ex)
         {
@@ -93,7 +101,7 @@ public static class AdminKbQualityEndpoints
         catch (EvalRateLimitedException ex)
         {
             var retryAfterSeconds = Math.Max(1, (int)Math.Ceiling(ex.RetryAfter.TotalSeconds));
-            httpContext.Response.Headers["Retry-After"] = retryAfterSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            httpContext.Response.Headers["Retry-After"] = retryAfterSeconds.ToString(CultureInfo.InvariantCulture);
 
             return Results.Json(
                 new
@@ -103,6 +111,43 @@ public static class AdminKbQualityEndpoints
                 },
                 statusCode: StatusCodes.Status429TooManyRequests);
         }
+    }
+
+    private static EvaluationStartedResult OverlayQuotaFromHttpItems(
+        EvaluationStartedResult result,
+        HttpContext httpContext)
+    {
+        var items = httpContext.Items;
+        var rateLimitRemaining = items[KbQualityHttpItemKeys.RateLimitRemaining] is int rlr
+            ? rlr
+            : result.RateLimitRemaining;
+        var rateLimitReset = items[KbQualityHttpItemKeys.RateLimitReset] is DateTime rls
+            ? rls
+            : result.RateLimitReset;
+        var costCapRemaining = items[KbQualityHttpItemKeys.CostCapRemaining] is decimal ccr
+            ? ccr
+            : result.CostCapRemaining;
+        var costCapEstimate = items[KbQualityHttpItemKeys.CostCapEstimate] is decimal cce
+            ? cce
+            : result.CostCapEstimate;
+
+        return result with
+        {
+            RateLimitRemaining = rateLimitRemaining,
+            RateLimitReset = rateLimitReset,
+            CostCapRemaining = costCapRemaining,
+            CostCapEstimate = costCapEstimate,
+        };
+    }
+
+    private static void WriteQuotaHeaders(HttpContext httpContext, EvaluationStartedResult result)
+    {
+        httpContext.Response.Headers["X-RateLimit-Remaining"] =
+            result.RateLimitRemaining.ToString(CultureInfo.InvariantCulture);
+        httpContext.Response.Headers["X-RateLimit-Reset"] =
+            result.RateLimitReset.ToString("o", CultureInfo.InvariantCulture);
+        httpContext.Response.Headers["X-Cost-Cap-Remaining"] =
+            result.CostCapRemaining.ToString(CultureInfo.InvariantCulture);
     }
 
     private static async Task<IResult> GetEvaluation(

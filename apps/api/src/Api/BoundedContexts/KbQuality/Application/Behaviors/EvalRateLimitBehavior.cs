@@ -59,6 +59,15 @@ public sealed class EvalRateLimitBehavior<TRequest, TResponse>(
             }
         }
 
+        // Sliding window of 1 slot per (docId, adminId): once this run starts the slot is
+        // consumed, so RateLimitRemaining=0 and Reset = now + window. Surface via
+        // HttpContext.Items so the endpoint can overlay onto the response body + headers.
+        if (httpContext.HttpContext is { } ctx)
+        {
+            ctx.Items[KbQualityHttpItemKeys.RateLimitRemaining] = 0;
+            ctx.Items[KbQualityHttpItemKeys.RateLimitReset] = DateTime.UtcNow.Add(window);
+        }
+
         return await next().ConfigureAwait(false);
     }
 }

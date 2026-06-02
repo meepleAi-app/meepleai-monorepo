@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KbQuality.Application.Authentication;
+using Api.BoundedContexts.KbQuality.Application.Behaviors;
 using Api.BoundedContexts.KbQuality.Application.Configuration;
 using Api.BoundedContexts.KbQuality.Application.Ports;
 using Api.BoundedContexts.KbQuality.Application.Services;
@@ -123,14 +124,21 @@ public sealed class StartEvaluationCommandHandler(
 
         await runRepo.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        // Quota headers (RateLimitRemaining, CostCapRemaining) are populated by the pipeline
-        // behaviors out-of-band; the endpoint will overlay them onto the HTTP response headers.
+        // Surface the run's final cost to EvalCostCapBehavior so it can charge the actual
+        // amount (or 0 for early failures) instead of the upfront estimate. The endpoint
+        // similarly overlays this + the rate-limit window onto the EvaluationStartedResult.
+        var actualCost = run.CostUsd ?? 0m;
+        if (httpContextAccessor.HttpContext is { } ctx)
+        {
+            ctx.Items[KbQualityHttpItemKeys.ActualCostUsd] = actualCost;
+        }
+
         return new EvaluationStartedResult(
             EvaluationId: run.Id,
             LocationCreatedAt: run.StartedAt,
             RateLimitRemaining: 0,
             RateLimitReset: DateTime.UtcNow.AddMinutes(options.CurrentValue.RateLimitPerDocMinutes),
             CostCapRemaining: 0m,
-            CostCapEstimate: run.CostUsd ?? 0m);
+            CostCapEstimate: actualCost);
     }
 }

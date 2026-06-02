@@ -90,10 +90,32 @@ public sealed class EvalCostCapBehavior<TRequest, TResponse>(
 
         var result = await next().ConfigureAwait(false);
 
-        // Increment uses estimated as upper bound. Plan acknowledges potential drift between
-        // estimate and actual cost; the handler may correct via direct repo call upon completion.
-        await budget.IncrementSpentAsync(tenantId, estimated, cancellationToken).ConfigureAwait(false);
+        // Charge the tenant. The handler may have recorded an "actual cost" in
+        // HttpContext.Items[ActualCostUsd] after a successful (or Failed) run — see
+        // StartEvaluationCommandHandler. If present, use it instead of the upfront estimate
+        // so a quick-failing run doesn't drain the budget at the estimated rate.
+        var actualCost = TryReadActualCost(httpContext.HttpContext) ?? estimated;
+        await budget.IncrementSpentAsync(tenantId, actualCost, cancellationToken).ConfigureAwait(false);
+
+        // Surface the post-charge view to the endpoint via HttpContext.Items.
+        if (httpContext.HttpContext is { } ctx)
+        {
+            ctx.Items[KbQualityHttpItemKeys.CostCapEstimate] = actualCost;
+            var newRemaining = await budget.GetRemainingAsync(tenantId, cancellationToken).ConfigureAwait(false);
+            ctx.Items[KbQualityHttpItemKeys.CostCapRemaining] = newRemaining;
+        }
 
         return result;
+    }
+
+    private static decimal? TryReadActualCost(Microsoft.AspNetCore.Http.HttpContext? context)
+    {
+        if (context is null
+            || !context.Items.TryGetValue(KbQualityHttpItemKeys.ActualCostUsd, out var raw)
+            || raw is not decimal cost)
+        {
+            return null;
+        }
+        return cost;
     }
 }

@@ -7,6 +7,7 @@ using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.KnowledgeBase;
+using Api.Observability;
 using Api.Services;
 using Api.Services.Pdf;
 using Microsoft.EntityFrameworkCore;
@@ -138,7 +139,20 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
             // Issue #4215: Transition to Chunking state
             pdfDoc.ProcessingState = nameof(PdfProcessingState.Chunking);
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                    nameof(PdfProcessingPipelineService),
+                    MeepleAiMetrics.PdfConcurrencyCategories.B);
+                _logger.LogWarning(ex,
+                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                    pdfId, nameof(PdfProcessingPipelineService));
+                return; // CRITICAL: do not throw — Quartz must see job as successful
+            }
 
             // Step 3: Chunk text
             _logger.LogInformation("[PdfPipeline] Step 3/4: Chunking text for {PdfId} ({CharCount} chars)", pdfId, fullText.Length);
@@ -294,7 +308,20 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                         }).ToList();
 
                         _db.GameEntityRelations.AddRange(entities);
-                        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                        try
+                        {
+                            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                        }
+                        catch (DbUpdateConcurrencyException ex)
+                        {
+                            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                                nameof(PdfProcessingPipelineService),
+                                MeepleAiMetrics.PdfConcurrencyCategories.B);
+                            _logger.LogWarning(ex,
+                                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                                pdfId, nameof(PdfProcessingPipelineService));
+                            DetachUnsavedChanges<GameEntityRelationEntity>();
+                        }
 
                         _logger.LogInformation(
                             "[PdfPipeline] Graph RAG: extracted {RelCount} relations for PDF {PdfId}",
@@ -314,7 +341,20 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
             // Issue #4215: Transition to Embedding state
             pdfDoc.ProcessingState = nameof(PdfProcessingState.Embedding);
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                    nameof(PdfProcessingPipelineService),
+                    MeepleAiMetrics.PdfConcurrencyCategories.B);
+                _logger.LogWarning(ex,
+                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                    pdfId, nameof(PdfProcessingPipelineService));
+                return; // CRITICAL: do not throw — Quartz must see job as successful
+            }
 
             // Step 4a: Generate embeddings (for all chunks: original + translated)
             var allChunkInputs = translatedChunks.Select(t => t.chunk).ToList();
@@ -323,7 +363,20 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
             // Issue #4215: Transition to Indexing state
             pdfDoc.ProcessingState = nameof(PdfProcessingState.Indexing);
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                    nameof(PdfProcessingPipelineService),
+                    MeepleAiMetrics.PdfConcurrencyCategories.B);
+                _logger.LogWarning(ex,
+                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                    pdfId, nameof(PdfProcessingPipelineService));
+                return; // CRITICAL: do not throw — Quartz must see job as successful
+            }
 
             // Step 4b: Index in pgvector
             _logger.LogInformation("[PdfPipeline] Step 4b/5: Indexing {ChunkCount} chunks for {PdfId}", allChunkInputs.Count, pdfId);
@@ -333,7 +386,20 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             // Issue #4215: Mark as Ready (final state)
             pdfDoc.ProcessingState = nameof(PdfProcessingState.Ready);
             pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                    nameof(PdfProcessingPipelineService),
+                    MeepleAiMetrics.PdfConcurrencyCategories.B);
+                _logger.LogWarning(ex,
+                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                    pdfId, nameof(PdfProcessingPipelineService));
+                return; // CRITICAL: do not throw — Quartz must see job as successful
+            }
 
             _logger.LogInformation("[PdfPipeline] Successfully processed PDF {PdfId}: {Pages} pages, {Chunks} chunks (incl. translations)",
                 pdfId, pdfDoc.PageCount ?? 0, translatedChunks.Count);
@@ -393,7 +459,20 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             pdfDoc.ExtractedText = fullText;
             pdfDoc.PageCount = extractResult.TotalPages;
             pdfDoc.CharacterCount = extractResult.TotalCharacters;
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                    nameof(PdfProcessingPipelineService),
+                    MeepleAiMetrics.PdfConcurrencyCategories.B);
+                _logger.LogWarning(ex,
+                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                    pdfDoc.Id, nameof(PdfProcessingPipelineService));
+                return (fullText, extractResult);
+            }
 
             return (fullText, extractResult);
         }
@@ -428,6 +507,15 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             pdfDoc.DiagramCount = structuredResult.DiagramCount;
             pdfDoc.AtomicRuleCount = structuredResult.AtomicRuleCount;
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(PdfProcessingPipelineService),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(ex,
+                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                pdfDoc.Id, nameof(PdfProcessingPipelineService));
         }
 #pragma warning disable CA1031 // Structured extraction is optional, don't fail the pipeline
         catch (Exception ex)
@@ -561,7 +649,20 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             vectorDoc.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
         }
 
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(PdfProcessingPipelineService),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(ex,
+                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                pdfDoc.Id, nameof(PdfProcessingPipelineService));
+            return; // CRITICAL: do not throw — Quartz must see job as successful
+        }
 
         // Index embeddings in pgvector for semantic search
         if (_vectorStore != null && embeddings.Count == translatedChunks.Count)
@@ -672,7 +773,20 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             .ConfigureAwait(false);
 
         _db.TextChunks.AddRange(textChunkEntities);
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(PdfProcessingPipelineService),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(ex,
+                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                pdfDoc.Id, nameof(PdfProcessingPipelineService));
+            return; // CRITICAL: do not throw — Quartz must see job as successful
+        }
 
         _logger.LogInformation("[PdfPipeline] Saved {Count} text chunks for hybrid search (PDF {PdfId})",
             textChunkEntities.Count, pdfDoc.Id);
@@ -698,7 +812,19 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             };
             _db.RaptorSummaries.Add(entity);
         }
-        await _db.SaveChangesAsync(ct).ConfigureAwait(false);
+        try
+        {
+            await _db.SaveChangesAsync(ct).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(PdfProcessingPipelineService),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(ex,
+                "Concurrency conflict on RaptorSummaries for PDF {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                pdfDocumentId, nameof(PdfProcessingPipelineService));
+        }
     }
 
     /// <summary>
@@ -724,7 +850,20 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
         pdfDoc.ProcessingError = errorMessage;
         pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-        await _db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+        try
+        {
+            await _db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(PdfProcessingPipelineService),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(ex,
+                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                pdfDoc.Id, nameof(PdfProcessingPipelineService));
+            // CRITICAL: do not throw — Quartz must see job as successful
+        }
     }
 
     /// <summary>
@@ -750,6 +889,15 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 await _db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
             }
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(PdfProcessingPipelineService),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(ex,
+                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                pdfDocumentId, nameof(PdfProcessingPipelineService));
         }
 #pragma warning disable CA1031 // Best-effort error marking must not throw
         catch (Exception ex)

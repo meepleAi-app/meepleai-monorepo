@@ -27,6 +27,7 @@ using Api.BoundedContexts.GameManagement.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameToolbox.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameToolkit.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KbQuality;
+using Api.BoundedContexts.KbQuality.Routing;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.SessionTracking.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Health;
@@ -852,6 +853,7 @@ v1Api.MapLlmAnalyticsEndpoints();      // ISSUE-1725: LLM cost optimization anal
 v1Api.MapAdminAgentMetricsEndpoints(); // Issue #3382: Agent Metrics Dashboard
 v1Api.MapArbitroAdminEndpoints();      // Issue #4328: Arbitro beta testing admin tools
 v1Api.MapAdminPdfMetricsEndpoints();   // Issue #4212: PDF processing metrics
+v1Api.MapAdminKbQualityEndpoints();    // Issue #1675: Per-doc KB quality evaluations
 v1Api.MapAdminPdfStorageEndpoints();   // PDF Storage Management Hub: Storage health
 v1Api.MapAdminPdfManagementEndpoints(); // PDF Storage Management Hub: Bulk ops, maintenance, analytics
 v1Api.MapAdminIndexerEndpoints();       // Issue #1673: indexer version registry endpoint

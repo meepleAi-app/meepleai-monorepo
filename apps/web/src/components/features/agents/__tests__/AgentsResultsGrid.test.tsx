@@ -19,6 +19,7 @@
  */
 
 import { render, screen } from '@testing-library/react';
+import { axe } from 'jest-axe';
 import { describe, expect, it } from 'vitest';
 
 import { AgentsResultsGrid } from '../AgentsResultsGrid';
@@ -172,5 +173,10 @@ describe('AgentsResultsGrid (Wave B.2)', () => {
     const { container } = render(<AgentsResultsGrid agents={AGENTS} />);
     const links = container.querySelectorAll('[data-slot="agents-results-grid-link"]');
     expect(links).toHaveLength(3);
+  });
+
+  it('passes axe a11y scan with 3 agents (#1569)', async () => {
+    const { container } = render(<AgentsResultsGrid agents={AGENTS} />);
+    expect(await axe(container)).toHaveNoViolations();
   });
 });

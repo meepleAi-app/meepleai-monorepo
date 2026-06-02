@@ -58,11 +58,13 @@ internal static class AdminPdfManagementEndpoints
 
     private static async Task<IResult> ReindexDocument(
         Guid pdfId,
+        ReindexDocumentRequest? request,
         IMediator mediator,
         CancellationToken cancellationToken)
     {
-        await mediator.Send(new ReindexDocumentCommand(pdfId), cancellationToken)
-            .ConfigureAwait(false);
+        await mediator.Send(
+            new ReindexDocumentCommand(pdfId, request?.IndexerVersion),
+            cancellationToken).ConfigureAwait(false);
         return Results.Ok(new { success = true, message = "Document queued for reindexing" });
     }
 
@@ -104,3 +106,4 @@ internal static class AdminPdfManagementEndpoints
 }
 
 internal record BulkDeletePdfsRequest(List<Guid> PdfIds);
+internal record ReindexDocumentRequest(string? IndexerVersion);

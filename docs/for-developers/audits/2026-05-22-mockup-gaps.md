@@ -158,15 +158,14 @@ sub-pages · nodi architetturali N4/N6/N7.
   l'altra con `redirect()` Next.js. Aggiornare il mapping
   in `MOCKUPS_INDEX.md` e in `v2-migration-matrix.md`.
 
-### Gap N5 — `/library/wishlist`
+### Gap N5 — `/library/wishlist` ✅ CLOSED 2026-06-02 (PR pending, #1491)
 
-- **Stato**: route esistente, codice impl attivo (`MeepleWishlistCard`,
-  `AddToWishlistDialog`, `useWishlist`).
-- **Mockup attuale**: nessuno dedicato. Riusa `MeepleCard` + Dialog primitives.
-- **Impatto**: layout/empty state/add-dialog UX non specificati centralmente.
-- **Tier**: S.
-- **Recommendation**: estendere `sp4-library-desktop.html` con variant
-  wishlist OR aprire `[Design v1 · B16] Mockup Library Wishlist standalone`.
+- **Stato**: route coperta da mockup dedicato (Option B standalone vinto).
+- **Mockup shipped**: `sp4-library-wishlist.html` + `.jsx` + `-ui.jsx` (split-multi pattern come cluster #1490). Coverage: card grid responsive con priority badge (Alta --c-danger / Media --c-warning / Bassa --text-muted), target price, notes, BGG meta, Modifica/Rimuovi actions; toolbar con search debounce + priority filter multi-select + sort; AddToWishlistDialog form (game combobox autocomplete + priority radiogroup + target price number + notes textarea con char counter); 8 stati (default / filter-priority-alta / filter-search-active / empty-no-items / loading / error / add-dialog-open / mobile-stack).
+- **Issue tracker**: [#1491 Design v1 · B16] Mockup Library Wishlist — opened 2026-05-22, mockup shipped 2026-06-02 via Claude Design web canvas (pattern P156 + cluster iterative project knowledge P159).
+- **Closing PR**: `feature/issue-1491-mockup-library-wishlist` → `main-dev`.
+- **Decisione architecturale**: Option B (standalone) vs Option A (variant in sp4-library-desktop) — spec-panel discussion 3 esperti (Fowler architecture + Adzic concrete examples + Doumont visual clarity) convergent su B per separation of concerns + coerenza cluster #1490 (1 file = 1 screen) + naming auto-descrittivo. Documentata in header comment file.
+- **Updates correlati**: `00-hub.html` (1 nuova card SP4 entity --c-game, **merge corretto 3 cluster consecutivo** — P155 NOT triggered), `v2-migration-matrix.md` (riga `/library/wishlist` aggiunta).
 
 ### Gap N6 — `/games/[id]/{reviews,rules,strategies}`
 

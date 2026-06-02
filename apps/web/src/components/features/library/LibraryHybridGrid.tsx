@@ -119,6 +119,7 @@ export function LibraryHybridGrid({
             <MeepleCard
               entity={item.entity}
               variant={variant}
+              id={item.id}
               title={item.title}
               subtitle={item.subtitle}
               imageUrl={itemImageUrl(item)}

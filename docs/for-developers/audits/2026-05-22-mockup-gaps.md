@@ -128,19 +128,17 @@ sub-pages · nodi architetturali N4/N6/N7.
 - **Recommendation**: aprire `[Design v1 · B11] Mockup Play Records (index,
   new, detail, edit, stats)`.
 
-### Gap N3 — `/toolkit/{history,stats,templates,play}`
+### Gap N3 — `/toolkit/{history,stats,templates,play}` ✅ CLOSED 2026-06-02 (PR pending, #1490)
 
-- **Route impattate** (4):
-  - `/toolkit/history` — paginated list
-  - `/toolkit/stats` — KPI dashboard
-  - `/toolkit/templates` — gallery + filter
-  - `/toolkit/play` — live session toolkit panel
-- **Impatto**: `sp4-toolkit-detail.html` mappa generico "+ sub-routes" ma
-  ognuna ha dati e interazioni distinte. Mancano esempi concreti (Adzic).
-- **Existing**: nessuna. `sp4-toolkit-detail` copre `[sessionId]` detail solo.
-- **Tier suggerito**: S (per ognuna).
-- **Recommendation**: aprire `[Design v1 · B15] Mockup Toolkit sub-pages
-  (history, stats, templates, play)`.
+- **Route impattate** (4) — TUTTE coperte:
+  - `/toolkit/stats` → `sp4-toolkit-stats.html` + `.jsx` (S1, KPI dashboard 12-mesi + Most Played + Monthly bar chart + Score Trends, 8 stati)
+  - `/toolkit/history` → `sp4-toolkit-history.html` + `.jsx` + `-ui.jsx` (S2, paginated list + filtri game/date/winner + detail modal con classifica/timeline/note/stats, 9 stati)
+  - `/toolkit/templates` → `sp4-toolkit-templates.html` + `.jsx` + `-ui.jsx` (S3, gallery grid 4-col + filter categoria + 4 card variants + clone modal, 8 stati)
+  - `/toolkit/play` → `sp4-toolkit-play.html` + `.jsx` + `-dice.jsx` + `-tools.jsx` + `-ui.jsx` (S4, Dice Builder full power + Counter + Timer + Randomizer + log streaming, 16 stati incluso 7 dice-* states)
+- **Issue tracker**: [#1490 Design v1 · B15] Mockup Toolkit sub-pages — opened 2026-05-22, mockup shipped 2026-06-02 via Claude Design web canvas (pattern P156 handoff package consolidato post-cluster #1489).
+- **Closing PR**: `feature/issue-1490-mockup-toolkit-sub-pages` → `main-dev`.
+- **Updates correlati**: `00-hub.html` (4 nuove card SP4, **merge corretto 4/4 turni** — P155 NOT triggered per intero cluster, primo Phase D senza bug), `v2-migration-matrix.md` (nuova sezione "Toolkit standalone sub-pages" con 4 row done).
+- **Highlights**: Dice Builder full power (preset chips + builder visivo + formula parser khN/klN/csN/explosive + result kept-dropped highlight + storico re-rollable) come pattern UX dice TTRPG-grade.
 
 ## P2 — Gap secondari / IA conflict
 

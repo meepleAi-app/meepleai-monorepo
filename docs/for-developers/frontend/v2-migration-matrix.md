@@ -786,6 +786,15 @@ instead.
 | `/pipeline-builder` | — | gap |
 | `/n8n` | — | gap (integration UI) |
 
+### Toolkit standalone sub-pages (cross-game helpers)
+
+| Route | Mockup | Note |
+|-------|--------|------|
+| `/toolkit/stats` | `sp4-toolkit-stats.html` [done] | B15 #1490 1/4 · KPI dashboard analytics 12-mesi (sessioni / giochi / durata) + Most Played top-N + Monthly bar chart + Recent Score Trends, 8 stati |
+| `/toolkit/history` | `sp4-toolkit-history.html` [done] | B15 #1490 2/4 · Lista paginata sessioni finalizzate cross-game con filtri (game/date/winner) + detail modal (classifica/timeline/note/stats), 9 stati |
+| `/toolkit/templates` | `sp4-toolkit-templates.html` [done] | B15 #1490 3/4 · Gallery template grid 4-col con filter categoria (Strategy/Party/CardGames/Cooperative) + Clone CTA + 4 card variants (official/popular/recent/pending), 8 stati |
+| `/toolkit/play` | `sp4-toolkit-play.html` [done] | B15 #1490 4/4 · Toolkit standalone live (4 tool widgets: **Dice Builder full power** con presets+formula parser khN/klN/csN/explosive + Counter + Timer countdown/turn FSM + Randomizer) + log streaming cross-tool, 16 stati |
+
 ### Critical gaps summary
 
 > **Updated 2026-05-31** (cross-audit 2026-05-12 + 2026-05-22): 3 dei 5 gap

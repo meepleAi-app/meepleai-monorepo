@@ -2,9 +2,10 @@
 
 import { useConnectionSource } from '../hooks/useConnectionSource';
 import { ConnectionChipStrip } from '../parts/ConnectionChipStrip';
+import { Cover } from '../parts/Cover';
 import { MetaChips } from '../parts/MetaChips';
 import { Rating } from '../parts/Rating';
-import { entityHsl, entityIcon } from '../tokens';
+import { entityHsl } from '../tokens';
 
 import type { MeepleCardProps } from '../types';
 
@@ -12,6 +13,7 @@ export function ListCard(props: MeepleCardProps) {
   const {
     entity,
     title,
+    id,
     subtitle,
     imageUrl,
     rating,
@@ -43,16 +45,7 @@ export function ListCard(props: MeepleCardProps) {
         style={{ background: entityHsl(entity) }}
       />
       <div className="h-[52px] w-[52px] flex-shrink-0 overflow-hidden rounded-lg">
-        {imageUrl ? (
-          <img src={imageUrl} alt={title} className="h-full w-full object-cover" loading="lazy" />
-        ) : (
-          <div
-            className="flex h-full w-full items-center justify-center text-xl opacity-50"
-            style={{ background: entityHsl(entity, 0.08) }}
-          >
-            {entityIcon[entity]}
-          </div>
-        )}
+        <Cover entity={entity} variant="compact" imageUrl={imageUrl} alt={title} gameId={id} />
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex items-center gap-2">

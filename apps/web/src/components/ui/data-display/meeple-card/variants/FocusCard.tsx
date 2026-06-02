@@ -14,6 +14,7 @@ export function FocusCard(props: MeepleCardProps) {
   const {
     entity,
     title,
+    id,
     subtitle,
     imageUrl,
     rating,
@@ -42,7 +43,7 @@ export function FocusCard(props: MeepleCardProps) {
       {/* Hero row: cover + info */}
       <div className="flex gap-4 p-4">
         <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl">
-          <Cover entity={entity} variant="compact" imageUrl={imageUrl} alt={title} />
+          <Cover entity={entity} variant="compact" imageUrl={imageUrl} alt={title} gameId={id} />
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">

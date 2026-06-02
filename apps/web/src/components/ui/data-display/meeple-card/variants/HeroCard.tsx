@@ -1,6 +1,11 @@
 /* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 'use client';
 
+import { useState } from 'react';
+
+import { shouldUsePlaceholder } from '@/lib/games/cover-utils';
+
+import { GameCoverPlaceholder } from '../parts/GameCoverPlaceholder';
 import { ManaPips } from '../parts/ManaPips';
 import { entityHsl, entityIcon } from '../tokens';
 
@@ -10,6 +15,7 @@ export function HeroCard(props: MeepleCardProps) {
   const {
     entity,
     title,
+    id,
     subtitle,
     imageUrl,
     rating,
@@ -21,6 +27,11 @@ export function HeroCard(props: MeepleCardProps) {
   } = props;
   const testId = props['data-testid'];
 
+  // #1822: reject BGG runtime URLs and degrade to placeholder on load failure.
+  const [imgFailed, setImgFailed] = useState(false);
+  const usePlaceholder = imgFailed || shouldUsePlaceholder(imageUrl);
+  const showRichPlaceholder = usePlaceholder && entity === 'game' && !!id;
+
   return (
     <div
       className={`group relative min-h-[320px] cursor-pointer overflow-hidden rounded-3xl shadow-[var(--mc-shadow-lg)] transition-transform duration-300 hover:scale-[1.01] ${className}`}
@@ -30,19 +41,27 @@ export function HeroCard(props: MeepleCardProps) {
       data-entity={entity}
       data-testid={testId}
     >
-      {imageUrl ? (
+      {usePlaceholder ? (
+        showRichPlaceholder ? (
+          <div className="absolute inset-0">
+            <GameCoverPlaceholder gameId={id ?? ''} title={title} />
+          </div>
+        ) : (
+          <div
+            className="absolute inset-0 flex items-center justify-center text-8xl opacity-30"
+            style={{ background: entityHsl(entity, 0.15) }}
+            aria-hidden="true"
+          >
+            {entityIcon[entity]}
+          </div>
+        )
+      ) : (
         <img
           src={imageUrl}
           alt={title}
           className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+          onError={() => setImgFailed(true)}
         />
-      ) : (
-        <div
-          className="absolute inset-0 flex items-center justify-center text-8xl opacity-30"
-          style={{ background: entityHsl(entity, 0.15) }}
-        >
-          {entityIcon[entity]}
-        </div>
       )}
       <div
         className="absolute inset-0"

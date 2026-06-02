@@ -400,4 +400,53 @@ describe('KbDocDetailPanel', () => {
     render(<KbDocDetailPanel docId="doc-1" />, { wrapper: makeWrapper() });
     expect(screen.getByRole('navigation', { name: /sezione documento/i })).toBeInTheDocument();
   });
+
+  // ── indexerVersion hero badge (Issue #1673) ───────────────────────────────
+
+  describe('indexerVersion hero badge (Issue #1673)', () => {
+    it('renders "v0 (legacy)" when indexerVersion is "v0"', () => {
+      const doc = { ...readyDoc, indexerVersion: 'v0' };
+      mockUseKbDocDetail.mockReturnValue({ data: { status: 'ready', doc }, isLoading: false });
+      mockUseKbChunksList.mockReturnValue({
+        data: { pages: [{ items: [], nextCursor: null, totalCount: 0 }] },
+        hasNextPage: false,
+        isFetchingNextPage: false,
+        fetchNextPage: vi.fn(),
+      });
+      render(<KbDocDetailPanel docId="doc-1" />, { wrapper: makeWrapper() });
+
+      const badge = screen.getByTestId('kb-doc-indexer-version');
+      expect(badge).toHaveTextContent(/v0 \(legacy\)/);
+    });
+
+    it('renders the version verbatim when indexerVersion is not "v0"', () => {
+      const doc = { ...readyDoc, indexerVersion: 'v1.2' };
+      mockUseKbDocDetail.mockReturnValue({ data: { status: 'ready', doc }, isLoading: false });
+      mockUseKbChunksList.mockReturnValue({
+        data: { pages: [{ items: [], nextCursor: null, totalCount: 0 }] },
+        hasNextPage: false,
+        isFetchingNextPage: false,
+        fetchNextPage: vi.fn(),
+      });
+      render(<KbDocDetailPanel docId="doc-1" />, { wrapper: makeWrapper() });
+
+      const badge = screen.getByTestId('kb-doc-indexer-version');
+      expect(badge).toHaveTextContent('v1.2');
+      expect(badge).not.toHaveTextContent('legacy');
+    });
+
+    it('does not render the badge when indexerVersion is null', () => {
+      const doc = { ...readyDoc, indexerVersion: null };
+      mockUseKbDocDetail.mockReturnValue({ data: { status: 'ready', doc }, isLoading: false });
+      mockUseKbChunksList.mockReturnValue({
+        data: { pages: [{ items: [], nextCursor: null, totalCount: 0 }] },
+        hasNextPage: false,
+        isFetchingNextPage: false,
+        fetchNextPage: vi.fn(),
+      });
+      render(<KbDocDetailPanel docId="doc-1" />, { wrapper: makeWrapper() });
+
+      expect(screen.queryByTestId('kb-doc-indexer-version')).not.toBeInTheDocument();
+    });
+  });
 });

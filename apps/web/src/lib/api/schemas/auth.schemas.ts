@@ -25,13 +25,25 @@ export type AuthUser = z.infer<typeof AuthUserSchema>;
 
 /**
  * Schema for login response
- * Supports both normal login and 2FA challenge flow
+ * Supports both normal login and 2FA challenge flow.
+ *
+ * The BE serializes the temp 2FA token as `sessionToken` (Models/TwoFactorDto.cs:62),
+ * while the FE historically reads it as `tempSessionToken`. Accept both field names
+ * and normalize to `tempSessionToken` so callers don't have to know which one the BE
+ * sent. See issue #1811 for the regression context.
  */
-export const LoginResponseSchema = z.object({
-  user: AuthUserSchema.nullable().optional(),
-  requiresTwoFactor: z.boolean().default(false),
-  tempSessionToken: z.string().nullable().optional(),
-});
+export const LoginResponseSchema = z
+  .object({
+    user: AuthUserSchema.nullable().optional(),
+    requiresTwoFactor: z.boolean().default(false),
+    tempSessionToken: z.string().nullable().optional(),
+    sessionToken: z.string().nullable().optional(),
+  })
+  .transform(r => ({
+    user: r.user ?? null,
+    requiresTwoFactor: r.requiresTwoFactor,
+    tempSessionToken: r.tempSessionToken ?? r.sessionToken ?? null,
+  }));
 
 export type LoginResponse = z.infer<typeof LoginResponseSchema>;
 

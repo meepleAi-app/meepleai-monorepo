@@ -9,10 +9,11 @@ import {
   AdminConfirmationDialog,
   AdminConfirmationLevel,
 } from '@/components/ui/admin/admin-confirmation-dialog';
-import { useDeleteKbDoc, useReindexDoc } from '@/hooks/queries/useKbDocActions';
+import { useDeleteKbDoc } from '@/hooks/queries/useKbDocActions';
 import { useKbDocConsumingAgents } from '@/hooks/queries/useKbDocConsumingAgents';
 import { api } from '@/lib/api';
 
+import { KbReindexDropdown } from './KbReindexDropdown';
 import { downloadAsFile } from '../utils/downloadAsFile';
 
 export interface KbDocActionsProps {
@@ -47,7 +48,6 @@ export function KbDocActions({ docId, fileName, gameId, processingStatus }: KbDo
   const [exportPending, setExportPending] = useState(false);
 
   // ── Mutation hooks ──────────────────────────────────────────────────────────
-  const reindexMutation = useReindexDoc(docId);
   const deleteMutation = useDeleteKbDoc(gameId);
 
   // ── Lazy agent count (only when delete dialog is open) ─────────────────────
@@ -61,13 +61,6 @@ export function KbDocActions({ docId, fileName, gameId, processingStatus }: KbDo
       : null;
 
   // ── Handlers ────────────────────────────────────────────────────────────────
-  const handleReindex = () => {
-    reindexMutation.mutate(undefined, {
-      onSuccess: () => toast.success('Re-index avviato'),
-      onError: (err: Error) => toast.error(`Re-index fallito: ${err.message}`),
-    });
-  };
-
   const handleDelete = () => {
     deleteMutation.mutate(docId, {
       onSuccess: () => {
@@ -102,20 +95,10 @@ export function KbDocActions({ docId, fileName, gameId, processingStatus }: KbDo
           ? `Referenziato da ${agentCount} agent — verranno scollegati.`
           : 'Nessun agent referenzia questo documento.';
 
-  const isReindexDisabled =
-    processingStatus === 'processing' || processingStatus === 'queued' || reindexMutation.isPending;
-
   return (
     <div className="flex flex-wrap gap-1.5">
-      {/* 1. Re-index */}
-      <button
-        type="button"
-        onClick={handleReindex}
-        disabled={isReindexDisabled}
-        className={`px-3 py-1.5 text-xs font-medium border border-border rounded-md hover:bg-muted/70 disabled:opacity-50 disabled:cursor-not-allowed ${FOCUS_RING}`}
-      >
-        ⟳ Re-index
-      </button>
+      {/* 1. Re-index (split-button con dropdown versione — Issue #1673) */}
+      <KbReindexDropdown docId={docId} processingStatus={processingStatus} />
 
       {/* 2. Download — plain anchor styled as button */}
       {}

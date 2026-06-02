@@ -249,6 +249,16 @@ export function KbDocDetailPanel({ docId, selectedDocMeta }: KbDocDetailPanelPro
               {formatLastReindex(doc.lastIngestedAt, doc.uploadedAt).label}
             </div>
 
+            {/* #1673 indexerVersion badge — hidden when null */}
+            {doc.indexerVersion ? (
+              <span
+                data-testid="kb-doc-indexer-version"
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground font-mono mt-1"
+              >
+                📦 {doc.indexerVersion === 'v0' ? 'v0 (legacy)' : doc.indexerVersion}
+              </span>
+            ) : null}
+
             {/* Action-bar */}
             <div className="mt-4">
               <KbDocActions

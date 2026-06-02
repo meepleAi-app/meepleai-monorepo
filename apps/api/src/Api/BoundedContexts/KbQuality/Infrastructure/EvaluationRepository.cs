@@ -182,6 +182,18 @@ internal sealed class EvaluationRepository
         await _db.SaveChangesAsync(ct).ConfigureAwait(false);
     }
 
+    public async Task<int> DeleteBudgetCountersOlderThanAsync(string yearMonthExclusive, CancellationToken ct)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(yearMonthExclusive);
+
+        // YearMonth is stored in canonical "yyyy-MM" form (see CurrentYearMonth()), so
+        // PostgreSQL's lexicographic text compare aligns 1:1 with chronological order.
+        return await _db.KbQualityBudgetCounters
+            .Where(c => string.Compare(c.YearMonth, yearMonthExclusive) < 0)
+            .ExecuteDeleteAsync(ct)
+            .ConfigureAwait(false);
+    }
+
     // -------------------- helpers --------------------
 
     private static string CurrentYearMonth()

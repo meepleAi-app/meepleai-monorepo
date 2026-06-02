@@ -44,6 +44,7 @@ public static class KbQualityModule
         // they each create their own DI scope per sweep so the scoped EvaluationRepository
         // (and its DbContext) doesn't leak across runs.
         services.AddHostedService<KbQualityRetentionJob>();
+        services.AddHostedService<KbQualityCostCapResetJob>();
 
         return services;
     }

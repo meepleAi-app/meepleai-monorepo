@@ -42,6 +42,8 @@ interface LocalMessage {
   inlineCitations?: InlineCitationMatch[];
   snippets?: Array<{ text: string; source: string; page: number; line: number; score: number }>;
   continuationToken?: string;
+  /** True when this assistant message was set from an SSE Error event (#1814). */
+  isError?: boolean;
 }
 
 interface CitationItem {
@@ -83,7 +85,9 @@ function MessageBubble({
           'max-w-[85%] rounded-2xl px-4 py-2.5 text-sm font-nunito',
           isUser
             ? 'bg-[var(--bg-card)] text-white rounded-br-md'
-            : 'bg-[var(--glass-bg)] backdrop-blur-sm border border-[var(--glass-border)] text-[var(--text)] rounded-bl-md'
+            : message.isError
+              ? 'bg-red-500/10 border border-red-500/30 text-red-400 rounded-bl-md'
+              : 'bg-[var(--glass-bg)] backdrop-blur-sm border border-[var(--glass-border)] text-[var(--text)] rounded-bl-md'
         )}
       >
         {!isUser && message.inlineCitations && message.inlineCitations.length > 0 ? (
@@ -435,15 +439,24 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
                   break;
                 }
                 case QA_EVENT_TYPES.ERROR: {
-                  const errData = event.data as { message?: string };
+                  // BE sends `{ errorMessage, errorCode }` (Models/Contracts.cs StreamingErrorEvent).
+                  // Read both names defensively in case future emitters use the shorter `message`.
+                  // #1814: previously fell through to the post-loop finalize block which overwrote
+                  // `content` with the empty `finalAnswer`, hiding the error from the user.
+                  const errData = event.data as {
+                    errorMessage?: string;
+                    errorCode?: string;
+                    message?: string;
+                  };
+                  const errorMsg =
+                    errData?.errorMessage ?? errData?.message ?? 'Errore nella risposta';
                   setMessages(prev =>
                     prev.map(m =>
-                      m.id === assistantMsgId
-                        ? { ...m, content: errData?.message ?? 'Errore nella risposta' }
-                        : m
+                      m.id === assistantMsgId ? { ...m, content: errorMsg, isError: true } : m
                     )
                   );
-                  break;
+                  abortController.abort();
+                  return;
                 }
               }
             }

@@ -23,6 +23,7 @@ public static class KbQualityModule
         services.AddSingleton<IQualityBandResolver, QualityBandResolver>();
         services.AddScoped<IEvaluationCostEstimator, EvaluationCostEstimator>();
         services.AddScoped<IGoldsetGenerator, LlmGoldsetGenerator>();
+        services.AddScoped<IEvaluationExecutor, EvaluationExecutor>();
 
         // EvaluationRepository implements 3 ports — single scoped registration backs all three.
         services.AddScoped<EvaluationRepository>();

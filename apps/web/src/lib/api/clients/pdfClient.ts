@@ -12,6 +12,10 @@ import {
   PdfMetricsSchema,
   type PdfMetrics,
 } from '../schemas';
+import {
+  IndexerVersionListSchema,
+  type IndexerVersionList,
+} from '../schemas/indexer-versions.schemas';
 
 export interface CreatePdfClientParams {
   httpClient: HttpClient;
@@ -350,10 +354,21 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
     },
 
     /**
-     * Reindex a specific document (admin)
+     * Reindex a PDF document with optional indexer version (Issue #1673).
+     * POST /api/v1/admin/pdfs/{pdfId}/reindex
      */
-    async reindexDocument(pdfId: string): Promise<void> {
-      return httpClient.post(`/api/v1/admin/pdfs/${encodeURIComponent(pdfId)}/reindex`, {});
+    async reindexDocument(pdfId: string, body?: { indexerVersion?: string }): Promise<void> {
+      const payload =
+        body?.indexerVersion !== undefined ? { indexerVersion: body.indexerVersion } : {};
+      return httpClient.post(`/api/v1/admin/pdfs/${encodeURIComponent(pdfId)}/reindex`, payload);
+    },
+
+    /**
+     * Get the registry of selectable indexer versions (Issue #1673).
+     * GET /api/v1/admin/indexer/versions
+     */
+    async getIndexerVersions(): Promise<IndexerVersionList | null> {
+      return httpClient.get('/api/v1/admin/indexer/versions', IndexerVersionListSchema);
     },
 
     /**

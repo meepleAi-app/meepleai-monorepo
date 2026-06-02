@@ -55,5 +55,7 @@ internal sealed record KbDocumentDto(
     int? PageCount,
     string Language,
     IReadOnlyList<string> Tags,
-    long FileSize
+    long FileSize,
+    // Issue #1673: indexer version applicato all'ultimo reindex (null = mai indicizzato; "v0" = pre-versioning).
+    string? IndexerVersion
 );

@@ -93,6 +93,10 @@ public class PdfDocumentEntity
     // Issue #5447: User-editable version label
     public string? VersionLabel { get; set; }
 
+    // Issue #1673: Pipeline indexer version applied at last reindex.
+    // Nullable for backwards compat — backfilled to 'v0' on migration.
+    public string? IndexerVersion { get; set; }
+
     // Issue #1687: User-editable display title (distinct from immutable FileName).
     public string? Title { get; set; }
 

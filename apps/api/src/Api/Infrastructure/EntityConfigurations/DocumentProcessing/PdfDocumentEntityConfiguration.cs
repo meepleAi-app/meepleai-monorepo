@@ -165,6 +165,15 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
             .HasColumnName("version_label")
             .IsRequired(false);
 
+        // Issue #1673: Pipeline indexer version (nullable; backfilled to 'v0').
+        builder.Property(e => e.IndexerVersion)
+            .HasMaxLength(32)
+            .HasColumnName("indexer_version")
+            .IsRequired(false);
+
+        builder.HasIndex(e => e.IndexerVersion)
+            .HasDatabaseName("ix_pdf_documents_indexer_version");
+
         // E5-1: Language confidence and override
         builder.Property(e => e.LanguageConfidence)
             .HasColumnName("language_confidence")

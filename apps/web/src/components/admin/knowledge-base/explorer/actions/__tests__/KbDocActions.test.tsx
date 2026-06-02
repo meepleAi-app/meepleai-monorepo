@@ -2,7 +2,8 @@
  * KbDocActions unit tests — Issue #1653 F3-FU-4 Task 6.
  *
  * Mocks:
- *  - @/hooks/queries/useKbDocActions  (useDeleteKbDoc, useReindexDoc)
+ *  - ../KbReindexDropdown  (KbReindexDropdown — replaces old Re-index button, Issue #1673)
+ *  - @/hooks/queries/useKbDocActions  (useDeleteKbDoc)
  *  - @/hooks/queries/useKbDocConsumingAgents (lazy used-by count)
  *  - @/lib/api  (api.pdf.getPdfDownloadUrl, api.pdf.exportDocChunks)
  *  - ../utils/downloadAsFile
@@ -48,14 +49,18 @@ vi.mock('sonner', () => ({
   },
 }));
 
+// ── KbReindexDropdown mock — replaces old Re-index button (Issue #1673) ────────
+vi.mock('../KbReindexDropdown', () => ({
+  KbReindexDropdown: ({ docId }: { docId: string }) => (
+    <button data-testid="reindex-dropdown">{docId}</button>
+  ),
+}));
+
 // ── useKbDocActions mock ───────────────────────────────────────────────────────
-const mockReindexMutate = vi.fn();
 const mockDeleteMutate = vi.fn();
-const mockUseReindexDoc = vi.fn();
 const mockUseDeleteKbDoc = vi.fn();
 
 vi.mock('@/hooks/queries/useKbDocActions', () => ({
-  useReindexDoc: (docId: string) => mockUseReindexDoc(docId),
   useDeleteKbDoc: (gameId: string | null) => mockUseDeleteKbDoc(gameId),
 }));
 
@@ -99,15 +104,6 @@ const BASE_PROPS = {
   processingStatus: 'ready' as const,
 };
 
-function makeReindexMutation(overrides: Record<string, unknown> = {}) {
-  return {
-    mutate: mockReindexMutate,
-    isPending: false,
-    isError: false,
-    ...overrides,
-  };
-}
-
 function makeDeleteMutation(overrides: Record<string, unknown> = {}) {
   return {
     mutate: mockDeleteMutate,
@@ -129,7 +125,6 @@ function makeConsumingAgentsQuery(overrides: Record<string, unknown> = {}) {
 describe('KbDocActions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseReindexDoc.mockReturnValue(makeReindexMutation());
     mockUseDeleteKbDoc.mockReturnValue(makeDeleteMutation());
     mockUseKbDocConsumingAgents.mockReturnValue(makeConsumingAgentsQuery());
     mockGetPdfDownloadUrl.mockReturnValue('http://api/download/doc-123');
@@ -138,50 +133,14 @@ describe('KbDocActions', () => {
     ]);
   });
 
-  // ── Re-index ─────────────────────────────────────────────────────────────────
+  // ── Re-index (KbReindexDropdown) ─────────────────────────────────────────────
+  // The Re-index split-button was replaced by KbReindexDropdown (Issue #1673).
+  // Behavior (disable states, mutation, toasts) is covered by KbReindexDropdown.test.tsx.
+  // Here we only verify the dropdown is rendered via its mocked stub.
 
-  it('renders the Re-index button', () => {
+  it('renders the KbReindexDropdown stub', () => {
     render(<KbDocActions {...BASE_PROPS} />);
-    expect(screen.getByRole('button', { name: /re-?index/i })).toBeInTheDocument();
-  });
-
-  it('disables Re-index while processingStatus is "processing"', () => {
-    render(<KbDocActions {...BASE_PROPS} processingStatus="processing" />);
-    expect(screen.getByRole('button', { name: /re-?index/i })).toBeDisabled();
-  });
-
-  it('disables Re-index while processingStatus is "queued"', () => {
-    render(<KbDocActions {...BASE_PROPS} processingStatus="queued" />);
-    expect(screen.getByRole('button', { name: /re-?index/i })).toBeDisabled();
-  });
-
-  it('disables Re-index while mutation isPending', () => {
-    mockUseReindexDoc.mockReturnValue(makeReindexMutation({ isPending: true }));
-    render(<KbDocActions {...BASE_PROPS} processingStatus="ready" />);
-    expect(screen.getByRole('button', { name: /re-?index/i })).toBeDisabled();
-  });
-
-  it('Re-index ready → calls mutate + shows success toast', async () => {
-    mockReindexMutate.mockImplementation(
-      (_: void, options?: { onSuccess?: () => void; onError?: (e: Error) => void }) => {
-        options?.onSuccess?.();
-      }
-    );
-    render(<KbDocActions {...BASE_PROPS} processingStatus="ready" />);
-    fireEvent.click(screen.getByRole('button', { name: /re-?index/i }));
-    expect(mockReindexMutate).toHaveBeenCalled();
-    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledWith('Re-index avviato'));
-  });
-
-  it('Re-index shows error toast on failure', async () => {
-    mockReindexMutate.mockImplementation(
-      (_: void, options?: { onSuccess?: () => void; onError?: (e: Error) => void }) => {
-        options?.onError?.(new Error('network error'));
-      }
-    );
-    render(<KbDocActions {...BASE_PROPS} processingStatus="ready" />);
-    fireEvent.click(screen.getByRole('button', { name: /re-?index/i }));
-    await waitFor(() => expect(mockToastError).toHaveBeenCalled());
+    expect(screen.getByTestId('reindex-dropdown')).toBeInTheDocument();
   });
 
   // ── Download ──────────────────────────────────────────────────────────────────

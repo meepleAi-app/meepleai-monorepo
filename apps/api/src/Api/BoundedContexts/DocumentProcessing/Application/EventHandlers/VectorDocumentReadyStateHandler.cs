@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.IntegrationEvents;
 using MediatR;
@@ -31,8 +32,8 @@ internal sealed class VectorDocumentReadyStateHandler
         CancellationToken cancellationToken)
     {
         // Only update if state is not already Ready or Failed
-        if (string.Equals(evt.CurrentProcessingState, "Ready", StringComparison.Ordinal)
-            || string.Equals(evt.CurrentProcessingState, "Failed", StringComparison.Ordinal))
+        if (string.Equals(evt.CurrentProcessingState, nameof(PdfProcessingState.Ready), StringComparison.Ordinal)
+            || string.Equals(evt.CurrentProcessingState, nameof(PdfProcessingState.Failed), StringComparison.Ordinal))
         {
             return;
         }
@@ -43,7 +44,7 @@ internal sealed class VectorDocumentReadyStateHandler
 
         if (pdfEntity != null)
         {
-            pdfEntity.ProcessingState = "Ready";
+            pdfEntity.ProcessingState = nameof(PdfProcessingState.Ready);
             await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(

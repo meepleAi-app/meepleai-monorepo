@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KbQuality.Application.Configuration;
 using Api.BoundedContexts.KbQuality.Application.Services;
+using Api.BoundedContexts.KbQuality.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -19,6 +20,7 @@ public static class KbQualityModule
         services.AddSingleton<IEvaluationMetricsCalculator, EvaluationMetricsCalculator>();
         services.AddSingleton<IQualityBandResolver, QualityBandResolver>();
         services.AddScoped<IEvaluationCostEstimator, EvaluationCostEstimator>();
+        services.AddScoped<IGoldsetGenerator, LlmGoldsetGenerator>();
 
         return services;
     }

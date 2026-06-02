@@ -3,7 +3,7 @@
 import { useCallback, useState, type ReactElement } from 'react';
 
 import { Dialog, DialogContent } from '@/components/ui/overlays/dialog';
-import { CHECKOUT_PACKS, formatEur, type CheckoutPackId } from '@/lib/gamebook/checkout-packs';
+import { formatEur, getCheckoutPack, type CheckoutPackId } from '@/lib/gamebook/checkout-packs';
 
 import { CheckoutStepIndicator } from './checkout/CheckoutStepIndicator';
 import { Step1QuotaReached, type Step1Labels } from './checkout/Step1QuotaReached';
@@ -82,7 +82,7 @@ export function CheckoutModal({
   const [selectedPack, setSelectedPack] = useState<CheckoutPackId>('starter');
   const [paymentSubState, setPaymentSubState] = useState<Step3SubState>('filled');
 
-  const pack = CHECKOUT_PACKS.find((p) => p.id === selectedPack)!;
+  const pack = getCheckoutPack(selectedPack);
   const priceEurString = formatEur(pack.priceEur);
 
   const handleOpenChange = useCallback(

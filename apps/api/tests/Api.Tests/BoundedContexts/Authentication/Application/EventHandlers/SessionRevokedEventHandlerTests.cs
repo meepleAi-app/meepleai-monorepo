@@ -2,8 +2,6 @@ using Api.BoundedContexts.Authentication.Application.EventHandlers;
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
-using FluentAssertions;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -12,7 +10,8 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.EventHandlers;
 
 /// <summary>
 /// Unit tests for <see cref="SessionRevokedEventHandler"/>.
-/// Tests audit logging for session revocation events.
+/// Issue #1534: Audit persistence is now centralised in <c>DomainEventAuditHandler</c> and is covered
+/// by <c>DomainEventAuditHandlerTests</c>. Handler-specific tests only verify logging hooks here.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public class SessionRevokedEventHandlerTests : IDisposable
@@ -30,86 +29,7 @@ public class SessionRevokedEventHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Handle_WithReason_CreatesAuditLogEntry()
-    {
-        // Arrange
-        var sessionId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
-        var reason = "User logged out";
-        var @event = new SessionRevokedEvent(sessionId, userId, reason);
-
-        // Act
-        await _handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLogs = await _dbContext.AuditLogs.ToListAsync();
-        auditLogs.Should().HaveCount(1);
-
-        var auditLog = auditLogs.First();
-        auditLog.UserId.Should().Be(userId);
-        auditLog.Resource.Should().Be(nameof(SessionRevokedEvent));
-        auditLog.Action.Should().Contain("SessionRevokedEvent");
-        auditLog.Result.Should().Be("Success");
-        auditLog.Details.Should().Contain(sessionId.ToString());
-        auditLog.Details.Should().Contain(reason);
-    }
-
-    [Fact]
-    public async Task Handle_WithoutReason_CreatesAuditLogWithNullReason()
-    {
-        // Arrange
-        var sessionId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
-        var @event = new SessionRevokedEvent(sessionId, userId, reason: null);
-
-        // Act
-        await _handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLog = await _dbContext.AuditLogs.FirstAsync();
-        auditLog.UserId.Should().Be(userId);
-        auditLog.Details.Should().Contain("SessionRevoked");
-    }
-
-    [Fact]
-    public async Task Handle_WithAdminRevocation_CreatesAuditLog()
-    {
-        // Arrange - Admin revoked user's session
-        var sessionId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
-        var reason = "Admin terminated session due to security concern";
-        var @event = new SessionRevokedEvent(sessionId, userId, reason);
-
-        // Act
-        await _handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLog = await _dbContext.AuditLogs.FirstAsync();
-        auditLog.Details.Should().Contain("Admin terminated");
-        auditLog.Details.Should().Contain("security concern");
-    }
-
-    [Fact]
-    public async Task Handle_CapturesSessionIdAndUserId()
-    {
-        // Arrange
-        var sessionId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
-        var @event = new SessionRevokedEvent(sessionId, userId, "test");
-
-        // Act
-        await _handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLog = await _dbContext.AuditLogs.FirstAsync();
-        auditLog.Details.Should().Contain(sessionId.ToString());
-        auditLog.Details.Should().Contain(userId.ToString());
-        auditLog.Details.Should().Contain("SessionId");
-        auditLog.Details.Should().Contain("Action");
-    }
-
-    [Fact]
-    public async Task Handle_LogsSuccessfulEventHandling()
+    public async Task Handle_LogsHandlingInformation()
     {
         // Arrange
         var @event = new SessionRevokedEvent(Guid.NewGuid(), Guid.NewGuid(), "test");

@@ -101,11 +101,8 @@ describe('AdminAiPage', () => {
     expect(screen.getByTestId('rag-tab')).toBeInTheDocument();
   });
 
-  it('renders page title', async () => {
-    const page = await AdminAiPage({ searchParams: Promise.resolve({}) });
-    render(page);
-    expect(screen.getByText('AI & Agents')).toBeInTheDocument();
-  });
+  // NOTE: page title "AI & Agents" moved to layout.tsx AiTopBand (#1722 PR 1/4).
+  // Title rendering coverage lives in components/admin/ai/__tests__/AiTopBand.test.tsx.
 
   it('renders all tab links', async () => {
     const page = await AdminAiPage({ searchParams: Promise.resolve({}) });

@@ -25,8 +25,8 @@ const MARKER_REGEX = /\[(\d+(?:,\s*\d+)*)\]/g;
 export interface ParseCitationMarkersOptions {
   /** Builds an i18n-aware aria-label for each pill. */
   formatAriaLabel: (citation: KbCitation, n: number) => string;
-  /** Optional click handler forwarded to each pill. */
-  onCitationClick?: (link: { docId: string; page: number }) => void;
+  /** Optional click handler forwarded to each pill (#1702: includes chunkId when present). */
+  onCitationClick?: (link: { docId: string; page: number; chunkId?: string }) => void;
   /**
    * Optional ref-text builder. Default: `p.{page}`.
    * Override for custom display (e.g. localized "Pagina {n}").
@@ -91,6 +91,7 @@ export function parseCitationMarkers(
           refText={refText(citation, n)}
           docId={citation.docId}
           page={citation.page}
+          chunkId={citation.chunkId}
           ariaLabel={formatAriaLabel(citation, n)}
           onClick={onCitationClick}
         />

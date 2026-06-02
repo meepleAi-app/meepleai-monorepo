@@ -22,6 +22,8 @@
 import {
   cloneElement,
   isValidElement,
+  useEffect,
+  useRef,
   useState,
   type MouseEvent,
   type ReactElement,
@@ -135,12 +137,33 @@ export function CampaignSetupDrawer({
     },
   });
 
+  const stepContainerRef = useRef<HTMLDivElement>(null);
+  const isInitialMountRef = useRef(true);
+
+  useEffect(() => {
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      return;
+    }
+    const container = stepContainerRef.current;
+    if (!container) return;
+    const focusable = container.querySelector<HTMLElement>(
+      'input:not([disabled]), button:not([disabled]):not([aria-disabled="true"]), [role="radio"]:not([aria-disabled="true"]), [tabindex="0"]'
+    );
+    if (focusable) {
+      focusable.focus();
+    } else {
+      container.focus();
+    }
+  }, [step]);
+
   function reset(): void {
     setOpen(false);
     setStep(1);
     setTitle('Campagna con i ragazzi');
     setPresetId('group-a');
     mutation.reset();
+    isInitialMountRef.current = true;
   }
 
   const trimmedTitle = title.trim();
@@ -190,7 +213,15 @@ export function CampaignSetupDrawer({
 
         <Stepper current={step} />
 
-        <div className="flex-1 overflow-y-auto px-4 py-3">
+        <div
+          ref={stepContainerRef}
+          tabIndex={-1}
+          aria-label={
+            step === 1 ? 'Step 1: Nome' : step === 2 ? 'Step 2: Giocatori' : 'Step 3: Conferma'
+          }
+          className="flex-1 overflow-y-auto px-4 py-3 outline-none"
+          data-testid="campaign-setup-step-content"
+        >
           {step === 1 && (
             <StepName
               title={title}

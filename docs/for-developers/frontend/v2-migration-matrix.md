@@ -61,6 +61,50 @@ ambiguity. Each route is also classified by **Tier** (S/M/L) to gate dispatch st
 > photo-upload +manual-mode entry). Spec:
 > `docs/superpowers/specs/2026-05-23-mockup-refinement-aaron-core-design.md`.
 
+> **Updated 2026-05-31 #3** (B19-4b skeleton mockup delivery): generic
+> session skeleton consegnato via Claude Design Web — 7 file in
+> `admin-mockups/design_files/` (`sp4-session-skeleton-{live,renderers,parts,data}.jsx`
+> + `sp4-session-skeleton-live.html` + `sp4-session-summary-skeleton.{html,jsx}`).
+> Renderizza dinamicamente qualsiasi gioco consumando `AiToolkitSuggestionDto`
+> polimorficamente (mirror dei FE renderers `ScoringPanelRenderer` +
+> `TurnIndicatorRenderer` di PR #1763). Demo side-by-side Wingspan
+> (Points + RoundRobin) vs Paleo (BinaryWin + Simultaneous). Hybrid strategy
+> confermata: skeleton copre i 13-14 giochi non-premium, i 6 premium
+> (Wingspan done, Puerto Rico + Catan + Power Grid + Zombicide GH + Paleo
+> + Codenames pending) restano ad-hoc. Closes issue #1750.
+
+> **Updated 2026-05-31 #2** (Sessions sub-routes consolidation via tabs,
+> closes gap N7 audit 2026-05-22): Option B+ hybrid consolidation accettata
+> e shipped — 7 sub-route Sessions confluiscono in `?tab=` deep-link
+> sui mockup canonical esistenti (cluster Live: 4 tabs nuove in
+> `sp4-session-live.jsx` `RightColumnTabs` esteso a 7; cluster Post-game
+> Review: 3 tabs nuove in `sp4-session-summary.jsx` con nuovo
+> `RightColumnTabs`). 4 file mockup nuovi shipped: `sp4-parts-common.jsx`
+> (shared runtime), `sp4-session-live-tabs.jsx` (`window.LiveTabs`),
+> `sp4-session-summary-sections.jsx`, `sp4-session-summary-tabs.jsx`
+> (`window.SummaryReviewTabs`). `/sessions/[id]/join` reuse `sp3-join.html`
+> (no design). 8th sub-route `/sessions/[id]/play` non in scope ADR (rimane
+> route fisica). ADR: `claudedocs/2026-05-31-sessions-consolidation-adr.md`.
+> Issue #1492.
+
+> **Updated 2026-05-31** (Documentation reconciliation cross-audit
+> 2026-05-12 + 2026-05-22): the Route → Mockup index now reflects 3 mockup
+> cluster già canonical in `admin-mockups/design_files/` ma precedentemente
+> non mappati — `sp4-dashboard.html` (closes #491 dashboard part, chat-fullscreen
+> consegnato a parte via `chat-fullscreen.html` 2026-05-23),
+> `sp4-play-records-{index,new,detail,edit,stats}.html` + `sp4-play-records-data.js`
+> (copre 5 routes `/play-records/*` gap critico) e `sp5-profile-settings.html`
+> (già mappato a `/profile?tab=settings`, esteso reuse nota a `/profile` root +
+> `/profile/achievements`). Le entry rimangono `pending` per l'implementazione
+> FE (stub di componenti da estrarre — TBD). Critical gaps summary aggiornato:
+> ridotti da 5 a **1 cluster** — `/pricing` resta l'unico gap reale.
+> `/library/playlists/*` rimosso (route inesistenti nel codebase, false-positive
+> confermato da audit 2026-05-22). `#492 community` ha avuto closure
+> false-positive — vedi audit 2026-05-22 per riapertura raccomandata.
+> Sync companion: `admin-mockups/MOCKUPS_INDEX.md` + audit
+> `docs/for-developers/audits/2026-05-12-mockup-gaps.md` (status update inline,
+> con riferimento all'audit più recente 2026-05-22).
+
 ## Scope and ground rules
 
 - **In scope**: 83 feature components extracted from `admin-mockups/design_files/sp4-*.jsx`
@@ -438,10 +482,10 @@ the PR review.
 | `sp4-kb-globale.jsx` | `HeroSearch` | `apps/web/src/components/features/kb-globale/HeroSearch.tsx` | `/knowledge-base/global` | done | #1688 | T A V | — |
 | `sp4-kb-globale.jsx` | `KbHomeDesktop` | `apps/web/src/components/features/kb-globale/KbHomeDesktop.tsx` | `/knowledge-base/global` | done | #1688 | T A V | — |
 | `sp4-kb-globale.jsx` | `KbSearchResultsDesktop` | `apps/web/src/components/features/kb-globale/KbSearchResultsDesktop.tsx` | `/knowledge-base/global` | done | #1688 | T A V | — |
-| `sp4-kb-globale.jsx` | `FilterAccordion` | `apps/web/src/components/features/kb-globale/FilterAccordion.tsx` | `/knowledge-base/global` | pending | — | T A V | #1686 deferred |
+| `sp4-kb-globale.jsx` | `FilterAccordion` | `apps/web/src/components/features/kb-globale/FilterAccordion.tsx` | `/knowledge-base/global` | done | #1743 | T A V | #1737 |
 | `sp4-kb-globale.jsx` | `KbDocViewerDesktop` | `apps/web/src/components/features/kb-globale/KbDocViewerDesktop.tsx` | `/knowledge-base/global` | done | #TBD | T A M V | — |
 | `sp4-kb-globale.jsx` | `KbDocViewerMobile` | `apps/web/src/components/features/kb-globale/KbDocViewerMobile.tsx` | `/knowledge-base/global` | done | #TBD | T A M V | — |
-| `sp4-kb-globale.jsx` | `KbEditorDesktop` | `apps/web/src/components/features/kb-globale/KbEditorDesktop.tsx` | `/knowledge-base/global` | pending | — | T A V | #1687 deferred |
+| `sp4-kb-globale.jsx` | `KbEditorDesktop` | `apps/web/src/components/features/kb-globale/KbEditorDesktop.tsx` | `/knowledge-base/global` | done | #1743 | T A V | #1737 |
 | `sp4-kb-globale.jsx` | `DrawerShell` (+ `DrawerIdle` / `DrawerStreaming` / `DrawerCompleted` / `DrawerError` states) | `apps/web/src/components/features/kb-globale/Drawer*.tsx` | `/knowledge-base/global` | done | #TBD | T A V | — |
 | `sp4-kb-globale.jsx` | `CitationPill` | `apps/web/src/components/features/kb-globale/CitationPill.tsx` | `/knowledge-base/global` | done | #TBD | T A V | — |
 | `sp4-kb-globale.jsx` | `KbEmptyState` | `apps/web/src/components/features/kb-globale/KbEmptyState.tsx` | `/knowledge-base/global` | done | #1688 | T A V | — |
@@ -653,9 +697,9 @@ instead.
 | Route | Mockup | Note |
 |-------|--------|------|
 | `/onboarding` · `/setup` | `onboarding.html` | — |
-| `/dashboard` | — | **gap critico** (oggi inferito da `02-desktop-patterns.html` pattern lib) |
+| `/dashboard` | `sp4-dashboard.html` | Mockup canonical (forward-design Pre-Stage-3, closes #491); FE stubs pending |
 | `/discover` | `sp4-discover.html` | Tier L, pending |
-| `/profile` · `/profile/achievements` | — | **gap critico** |
+| `/profile` · `/profile/achievements` | `sp4-player-detail.html` ↻ + `sp5-profile-settings.html` [partial] | `/profile?tab=settings` coperto da sp5; self-view + achievements via sp4-player-detail reuse |
 | `/settings` (+ `/ai-consent`, `/api-keys`, `/notifications`, `/preferences`, `/profile`, `/security`, `/services`) | `settings.html` | Shell unica per 7 sub-route |
 | `/notifications` · `/notifications/preferences` | `notifications.html` | — |
 | `/versions` | — | gap (changelog) |
@@ -665,8 +709,8 @@ instead.
 | Route | Mockup | Note |
 |-------|--------|------|
 | `/library` | `sp4-library-desktop.html` + `sp4-library-mobile.html` | Tier S done (PR #574/635/638); mobile variant SP8 brief 2026-05-30 (IA semplificata 3 tab + overflow Più=Agents/KB) |
-| `/library/wishlist` | — | gap |
-| `/library/playlists` · `/[id]` · `/shared/[token]` | — | **gap critico** (US-attiva) |
+| `/library/wishlist` | — | gap — issue B16 #1491 aperta (audit 2026-05-22 gap N5) |
+| `/library/playlists` · `/[id]` · `/shared/[token]` | n/a | route INESISTENTI nel codebase (false-positive audit 2026-05-12, confermato 2026-05-22) — rimosso dal scope |
 | `/library/private` · `/add` · `/[id]` | `sp4-add-game-pdf-dedup.html` + `sp4-upload-wizard-extended.html` [partial] | — |
 | `/library/private/[id]/toolkit/configure` | `sp4-toolkit-detail.html` ↻ | — |
 | `/library/proposals` · `/propose` | `sp4-add-game-bgg-step.html` | Ingestion proposta |
@@ -700,10 +744,13 @@ instead.
 | `/sessions` | `sp4-sessions-index.html` | — |
 | `/sessions/new` | `librogame-runthrough-setup-wizard.html` | — |
 | `/sessions/join` | `sp3-join.html` ↻ | Reuse |
-| `/sessions/[id]` | `sp4-session-summary.html` | Tier M-L done (PR #762) |
-| `/sessions/[id]/live` | `sp4-session-live.html` | Tier L+ pending |
-| `/sessions/[id]/{play,notes,players,scoreboard,join}` | `sp4-session-live.html` [partial] | Sub-views |
-| `/sessions/live/[id]` (+ `/agent`, `/photos`, `/players`, `/scores`) | `sp4-session-live.html` + `librogame-runthrough-session-end.html` | — |
+| `/sessions/[id]` | `sp4-session-wingspan-summary.html` + `sp4-session-wingspan-summary-{parts,sections,tabs}.jsx` | Tier M-L done (PR #762); 2026-05-31 consolidation +3 tabs `?tab=scoreboard\|notes\|players` (closes gap N7 audit 2026-05-22). ⚠️ **Wingspan-specific demo** — generic skeleton tracked in B19 |
+| `/sessions/[id]/live` | `sp4-session-wingspan-live.html` + `sp4-session-wingspan-live-{parts,tabs}.jsx` + `sp4-parts-common.jsx` | Tier L+ pending impl; 2026-05-31 consolidation +4 tabs `?tab=scores\|photos\|agent\|players` (closes gap N7) — vedi ADR `claudedocs/2026-05-31-sessions-consolidation-adr.md`. ⚠️ **Wingspan-specific demo** — generic skeleton tracked in B19 |
+| `/sessions/[id]/{scoreboard,notes,players}` | `sp4-session-wingspan-summary.html` ↻ tabs | Consolidated 2026-05-31 — route da deletare, redirect 301/308 a `?tab=` equivalente |
+| `/sessions/[id]/{scores,photos,agent,players}` | `sp4-session-wingspan-live.html` ↻ tabs | Consolidated 2026-05-31 — route da deletare, redirect 301/308 a `?tab=` equivalente. NOTA: `/sessions/[id]/players` esiste sia post-game (summary tab) sia live (live tab) — context-dependent |
+| `/sessions/[id]/join` | `sp3-join.html` ↻ | Reuse — non consolidato (flow distinto) |
+| `/sessions/[id]/play` | — | Route esistente, NON in scope ADR 2026-05-31 — gap residuo |
+| `/sessions/live/[id]` (+ `/agent`, `/photos`, `/players`, `/scores`) | `sp4-session-live.html` + `librogame-runthrough-session-end.html` | Consolidation 2026-05-31 applicabile (stesso pattern `?tab=`); coexistenza route fisiche da pianificare |
 | `/game-nights` | `sp4-game-nights-index.html` | Tier L pending |
 | `/game-nights/new` | `sp7-game-night-create.html` | Tier L+ DONE (PR #1297 components, PR #1302 orchestrator, PR #1305 W4 E2E + a11y + conformity entry); baseline PNGs auto-generated post-merge via bootstrap workflows |
 | `/game-nights/[id]` · `/[id]/edit` | `sp7-game-night-detail-rsvp.html` + `nanolith-game-night-storyboard.html` | Tier M done (PR #1171, RSVP cluster); tabbed/host surfaces pending |
@@ -712,7 +759,7 @@ instead.
 
 | Route | Mockup | Note |
 |-------|--------|------|
-| `/play-records` · `/new` · `/[id]` · `/[id]/edit` · `/stats` | — | **gap critico** (P1 sprint, 5 route) |
+| `/play-records` · `/new` · `/[id]` · `/[id]/edit` · `/stats` | `sp4-play-records-{index,new,detail,edit,stats}.html` (+ `sp4-play-records-data.js` dev-fixture) | 5 mockup canonical per 5 routes; FE stubs pending |
 | `/toolkit` · `/play` · `/history` · `/stats` · `/templates` · `/[sessionId]` | `sp4-toolkit-detail.html` ↻ | Shell unica |
 | `/gamebook` · `/gamebook/upload` | `sp6-libro-game-index.html` + `sp4-upload-wizard-extended.html` | done (PR #792/794+) |
 | `/agents` · `/agents/[id]` | `sp4-agents-index.html` + `sp4-agent-detail.html` | Tier S+L done |
@@ -731,21 +778,38 @@ instead.
 
 | Route | Mockup | Note |
 |-------|--------|------|
-| `/editor` · `/editor/agent-proposals/*` (4 sub-route) | `sp4-agents-index.html` [partial] | UX editor proposte mancante |
+| `/editor` | `sp4-editor-index.html` [done] | B14 #1489 5/5 · RuleSpec atom editor split-view + PDF preview, 11 stati |
+| `/editor/agent-proposals` | `sp4-editor-proposals-index.html` [done] | B14 #1489 · Typology list, 5 status badge, 9 stati |
+| `/editor/agent-proposals/create` | `sp4-editor-proposals-create.html` [done] | B14 #1489 · Form multi-section 5 sezioni, 8 stati |
+| `/editor/agent-proposals/[id]/edit` | `sp4-editor-proposals-edit.html` [done] | B14 #1489 · Edit + 4 status variants + Revisions diff + Audit trail, 10 stati |
+| `/editor/agent-proposals/[id]/test` | `sp4-editor-proposals-test.html` [done] | B14 #1489 · Playground FSM streaming + Trace + Compare, 12 stati |
 | `/pipeline-builder` | — | gap |
 | `/n8n` | — | gap (integration UI) |
 
 ### Critical gaps summary
 
-Routes senza mockup con **alta priorità user-journey** (audit 2026-05-12):
+> **Updated 2026-05-31** (cross-audit 2026-05-12 + 2026-05-22): 3 dei 5 gap
+> critici originali (audit 2026-05-12) sono riconciliati — `sp4-dashboard.html`
+> (closes #491 dashboard part), `sp4-play-records-*` (5 file canonical) e
+> `sp5-profile-settings.html` (settings tab; `/profile` root +
+> `/profile/achievements` via `sp4-player-detail.html` reuse) sono ora mappati.
+> `/library/playlists/*` (originale gap #4) è **rimosso** — le route non
+> esistono nel codebase (false-positive confermato dall'audit 2026-05-22).
+> Resta **1 cluster** senza mockup canonical né issue B-series dedicata:
 
-1. **`/dashboard`** — hub post-login, oggi inferito da pattern lib non-page-level
-2. **`/play-records/*`** — 5 route P1 sprint senza copertura
-3. **`/library/playlists/*`** — 3 route feature US-attiva
-4. **`/profile/*`** — 2 route standard utente (esiste solo `settings.html`)
-5. **`/pricing`** — landing commerciale assente
+1. **`/pricing`** — landing commerciale assente (tier-upgrade funnel). Proposta `[Design v1 · B12]`.
 
-Status di queste 5 lacune è tracciato in `docs/for-developers/audits/2026-05-12-mockup-gaps.md`.
+> **Nota**: l'audit più recente `2026-05-22-mockup-gaps.md` identifica
+> ulteriori gap (P1 editor agent-proposals, toolkit sub-pages, wishlist,
+> sessions sub-pages, community follow-up) per cui sono già state aperte
+> issue B11 / B14 / B15 / B16 / B17. La riapertura di #492 (community
+> follow-up false-positive) e #491 chat full-screen (parziale, consegnato
+> via `chat-fullscreen.html`) sono follow-up del maintainer.
+
+Status delle lacune originali è tracciato in
+`docs/for-developers/audits/2026-05-12-mockup-gaps.md` (con status update
+inline 2026-05-31) — vedi anche `2026-05-22-mockup-gaps.md` per la review
+successiva.
 
 ### Cross-route state coverage (dev-fixture)
 

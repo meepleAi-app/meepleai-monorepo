@@ -1,0 +1,53 @@
+{
+  "ToolkitName": "Puerto Rico",
+  "DiceTools": [],
+  "CounterTools": [
+    { "Name": "Doubloons", "MinValue": 0, "MaxValue": 54, "DefaultValue": 3, "IsPerPlayer": true, "Icon": "coin", "Color": "#f1c40f" },
+    { "Name": "Colonists (on island/buildings)", "MinValue": 0, "MaxValue": 30, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "person", "Color": "#8b6914" },
+    { "Name": "Victory Point chips", "MinValue": 0, "MaxValue": 75, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "star", "Color": "#9b59b6" },
+    { "Name": "Corn (in storehouse)", "MinValue": 0, "MaxValue": 20, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "wheat", "Color": "#f4d03f" },
+    { "Name": "Indigo", "MinValue": 0, "MaxValue": 20, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "leaf", "Color": "#2980b9" },
+    { "Name": "Sugar", "MinValue": 0, "MaxValue": 20, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "cube", "Color": "#ecf0f1" },
+    { "Name": "Tobacco", "MinValue": 0, "MaxValue": 20, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "leaf", "Color": "#7d6608" },
+    { "Name": "Coffee", "MinValue": 0, "MaxValue": 20, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "cup", "Color": "#6e2c00" },
+    { "Name": "Buildings owned", "MinValue": 0, "MaxValue": 12, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "house", "Color": null },
+    { "Name": "Plantations + Quarries", "MinValue": 0, "MaxValue": 12, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "field", "Color": null }
+  ],
+  "TimerTools": [],
+  "ScoringTemplate": {
+    "Dimensions": ["Building VP", "Shipped goods VP", "Large building bonuses"],
+    "DefaultUnit": "VP",
+    "ScoreType": "Points",
+    "Categories": [
+      { "Id": "buildings-vp", "Label": "Buildings (printed VP)", "Computation": "Sum", "Weight": 1, "Description": "VP printed on each owned building (1-4 per building)." },
+      { "Id": "shipped-goods-vp", "Label": "Shipped goods VP", "Computation": "Count", "Weight": 1, "Description": "1 VP chip per good shipped on a galleon during Captain phase." },
+      { "Id": "large-building-bonus", "Label": "Large building bonuses", "Computation": "Custom", "Weight": 1, "Description": "End-game bonuses from large purple buildings (Guild Hall, City Hall, Residence, Fortress, Wharf 2, Custom House, Harbor) — variable per condition." }
+    ]
+  },
+  "TurnTemplate": {
+    "TurnOrderType": "Sequential",
+    "Phases": [
+      "Settler", "Mayor", "Builder", "Craftsman", "Trader", "Captain", "Prospector 1", "Prospector 2"
+    ],
+    "Rounds": null,
+    "TurnsPerRound": null,
+    "TurnActions": [
+      "choose-role",
+      "execute-role-action",
+      "all-others-execute-action-in-clockwise",
+      "take-privilege",
+      "pass-governor"
+    ],
+    "Direction": "clockwise"
+  },
+  "Overrides": {
+    "OverridesTurnOrder": true,
+    "OverridesScoreboard": true,
+    "OverridesDiceSet": false
+  },
+  "Reasoning": "Curated 2026-05-31 from Puerto Rico base game (3-5 players, ~120 min). NO dice (deterministic role selection). 5 goods types tracked per player (corn/indigo/sugar/tobacco/coffee). Doubloons + colonists + VP chips per player. Turn structure: each round, players take turns selecting one of 8 role cards (Settler/Mayor/Builder/Craftsman/Trader/Captain × 1 + Prospector × 2 in 5-player) — the chooser gets a privilege bonus, then all players execute the role action clockwise. Round ends when all 8 roles taken + governor token passes left. End-game triggered by: VP chips exhausted OR colonist supply exhausted OR any player fills the 12th building plot. Final scoring: buildings VP + shipped goods VP + large building bonuses (e.g., Guild Hall = 1 VP per small/large production building owned). Prospector 2 only present in 5-player variant.",
+  "ExcludedTools": [
+    { "ToolType": "Dice", "Reason": "Puerto Rico is deterministic role-selection, no dice involved." },
+    { "ToolType": "Timer", "Reason": "No time limit per turn or round." }
+  ]
+}

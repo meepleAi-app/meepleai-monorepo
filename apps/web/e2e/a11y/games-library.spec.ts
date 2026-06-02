@@ -59,15 +59,10 @@ async function gotoLibraryReady(page: Page, search = '', waitForGrid = true): Pr
 }
 
 test.describe('Games library — accessibility @a11y', () => {
-  // Skipped 2026-05-30 (PR #1700 release CI): `useLibrary` does NOT have a
-  // VISUAL_TEST_FIXTURE short-circuit, so without backend data the games tab
-  // lands in `gamesEffectiveKind = 'empty'` (renders GamesEmptyState, not
-  // GamesResultsGrid). Was masked previously because `Frontend - A11y E2E`
-  // runs only on PRs to main-staging (not main-dev via Dev Fast) — first run
-  // surfacing this was the release PR. Follow-up: add fixture short-circuit
-  // to useLibrary matching SessionSummaryView pattern, or mock API in spec.
-  test.fixme('axe-core: no WCAG 2.1 AA violations on default state', async ({ page }) => {
-    await gotoLibraryReady(page);
+  // Re-activated 2026-05-30 via #1714: useLibrary now short-circuits to a
+  // 12-entry fixture when STATE_OVERRIDE_ENABLED && ?fixture=default.
+  test('axe-core: no WCAG 2.1 AA violations on default state', async ({ page }) => {
+    await gotoLibraryReady(page, 'fixture=default');
     // Default state expects results grid populato — wait for first card.
     await expect(page.locator('[data-slot="games-results-grid-link"]').first()).toBeVisible();
 
@@ -106,15 +101,13 @@ test.describe('Games library — accessibility @a11y', () => {
     expect(results.violations).toEqual([]);
   });
 
-  // Skipped 2026-05-30 (PR #1700 release CI): same root cause as the test
-  // above — `useLibrary` lacks fixture short-circuit, so the grid is empty
-  // and the `games-results-grid-link` locator never resolves.
-  test.fixme('prefers-reduced-motion: card hover transitions collapse to sub-ms', async ({ page }) => {
+  // Re-activated 2026-05-30 via #1714: same fix as the test above.
+  test('prefers-reduced-motion: card hover transitions collapse to sub-ms', async ({ page }) => {
     // Emulate reduced-motion BEFORE goto so the global CSS rule
     // (globals.css:388-396) applies on first paint. Without this the
     // GridCard `transition-all duration-[350ms]` runs full hover animation.
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await gotoLibraryReady(page);
+    await gotoLibraryReady(page, 'fixture=default');
     await expect(page.locator('[data-slot="games-results-grid-link"]').first()).toBeVisible();
 
     // Inspect computed transition-duration on the GridCard element (first child

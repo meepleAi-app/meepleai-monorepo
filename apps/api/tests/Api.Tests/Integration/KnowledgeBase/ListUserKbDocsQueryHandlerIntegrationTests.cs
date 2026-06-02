@@ -359,4 +359,37 @@ public sealed class ListUserKbDocsQueryHandlerIntegrationTests : IAsyncLifetime
         dto.UpdatedAt.Should().BeCloseTo(uploadTime, TimeSpan.FromMilliseconds(1),
             "UpdatedAt should equal UploadedAt when ProcessedAt is null");
     }
+
+    // ─── Issue #1687 Task 10: Title/Tags/UpdatedBy in DTO + UpdatedAt override ─
+
+    [Fact(Timeout = 30000)]
+    public async Task Handle_DocWithTitleAndTags_ReturnsThemInDto()
+    {
+        await SeedUserAsync(UserA);
+        var game = await SeedGameAsync("Catan");
+        var uploadTime = DateTime.UtcNow.AddDays(-5);
+        var processTime = DateTime.UtcNow.AddDays(-3);
+        var editTime = DateTime.UtcNow.AddHours(-1);
+
+        var editorId = Guid.NewGuid();
+        var doc = NewDoc(UserA, game.Id, "Ready", "catan-rulebook.pdf", uploadTime, processTime);
+        doc.Title = "Catan 5th Edition";
+        doc.Tags = new List<string> { "family", "strategy" };
+        doc.UpdatedAt = editTime;
+        doc.UpdatedBy = editorId;
+
+        _dbContext!.PdfDocuments.Add(doc);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        var result = await _handler!.Handle(new ListUserKbDocsQuery(UserA), TestCancellationToken);
+
+        result.Items.Should().HaveCount(1);
+        var dto = result.Items.Single();
+        dto.Title.Should().Be("Catan 5th Edition", "Issue #1687 D-5");
+        dto.Tags.Should().BeEquivalentTo(new[] { "family", "strategy" }, "Issue #1687 D-8");
+        dto.UpdatedBy.Should().Be(editorId, "Issue #1687 D-13");
+        // D-13 override: an explicit edit beats ProcessedAt for display recency.
+        dto.UpdatedAt.Should().BeCloseTo(editTime, TimeSpan.FromMilliseconds(1),
+            "UpdatedAt = doc.UpdatedAt when an edit happened post-processing");
+    }
 }

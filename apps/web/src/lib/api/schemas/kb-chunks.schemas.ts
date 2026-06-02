@@ -45,6 +45,12 @@ export const KbDocDetailSchema = z.object({
   language: z.string().min(1),
   // Schema reality v1 carryover (Gate B): empty array until tags entity lands.
   tags: z.array(z.string()),
+  // #1676 scope (a) F1 (mockup sp5-admin-kb.html L147): file size in bytes.
+  // Optional for BE-pre-deploy safety — FE gracefully renders "—" when missing.
+  fileSize: z.number().int().nonnegative().optional(),
+  // Issue #1673: indexer version applicato all'ultimo reindex. Nullable per documenti
+  // mai indicizzati; "v0" è il marker legacy pre-versioning (read-only nell'UI).
+  indexerVersion: z.string().min(1).nullable().optional(),
 });
 export type KbDocDetail = z.infer<typeof KbDocDetailSchema>;
 

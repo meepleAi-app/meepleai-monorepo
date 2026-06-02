@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useCallback } from 'react';
@@ -19,7 +18,7 @@ function levelBadgeClass(level: LokiLogEntry['level']): string {
     case 'info':
       return 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300';
     default:
-      return 'bg-zinc-100 text-muted-foreground dark:bg-zinc-800 dark:text-muted-foreground';
+      return 'bg-muted text-muted-foreground';
   }
 }
 
@@ -92,10 +91,7 @@ export function LokiErrorViewer() {
   const entries = data?.entries ?? [];
 
   return (
-    <div
-      className="rounded-xl border bg-card/70 backdrop-blur-md dark:bg-zinc-900/70"
-      data-testid="loki-viewer"
-    >
+    <div className="rounded-xl border bg-card/70 backdrop-blur-md" data-testid="loki-viewer">
       {/* Header */}
       <div className="flex items-center justify-between border-b px-4 py-3">
         <span className="text-xs text-muted-foreground">Last 100 errors/warnings · last 24h</span>

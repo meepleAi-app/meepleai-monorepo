@@ -85,7 +85,9 @@ export function SessionDrawerContent({ entityId, initialTabId }: SessionDrawerCo
     },
   ];
 
-  const hasToolkit = data.toolkit != null;
+  // Bind to a local so TypeScript narrows inside `{toolkit && ...}` blocks
+  // and we avoid `data.toolkit!` non-null assertions in the JSX below.
+  const toolkit = data.toolkit;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -109,7 +111,7 @@ export function SessionDrawerContent({ entityId, initialTabId }: SessionDrawerCo
             label="Live"
             activeAccent={colors.activeAccent}
           />
-          {hasToolkit && (
+          {toolkit && (
             <EntityTabTrigger
               value="toolkit"
               icon={Wrench}
@@ -180,33 +182,31 @@ export function SessionDrawerContent({ entityId, initialTabId }: SessionDrawerCo
           </TabsContent>
 
           {/* Toolkit tab */}
-          {hasToolkit && (
+          {toolkit && (
             <TabsContent value="toolkit" className="mt-0">
               <div className="space-y-3">
                 <div className="rounded-lg bg-indigo-50/50 border border-indigo-200/40 p-3">
                   <p className="font-nunito text-[10px] text-indigo-500 uppercase tracking-wider">
                     Toolkit
                   </p>
-                  <p className="font-quicksand text-sm font-bold text-indigo-700">
-                    {data.toolkit!.name}
-                  </p>
+                  <p className="font-quicksand text-sm font-bold text-indigo-700">{toolkit.name}</p>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <div className="rounded-lg bg-card/50 border border-border/40 p-2.5 text-center">
                     <p className="font-quicksand text-lg font-bold text-indigo-700">
-                      {data.toolkit!.diceTools.length}
+                      {toolkit.diceTools.length}
                     </p>
                     <p className="font-nunito text-[10px] text-muted-foreground">Dadi</p>
                   </div>
                   <div className="rounded-lg bg-card/50 border border-border/40 p-2.5 text-center">
                     <p className="font-quicksand text-lg font-bold text-indigo-700">
-                      {data.toolkit!.cardTools.length}
+                      {toolkit.cardTools.length}
                     </p>
                     <p className="font-nunito text-[10px] text-muted-foreground">Carte</p>
                   </div>
                   <div className="rounded-lg bg-card/50 border border-border/40 p-2.5 text-center">
                     <p className="font-quicksand text-lg font-bold text-indigo-700">
-                      {data.toolkit!.timerTools.length}
+                      {toolkit.timerTools.length}
                     </p>
                     <p className="font-nunito text-[10px] text-muted-foreground">Timer</p>
                   </div>
@@ -232,7 +232,9 @@ export function SessionDrawerContent({ entityId, initialTabId }: SessionDrawerCo
                       <p className="font-nunito text-xs font-medium text-foreground truncate">
                         {event.label ?? event.description}
                       </p>
-                      <p className="font-nunito text-[10px] text-muted-foreground">{event.timestamp}</p>
+                      <p className="font-nunito text-[10px] text-muted-foreground">
+                        {event.timestamp}
+                      </p>
                     </div>
                   </div>
                 ))

@@ -194,13 +194,13 @@ Mockup per le funzioni admin reali prive di mockup SP5 (vedi `SURPLUS_DESIGN_PRO
 - B4 Upload avanzato (queue + history)
 
 ### Sprint 4 — AI quality (settimana 4)
-- A4 AI/RAG metrics + drill-down
+- A4 AI/RAG metrics + drill-down — **F3-FU-7 #1722** (AiTopBand layout + 9 tab token re-skin + QueryDrillPanel + AiTrendChart + LatencyBreakdownBar; sub-task BE per drill/metrics endpoints)
 - B6 Versions (timeline + diff)
 
 ### Sprint 5 — Operations (settimana 5)
 - A6 Catalog ingestion
 - A7 Config / Flags
-- A8 Monitor + LiveEventLog SSE
+- A8 Monitor + LiveEventLog SSE — **✅ completato F4.1 #1718** (PR #1740+#1764+#1768+#PR-integration-TBD)
 
 ### Sprint 6 — Content & Tools (settimana 6)
 - A9 Notifications + TemplateEditor

@@ -34,3 +34,17 @@ export type {
   AchievementBadgeGridProps,
   AchievementBadgeGridLabels,
 } from '@/components/features/player-detail/AchievementBadgeGrid';
+
+export { PlayerTopGamesCard } from '@/components/features/player-detail/PlayerTopGamesCard';
+export type {
+  PlayerTopGamesCardProps,
+  PlayerTopGamesCardLabels,
+  TopGameItem,
+} from '@/components/features/player-detail/PlayerTopGamesCard';
+
+export { PlayerTrendCard } from '@/components/features/player-detail/PlayerTrendCard';
+export type {
+  PlayerTrendCardProps,
+  PlayerTrendCardLabels,
+  MonthlyWinRatePoint,
+} from '@/components/features/player-detail/PlayerTrendCard';

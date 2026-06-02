@@ -57,6 +57,12 @@ public static class EventTypeRegistry
         // event was raised for SSE only, never into the MediatR pipeline, until BE-3).
         [typeof(SessionCreatedEvent)] = "session.created",
         [typeof(SessionFinalizedEvent)] = "session.finalized",
+
+        // Issue #1687 — durable log of user-driven KB-doc metadata edits.
+        // Without this entry the cache-invalidation handler still fires (MediatR
+        // in-memory) but the audit row is silently dropped. Tested explicitly in
+        // EventTypeRegistryTests.Registry_resolves_pdf_metadata_changed_alias.
+        [typeof(PdfMetadataChangedEvent)] = "pdf.metadata.changed",
     };
 
     /// <summary>

@@ -119,12 +119,21 @@ describe('useKbDocActions (Issue #1653 T4)', () => {
   // -------------------------------------------------------------------------
 
   describe('useReindexDoc', () => {
-    it('calls reindexDocument with the given docId', async () => {
+    it('calls reindexDocument with the given docId (no version)', async () => {
       mockReindexDocument.mockResolvedValueOnce(undefined);
       const { wrapper } = makeWrapper();
       const { result } = renderHook(() => useReindexDoc(DOC_ID), { wrapper });
       await result.current.mutateAsync();
-      expect(mockReindexDocument).toHaveBeenCalledWith(DOC_ID);
+      // Second arg is undefined when no indexerVersion is supplied (Issue #1673 payload support).
+      expect(mockReindexDocument).toHaveBeenCalledWith(DOC_ID, undefined);
+    });
+
+    it('passes indexerVersion to reindexDocument when provided', async () => {
+      mockReindexDocument.mockResolvedValueOnce(undefined);
+      const { wrapper } = makeWrapper();
+      const { result } = renderHook(() => useReindexDoc(DOC_ID), { wrapper });
+      await result.current.mutateAsync({ indexerVersion: 'v1.0' });
+      expect(mockReindexDocument).toHaveBeenCalledWith(DOC_ID, { indexerVersion: 'v1.0' });
     });
 
     it('invalidates kbDocDetailKeys.byId(docId) and kbChunksListKeys.all on success', async () => {

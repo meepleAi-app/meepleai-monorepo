@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Infrastructure;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -38,13 +39,13 @@ internal class GetPdfAnalyticsQueryHandler : IRequestHandler<GetPdfAnalyticsQuer
 
         // Counts
         var totalUploaded = await timeFilteredQuery.CountAsync(cancellationToken).ConfigureAwait(false);
-        var successCount = await timeFilteredQuery.CountAsync(p => p.ProcessingState == "Ready", cancellationToken).ConfigureAwait(false);
-        var failedCount = await timeFilteredQuery.CountAsync(p => p.ProcessingState == "Failed", cancellationToken).ConfigureAwait(false);
+        var successCount = await timeFilteredQuery.CountAsync(p => p.ProcessingState == nameof(PdfProcessingState.Ready), cancellationToken).ConfigureAwait(false);
+        var failedCount = await timeFilteredQuery.CountAsync(p => p.ProcessingState == nameof(PdfProcessingState.Failed), cancellationToken).ConfigureAwait(false);
         var successRate = totalUploaded > 0 ? (decimal)successCount / totalUploaded * 100 : 0m;
 
         // Processing times from documents with completed processing
         var durations = await timeFilteredQuery
-            .Where(p => p.ProcessingState == "Ready" && p.ProcessedAt != null)
+            .Where(p => p.ProcessingState == nameof(PdfProcessingState.Ready) && p.ProcessedAt != null)
             .Select(p => new { p.UploadedAt, p.ProcessedAt })
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
@@ -88,8 +89,8 @@ internal class GetPdfAnalyticsQueryHandler : IRequestHandler<GetPdfAnalyticsQuer
             {
                 Date = g.Key,
                 TotalCount = g.Count(),
-                SuccessCount = g.Count(p => p.ProcessingState == "Ready"),
-                FailedCount = g.Count(p => p.ProcessingState == "Failed")
+                SuccessCount = g.Count(p => p.ProcessingState == nameof(PdfProcessingState.Ready)),
+                FailedCount = g.Count(p => p.ProcessingState == nameof(PdfProcessingState.Failed))
             })
             .OrderBy(d => d.Date)
             .ToListAsync(cancellationToken).ConfigureAwait(false);

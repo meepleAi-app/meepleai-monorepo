@@ -2503,6 +2503,11 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("DetectedSourceLang")
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasColumnName("detected_source_lang");
+
                     b.Property<DateTimeOffset>("ExpiresAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("expires_at");
@@ -2515,6 +2520,10 @@ namespace Api.Infrastructure.Migrations
                     b.Property<Guid>("GameBookId")
                         .HasColumnType("uuid")
                         .HasColumnName("game_book_id");
+
+                    b.Property<double?>("LangDetectionConfidence")
+                        .HasColumnType("double precision")
+                        .HasColumnName("lang_detection_confidence");
 
                     b.Property<string>("OcrFullText")
                         .HasColumnType("text")
@@ -3472,6 +3481,12 @@ namespace Api.Infrastructure.Migrations
 
                     b.Property<Guid?>("ApiKeyId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("BreakdownJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("ChunksJson")
+                        .HasColumnType("jsonb");
 
                     b.Property<double?>("CitationQuality")
                         .HasColumnType("double precision");
@@ -8537,6 +8552,11 @@ namespace Api.Infrastructure.Migrations
                     b.Property<long>("FileSizeBytes")
                         .HasColumnType("bigint");
 
+                    b.Property<string>("IndexerVersion")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("indexer_version");
+
                     b.Property<DateTime?>("IndexingStartedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("indexing_started_at");
@@ -8612,6 +8632,11 @@ namespace Api.Infrastructure.Migrations
                         .HasDefaultValue(0)
                         .HasColumnName("retry_count");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea");
+
                     b.Property<Guid?>("SharedGameId")
                         .HasColumnType("uuid");
 
@@ -8625,6 +8650,26 @@ namespace Api.Infrastructure.Migrations
 
                     b.Property<int?>("TableCount")
                         .HasColumnType("integer");
+
+                    b.PrimitiveCollection<List<string>>("Tags")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text[]")
+                        .HasColumnName("tags")
+                        .HasDefaultValueSql("'{}'::text[]");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
 
                     b.Property<DateTime>("UploadedAt")
                         .HasColumnType("timestamp with time zone");
@@ -8652,10 +8697,18 @@ namespace Api.Infrastructure.Migrations
                     b.HasIndex("DocumentCategory")
                         .HasDatabaseName("ix_pdf_documents_document_category");
 
+                    b.HasIndex("IndexerVersion")
+                        .HasDatabaseName("ix_pdf_documents_indexer_version");
+
                     b.HasIndex("IsActiveForRag")
                         .HasDatabaseName("ix_pdf_documents_is_active_for_rag");
 
                     b.HasIndex("PrivateGameId");
+
+                    b.HasIndex("Tags")
+                        .HasDatabaseName("IX_pdf_documents_tags_gin");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Tags"), "gin");
 
                     b.HasIndex("CollectionId", "SortOrder");
 

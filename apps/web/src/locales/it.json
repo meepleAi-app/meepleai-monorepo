@@ -2428,6 +2428,14 @@
           "none": "Nessun agente usato ancora",
           "ariaLabel": "Apri {agentName}"
         },
+        "topGames": {
+          "title": "Top giochi",
+          "playsLabel": "{count} partite",
+          "playsLabelWithWins": "{count} partite · {wins} vittorie",
+          "winRateLabel": "WIN RATE",
+          "rankAriaLabel": "Posizione {rank}",
+          "empty": "Nessun gioco giocato ancora"
+        },
         "achievements": {
           "title": "Achievement",
           "viewAll": "Vedi tutti",
@@ -3977,6 +3985,40 @@
         "thumbnailsLabel": "Pagine",
         "closeLabel": "Chiudi",
         "pageOfTotal": "{cur} / {total}"
+      },
+      "filters": {
+        "heading": "Filtri",
+        "docTypeLabel": "Tipo documento",
+        "gameIdLabel": "Gioco",
+        "languageLabel": "Lingua",
+        "clearAll": "Cancella filtri",
+        "docTypeOptions": {
+          "Rulebook": "Regolamento",
+          "Expansion": "Espansione",
+          "Errata": "Errata",
+          "QuickStart": "Quick Start",
+          "Reference": "Riferimento",
+          "PlayerAid": "Aiuto giocatore",
+          "Other": "Altro"
+        },
+        "languageOptions": {
+          "en": "English",
+          "it": "Italiano",
+          "de": "Deutsch",
+          "fr": "Français",
+          "es": "Español"
+        }
+      },
+      "editor": {
+        "heading": "Modifica metadati",
+        "titleLabel": "Titolo",
+        "documentTypeLabel": "Tipo documento",
+        "languageLabel": "Lingua",
+        "tagsLabel": "Tag",
+        "saveLabel": "Salva",
+        "cancelLabel": "Annulla",
+        "notFoundError": "Documento non trovato",
+        "genericError": "Errore generico, riprova."
       },
       "drawer": {
         "title": "Ask the Meeple",

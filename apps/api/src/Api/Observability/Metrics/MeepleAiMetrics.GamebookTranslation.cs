@@ -98,6 +98,7 @@ internal static partial class MeepleAiMetrics
     /// <param name="completionTokens">Tokens generated as completion (null when usage unavailable)</param>
     /// <param name="costUsd">Cost in USD reported by provider (null when unavailable)</param>
     /// <param name="provider">LLM provider name (e.g. "openrouter", "deepseek")</param>
+    /// <param name="sourceMethod">Translation entry point: "ocr" (photo-based) or "manual" (textarea, #1774). Default "ocr" for backward compat.</param>
     public static void RecordGamebookTranslationRequest(
         string status,
         double latencyFullSeconds,
@@ -105,9 +106,14 @@ internal static partial class MeepleAiMetrics
         long? promptTokens,
         long? completionTokens,
         double? costUsd,
-        string provider)
+        string provider,
+        string sourceMethod = "ocr")
     {
-        GamebookTranslationRequestsTotal.Add(1, new TagList { { "status", status } });
+        GamebookTranslationRequestsTotal.Add(1, new TagList
+        {
+            { "status", status },
+            { "source_method", sourceMethod },
+        });
         GamebookTranslationLatencySeconds.Record(latencyFullSeconds, new TagList { { "stage", "full" } });
 
         if (latencyStreamingSeconds.HasValue)

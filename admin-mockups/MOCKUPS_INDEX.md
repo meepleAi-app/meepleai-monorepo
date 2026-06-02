@@ -6,7 +6,7 @@
 >
 > **Audience**: developers looking for "which mockup file do I need for route X?".
 >
-> **Last updated**: 2026-05-30. Keep in sync with
+> **Last updated**: 2026-05-31. Keep in sync with
 > [`docs/for-developers/frontend/v2-migration-matrix.md`](../docs/for-developers/frontend/v2-migration-matrix.md)
 > Route Index section.
 
@@ -35,6 +35,7 @@
 | `components.css` | dev-fixture | Shared component CSS (phone frame, nav, cards) |
 | `data.js` | dev-fixture | Fake dataset, 9 cross-referenced entities |
 | `mobile-app.jsx` | dev-fixture | Full mobile-app React prototype (~870 lines) |
+| `sp4-play-records-data.js` | dev-fixture | Fake dataset for `sp4-play-records-*` page-mocks (shared across 5 frames) |
 | `tokens.css` | dev-fixture | **Source of truth for design tokens** (port first) |
 | `state-matrix.html` | dev-fixture | State matrix cross-route (8 route × 5 stati = 40 cell) — riusabile per Phase 2/3 |
 
@@ -70,6 +71,7 @@
 | `sp4-agent-detail.html` | page-mock | `/agents/[id]`, `/library/[gameId]/agent` |
 | `sp4-agents-index.html` | page-mock | `/agents`, `/editor/agent-proposals/*` (partial), `/chat/agents/create` (partial) |
 | `sp4-citation-pdf-viewer.html` | component-mock | Citation overlay used by `/chat/[threadId]` and game-chat tabs |
+| `sp4-dashboard.html` | page-mock | `/dashboard` (forward-design Pre-Stage-3, closes #491) |
 | `sp4-discover.html` | page-mock | `/discover` |
 | `sp4-game-chat-tab.html` | component-mock | Chat tab embedded in `/library/[gameId]/agent`, `/games/[id]` |
 | `sp4-game-detail.html` | page-mock | `/games/[id]`, `/library/[gameId]`, `/private-games/[id]` |
@@ -79,12 +81,71 @@
 | `sp4-kb-hub.html` | page-mock | `/knowledge-base` |
 | `sp4-library-desktop.html` | page-mock | `/library` (Wave B.3 done) |
 | `sp4-library-mobile.html` | page-mock | `/library` (mobile <768px variant, SP8 brief 2026-05-30, IA semplificata 3 tab + overflow) |
+| `sp4-parts-common.jsx` | component-mock | Shared mockup runtime — `window.MAI` (entity helpers, StateBlock/Shimmer/SseBanner, fake dataset). Re-derived for sessions consolidation (2026-05-31). Replace with codebase modules at integration time. |
+| `sp4-play-records-detail.html` | page-mock | `/play-records/[id]` |
+| `sp4-play-records-edit.html` | page-mock | `/play-records/[id]/edit` |
+| `sp4-play-records-index.html` | page-mock | `/play-records` |
+| `sp4-play-records-new.html` | page-mock | `/play-records/new` |
+| `sp4-play-records-stats.html` | page-mock | `/play-records/stats` |
 | `sp4-player-detail.html` | page-mock | `/players/[id]`, `/players/[id]/{achievements,games,sessions,stats}` |
 | `sp4-players-index.html` | page-mock | `/players` |
-| `sp4-session-live-parts.jsx` | component-mock | Sub-components of `/sessions/[id]/live` Foundation sub-PR |
-| `sp4-session-live.html` | page-mock | `/sessions/[id]/live`, `/sessions/live/[sessionId]/*` |
-| `sp4-session-summary-parts.jsx` | component-mock | Sub-components of `/sessions/[id]` Wave D.3 |
-| `sp4-session-summary.html` | page-mock | `/sessions/[id]` |
+| `sp4-session-catan-data.jsx` | component-mock | Catan-specific dataset (hex board 19-tiles, resources, settlements/cities/roads, dev cards). Premium #3/7. |
+| `sp4-session-catan-flavor.jsx` | component-mock | Catan flavor components — `HexBoard`, `RobberOverlay`, `DiceDisplay`, `TradePanel`, `DevCardsPanel`, `ResourceHandBar`. |
+| `sp4-session-catan-live.html` | page-mock | `/sessions/[id]/live` Catan demo (medium euro + trading, 3-4 players, ~75-90 min). Extends skeleton with Catan-specific panels. |
+| `sp4-session-catan-live.jsx` | component-mock | Root component for `sp4-session-catan-live.html` — wires skeleton + hex board + RightColumnTabs (Scoring, Trade, Dev, Build, Chat). |
+| `sp4-session-catan-parts.jsx` | component-mock | Shared parts for Catan — player rail with hand counts + dev cards + pieces remaining. |
+| `sp4-session-catan-summary.html` | page-mock | `/sessions/[id]` Catan post-game (final VP: settlements + cities + Longest Road + Largest Army + VP dev cards). Premium #3/7. |
+| `sp4-session-catan-summary.jsx` | component-mock | Root component for Catan summary — hero + tabs (Scoreboard / Final Board / Stats). |
+| `sp4-session-codenames-bodies.jsx` | component-mock | Codenames body layouts — DesktopBody + MobileBody composition. |
+| `sp4-session-codenames-data.jsx` | component-mock | Codenames-specific dataset (5x5 word grid, key card pattern, team agents 9/8, clue history). Premium #7/7. |
+| `sp4-session-codenames-flavor.jsx` | component-mock | Codenames flavor components — `WordGrid`, `WordCard` (5 states: covered/red/blue/neutral/assassin), `SpymasterKeyCardOverlay`, `TeamPanel`, `CurrentCluePanel`, `ClueHistoryTimeline`, `RoleAvatar`. |
+| `sp4-session-codenames-live.html` | page-mock | `/sessions/[id]/live` Codenames demo (team deduction party game, 2-8+ players in 2 teams, ~15 min). Extends skeleton with Codenames-specific panels + accordion-extended. |
+| `sp4-session-codenames-live.jsx` | component-mock | Root component for `sp4-session-codenames-live.html` — wires skeleton + word grid + RightColumnTabs (Scoring Ranking, Board, Clue history, Teams, Chat). |
+| `sp4-session-codenames-parts.jsx` | component-mock | Shared parts for Codenames — SectionCard accordion, helper sec(id). Mirrors skeleton + Power Grid extension. |
+| `sp4-session-codenames-summary.html` | page-mock | `/sessions/[id]` Codenames post-game (WINNER team banner + Red/Blue agents found + assassin status + clue analysis). Premium #7/7. |
+| `sp4-session-codenames-summary.jsx` | component-mock | Root component for Codenames summary — hero + tabs (Scoreboard / Final Board / Clue Analysis / Stats). |
+| `sp4-session-paleo-data.jsx` | component-mock | Paleo-specific dataset (tribe state, day phases, mission deck, BinaryWin co-op simultaneous). Premium #6/7. |
+| `sp4-session-paleo-flavor.jsx` | component-mock | Paleo flavor components — `TribePanel`, `DayPhaseIndicator`, `CardsDeckPanel`, `PlayerHandPanel`, `ActionRevealOverlay`, `CavePaintingProgress`, `SkullCluster`. |
+| `sp4-session-paleo-live.html` | page-mock | `/sessions/[id]/live` Paleo demo (co-op preistorico Simultaneous, 1-4 players, ~45-60 min). Extends skeleton with accordion-extended for game panels. |
+| `sp4-session-paleo-live.jsx` | component-mock | Root component for `sp4-session-paleo-live.html` — wires skeleton + Paleo flavor + RightColumnTabs (Scoring, Tribe, Cards, Skills, Chat). |
+| `sp4-session-paleo-parts.jsx` | component-mock | Shared parts for Paleo — SectionCard accordion (11 utilizzi), helper sec(id) per accordion state machine. Mirrors Power Grid pattern. |
+| `sp4-session-paleo-summary.html` | page-mock | `/sessions/[id]` Paleo post-game (VICTORY 5 cave paintings / DEFEAT 5 skulls or tribe extinct + cause-of-loss + tribe journey). Premium #6/7. |
+| `sp4-session-paleo-summary.jsx` | component-mock | Root component for Paleo summary — hero VICTORY/DEFEAT + tabs (Scoreboard / Tribe Journey / Cards played / Stats). |
+| `sp4-session-power-grid-data.jsx` | component-mock | Power Grid-specific dataset (Elektro, 4 resources market, 8 plants, 5 phases, 3 game steps). Premium #4/7. |
+| `sp4-session-power-grid-flavor.jsx` | component-mock | Power Grid flavor components — `PhaseTimeline`, `PowerPlantMarket`, `ResourceMarket`, `AuctionOverlay`, `NetworkMap`, `PlantsRail`, `TurnOrderStrip` (reverse-aware). |
+| `sp4-session-power-grid-live.html` | page-mock | `/sessions/[id]/live` Power Grid demo (heavy euro auction + network, 2-6 players, ~120 min). Extends skeleton with PG-specific panels + accordion-extended for game sections (auction/market/resources). |
+| `sp4-session-power-grid-live.jsx` | component-mock | Root component for `sp4-session-power-grid-live.html` — wires skeleton + PG flavor + RightColumnTabs (Scoring, Market, Network, Plants, Chat). |
+| `sp4-session-power-grid-parts.jsx` | component-mock | Shared parts for Power Grid — `SectionCard` accordion, player rail, helper `sec(id)` for accordion state machine across 5 phases. |
+| `sp4-session-power-grid-summary.html` | page-mock | `/sessions/[id]` Power Grid post-game (final: cities powered + Elektro tiebreaker + plants capacity). Premium #4/7. |
+| `sp4-session-power-grid-summary.jsx` | component-mock | Root component for PG summary — hero + tabs (Scoreboard / Network snapshot / Step transitions / Stats). |
+| `sp4-session-puerto-rico-data.jsx` | component-mock | Puerto Rico-specific dataset (role-selection state, 5 goods, plantations + buildings grids). Premium #2/7. |
+| `sp4-session-puerto-rico-flavor.jsx` | component-mock | Puerto Rico flavor components — `RoleSelectionBoard`, `PlantationGrid`, `BuildingGrid`, `GalleonsShipping`, `TradingHouseSlots`, `ColonistShip`. |
+| `sp4-session-puerto-rico-live.html` | page-mock | `/sessions/[id]/live` Puerto Rico demo (heavy euro role-selection, 3-5 players, ~120min). Extends skeleton (mockup #1) with PR-specific panels. |
+| `sp4-session-puerto-rico-live.jsx` | component-mock | Root component for `sp4-session-puerto-rico-live.html` — wires skeleton + PR flavor + RightColumnTabs (Scoring, Roles, Trade, Ship, Chat). |
+| `sp4-session-puerto-rico-parts.jsx` | component-mock | Shared parts for Puerto Rico — player mat, role cards, role action flow. |
+| `sp4-session-puerto-rico-summary.html` | page-mock | `/sessions/[id]` Puerto Rico post-game (final VP breakdown: buildings + shipped goods + large building bonuses). Premium #2/7. |
+| `sp4-session-puerto-rico-summary.jsx` | component-mock | Root component for PR summary — hero + tabs (Scoreboard / Final Board / Round Recap / Stats). |
+| `sp4-session-skeleton-data.jsx` | component-mock | Demo datasets (Wingspan + Paleo) for the generic session skeleton — `window.SkelData`. Used only inside `sp4-session-skeleton-*` mockup to validate polymorphic rendering side-by-side. |
+| `sp4-session-skeleton-live.html` | page-mock | `/sessions/[id]/live` **generic skeleton** (universal renderer for any game). Consumes `AiToolkitSuggestionDto` polymorphically. Demo shows side-by-side Wingspan (Points+RoundRobin) vs Paleo (BinaryWin+Simultaneous). Closes #1750 (B19-4b). |
+| `sp4-session-skeleton-live.jsx` | component-mock | Root component for `sp4-session-skeleton-live.html` — wires top-bar + ChatAgent + `RightColumnTabs` polymorphic. |
+| `sp4-session-skeleton-parts.jsx` | component-mock | Shared building blocks for the skeleton (TopBar, ChatAgentPanel, ActionLog, RightColumnTabs container, DesktopFrame, PhoneShell side-by-side wrapper). Game-agnostic. |
+| `sp4-session-skeleton-renderers.jsx` | component-mock | **Polymorphic renderers** — `ScoringPanelRenderer` (switch on ScoreType: Points/Ranking/BinaryWin/Objectives), `TurnIndicatorRenderer` (switch on TurnOrderType: 7 variants), `WidgetRenderer` (6 WidgetType dispatch). Zero game-specific code. Mirrors FE renderers shipped in PR #1763 (B19-4a). |
+| `sp4-session-summary-skeleton.html` | page-mock | `/sessions/[id]` **generic post-game skeleton** (universal summary). Demo shows side-by-side Wingspan vs Paleo. Closes #1750 (B19-4b). |
+| `sp4-session-summary-skeleton.jsx` | component-mock | Root component for `sp4-session-summary-skeleton.html` — hero result + tabbed review (scoreboard / diary / photos / chat highlights / stats). Game-agnostic. |
+| `sp4-session-wingspan-live-parts.jsx` | component-mock | Sub-components of `/sessions/[id]/live` Wingspan demo — `window.LiveSessionParts1`. **Wingspan-specific** (scoring categories hard-coded). Generic skeleton tracked in B19. |
+| `sp4-session-wingspan-live-tabs.jsx` | component-mock | `window.LiveTabs` — 4 new consolidated tabs (scores · photos · agent · players) × 5 stati each (default · empty · loading · error · sse). **Wingspan-flavored content**. See consolidation ADR `claudedocs/2026-05-31-sessions-consolidation-adr.md` + spike `claudedocs/2026-05-31-spike-toolkit-ai-generation.md`. |
+| `sp4-session-wingspan-live.html` | page-mock | `/sessions/[id]/live` Wingspan demo + consolidated tabs `?tab=scores\|photos\|agent\|players\|chat\|tools\|notes` (was 4 separate sub-routes pre-2026-05-31, see ADR). Also reuses for `/sessions/live/[sessionId]/*`. **Wingspan-specific** — generic session skeleton in B19. |
+| `sp4-session-wingspan-summary-parts.jsx` | component-mock | Sub-components of `/sessions/[id]` Wingspan demo — `window.SummaryParts`. **Wingspan-flavored**. |
+| `sp4-session-wingspan-summary-sections.jsx` | component-mock | Celebrative body sections of `/sessions/[id]` Wingspan demo (podium, KPI, diary, photos, chat highlights, share) — unchanged in 2026-05-31 consolidation. **Wingspan-flavored content**. |
+| `sp4-session-wingspan-summary-tabs.jsx` | component-mock | `window.SummaryReviewTabs` — 3 new consolidated tabs (scoreboard · notes · players) × 5 stati each (default · empty · loading · error · offline). **Wingspan scoring categories hard-coded**. See consolidation ADR. |
+| `sp4-session-wingspan-summary.html` | page-mock | `/sessions/[id]` Wingspan demo + consolidated tabs `?tab=scoreboard\|notes\|players` (was 3 separate sub-routes pre-2026-05-31, see ADR). **Wingspan-specific**. |
+| `sp4-session-zombicide-data.jsx` | component-mock | Zombicide Green Horde-specific dataset (survivors w/ skill trees, zombie counts per type, scenario objectives). Premium #5/7. |
+| `sp4-session-zombicide-flavor.jsx` | component-mock | Zombicide GH flavor components — `SurvivorCard` (skill tree Blue→Yellow→Orange→Red + equipment + wounds + AP), `BoardStatePanel`, `CombatDicePanel`, `SpawnDeckIndicator`, `PhaseTimeline` (3-phase round), `MapTilesGrid`. |
+| `sp4-session-zombicide-live.html` | page-mock | `/sessions/[id]/live` Zombicide GH demo (co-op miniatures dungeon-crawler, 1-6 players, ~60-90 min/scenario). Extends skeleton + accordion-extended for game panels. |
+| `sp4-session-zombicide-live.jsx` | component-mock | Root component for `sp4-session-zombicide-live.html` — wires skeleton + Zombicide flavor + RightColumnTabs (Scoring, Dice, Board, Equip, Chat). |
+| `sp4-session-zombicide-parts.jsx` | component-mock | Shared parts for Zombicide — SectionCard accordion (16 utilizzi), helper `sec(id)` per accordion state machine across survivors/board/spawn panels. |
+| `sp4-session-zombicide-summary.html` | page-mock | `/sessions/[id]` Zombicide post-game (VICTORY/DEFEAT banner + mission objectives + survivors final state + XP totals + kill stats). Premium #5/7. |
+| `sp4-session-zombicide-summary.jsx` | component-mock | Root component for Zombicide summary — hero + tabs (Scoreboard / Survivors / Board final / Stats). |
 | `sp4-sessions-index.html` | page-mock | `/sessions`, `/games/[id]/sessions` (reuse) |
 | `sp4-toolkit-detail.html` | page-mock | `/toolkit` + sub-routes, `/library/[gameId]/toolbox`, `/library/[gameId]/toolkit`, `/library/private/[id]/toolkit/configure` |
 | `sp4-upload-wizard-extended.html` | page-mock | `/upload`, `/gamebook/upload` (partial) |
@@ -150,10 +211,10 @@
 
 | Type | Count |
 |------|------:|
-| page-mock | 49 |
-| component-mock | 16 |
-| dev-fixture | 11 |
-| **Total** | **76** |
+| page-mock | 67 |
+| component-mock | 51 |
+| dev-fixture | 12 |
+| **Total** | **130** |
 
 > The `*.jsx` twins of `*.html` files are not double-counted (the JSX is the
 > implementation companion of the HTML reference). Listing them separately

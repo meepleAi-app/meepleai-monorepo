@@ -42,7 +42,10 @@ export function TranslationPane({
           </span>
           {isComplete && <span className="text-xs text-muted-foreground">&#10003; completata</span>}
         </div>
-        <p className="text-sm whitespace-pre-wrap">
+        <p
+          className="text-sm whitespace-pre-wrap reader-mode-content"
+          style={{ color: 'hsl(var(--c-text-high-contrast))' }}
+        >
           {partialText || (isComplete ? '(traduzione vuota)' : 'Traduzione in corso…')}
         </p>
         {highlightTerms.length > 0 && (

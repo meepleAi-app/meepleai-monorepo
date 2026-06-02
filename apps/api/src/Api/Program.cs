@@ -340,6 +340,11 @@ builder.Services.AddMediatR(cfg =>
         cfg.LicenseKey = mediatrLicenseKey;
 });
 
+// Issue #1534: the open-generic DomainEventAuditHandler<TEvent> is auto-registered by
+// MediatR's RegisterServicesFromAssembly above. No explicit AddTransient registration
+// is needed — MediatR honours the `where TEvent : IDomainEvent` constraint, so only
+// IDomainEvent notifications resolve this handler.
+
 // Application services (Domain, AI, Admin)
 builder.Services.AddVectorSearchServices(builder.Configuration);
 builder.Services.AddDomainServices();
@@ -843,6 +848,7 @@ v1Api.MapArbitroAdminEndpoints();      // Issue #4328: Arbitro beta testing admi
 v1Api.MapAdminPdfMetricsEndpoints();   // Issue #4212: PDF processing metrics
 v1Api.MapAdminPdfStorageEndpoints();   // PDF Storage Management Hub: Storage health
 v1Api.MapAdminPdfManagementEndpoints(); // PDF Storage Management Hub: Bulk ops, maintenance, analytics
+v1Api.MapAdminIndexerEndpoints();       // Issue #1673: indexer version registry endpoint
 v1Api.MapAdminQueueEndpoints();         // Issue #4731: Processing queue management
 v1Api.MapAdminStorageMigrationEndpoints(); // S3 storage migration (local → S3)
 v1Api.MapAdminRagBackupEndpoints();        // RAG data backup & import
@@ -888,6 +894,7 @@ v1Api.MapGameBookEndpoints();          // Phase E1 — GameBook catalog (multi-b
 // Audit & Analytics
 v1Api.MapAuditEndpoints();             // Audit log retrieval & search
 v1Api.MapAdminAuditLogEndpoints();     // Issue #3691: Admin audit log system
+v1Api.MapAdminEventsEndpoints();       // F4.1 #1718: admin domain event log (GET, stream SSE, types)
 v1Api.MapUserActivityEndpoints();      // Issue #4652: User activity log for Admin Dashboard
 v1Api.MapAdminAgentAnalyticsEndpoints(); // Issue #4653: Agents analytics for Admin Dashboard
 v1Api.MapAdminAnalyticsEndpoints();      // Admin analytics: overview, chat, PDF, model performance, MAU

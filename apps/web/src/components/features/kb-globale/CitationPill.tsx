@@ -1,8 +1,8 @@
 /**
- * CitationPill — page-level citation chip (D-E spec-panel 2026-05-30).
+ * CitationPill — citation chip, supports both page-level (legacy) and chunk-level (#1702 FE follow-up).
  *
- * onClick callback receives { docId, page } so the caller can push
- * `?docId=&page=` to the URL (orchestrator wires viewer scroll).
+ * onClick callback receives { docId, page, chunkId? } so the caller can push
+ * `?docId=&page=` (legacy) or `?docId=&page=&chunkId=` (chunk-level) to the URL.
  *
  * Visual: numbered circle + ref text (e.g. "p.14 §4.1"), button-role,
  * DS-15 entity-kb tokens, jest-axe clean.
@@ -16,18 +16,25 @@ import { cn } from '@/lib/utils';
 
 export interface CitationPillProps {
   /** 1-based index in the citations array */
-  n: number;
+  readonly n: number;
   /** Display text (e.g. "p.14" or "p.14 §4.1") — caller formats from KbCitation */
-  refText: string;
+  readonly refText: string;
   /** PdfDocumentId (D-E deep-link target) */
-  docId: string;
+  readonly docId: string;
   /** Page number (D-E deep-link target) */
-  page: number;
+  readonly page: number;
+  /**
+   * Optional chunk identifier (#1702). Composite "{docId}_{chunkIndex}".
+   * When provided as an empty string, treated as absent (page-only payload).
+   * When provided, included in the onClick payload so the orchestrator
+   * can push a chunk-level URL `?chunkId=` for deep-link.
+   */
+  readonly chunkId?: string;
   /** Required accessible label (full sentence, i18n-injected by caller) */
-  ariaLabel: string;
+  readonly ariaLabel: string;
   /** Click handler receiving deep-link payload */
-  onClick?: (link: { docId: string; page: number }) => void;
-  className?: string;
+  readonly onClick?: (link: { docId: string; page: number; chunkId?: string }) => void;
+  readonly className?: string;
 }
 
 export function CitationPill({
@@ -35,6 +42,7 @@ export function CitationPill({
   refText,
   docId,
   page,
+  chunkId,
   ariaLabel,
   onClick,
   className,
@@ -44,7 +52,7 @@ export function CitationPill({
       type="button"
       data-slot="kb-globale-citation-pill"
       aria-label={ariaLabel}
-      onClick={() => onClick?.({ docId, page })}
+      onClick={() => onClick?.(chunkId ? { docId, page, chunkId } : { docId, page })}
       className={cn(
         'inline-flex items-center gap-1 px-1.5 py-0 rounded-full align-baseline',
         'border border-entity-kb/25 bg-entity-kb/10 text-entity-kb',

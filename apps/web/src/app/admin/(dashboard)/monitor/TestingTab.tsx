@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -38,12 +37,7 @@ function MetricValue({
 function AccessibilitySection({ data }: { data: AccessibilityMetrics | null }) {
   if (!data) {
     return (
-      <div
-        className={cn(
-          'rounded-xl border border-border/60 p-5',
-          'bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md'
-        )}
-      >
+      <div className={cn('rounded-xl border border-border/60 p-5', 'bg-card/70 backdrop-blur-md')}>
         <h3 className="font-quicksand text-sm font-semibold text-foreground">Accessibility</h3>
         <p className="mt-2 text-sm text-muted-foreground">No data available.</p>
       </div>
@@ -51,12 +45,7 @@ function AccessibilitySection({ data }: { data: AccessibilityMetrics | null }) {
   }
 
   return (
-    <div
-      className={cn(
-        'rounded-xl border border-border/60 p-5',
-        'bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md'
-      )}
-    >
+    <div className={cn('rounded-xl border border-border/60 p-5', 'bg-card/70 backdrop-blur-md')}>
       <h3 className="font-quicksand text-sm font-semibold text-foreground">Accessibility</h3>
       <div className="mt-3 space-y-1">
         <MetricValue label="Lighthouse Score" value={data.lighthouseScore} />
@@ -72,12 +61,7 @@ function AccessibilitySection({ data }: { data: AccessibilityMetrics | null }) {
 function PerformanceSection({ data }: { data: PerformanceMetrics | null }) {
   if (!data) {
     return (
-      <div
-        className={cn(
-          'rounded-xl border border-border/60 p-5',
-          'bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md'
-        )}
-      >
+      <div className={cn('rounded-xl border border-border/60 p-5', 'bg-card/70 backdrop-blur-md')}>
         <h3 className="font-quicksand text-sm font-semibold text-foreground">Performance</h3>
         <p className="mt-2 text-sm text-muted-foreground">No data available.</p>
       </div>
@@ -85,12 +69,7 @@ function PerformanceSection({ data }: { data: PerformanceMetrics | null }) {
   }
 
   return (
-    <div
-      className={cn(
-        'rounded-xl border border-border/60 p-5',
-        'bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md'
-      )}
-    >
+    <div className={cn('rounded-xl border border-border/60 p-5', 'bg-card/70 backdrop-blur-md')}>
       <h3 className="font-quicksand text-sm font-semibold text-foreground">Performance</h3>
       <div className="mt-3 space-y-1">
         <MetricValue label="Lighthouse Score" value={data.lighthouseScore} />
@@ -110,12 +89,7 @@ function PerformanceSection({ data }: { data: PerformanceMetrics | null }) {
 function E2ESection({ data }: { data: E2EMetrics | null }) {
   if (!data) {
     return (
-      <div
-        className={cn(
-          'rounded-xl border border-border/60 p-5',
-          'bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md'
-        )}
-      >
+      <div className={cn('rounded-xl border border-border/60 p-5', 'bg-card/70 backdrop-blur-md')}>
         <h3 className="font-quicksand text-sm font-semibold text-foreground">E2E</h3>
         <p className="mt-2 text-sm text-muted-foreground">No data available.</p>
       </div>
@@ -123,12 +97,7 @@ function E2ESection({ data }: { data: E2EMetrics | null }) {
   }
 
   return (
-    <div
-      className={cn(
-        'rounded-xl border border-border/60 p-5',
-        'bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md'
-      )}
-    >
+    <div className={cn('rounded-xl border border-border/60 p-5', 'bg-card/70 backdrop-blur-md')}>
       <h3 className="font-quicksand text-sm font-semibold text-foreground">E2E</h3>
       <div className="mt-3 space-y-1">
         <MetricValue label="Coverage" value={`${data.coverage}%`} />

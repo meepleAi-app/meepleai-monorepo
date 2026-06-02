@@ -41,13 +41,12 @@ async function gotoLibraryReady(page: Page, search = ''): Promise<void> {
 }
 
 test.describe('Library desktop — accessibility @a11y', () => {
-  // Skipped 2026-05-30 (PR #1700 release CI): `useLibrary` does NOT have a
-  // VISUAL_TEST_FIXTURE short-circuit, so without backend data the hub lands
-  // in empty/loading state — LibraryHybridGrid is not rendered. Same pattern
-  // as games-library.spec. Follow-up: add fixture short-circuit to useLibrary
-  // matching SessionSummaryView pattern, or mock /api/v1/library in spec.
-  test.fixme('axe-core: no WCAG 2.1 AA violations on default state', async ({ page }) => {
-    await gotoLibraryReady(page);
+  // Re-activated 2026-05-30 via #1714: useLibrary now has a VISUAL_TEST_FIXTURE
+  // short-circuit (parseLibraryStateOverride). Append `?fixture=default` to
+  // force the populated state (mirrors PR #1709 cluster-1 pattern for
+  // session-summary.spec.ts).
+  test('axe-core: no WCAG 2.1 AA violations on default state', async ({ page }) => {
+    await gotoLibraryReady(page, '?fixture=default');
     // Default state expects LibraryHybridGrid populato — wait for first card.
     await expect(page.locator('[data-slot="library-grid-card"]').first()).toBeVisible();
 
@@ -86,15 +85,13 @@ test.describe('Library desktop — accessibility @a11y', () => {
     expect(results.violations).toEqual([]);
   });
 
-  // Skipped 2026-05-30 (PR #1700 release CI): same root cause as the test
-  // above — `useLibrary` lacks fixture short-circuit, so library-grid-card
-  // never renders.
-  test.fixme('prefers-reduced-motion: card hover transitions collapse to sub-ms', async ({ page }) => {
+  // Re-activated 2026-05-30 via #1714: same fix as the test above.
+  test('prefers-reduced-motion: card hover transitions collapse to sub-ms', async ({ page }) => {
     // Emulate reduced-motion BEFORE goto so the global CSS rule
     // (globals.css:388-396) applies on first paint. Without this the
     // GridCard `transition-all duration-[350ms]` runs full hover animation.
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await gotoLibraryReady(page);
+    await gotoLibraryReady(page, '?fixture=default');
     await expect(page.locator('[data-slot="library-grid-card"]').first()).toBeVisible();
 
     // Inspect computed transition-duration on the GridCard element. Under

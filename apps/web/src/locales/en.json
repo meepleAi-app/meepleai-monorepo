@@ -2378,6 +2378,14 @@
           "none": "No agent used yet",
           "ariaLabel": "Open {agentName}"
         },
+        "topGames": {
+          "title": "Top games",
+          "playsLabel": "{count} plays",
+          "playsLabelWithWins": "{count} plays · {wins} wins",
+          "winRateLabel": "WIN RATE",
+          "rankAriaLabel": "Rank {rank}",
+          "empty": "No games played yet"
+        },
         "achievements": {
           "title": "Achievements",
           "viewAll": "View all",
@@ -3924,6 +3932,40 @@
         "thumbnailsLabel": "Pages",
         "closeLabel": "Close",
         "pageOfTotal": "{cur} / {total}"
+      },
+      "filters": {
+        "heading": "Filters",
+        "docTypeLabel": "Document type",
+        "gameIdLabel": "Game",
+        "languageLabel": "Language",
+        "clearAll": "Clear filters",
+        "docTypeOptions": {
+          "Rulebook": "Rulebook",
+          "Expansion": "Expansion",
+          "Errata": "Errata",
+          "QuickStart": "Quick Start",
+          "Reference": "Reference",
+          "PlayerAid": "Player aid",
+          "Other": "Other"
+        },
+        "languageOptions": {
+          "en": "English",
+          "it": "Italian",
+          "de": "German",
+          "fr": "French",
+          "es": "Spanish"
+        }
+      },
+      "editor": {
+        "heading": "Edit metadata",
+        "titleLabel": "Title",
+        "documentTypeLabel": "Document type",
+        "languageLabel": "Language",
+        "tagsLabel": "Tags",
+        "saveLabel": "Save",
+        "cancelLabel": "Cancel",
+        "notFoundError": "Document not found",
+        "genericError": "Generic error, please try again."
       },
       "drawer": {
         "title": "Ask the Meeple",

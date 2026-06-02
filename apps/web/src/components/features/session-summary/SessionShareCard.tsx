@@ -186,7 +186,12 @@ export function SessionShareCard({
                 className={clsx(
                   'px-3 py-1 font-mono text-[10px] font-extrabold uppercase tracking-wide',
                   active
-                    ? 'bg-entity-session/14 text-entity-session'
+                    ? // PR #1721 follow-up: use --c-session-text (AA on dark bg) instead of
+                      // --c-session — the latter resolved to #7d86e8 on dark `--card +
+                      // --c-session/14` overlay (= ~#393a48) for a 3.85:1 contrast (axe AA
+                      // serious fail). The dedicated text token is darker on light themes
+                      // (same as --c-session) and lighter on dark themes (235 85% 85%).
+                      'bg-entity-session/14 text-[hsl(var(--c-session-text))]'
                     : 'bg-transparent text-muted-foreground hover:text-foreground'
                 )}
               >

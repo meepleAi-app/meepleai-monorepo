@@ -35,6 +35,7 @@
 
 import { useMemo, type ReactElement } from 'react';
 
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
@@ -45,8 +46,11 @@ import {
   type PlayerHeroLabels,
   type PlayerLeaderboardCardLabels,
   type PlayerStatsGridLabels,
+  type PlayerTopGamesCardLabels,
+  type PlayerTrendCardLabels,
 } from '@/components/features/player-detail';
 import { DetailPageLayout } from '@/components/ui/detail-layout';
+import { useAchievements } from '@/hooks/queries/useAchievements';
 import { usePlayerStatistics } from '@/hooks/queries/usePlayersFromRecords';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { PlayerStatistics } from '@/lib/api/schemas/play-records.schemas';
@@ -54,7 +58,9 @@ import { derivePlayerDetailUiState } from '@/lib/player-detail/player-detail-sta
 import {
   IS_VISUAL_TEST_BUILD,
   tryLoadVisualTestFixture,
+  type MonthlyWinRatePoint,
   type PlayerProfileFixture,
+  type TopGameItem,
 } from '@/lib/player-detail/player-detail-visual-test-fixture';
 
 import { GamesTabPanel, type GamesTabPanelLabels } from './GamesTabPanel';
@@ -105,12 +111,62 @@ export interface PlayerDetailViewProps {
 // ─── Schema mapping ─────────────────────────────────────────────────────────
 
 /**
+ * Derives the ranked top-N games list for `PlayerTopGamesCard`.
+ *
+ * Source priority (#1663 Phase 2 evolution — optional during BE rollout):
+ *   1. `stats.mostPlayedGames` if present (BE pre-sorted, has gameId).
+ *   2. Fallback: derive from `stats.gamePlayCounts` (always present).
+ *
+ * `winCount` is joined from `stats.winByGame` (optional) by gameId when both
+ * sides have one, otherwise by gameName. Returns `null` when no join hits —
+ * the card then gracefully hides the win-rate badge (never shows "0%").
+ */
+function deriveTopGames(stats: PlayerStatistics, maxItems = 5): ReadonlyArray<TopGameItem> {
+  // Build a winByGame lookup: prefer gameId, fall back to gameName.
+  const winsByGameId = new Map<string, number>();
+  const winsByGameName = new Map<string, number>();
+  for (const entry of stats.winByGame ?? []) {
+    if (entry.gameId != null) winsByGameId.set(entry.gameId, entry.won);
+    winsByGameName.set(entry.gameName, entry.won);
+  }
+
+  const resolveWins = (gameId: string | null, gameName: string): number | null => {
+    if (gameId != null && winsByGameId.has(gameId)) return winsByGameId.get(gameId) ?? null;
+    if (winsByGameName.has(gameName)) return winsByGameName.get(gameName) ?? null;
+    return null;
+  };
+
+  // Priority 1: mostPlayedGames (BE-sorted, structured).
+  if (stats.mostPlayedGames && stats.mostPlayedGames.length > 0) {
+    return stats.mostPlayedGames.slice(0, maxItems).map(g => ({
+      gameId: g.gameId,
+      gameName: g.gameName,
+      playCount: g.plays,
+      winCount: resolveWins(g.gameId, g.gameName),
+    }));
+  }
+
+  // Fallback: derive from gamePlayCounts (Record<gameName, count>).
+  return Object.entries(stats.gamePlayCounts)
+    .map<TopGameItem>(([gameName, playCount]) => ({
+      gameId: null,
+      gameName,
+      playCount,
+      winCount: resolveWins(null, gameName),
+    }))
+    .sort((a, b) => b.playCount - a.playCount)
+    .slice(0, maxItems);
+}
+
+/**
  * Maps usePlayerStatistics data + URL slug → PlayerProfileFixture-like shape.
  *
  * Schema reality (v1 carryover):
  *   - displayName derived from URL slug (decodeURIComponent + replace dashes)
  *   - winRate = totalWins / totalSessions (0 when totalSessions === 0)
  *   - favoriteGameName = max-count entry from gamePlayCounts (null when empty)
+ *   - topGames = top-N derived from mostPlayedGames (or gamePlayCounts fallback)
+ *     joined with winByGame for per-game wins
  *   - achievementCount / leaderboardRank / favoriteAgentName defaulted to
  *     0 / null / null (TBD backend schema extensions)
  */
@@ -129,6 +185,12 @@ function mapStatsToProfile(playerId: string, stats: PlayerStatistics): PlayerPro
 
   const displayName = decodeURIComponent(playerId).replace(/-/g, ' ');
 
+  // #1550 BE bundle: winRateTrend is optional during BE rollout. The mapper
+  // copies the values through; PlayerTrendCard handles points.length < 2 with
+  // a graceful empty state.
+  const trendPoints: ReadonlyArray<MonthlyWinRatePoint> =
+    stats.winRateTrend?.map(p => ({ month: p.month, winRate: p.winRate })) ?? [];
+
   return {
     playerId,
     displayName,
@@ -136,9 +198,14 @@ function mapStatsToProfile(playerId: string, stats: PlayerStatistics): PlayerPro
     totalWins,
     winRate,
     favoriteGameName: favoriteGameName && favoriteGameName.length > 0 ? favoriteGameName : null,
-    favoriteAgentName: null, // TBD: no favorite agent data in current schema
-    achievementCount: 0, // TBD: no achievement data in current schema
-    leaderboardRank: null, // TBD: no leaderboard data in current schema
+    // #1541 BE: favoriteAgentName populates once BE deploys the field; until then `?? null`.
+    favoriteAgentName: stats.favoriteAgentName ?? null,
+    // #1542 FE: achievementCount is overridden by the orchestrator (useAchievements hook).
+    achievementCount: 0,
+    // #1540 BE: leaderboardRank populates once BE deploys the field; until then `?? null`.
+    leaderboardRank: stats.leaderboardRank ?? null,
+    topGames: deriveTopGames(stats),
+    trendPoints,
   };
 }
 
@@ -187,6 +254,8 @@ function ErrorShell({
   return (
     <div
       data-slot="player-detail-error"
+      role="status"
+      aria-live="polite"
       className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-4 text-center sm:p-8"
     >
       <span aria-hidden="true" className="text-4xl">
@@ -220,6 +289,8 @@ function NotFoundShell({
   return (
     <div
       data-slot="player-detail-not-found"
+      role="status"
+      aria-live="polite"
       className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-4 text-center sm:p-8"
     >
       <span aria-hidden="true" className="text-5xl">
@@ -227,13 +298,13 @@ function NotFoundShell({
       </span>
       <h2 className="font-display text-[20px] font-extrabold text-foreground">{title}</h2>
       <p className="max-w-sm text-[14px] text-muted-foreground">{subtitle}</p>
-      <a
+      <Link
         href="/players"
         data-slot="player-detail-not-found-cta"
         className="inline-flex items-center gap-1.5 rounded-md border-none bg-violet-700 px-4 py-2.5 font-display text-[13px] font-extrabold text-white shadow-md transition-shadow hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {cta}
-      </a>
+      </Link>
     </div>
   );
 }
@@ -262,16 +333,22 @@ export function PlayerDetailView({ playerId }: PlayerDetailViewProps): ReactElem
     return tryLoadVisualTestFixture('default');
   }, [stateOverride]);
 
-  // ── Data hook (current user only — schema reality v1 carryover) ──────────
+  // ── Data hooks (current user only — schema reality v1 carryover) ─────────
   const statsQuery = usePlayerStatistics();
+  // #1542: pull achievements list to derive `achievementCount` from the real
+  // unlock count instead of the legacy hardcoded `0`. Graceful degrade: if the
+  // achievements query is still loading or errored, achievementCount stays 0.
+  const achievementsQuery = useAchievements();
 
   // ── Derived profile (fixture takes priority over real data) ─────────────
   const profile = useMemo<PlayerProfileFixture | null>(() => {
     if (fixture != null) return fixture;
     if (playerId == null) return null;
     if (statsQuery.data == null) return null;
-    return mapStatsToProfile(playerId, statsQuery.data);
-  }, [fixture, playerId, statsQuery.data]);
+    const base = mapStatsToProfile(playerId, statsQuery.data);
+    const unlockedCount = achievementsQuery.data?.filter(a => a.isUnlocked).length ?? 0;
+    return { ...base, achievementCount: unlockedCount };
+  }, [fixture, playerId, statsQuery.data, achievementsQuery.data]);
 
   // ── FSM state derivation ─────────────────────────────────────────────────
   const realKind = useMemo(() => {
@@ -328,6 +405,47 @@ export function PlayerDetailView({ playerId }: PlayerDetailViewProps): ReactElem
     [t]
   );
 
+  const topGamesLabels = useMemo<PlayerTopGamesCardLabels>(
+    () => ({
+      title: t('pages.playerDetail.sections.topGames.title'),
+      playsLabel: t('pages.playerDetail.sections.topGames.playsLabel'),
+      playsLabelWithWins: t('pages.playerDetail.sections.topGames.playsLabelWithWins'),
+      winRateLabel: t('pages.playerDetail.sections.topGames.winRateLabel'),
+      rankAriaLabel: t('pages.playerDetail.sections.topGames.rankAriaLabel'),
+      empty: t('pages.playerDetail.sections.topGames.empty'),
+    }),
+    [t]
+  );
+
+  const trendLabels = useMemo<PlayerTrendCardLabels>(
+    () => ({
+      title: t('pages.playerDetail.sections.trend.title'),
+      deltaUp: t('pages.playerDetail.sections.trend.deltaUp'),
+      deltaDown: t('pages.playerDetail.sections.trend.deltaDown'),
+      deltaFlat: t('pages.playerDetail.sections.trend.deltaFlat'),
+      deltaUpAriaLabel: t('pages.playerDetail.sections.trend.deltaUpAriaLabel'),
+      deltaDownAriaLabel: t('pages.playerDetail.sections.trend.deltaDownAriaLabel'),
+      deltaFlatAriaLabel: t('pages.playerDetail.sections.trend.deltaFlatAriaLabel'),
+      empty: t('pages.playerDetail.sections.trend.empty'),
+      trendSummaryAriaLabel: t('pages.playerDetail.sections.trend.trendSummaryAriaLabel'),
+      monthsShort: [
+        t('pages.playerDetail.sections.trend.monthsShort.jan'),
+        t('pages.playerDetail.sections.trend.monthsShort.feb'),
+        t('pages.playerDetail.sections.trend.monthsShort.mar'),
+        t('pages.playerDetail.sections.trend.monthsShort.apr'),
+        t('pages.playerDetail.sections.trend.monthsShort.may'),
+        t('pages.playerDetail.sections.trend.monthsShort.jun'),
+        t('pages.playerDetail.sections.trend.monthsShort.jul'),
+        t('pages.playerDetail.sections.trend.monthsShort.aug'),
+        t('pages.playerDetail.sections.trend.monthsShort.sep'),
+        t('pages.playerDetail.sections.trend.monthsShort.oct'),
+        t('pages.playerDetail.sections.trend.monthsShort.nov'),
+        t('pages.playerDetail.sections.trend.monthsShort.dec'),
+      ],
+    }),
+    [t]
+  );
+
   const achievementLabels = useMemo<AchievementBadgeGridLabels>(
     () => ({
       title: t('pages.playerDetail.sections.achievements.title'),
@@ -366,8 +484,10 @@ export function PlayerDetailView({ playerId }: PlayerDetailViewProps): ReactElem
   }
 
   // ── Default render — profile guaranteed non-null (FSM=default) ───────────
-  // TypeScript: effectiveKind === 'default' → real FSM ensures profile != null
-  // fixture branch also guarantees profile != null
+  // TypeScript: effectiveKind === 'default' → real FSM ensures profile != null.
+  // The fixture branch also guarantees profile != null. The non-null assertion
+  // is intentional and safe: derivePlayerDetailUiState has validated profile.
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- FSM invariant
   const safeProfile = profile!;
   const safePlayerId = playerId ?? safeProfile.playerId;
 
@@ -415,6 +535,8 @@ export function PlayerDetailView({ playerId }: PlayerDetailViewProps): ReactElem
     stats: statsLabels,
     leaderboard: leaderboardLabels,
     favoriteAgent: favoriteAgentLabels,
+    topGames: topGamesLabels,
+    trend: trendLabels,
   };
 
   const sessionsLabels: SessionsTabPanelLabels = {

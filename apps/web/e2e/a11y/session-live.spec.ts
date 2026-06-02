@@ -267,13 +267,29 @@ test.describe('Session live — accessibility @a11y', () => {
   // Reliability note: We click inside the dialog before pressing ESC to ensure
   // keyboard events land on the element with the onKeyDown handler.
 
-  // Skipped 2026-05-30 (PR #1700 release CI #3): even with 15s timeout the
-  // PauseOverlay never detaches after ESC + URL replace under CI load. The
-  // dialog is mounted via Portal/Suspense and the URL→state→unmount round-trip
-  // appears to race the test assertion. Pre-existing on main-staging (not a
-  // release regression). Follow-up: investigate dialog cleanup pattern or
-  // assert on `display:none` / aria-hidden state instead of DOM detachment.
-  test.fixme('PauseOverlay ESC closes dialog — URL drops ?dialog=pause', async ({ page }) => {
+  // Re-enabled 2026-05-31 (issue #1715): test was skipped via `test.fixme()` in
+  // PR #1711 because the strict `state: 'detached'` assertion raced the
+  // React.lazy + Suspense unmount under CI load. The flow is:
+  //   ESC keydown → onClose() → router.replace() → ?dialog=pause removed
+  //     → React re-render → Suspense child unmounts → DOM node removed
+  //
+  // Under CI scheduler pressure step 3→5 can take >15s, even though the URL
+  // mutation (step 2) and the user-visible dismissal (focus restore + dialog
+  // hidden) complete promptly. Investigation in #1715 confirmed the production
+  // semantics are correct — ESC is captured, the handler is called synchronously,
+  // focus is restored on unmount via PauseOverlay's `useEffect` cleanup. The
+  // race is purely test-side timing of strict DOM detach vs. observable a11y
+  // contract.
+  //
+  // Fix strategy: assert on the user-visible a11y contract (URL drops the
+  // dialog param + dialog is no longer visible to AT users) instead of the
+  // stricter "DOM node detached" condition. Playwright's `toBeHidden()` auto-
+  // retries and passes when the element is detached OR visually hidden, which
+  // matches the WCAG 2.1.1 promise: ESC dismisses the dialog from the user's
+  // perspective. Detach itself still happens — we just don't gate the test on
+  // the exact reconciliation tick. Pattern parallels round-2 flake fixes in
+  // PR #1711 (game-night-create numeric parsing over regex match).
+  test('PauseOverlay ESC closes dialog — URL drops ?dialog=pause', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await seedAuth(page);
     await page.goto(`/sessions/${FIXTURE_SESSION_ID}/live?fixture=host&dialog=pause`, {
@@ -290,16 +306,21 @@ test.describe('Session live — accessibility @a11y', () => {
     // Press ESC — triggers onClose() → router.replace removes ?dialog=pause
     await page.keyboard.press('Escape');
 
-    // Dialog must detach from DOM (URL navigation causes React re-render).
-    // Bumped 5s → 15s 2026-05-30 (PR #1700 release CI flake): same headroom
-    // used elsewhere in this spec for dialog mount/unmount under CI load.
-    await page.waitForSelector('[data-slot="pause-overlay"]', {
-      state: 'detached',
-      timeout: 15_000,
-    });
+    // PRIMARY a11y contract: URL must drop ?dialog=pause synchronously.
+    // This proves the ESC handler fired AND router.replace committed — i.e.
+    // the dismiss state is the source of truth and AT users navigating by URL
+    // will see the dialog as closed. `expect.poll` auto-retries with default
+    // 5s timeout (sufficient: router.replace is sub-second under CI).
+    await expect.poll(() => page.url(), { timeout: 5_000 }).not.toContain('dialog=pause');
 
-    // URL must no longer contain ?dialog=pause (URL SSOT verified)
-    expect(page.url()).not.toContain('dialog=pause');
+    // SECONDARY a11y contract: dialog must be invisible to AT users.
+    // `toBeHidden()` passes for any of: detached, display:none, visibility:hidden,
+    // zero size, off-screen, or aria-hidden ancestor. This matches the user-
+    // visible dismissal contract without racing React.lazy + Suspense's
+    // reconciliation tick (which is the root cause of the original flake).
+    // 15s timeout: same headroom used elsewhere in this spec for dialog
+    // lifecycle assertions under CI load.
+    await expect(page.locator('[data-slot="pause-overlay"]')).toBeHidden({ timeout: 15_000 });
   });
 
   // ── EndgameDialog ESC DISABLED — intentional deviation ─────────────────────

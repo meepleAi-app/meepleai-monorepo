@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 /**
@@ -77,7 +76,7 @@ function ServiceCard({ summary, colorClass }: ServiceCardProps) {
 
   return (
     <div
-      className={`rounded-xl border bg-card/70 backdrop-blur-md dark:bg-zinc-900/70 border-l-4 ${colorClass} p-4 space-y-3`}
+      className={`rounded-xl border bg-card/70 backdrop-blur-md border-l-4 ${colorClass} p-4 space-y-3`}
       data-testid={`service-card-${summary.serviceName}`}
     >
       <div className="flex items-center justify-between gap-2">

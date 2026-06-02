@@ -9,6 +9,7 @@
  */
 
 import { render, screen } from '@testing-library/react';
+import { axe } from 'jest-axe';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 // ─── Mock i18n ───────────────────────────────────────────────────────────────
@@ -33,6 +34,14 @@ const mockStatsQuery = vi.fn();
 
 vi.mock('@/hooks/queries/usePlayersFromRecords', () => ({
   usePlayerStatistics: () => mockStatsQuery(),
+}));
+
+// ─── Mock useAchievements (#1542) ─────────────────────────────────────────────
+
+const mockAchievementsQuery = vi.fn();
+
+vi.mock('@/hooks/queries/useAchievements', () => ({
+  useAchievements: () => mockAchievementsQuery(),
 }));
 
 // ─── Mock visual fixture (IS_VISUAL_TEST_BUILD=false for most tests) ──────────
@@ -80,6 +89,13 @@ describe('PlayerDetailView', () => {
       isError: false,
       data: BASE_STATS,
       refetch: vi.fn(),
+    });
+    // #1542: achievements hook defaults to "loaded, empty list" so all existing
+    // tests get achievementCount=0 (same as the pre-#1542 hardcoded default).
+    mockAchievementsQuery.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: [],
     });
   });
 
@@ -302,5 +318,53 @@ describe('PlayerDetailView', () => {
     const { container } = renderView('sara-rossi');
     expect(getBySlot(container, 'sessions-tab-panel')).toBeDefined();
     mockSearchParams.delete('tab');
+  });
+
+  // ── a11y (#1547): FSM transition announcements for AT users ──────────────────
+  // Loading shell already has aria-busy + aria-live="polite". Error and not-found
+  // shells were silent transitions for screen readers; #1547 adds role="status" +
+  // aria-live="polite" so AT users get the same announcement consistency.
+
+  describe('a11y (#1547): FSM transition announcements', () => {
+    it('ErrorShell exposes role="status" + aria-live="polite"', () => {
+      mockStatsQuery.mockReturnValue({
+        isLoading: false,
+        isError: true,
+        data: undefined,
+        refetch: vi.fn(),
+      });
+
+      const { container } = renderView('sara-rossi');
+      const shell = getBySlot(container, 'player-detail-error');
+      expect(shell).toHaveAttribute('role', 'status');
+      expect(shell).toHaveAttribute('aria-live', 'polite');
+    });
+
+    it('NotFoundShell exposes role="status" + aria-live="polite"', () => {
+      const { container } = renderView(null); // null playerId → not-found
+
+      const shell = getBySlot(container, 'player-detail-not-found');
+      expect(shell).toHaveAttribute('role', 'status');
+      expect(shell).toHaveAttribute('aria-live', 'polite');
+    });
+
+    it('ErrorShell passes axe a11y scan', async () => {
+      mockStatsQuery.mockReturnValue({
+        isLoading: false,
+        isError: true,
+        data: undefined,
+        refetch: vi.fn(),
+      });
+
+      const { container } = renderView('sara-rossi');
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('NotFoundShell passes axe a11y scan', async () => {
+      const { container } = renderView(null);
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
   });
 });

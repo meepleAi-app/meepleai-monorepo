@@ -168,6 +168,18 @@ export function GamebookUploadClient(): JSX.Element {
   }
 
   // ── Step 2: photo upload ─────────────────────────────────────────────────
+  // Defensive guard: `step === 'upload'` always implies `gameId` is set
+  // (either from URL `initialGameId` or via `handleGameSelect`). This early
+  // return both narrows the type for `<PhotoUploader>` and protects against
+  // any future regression that would invalidate the invariant.
+  if (gameId == null) {
+    return (
+      <div className="space-y-6" data-testid="gamebook-wizard-pick">
+        <GamePicker onSelect={handleGameSelect} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6" data-testid="gamebook-wizard-upload">
       {/* Back + game title */}
@@ -198,7 +210,7 @@ export function GamebookUploadClient(): JSX.Element {
         </p>
       </div>
 
-      <PhotoUploader gameId={gameId!} />
+      <PhotoUploader gameId={gameId} />
     </div>
   );
 }

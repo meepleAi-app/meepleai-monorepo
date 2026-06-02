@@ -1,6 +1,9 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.Middleware.Exceptions;
+using Api.Observability;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
@@ -39,7 +42,21 @@ internal class SetActiveForRagCommandHandler : ICommandHandler<SetActiveForRagCo
         pdf.SetActiveForRag(command.IsActive);
 
         await _pdfRepository.UpdateAsync(pdf, cancellationToken).ConfigureAwait(false);
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(SetActiveForRagCommandHandler),
+                MeepleAiMetrics.PdfConcurrencyCategories.A);
+            _logger.LogWarning(ex,
+                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category A)",
+                command.PdfId, nameof(SetActiveForRagCommandHandler));
+            throw new ConflictException(
+                $"Document {command.PdfId} was modified by another concurrent operation; please retry.");
+        }
 
         var statusMessage = command.IsActive
             ? "Document is now active for RAG search"

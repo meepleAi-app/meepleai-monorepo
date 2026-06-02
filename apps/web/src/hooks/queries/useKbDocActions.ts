@@ -58,17 +58,27 @@ export function useDeleteKbDoc(gameId: string | null): UseMutationResult<void, E
 // ---------------------------------------------------------------------------
 
 /**
- * Trigger a reindex for a specific document (admin).
+ * Trigger a reindex for a specific document (admin). Optionally pass an indexer
+ * version to override the stored one. Issue #1673.
+ *
  * Invalidates the detail view and the full chunks list for this doc.
  *
  * @example
  * const { mutateAsync } = useReindexDoc(docId);
- * await mutateAsync();
+ * await mutateAsync({ indexerVersion: 'v1.0' });
  */
-export function useReindexDoc(docId: string): UseMutationResult<void, Error, void> {
+export function useReindexDoc(
+  docId: string
+): UseMutationResult<void, Error, { indexerVersion?: string } | void> {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => api.pdf.reindexDocument(docId),
+    mutationFn: payload =>
+      api.pdf.reindexDocument(
+        docId,
+        payload && 'indexerVersion' in payload && payload.indexerVersion !== undefined
+          ? { indexerVersion: payload.indexerVersion }
+          : undefined
+      ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: kbDocDetailKeys.byId(docId) });
       qc.invalidateQueries({ queryKey: kbChunksListKeys.all });

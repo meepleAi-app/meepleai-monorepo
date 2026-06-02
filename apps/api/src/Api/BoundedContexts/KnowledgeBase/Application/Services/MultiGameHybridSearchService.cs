@@ -39,6 +39,7 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
         int limit,
         SearchMode mode = SearchMode.Hybrid,
         double minScore = 0.0,
+        IReadOnlyList<Guid>? documentIds = null,
         CancellationToken cancellationToken = default)
     {
         // EC-1: no accessible games → return empty immediately
@@ -46,8 +47,12 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
             return Array.Empty<MultiGameSearchResultItem>();
 
         _logger.LogInformation(
-            "MultiGameHybridSearch: query='{Query}', gameCount={GameCount}, limit={Limit}, mode={Mode}, minScore={MinScore}",
-            query, gameIds.Count, limit, mode, minScore);
+            "MultiGameHybridSearch: query='{Query}', gameCount={GameCount}, limit={Limit}, mode={Mode}, minScore={MinScore}, documentIdsCount={DocCount}",
+            query, gameIds.Count, limit, mode, minScore, documentIds?.Count);
+
+        // Convert IReadOnlyList → List once (interface requires List<Guid>? on the per-game service).
+        // Materialise outside the per-game loop so all parallel calls share the same instance.
+        var documentIdsList = documentIds is null ? null : new List<Guid>(documentIds);
 
         // Step 1: Launch parallel per-game searches.
         // We request 'limit' results per game so each game contributes enough candidates
@@ -56,7 +61,7 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
         var perGameLimit = Math.Min(Math.Max(limit, 1), 50);
 
         var tasks = gameIds
-            .Select(gameId => SearchGameSafeAsync(query, gameId, perGameLimit, mode, cancellationToken))
+            .Select(gameId => SearchGameSafeAsync(query, gameId, perGameLimit, mode, documentIdsList, cancellationToken))
             .ToList();
 
         // Task.WhenAll guarantees parallel execution (all tasks start before any is awaited).
@@ -102,12 +107,15 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
     /// <summary>
     /// Issues a single-game search, catching and logging any exception so that
     /// one failing game does not abort the entire cross-game query (EC-2 resilience).
+    /// The <paramref name="documentIds"/> allowlist (Issue #1686) restricts the per-game
+    /// hit set to a subset of PDF documents; <c>null</c> = no document filter.
     /// </summary>
     private async Task<(Guid GameId, List<HybridSearchResult> Results)> SearchGameSafeAsync(
         string query,
         Guid gameId,
         int limit,
         SearchMode mode,
+        List<Guid>? documentIds,
         CancellationToken cancellationToken)
     {
         try
@@ -117,7 +125,7 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
                 gameId,
                 mode,
                 limit,
-                documentIds: null,
+                documentIds: documentIds,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             return (gameId, results);

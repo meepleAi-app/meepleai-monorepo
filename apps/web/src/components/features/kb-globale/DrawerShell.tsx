@@ -45,6 +45,8 @@ export interface DrawerShellProps {
   onEmptyCta: () => void;
   onCopy?: () => void;
   onRegenerate?: () => void;
+  /** Citation click handler receiving deep-link payload with optional chunkId (#1702) */
+  onCitationClick?: (link: { docId: string; page: number; chunkId?: string }) => void;
 }
 
 export function DrawerShell({
@@ -58,6 +60,7 @@ export function DrawerShell({
   onEmptyCta,
   onCopy,
   onRegenerate,
+  onCitationClick,
 }: DrawerShellProps): JSX.Element {
   return (
     <div
@@ -108,6 +111,7 @@ export function DrawerShell({
           onCopy={onCopy}
           onRegenerate={onRegenerate}
           labels={labels.completed}
+          onCitationClick={onCitationClick}
         />
       )}
       {state.status === 'completed-empty' && (

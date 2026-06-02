@@ -2,33 +2,17 @@
 
 import React, { useState } from 'react';
 
-import { useQuery } from '@tanstack/react-query';
 import { Trophy, Lock, TrendingUp, Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
-import { apiClient } from '@/lib/api/client';
+import { useAchievements, type AchievementDto } from '@/hooks/queries/useAchievements';
 import { cn } from '@/lib/utils';
 
-export interface AchievementDto {
-  id: string;
-  code: string;
-  name: string;
-  description: string;
-  iconUrl: string;
-  points: number;
-  rarity: string;
-  category: string;
-  threshold: number;
-  progress: number | null;
-  isUnlocked: boolean;
-  unlockedAt: string | null;
-}
+// Re-export the type for downstream consumers (e.g. `lib/sessions-summary/fsm.ts`)
+// that imported it from this module before the hook extraction (#1542).
+export type { AchievementDto };
 
 type AchievementFilter = 'all' | 'earned' | 'locked' | 'in-progress';
-
-const achievementKeys = {
-  all: ['achievements'] as const,
-};
 
 function getStatus(a: AchievementDto): 'earned' | 'locked' | 'in-progress' {
   if (a.isUnlocked) return 'earned';
@@ -53,18 +37,7 @@ function getIcon(a: AchievementDto): string {
 export function AchievementsGrid(): React.ReactElement {
   const [filter, setFilter] = useState<AchievementFilter>('all');
 
-  const {
-    data: achievements,
-    isLoading,
-    error,
-  } = useQuery<AchievementDto[]>({
-    queryKey: achievementKeys.all,
-    queryFn: async () => {
-      const res = await apiClient.get<AchievementDto[]>('/api/v1/achievements');
-      return res ?? [];
-    },
-    staleTime: 5 * 60 * 1000,
-  });
+  const { data: achievements, isLoading, error } = useAchievements();
 
   const filtered = (achievements ?? []).filter(a => {
     if (filter === 'all') return true;

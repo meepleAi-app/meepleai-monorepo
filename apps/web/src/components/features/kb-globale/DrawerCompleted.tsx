@@ -25,6 +25,7 @@ export function DrawerCompleted({
   onCopy,
   onRegenerate,
   labels,
+  onCitationClick,
 }: {
   text: string;
   citations: readonly KbCitation[];
@@ -33,6 +34,8 @@ export function DrawerCompleted({
   onCopy?: () => void;
   onRegenerate?: () => void;
   labels: DrawerCompletedLabels;
+  /** Citation click handler receiving deep-link payload with optional chunkId (#1702) */
+  onCitationClick?: (link: { docId: string; page: number; chunkId?: string }) => void;
 }): JSX.Element {
   const defaultAriaLabel = (c: { docId: string; page: number }, n: number): string =>
     `Citation ${n}, document ${c.docId}, page ${c.page}`;
@@ -40,6 +43,7 @@ export function DrawerCompleted({
 
   const parsedNodes = parseCitationMarkers(text, citations, {
     formatAriaLabel: (c, n) => ariaLabelBuilder(c, n),
+    onCitationClick,
   });
 
   // Inline path is active when the parser yielded at least one ReactElement

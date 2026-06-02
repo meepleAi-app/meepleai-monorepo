@@ -14,6 +14,7 @@ using Api.BoundedContexts.Administration.Infrastructure.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.BackgroundTasks;
 using Api.Infrastructure.Http;
+using Api.Infrastructure.EventBroadcasting;
 using Api.Infrastructure.Persistence;
 using Api.Services;
 using Api.Services.Providers.Probe;
@@ -33,6 +34,7 @@ internal static class InfrastructureServiceExtensions
         IConfiguration configuration,
         IWebHostEnvironment environment)
     {
+        services.AddEventBroadcasting(); // F4.1 #1718: SSE event broadcasting (Task 1.6)
         services.AddDatabaseServices(configuration, environment);
         services.AddCachingServices(configuration);
         services.AddHttpClients(configuration);
@@ -163,7 +165,11 @@ internal static class InfrastructureServiceExtensions
 
                 // SP5 Admin Security S1 T3: attach the audit interceptor so every SaveChanges
                 // during an [AuditableAction] command captures entity snapshots into the sink.
-                options.AddInterceptors(sp.GetRequiredService<AuditingSaveChangesInterceptor>());
+                // F4.1 #1718 Task 1.6: also attach the event broadcast interceptor so committed
+                // DomainEventLogEntity rows are fanned out to SSE subscribers.
+                options.AddInterceptors(
+                    sp.GetRequiredService<AuditingSaveChangesInterceptor>(),
+                    sp.GetRequiredService<DomainEventBroadcastInterceptor>());
             });
 
             // Register domain event collector as scoped (per-request lifecycle)

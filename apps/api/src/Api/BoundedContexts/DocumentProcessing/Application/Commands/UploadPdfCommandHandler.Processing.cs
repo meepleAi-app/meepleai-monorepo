@@ -167,8 +167,21 @@ internal partial class UploadPdfCommandHandler
 
         // Mark as processing (optimistic locking)
         _logger.LogInformation("🔄 [PDF-DEBUG-VALIDATE] Updating status from 'pending' to 'processing'");
-        pdfDoc.ProcessingState = "Uploading";
-        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        pdfDoc.ProcessingState = nameof(PdfProcessingState.Uploading);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(UploadPdfCommandHandler),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(ex,
+                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                pdfId, nameof(UploadPdfCommandHandler));
+            return null; // Null signals to caller that preparation failed; pipeline will skip
+        }
         _logger.LogInformation("✅ [PDF-DEBUG-VALIDATE] Status updated, proceeding with processing");
 
         return pdfDoc;
@@ -211,10 +224,23 @@ internal partial class UploadPdfCommandHandler
             {
                 RecordPipelineMetricSafely("extraction_error", 0);
                 await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, extractResult.ErrorMessage, cancellationToken).ConfigureAwait(false);
-                pdfDoc.ProcessingState = "Failed";
+                pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
                 pdfDoc.ProcessingError = extractResult.ErrorMessage;
                 pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                }
+                catch (DbUpdateConcurrencyException ex)
+                {
+                    MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                        nameof(UploadPdfCommandHandler),
+                        MeepleAiMetrics.PdfConcurrencyCategories.B);
+                    _logger.LogWarning(ex,
+                        "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                        pdfId, nameof(UploadPdfCommandHandler));
+                    return (false, null, null);
+                }
                 return (false, null, null);
             }
 
@@ -225,7 +251,20 @@ internal partial class UploadPdfCommandHandler
             pdfDoc.ExtractedText = fullText;
             pdfDoc.PageCount = extractResult.TotalPages;
             pdfDoc.CharacterCount = extractResult.TotalCharacters;
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                    nameof(UploadPdfCommandHandler),
+                    MeepleAiMetrics.PdfConcurrencyCategories.B);
+                _logger.LogWarning(ex,
+                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                    pdfId, nameof(UploadPdfCommandHandler));
+                return (false, null, null);
+            }
 
             RecordPipelineMetricSafely("pages_processed", extractResult.TotalPages);
 
@@ -268,7 +307,19 @@ internal partial class UploadPdfCommandHandler
         pdfDoc.TableCount = structuredResult.TableCount;
         pdfDoc.DiagramCount = structuredResult.DiagramCount;
         pdfDoc.AtomicRuleCount = structuredResult.AtomicRuleCount;
-        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(UploadPdfCommandHandler),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(ex,
+                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                pdfDoc.Id, nameof(UploadPdfCommandHandler));
+        }
     }
 
     /// <summary>
@@ -459,10 +510,22 @@ internal partial class UploadPdfCommandHandler
     {
         await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, errorMessage, cancellationToken).ConfigureAwait(false);
         await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
-        pdfDoc.ProcessingState = "Failed";
+        pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
         pdfDoc.ProcessingError = errorMessage;
         pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(UploadPdfCommandHandler),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(ex,
+                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                pdfId, nameof(UploadPdfCommandHandler));
+        }
     }
 
     /// <summary>
@@ -545,7 +608,19 @@ internal partial class UploadPdfCommandHandler
             vectorDoc.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
         }
 
-        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(UploadPdfCommandHandler),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(ex,
+                "Concurrency conflict on VectorDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                pdfId, nameof(UploadPdfCommandHandler));
+        }
     }
 
     /// <summary>
@@ -604,7 +679,20 @@ internal partial class UploadPdfCommandHandler
             .ConfigureAwait(false);
 
         db.TextChunks.AddRange(textChunkEntities);
-        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(UploadPdfCommandHandler),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(ex,
+                "Concurrency conflict on TextChunks for PDF {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                pdfId, nameof(UploadPdfCommandHandler));
+            return;
+        }
 
         _logger.LogInformation("Saved {ChunkCount} text chunks to PostgreSQL for hybrid search (PDF {PdfId})",
             textChunkEntities.Count, pdfId);
@@ -675,7 +763,20 @@ internal partial class UploadPdfCommandHandler
             }).ToList();
 
             await db.PgVectorEmbeddings.AddRangeAsync(entities, cancellationToken).ConfigureAwait(false);
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                    nameof(UploadPdfCommandHandler),
+                    MeepleAiMetrics.PdfConcurrencyCategories.B);
+                _logger.LogWarning(ex,
+                    "Concurrency conflict on PgVectorEmbeddings for PDF {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                    pdfId, nameof(UploadPdfCommandHandler));
+                return;
+            }
 
             _logger.LogInformation("💾 [PG-VECTOR] Saved batch {Idx}/{Total}: {Count} embeddings for PDF {PdfId}",
                 batchIdx + 1, batchCount, entities.Count, pdfId);
@@ -701,9 +802,22 @@ internal partial class UploadPdfCommandHandler
         var totalPages = pdfDoc.PageCount ?? 0;
         await UpdateProgressAsync(db, pdfId, ProcessingStep.Completed, totalPages, totalPages, startTime, null, cancellationToken).ConfigureAwait(false);
 
-        pdfDoc.ProcessingState = "Ready";
+        pdfDoc.ProcessingState = nameof(PdfProcessingState.Ready);
         pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(UploadPdfCommandHandler),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(ex,
+                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                pdfId, nameof(UploadPdfCommandHandler));
+            return; // CRITICAL: do not throw — background task must see success
+        }
 
         // Publish PdfStateChangedEvent so downstream handlers fire:
         // AutoCreateAgentOnPdfReadyHandler (admin PDFs), PdfNotificationEventHandler, PdfStateChangedMetricsEventHandler.
@@ -749,10 +863,22 @@ internal partial class UploadPdfCommandHandler
                 .ConfigureAwait(false);
             if (pdfDoc != null)
             {
-                pdfDoc.ProcessingState = "Failed";
+                pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
                 pdfDoc.ProcessingError = "Processing cancelled by user";
                 pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                await db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+                try
+                {
+                    await db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+                }
+                catch (DbUpdateConcurrencyException ex)
+                {
+                    MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                        nameof(UploadPdfCommandHandler),
+                        MeepleAiMetrics.PdfConcurrencyCategories.B);
+                    _logger.LogWarning(ex,
+                        "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                        pdfId, nameof(UploadPdfCommandHandler));
+                }
             }
         }
     }
@@ -783,10 +909,22 @@ internal partial class UploadPdfCommandHandler
                 .ConfigureAwait(false);
             if (pdfDoc != null)
             {
-                pdfDoc.ProcessingState = "Failed";
+                pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
                 pdfDoc.ProcessingError = errorMessage;
                 pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                }
+                catch (DbUpdateConcurrencyException concEx)
+                {
+                    MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                        nameof(UploadPdfCommandHandler),
+                        MeepleAiMetrics.PdfConcurrencyCategories.B);
+                    _logger.LogWarning(concEx,
+                        "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                        pdfId, nameof(UploadPdfCommandHandler));
+                }
             }
         }
     }
@@ -839,6 +977,15 @@ internal partial class UploadPdfCommandHandler
         catch (OperationCanceledException)
         {
             throw;
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(UploadPdfCommandHandler),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(ex,
+                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                pdfId, nameof(UploadPdfCommandHandler));
         }
         catch (DbUpdateException ex)
         {

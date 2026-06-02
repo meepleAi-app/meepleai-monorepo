@@ -244,7 +244,11 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             isActiveForRag: entity.IsActiveForRag, // Issue #5446
             versionLabel: entity.VersionLabel, // Issue #5447
             languageConfidence: entity.LanguageConfidence, // E5-1
-            languageOverride: entity.LanguageOverride // E5-1
+            languageOverride: entity.LanguageOverride, // E5-1
+            title: entity.Title, // Issue #1687
+            tags: entity.Tags, // Issue #1687
+            updatedAt: entity.UpdatedAt, // Issue #1687
+            updatedBy: entity.UpdatedBy // Issue #1687
         );
     }
 
@@ -288,7 +292,11 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             IsActiveForRag = domain.IsActiveForRag, // Issue #5446
             VersionLabel = domain.VersionLabel, // Issue #5447
             LanguageConfidence = domain.LanguageConfidence, // E5-1
-            LanguageOverride = domain.LanguageOverride // E5-1
+            LanguageOverride = domain.LanguageOverride, // E5-1
+            Title = domain.Title, // Issue #1687
+            Tags = domain.Tags.ToList(), // Issue #1687
+            UpdatedAt = domain.UpdatedAt, // Issue #1687
+            UpdatedBy = domain.UpdatedBy // Issue #1687
         };
     }
 }

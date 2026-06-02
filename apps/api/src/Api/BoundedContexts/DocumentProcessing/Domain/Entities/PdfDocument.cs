@@ -77,6 +77,18 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     // Issue #5447: User-editable version label (e.g., "2nd Edition", "v1.3 Errata")
     public string? VersionLabel { get; private set; }
 
+    // Issue #1687: User-editable display title (distinct from immutable FileName).
+    // Null = fall back to FileName for FE display.
+    public string? Title { get; private set; }
+
+    // Issue #1687: User-curated tags. Read-only collection; mutated only via SetTags.
+    private readonly List<string> _tags = new();
+    public IReadOnlyList<string> Tags => _tags.AsReadOnly();
+
+    // Issue #1687: Audit columns recording the last user-driven metadata edit (D-3 last-write-wins).
+    public DateTime? UpdatedAt { get; private set; }
+    public Guid? UpdatedBy { get; private set; }
+
     // Issue #4219: Per-state timing tracking for metrics and ETA
     public DateTime? UploadingStartedAt { get; private set; }
     public DateTime? ExtractingStartedAt { get; private set; }
@@ -187,7 +199,11 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         bool isActiveForRag = true,
         string? versionLabel = null,
         double? languageConfidence = null,
-        string? languageOverride = null)
+        string? languageOverride = null,
+        string? title = null,
+        IReadOnlyList<string>? tags = null,
+        DateTime? updatedAt = null,
+        Guid? updatedBy = null)
     {
         var document = new PdfDocument
         {
@@ -248,8 +264,18 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
 
             // E5-1: Language confidence and override
             LanguageConfidence = languageConfidence,
-            LanguageOverride = languageOverride
+            LanguageOverride = languageOverride,
+
+            // Issue #1687: editable metadata + audit columns
+            Title = title,
+            UpdatedAt = updatedAt,
+            UpdatedBy = updatedBy
         };
+
+        if (tags is { Count: > 0 })
+        {
+            document._tags.AddRange(tags);
+        }
 
         // Issue #4219: Calculate ETA after reconstitution
         document.UpdateETA();
@@ -602,6 +628,137 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             UnlinkBaseDocument();
 
         SetVersionLabel(versionLabel);
+    }
+
+    // ── Issue #1687: editable metadata mutators (KbEditorDesktop PATCH endpoint) ──
+
+    /// <summary>
+    /// Sets the user-editable display title. Null, empty, or whitespace input clears the title.
+    /// Issue #1687 D-5: distinct from immutable FileName.
+    /// </summary>
+    /// <exception cref="ArgumentException">Thrown when the editor id is empty, or the trimmed title exceeds 200 characters.</exception>
+    public void SetTitle(string? title, Guid editorId)
+    {
+        EnsureValidEditorId(editorId);
+
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            Title = null;
+        }
+        else
+        {
+            var trimmed = title.Trim();
+            if (trimmed.Length > 200)
+                throw new ArgumentException("Title cannot exceed 200 characters", nameof(title));
+
+            Title = trimmed;
+        }
+
+        StampAudit(editorId);
+    }
+
+    /// <summary>
+    /// Sets the user-curated tags. Normalizes (trim + lowercase + filter-empty + dedup + sort)
+    /// before storage so equality semantics are deterministic.
+    /// Issue #1687 D-8: max 20 tags / 50 chars each.
+    /// </summary>
+    /// <exception cref="ArgumentException">Thrown when the editor id is empty, more than 20 tags are supplied, or any tag exceeds 50 chars after trim.</exception>
+    public void SetTags(IEnumerable<string> tags, Guid editorId)
+    {
+        ArgumentNullException.ThrowIfNull(tags);
+        EnsureValidEditorId(editorId);
+
+        var raw = tags.ToList();
+        if (raw.Count > 20)
+            throw new ArgumentException("Tags cannot contain more than 20 items", nameof(tags));
+
+        var normalized = new List<string>(raw.Count);
+        foreach (var tag in raw)
+        {
+            if (string.IsNullOrWhiteSpace(tag))
+                continue;
+
+            var trimmed = tag.Trim();
+            if (trimmed.Length > 50)
+                throw new ArgumentException("Each tag cannot exceed 50 characters", nameof(tags));
+
+            normalized.Add(trimmed.ToLowerInvariant());
+        }
+
+        var sorted = normalized
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(t => t, StringComparer.Ordinal)
+            .ToList();
+
+        _tags.Clear();
+        _tags.AddRange(sorted);
+
+        StampAudit(editorId);
+    }
+
+    /// <summary>
+    /// Sets the document category without clobbering the base-document linkage or version label
+    /// (in contrast to <see cref="Reclassify"/> which is admin-grade and mutates all three).
+    /// Issue #1687 D-6 / Task 4 alt: SRP-narrow mutator for KbEditorDesktop.
+    /// </summary>
+    /// <exception cref="ArgumentException">Thrown when the editor id is empty.</exception>
+    public void SetCategory(DocumentCategory category, Guid editorId)
+    {
+        EnsureValidEditorId(editorId);
+
+        DocumentCategory = category;
+        StampAudit(editorId);
+    }
+
+    /// <summary>
+    /// Editor-driven language override. Reuses the existing detection-pipeline path
+    /// (<see cref="OverrideLanguage"/>) and additionally records the audit columns.
+    /// Issue #1687 D-7: validator gates the whitelist before this call.
+    /// </summary>
+    /// <exception cref="ArgumentException">Thrown when the editor id is empty.</exception>
+    public void OverrideLanguageByEditor(string? languageCode, Guid editorId)
+    {
+        EnsureValidEditorId(editorId);
+
+        OverrideLanguage(languageCode);
+        StampAudit(editorId);
+    }
+
+    private void StampAudit(Guid editorId)
+    {
+        UpdatedAt = TimeProvider.System.GetUtcNow().UtcDateTime;
+        UpdatedBy = editorId;
+    }
+
+    private static void EnsureValidEditorId(Guid editorId)
+    {
+        if (editorId == Guid.Empty)
+            throw new ArgumentException("Editor id cannot be empty", nameof(editorId));
+    }
+
+    /// <summary>
+    /// Raises a <see cref="PdfMetadataChangedEvent"/> with the supplied change diff. Intended for the
+    /// <c>UpdateKbDocMetadataCommandHandler</c> only — it knows the cross-field diff (old/new tuples)
+    /// while individual aggregate mutators only see their own field.
+    /// Issue #1687 D-9 / Task 6.
+    /// </summary>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="changes"/> is empty.</exception>
+    public void RaiseMetadataChangedEvent(IReadOnlyList<MetadataChange> changes, Guid editorId, string editorRole)
+    {
+        ArgumentNullException.ThrowIfNull(changes);
+        if (changes.Count == 0)
+            throw new ArgumentException("At least one change must be present to emit the metadata-changed event", nameof(changes));
+
+        EnsureValidEditorId(editorId);
+        if (string.IsNullOrWhiteSpace(editorRole))
+            throw new ArgumentException("Editor role must be non-empty", nameof(editorRole));
+
+        AddDomainEvent(new PdfMetadataChangedEvent(
+            AggregateId: Id,
+            UserId: editorId,
+            EditorRole: editorRole,
+            Changes: changes,
+            GameId: SharedGameId));
     }
 
     // Issue #2029: Update detected language after processing

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SP4 · B14 editor · #4/5 · Edit typology proposal — /editor/agent-proposals/[id]/edit</title>
+<!-- route: /editor/agent-proposals/[id]/edit — Edit typology proposal con status-variant mode (Draft/Pending/Approved/Rejected) + Revisions diff + Audit trail -->
+<!--
+  @route /editor/agent-proposals/[id]/edit
+  @brief B14 (issue #1489) — Editor user-facing (agent proposals)
+  @screen 4 of 5 — sp4-editor-proposals-edit
+  @tier M
+  @pattern Form full-page (5 sezioni S3) + status-variant header/banner + read-only mode + Revisions diff (6) + Audit trail (7) · max-width 880 centered
+  @states draft-edit · draft-edit-dirty · pending-review · approved-readonly · approved-with-stats · rejected-fresh · rejected-addressing · revisions-expanded · audit-trail-expanded · submitting-update
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+<link rel="stylesheet" href="components.css"/>
+</head>
+<body>
+<div id="root"></div>
+<script src="data.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="sp4-editor-proposals-edit.jsx"></script>
+</body>
+</html>

@@ -1,5 +1,23 @@
 # Mockup Gaps Audit — 2026-05-12
 
+> ⚠️ **This audit is partially stale** — see
+> [`2026-05-22-mockup-gaps.md`](./2026-05-22-mockup-gaps.md) for the latest
+> review. Below is the status update applied 2026-05-31 to reconcile
+> documentation with the actual state.
+>
+> **Status update 2026-05-31** — **3 di 5 gap chiusi** (mockup canonical
+> shippati), **1 gap rimosso** (false-positive), **1 gap residuo aperto**:
+> - ✅ #1 dashboard — `sp4-dashboard.html` shipped
+> - ✅ #2 profile — `sp5-profile-settings.html` (settings tab) + `sp4-player-detail.html` (reuse self-view/achievements)
+> - ✅ #3 play-records — 5 mockup canonical shipped
+> - ✗ #4 `/library/playlists/*` — **rimosso** (route INESISTENTI nel codebase,
+>   confermato audit 2026-05-22 § Diff vs audit 2026-05-12 row 4)
+> - 🔴 #5 `/pricing` — gap reale, nessuna issue B-series dedicata → proposta `B12`
+>
+> Companion: `admin-mockups/MOCKUPS_INDEX.md` e
+> `docs/for-developers/frontend/v2-migration-matrix.md` riconciliati nello
+> stesso PR (Updated 2026-05-31).
+
 **Scope**: user-reachable routes (excluding `admin/(dashboard)/**`) that lack a
 canonical mockup in `admin-mockups/design_files/`.
 
@@ -23,11 +41,11 @@ flagged as needing remediation otherwise.
 
 | # | Gap (route cluster) | Existing issue | Status | Action |
 |---|---|---|---|---|
-| 1 | `/dashboard` | [#491](https://github.com/meepleAi-app/meepleai-monorepo/issues/491) *[Design v1 · B7] Mockup Dashboard desktop + Chat full-screen* | **OPEN** | Already covers gap. **No new issue needed.** Add cross-link to this audit in #491 body. |
-| 2 | `/profile` · `/profile/achievements` | [#492](https://github.com/meepleAi-app/meepleai-monorepo/issues/492) *[Design v1 · B8] Mockup Community (player profile, friends, shared games)* | **OPEN** | Already covers gap. **No new issue needed.** Add cross-link to this audit in #492 body. |
-| 3 | `/play-records/*` (5 routes: index, new, `[id]`, `[id]/edit`, stats) | — | — | **No existing issue.** Propose: append `[Design v1 · B11] Mockup Play Records` to existing B-series via comment on epic / umbrella issue, OR extend #492 scope to include play-records. Owner decides per current Design v1 capacity. |
-| 4 | `/library/playlists/*` (3 routes: index, `[id]`, `shared/[token]`) | — | — | **No existing issue.** Propose: append `[Design v1 · B12] Mockup Library Playlists` OR extend an existing Library-area issue (e.g. SP4 library follow-up). |
-| 5 | `/pricing` | — | — | **No existing issue.** Propose: append `[Design v1 · B13] Mockup Pricing / Plans page` OR fold into the public-pages mockup work (#493 closed — secondary public pages). Likely needs a fresh slot in the B-series given commercial sensitivity. |
+| 1 | `/dashboard` | [#491](https://github.com/meepleAi-app/meepleai-monorepo/issues/491) *[Design v1 · B7] Mockup Dashboard desktop + Chat full-screen* | **CLOSED** ✅ | `sp4-dashboard.html/.jsx` shipped in `design_files/` (forward-design Pre-Stage-3). Reconciled in MOCKUPS_INDEX + v2-migration-matrix 2026-05-31. FE stubs pending. |
+| 2 | `/profile` · `/profile/achievements` | [#492](https://github.com/meepleAi-app/meepleai-monorepo/issues/492) *[Design v1 · B8] Mockup Community (player profile, friends, shared games)* | **CLOSED** ✅ | `/profile?tab=settings` coperto da `sp5-profile-settings.html/.jsx`; self-view + achievements via `sp4-player-detail.html` reuse. Reconciled 2026-05-31. |
+| 3 | `/play-records/*` (5 routes: index, new, `[id]`, `[id]/edit`, stats) | — | **CLOSED** ✅ | 5 mockup canonical + `sp4-play-records-data.js` dev-fixture shipped in `design_files/`. Reconciled 2026-05-31. FE stubs pending. |
+| 4 | `/library/playlists/*` (3 routes: index, `[id]`, `shared/[token]`) | — | **REMOVED** ✗ | **False-positive** confermato audit 2026-05-22: le route non esistono nel codebase. Nessuna issue da aprire. |
+| 5 | `/pricing` | — | **OPEN** | **No existing issue.** Proposta: aprire `[Design v1 · B12] Mockup Pricing / Plans page` (B12 next-free in B-series; B13 anche libero per audit follow-up). |
 
 ## Detailed inventory
 

@@ -80,6 +80,11 @@ internal static class SessionTrackingServiceExtensions
         // Iter 1.B — Tesseract OCR engine (singleton: engine is thread-safe, pages are per-call)
         services.AddSingleton<IOcrService, TesseractOcrService>(); // Iter 1.B
 
+        // #1559: NLP lang detection (NTextCat heuristic, ~5-15ms per text).
+        // Singleton: NTextCatLanguageDetectionService loads ~2.4MB profile once at startup
+        // and is thread-safe (RankedLanguageIdentifier is read-only post-construction).
+        services.AddSingleton<ILanguageDetectionService, NTextCatLanguageDetectionService>();
+
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 
         return services;

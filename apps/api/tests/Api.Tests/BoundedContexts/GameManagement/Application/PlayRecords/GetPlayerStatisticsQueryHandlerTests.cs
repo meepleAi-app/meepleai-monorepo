@@ -1,5 +1,9 @@
 using Api.BoundedContexts.GameManagement.Application.Queries.PlayRecords;
+using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
@@ -236,6 +240,265 @@ public class GetPlayerStatisticsQueryHandlerTests : IDisposable
         // Existing fields also default correctly
         result.TotalSessions.Should().Be(0);
         result.TotalWins.Should().Be(0);
+
+        // #1540 / #1541 / #1550 — new field defaults
+        result.LeaderboardRank.Should().BeNull();
+        result.FavoriteAgentName.Should().BeNull();
+        result.WinRateTrend.Should().BeEmpty();
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // #1540: LeaderboardRank
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    [Trait("Issue", "1540")]
+    public async Task LeaderboardRank_UserWithZeroSessions_ReturnsNull()
+    {
+        // Arrange — no records for this user. The user is unranked.
+        var userId = Guid.NewGuid();
+
+        // Act
+        var result = await _handler.Handle(new GetPlayerStatisticsQuery(userId), TestContext.Current.CancellationToken);
+
+        // Assert
+        result.TotalSessions.Should().Be(0);
+        result.LeaderboardRank.Should().BeNull();
+    }
+
+    [Fact]
+    [Trait("Issue", "1540")]
+    public async Task LeaderboardRank_TwoOtherUsersWithMoreWins_ReturnsThirdPlace()
+    {
+        // Arrange — caller has 1 win; two other users have 3 and 2 wins respectively.
+        // Both have STRICTLY more wins than caller → rank = 2 + 1 = 3.
+        var caller = Guid.NewGuid();
+        var rival1 = Guid.NewGuid();
+        var rival2 = Guid.NewGuid();
+
+        // Caller: 1 win, 1 loss
+        var c1 = MakePlayRecord(Guid.NewGuid(), caller, Guid.NewGuid(), "Game A");
+        c1.Players = [MakePlayer(Guid.NewGuid(), c1.Id, ("wins", 1))];
+        var c2 = MakePlayRecord(Guid.NewGuid(), caller, Guid.NewGuid(), "Game A");
+        c2.Players = [MakePlayer(Guid.NewGuid(), c2.Id, ("wins", 0))];
+
+        // Rival 1: 3 wins
+        for (var i = 0; i < 3; i++)
+        {
+            var r = MakePlayRecord(Guid.NewGuid(), rival1, Guid.NewGuid(), "Game A");
+            r.Players = [MakePlayer(Guid.NewGuid(), r.Id, ("wins", 1))];
+            _context.PlayRecords.Add(r);
+        }
+
+        // Rival 2: 2 wins
+        for (var i = 0; i < 2; i++)
+        {
+            var r = MakePlayRecord(Guid.NewGuid(), rival2, Guid.NewGuid(), "Game A");
+            r.Players = [MakePlayer(Guid.NewGuid(), r.Id, ("wins", 1))];
+            _context.PlayRecords.Add(r);
+        }
+
+        _context.PlayRecords.AddRange(c1, c2);
+        await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        // Act
+        var result = await _handler.Handle(new GetPlayerStatisticsQuery(caller), TestContext.Current.CancellationToken);
+
+        // Assert
+        result.TotalWins.Should().Be(1);
+        result.LeaderboardRank.Should().Be(3); // 2 users ahead → rank 3
+    }
+
+    [Fact]
+    [Trait("Issue", "1540")]
+    public async Task LeaderboardRank_UserWithMostWins_ReturnsFirstPlace()
+    {
+        // Arrange — caller has 5 wins; one rival has 2. Caller is the leader.
+        var caller = Guid.NewGuid();
+        var rival = Guid.NewGuid();
+
+        for (var i = 0; i < 5; i++)
+        {
+            var r = MakePlayRecord(Guid.NewGuid(), caller, Guid.NewGuid(), "Game A");
+            r.Players = [MakePlayer(Guid.NewGuid(), r.Id, ("wins", 1))];
+            _context.PlayRecords.Add(r);
+        }
+
+        for (var i = 0; i < 2; i++)
+        {
+            var r = MakePlayRecord(Guid.NewGuid(), rival, Guid.NewGuid(), "Game A");
+            r.Players = [MakePlayer(Guid.NewGuid(), r.Id, ("wins", 1))];
+            _context.PlayRecords.Add(r);
+        }
+
+        await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        // Act
+        var result = await _handler.Handle(new GetPlayerStatisticsQuery(caller), TestContext.Current.CancellationToken);
+
+        // Assert
+        result.TotalWins.Should().Be(5);
+        result.LeaderboardRank.Should().Be(1); // 0 users ahead → rank 1
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // #1541: FavoriteAgentName
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    [Trait("Issue", "1541")]
+    public async Task FavoriteAgentName_UserWithNoChatThreads_ReturnsNull()
+    {
+        // Arrange — caller has play records but no chat threads with agents.
+        var caller = Guid.NewGuid();
+        var r = MakePlayRecord(Guid.NewGuid(), caller, Guid.NewGuid(), "Game A");
+        r.Players = [MakePlayer(Guid.NewGuid(), r.Id)];
+        _context.PlayRecords.Add(r);
+        await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        // Act
+        var result = await _handler.Handle(new GetPlayerStatisticsQuery(caller), TestContext.Current.CancellationToken);
+
+        // Assert
+        result.FavoriteAgentName.Should().BeNull();
+    }
+
+    [Fact]
+    [Trait("Issue", "1541")]
+    public async Task FavoriteAgentName_TwoThreadsForAgentAOneForAgentB_ReturnsAgentAName()
+    {
+        // Arrange — caller has 2 threads with Agent A and 1 with Agent B.
+        // Most-used agent (by thread count) = A. Returned name = "Mago di Wingspan".
+        var caller = Guid.NewGuid();
+
+        var agentA = AgentDefinition.Create(
+            "Mago di Wingspan",
+            "Wingspan tutor",
+            AgentType.RagAgent,
+            AgentDefinitionConfig.Create("gpt-4", 2048, 0.7f));
+
+        var agentB = AgentDefinition.Create(
+            "Mago di Catan",
+            "Catan tutor",
+            AgentType.RagAgent,
+            AgentDefinitionConfig.Create("gpt-4", 2048, 0.7f));
+
+        _context.AgentDefinitions.AddRange(agentA, agentB);
+
+        _context.ChatThreads.AddRange(
+            new ChatThreadEntity { UserId = caller, AgentId = agentA.Id, MessagesJson = "[]" },
+            new ChatThreadEntity { UserId = caller, AgentId = agentA.Id, MessagesJson = "[]" },
+            new ChatThreadEntity { UserId = caller, AgentId = agentB.Id, MessagesJson = "[]" });
+        await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        // Act
+        var result = await _handler.Handle(new GetPlayerStatisticsQuery(caller), TestContext.Current.CancellationToken);
+
+        // Assert
+        result.FavoriteAgentName.Should().Be("Mago di Wingspan");
+    }
+
+    [Fact]
+    [Trait("Issue", "1541")]
+    public async Task FavoriteAgentName_ThreadsWithoutAgentId_AreIgnored()
+    {
+        // Arrange — caller has chat threads but all have AgentId == null
+        // (anonymous / no-agent threads). Result must be NULL, not picked from null.
+        var caller = Guid.NewGuid();
+
+        _context.ChatThreads.AddRange(
+            new ChatThreadEntity { UserId = caller, AgentId = null, MessagesJson = "[]" },
+            new ChatThreadEntity { UserId = caller, AgentId = null, MessagesJson = "[]" });
+        await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        // Act
+        var result = await _handler.Handle(new GetPlayerStatisticsQuery(caller), TestContext.Current.CancellationToken);
+
+        // Assert
+        result.FavoriteAgentName.Should().BeNull();
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // #1550: WinRateTrend
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    [Trait("Issue", "1550")]
+    public async Task WinRateTrend_NoRecordsInLast6Months_ReturnsEmpty()
+    {
+        // Arrange — caller has records BUT all are older than 6 months → excluded.
+        var caller = Guid.NewGuid();
+        var oldDate = DateTime.UtcNow.AddMonths(-12); // 1 year ago
+
+        var r = MakePlayRecord(Guid.NewGuid(), caller, Guid.NewGuid(), "Game A", sessionDate: oldDate);
+        r.Players = [MakePlayer(Guid.NewGuid(), r.Id, ("wins", 1))];
+        _context.PlayRecords.Add(r);
+        await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        // Act
+        var result = await _handler.Handle(new GetPlayerStatisticsQuery(caller), TestContext.Current.CancellationToken);
+
+        // Assert
+        result.WinRateTrend.Should().BeEmpty();
+    }
+
+    [Fact]
+    [Trait("Issue", "1550")]
+    public async Task WinRateTrend_TwoMonthsWithPlays_ReturnsMonthlyAggregatesSortedAsc()
+    {
+        // Arrange — caller has 4 records: 2 in current month (1 win), 2 in previous
+        // month (2 wins). Trend should include both buckets, ordered ascending by month.
+        var caller = Guid.NewGuid();
+        var thisMonth = DateTime.UtcNow;
+        var prevMonth = DateTime.UtcNow.AddMonths(-1);
+
+        var c1 = MakePlayRecord(Guid.NewGuid(), caller, Guid.NewGuid(), "Game A", sessionDate: thisMonth);
+        c1.Players = [MakePlayer(Guid.NewGuid(), c1.Id, ("wins", 1))];
+        var c2 = MakePlayRecord(Guid.NewGuid(), caller, Guid.NewGuid(), "Game A", sessionDate: thisMonth);
+        c2.Players = [MakePlayer(Guid.NewGuid(), c2.Id, ("wins", 0))];
+
+        var p1 = MakePlayRecord(Guid.NewGuid(), caller, Guid.NewGuid(), "Game A", sessionDate: prevMonth);
+        p1.Players = [MakePlayer(Guid.NewGuid(), p1.Id, ("wins", 1))];
+        var p2 = MakePlayRecord(Guid.NewGuid(), caller, Guid.NewGuid(), "Game A", sessionDate: prevMonth);
+        p2.Players = [MakePlayer(Guid.NewGuid(), p2.Id, ("wins", 1))];
+
+        _context.PlayRecords.AddRange(c1, c2, p1, p2);
+        await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        // Act
+        var result = await _handler.Handle(new GetPlayerStatisticsQuery(caller), TestContext.Current.CancellationToken);
+
+        // Assert — 2 buckets, ascending order
+        result.WinRateTrend.Should().HaveCount(2);
+
+        var firstBucket = result.WinRateTrend[0]; // prev month
+        firstBucket.Month.Should().Be($"{prevMonth.Year:D4}-{prevMonth.Month:D2}");
+        firstBucket.WinRate.Should().Be(1.0); // 2 wins / 2 plays
+
+        var secondBucket = result.WinRateTrend[1]; // this month
+        secondBucket.Month.Should().Be($"{thisMonth.Year:D4}-{thisMonth.Month:D2}");
+        secondBucket.WinRate.Should().Be(0.5); // 1 win / 2 plays
+    }
+
+    [Fact]
+    [Trait("Issue", "1550")]
+    public async Task WinRateTrend_RecordWithZeroWinsInMonth_ReturnsZeroWinRate()
+    {
+        // Arrange — single record in current month, no wins. WinRate must be 0
+        // (valid datum: "played but never won"), NOT excluded from trend.
+        var caller = Guid.NewGuid();
+
+        var r = MakePlayRecord(Guid.NewGuid(), caller, Guid.NewGuid(), "Game A", sessionDate: DateTime.UtcNow);
+        r.Players = [MakePlayer(Guid.NewGuid(), r.Id, ("wins", 0))];
+        _context.PlayRecords.Add(r);
+        await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        // Act
+        var result = await _handler.Handle(new GetPlayerStatisticsQuery(caller), TestContext.Current.CancellationToken);
+
+        // Assert
+        result.WinRateTrend.Should().HaveCount(1);
+        result.WinRateTrend[0].WinRate.Should().Be(0.0);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -247,14 +510,15 @@ public class GetPlayerStatisticsQueryHandlerTests : IDisposable
         Guid userId,
         Guid? gameId,
         string gameName = "Test Game",
-        TimeSpan? duration = null) => new()
+        TimeSpan? duration = null,
+        DateTime? sessionDate = null) => new()
     {
         Id = id,
         GameId = gameId,
         GameName = gameName,
         CreatedByUserId = userId,
         Visibility = 0,
-        SessionDate = DateTime.UtcNow.AddDays(-1),
+        SessionDate = sessionDate ?? DateTime.UtcNow.AddDays(-1),
         Duration = duration,
         Status = 2, // Completed
         ScoringConfigJson = """{"Dimensions":["points","wins"],"Units":{"points":"pts","wins":"W"}}""",

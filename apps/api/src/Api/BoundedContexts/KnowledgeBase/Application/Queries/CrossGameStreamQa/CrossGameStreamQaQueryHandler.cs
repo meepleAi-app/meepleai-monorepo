@@ -103,7 +103,11 @@ internal sealed class CrossGameStreamQaQueryHandler : IStreamingQueryHandler<Cro
             new StreamingStateUpdate("Ricerca nella tua libreria..."));
 
         var snippets = retrievalResults!
-            .Select(r => new Snippet(r.Content, r.PdfDocumentId, r.PageNumber ?? 0, 0, r.HybridScore))
+            .Select(r => new Snippet(r.Content, r.PdfDocumentId, r.PageNumber ?? 0, 0, r.HybridScore)
+            {
+                chunkId = r.ChunkId,
+                chunkPosition = r.ChunkIndex,
+            })
             .ToList();
 
         yield return CreateEvent(StreamingEventType.Citations, new StreamingCitations(snippets));

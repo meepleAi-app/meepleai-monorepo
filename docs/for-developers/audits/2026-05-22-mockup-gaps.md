@@ -102,21 +102,17 @@ sub-pages · nodi architetturali N4/N6/N7.
 
 ## P1 — Gap nuovi bloccanti sprint corrente
 
-### Gap N1 — `/editor/agent-proposals/*`
+### Gap N1 — `/editor/agent-proposals/*` ✅ CLOSED 2026-06-02 (PR pending, #1489)
 
-- **Route impattate** (5):
-  - `/editor` — index editor user-facing
-  - `/editor/agent-proposals` — index proposals
-  - `/editor/agent-proposals/create` — create flow
-  - `/editor/agent-proposals/[id]/edit` — edit detail
-  - `/editor/agent-proposals/[id]/test` — playground test
-- **Impatto**: feature attiva (Epic AI Agent System) senza UX spec → impl
-  scollegato dal design system.
-- **Existing**: nessuna issue dedicata. Search "mockup editor / agent-proposals"
-  → 0 hit.
-- **Tier suggerito**: M (proposal index = S, create/edit = M, test = M con stream).
-- **Recommendation**: aprire `[Design v1 · B14] Mockup Editor user-facing
-  (agent proposals)`.
+- **Route impattate** (5) — TUTTE coperte:
+  - `/editor` → `sp4-editor-index.html` + `.jsx` (S1, RuleSpec atom editor split-view + PDF preview, 11 stati)
+  - `/editor/agent-proposals` → `sp4-editor-proposals-index.html` + `.jsx` (S2, typology list, 5 status badge, 9 stati)
+  - `/editor/agent-proposals/create` → `sp4-editor-proposals-create.html` + `.jsx` (S3, form 5-section, 8 stati)
+  - `/editor/agent-proposals/[id]/edit` → `sp4-editor-proposals-edit.html` + `.jsx` (S4, status-variant + Revisions diff + Audit trail, 10 stati)
+  - `/editor/agent-proposals/[id]/test` → `sp4-editor-proposals-test.html` + `.jsx` (S5, playground FSM streaming + Trace + Compare, 12 stati)
+- **Issue tracker**: [#1489 Design v1 · B14] Mockup Editor user-facing — opened 2026-05-22, mockup shipped 2026-06-02 via Claude Design web canvas.
+- **Closing PR**: `feature/issue-1489-mockup-editor-user-facing` → `main-dev`.
+- **Updates correlati**: `00-hub.html` (5 nuove card SP4), `v2-migration-matrix.md` (5 row /editor/** flipped a `done`).
 
 ### Gap N2 — `/play-records/*`
 
@@ -185,21 +181,33 @@ sub-pages · nodi architetturali N4/N6/N7.
   con 3 screen sub-route OR ridurre fisicamente le route (Next.js routes →
   query params).
 
-### Gap N7 — `/sessions/[id]/*` e `/sessions/live/[sessionId]/*` sub-routes
+### Gap N7 — `/sessions/[id]/*` e `/sessions/live/[sessionId]/*` sub-routes — ✅ **CLOSED 2026-05-31**
 
-- **Route impattate** (8):
-  - `/sessions/[id]/scoreboard` — vista standalone scoreboard
-  - `/sessions/[id]/notes` — post-session notes editor
-  - `/sessions/[id]/join` — join flow (sp3-join reuse?)
-  - `/sessions/[id]/players` — players list management
-  - `/sessions/live/[sessionId]/scores` — live scores entry
-  - `/sessions/live/[sessionId]/photos` — photo gallery in-session
-  - `/sessions/live/[sessionId]/agent` — agent panel in-session
-  - `/sessions/live/[sessionId]/players` — players management live
-- **Mockup attuale**: `sp4-session-live.html` (live aggregate) +
-  `sp4-session-summary.html` (post-game). Le sub-route specifiche non distinte.
-- **Recommendation**: aprire `[Design v1 · B17] Mockup Sessions sub-pages`
-  (8 screen) OR consolidare sub-route in tabs interne dei mockup esistenti.
+> **Status update 2026-05-31**: gap **CLOSED** via Option B+ hybrid
+> consolidation (consolidation in tabs interne) — vedi ADR
+> `claudedocs/2026-05-31-sessions-consolidation-adr.md`. Mockup canonical
+> estesi: `sp4-session-live.{html,jsx}` (+ `sp4-session-live-{parts,tabs}.jsx`
+> + `sp4-parts-common.jsx`), `sp4-session-summary.{html,jsx}` (+
+> `sp4-session-summary-{parts,sections,tabs}.jsx`). 7 sub-route consolidate
+> via `?tab=` deep-link. `/sessions/[id]/join` → reuse `sp3-join.html` (no
+> design). `/sessions/[id]/play` (8a sub-route) **non in scope ADR** —
+> gap residuo minore, valutare consolidation o standalone separatamente.
+> Issue #1492 commentata, implementation downstream è separate issue.
+
+- **Route impattate** (8 originali + 1 residuo `/sessions/[id]/play`):
+  - ✅ `/sessions/[id]/scoreboard` → `sp4-session-summary?tab=scoreboard`
+  - ✅ `/sessions/[id]/notes` → `sp4-session-summary?tab=notes`
+  - ✅ `/sessions/[id]/join` → reuse `sp3-join.html` (invariato)
+  - ✅ `/sessions/[id]/players` → `sp4-session-summary?tab=players` (post-game) o `sp4-session-live?tab=players` (live, context-dependent)
+  - ✅ `/sessions/live/[sessionId]/scores` → `sp4-session-live?tab=scores`
+  - ✅ `/sessions/live/[sessionId]/photos` → `sp4-session-live?tab=photos`
+  - ✅ `/sessions/live/[sessionId]/agent` → `sp4-session-live?tab=agent`
+  - ✅ `/sessions/live/[sessionId]/players` → `sp4-session-live?tab=players`
+  - ⚠️ `/sessions/[id]/play` — gap residuo, fuori scope ADR 2026-05-31
+- **Mockup canonical**: tutti i 10 file (6 modificati + 4 nuovi) shipped in
+  `admin-mockups/design_files/`. Sync companion: `MOCKUPS_INDEX.md`
+  (+4 component-mock, total 83→87) e `v2-migration-matrix.md`
+  (Route Index aggiornato con tab mapping).
 
 ## P3 — Coverage stati (cross-cutting, Adzic)
 
@@ -238,7 +246,7 @@ reali** la coverage di stati canonici è disomogenea:
 4. **Aprire B14** `Mockup Editor user-facing (agent proposals)`
 5. **Aprire B15** `Mockup Toolkit sub-pages`
 6. **Aprire B16** `Mockup Library Wishlist standalone` (estensione)
-7. **Aprire B17** `Mockup Sessions sub-pages` (estensione)
+7. ✅ **Aprire B17** `Mockup Sessions sub-pages` — issue #1492 aperta; mockup consegnati 2026-05-31 via consolidation ADR (vedi gap N7 sopra)
 8. ✅ **Aprire B18** `Mockup State Matrix cross-route` → consegnato via `state-matrix.html` (Phase 1, 2026-05-23)
 
 ### Decisioni architetturali (non-mockup)

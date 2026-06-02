@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
@@ -26,6 +27,32 @@ namespace Api.Routing;
 internal static class AiEndpoints
 {
     private static readonly string[] ParagraphSeparators = { "\n\n", "\n" };
+
+    // #1728: Map RAG pipeline snippets to the drill payload chunks shape so
+    // QueryDrillPanel can render the retrieved-chunks list. Snippets without
+    // a `chunkId` (per-game endpoints) fall back to a composite "source#page.line"
+    // identifier — the FE only needs uniqueness within the panel.
+    private static IReadOnlyList<RetrievedChunkDto>? MapSnippetsToChunks(IReadOnlyList<Snippet>? snippets)
+    {
+        if (snippets is null || snippets.Count == 0) return null;
+        var chunks = new List<RetrievedChunkDto>(snippets.Count);
+        foreach (var s in snippets)
+        {
+            chunks.Add(new RetrievedChunkDto
+            {
+                Id = !string.IsNullOrWhiteSpace(s.chunkId)
+                    ? s.chunkId!
+                    : $"{s.source}#{s.page}.{s.line}",
+                Score = s.score,
+                Text = s.text,
+                Page = s.page,
+                ChunkIndex = s.chunkPosition ?? s.line,
+                PdfName = s.source,
+                Used = true,
+            });
+        }
+        return chunks;
+    }
 
     /// <summary>
     /// SSE events must use camelCase to match frontend qaStream parser expectations.
@@ -318,7 +345,10 @@ internal static class AiEndpoints
             ErrorMessage: streamContext.StreamErrorMessage,
             IpAddress: context.Connection.RemoteIpAddress?.ToString(),
             UserAgent: context.Request.Headers.UserAgent.ToString(),
-            CompletionTokens: streamContext.TotalTokens
+            CompletionTokens: streamContext.TotalTokens,
+            // #1728: drill payload (chunks from retrieved snippets; breakdown
+            // pending pipeline instrumentation)
+            Chunks: MapSnippetsToChunks(streamContext.Snippets)
         );
         await mediator.Send(logCommand, CancellationToken.None).ConfigureAwait(false);
     }
@@ -499,7 +529,9 @@ internal static class AiEndpoints
             PromptTokens: resp.promptTokens,
             CompletionTokens: resp.completionTokens,
             Model: null,
-            FinishReason: null
+            FinishReason: null,
+            // #1728: drill payload (citations as chunks)
+            Chunks: MapSnippetsToChunks(snippets)
         );
         await mediator.Send(logCommand, ct).ConfigureAwait(false);
 
@@ -874,7 +906,9 @@ internal static class AiEndpoints
             CompletionTokens: resp.completionTokens,
             Model: model,
             FinishReason: finishReason,
-            QualityScores: qualityScores
+            QualityScores: qualityScores,
+            // #1728: drill payload (snippets as chunks)
+            Chunks: MapSnippetsToChunks(resp.snippets)
         );
         await mediator.Send(logCommand, ct).ConfigureAwait(false);
     }

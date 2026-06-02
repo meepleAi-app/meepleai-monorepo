@@ -6,6 +6,7 @@ using Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.Extensions;
 using Api.Middleware.Exceptions;
+using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -27,6 +28,7 @@ internal static class GamebookPhotoEndpoints
         MapUploadPhotoEndpoint(group);
         MapSegmentPhotoEndpoint(group);
         MapTranslateStreamEndpoint(group);
+        MapTextTranslateStreamEndpoint(group);
         MapGetHistoryEndpoint(group);
         MapGetGlossaryEndpoint(group);
         MapBootstrapGlossaryEndpoint(group);
@@ -137,6 +139,7 @@ internal static class GamebookPhotoEndpoints
             [FromQuery] Guid photoId,
             [FromQuery] int paragraphNumber,
             [FromQuery] Guid gameBookId,
+            [FromQuery] string? sourceLangOverride,
             IMediator mediator,
             ICampaignOwnershipGuard ownershipGuard,
             HttpContext context,
@@ -146,6 +149,20 @@ internal static class GamebookPhotoEndpoints
             var (authenticated, session, error) = context.TryGetAuthenticatedUser();
             if (!authenticated) return error!;
             if (!TryGetUserId(context, session, out var userId)) return Results.Unauthorized();
+
+            // #1559 DEC-12: validate sourceLangOverride BEFORE the ownership check and BEFORE
+            // SSE headers are flushed, so a 400 can be returned as a proper HTTP error.
+            // Allowlist: EN, FR, DE, ES, IT (covers the 5 languages NTextCat is trained for).
+            if (sourceLangOverride is not null)
+            {
+                var normalized = sourceLangOverride.Trim().ToUpperInvariant();
+                if (normalized.Length == 0 ||
+                    (normalized is not "EN" and not "FR" and not "DE" and not "ES" and not "IT"))
+                {
+                    return Results.BadRequest(new { error = "sourceLangOverride must be one of EN, FR, DE, ES, IT" });
+                }
+                sourceLangOverride = normalized;
+            }
 
             // Issue #1415: pre-flight ownership check BEFORE writing SSE headers so middleware
             // can translate ForbiddenException/NotFoundException into proper HTTP 403/404.
@@ -157,7 +174,8 @@ internal static class GamebookPhotoEndpoints
             context.Response.Headers["Connection"] = "keep-alive";
 
             // C2 (2026-05-19): gameBookId scopes the per-book progress update.
-            var query = new TranslateGamebookSegmentQuery(campaignId, photoId, paragraphNumber, userId, gameBookId);
+            // DEC-12 (#1559): sourceLangOverride is nullable; null = use detected lang from cache.
+            var query = new TranslateGamebookSegmentQuery(campaignId, photoId, paragraphNumber, userId, gameBookId, sourceLangOverride);
 
             try
             {
@@ -214,13 +232,124 @@ internal static class GamebookPhotoEndpoints
         })
         .RequireAuthenticatedUser()
         .Produces(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest)
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status403Forbidden)
         .Produces(StatusCodes.Status404NotFound)
         .Produces(StatusCodes.Status504GatewayTimeout)
         .WithTags("Gamebook")
         .WithSummary("Stream paragraph translation as SSE")
-        .WithDescription("Server-Sent Events stream of TranslateChunk events. Must be GET for EventSource compatibility. Pass photoId and paragraphNumber as query params. Final chunk has IsComplete=true with ParagraphId. Non-owner callers receive HTTP 403 BEFORE the stream opens (Issue #1415).")
+        .WithDescription("Server-Sent Events stream of TranslateChunk events. Must be GET for EventSource compatibility. Pass photoId and paragraphNumber as query params. Optional sourceLangOverride (EN/FR/DE/ES/IT) overrides auto-detected source language. Final chunk has IsComplete=true with ParagraphId. Non-owner callers receive HTTP 403 BEFORE the stream opens (Issue #1415).")
+        .WithOpenApi();
+    }
+
+    /// <summary>
+    /// SSE endpoint for streaming manual text translation (#1774).
+    /// Accepts text directly (no photo, no OCR) via POST body. Validates the request BEFORE
+    /// writing SSE headers so that 400/401/403/404 can be returned as proper HTTP errors.
+    /// Exception priority chain identical to <see cref="MapTranslateStreamEndpoint"/>.
+    /// DEC-BE-11: no TranslatedParagraph persistence. DEC-BE-12: no SessionBookProgress update.
+    /// </summary>
+    private static void MapTextTranslateStreamEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/gamebook/campaigns/{campaignId:guid}/text/translate", async (
+            Guid campaignId,
+            [FromBody] TranslateGamebookTextRequest request,
+            IValidator<TranslateGamebookTextRequest> validator,
+            IMediator mediator,
+            ICampaignOwnershipGuard ownershipGuard,
+            HttpContext context,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+            if (!TryGetUserId(context, session, out var userId)) return Results.Unauthorized();
+
+            // Validate BEFORE SSE headers — allows returning 400 as proper HTTP error.
+            var validationResult = await validator.ValidateAsync(request, ct).ConfigureAwait(false);
+            if (!validationResult.IsValid)
+            {
+                return Results.ValidationProblem(
+                    validationResult.ToDictionary(),
+                    statusCode: StatusCodes.Status400BadRequest);
+            }
+
+            // Pre-flight ownership check BEFORE SSE headers — allows 403/404 via middleware.
+            await ownershipGuard.AssertOwnedByAsync(campaignId, userId, ct).ConfigureAwait(false);
+
+            context.Response.Headers["Content-Type"] = "text/event-stream";
+            context.Response.Headers["Cache-Control"] = "no-cache";
+            context.Response.Headers["Connection"] = "keep-alive";
+
+            var query = new TranslateGamebookTextQuery(
+                campaignId,
+                request.Text,
+                request.SourceLang,
+                request.TargetLang,
+                request.GameBookId,
+                userId);
+
+            try
+            {
+                await foreach (var chunk in mediator.CreateStream(query, ct).ConfigureAwait(false))
+                {
+                    var json = System.Text.Json.JsonSerializer.Serialize(chunk, SseJsonOptions);
+                    await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
+                    await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException ex)
+            {
+                logger.LogInformation(ex,
+                    "Gamebook text translate stream cancelled for campaign {CampaignId}",
+                    campaignId);
+            }
+            catch (ForbiddenException) when (!context.Response.HasStarted)
+            {
+                throw;
+            }
+            catch (NotFoundException) when (!context.Response.HasStarted)
+            {
+                throw;
+            }
+            catch (ForbiddenException ex)
+            {
+                logger.LogWarning(ex,
+                    "Forbidden mid-stream (text translate) for campaign {CampaignId} (headers already flushed)",
+                    campaignId);
+                await EmitSseErrorAsync(context, code: "FORBIDDEN", message: ex.Message).ConfigureAwait(false);
+            }
+            catch (NotFoundException ex)
+            {
+                logger.LogWarning(ex,
+                    "NotFound mid-stream (text translate) for campaign {CampaignId} (headers already flushed)",
+                    campaignId);
+                await EmitSseErrorAsync(context, code: "NOT_FOUND", message: ex.Message).ConfigureAwait(false);
+            }
+#pragma warning disable CA1031
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error in gamebook text translate stream campaign {CampaignId}", campaignId);
+                await EmitSseErrorAsync(context, code: "INTERNAL_ERROR", message: ex.Message).ConfigureAwait(false);
+            }
+#pragma warning restore CA1031
+
+            return Results.Empty;
+        })
+        .RequireAuthenticatedUser()
+        .Produces(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
+        .Produces(StatusCodes.Status404NotFound)
+        .WithTags("Gamebook")
+        .WithSummary("Stream manual text translation as SSE (#1774)")
+        .WithDescription(
+            "Server-Sent Events stream for manual text translation (FE #1560 textarea mode). " +
+            "Body must contain text (1-2000 chars), sourceLang (EN|FR|DE|ES|IT), targetLang=IT, gameBookId. " +
+            "Final chunk has IsComplete=true, ParagraphId=null (no persistence per DEC-BE-11), " +
+            "DetectedSourceLang echoes input, LangDetectionConfidence=null.")
         .WithOpenApi();
     }
 

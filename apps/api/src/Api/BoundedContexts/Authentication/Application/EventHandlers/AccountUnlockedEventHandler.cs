@@ -7,6 +7,13 @@ namespace Api.BoundedContexts.Authentication.Application.EventHandlers;
 /// <summary>
 /// Event handler for AccountUnlockedEvent.
 /// Issue #3676: Creates audit log when account is unlocked (manual or automatic).
+///
+/// Issue #1534 review note (2026-06-01): same dual-write pattern as
+/// <see cref="AccountLockedEventHandler"/> — this handler's direct <c>LogAsync</c>
+/// captures the unlock-trigger context ("manual" vs "automatic", actor), which is
+/// separate concern from the canonical domain-event audit row written by
+/// <c>DomainEventAuditHandler&lt;AccountUnlockedEvent&gt;</c>. Intentional dual-write,
+/// not a regression of the audit-path collapse refactor.
 /// </summary>
 internal sealed class AccountUnlockedEventHandler : INotificationHandler<AccountUnlockedEvent>
 {

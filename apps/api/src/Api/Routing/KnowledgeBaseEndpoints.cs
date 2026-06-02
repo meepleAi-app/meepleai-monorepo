@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.ContextEngineering.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.ContextEngineering.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 
+using Api.BoundedContexts.KnowledgeBase.Application.Commands.UpdateKbDocMetadata;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.CrossGameStreamQa;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGameDocuments;
@@ -87,12 +88,31 @@ internal static class KnowledgeBaseEndpoints
             .WithName("GlobalKbSearch")
             .RequireSession()
             .WithTags("KnowledgeBase")
-            .WithSummary("Cross-game knowledge base search (RBAC-filtered)")
+            .WithSummary("Cross-game knowledge base search (RBAC-filtered, optional facets)")
             .WithDescription(
                 "Searches the knowledge base across all games accessible to the authenticated user " +
                 "(public games + library-owned games). Admins see all games. " +
                 "Returns ranked results with cursor-based pagination (hasMore + nextCursor). " +
-                "Issue #1661.")
+                "\n\n" +
+                "Optional facets narrow within the RBAC-accessible set (Issue #1686 / canonical D-1..D-2):\n" +
+                "- `DocType` (list, max 10): canonical PdfDocumentEntity.DocumentType allowlist " +
+                "{ base, expansion, errata, homerule } — case-insensitive.\n" +
+                "- `GameId` (single Guid): narrows to that single SharedGame.Id if accessible; " +
+                "non-accessible IDs are silently dropped (200 empty, no info leak).\n" +
+                "- `Language` (single string): ISO 639-1 allowlist { en, it, de, fr, es } — case-insensitive.\n" +
+                "Empty list ≡ null (no filter). Combined facets are AND-ed. " +
+                "Unknown values → 422 with allowlist enumerated in the error message.\n\n" +
+                "Example request body (Issue #1731 / D-15):\n" +
+                "```json\n" +
+                "{\n" +
+                "  \"query\": \"movement rules\",\n" +
+                "  \"limit\": 20,\n" +
+                "  \"docType\": [\"base\", \"expansion\"],\n" +
+                "  \"gameId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n" +
+                "  \"language\": \"it\"\n" +
+                "}\n" +
+                "```\n\n" +
+                "Issues: #1661, #1686, #1731.")
             .Produces<GlobalKbSearchResponseDto>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status422UnprocessableEntity);
@@ -125,7 +145,10 @@ internal static class KnowledgeBaseEndpoints
             Mode: request.Mode ?? SearchMode.Hybrid,
             MinScore: request.MinScore ?? 0.0,
             UserId: userId,
-            Role: userRole);
+            Role: userRole,
+            DocType: request.DocType,
+            GameId: request.GameId,
+            Language: request.Language);
 
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);
@@ -1157,6 +1180,21 @@ internal static class KnowledgeBaseEndpoints
             .Produces<KbDocsListResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status422UnprocessableEntity);
+
+        // Issue #1687: partial-update PATCH for editable KB doc metadata (KbEditorDesktop).
+        group.MapPatch("/kb-docs/{id:guid}", HandleUpdateKbDocMetadata)
+            .WithName("UpdateKbDocMetadata")
+            .RequireSession()
+            .WithTags("KnowledgeBase")
+            .WithSummary("Update editable metadata (title, documentType, language, tags) for one KB document.")
+            .WithDescription(
+                "PATCH /api/v1/kb-docs/{id}. JSON null on any field = no-op (partial update); empty string clears Title; " +
+                "empty array clears Tags. Owner OR Admin/SuperAdmin only. Returns 404 (NOT 403) when the caller cannot " +
+                "see the doc — anti-info-leak per D-2 of the spec panel.")
+            .Produces<UserKbDocDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status422UnprocessableEntity);
     }
 
     private static async Task<IResult> HandleListUserKbDocs(
@@ -1186,6 +1224,44 @@ internal static class KnowledgeBaseEndpoints
             State: state);
 
         var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    /// <summary>
+    /// Issue #1687: handler for <c>PATCH /api/v1/kb-docs/{id}</c>. Editable metadata
+    /// (title / documentType / language / tags) — partial update via the
+    /// <see cref="UpdateKbDocMetadataCommand"/> + handler pipeline.
+    ///
+    /// Authorization is enforced inside the handler so 404 anti-info-leak (D-2)
+    /// is single-sourced. The endpoint only resolves the session principal and
+    /// the actor role string.
+    /// </summary>
+    private static async Task<IResult> HandleUpdateKbDocMetadata(
+        Guid id,
+        UpdateKbDocMetadataRequest req,
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var session = context.Items[nameof(SessionStatusDto)] as SessionStatusDto;
+        if (session?.Principal?.Subject?.Id is not Guid userId
+            || userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
+        var role = session.Principal!.EffectiveActor.Role ?? "User";
+
+        var command = new UpdateKbDocMetadataCommand(
+            DocId: id,
+            EditorUserId: userId,
+            EditorRole: role,
+            Title: req.Title,
+            DocumentType: req.DocumentType,
+            Language: req.Language,
+            Tags: req.Tags);
+
+        var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
 
@@ -1376,6 +1452,24 @@ internal record UpdateChatThreadTitleRequest(
 );
 
 /// <summary>
+/// Issue #1687: Request model for PATCH /api/v1/kb-docs/{id}. Each field is
+/// optional; JSON null means "no-op" (partial update / D-4). Empty string
+/// clears <see cref="Title"/>; empty array clears <see cref="Tags"/>.
+/// </summary>
+/// <param name="Title">User-editable display title; max 200 chars after trim.</param>
+/// <param name="DocumentType">Case-insensitive <c>DocumentCategory</c> enum value
+/// (Rulebook|Expansion|Errata|QuickStart|Reference|PlayerAid|Other).</param>
+/// <param name="Language">Case-insensitive ISO 639-1 code from the LanguageCode whitelist
+/// (en, it, de, fr, es, pt, pl, nl, ja, zh).</param>
+/// <param name="Tags">Replacement tag set; deduped+lowercased+sorted on persist; max 20 / 50 chars.</param>
+internal record UpdateKbDocMetadataRequest(
+    string? Title,
+    string? DocumentType,
+    string? Language,
+    IReadOnlyList<string>? Tags
+);
+
+/// <summary>
 /// Request model for switching agent type on a chat thread (Issue #4465).
 /// </summary>
 internal record SwitchThreadAgentRequest(
@@ -1410,13 +1504,36 @@ internal sealed record SearchKbChunksRequest(string Query, int? Skip, int? Take)
 /// <summary>
 /// Request body for POST /api/v1/knowledge-base/search/global (cross-game search, Issue #1661).
 /// User/Role are NOT in the request — they are resolved from the authenticated session.
+/// Issue #1686 added optional facet fields (DocType, GameId, Language).
 /// </summary>
+/// <param name="Query">Natural-language search query (required, max 500 chars).</param>
+/// <param name="Limit">Max results per page (default 20, hard cap 50).</param>
+/// <param name="Cursor">Opaque pagination cursor from a previous response.</param>
+/// <param name="Mode">Search mode (Hybrid by default).</param>
+/// <param name="MinScore">Minimum hybrid score; results below threshold are discarded.</param>
+/// <param name="DocType">
+/// Optional facet (Issue #1686, canonical D-1): list of <c>PdfDocumentEntity.DocumentType</c> values
+/// from the allowlist <c>{ "base", "expansion", "errata", "homerule" }</c>
+/// (case-insensitive). Hard cap of 10 elements. Null or empty = no filter (D-3 byte-identical legacy).
+/// </param>
+/// <param name="GameId">
+/// Optional facet (Issue #1686, D-5): single SharedGame.Id to narrow results to.
+/// When provided AND accessible, search runs only on that game.
+/// When provided AND NOT accessible, returns 200 empty (no info leak).
+/// </param>
+/// <param name="Language">
+/// Optional facet (Issue #1686, D-2): ISO 639-1 code from the allowlist
+/// <c>{ "en", "it", "de", "fr", "es" }</c> (case-insensitive). Null = no filter.
+/// </param>
 internal sealed record GlobalKbSearchRequest(
     string Query,
     int Limit = 20,
     string? Cursor = null,
     SearchMode? Mode = null,
-    double? MinScore = null);
+    double? MinScore = null,
+    IReadOnlyList<string>? DocType = null,
+    Guid? GameId = null,
+    string? Language = null);
 
 /// <summary>
 /// Request body for POST /api/v1/knowledge-base/ask/global (cross-game SSE ask, Issue #1661 PR-2).

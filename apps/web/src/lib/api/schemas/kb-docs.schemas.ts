@@ -33,6 +33,8 @@ export type ProcessingState = z.infer<typeof ProcessingStateSchema>;
  * Does NOT include `filePath`, `fileSizeBytes`, `documentType`, etc. — see issue #1592.
  * The `updatedAt` field (issue #1645) is explicit BE-side: equals ProcessedAt ?? UploadedAt,
  * mirroring the canonical sort key from the handler.
+ * Phase 3 (#1737): adds title/tags/updatedBy per BE PR #1732 (#1687).
+ * All Phase 3 fields are optional/nullable for backwards-compat with pre-#1687 payloads.
  */
 export const UserKbDocDtoSchema = z.object({
   id: z.string().uuid(),
@@ -44,6 +46,10 @@ export const UserKbDocDtoSchema = z.object({
   processedAt: z.string().datetime({ offset: true }).nullable(),
   uploadedAt: z.string().datetime({ offset: true }),
   updatedAt: z.string().datetime({ offset: true }),
+  // Phase 3 (#1687) additions:
+  title: z.string().nullable().optional(),
+  tags: z.array(z.string()).optional(),
+  updatedBy: z.string().uuid().nullable().optional(),
 });
 
 export type UserKbDocDto = z.infer<typeof UserKbDocDtoSchema>;

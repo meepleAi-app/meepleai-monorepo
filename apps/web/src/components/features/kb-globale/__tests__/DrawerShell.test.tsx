@@ -358,4 +358,46 @@ describe('DrawerShell — FSM state rendering', () => {
     expect(screen.getByTestId('citation-list')).toBeInTheDocument();
     expect(screen.getByText(/cite uno/i)).toBeInTheDocument();
   });
+
+  it('forwards onCitationClick from DrawerCompleted props to inline pills (#1702 wiring fix)', async () => {
+    const onCitationClick = vi.fn();
+    const state: KbAskStreamState = {
+      ...baseState,
+      status: 'completed',
+      partialText: 'La classe Scout [1].',
+      citations: [
+        {
+          docId: 'doc-1',
+          source: 'doc-1',
+          page: 14,
+          snippet: 'cite uno',
+          score: 0.9,
+          chunkId: 'doc-1_3',
+        },
+      ],
+      totalTokens: 100,
+      elapsedMs: 500,
+    };
+    render(
+      <DrawerShell
+        state={state}
+        labels={labels}
+        suggestions={[]}
+        onAsk={vi.fn()}
+        onStop={vi.fn()}
+        onReset={vi.fn()}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+        onCitationClick={onCitationClick}
+      />
+    );
+
+    const pill = screen.getByRole('button', { name: /citation 1/i });
+    await userEvent.click(pill);
+    expect(onCitationClick).toHaveBeenCalledWith({
+      docId: 'doc-1',
+      page: 14,
+      chunkId: 'doc-1_3',
+    });
+  });
 });

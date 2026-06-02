@@ -4,6 +4,7 @@ namespace Api.BoundedContexts.GameManagement.Application.DTOs.PlayRecords;
 /// DTO for cross-game player statistics.
 /// Issue #3890: CQRS queries for play records.
 /// Issue #1663: Phase 2 – statistics dashboard fields.
+/// Issue #1540 / #1541 / #1550: leaderboardRank, favoriteAgentName, winRateTrend.
 /// </summary>
 public record PlayerStatisticsDto(
     int TotalSessions,
@@ -12,7 +13,10 @@ public record PlayerStatisticsDto(
     Dictionary<string, double> AverageScoresByGame,
     int TotalDurationMinutes,
     IReadOnlyList<GameWinStats> WinByGame,
-    IReadOnlyList<GamePlayCount> MostPlayedGames
+    IReadOnlyList<GamePlayCount> MostPlayedGames,
+    int? LeaderboardRank,
+    string? FavoriteAgentName,
+    IReadOnlyList<MonthlyWinRate> WinRateTrend
 );
 
 /// <summary>
@@ -26,3 +30,10 @@ public record GameWinStats(Guid? GameId, string GameName, int Played, int Won);
 /// Issue #1663: Phase 2 – statistics dashboard fields.
 /// </summary>
 public record GamePlayCount(Guid? GameId, string GameName, int Plays);
+
+/// <summary>
+/// Win rate for a single ISO month bucket (YYYY-MM), used in
+/// <see cref="PlayerStatisticsDto.WinRateTrend"/>. Win rate is in [0, 1].
+/// Issue #1550: 6-month sliding window for PlayerTrendCard.
+/// </summary>
+public record MonthlyWinRate(string Month, double WinRate);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
 import { MessageSquare, ThumbsDown, ThumbsUp } from 'lucide-react';
@@ -19,15 +19,24 @@ interface Props {
   gameId: string;
 }
 
+const OUTCOME_ALL = 'all';
+
 export function KbFeedbackPanel({ gameId }: Props) {
-  const [outcomeFilter, setOutcomeFilter] = useState<string>('');
+  const [outcomeFilter, setOutcomeFilter] = useState<string>(OUTCOME_ALL);
   const [page, setPage] = useState(1);
+
+  // #1665: changing the gameId prop while paged past page 1 used to leave
+  // `page` stale and surface an empty page. Reset whenever gameId changes.
+  useEffect(() => {
+    setPage(1);
+  }, [gameId]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-kb-feedback', gameId, outcomeFilter, page],
     queryFn: () =>
       api.knowledgeBase.getAdminKbFeedback(gameId, {
-        outcome: outcomeFilter ? (outcomeFilter as 'helpful' | 'not_helpful') : undefined,
+        outcome:
+          outcomeFilter === OUTCOME_ALL ? undefined : (outcomeFilter as 'helpful' | 'not_helpful'),
         page,
         pageSize: 20,
       }),
@@ -37,12 +46,19 @@ export function KbFeedbackPanel({ gameId }: Props) {
     <section className="rounded-[10px] border border-border/60 bg-card overflow-hidden">
       {/* Panel header: filter + meta */}
       <div className="flex items-center gap-2.5 border-b border-border/60 bg-background px-3.5 py-2.5">
-        <Select value={outcomeFilter} onValueChange={setOutcomeFilter}>
+        <Select
+          value={outcomeFilter}
+          onValueChange={value => {
+            setOutcomeFilter(value);
+            // #1665: reset to page 1 so the filtered set is not paged past its end.
+            setPage(1);
+          }}
+        >
           <SelectTrigger className="h-7 w-36 text-[11px] font-quicksand font-bold bg-card border-border/60">
             <SelectValue placeholder="Tutti" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Tutti</SelectItem>
+            <SelectItem value={OUTCOME_ALL}>Tutti</SelectItem>
             <SelectItem value="helpful">Utili</SelectItem>
             <SelectItem value="not_helpful">Non utili</SelectItem>
           </SelectContent>

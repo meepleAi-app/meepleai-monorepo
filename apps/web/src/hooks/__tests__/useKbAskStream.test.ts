@@ -259,4 +259,21 @@ describe('useKbAskStream — transitions', () => {
     expect(result.current.state.retryCount).toBeGreaterThanOrEqual(2);
     vi.useRealTimers();
   });
+
+  it('retries exactly 3 times then surfaces final error on persistent connection failure', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(kbAskClient, 'askGlobal').mockImplementation(() => {
+      throw new TypeError('Failed to fetch');
+    });
+
+    const { result } = renderHook(() => useKbAskStream());
+    act(() => {
+      result.current.ask('q');
+    });
+    await vi.runAllTimersAsync();
+
+    expect(result.current.state.retryCount).toBe(3);
+    expect(result.current.state.error?.kind).toBe('connection');
+    vi.useRealTimers();
+  });
 });

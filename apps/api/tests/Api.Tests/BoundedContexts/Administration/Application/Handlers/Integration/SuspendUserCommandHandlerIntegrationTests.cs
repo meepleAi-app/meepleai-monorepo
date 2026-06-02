@@ -145,4 +145,70 @@ public sealed class SuspendUserCommandHandlerIntegrationTests : IAsyncLifetime
         suspendedUser.Should().NotBeNull();
         suspendedUser!.IsSuspended.Should().BeTrue();
     }
+
+    // Issue #1533 — admin commands must not wipe persisted 2FA backup codes when
+    // 2FA is mid-setup (TotpSecret set, IsTwoFactorEnabled=false) or in a stale state.
+    [Fact]
+    public async Task Handle_SuspendingUserMid2FASetup_PreservesBackupCodes()
+    {
+        // Arrange — user with persisted backup codes but IsTwoFactorEnabled=false
+        // (mimics TotpService.SetupAsync run, no OTP confirmation yet).
+        var userId = Guid.NewGuid();
+        var requesterId = Guid.NewGuid();
+        var user = new User(
+            userId,
+            new Email("midsetup@s.test"),
+            "Mid Setup User",
+            PasswordHash.Create("hashedPwd1234"),
+            Role.User
+        );
+
+        await _userRepository.AddAsync(user, CancellationToken.None);
+        await _unitOfWork.SaveChangesAsync(CancellationToken.None);
+
+        // Set TotpSecretEncrypted directly on persistence row + seed 6 codes.
+        // IsTwoFactorEnabled stays false on purpose (setup-in-progress window).
+        var persistedRow = await _dbContext.Users.FirstAsync(u => u.Id == userId);
+        persistedRow.TotpSecretEncrypted = "fake_setup_secret_pending_confirmation";
+
+        for (var i = 0; i < 6; i++)
+        {
+            _dbContext.UserBackupCodes.Add(new Api.Infrastructure.Entities.UserBackupCodeEntity
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                CodeHash = $"midsetup-hash-{i}-{Guid.NewGuid():N}",
+                IsUsed = false,
+                CreatedAt = DateTime.UtcNow,
+            });
+        }
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        var command = new SuspendUserCommand(userId.ToString(), requesterId, "Admin action during 2FA setup");
+
+        // Act
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert — suspension actually executed (guard against silent no-op masking the
+        // backup-code assertion below).
+        result.IsSuspended.Should().BeTrue(
+            because: "the suspension must actually execute, otherwise the codes-preserved assertion is meaningless");
+
+        // Assert — codes still present so the user can resume enrollment.
+        var codeCount = await _dbContext.UserBackupCodes
+            .AsNoTracking()
+            .CountAsync(c => c.UserId == userId);
+        codeCount.Should().Be(6,
+            because: "SuspendUserCommand MUST NOT wipe persisted backup codes during 2FA setup (#1533)");
+
+        // Assert — TotpSecret survives so the user can resume enrollment (#1533 follow-up).
+        var persistedAfter = await _dbContext.Users
+            .AsNoTracking()
+            .FirstAsync(u => u.Id == userId);
+        persistedAfter.TotpSecretEncrypted.Should().Be("fake_setup_secret_pending_confirmation",
+            because: "the TOTP setup secret must survive admin commands during enrollment");
+        persistedAfter.IsTwoFactorEnabled.Should().BeFalse(
+            because: "the enrollment is still in-progress — the flag must NOT flip until first OTP confirmation");
+    }
 }

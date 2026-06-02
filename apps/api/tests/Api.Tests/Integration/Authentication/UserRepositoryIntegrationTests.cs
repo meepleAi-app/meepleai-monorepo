@@ -530,6 +530,123 @@ public sealed class UserRepositoryIntegrationTests : IAsyncLifetime
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Issue #1533 — UpdateAsync must NOT wipe backup codes when caller did not
+    // intend to mutate them. Two reproducible scenarios:
+    //   B. Stale codes: 2FA fully disabled but codes still in DB.
+    //   C. Setup in-progress: TotpSecretEncrypted set but IsTwoFactorEnabled=false
+    //      (the window between TotpService setup and the first OTP confirmation).
+    // Both states are real-life occurrences (Scenario C affects every user during
+    // 2FA enrollment). Before the fix, MapToDomain hydrated BackupCodes only when
+    // both flags were set, so domain.BackupCodes arrived empty and UpdateAsync's
+    // Clear()+Add(empty) wiped the persisted rows.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task UpdateAsync_RoleChangeOnUserWithBackupCodesNo2FA_ShouldPreserveBackupCodes()
+    {
+        // Arrange — Scenario B: user with backup codes seeded directly, 2FA disabled.
+        await CleanDatabaseAsync();
+        var user = CreateTestUser(TestUserId1, "stale-codes@test.com");
+        await _repository!.AddAsync(user, TestCancellationToken);
+        await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
+
+        for (var i = 0; i < 5; i++)
+        {
+            _dbContext!.UserBackupCodes.Add(new Api.Infrastructure.Entities.UserBackupCodeEntity
+            {
+                Id = Guid.NewGuid(),
+                UserId = TestUserId1,
+                CodeHash = $"stale-hash-{i}-{Guid.NewGuid():N}",
+                IsUsed = false,
+                CreatedAt = DateTime.UtcNow,
+            });
+        }
+        await _dbContext!.SaveChangesAsync(TestCancellationToken);
+        _dbContext.ChangeTracker.Clear();
+
+        (await _dbContext.UserBackupCodes.AsNoTracking()
+            .CountAsync(c => c.UserId == TestUserId1, TestCancellationToken))
+            .Should().Be(5, because: "the seeding step must succeed before the act");
+
+        // Act — same pathway ChangeUserRoleCommandHandler uses: load + mutate scalar + UpdateAsync.
+        await ExecuteInScopeAsync(async (repo, uow) =>
+        {
+            var loaded = await repo.GetByIdAsync(TestUserId1, TestCancellationToken);
+            loaded!.UpdateRole(Role.Editor);
+            await repo.UpdateAsync(loaded, TestCancellationToken);
+            await uow.SaveChangesAsync(TestCancellationToken);
+            return true;
+        });
+
+        // Assert — codes still present (regression guard for #1533).
+        (await _dbContext.UserBackupCodes.AsNoTracking()
+            .CountAsync(c => c.UserId == TestUserId1, TestCancellationToken))
+            .Should().Be(5,
+                because: "scalar mutations (role change) MUST NOT wipe persisted backup codes (#1533)");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_SuspensionOnUserMid2FASetup_ShouldPreserveBackupCodes()
+    {
+        // Arrange — Scenario C: 2FA setup-in-progress (TotpSecret set, IsTwoFactorEnabled=false).
+        // This is the realistic enrollment window: TotpService.SetupAsync persists the secret
+        // + plaintext-hashed backup codes, but IsTwoFactorEnabled flips only on the first
+        // successful OTP verification.
+        await CleanDatabaseAsync();
+        var user = CreateTestUser(TestUserId1, "midsetup@test.com");
+        await _repository!.AddAsync(user, TestCancellationToken);
+        await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
+
+        // Directly set TotpSecretEncrypted on the persistence row to mimic setup-mid-state.
+        var persistedUser = await _dbContext!.Users
+            .AsTracking()
+            .FirstAsync(u => u.Id == TestUserId1, TestCancellationToken);
+        persistedUser.TotpSecretEncrypted = "fake_setup_secret_not_yet_confirmed";
+        // IsTwoFactorEnabled remains false intentionally.
+
+        for (var i = 0; i < 8; i++)
+        {
+            _dbContext.UserBackupCodes.Add(new Api.Infrastructure.Entities.UserBackupCodeEntity
+            {
+                Id = Guid.NewGuid(),
+                UserId = TestUserId1,
+                CodeHash = $"setup-hash-{i}-{Guid.NewGuid():N}",
+                IsUsed = false,
+                CreatedAt = DateTime.UtcNow,
+            });
+        }
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        _dbContext.ChangeTracker.Clear();
+
+        // Act — admin suspends the user during the enrollment window.
+        await ExecuteInScopeAsync(async (repo, uow) =>
+        {
+            var loaded = await repo.GetByIdAsync(TestUserId1, TestCancellationToken);
+            loaded!.Suspend("admin action mid-2FA-setup");
+            await repo.UpdateAsync(loaded, TestCancellationToken);
+            await uow.SaveChangesAsync(TestCancellationToken);
+            return true;
+        });
+
+        // Assert — codes still present so the user can resume enrollment after un-suspension.
+        (await _dbContext.UserBackupCodes.AsNoTracking()
+            .CountAsync(c => c.UserId == TestUserId1, TestCancellationToken))
+            .Should().Be(8,
+                because: "admin actions during 2FA setup window MUST NOT wipe backup codes (#1533)");
+
+        // Assert — TotpSecret survives the round-trip. Without TotpSecret hydration in
+        // MapToDomain, the next UpdateAsync would null TotpSecretEncrypted via the scalar
+        // copy `existingUser.TotpSecretEncrypted = entity.TotpSecret?.EncryptedValue`,
+        // leaving the user with codes but no way to complete enrollment (#1533 follow-up).
+        var persistedAfter = await _dbContext.Users.AsNoTracking()
+            .FirstAsync(u => u.Id == TestUserId1, TestCancellationToken);
+        persistedAfter.TotpSecretEncrypted.Should().Be("fake_setup_secret_not_yet_confirmed",
+            because: "the TOTP setup secret must survive admin commands during enrollment");
+        persistedAfter.IsTwoFactorEnabled.Should().BeFalse(
+            because: "enrollment is still in-progress — the flag must NOT flip until first OTP confirmation");
+    }
+
     #endregion
 
     #region DeleteAsync Tests

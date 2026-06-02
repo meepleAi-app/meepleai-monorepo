@@ -41,15 +41,32 @@ export type GlobalKbSearchResult = z.infer<typeof GlobalKbSearchResultSchema>;
 
 /**
  * GlobalKbSearchRequest — the POST /knowledge-base/search/global request body.
+ * Phase 3 (#1737): adds optional facet filters per BE PR #1730 (#1686).
+ * - docType: 7-value allowlist BE-side (D-6 of #1686); FE sends raw strings.
+ * - gameId: UUID array; non-accessible IDs return 200 empty (D-4 anti-info-leak).
+ * - language: ISO 639-1 lowercase {en,it,de,fr,es} (D-7 of #1686).
  */
 export const GlobalKbSearchRequestSchema = z.object({
   query: z.string().min(1, 'Query must not be empty'),
   limit: z.number().int().positive().optional(),
   cursor: z.string().nullable().optional(),
   mode: SearchModeSchema.optional(),
+  docType: z.array(z.string()).optional(),
+  gameId: z.array(z.string().uuid()).optional(),
+  language: z.string().optional(),
 });
 
 export type GlobalKbSearchRequest = z.infer<typeof GlobalKbSearchRequestSchema>;
+
+/**
+ * GlobalKbSearchFilters — typed FE-side helper for the orchestrator/components.
+ * Used by useGlobalKbSearch options + FilterAccordion props.
+ */
+export interface GlobalKbSearchFilters {
+  docType?: readonly string[];
+  gameId?: readonly string[];
+  language?: string;
+}
 
 /**
  * GlobalKbSearchResponse envelope — the complete response from /knowledge-base/search/global.

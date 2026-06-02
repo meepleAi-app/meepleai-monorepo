@@ -5,6 +5,8 @@ import { useSearchParams } from 'next/navigation';
 
 import { useKbChunksList } from '@/hooks/queries/useKbChunksList';
 import { useKbDocDetail } from '@/hooks/queries/useKbDocDetail';
+import { formatFileSize } from '@/lib/format/file-size';
+import { formatLastReindex } from '@/lib/format/last-reindex';
 
 import { KbDocActions } from './actions/KbDocActions';
 import { IngestionPanel } from './ingestion/IngestionPanel';
@@ -227,11 +229,35 @@ export function KbDocDetailPanel({ docId, selectedDocMeta }: KbDocDetailPanelPro
               </div>
             </div>
 
-            <dl className="mt-4 grid grid-cols-3 gap-2">
+            <dl className="mt-4 grid grid-cols-4 gap-2">
               <Stat label="Chunks" value={doc.chunkCount.toLocaleString('it-IT')} />
               <Stat label="Pagine" value={doc.pageCount?.toLocaleString('it-IT') ?? '—'} />
               <Stat label="Lingua" value={doc.language} />
+              {/* #1676 scope (a) F1: Size (mockup sp5-admin-kb.html L147) */}
+              <Stat
+                label="Size"
+                value={doc.fileSize !== undefined ? formatFileSize(doc.fileSize) : '—'}
+              />
             </dl>
+
+            {/* #1676 scope (a) F2: last reindex meta-footer (mockup L152).
+             * Falls back to "📤 upload only" when LastIngestedAt == UploadedAt. */}
+            <div
+              data-testid="kb-doc-last-reindex"
+              className="mt-3 font-mono text-[11px] text-muted-foreground"
+            >
+              {formatLastReindex(doc.lastIngestedAt, doc.uploadedAt).label}
+            </div>
+
+            {/* #1673 indexerVersion badge — hidden when null */}
+            {doc.indexerVersion ? (
+              <span
+                data-testid="kb-doc-indexer-version"
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground font-mono mt-1"
+              >
+                📦 {doc.indexerVersion === 'v0' ? 'v0 (legacy)' : doc.indexerVersion}
+              </span>
+            ) : null}
 
             {/* Action-bar */}
             <div className="mt-4">

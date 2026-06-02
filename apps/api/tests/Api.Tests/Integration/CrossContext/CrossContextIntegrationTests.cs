@@ -98,14 +98,15 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
         // Act - SaveChangesAsync should dispatch events
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
-        // Assert - Audit log created by domain event handler
-        var auditLog = await _dbContext.AuditLogs
-            .FirstOrDefaultAsync(a => a.Resource == "GameCreatedEvent", TestCancellationToken);
+        // Assert - audit_outbox row created by DomainEventAuditHandler<GameCreatedEvent>
+        // (Issue #1534: single canonical write path → audit_outbox)
+        var allOutbox = await _dbContext.AuditOutbox.ToListAsync(TestCancellationToken);
+        var outboxRow = allOutbox.FirstOrDefault(o => o.PayloadJson.Contains("\"Resource\":\"GameCreatedEvent\""));
 
-        auditLog.Should().NotBeNull();
-        auditLog!.Action.Should().Contain("GameCreatedEvent");
-        auditLog.Result.Should().Be("Success");
-        auditLog.Details.Should().Contain(gameId.ToString());
+        outboxRow.Should().NotBeNull();
+        outboxRow!.PayloadJson.Should().Contain("\"Action\":\"DomainEvent.GameCreatedEvent\"");
+        outboxRow.PayloadJson.Should().Contain("\"Result\":\"Success\"");
+        outboxRow.PayloadJson.Should().Contain(gameId.ToString());
 
         // Verify game persisted
         var savedGame = await _dbContext.SharedGames.FindAsync(new object[] { gameId }, TestCancellationToken);
@@ -133,13 +134,13 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
         // Act
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
-        // Assert - Audit log from GameLinkedToBggEvent
-        var auditLog = await _dbContext.AuditLogs
-            .FirstOrDefaultAsync(a => a.Resource == "GameLinkedToBggEvent", TestCancellationToken);
+        // Assert - audit_outbox row from GameLinkedToBggEvent
+        var allOutbox = await _dbContext.AuditOutbox.ToListAsync(TestCancellationToken);
+        var outboxRow = allOutbox.FirstOrDefault(o => o.PayloadJson.Contains("\"Resource\":\"GameLinkedToBggEvent\""));
 
-        auditLog.Should().NotBeNull();
-        auditLog!.Details.Should().Contain("266192");
-        auditLog.Details.Should().Contain(gameId.ToString());
+        outboxRow.Should().NotBeNull();
+        outboxRow!.PayloadJson.Should().Contain("266192");
+        outboxRow.PayloadJson.Should().Contain(gameId.ToString());
 
         // Verify BGG metadata persisted
         var savedGame = await _dbContext.SharedGames.FindAsync(new object[] { gameId }, TestCancellationToken);
@@ -172,16 +173,15 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
         // Act - All events dispatched in single transaction
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
-        // Assert - Audit log for each game
-        var auditLogs = await _dbContext.AuditLogs
-            .Where(a => a.Resource == "GameCreatedEvent")
-            .ToListAsync(TestCancellationToken);
+        // Assert - audit_outbox row for each game
+        var allOutbox = await _dbContext.AuditOutbox.ToListAsync(TestCancellationToken);
+        var outboxRows = allOutbox.Where(o => o.PayloadJson.Contains("\"Resource\":\"GameCreatedEvent\"")).ToList();
 
-        auditLogs.Should().HaveCount(3);
-        auditLogs.Should().AllSatisfy(log =>
+        outboxRows.Should().HaveCount(3);
+        outboxRows.Should().AllSatisfy(row =>
         {
-            log.Result.Should().Be("Success");
-            log.Action.Should().Contain("GameCreatedEvent");
+            row.PayloadJson.Should().Contain("\"Result\":\"Success\"");
+            row.PayloadJson.Should().Contain("\"Action\":\"DomainEvent.GameCreatedEvent\"");
         });
 
         // Verify all games persisted
@@ -214,15 +214,17 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
 
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
-        // Assert - Both creation and update events logged
-        var auditLogs = await _dbContext.AuditLogs
-            .Where(a => a.Details != null && a.Details.Contains(gameId.ToString()))
-            .OrderBy(a => a.CreatedAt)
-            .ToListAsync(TestCancellationToken);
+        // Assert - Both creation and update events logged to audit_outbox
+        // PayloadJson contains the full AuditOutboxPayload (incl. Resource + serialized event Details with GameId)
+        var allOutbox = await _dbContext.AuditOutbox.ToListAsync(TestCancellationToken);
+        var outboxRows = allOutbox
+            .Where(o => o.PayloadJson.Contains(gameId.ToString()))
+            .OrderBy(o => o.CreatedAt)
+            .ToList();
 
-        auditLogs.Should().HaveCountGreaterThanOrEqualTo(2);
-        auditLogs.Should().Contain(log => log.Resource == "GameCreatedEvent");
-        auditLogs.Should().Contain(log => log.Resource == "GameLinkedToBggEvent");
+        outboxRows.Should().HaveCountGreaterThanOrEqualTo(2);
+        outboxRows.Should().Contain(row => row.PayloadJson.Contains("\"Resource\":\"GameCreatedEvent\""));
+        outboxRows.Should().Contain(row => row.PayloadJson.Contains("\"Resource\":\"GameLinkedToBggEvent\""));
     }
 
     /// <summary>
@@ -248,12 +250,12 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
         var savedGame = await _dbContext.SharedGames.FindAsync(new object[] { gameId }, TestCancellationToken);
         savedGame.Should().NotBeNull();
 
-        // Audit log still created (handlers are resilient)
-        var auditLog = await _dbContext.AuditLogs
-            .FirstOrDefaultAsync(a => a.Resource == "GameCreatedEvent" &&
-                                     a.Details != null && a.Details.Contains(gameId.ToString()), TestCancellationToken);
+        // audit_outbox row still created (handlers are resilient)
+        var allOutbox = await _dbContext.AuditOutbox.ToListAsync(TestCancellationToken);
+        var outboxRow = allOutbox.FirstOrDefault(o => o.PayloadJson.Contains("\"Resource\":\"GameCreatedEvent\"") &&
+                                                       o.PayloadJson.Contains(gameId.ToString()));
 
-        auditLog.Should().NotBeNull();
+        outboxRow.Should().NotBeNull();
     }
 
     #endregion

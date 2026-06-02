@@ -989,6 +989,28 @@ public sealed class User : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Restores 2FA setup-in-progress state (TotpSecret and/or BackupCodes) without flipping
+    /// the IsTwoFactorEnabled flag. Internal hydration helper used by UserRepository when the
+    /// persistence row carries a TotpSecretEncrypted or BackupCode rows but IsTwoFactorEnabled
+    /// is still false (Issue #1533: stale rows or the setup window between TotpService.SetupAsync
+    /// and the first OTP confirmation).
+    ///
+    /// Both arguments are independently optional: pass <c>null</c> for an absent setup secret
+    /// and an empty collection for absent codes. Decoupling these from the IsTwoFactorEnabled
+    /// invariant ensures subsequent UpdateAsync calls preserve the setup secret and recovery
+    /// codes even when they reach the domain aggregate via a path that does not enable 2FA
+    /// (e.g. ChangeUserRoleCommand, SuspendUserCommand).
+    /// </summary>
+    internal void RestoreSetupInProgressState(TotpSecret? totpSecret, IEnumerable<BackupCode> backupCodes)
+    {
+        ArgumentNullException.ThrowIfNull(backupCodes);
+
+        TotpSecret = totpSecret;
+        _backupCodes.Clear();
+        _backupCodes.AddRange(backupCodes);
+    }
+
+    /// <summary>
     /// Restores OAuth accounts from persistence layer.
     /// Internal method to avoid reflection in repository (S3011 compliance).
     /// Should only be called by UserRepository during entity materialization.

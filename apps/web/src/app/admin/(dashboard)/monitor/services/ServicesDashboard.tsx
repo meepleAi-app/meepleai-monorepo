@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 /**
@@ -232,9 +231,9 @@ function CategoryGroup({
   const unhealthyCount = services.filter(s => s.state !== 'Healthy').length;
 
   return (
-    <div className="rounded-xl border bg-card/70 dark:bg-zinc-900/70 backdrop-blur-md overflow-hidden">
+    <div className="rounded-xl border bg-card/70 backdrop-blur-md overflow-hidden">
       <button
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/50 dark:hover:bg-zinc-800/30 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"
         onClick={() => setOpen(!open)}
         data-testid={`category-toggle-${category.replace(/\s+/g, '-').toLowerCase()}`}
       >
@@ -313,7 +312,7 @@ function MetricsKpiRow({ metrics }: { metrics: PrometheusMetricsSummary }) {
       {kpis.map(kpi => (
         <div
           key={kpi.testId}
-          className="rounded-xl border bg-card/70 dark:bg-zinc-900/70 backdrop-blur-md p-3"
+          className="rounded-xl border bg-card/70 backdrop-blur-md p-3"
           data-testid={kpi.testId}
         >
           <p className="text-xs text-muted-foreground">{kpi.label}</p>

@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 /**
  * Admin Operations Console
  * Issue #126 — Domain Operations Console page
@@ -55,10 +54,10 @@ type TabId = (typeof TABS)[number]['id'];
 function TabSkeleton() {
   return (
     <div className="space-y-3 pt-2">
-      <div className="h-10 w-48 rounded-lg bg-card/40 dark:bg-zinc-800/40 animate-pulse" />
+      <div className="h-10 w-48 rounded-lg bg-card/40 animate-pulse" />
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {[1, 2, 3].map(i => (
-          <div key={i} className="h-24 rounded-xl bg-card/40 dark:bg-zinc-800/40 animate-pulse" />
+          <div key={i} className="h-24 rounded-xl bg-card/40 animate-pulse" />
         ))}
       </div>
     </div>

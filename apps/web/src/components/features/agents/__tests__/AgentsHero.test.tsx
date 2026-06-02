@@ -14,6 +14,7 @@
  */
 
 import { fireEvent, render, screen } from '@testing-library/react';
+import { axe } from 'jest-axe';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AgentsHero, type AgentsHeroLabels, type AgentsHeroStat } from '../AgentsHero';
@@ -103,5 +104,12 @@ describe('AgentsHero (Wave B.2)', () => {
   it('exposes data-slot="agents-library-hero" on the root for spec scoping', () => {
     const { container } = render(<AgentsHero labels={baseLabels} stats={baseStats} />);
     expect(container.querySelector('[data-slot="agents-library-hero"]')).not.toBeNull();
+  });
+
+  it('passes axe a11y scan (#1569)', async () => {
+    const { container } = render(
+      <AgentsHero labels={baseLabels} stats={baseStats} onCreateAgent={vi.fn()} />
+    );
+    expect(await axe(container)).toHaveNoViolations();
   });
 });

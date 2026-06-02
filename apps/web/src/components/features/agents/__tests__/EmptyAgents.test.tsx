@@ -16,6 +16,7 @@
  */
 
 import { fireEvent, render, screen } from '@testing-library/react';
+import { axe } from 'jest-axe';
 import { describe, expect, it, vi } from 'vitest';
 
 import { EmptyAgents, type EmptyAgentsLabels } from '../EmptyAgents';
@@ -135,5 +136,31 @@ describe('EmptyAgents (Wave B.2)', () => {
     const root = container.querySelector('[data-slot="agents-empty-state"]');
     expect(root?.getAttribute('aria-busy')).toBe('true');
     expect(root?.getAttribute('aria-live')).toBe('polite');
+  });
+
+  // ─── jest-axe a11y coverage per kind (#1569) ───────────────────────────
+
+  it('passes axe a11y scan for kind="empty" (#1569)', async () => {
+    const { container } = render(
+      <EmptyAgents kind="empty" labels={labels} onCreateAgent={vi.fn()} />
+    );
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('passes axe a11y scan for kind="filtered-empty" (#1569)', async () => {
+    const { container } = render(
+      <EmptyAgents kind="filtered-empty" labels={labels} onClearFilters={vi.fn()} />
+    );
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('passes axe a11y scan for kind="error" (#1569)', async () => {
+    const { container } = render(<EmptyAgents kind="error" labels={labels} onRetry={vi.fn()} />);
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('passes axe a11y scan for kind="loading" (#1569)', async () => {
+    const { container } = render(<EmptyAgents kind="loading" labels={labels} />);
+    expect(await axe(container)).toHaveNoViolations();
   });
 });

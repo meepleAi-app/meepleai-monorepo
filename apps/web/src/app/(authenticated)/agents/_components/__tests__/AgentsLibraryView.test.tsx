@@ -17,6 +17,7 @@
  */
 
 import { render, screen, fireEvent, within } from '@testing-library/react';
+import { axe } from 'jest-axe';
 import { IntlProvider } from 'react-intl';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactElement } from 'react';
@@ -342,5 +343,44 @@ describe('AgentsLibraryView (Wave B.2)', () => {
     // only place this label appears (EmptyAgents not rendered).
     fireEvent.click(screen.getByRole('button', { name: 'Crea agente' }));
     expect(onCreateAgent).toHaveBeenCalledTimes(1);
+  });
+
+  // ─── jest-axe a11y coverage (#1569) ────────────────────────────────────
+
+  // Default-state scan disables the `heading-order` rule: AgentsHero renders an
+  // <h1> ("Studio agenti") and each MeepleCard renders an <h3>, skipping <h2>.
+  // The <h3> mapping is shared across every v2 entity surface that consumes
+  // MeepleCard (games, players, toolkits, etc.) — a global fix requires a
+  // coordinated change to MeepleCard's heading prop or to every Hero. Tracked
+  // separately so #1569 stays test-only (no component edits).
+  it('passes axe a11y scan in default state with 6 agents (heading-order excluded; follow-up tracked)', async () => {
+    const { container } = renderWithIntl(<AgentsLibraryView />);
+    expect(
+      await axe(container, { rules: { 'heading-order': { enabled: false } } })
+    ).toHaveNoViolations();
+  });
+
+  it('passes axe a11y scan in empty state (no agents)', async () => {
+    useAgentsMock.mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    const { container } = renderWithIntl(<AgentsLibraryView />);
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('passes axe a11y scan in error state', async () => {
+    useAgentsMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: new Error('boom'),
+      refetch: vi.fn(),
+    });
+    const { container } = renderWithIntl(<AgentsLibraryView />);
+    expect(await axe(container)).toHaveNoViolations();
   });
 });

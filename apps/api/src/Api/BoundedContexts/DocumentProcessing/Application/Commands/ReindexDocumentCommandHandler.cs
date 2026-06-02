@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
@@ -18,16 +19,19 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 internal sealed class ReindexDocumentCommandHandler : ICommandHandler<ReindexDocumentCommand>
 {
     // Stati pre-terminali. Reindex bloccato finché non si raggiunge Ready o Failed.
+    // Derived from Enum.GetNames so adding a new pre-terminal state to PdfProcessingState
+    // (or renaming an existing one) automatically updates this set — no manual sync needed. Issue #1801.
     private static readonly HashSet<string> InFlightStates =
-        new(StringComparer.Ordinal)
-        {
-            "Pending",
-            "Uploading",
-            "Extracting",
-            "Chunking",
-            "Embedding",
-            "Indexing",
-        };
+        new(
+            Enum.GetNames<PdfProcessingState>()
+                .Except(
+                    new[]
+                    {
+                        nameof(PdfProcessingState.Ready),
+                        nameof(PdfProcessingState.Failed),
+                    },
+                    StringComparer.Ordinal),
+            StringComparer.Ordinal);
 
     private readonly MeepleAiDbContext _dbContext;
     private readonly IMediator _mediator;
@@ -80,7 +84,7 @@ internal sealed class ReindexDocumentCommandHandler : ICommandHandler<ReindexDoc
         }
 
         // Reset state + scrive la versione risolta.
-        pdf.ProcessingState = "Pending";
+        pdf.ProcessingState = nameof(PdfProcessingState.Pending);
         pdf.ProcessedAt = null;
         pdf.ProcessingError = null;
         pdf.RetryCount = 0;

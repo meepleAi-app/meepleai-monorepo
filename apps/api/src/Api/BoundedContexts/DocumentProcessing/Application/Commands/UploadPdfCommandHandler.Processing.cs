@@ -167,7 +167,7 @@ internal partial class UploadPdfCommandHandler
 
         // Mark as processing (optimistic locking)
         _logger.LogInformation("🔄 [PDF-DEBUG-VALIDATE] Updating status from 'pending' to 'processing'");
-        pdfDoc.ProcessingState = "Uploading";
+        pdfDoc.ProcessingState = nameof(PdfProcessingState.Uploading);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         _logger.LogInformation("✅ [PDF-DEBUG-VALIDATE] Status updated, proceeding with processing");
 
@@ -211,7 +211,7 @@ internal partial class UploadPdfCommandHandler
             {
                 RecordPipelineMetricSafely("extraction_error", 0);
                 await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, extractResult.ErrorMessage, cancellationToken).ConfigureAwait(false);
-                pdfDoc.ProcessingState = "Failed";
+                pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
                 pdfDoc.ProcessingError = extractResult.ErrorMessage;
                 pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -459,7 +459,7 @@ internal partial class UploadPdfCommandHandler
     {
         await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, errorMessage, cancellationToken).ConfigureAwait(false);
         await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
-        pdfDoc.ProcessingState = "Failed";
+        pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
         pdfDoc.ProcessingError = errorMessage;
         pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -701,7 +701,7 @@ internal partial class UploadPdfCommandHandler
         var totalPages = pdfDoc.PageCount ?? 0;
         await UpdateProgressAsync(db, pdfId, ProcessingStep.Completed, totalPages, totalPages, startTime, null, cancellationToken).ConfigureAwait(false);
 
-        pdfDoc.ProcessingState = "Ready";
+        pdfDoc.ProcessingState = nameof(PdfProcessingState.Ready);
         pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
@@ -749,7 +749,7 @@ internal partial class UploadPdfCommandHandler
                 .ConfigureAwait(false);
             if (pdfDoc != null)
             {
-                pdfDoc.ProcessingState = "Failed";
+                pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
                 pdfDoc.ProcessingError = "Processing cancelled by user";
                 pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 await db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
@@ -783,7 +783,7 @@ internal partial class UploadPdfCommandHandler
                 .ConfigureAwait(false);
             if (pdfDoc != null)
             {
-                pdfDoc.ProcessingState = "Failed";
+                pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
                 pdfDoc.ProcessingError = errorMessage;
                 pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Infrastructure;
 using Api.Services.Pdf;
@@ -72,7 +73,7 @@ internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComm
         try
         {
             // 3. Update status to processing
-            pdf.ProcessingState = "Extracting";
+            pdf.ProcessingState = nameof(PdfProcessingState.Extracting);
             pdf.ExtractingStartedAt = _timeProvider.GetUtcNow().UtcDateTime;
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
@@ -87,7 +88,7 @@ internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComm
             {
                 _logger.LogError("Text extraction failed for PDF {PdfId}: {Error}",
                     pdfId, extractResult.ErrorMessage);
-                pdf.ProcessingState = "Failed";
+                pdf.ProcessingState = nameof(PdfProcessingState.Failed);
                 pdf.ProcessingError = extractResult.ErrorMessage;
                 pdf.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -106,7 +107,7 @@ internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComm
             pdf.ExtractedText = fullText;
             pdf.PageCount = extractResult.TotalPages;
             pdf.CharacterCount = extractResult.TotalCharacters;
-            pdf.ProcessingState = "Ready";
+            pdf.ProcessingState = nameof(PdfProcessingState.Ready);
             pdf.ProcessingError = null;
             pdf.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
 

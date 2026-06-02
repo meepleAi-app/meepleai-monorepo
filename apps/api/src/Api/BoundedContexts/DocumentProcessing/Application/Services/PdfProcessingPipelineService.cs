@@ -137,7 +137,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 langResult.DetectedLanguage, langResult.Confidence, pdfDoc.Id);
 
             // Issue #4215: Transition to Chunking state
-            pdfDoc.ProcessingState = "Chunking";
+            pdfDoc.ProcessingState = nameof(PdfProcessingState.Chunking);
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             // Step 3: Chunk text
@@ -313,7 +313,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             }
 
             // Issue #4215: Transition to Embedding state
-            pdfDoc.ProcessingState = "Embedding";
+            pdfDoc.ProcessingState = nameof(PdfProcessingState.Embedding);
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             // Step 4a: Generate embeddings (for all chunks: original + translated)
@@ -322,7 +322,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             var embeddings = await GenerateEmbeddingsAsync(pdfDoc, allChunkInputs, cancellationToken).ConfigureAwait(false);
 
             // Issue #4215: Transition to Indexing state
-            pdfDoc.ProcessingState = "Indexing";
+            pdfDoc.ProcessingState = nameof(PdfProcessingState.Indexing);
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             // Step 4b: Index in pgvector
@@ -331,7 +331,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             await SaveTextChunksAsync(pdfDoc, allChunkInputs, cancellationToken).ConfigureAwait(false);
 
             // Issue #4215: Mark as Ready (final state)
-            pdfDoc.ProcessingState = "Ready";
+            pdfDoc.ProcessingState = nameof(PdfProcessingState.Ready);
             pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
@@ -721,7 +721,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     private async Task MarkFailedAsync(PdfDocumentEntity pdfDoc, string errorMessage)
     {
         // Issue #4215: Use Failed state
-        pdfDoc.ProcessingState = "Failed";
+        pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
         pdfDoc.ProcessingError = errorMessage;
         pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
         await _db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
@@ -740,10 +740,10 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 .ConfigureAwait(false);
 
             if (pdfDoc != null
-                && !string.Equals(pdfDoc.ProcessingState, "Ready", StringComparison.Ordinal))
+                && !string.Equals(pdfDoc.ProcessingState, nameof(PdfProcessingState.Ready), StringComparison.Ordinal))
             {
                 // Issue #4215: Use Failed state
-                pdfDoc.ProcessingState = "Failed";
+                pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
                 pdfDoc.ProcessingError = errorMessage.Length > 500
                     ? errorMessage[..500]
                     : errorMessage;

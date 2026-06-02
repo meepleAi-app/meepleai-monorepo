@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Configuration;
 using Api.Infrastructure;
@@ -74,7 +75,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             }
 
             // Track processing state: mark as Indexing (covers chunk + embed + index phases)
-            pdf!.ProcessingState = "Indexing";
+            pdf!.ProcessingState = nameof(PdfProcessingState.Indexing);
             pdf.IndexingStartedAt = _timeProvider.GetUtcNow().UtcDateTime;
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
@@ -83,7 +84,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                 pdfId, pdf.ExtractedText!, cancellationToken).ConfigureAwait(false);
             if (!chunkingSuccess)
             {
-                pdf.ProcessingState = "Failed";
+                pdf.ProcessingState = nameof(PdfProcessingState.Failed);
                 return await MarkIndexingFailedAsync(vectorDoc!, chunkingError!, chunkErrorCode!.Value, cancellationToken).ConfigureAwait(false);
             }
 
@@ -95,7 +96,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                 pdfId, effectiveGameId.ToString(), pdf.ExtractedText!, documentChunks!, vectorDoc!, cancellationToken).ConfigureAwait(false);
             if (!indexingSuccess)
             {
-                pdf.ProcessingState = "Failed";
+                pdf.ProcessingState = nameof(PdfProcessingState.Failed);
                 return await MarkIndexingFailedAsync(vectorDoc!, "Vector indexing failed", PdfIndexingErrorCode.VectorIndexingFailed, cancellationToken).ConfigureAwait(false);
             }
 
@@ -105,7 +106,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             await SaveTextChunksToPostgresAsync(pdfId, chunkGameId, pdf.SharedGameId, documentChunks!, cancellationToken).ConfigureAwait(false);
 
             // Mark processing complete
-            pdf.ProcessingState = "Ready";
+            pdf.ProcessingState = nameof(PdfProcessingState.Ready);
             pdf.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
             pdf.IsActiveForRag = true; // Auto-enable after successful indexing so vectors are searchable
 
@@ -145,7 +146,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                     .FirstOrDefaultAsync(p => p.Id.ToString() == pdfId, CancellationToken.None).ConfigureAwait(false);
                 if (failedPdf != null)
                 {
-                    failedPdf.ProcessingState = "Failed";
+                    failedPdf.ProcessingState = nameof(PdfProcessingState.Failed);
                     failedPdf.ProcessingError = $"Unexpected error: {ex.Message}";
                     await _db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
                 }

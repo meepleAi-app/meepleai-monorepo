@@ -193,6 +193,72 @@ apps/web/e2e/admin/
 
 ---
 
+## Task 0 — Pre-flight cross-BC discovery (~30 min)
+
+> **Why this exists**: the plan references cross-BC symbols (`ILlmGateway`, `ICurrentUserService`, `IAuditService`, `ISystemConfigStore`, `SearchQuery`, `IAuditLogger`, `AuditableActionAttribute`, `TextChunkEntity`) that may have different namespaces, surface, or in some cases not yet exist. This task locks down the actuals BEFORE any KbQuality code is written. Run all greps in parallel; record findings in a scratch table; flag missing capabilities to the user BEFORE proceeding to Task 1.
+
+**Files:**
+- Create (temp scratch, NOT committed): a local note buffer to record findings — discard after Phase A landed.
+
+- [ ] **Step 1: Grep for cross-BC types**
+
+Run (in parallel where possible):
+
+```bash
+grep -rn "interface ILlmGateway\|class .*LlmGateway " apps/api/src/Api/Services/
+grep -rn "interface ICurrentUserService" apps/api/src/Api/
+grep -rn "interface IAuditService\|class .*AuditService" apps/api/src/Api/BoundedContexts/Administration/
+grep -rn "interface ISystemConfigStore\|class SystemConfigService" apps/api/src/Api/BoundedContexts/SystemConfiguration/
+grep -rn "class SearchQuery\b" apps/api/src/Api/BoundedContexts/KnowledgeBase/
+grep -rn "class AuditableActionAttribute" apps/api/src/Api/
+grep -rn "class TextChunkEntity\|class PdfChunkEntity" apps/api/src/Api/Infrastructure/Entities/
+grep -rn "class AuditLogEntity\|class AuditEventEntity" apps/api/src/Api/Infrastructure/Entities/
+grep -rn "export function fetchJson\|export const fetchJson" apps/web/src/lib/
+grep -rn "export function useCurrentUser" apps/web/src/hooks/
+```
+
+- [ ] **Step 2: Record findings in a scratch table**
+
+Populate this table mentally (or in a temp `.md` you discard):
+
+| Symbol | Found path | Namespace / Module | Surface notes (signatures, members) |
+|---|---|---|---|
+| `ILlmGateway` | | | does `CompleteAsync` accept `seed:`? |
+| `ICurrentUserService` | | | exposes `UserId`, `TenantId`, `HasPermission(string)`? |
+| `IAuditService` | | | `LogAsync(actionName, entityType, level, entityId, payload, ct)`? |
+| `ISystemConfigStore` | | | has `GetDecimalAsync`/`SetDecimalAsync`/`DeleteByKeySuffixAsync`? |
+| `SearchQuery` (KnowledgeBase BC) | | | supports doc-scoped search? |
+| `AuditableActionAttribute` | | | constructor `(actionName, entityType, Level=N)` matches plan? |
+| `TextChunkEntity` | | | has `PdfDocumentId`, `Position`, `Snippet` columns? |
+| `AuditLogEntity` | | | columns `ActionName`, `Level`, `Payload`? |
+| `fetchJson` (FE) | | | accepts `{ method, body }` shape? |
+| `useCurrentUser` (FE) | | | exposes `data.permissions: string[]`? |
+
+- [ ] **Step 3: Classify gaps**
+
+Bucket findings into:
+1. **Match plan** — no change needed.
+2. **Minor surface drift** — adjust the calling code at the relevant later task (inline edit during execution).
+3. **Major gap (capability missing)** — STOP and surface to user before continuing. Examples that block: `ISystemConfigStore` lacks decimal getter/setter; `KnowledgeBase` BC has no doc-scoped search; `AuditBehavior` pipeline not registered globally.
+
+- [ ] **Step 4: Decision gate**
+
+- If **no major gap**: proceed to Task 1.
+- If **major gap**: post a short note via TodoWrite / chat saying "BLOCKED: <symbol> is <gap-state>; we need to <add capability X to BC Y> before #1675 can proceed". Wait for user confirmation.
+
+- [ ] **Step 5: Refinement to plan based on findings**
+
+If minor drifts are discovered, apply 1–2 inline edits to this plan file (Tasks 18, 22, 30 are the typical edit hotspots). Commit the plan adjustment as its own atomic commit:
+
+```bash
+git add docs/superpowers/plans/2026-06-02-issue-1675-per-doc-quality-eval.md
+git commit -m "docs(plans): #1675 align plan to actual cross-BC surface (Task 0 findings)"
+```
+
+This commit MUST happen before any KbQuality code is added — keeps the plan as a faithful blueprint of what was actually executed.
+
+---
+
 ## Phase A — Foundation (Tasks 1-3)
 
 ### Task 1: Branch setup + BC scaffolding

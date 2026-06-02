@@ -291,7 +291,10 @@ public sealed class PdfRowVersionConcurrencyIntegrationTests : IAsyncLifetime
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
             // Pre-load the entity to confirm it exists before racing (AsNoTracking — no scope pollution).
-            using var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            // Note: NO `using` — db is the scoped DbContext that mediator.Send will also resolve.
+            // `using` would Dispose() it prematurely at end-of-Task scope, leaving the
+            // mediator with a disposed context. The IServiceScope itself owns disposal.
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             _ = await db.PdfDocuments.AsNoTracking()
                 .FirstAsync(p => p.Id == pdf.Id, TestCancellationToken);
 

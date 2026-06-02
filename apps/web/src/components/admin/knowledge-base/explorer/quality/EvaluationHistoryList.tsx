@@ -68,7 +68,7 @@ export function EvaluationHistoryList({
             <button
               type="button"
               onClick={() => onSelect(item.evaluationId)}
-              className="flex-1 text-left font-mono text-[11px] hover:underline"
+              className="flex-1 rounded text-left font-mono text-[11px] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               data-testid={`eval-list-row-${item.evaluationId}`}
             >
               {new Date(item.startedAt).toLocaleString('it-IT')}
@@ -92,7 +92,7 @@ export function EvaluationHistoryList({
             type="button"
             disabled={page <= 1}
             onClick={() => setPage(p => Math.max(1, p - 1))}
-            className="hover:underline disabled:opacity-40"
+            className="rounded px-1 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-40"
             data-testid="eval-list-prev"
           >
             ← prev
@@ -101,7 +101,7 @@ export function EvaluationHistoryList({
             type="button"
             disabled={isLastPage}
             onClick={() => setPage(p => p + 1)}
-            className="hover:underline disabled:opacity-40"
+            className="rounded px-1 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-40"
             data-testid="eval-list-next"
           >
             next →

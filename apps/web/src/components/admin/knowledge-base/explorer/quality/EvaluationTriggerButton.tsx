@@ -38,7 +38,7 @@ export function EvaluationTriggerButton({
         onClick={handleClick}
         disabled={mutation.isPending}
         data-testid="eval-trigger-button"
-        className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-60"
+        className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-60"
       >
         {mutation.isPending ? 'Avvio…' : '🔬 Lancia eval'}
       </button>

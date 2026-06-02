@@ -38,7 +38,7 @@ export function QualityTabPanel({
         <h3 className="font-quicksand text-sm font-semibold">Storico eval</h3>
         <EvaluationHistoryList docId={docId} onSelect={setSelected} />
       </section>
-      <section className="col-span-7 border-l border-border/60 dark:border-zinc-700/60">
+      <section className="col-span-7 border-l border-border">
         <EvaluationRunDetailPanel docId={docId} evaluationId={selected} />
       </section>
     </div>

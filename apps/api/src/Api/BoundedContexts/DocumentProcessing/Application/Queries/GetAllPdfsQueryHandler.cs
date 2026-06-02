@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.Interfaces;
@@ -37,15 +38,15 @@ internal sealed class GetAllPdfsQueryHandler : IQueryHandler<GetAllPdfsQuery, Pd
         {
             pdfsQuery = query.Status.ToLowerInvariant() switch
             {
-                "completed" => pdfsQuery.Where(p => p.ProcessingState == "Ready"),
-                "failed" => pdfsQuery.Where(p => p.ProcessingState == "Failed"),
-                "pending" => pdfsQuery.Where(p => p.ProcessingState == "Pending"),
+                "completed" => pdfsQuery.Where(p => p.ProcessingState == nameof(PdfProcessingState.Ready)),
+                "failed" => pdfsQuery.Where(p => p.ProcessingState == nameof(PdfProcessingState.Failed)),
+                "pending" => pdfsQuery.Where(p => p.ProcessingState == nameof(PdfProcessingState.Pending)),
                 "processing" => pdfsQuery.Where(p =>
-                    p.ProcessingState == "Uploading" ||
-                    p.ProcessingState == "Extracting" ||
-                    p.ProcessingState == "Chunking" ||
-                    p.ProcessingState == "Embedding" ||
-                    p.ProcessingState == "Indexing"),
+                    p.ProcessingState == nameof(PdfProcessingState.Uploading) ||
+                    p.ProcessingState == nameof(PdfProcessingState.Extracting) ||
+                    p.ProcessingState == nameof(PdfProcessingState.Chunking) ||
+                    p.ProcessingState == nameof(PdfProcessingState.Embedding) ||
+                    p.ProcessingState == nameof(PdfProcessingState.Indexing)),
                 _ => pdfsQuery
             };
         }

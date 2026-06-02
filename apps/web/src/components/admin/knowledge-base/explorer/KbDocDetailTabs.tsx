@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 
-export type KbDocTabKey = 'overview' | 'ingestion' | 'used-by' | 'preview';
+export type KbDocTabKey = 'overview' | 'ingestion' | 'used-by' | 'preview' | 'quality';
 
 interface KbDocDetailTabsProps {
   readonly docId: string;
@@ -14,12 +14,14 @@ const TABS: ReadonlyArray<{ readonly key: KbDocTabKey; readonly label: string }>
   { key: 'ingestion', label: 'Ingestion log' },
   { key: 'used-by', label: 'Used by' },
   { key: 'preview', label: 'Preview' },
+  { key: 'quality', label: 'Quality' },
 ];
 
 /**
  * Inner tab nav for `KbDocDetailPanel`. URL-driven via `?tab=overview` (default)
- * | `?tab=ingestion` | `?tab=used-by` | `?tab=preview`. Preserves `docId` in each link.
- * Issues #1650 (Ingestion log) + #1651 (Used by) + #1654 (Preview).
+ * | `?tab=ingestion` | `?tab=used-by` | `?tab=preview` | `?tab=quality`.
+ * Preserves `docId` in each link.
+ * Issues #1650 (Ingestion log) + #1651 (Used by) + #1654 (Preview) + #1675 (Quality).
  */
 export function KbDocDetailTabs({ docId, activeTab }: KbDocDetailTabsProps) {
   return (

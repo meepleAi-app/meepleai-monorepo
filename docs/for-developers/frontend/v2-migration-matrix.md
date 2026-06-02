@@ -709,7 +709,7 @@ instead.
 | Route | Mockup | Note |
 |-------|--------|------|
 | `/library` | `sp4-library-desktop.html` + `sp4-library-mobile.html` | Tier S done (PR #574/635/638); mobile variant SP8 brief 2026-05-30 (IA semplificata 3 tab + overflow Più=Agents/KB) |
-| `/library/wishlist` | — | gap — issue B16 #1491 aperta (audit 2026-05-22 gap N5) |
+| `/library/wishlist` | `sp4-library-wishlist.html` [done] | B16 #1491 · Standalone (Option B vs A variant) · Card grid responsive + priority filter multi-select (Alta/Media/Bassa) + AddToWishlistDialog (game combo + radiogroup + target price + notes), 8 stati |
 | `/library/playlists` · `/[id]` · `/shared/[token]` | n/a | route INESISTENTI nel codebase (false-positive audit 2026-05-12, confermato 2026-05-22) — rimosso dal scope |
 | `/library/private` · `/add` · `/[id]` | `sp4-add-game-pdf-dedup.html` + `sp4-upload-wizard-extended.html` [partial] | — |
 | `/library/private/[id]/toolkit/configure` | `sp4-toolkit-detail.html` ↻ | — |

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Api.Models;
 
@@ -96,6 +97,13 @@ public class PdfDocumentEntity
     // Issue #1673: Pipeline indexer version applied at last reindex.
     // Nullable for backwards compat — backfilled to 'v0' on migration.
     public string? IndexerVersion { get; set; }
+
+    // Issue #1802: Optimistic concurrency control via PostgreSQL xmin system column.
+    // Auto-mapped to xmin by Npgsql when configured with .IsRowVersion(). Nullable
+    // to avoid PhotoBatchUpload landmine (migration 20260524190307: NOT NULL caused
+    // InsertCommand double-mapping bug under Npgsql).
+    [Timestamp]
+    public byte[]? RowVersion { get; set; }
 
     // Issue #1687: User-editable display title (distinct from immutable FileName).
     public string? Title { get; set; }

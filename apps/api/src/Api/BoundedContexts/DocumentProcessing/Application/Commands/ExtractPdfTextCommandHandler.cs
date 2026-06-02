@@ -4,6 +4,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Infrastructure;
+using Api.Observability;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -75,7 +76,20 @@ internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComm
             // 3. Update status to processing
             pdf.ProcessingState = nameof(PdfProcessingState.Extracting);
             pdf.ExtractingStartedAt = _timeProvider.GetUtcNow().UtcDateTime;
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                    nameof(ExtractPdfTextCommandHandler),
+                    MeepleAiMetrics.PdfConcurrencyCategories.B);
+                _logger.LogWarning(ex,
+                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                    pdfId, nameof(ExtractPdfTextCommandHandler));
+                return ExtractPdfTextResultDto.CreateFailure("Concurrency conflict; please retry");
+            }
 
             // 4. Extract text from PDF
             _logger.LogInformation("Extracting text from PDF {PdfId}", pdfId);
@@ -91,7 +105,20 @@ internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComm
                 pdf.ProcessingState = nameof(PdfProcessingState.Failed);
                 pdf.ProcessingError = extractResult.ErrorMessage;
                 pdf.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                }
+                catch (DbUpdateConcurrencyException ex)
+                {
+                    MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                        nameof(ExtractPdfTextCommandHandler),
+                        MeepleAiMetrics.PdfConcurrencyCategories.B);
+                    _logger.LogWarning(ex,
+                        "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                        pdfId, nameof(ExtractPdfTextCommandHandler));
+                    return ExtractPdfTextResultDto.CreateFailure("Concurrency conflict; please retry");
+                }
                 return ExtractPdfTextResultDto.CreateFailure(extractResult.ErrorMessage ?? "Text extraction failed");
             }
 
@@ -112,7 +139,21 @@ internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComm
             pdf.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
 
             _logger.LogInformation("💾 [EXTRACT-DEBUG] Calling SaveChangesAsync for PDF {PdfId}", pdfId);
-            var changeCount = await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            int changeCount;
+            try
+            {
+                changeCount = await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                    nameof(ExtractPdfTextCommandHandler),
+                    MeepleAiMetrics.PdfConcurrencyCategories.B);
+                _logger.LogWarning(ex,
+                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                    pdfId, nameof(ExtractPdfTextCommandHandler));
+                return ExtractPdfTextResultDto.CreateFailure("Concurrency conflict; please retry");
+            }
             _logger.LogInformation("✅ [EXTRACT-DEBUG] SaveChangesAsync returned {ChangeCount} changes for PDF {PdfId}", changeCount, pdfId);
 
             // Verify data was actually saved

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Infrastructure;
+using Api.Observability;
 using Api.SharedKernel.Application.IntegrationEvents;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -45,7 +46,20 @@ internal sealed class VectorDocumentReadyStateHandler
         if (pdfEntity != null)
         {
             pdfEntity.ProcessingState = nameof(PdfProcessingState.Ready);
-            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                    nameof(VectorDocumentReadyStateHandler),
+                    MeepleAiMetrics.PdfConcurrencyCategories.B);
+                _logger.LogWarning(ex,
+                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                    evt.PdfDocumentId, nameof(VectorDocumentReadyStateHandler));
+                return; // CRITICAL: do not throw — caller (MediatR publish) must see success
+            }
 
             _logger.LogInformation(
                 "Compensating update: set ProcessingState=Ready for PdfDocument {PdfId} (was {PrevState}) after vector indexing",

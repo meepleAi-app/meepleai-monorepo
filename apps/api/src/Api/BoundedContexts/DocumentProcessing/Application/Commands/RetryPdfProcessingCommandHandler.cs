@@ -1,9 +1,11 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.Observability;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
@@ -83,6 +85,17 @@ internal sealed class RetryPdfProcessingCommandHandler
                 RetryCount: pdf.RetryCount,
                 Message: $"Retry {pdf.RetryCount} initiated"
             );
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(RetryPdfProcessingCommandHandler),
+                MeepleAiMetrics.PdfConcurrencyCategories.A);
+            _logger.LogWarning(ex,
+                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category A)",
+                command.PdfId, nameof(RetryPdfProcessingCommandHandler));
+            throw new ConflictException(
+                $"Document {command.PdfId} was modified by another concurrent operation; please retry.");
         }
         catch (InvalidOperationException ex)
         {

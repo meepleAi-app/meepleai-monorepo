@@ -1,6 +1,6 @@
 {
-  "description": "Baseline JS bundle size for prod build (no mock). Update manually in dedicated PRs. Last bump rebaselines post-SP5 F3-FU-4 KbDocActions + KbChunkSearch + locked-restructure (+~155KB): adds doc-action bar (reindex/download/delete/export/used-by), per-doc chunk similarity-search UI, AdminConfirmationDialog confirmPhrase prop, and reachable actions on failed/processing docs.",
-  "updatedAt": "2026-05-29",
-  "totalBytes": 14660000,
-  "toleranceBytes": 10240
+  "description": "Baseline JS bundle size for prod build (no mock). Update manually in dedicated PRs. Last bump rebaselines post-#1675 KbQuality FE (+~40KB cumulative Tasks 26-30): Zod schemas + kbQualityClient + 3 TanStack Query hooks + 6 React components (chips, trigger, history, detail, tab orchestrator) + wire into KbDocDetailPanel/Tabs.",
+  "updatedAt": "2026-06-02",
+  "totalBytes": 14700000,
+  "toleranceBytes": 20480
 }

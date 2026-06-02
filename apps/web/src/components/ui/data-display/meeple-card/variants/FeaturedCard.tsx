@@ -17,6 +17,7 @@ export function FeaturedCard(props: MeepleCardProps) {
   const {
     entity,
     title,
+    id,
     subtitle,
     imageUrl,
     rating,
@@ -45,7 +46,7 @@ export function FeaturedCard(props: MeepleCardProps) {
     >
       <AccentBorder entity={entity} />
       <div className="relative">
-        <Cover entity={entity} variant="featured" imageUrl={imageUrl} alt={title} />
+        <Cover entity={entity} variant="featured" imageUrl={imageUrl} alt={title} gameId={id} />
         {/* Top-left badge stack — see GridCard for rationale */}
         <div
           className="absolute left-2.5 top-2 z-10 flex flex-col items-start gap-1"

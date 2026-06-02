@@ -224,6 +224,17 @@ public sealed class ReindexDocumentVersionIntegrationTests : IAsyncLifetime
     // ──────────────────────────────────────────────────────────────────────
 
     /// <summary>
+    /// Overload without Result check (Action + Resource only). Required as a separate method
+    /// (not a default argument) because <see cref="FluentAssertions.GenericCollectionAssertions{T}.Contain(System.Linq.Expressions.Expression{System.Func{T,bool}}, string, object[])"/>
+    /// takes an expression tree, and C# forbids calls with optional arguments inside expression trees (CS0854).
+    /// </summary>
+    private static bool HasMatchingAuditPayload(
+        string payloadJson,
+        string expectedAction,
+        string expectedResource)
+        => HasMatchingAuditPayload(payloadJson, expectedAction, expectedResource, null);
+
+    /// <summary>
     /// Deserializes <paramref name="payloadJson"/> and checks whether it contains the expected
     /// Action + Resource + optional Result values. Client-side filter to avoid jsonb SQL operator
     /// dependencies. When <paramref name="expectedResult"/> is non-null, the Result property in the
@@ -233,7 +244,7 @@ public sealed class ReindexDocumentVersionIntegrationTests : IAsyncLifetime
         string payloadJson,
         string expectedAction,
         string expectedResource,
-        string? expectedResult = null)
+        string? expectedResult)
     {
         try
         {

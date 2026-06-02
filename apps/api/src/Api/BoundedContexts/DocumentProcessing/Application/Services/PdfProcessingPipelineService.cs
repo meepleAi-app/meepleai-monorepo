@@ -45,6 +45,10 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     // Phase D4 (gamebook multi-book): optional role classifier for tagging chunks at ingest.
     // Optional so unit tests that pre-date Phase D continue to compile without updates.
     private readonly IRoleClassifierService? _roleClassifier;
+    // Issue #1831 (umbrella #1821 L4): optional cover extractor — pipeline does
+    // NOT fail if cover generation throws; we just mark the row as Failed and
+    // continue (the L1 placeholder remains visible client-side).
+    private readonly IPdfCoverExtractor? _pdfCoverExtractor;
 
     public PdfProcessingPipelineService(
         MeepleAiDbContext db,
@@ -62,7 +66,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         IEntityExtractor? entityExtractor = null,
         IVectorStoreAdapter? vectorStore = null,
         IFeatureFlagService? featureFlagService = null,
-        IRoleClassifierService? roleClassifier = null)
+        IRoleClassifierService? roleClassifier = null,
+        IPdfCoverExtractor? pdfCoverExtractor = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _pdfClaimService = pdfClaimService ?? throw new ArgumentNullException(nameof(pdfClaimService));
@@ -80,6 +85,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         _vectorStore = vectorStore;
         _featureFlagService = featureFlagService;
         _roleClassifier = roleClassifier;
+        _pdfCoverExtractor = pdfCoverExtractor;
     }
 
     public async Task ProcessAsync(
@@ -136,6 +142,10 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             _logger.LogInformation(
                 "[PdfPipeline] Detected language: {Language} (confidence: {Confidence:F2}) for PDF {PdfId}",
                 langResult.DetectedLanguage, langResult.Confidence, pdfDoc.Id);
+
+            // Issue #1831 (L4): extract first-page cover image. Best-effort —
+            // failures are logged on the entity and do not block the pipeline.
+            await ExtractCoverImageAsync(pdfDoc, filePath, cancellationToken).ConfigureAwait(false);
 
             // Issue #4215: Transition to Chunking state
             pdfDoc.ProcessingState = nameof(PdfProcessingState.Chunking);
@@ -475,6 +485,91 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             }
 
             return (fullText, extractResult);
+        }
+    }
+
+    /// <summary>
+    /// Issue #1831 (L4) — render the first significant PDF page as a webp
+    /// cover image and persist into R2 + entity columns. Best-effort: any
+    /// failure is recorded on the entity (<c>CoverGenerationStatus=Failed</c>
+    /// + <c>CoverGenerationError</c>) and the pipeline continues — the L1
+    /// placeholder remains visible on the client.
+    /// </summary>
+    private async Task ExtractCoverImageAsync(
+        PdfDocumentEntity pdfDoc,
+        string filePath,
+        CancellationToken cancellationToken)
+    {
+        if (_pdfCoverExtractor is null)
+        {
+            // Service not registered (unit-test scenarios) — leave default Pending.
+            return;
+        }
+
+        try
+        {
+            var pdfBytes = await File.ReadAllBytesAsync(filePath, cancellationToken).ConfigureAwait(false);
+            var result = await _pdfCoverExtractor.ExtractAsync(pdfBytes, cancellationToken).ConfigureAwait(false);
+
+            switch (result.Outcome)
+            {
+                case PdfCoverExtractionOutcome.Generated:
+                {
+                    var resourceKey = $"pdf-cover-{pdfDoc.Id}";
+
+                    // Upload thumb + preview as separate blobs. The CoverR2Key
+                    // we persist is the resourceKey prefix — the resolver
+                    // endpoint reconstructs `{prefix}/{size}.webp` at read time.
+                    using (var thumbStream = new MemoryStream(result.ThumbnailWebp!, writable: false))
+                    {
+                        await _blobStorageService.StoreAsync(
+                            thumbStream, "thumb.webp", BlobCategory.GameImage, resourceKey, cancellationToken)
+                            .ConfigureAwait(false);
+                    }
+                    using (var previewStream = new MemoryStream(result.PreviewWebp!, writable: false))
+                    {
+                        await _blobStorageService.StoreAsync(
+                            previewStream, "preview.webp", BlobCategory.GameImage, resourceKey, cancellationToken)
+                            .ConfigureAwait(false);
+                    }
+
+                    pdfDoc.CoverR2Key = resourceKey;
+                    pdfDoc.CoverGenerationStatus = "Generated";
+                    pdfDoc.CoverPageIndex = result.SelectedPageIndex;
+                    pdfDoc.CoverGenerationError = null;
+
+                    _logger.LogInformation(
+                        "[PdfPipeline] Cover image generated for PDF {PdfId} from page {PageIndex} (resourceKey={ResourceKey})",
+                        pdfDoc.Id, result.SelectedPageIndex, resourceKey);
+                    break;
+                }
+                case PdfCoverExtractionOutcome.Skipped:
+                    pdfDoc.CoverGenerationStatus = "Skipped";
+                    pdfDoc.CoverPageIndex = result.SelectedPageIndex;
+                    _logger.LogInformation(
+                        "[PdfPipeline] Cover extraction skipped for PDF {PdfId} (heuristic rejected first 3 pages)",
+                        pdfDoc.Id);
+                    break;
+                case PdfCoverExtractionOutcome.Failed:
+                    pdfDoc.CoverGenerationStatus = "Failed";
+                    pdfDoc.CoverGenerationError = result.ErrorMessage;
+                    _logger.LogWarning(
+                        "[PdfPipeline] Cover extraction failed for PDF {PdfId}: {Error}",
+                        pdfDoc.Id, result.ErrorMessage);
+                    break;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            pdfDoc.CoverGenerationStatus = "Failed";
+            pdfDoc.CoverGenerationError = ex.Message.Length > 500 ? ex.Message[..500] : ex.Message;
+            _logger.LogWarning(ex,
+                "[PdfPipeline] Cover extraction threw for PDF {PdfId} — continuing pipeline without cover",
+                pdfDoc.Id);
         }
     }
 

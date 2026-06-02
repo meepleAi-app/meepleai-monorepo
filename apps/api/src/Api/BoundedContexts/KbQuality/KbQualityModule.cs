@@ -1,3 +1,5 @@
+using Api.BoundedContexts.KbQuality.Application.Configuration;
+using Api.BoundedContexts.KbQuality.Application.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,7 +14,11 @@ public static class KbQualityModule
 {
     public static IServiceCollection AddKbQualityModule(this IServiceCollection services, IConfiguration configuration)
     {
-        // Services + behaviors + adapters registered task-by-task; placeholder for now.
+        services.Configure<EvalQualityOptions>(configuration.GetSection(EvalQualityOptions.SectionName));
+
+        services.AddSingleton<IEvaluationMetricsCalculator, EvaluationMetricsCalculator>();
+        services.AddSingleton<IQualityBandResolver, QualityBandResolver>();
+
         return services;
     }
 }

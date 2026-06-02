@@ -1,0 +1,70 @@
+<!doctype html>
+<!-- route: /toolkit/play — Toolkit standalone live con 4 tool widgets (dice/counter/timer/randomizer) + log streaming + FSM animation -->
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MeepleAI · /toolkit/play — Toolkit play</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+<link rel="stylesheet" href="components.css"/>
+<style>
+  /* ─── Tool FSM keyframes (cluster #1490 S4 — annotati nel brief) ─── */
+  @keyframes tp-dice-roll {
+    0%   { transform: rotateX(0deg) rotateY(0deg) scale(1); }
+    25%  { transform: rotateX(180deg) rotateY(90deg) scale(1.1); }
+    50%  { transform: rotateX(360deg) rotateY(180deg) scale(1.15); }
+    75%  { transform: rotateX(540deg) rotateY(270deg) scale(1.1); }
+    100% { transform: rotateX(720deg) rotateY(360deg) scale(1); }
+  }
+  @keyframes tp-counter-pop { 0%,100% { transform: scale(1); } 50% { transform: scale(1.22); } }
+  @keyframes tp-timer-alert {
+    0%,100% { color: hsl(var(--c-danger)); border-color: hsl(var(--c-danger) / .55); }
+    50%     { color: hsl(var(--c-warning)); border-color: hsl(var(--c-warning) / .55); }
+  }
+  @keyframes tp-timer-flash {
+    0%,100% { background: hsl(var(--c-danger) / 0); }
+    50%     { background: hsl(var(--c-danger) / .3); }
+  }
+  @keyframes tp-log-slide-in { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes tp-randomizer-cycle { 0%,100% { background: hsl(var(--c-event) / .05); } 50% { background: hsl(var(--c-event) / .22); } }
+  @keyframes tp-dice-result-pop { 0% { transform: scale(.9); } 55% { transform: scale(1.06); } 100% { transform: scale(1); } }
+  @keyframes tp-preset-pulse { 0%,100% { transform: scale(1); box-shadow: 0 0 0 0 hsl(var(--c-game) / 0); } 50% { transform: scale(1.08); box-shadow: 0 0 0 4px hsl(var(--c-game) / .22); } }
+  @keyframes tp-die-in { from { transform: translateY(6px) scale(.9); } to { transform: none; } }
+  @keyframes tp-pulse-ring { 0% { box-shadow: 0 0 0 0 hsl(var(--e) / .4); } 100% { box-shadow: 0 0 0 10px hsl(var(--e) / 0); } }
+  @keyframes tp-overlay-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes tp-modal-in { from { opacity: 0; transform: translateY(14px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  @keyframes tp-sheet-in { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+  /* Focus ring — keyboard only, toolkit entity (continuity #1490) */
+  a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid hsl(var(--c-toolkit));
+    outline-offset: 2px;
+    border-radius: var(--r-xs);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tp-die.rolling { animation: none !important; }
+    .tp-num.pop, .tp-cval.pop { animation: none !important; }
+    .tp-timer.finishing { animation: none !important; }
+    .tp-rand-item.cycling { animation: none !important; }
+    .tp-logentry.fresh { animation: none !important; }
+    .tp-die-result, .tp-total.pop, .tp-preset.pulse, .tp-die-result.rolling { animation: none !important; }
+    .tp-overlay, .tp-modal { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="data.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="sp4-toolkit-play.jsx?v=1"></script>
+<script type="text/babel" src="sp4-toolkit-play-tools.jsx?v=1"></script>
+<script type="text/babel" src="sp4-toolkit-play-dice.jsx?v=1"></script>
+<script type="text/babel" src="sp4-toolkit-play-ui.jsx?v=1"></script>
+</body>
+</html>

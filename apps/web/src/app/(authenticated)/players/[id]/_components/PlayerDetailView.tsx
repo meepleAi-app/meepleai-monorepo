@@ -47,6 +47,7 @@ import {
   type PlayerLeaderboardCardLabels,
   type PlayerStatsGridLabels,
   type PlayerTopGamesCardLabels,
+  type PlayerTrendCardLabels,
 } from '@/components/features/player-detail';
 import { DetailPageLayout } from '@/components/ui/detail-layout';
 import { useAchievements } from '@/hooks/queries/useAchievements';
@@ -57,6 +58,7 @@ import { derivePlayerDetailUiState } from '@/lib/player-detail/player-detail-sta
 import {
   IS_VISUAL_TEST_BUILD,
   tryLoadVisualTestFixture,
+  type MonthlyWinRatePoint,
   type PlayerProfileFixture,
   type TopGameItem,
 } from '@/lib/player-detail/player-detail-visual-test-fixture';
@@ -183,6 +185,12 @@ function mapStatsToProfile(playerId: string, stats: PlayerStatistics): PlayerPro
 
   const displayName = decodeURIComponent(playerId).replace(/-/g, ' ');
 
+  // #1550 BE bundle: winRateTrend is optional during BE rollout. The mapper
+  // copies the values through; PlayerTrendCard handles points.length < 2 with
+  // a graceful empty state.
+  const trendPoints: ReadonlyArray<MonthlyWinRatePoint> =
+    stats.winRateTrend?.map(p => ({ month: p.month, winRate: p.winRate })) ?? [];
+
   return {
     playerId,
     displayName,
@@ -190,10 +198,14 @@ function mapStatsToProfile(playerId: string, stats: PlayerStatistics): PlayerPro
     totalWins,
     winRate,
     favoriteGameName: favoriteGameName && favoriteGameName.length > 0 ? favoriteGameName : null,
-    favoriteAgentName: null, // TBD: no favorite agent data in current schema
-    achievementCount: 0, // TBD: no achievement data in current schema
-    leaderboardRank: null, // TBD: no leaderboard data in current schema
+    // #1541 BE: favoriteAgentName populates once BE deploys the field; until then `?? null`.
+    favoriteAgentName: stats.favoriteAgentName ?? null,
+    // #1542 FE: achievementCount is overridden by the orchestrator (useAchievements hook).
+    achievementCount: 0,
+    // #1540 BE: leaderboardRank populates once BE deploys the field; until then `?? null`.
+    leaderboardRank: stats.leaderboardRank ?? null,
     topGames: deriveTopGames(stats),
+    trendPoints,
   };
 }
 
@@ -405,6 +417,35 @@ export function PlayerDetailView({ playerId }: PlayerDetailViewProps): ReactElem
     [t]
   );
 
+  const trendLabels = useMemo<PlayerTrendCardLabels>(
+    () => ({
+      title: t('pages.playerDetail.sections.trend.title'),
+      deltaUp: t('pages.playerDetail.sections.trend.deltaUp'),
+      deltaDown: t('pages.playerDetail.sections.trend.deltaDown'),
+      deltaFlat: t('pages.playerDetail.sections.trend.deltaFlat'),
+      deltaUpAriaLabel: t('pages.playerDetail.sections.trend.deltaUpAriaLabel'),
+      deltaDownAriaLabel: t('pages.playerDetail.sections.trend.deltaDownAriaLabel'),
+      deltaFlatAriaLabel: t('pages.playerDetail.sections.trend.deltaFlatAriaLabel'),
+      empty: t('pages.playerDetail.sections.trend.empty'),
+      trendSummaryAriaLabel: t('pages.playerDetail.sections.trend.trendSummaryAriaLabel'),
+      monthsShort: [
+        t('pages.playerDetail.sections.trend.monthsShort.jan'),
+        t('pages.playerDetail.sections.trend.monthsShort.feb'),
+        t('pages.playerDetail.sections.trend.monthsShort.mar'),
+        t('pages.playerDetail.sections.trend.monthsShort.apr'),
+        t('pages.playerDetail.sections.trend.monthsShort.may'),
+        t('pages.playerDetail.sections.trend.monthsShort.jun'),
+        t('pages.playerDetail.sections.trend.monthsShort.jul'),
+        t('pages.playerDetail.sections.trend.monthsShort.aug'),
+        t('pages.playerDetail.sections.trend.monthsShort.sep'),
+        t('pages.playerDetail.sections.trend.monthsShort.oct'),
+        t('pages.playerDetail.sections.trend.monthsShort.nov'),
+        t('pages.playerDetail.sections.trend.monthsShort.dec'),
+      ],
+    }),
+    [t]
+  );
+
   const achievementLabels = useMemo<AchievementBadgeGridLabels>(
     () => ({
       title: t('pages.playerDetail.sections.achievements.title'),
@@ -495,6 +536,7 @@ export function PlayerDetailView({ playerId }: PlayerDetailViewProps): ReactElem
     leaderboard: leaderboardLabels,
     favoriteAgent: favoriteAgentLabels,
     topGames: topGamesLabels,
+    trend: trendLabels,
   };
 
   const sessionsLabels: SessionsTabPanelLabels = {

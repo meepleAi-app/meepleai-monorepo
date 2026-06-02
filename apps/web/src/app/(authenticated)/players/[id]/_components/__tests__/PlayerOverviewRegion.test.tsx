@@ -35,6 +35,31 @@ const labels = {
     rankAriaLabel: 'Posizione {rank}',
     empty: 'Nessun gioco giocato ancora',
   },
+  trend: {
+    title: 'Andamento ultimi 6 mesi',
+    deltaUp: '↗ +{percent}%',
+    deltaDown: '↘ {percent}%',
+    deltaFlat: '→ 0%',
+    deltaUpAriaLabel: 'Win rate in salita di {percent}%',
+    deltaDownAriaLabel: 'Win rate in discesa di {percent}%',
+    deltaFlatAriaLabel: 'Win rate invariato',
+    empty: 'Non ci sono ancora dati sufficienti per mostrare un trend',
+    trendSummaryAriaLabel: 'Andamento win rate da {from}% a {to}% negli ultimi {count} mesi',
+    monthsShort: [
+      'Gen',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mag',
+      'Giu',
+      'Lug',
+      'Ago',
+      'Set',
+      'Ott',
+      'Nov',
+      'Dic',
+    ],
+  },
 } as const;
 
 const profile: PlayerProfileFixture = {
@@ -51,6 +76,11 @@ const profile: PlayerProfileFixture = {
     { gameId: null, gameName: 'Azul', playCount: 10, winCount: 6 },
     { gameId: null, gameName: 'Catan', playCount: 8, winCount: 3 },
   ],
+  trendPoints: [
+    { month: '2026-04', winRate: 0.4 },
+    { month: '2026-05', winRate: 0.5 },
+    { month: '2026-06', winRate: 0.6 },
+  ],
 };
 
 describe('PlayerOverviewRegion', () => {
@@ -63,6 +93,7 @@ describe('PlayerOverviewRegion', () => {
     expect(container.querySelector('[data-slot="player-detail-leaderboard"]')).not.toBeNull();
     expect(container.querySelector('[data-slot="player-detail-favorite-agent"]')).not.toBeNull();
     expect(container.querySelector('[data-slot="player-detail-top-games"]')).not.toBeNull();
+    expect(container.querySelector('[data-slot="player-detail-trend"]')).not.toBeNull();
   });
 
   it('exposes a region root with data-slot="player-overview-region"', () => {

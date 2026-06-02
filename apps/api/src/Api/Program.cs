@@ -336,6 +336,7 @@ builder.Services.AddMediatR(cfg =>
     cfg.AddOpenBehavior(typeof(Api.BoundedContexts.Administration.Application.Behaviors.AuditLoggingBehavior<,>)); // Issue #3691: Audit logging
     cfg.AddOpenBehavior(typeof(Api.BoundedContexts.Authentication.Application.Behaviors.TwoFactorEnforcementBehavior<,>)); // Issue #186 P1.1: 2FA admin enforcement (shadow mode)
     cfg.AddOpenBehavior(typeof(Api.BoundedContexts.SessionTracking.Application.Behaviors.ValidatePlayerRoleBehavior<,>)); // Issue #4765: Role validation
+    cfg.AddOpenBehavior(typeof(Api.BoundedContexts.KbQuality.Application.Behaviors.EvalRateLimitBehavior<,>)); // Issue #1675: KB quality eval sliding rate limit (registered BEFORE cost cap)
     cfg.AddOpenBehavior(typeof(Api.BoundedContexts.KbQuality.Application.Behaviors.EvalCostCapBehavior<,>)); // Issue #1675: KB quality eval cost cap (D-H, A1)
     var mediatrLicenseKey = Environment.GetEnvironmentVariable("MEDIATR_LICENSE_KEY");
     if (!string.IsNullOrWhiteSpace(mediatrLicenseKey))

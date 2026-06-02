@@ -83,9 +83,11 @@ ambiguity. Each route is also classified by **Tier** (S/M/L) to gate dispatch st
 > (shared runtime), `sp4-session-live-tabs.jsx` (`window.LiveTabs`),
 > `sp4-session-summary-sections.jsx`, `sp4-session-summary-tabs.jsx`
 > (`window.SummaryReviewTabs`). `/sessions/[id]/join` reuse `sp3-join.html`
-> (no design). 8th sub-route `/sessions/[id]/play` non in scope ADR (rimane
-> route fisica). ADR: `claudedocs/2026-05-31-sessions-consolidation-adr.md`.
-> Issue #1492.
+> (no design). 8th sub-route `/sessions/[id]/play` chiusa 2026-06-02 via
+> `sp4-session-play.html` (residuo gap N7, 10 stati, 3-col live view —
+> distinta da `/sessions/[id]/live` spectator). ADR:
+> `claudedocs/2026-05-31-sessions-consolidation-adr.md`.
+> Issue #1492 CLOSED 2026-06-02 — **epic #1475 user-facing UI a 26/26 (100%)**.
 
 > **Updated 2026-05-31** (Documentation reconciliation cross-audit
 > 2026-05-12 + 2026-05-22): the Route → Mockup index now reflects 3 mockup
@@ -749,7 +751,7 @@ instead.
 | `/sessions/[id]/{scoreboard,notes,players}` | `sp4-session-wingspan-summary.html` ↻ tabs | Consolidated 2026-05-31 — route da deletare, redirect 301/308 a `?tab=` equivalente |
 | `/sessions/[id]/{scores,photos,agent,players}` | `sp4-session-wingspan-live.html` ↻ tabs | Consolidated 2026-05-31 — route da deletare, redirect 301/308 a `?tab=` equivalente. NOTA: `/sessions/[id]/players` esiste sia post-game (summary tab) sia live (live tab) — context-dependent |
 | `/sessions/[id]/join` | `sp3-join.html` ↻ | Reuse — non consolidato (flow distinto) |
-| `/sessions/[id]/play` | — | Route esistente, NON in scope ADR 2026-05-31 — gap residuo |
+| `/sessions/[id]/play` | `sp4-session-play.html` [done] | B17 #1492 · Live play view 3-col (Scoreboard PV inline +/- / Activity feed SSE / Chat agent streaming) + Rules sheet + Score/Dispute modals, 10 stati. **Chiude residuo gap N7 + epic #1475 a 26/26 (100%).** |
 | `/sessions/live/[id]` (+ `/agent`, `/photos`, `/players`, `/scores`) | `sp4-session-live.html` + `librogame-runthrough-session-end.html` | Consolidation 2026-05-31 applicabile (stesso pattern `?tab=`); coexistenza route fisiche da pianificare |
 | `/game-nights` | `sp4-game-nights-index.html` | Tier L pending |
 | `/game-nights/new` | `sp7-game-night-create.html` | Tier L+ DONE (PR #1297 components, PR #1302 orchestrator, PR #1305 W4 E2E + a11y + conformity entry); baseline PNGs auto-generated post-merge via bootstrap workflows |

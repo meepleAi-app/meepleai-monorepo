@@ -239,5 +239,29 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         builder.HasIndex(e => e.Tags)
             .HasDatabaseName("IX_pdf_documents_tags_gin")
             .HasMethod("gin");
+
+        // Issue #1831 — L4 PDF first-page cover extraction (umbrella #1821).
+        builder.Property(e => e.CoverR2Key)
+            .HasMaxLength(512)
+            .HasColumnName("cover_r2_key")
+            .IsRequired(false);
+
+        builder.Property(e => e.CoverGenerationStatus)
+            .IsRequired()
+            .HasMaxLength(32)
+            .HasColumnName("cover_generation_status")
+            .HasDefaultValue("Pending");
+
+        builder.Property(e => e.CoverPageIndex)
+            .HasColumnName("cover_page_index")
+            .IsRequired(false);
+
+        builder.Property(e => e.CoverGenerationError)
+            .HasMaxLength(512)
+            .HasColumnName("cover_generation_error")
+            .IsRequired(false);
+
+        builder.HasIndex(e => e.CoverGenerationStatus)
+            .HasDatabaseName("ix_pdf_documents_cover_generation_status");
     }
 }

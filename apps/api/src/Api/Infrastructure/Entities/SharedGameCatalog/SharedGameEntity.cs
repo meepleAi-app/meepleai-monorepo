@@ -49,6 +49,26 @@ public class SharedGameEntity
     /// </summary>
     public byte[]? RowVersion { get; set; }
 
+    /// <summary>
+    /// Issue #1823 (umbrella #1821 L2) — Wikidata/Wikimedia Commons-sourced
+    /// cover image for this catalog game. Stored in R2 at
+    /// <c>covers/wikidata/{Id}/cover.webp</c>. Has lower priority than the
+    /// user-uploaded cover (L3) and PDF-derived cover (L4) but supersedes
+    /// the placeholder (L1). Nullable; populated by the Wikidata enrichment
+    /// job — see issue #1823 for the SPARQL query + license validation rules
+    /// (must be CC0 / CC-BY / CC-BY-SA + attribution stored alongside).
+    /// </summary>
+    public string? WikidataCoverR2Key { get; set; }
+
+    /// <summary>Source URL on Wikimedia Commons; surfaced in the attribution footer.</summary>
+    public string? WikidataCoverSourceUrl { get; set; }
+
+    /// <summary>License identifier (e.g. "CC-BY-SA-4.0"); restricts the rendered attribution string.</summary>
+    public string? WikidataCoverLicense { get; set; }
+
+    /// <summary>Attribution string ready for display (author + license link).</summary>
+    public string? WikidataCoverAttribution { get; set; }
+
     // Navigation properties (many-to-many)
     public ICollection<GameDesignerEntity> Designers { get; set; } = new List<GameDesignerEntity>();
     public ICollection<GamePublisherEntity> Publishers { get; set; } = new List<GamePublisherEntity>();

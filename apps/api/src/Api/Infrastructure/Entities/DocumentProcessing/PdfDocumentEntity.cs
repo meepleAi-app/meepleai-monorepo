@@ -143,4 +143,21 @@ public class PdfDocumentEntity
 
     // Issue #2051: Navigation to collection
     public DocumentCollectionEntity? Collection { get; set; }
+
+    // Issue #1831 (L4) — cover image rendered from the first significant
+    // page of the PDF. Populated by ExtractPdfCoverImageStep during the
+    // processing pipeline, stored in R2 at `covers/pdf/{Id}/{size}.webp`.
+    // CoverR2Key is the prefix (without `-thumb` / `-preview` suffix); the
+    // FE/server resolve the size at read time.
+    public string? CoverR2Key { get; set; }
+
+    // CoverGenerationStatus: enum stored as string — Pending | Generated |
+    // Skipped (heuristic rejected first 3 pages as non-cover material) | Failed
+    public string CoverGenerationStatus { get; set; } = "Pending";
+
+    // Which 0-indexed page was selected as the cover. NULL when status != Generated.
+    public int? CoverPageIndex { get; set; }
+
+    // Last error string when CoverGenerationStatus = Failed; for diagnostics + retry.
+    public string? CoverGenerationError { get; set; }
 }

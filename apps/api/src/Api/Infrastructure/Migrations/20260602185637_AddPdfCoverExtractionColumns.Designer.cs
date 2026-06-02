@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -13,9 +14,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260602185637_AddPdfCoverExtractionColumns")]
+    partial class AddPdfCoverExtractionColumns
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -12328,26 +12331,6 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("title");
 
-                    b.Property<string>("WikidataCoverAttribution")
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)")
-                        .HasColumnName("wikidata_cover_attribution");
-
-                    b.Property<string>("WikidataCoverLicense")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("wikidata_cover_license");
-
-                    b.Property<string>("WikidataCoverR2Key")
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)")
-                        .HasColumnName("wikidata_cover_r2_key");
-
-                    b.Property<string>("WikidataCoverSourceUrl")
-                        .HasMaxLength(2048)
-                        .HasColumnType("character varying(2048)")
-                        .HasColumnName("wikidata_cover_source_url");
-
                     b.Property<int>("YearPublished")
                         .HasColumnType("integer")
                         .HasColumnName("year_published");
@@ -13795,11 +13778,6 @@ namespace Api.Infrastructure.Migrations
 
                     b.Property<string>("CustomAgentConfigJson")
                         .HasColumnType("jsonb");
-
-                    b.Property<string>("CustomCoverR2Key")
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)")
-                        .HasColumnName("custom_cover_r2_key");
 
                     b.Property<long?>("CustomPdfFileSizeBytes")
                         .HasColumnType("bigint");

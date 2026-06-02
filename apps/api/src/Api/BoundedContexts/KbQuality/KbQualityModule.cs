@@ -3,6 +3,7 @@ using Api.BoundedContexts.KbQuality.Application.Ports;
 using Api.BoundedContexts.KbQuality.Application.Services;
 using Api.BoundedContexts.KbQuality.Infrastructure;
 using Api.BoundedContexts.KbQuality.Infrastructure.Adapters;
+using Api.BoundedContexts.KbQuality.Infrastructure.BackgroundJobs;
 using Api.BoundedContexts.KbQuality.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,6 +39,11 @@ public static class KbQualityModule
         // until a runtime caller needs them.
         services.AddScoped<IKbSearchProvider, KbSearchProviderAdapter>();
         services.AddScoped<IPdfDocumentReadModel, PdfDocumentReadModelAdapter>();
+
+        // Background jobs (Phase G). Both are IHostedService and self-schedule with timer loops;
+        // they each create their own DI scope per sweep so the scoped EvaluationRepository
+        // (and its DbContext) doesn't leak across runs.
+        services.AddHostedService<KbQualityRetentionJob>();
 
         return services;
     }

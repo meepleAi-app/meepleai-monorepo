@@ -160,6 +160,9 @@ internal static class DocumentProcessingServiceExtensions
         // for production. Tests inject the InMemoryPdfClaimService helper directly.
         services.AddScoped<IPdfClaimService, RelationalPdfClaimService>();
 
+        // Issue #1831 (umbrella #1821 L4) — PDF first-page cover extraction
+        services.AddScoped<IPdfCoverExtractor, PdfCoverExtractor>();
+
         // Shared PDF processing pipeline (used by recovery job and future handler consolidation)
         services.AddScoped<IPdfProcessingPipelineService, PdfProcessingPipelineService>();
 

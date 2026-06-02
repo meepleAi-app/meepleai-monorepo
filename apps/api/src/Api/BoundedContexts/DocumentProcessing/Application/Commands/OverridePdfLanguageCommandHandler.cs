@@ -1,8 +1,10 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.Observability;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
@@ -41,7 +43,21 @@ internal sealed class OverridePdfLanguageCommandHandler : ICommandHandler<Overri
         pdf.OverrideLanguage(command.LanguageCode);
 
         await _pdfRepository.UpdateAsync(pdf, cancellationToken).ConfigureAwait(false);
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(OverridePdfLanguageCommandHandler),
+                MeepleAiMetrics.PdfConcurrencyCategories.A);
+            _logger.LogWarning(ex,
+                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category A)",
+                command.PdfId, nameof(OverridePdfLanguageCommandHandler));
+            throw new ConflictException(
+                $"Document {command.PdfId} was modified by another concurrent operation; please retry.");
+        }
 
         _logger.LogInformation(
             "PDF {PdfId} language override set to {LanguageCode}",

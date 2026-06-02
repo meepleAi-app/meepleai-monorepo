@@ -18,6 +18,7 @@ public static class KbQualityModule
 
         services.AddSingleton<IEvaluationMetricsCalculator, EvaluationMetricsCalculator>();
         services.AddSingleton<IQualityBandResolver, QualityBandResolver>();
+        services.AddScoped<IEvaluationCostEstimator, EvaluationCostEstimator>();
 
         return services;
     }

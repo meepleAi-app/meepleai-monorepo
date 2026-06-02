@@ -26,6 +26,7 @@ using Api.BoundedContexts.Gamification.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameManagement.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameToolbox.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameToolkit.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.KbQuality;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.SessionTracking.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Health;
@@ -375,6 +376,9 @@ builder.Services.AddEntityRelationshipsContext();
 
 // DDD-PHASE3: KnowledgeBase bounded context
 builder.Services.AddKnowledgeBaseServices();
+
+// Issue #1675: KbQuality bounded context (per-doc quality eval)
+builder.Services.AddKbQualityModule(builder.Configuration);
 
 // DDD-PHASE3: WorkflowIntegration bounded context
 builder.Services.AddWorkflowIntegrationContext(builder.Configuration);

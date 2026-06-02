@@ -188,8 +188,50 @@ apps/web/e2e/admin/
 - [ ] Branch `feature/issue-1675-per-doc-quality-eval` checked out from `main-dev`
 - [ ] `git config branch.feature/issue-1675-per-doc-quality-eval.parent main-dev`
 - [ ] Spec letta: `docs/superpowers/specs/2026-06-01-sp5-admin-kb-fu4-spinouts-design.md` §3.3
-- [ ] Verifica precedent codice: `apps/api/src/Api/BoundedContexts/MechanicExtractor/Application/Behaviors/CostCapBehavior.cs` (mirror pattern D-H)
 - [ ] Verifica precedent codice: `apps/api/src/Api/BoundedContexts/DocumentProcessing/Domain/ValueObjects/IndexerVersion.cs` (mirror pattern R-2)
+
+## Plan amendments post Task 0 discovery (2026-06-02)
+
+Task 0 pre-flight discovery ha rivelato 1 major gap + 4 drift. Adattamenti decisi con user:
+
+### A1 — Cost cap KV store (major gap)
+
+**Problem**: `ISystemConfigStore` con generic `GetDecimalAsync/SetDecimalAsync` NON esiste. `ILlmSystemConfigProvider` espone solo budget/circuit-breaker specifici.
+
+**Adopted solution (option A)**: self-contained `KbQualityBudgetCounter` entity nel BC KbQuality. Schema: `(TenantId, YearMonth, SpentUsd)`. PK composto. Repo `IKbQualityBudgetRepository` con `GetSpentAsync(tenantId, yearMonth)` + `IncrementSpentAsync(tenantId, yearMonth, amount)`. Task 17 EvaluationRepository ora gestisce ANCHE questa entity (oppure split in `KbQualityBudgetRepository` separato — scelta executor).
+
+**Impact**: Task 2 (migration) include nuova tabella `kb_quality_budget_counters`. Task 17 aggiunge repo + entity. Task 18 EvalCostBudgetCheckerAdapter wraps il repo. Task 21 cost-cap reset job legge/elimina counter per `YearMonth < currentMonth - 1`. Reference "Mirror Mechanic Extractor M1.2 ADR-051" è da considerarsi NULL (BC inesistente): pattern è greenfield, documentiamo decisioni nel codice.
+
+### A2 — ICurrentUserService non esiste (drift)
+
+**Problem**: plan ipotizzava `ICurrentUserService.UserId/TenantId/HasPermission(string)`. Non esiste come interface.
+
+**Adopted solution (option A)**: inject `IHttpContextAccessor` direttamente in handler/behaviors. Estrarre user info da `HttpContext.User.Claims` con helpers locali (es. metodo statico `KbQualityClaims.GetUserId(ClaimsPrincipal)`). Per `TenantId`: se non esiste claim, usare `UserId` come tenant identifier (single-tenant per user — semplificazione documentata).
+
+**Impact**: Task 11 `EvalCostCapBehavior` inject `IHttpContextAccessor` invece di `ICurrentUserService`. Task 12 `EvalRateLimitBehavior` idem. Task 14 handler idem. Fixture Task 22 must register a `IHttpContextAccessor` test double with seeded `ClaimsPrincipal` (role=Admin) per tests.
+
+### A3 — TextChunkEntity column rename (drift)
+
+`TextChunkEntity` colonne effettive: `ChunkIndex` (NOT `Position`), `Content` (NOT `Snippet`). Task 18 `PdfDocumentReadModelAdapter` deve mapping `ChunkIndex → Position`, `Content → Snippet` (snippet truncate a primi N char). Task 23 seed test deve usare `ChunkIndex` + `Content` come property names.
+
+### A4 — AuthUser non ha `permissions[]` (drift)
+
+FE Task 28 `EvaluationTriggerButton.hasOverrideCostCapPermission` non può essere derivato da `permissions` field. Soluzione: check `role === 'admin' || role === 'superadmin'` per gating override toggle. Task 30 wire passa `hasOverrideCostCapPermission={['admin', 'superadmin'].includes(user.role)}`. BE Task 11 behavior verifica via claim role (ClaimsPrincipal.IsInRole) NOT generic `HasPermission(string)`.
+
+### A5 — ILlmClient no `seed` (drift)
+
+`ILlmClient.GenerateCompletionAsync` non accetta `seed`. Task 10 `LlmGoldsetGenerator` deve:
+- Usare `temperature=0` per massimizzare determinismo
+- Includere seed nel prompt body ("Use this seed for reproducibility: {N}")
+- Accept variance nel test contract Scenario D: tolerance `±0.05` invece di `±0.001`
+
+Modifica Task 14 e Scenario D test: assertion `BeApproximately(value, 0.05)` invece di `0.001`.
+
+### A6 — AuditLogEntity no `Level` column (drift)
+
+`AuditLogEntity` colonne: `Action`, `Resource`, `Details` (string). NO `Level` column. `AuditableActionAttribute.Level` (default 1) viene serializzato dentro `Details` JSON dall'`AuditLoggingBehavior` esistente. Task 13 attribute wiring resta uguale. Task 25 audit integration test deve cercare `Details` field con string contains "Level\":2" invece di `e.Level == 2`.
+
+---
 
 ---
 

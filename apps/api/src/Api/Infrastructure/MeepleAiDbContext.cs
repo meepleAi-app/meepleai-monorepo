@@ -286,6 +286,10 @@ public class MeepleAiDbContext : DbContext
     // KB-06: User feedback on KB chat responses
     public DbSet<BoundedContexts.KnowledgeBase.Domain.Entities.KbUserFeedback> KbUserFeedbacks => Set<BoundedContexts.KnowledgeBase.Domain.Entities.KbUserFeedback>();
 
+    // Issue #1675: KbQuality bounded context (per-doc quality eval) — Task 2
+    public DbSet<BoundedContexts.KbQuality.Domain.Evaluation.DocumentEvaluationRun> DocumentEvaluationRuns => Set<BoundedContexts.KbQuality.Domain.Evaluation.DocumentEvaluationRun>();
+    public DbSet<BoundedContexts.KbQuality.Domain.Budget.KbQualityBudgetCounter> KbQualityBudgetCounters => Set<BoundedContexts.KbQuality.Domain.Budget.KbQualityBudgetCounter>();
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         ArgumentNullException.ThrowIfNull(optionsBuilder);

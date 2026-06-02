@@ -102,21 +102,17 @@ sub-pages · nodi architetturali N4/N6/N7.
 
 ## P1 — Gap nuovi bloccanti sprint corrente
 
-### Gap N1 — `/editor/agent-proposals/*`
+### Gap N1 — `/editor/agent-proposals/*` ✅ CLOSED 2026-06-02 (PR pending, #1489)
 
-- **Route impattate** (5):
-  - `/editor` — index editor user-facing
-  - `/editor/agent-proposals` — index proposals
-  - `/editor/agent-proposals/create` — create flow
-  - `/editor/agent-proposals/[id]/edit` — edit detail
-  - `/editor/agent-proposals/[id]/test` — playground test
-- **Impatto**: feature attiva (Epic AI Agent System) senza UX spec → impl
-  scollegato dal design system.
-- **Existing**: nessuna issue dedicata. Search "mockup editor / agent-proposals"
-  → 0 hit.
-- **Tier suggerito**: M (proposal index = S, create/edit = M, test = M con stream).
-- **Recommendation**: aprire `[Design v1 · B14] Mockup Editor user-facing
-  (agent proposals)`.
+- **Route impattate** (5) — TUTTE coperte:
+  - `/editor` → `sp4-editor-index.html` + `.jsx` (S1, RuleSpec atom editor split-view + PDF preview, 11 stati)
+  - `/editor/agent-proposals` → `sp4-editor-proposals-index.html` + `.jsx` (S2, typology list, 5 status badge, 9 stati)
+  - `/editor/agent-proposals/create` → `sp4-editor-proposals-create.html` + `.jsx` (S3, form 5-section, 8 stati)
+  - `/editor/agent-proposals/[id]/edit` → `sp4-editor-proposals-edit.html` + `.jsx` (S4, status-variant + Revisions diff + Audit trail, 10 stati)
+  - `/editor/agent-proposals/[id]/test` → `sp4-editor-proposals-test.html` + `.jsx` (S5, playground FSM streaming + Trace + Compare, 12 stati)
+- **Issue tracker**: [#1489 Design v1 · B14] Mockup Editor user-facing — opened 2026-05-22, mockup shipped 2026-06-02 via Claude Design web canvas.
+- **Closing PR**: `feature/issue-1489-mockup-editor-user-facing` → `main-dev`.
+- **Updates correlati**: `00-hub.html` (5 nuove card SP4), `v2-migration-matrix.md` (5 row /editor/** flipped a `done`).
 
 ### Gap N2 — `/play-records/*`
 

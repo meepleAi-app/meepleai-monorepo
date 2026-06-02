@@ -275,6 +275,46 @@
     <div class="tags"><span class="tag">4 stati</span><span class="tag">Cost preview</span><span class="tag">Async progress</span></div>
   </a>
 
+  <a class="hub-card e-game" href="sp4-editor-index.html">
+    <div class="arrow">→</div>
+    <div class="num">B14 · #1489 · 1/5</div>
+    <h3>Editor regole — atom + PDF split</h3>
+    <p>RuleSpec atom editor split-view 60/40: pane sinistro accordion section-grouped con card atom inline-editable (text + page/line metadata + select-to-sync), pane destro PDF preview con highlight overlay sync. 11 stati: default / editing / saving / saved / validation-error / conflict / published / lock-acquiring / lock-held-by-other / loading / empty. Mobile stack con bottom-sheet drawer PDF.</p>
+    <div class="tags"><span class="tag">11 stati</span><span class="tag">Split-view</span><span class="tag">PDF preview</span></div>
+  </a>
+
+  <a class="hub-card e-agent" href="sp4-editor-proposals-index.html">
+    <div class="arrow">→</div>
+    <div class="num">B14 · #1489 · 2/5</div>
+    <h3>Typology proposals — list</h3>
+    <p>Lista typology AI agent proposals con filtri search + status chips, table desktop + cards mobile, 5 status badges (Draft/PendingReview/Approved/Rejected/Live), 9 stati: default / empty / loading / error / filter-search / filter-status / filter-empty / rejected-row-expanded / mobile-cards. Action buttons per-status (Edit/Test/Submit/View).</p>
+    <div class="tags"><span class="tag">9 stati</span><span class="tag">Table+Cards</span><span class="tag">Status badges</span></div>
+  </a>
+
+  <a class="hub-card e-agent" href="sp4-editor-proposals-create.html">
+    <div class="arrow">→</div>
+    <div class="num">B14 · #1489 · 3/5</div>
+    <h3>Create proposal — form multi-section</h3>
+    <p>Form full-page multi-section per creare nuova typology AI agent proposal: 5 sezioni accordion (Identità / Capabilities / System prompt con highlight {var} / Test config / Game scope), validation realtime con required indicators, unique-name check inline, draft autosave + submit-for-review modal. 8 stati: default-empty / partial-filled / all-valid / validation-errors / saving / draft-saved / submitting / submit-success.</p>
+    <div class="tags"><span class="tag">8 stati</span><span class="tag">5-section form</span><span class="tag">Code highlight</span></div>
+  </a>
+
+  <a class="hub-card e-agent" href="sp4-editor-proposals-edit.html">
+    <div class="arrow">→</div>
+    <div class="num">B14 · #1489 · 4/5</div>
+    <h3>Edit proposal — status-variant + revisions + audit</h3>
+    <p>Edit typology proposal con 4 status variants profondi (Draft editable / PendingReview locked / Approved read-only+live / Rejected con alert feedback admin). 7 sezioni: 5 form S3 (riusate) + Revisions diff inline vs versione approvata + Audit trail timeline (8 evento tipi). 10 stati: draft-edit / draft-edit-dirty / pending-review / approved-readonly / approved-with-stats / rejected-fresh / rejected-addressing / revisions-expanded / audit-trail-expanded / submitting-update. Dirty-field tracking per re-submission post-rejection.</p>
+    <div class="tags"><span class="tag">10 stati</span><span class="tag">4 status modes</span><span class="tag">Diff + Audit</span></div>
+  </a>
+
+  <a class="hub-card e-agent" href="sp4-editor-proposals-test.html">
+    <div class="arrow">→</div>
+    <div class="num">B14 · #1489 · 5/5</div>
+    <h3>Test playground — FSM streaming + trace</h3>
+    <p>Playground streaming per testare typology pre-submit: split-view (config sidebar 320px + chat body fluid), FSM streaming 4 stati (idle / streaming con cursor blink animato / completed / error con 3 variant rate-limit/timeout/network), trace drawer destra con token count + latency + cost + tool calls + RAG sources, compare mode v3 Draft vs v2 Approved side-by-side. 12 stati totali: idle-empty / typing-input / streaming-active / streaming-stop-clicked / completed-single / completed-multi / error-rate-limit / error-timeout / error-network / trace-drawer-open / compare-mode / mobile-stack.</p>
+    <div class="tags"><span class="tag">12 stati</span><span class="tag">FSM streaming</span><span class="tag">Trace + Compare</span></div>
+  </a>
+
   <a class="hub-card e-event" href="sp7-game-night-live.html">
     <div class="arrow">→</div>
     <div class="num">SP7 · K · #487</div>

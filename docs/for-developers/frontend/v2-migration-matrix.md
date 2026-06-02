@@ -778,7 +778,11 @@ instead.
 
 | Route | Mockup | Note |
 |-------|--------|------|
-| `/editor` · `/editor/agent-proposals/*` (4 sub-route) | `sp4-agents-index.html` [partial] | UX editor proposte mancante |
+| `/editor` | `sp4-editor-index.html` [done] | B14 #1489 5/5 · RuleSpec atom editor split-view + PDF preview, 11 stati |
+| `/editor/agent-proposals` | `sp4-editor-proposals-index.html` [done] | B14 #1489 · Typology list, 5 status badge, 9 stati |
+| `/editor/agent-proposals/create` | `sp4-editor-proposals-create.html` [done] | B14 #1489 · Form multi-section 5 sezioni, 8 stati |
+| `/editor/agent-proposals/[id]/edit` | `sp4-editor-proposals-edit.html` [done] | B14 #1489 · Edit + 4 status variants + Revisions diff + Audit trail, 10 stati |
+| `/editor/agent-proposals/[id]/test` | `sp4-editor-proposals-test.html` [done] | B14 #1489 · Playground FSM streaming + Trace + Compare, 12 stati |
 | `/pipeline-builder` | — | gap |
 | `/n8n` | — | gap (integration UI) |
 

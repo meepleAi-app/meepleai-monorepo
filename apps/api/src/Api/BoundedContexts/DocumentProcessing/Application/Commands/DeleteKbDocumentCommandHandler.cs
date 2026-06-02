@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
+using Api.Observability;
 using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
@@ -91,7 +92,21 @@ internal sealed class DeleteKbDocumentCommandHandler : ICommandHandler<DeleteKbD
         // 4. EF delete — cascade removes TextChunks + VectorDocument
         var storageGameId = (doc.PrivateGameId ?? doc.SharedGameId)?.ToString() ?? string.Empty;
         _db.PdfDocuments.Remove(doc);
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(DeleteKbDocumentCommandHandler),
+                MeepleAiMetrics.PdfConcurrencyCategories.A);
+            _logger.LogWarning(ex,
+                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category A)",
+                id, nameof(DeleteKbDocumentCommandHandler));
+            throw new ConflictException(
+                $"Document {id} was modified by another concurrent operation; please retry.");
+        }
         _logger.LogInformation(
             "Deleted KB document {DocId} (detached from {AgentCount} consuming agents)",
             id, consumingAgents.Count);

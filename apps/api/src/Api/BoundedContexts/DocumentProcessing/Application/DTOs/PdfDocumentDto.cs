@@ -1,3 +1,5 @@
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
+
 namespace Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 
 /// <summary>
@@ -15,7 +17,7 @@ internal record PdfDocumentDto(
     int? PageCount,
     string DocumentType = "base", // Issue #2051: base, expansion, errata, homerule
     bool IsPublic = false, // Admin Wizard: Public library visibility
-    string ProcessingState = "Pending", // Issue #5186: granular 7-state pipeline (PdfProcessingState enum value)
+    string ProcessingState = nameof(PdfProcessingState.Pending), // Issue #5186: granular 7-state pipeline (PdfProcessingState enum value)
     int ProgressPercentage = 0, // Issue #5186: 0-100 based on current state
     int RetryCount = 0, // Issue #5186: number of retries attempted
     int MaxRetries = 3, // Issue #5186: always 3 per domain model

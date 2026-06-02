@@ -18,7 +18,8 @@ internal static class AdminIndexerEndpoints
 
         group.MapGet("/versions", GetVersions)
             .WithName("GetIndexerVersions")
-            .WithSummary("Returns selectable indexer versions for the reindex dropdown");
+            .WithSummary("Returns selectable indexer versions for the reindex dropdown")
+            .Produces<IReadOnlyList<IndexerVersionDto>>(StatusCodes.Status200OK);
     }
 
     private static async Task<IResult> GetVersions(

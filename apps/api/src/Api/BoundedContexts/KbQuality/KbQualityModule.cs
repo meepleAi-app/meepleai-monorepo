@@ -1,5 +1,7 @@
 using Api.BoundedContexts.KbQuality.Application.Configuration;
+using Api.BoundedContexts.KbQuality.Application.Ports;
 using Api.BoundedContexts.KbQuality.Application.Services;
+using Api.BoundedContexts.KbQuality.Infrastructure;
 using Api.BoundedContexts.KbQuality.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +23,12 @@ public static class KbQualityModule
         services.AddSingleton<IQualityBandResolver, QualityBandResolver>();
         services.AddScoped<IEvaluationCostEstimator, EvaluationCostEstimator>();
         services.AddScoped<IGoldsetGenerator, LlmGoldsetGenerator>();
+
+        // EvaluationRepository implements 3 ports — single scoped registration backs all three.
+        services.AddScoped<EvaluationRepository>();
+        services.AddScoped<IEvaluationRepository>(sp => sp.GetRequiredService<EvaluationRepository>());
+        services.AddScoped<IEvaluationRateLimitStore>(sp => sp.GetRequiredService<EvaluationRepository>());
+        services.AddScoped<IEvalCostBudgetChecker>(sp => sp.GetRequiredService<EvaluationRepository>());
 
         return services;
     }

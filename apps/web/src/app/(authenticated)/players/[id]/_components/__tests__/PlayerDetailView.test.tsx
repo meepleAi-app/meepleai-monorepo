@@ -36,6 +36,14 @@ vi.mock('@/hooks/queries/usePlayersFromRecords', () => ({
   usePlayerStatistics: () => mockStatsQuery(),
 }));
 
+// ─── Mock useAchievements (#1542) ─────────────────────────────────────────────
+
+const mockAchievementsQuery = vi.fn();
+
+vi.mock('@/hooks/queries/useAchievements', () => ({
+  useAchievements: () => mockAchievementsQuery(),
+}));
+
 // ─── Mock visual fixture (IS_VISUAL_TEST_BUILD=false for most tests) ──────────
 
 vi.mock('@/lib/player-detail/player-detail-visual-test-fixture', () => ({
@@ -81,6 +89,13 @@ describe('PlayerDetailView', () => {
       isError: false,
       data: BASE_STATS,
       refetch: vi.fn(),
+    });
+    // #1542: achievements hook defaults to "loaded, empty list" so all existing
+    // tests get achievementCount=0 (same as the pre-#1542 hardcoded default).
+    mockAchievementsQuery.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: [],
     });
   });
 

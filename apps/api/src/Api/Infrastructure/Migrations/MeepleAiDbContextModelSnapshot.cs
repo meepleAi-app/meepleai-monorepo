@@ -1826,9 +1826,6 @@ namespace Api.Infrastructure.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
-                    b.Property<string>("MetricsJson")
-                        .HasColumnType("jsonb");
-
                     b.Property<Guid>("PdfDocumentId")
                         .HasColumnType("uuid");
 
@@ -15037,6 +15034,101 @@ namespace Api.Infrastructure.Migrations
                         .HasForeignKey("ToolkitId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.KbQuality.Domain.Evaluation.DocumentEvaluationRun", b =>
+                {
+                    b.OwnsOne("Api.BoundedContexts.KbQuality.Domain.Evaluation.EvaluationMetrics", "Metrics", b1 =>
+                        {
+                            b1.Property<Guid>("DocumentEvaluationRunId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<decimal>("CostUsd")
+                                .HasColumnType("numeric");
+
+                            b1.Property<int>("QualityBand")
+                                .HasColumnType("integer");
+
+                            b1.Property<int>("QueryCount")
+                                .HasColumnType("integer");
+
+                            b1.HasKey("DocumentEvaluationRunId");
+
+                            b1.ToTable("document_evaluation_runs");
+
+                            b1.ToJson("Metrics");
+
+                            b1.WithOwner()
+                                .HasForeignKey("DocumentEvaluationRunId");
+
+                            b1.OwnsOne("Api.BoundedContexts.KbQuality.Domain.Evaluation.LatencyMetrics", "Latency", b2 =>
+                                {
+                                    b2.Property<Guid>("EvaluationMetricsDocumentEvaluationRunId")
+                                        .HasColumnType("uuid");
+
+                                    b2.Property<TimeSpan>("P50")
+                                        .HasColumnType("interval");
+
+                                    b2.Property<TimeSpan>("P95")
+                                        .HasColumnType("interval");
+
+                                    b2.HasKey("EvaluationMetricsDocumentEvaluationRunId");
+
+                                    b2.ToTable("document_evaluation_runs");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("EvaluationMetricsDocumentEvaluationRunId");
+                                });
+
+                            b1.OwnsOne("Api.BoundedContexts.KbQuality.Domain.Evaluation.PrecisionMetrics", "Precision", b2 =>
+                                {
+                                    b2.Property<Guid>("EvaluationMetricsDocumentEvaluationRunId")
+                                        .HasColumnType("uuid");
+
+                                    b2.Property<double>("At1")
+                                        .HasColumnType("double precision");
+
+                                    b2.Property<double>("At3")
+                                        .HasColumnType("double precision");
+
+                                    b2.Property<double>("At5")
+                                        .HasColumnType("double precision");
+
+                                    b2.HasKey("EvaluationMetricsDocumentEvaluationRunId");
+
+                                    b2.ToTable("document_evaluation_runs");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("EvaluationMetricsDocumentEvaluationRunId");
+                                });
+
+                            b1.OwnsOne("Api.BoundedContexts.KbQuality.Domain.Evaluation.RankingMetrics", "Ranking", b2 =>
+                                {
+                                    b2.Property<Guid>("EvaluationMetricsDocumentEvaluationRunId")
+                                        .HasColumnType("uuid");
+
+                                    b2.Property<double>("Mrr")
+                                        .HasColumnType("double precision");
+
+                                    b2.HasKey("EvaluationMetricsDocumentEvaluationRunId");
+
+                                    b2.ToTable("document_evaluation_runs");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("EvaluationMetricsDocumentEvaluationRunId");
+                                });
+
+                            b1.Navigation("Latency")
+                                .IsRequired();
+
+                            b1.Navigation("Precision")
+                                .IsRequired();
+
+                            b1.Navigation("Ranking")
+                                .IsRequired();
+                        });
+
+                    b.Navigation("Metrics");
                 });
 
             modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AbTestVariant", b =>

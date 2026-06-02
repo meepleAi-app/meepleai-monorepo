@@ -22,10 +22,10 @@ namespace Api.Infrastructure.Migrations
                     Status = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
                     GoldsetVersion = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     GoldsetGenerationSeed = table.Column<long>(type: "bigint", nullable: false),
-                    MetricsJson = table.Column<string>(type: "jsonb", nullable: true),
                     CostUsd = table.Column<decimal>(type: "numeric(10,4)", precision: 10, scale: 4, nullable: true),
                     TriggeredByAdminId = table.Column<Guid>(type: "uuid", nullable: false),
-                    ErrorMessage = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true)
+                    ErrorMessage = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    Metrics = table.Column<string>(type: "jsonb", nullable: true)
                 },
                 constraints: table =>
                 {

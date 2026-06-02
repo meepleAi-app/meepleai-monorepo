@@ -19,6 +19,7 @@ export function GridCard(props: MeepleCardProps) {
   const {
     entity,
     title,
+    id,
     subtitle,
     imageUrl,
     rating,
@@ -51,7 +52,7 @@ export function GridCard(props: MeepleCardProps) {
     >
       <AccentBorder entity={entity} />
       <div className="relative">
-        <Cover entity={entity} variant="grid" imageUrl={imageUrl} alt={title} />
+        <Cover entity={entity} variant="grid" imageUrl={imageUrl} alt={title} gameId={id} />
         {/* Top-left badge stack: EntityBadge always, StatusBadge optional.
             Stacked in a single absolute flex column (gap-1) so they never overlap
             and TagStrip can position itself below them deterministically. */}

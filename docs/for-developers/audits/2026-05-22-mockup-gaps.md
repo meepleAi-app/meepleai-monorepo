@@ -200,11 +200,13 @@ sub-pages · nodi architetturali N4/N6/N7.
   - ✅ `/sessions/live/[sessionId]/photos` → `sp4-session-live?tab=photos`
   - ✅ `/sessions/live/[sessionId]/agent` → `sp4-session-live?tab=agent`
   - ✅ `/sessions/live/[sessionId]/players` → `sp4-session-live?tab=players`
-  - ⚠️ `/sessions/[id]/play` — gap residuo, fuori scope ADR 2026-05-31
+  - ✅ `/sessions/[id]/play` → `sp4-session-play.html` + `.jsx` + `-parts.jsx` + `-ui.jsx` (residuo chiuso 2026-06-02, 10 stati, 3-col live view distinta da /live spectator) — PR pending #1492
 - **Mockup canonical**: tutti i 10 file (6 modificati + 4 nuovi) shipped in
-  `admin-mockups/design_files/`. Sync companion: `MOCKUPS_INDEX.md`
-  (+4 component-mock, total 83→87) e `v2-migration-matrix.md`
-  (Route Index aggiornato con tab mapping).
+  `admin-mockups/design_files/` 2026-05-31, **+ 4 file sp4-session-play** shipped 2026-06-02
+  (residuo closure). Sync companion: `MOCKUPS_INDEX.md`
+  (+4 component-mock, total 83→87, +4 sp4-session-play files 87→91) e `v2-migration-matrix.md`
+  (Route Index aggiornato con tab mapping + /play row done).
+- **Issue #1492 CLOSED 2026-06-02** — **epic #1475 user-facing UI a 26/26 (100%)** (gap N7 fully resolved including residual).
 
 ## P3 — Coverage stati (cross-cutting, Adzic)
 

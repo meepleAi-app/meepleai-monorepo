@@ -15,6 +15,7 @@
  */
 
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentFilters, type AgentFiltersLabels, type AgentFiltersProps } from '../AgentFilters';
@@ -181,5 +182,43 @@ describe('AgentFilters (Wave B.2)', () => {
   it('exposes data-slot="agents-filters" on the root for spec scoping', () => {
     const { container } = renderFilters();
     expect(container.querySelector('[data-slot="agents-filters"]')).not.toBeNull();
+  });
+});
+
+// Separate describe block: axe needs real timers because jest-axe runs the
+// rules engine via a microtask queue that `vi.useFakeTimers()` would freeze.
+describe('AgentFilters a11y (#1569)', () => {
+  it('passes axe a11y scan in default state', async () => {
+    const { container } = render(
+      <AgentFilters
+        labels={labels}
+        query=""
+        onQueryChange={vi.fn()}
+        status="all"
+        onStatusChange={vi.fn()}
+        sort="recent"
+        onSortChange={vi.fn()}
+        resultCount={6}
+        compact={false}
+      />
+    );
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('passes axe a11y scan with non-empty query (clear button visible)', async () => {
+    const { container } = render(
+      <AgentFilters
+        labels={labels}
+        query="catan"
+        onQueryChange={vi.fn()}
+        status="attivo"
+        onStatusChange={vi.fn()}
+        sort="alpha"
+        onSortChange={vi.fn()}
+        resultCount={3}
+        compact={false}
+      />
+    );
+    expect(await axe(container)).toHaveNoViolations();
   });
 });

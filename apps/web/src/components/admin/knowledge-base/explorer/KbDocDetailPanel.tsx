@@ -3,15 +3,18 @@
 
 import { useSearchParams } from 'next/navigation';
 
+import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { useKbChunksList } from '@/hooks/queries/useKbChunksList';
 import { useKbDocDetail } from '@/hooks/queries/useKbDocDetail';
 import { formatFileSize } from '@/lib/format/file-size';
 import { formatLastReindex } from '@/lib/format/last-reindex';
+import { isAdminOrAbove } from '@/types/auth';
 
 import { KbDocActions } from './actions/KbDocActions';
 import { IngestionPanel } from './ingestion/IngestionPanel';
 import { KbDocDetailTabs, type KbDocTabKey } from './KbDocDetailTabs';
 import { KbDocPreviewPanel } from './preview/KbDocPreviewPanel';
+import { QualityTabPanel } from './quality/QualityTabPanel';
 import { KbChunkSearch } from './search/KbChunkSearch';
 import { UsedByPanel } from './used-by/UsedByPanel';
 
@@ -63,8 +66,14 @@ export function KbDocDetailPanel({ docId, selectedDocMeta }: KbDocDetailPanelPro
     if (tab === 'ingestion') return 'ingestion';
     if (tab === 'used-by') return 'used-by';
     if (tab === 'preview') return 'preview';
+    if (tab === 'quality') return 'quality';
     return 'overview';
   })();
+
+  // Plan amendment A4: AuthUser has no permissions[] — gate override-cost-cap
+  // toggle on admin/superadmin role instead.
+  const currentUser = useCurrentUser();
+  const canOverrideCostCap = isAdminOrAbove(currentUser.data ?? null);
 
   const detailQuery = useKbDocDetail({ docId: docId ?? undefined, enabled: docId !== null });
   const chunksQuery = useKbChunksList({
@@ -203,6 +212,10 @@ export function KbDocDetailPanel({ docId, selectedDocMeta }: KbDocDetailPanelPro
       {activeTab === 'used-by' && <UsedByPanel docId={doc.id} />}
 
       {activeTab === 'preview' && <KbDocPreviewPanel docId={doc.id} />}
+
+      {activeTab === 'quality' && (
+        <QualityTabPanel docId={doc.id} hasOverrideCostCapPermission={canOverrideCostCap} />
+      )}
 
       {activeTab === 'overview' && (
         <>

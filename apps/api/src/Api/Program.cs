@@ -26,6 +26,8 @@ using Api.BoundedContexts.Gamification.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameManagement.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameToolbox.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameToolkit.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.KbQuality;
+using Api.BoundedContexts.KbQuality.Routing;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.SessionTracking.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Health;
@@ -335,6 +337,8 @@ builder.Services.AddMediatR(cfg =>
     cfg.AddOpenBehavior(typeof(Api.BoundedContexts.Administration.Application.Behaviors.AuditLoggingBehavior<,>)); // Issue #3691: Audit logging
     cfg.AddOpenBehavior(typeof(Api.BoundedContexts.Authentication.Application.Behaviors.TwoFactorEnforcementBehavior<,>)); // Issue #186 P1.1: 2FA admin enforcement (shadow mode)
     cfg.AddOpenBehavior(typeof(Api.BoundedContexts.SessionTracking.Application.Behaviors.ValidatePlayerRoleBehavior<,>)); // Issue #4765: Role validation
+    cfg.AddOpenBehavior(typeof(Api.BoundedContexts.KbQuality.Application.Behaviors.EvalRateLimitBehavior<,>)); // Issue #1675: KB quality eval sliding rate limit (registered BEFORE cost cap)
+    cfg.AddOpenBehavior(typeof(Api.BoundedContexts.KbQuality.Application.Behaviors.EvalCostCapBehavior<,>)); // Issue #1675: KB quality eval cost cap (D-H, A1)
     var mediatrLicenseKey = Environment.GetEnvironmentVariable("MEDIATR_LICENSE_KEY");
     if (!string.IsNullOrWhiteSpace(mediatrLicenseKey))
         cfg.LicenseKey = mediatrLicenseKey;
@@ -375,6 +379,9 @@ builder.Services.AddEntityRelationshipsContext();
 
 // DDD-PHASE3: KnowledgeBase bounded context
 builder.Services.AddKnowledgeBaseServices();
+
+// Issue #1675: KbQuality bounded context (per-doc quality eval)
+builder.Services.AddKbQualityModule(builder.Configuration);
 
 // DDD-PHASE3: WorkflowIntegration bounded context
 builder.Services.AddWorkflowIntegrationContext(builder.Configuration);
@@ -846,6 +853,7 @@ v1Api.MapLlmAnalyticsEndpoints();      // ISSUE-1725: LLM cost optimization anal
 v1Api.MapAdminAgentMetricsEndpoints(); // Issue #3382: Agent Metrics Dashboard
 v1Api.MapArbitroAdminEndpoints();      // Issue #4328: Arbitro beta testing admin tools
 v1Api.MapAdminPdfMetricsEndpoints();   // Issue #4212: PDF processing metrics
+v1Api.MapAdminKbQualityEndpoints();    // Issue #1675: Per-doc KB quality evaluations
 v1Api.MapAdminPdfStorageEndpoints();   // PDF Storage Management Hub: Storage health
 v1Api.MapAdminPdfManagementEndpoints(); // PDF Storage Management Hub: Bulk ops, maintenance, analytics
 v1Api.MapAdminIndexerEndpoints();       // Issue #1673: indexer version registry endpoint

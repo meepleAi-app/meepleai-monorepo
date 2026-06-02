@@ -72,8 +72,10 @@ import {
   createInfrastructureClient,
   createSessionFlowClient,
   createKbDocsClient,
+  createKbQualityClient,
   createActivityClient,
   type KbDocsClient,
+  type KbQualityClient,
   type ActivityClient,
   type AuthClient,
   type GamesClient,
@@ -370,6 +372,9 @@ export interface ApiClient {
   /** Cross-game per-user KB documents listing (Issue #1592 Phase 2b) */
   kbDocs: KbDocsClient;
 
+  /** Per-doc KB quality evaluation runs (Issue #1675) */
+  kbQuality: KbQualityClient;
+
   /** Cross-entity activity feed (Issue #1593 Phase 3b) */
   activity: ActivityClient;
 
@@ -475,6 +480,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     infrastructure: createInfrastructureClient({ httpClient }), // AI Infrastructure Dashboard
     sessionFlow: createSessionFlowClient({ httpClient }), // Session Flow v2.1
     kbDocs: createKbDocsClient({ httpClient }), // Issue #1592 Phase 2b
+    kbQuality: createKbQualityClient({ httpClient }), // Issue #1675 — per-doc quality eval
     activity: createActivityClient({ httpClient }), // Issue #1593 Phase 3b
     delete: (path: string) => httpClient.delete(path),
   };

@@ -1781,6 +1781,81 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("toolkit_widgets", "game_toolkit");
                 });
 
+            modelBuilder.Entity("Api.BoundedContexts.KbQuality.Domain.Budget.KbQualityBudgetCounter", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("YearMonth")
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea");
+
+                    b.Property<decimal>("SpentUsd")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("numeric(10,4)");
+
+                    b.HasKey("TenantId", "YearMonth");
+
+                    b.HasIndex("YearMonth");
+
+                    b.ToTable("kb_quality_budget_counters", (string)null);
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.KbQuality.Domain.Evaluation.DocumentEvaluationRun", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("CostUsd")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("numeric(10,4)");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<long>("GoldsetGenerationSeed")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("GoldsetVersion")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("PdfDocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid>("TriggeredByAdminId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompletedAt");
+
+                    b.HasIndex("TriggeredByAdminId");
+
+                    b.HasIndex("PdfDocumentId", "StartedAt");
+
+                    b.ToTable("document_evaluation_runs", (string)null);
+                });
+
             modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AbTestSession", b =>
                 {
                     b.Property<Guid>("Id")
@@ -8494,6 +8569,28 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("copyright_disclaimer_accepted_by");
 
+                    b.Property<string>("CoverGenerationError")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("cover_generation_error");
+
+                    b.Property<string>("CoverGenerationStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasDefaultValue("Pending")
+                        .HasColumnName("cover_generation_status");
+
+                    b.Property<int?>("CoverPageIndex")
+                        .HasColumnType("integer")
+                        .HasColumnName("cover_page_index");
+
+                    b.Property<string>("CoverR2Key")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("cover_r2_key");
+
                     b.Property<int?>("DiagramCount")
                         .HasColumnType("integer");
 
@@ -8693,6 +8790,9 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("ix_pdf_documents_base_document_id");
 
                     b.HasIndex("CollectionId");
+
+                    b.HasIndex("CoverGenerationStatus")
+                        .HasDatabaseName("ix_pdf_documents_cover_generation_status");
 
                     b.HasIndex("DocumentCategory")
                         .HasDatabaseName("ix_pdf_documents_document_category");
@@ -12228,6 +12328,26 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("title");
 
+                    b.Property<string>("WikidataCoverAttribution")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("wikidata_cover_attribution");
+
+                    b.Property<string>("WikidataCoverLicense")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("wikidata_cover_license");
+
+                    b.Property<string>("WikidataCoverR2Key")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("wikidata_cover_r2_key");
+
+                    b.Property<string>("WikidataCoverSourceUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("wikidata_cover_source_url");
+
                     b.Property<int>("YearPublished")
                         .HasColumnType("integer")
                         .HasColumnName("year_published");
@@ -13676,6 +13796,11 @@ namespace Api.Infrastructure.Migrations
                     b.Property<string>("CustomAgentConfigJson")
                         .HasColumnType("jsonb");
 
+                    b.Property<string>("CustomCoverR2Key")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("custom_cover_r2_key");
+
                     b.Property<long?>("CustomPdfFileSizeBytes")
                         .HasColumnType("bigint");
 
@@ -14964,6 +15089,101 @@ namespace Api.Infrastructure.Migrations
                         .HasForeignKey("ToolkitId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.KbQuality.Domain.Evaluation.DocumentEvaluationRun", b =>
+                {
+                    b.OwnsOne("Api.BoundedContexts.KbQuality.Domain.Evaluation.EvaluationMetrics", "Metrics", b1 =>
+                        {
+                            b1.Property<Guid>("DocumentEvaluationRunId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<decimal>("CostUsd")
+                                .HasColumnType("numeric");
+
+                            b1.Property<int>("QualityBand")
+                                .HasColumnType("integer");
+
+                            b1.Property<int>("QueryCount")
+                                .HasColumnType("integer");
+
+                            b1.HasKey("DocumentEvaluationRunId");
+
+                            b1.ToTable("document_evaluation_runs");
+
+                            b1.ToJson("Metrics");
+
+                            b1.WithOwner()
+                                .HasForeignKey("DocumentEvaluationRunId");
+
+                            b1.OwnsOne("Api.BoundedContexts.KbQuality.Domain.Evaluation.LatencyMetrics", "Latency", b2 =>
+                                {
+                                    b2.Property<Guid>("EvaluationMetricsDocumentEvaluationRunId")
+                                        .HasColumnType("uuid");
+
+                                    b2.Property<TimeSpan>("P50")
+                                        .HasColumnType("interval");
+
+                                    b2.Property<TimeSpan>("P95")
+                                        .HasColumnType("interval");
+
+                                    b2.HasKey("EvaluationMetricsDocumentEvaluationRunId");
+
+                                    b2.ToTable("document_evaluation_runs");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("EvaluationMetricsDocumentEvaluationRunId");
+                                });
+
+                            b1.OwnsOne("Api.BoundedContexts.KbQuality.Domain.Evaluation.PrecisionMetrics", "Precision", b2 =>
+                                {
+                                    b2.Property<Guid>("EvaluationMetricsDocumentEvaluationRunId")
+                                        .HasColumnType("uuid");
+
+                                    b2.Property<double>("At1")
+                                        .HasColumnType("double precision");
+
+                                    b2.Property<double>("At3")
+                                        .HasColumnType("double precision");
+
+                                    b2.Property<double>("At5")
+                                        .HasColumnType("double precision");
+
+                                    b2.HasKey("EvaluationMetricsDocumentEvaluationRunId");
+
+                                    b2.ToTable("document_evaluation_runs");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("EvaluationMetricsDocumentEvaluationRunId");
+                                });
+
+                            b1.OwnsOne("Api.BoundedContexts.KbQuality.Domain.Evaluation.RankingMetrics", "Ranking", b2 =>
+                                {
+                                    b2.Property<Guid>("EvaluationMetricsDocumentEvaluationRunId")
+                                        .HasColumnType("uuid");
+
+                                    b2.Property<double>("Mrr")
+                                        .HasColumnType("double precision");
+
+                                    b2.HasKey("EvaluationMetricsDocumentEvaluationRunId");
+
+                                    b2.ToTable("document_evaluation_runs");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("EvaluationMetricsDocumentEvaluationRunId");
+                                });
+
+                            b1.Navigation("Latency")
+                                .IsRequired();
+
+                            b1.Navigation("Precision")
+                                .IsRequired();
+
+                            b1.Navigation("Ranking")
+                                .IsRequired();
+                        });
+
+                    b.Navigation("Metrics");
                 });
 
             modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AbTestVariant", b =>

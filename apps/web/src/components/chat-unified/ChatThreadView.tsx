@@ -431,9 +431,14 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                 break;
               }
               case 5: {
-                // Error
-                const data = event.data as { message?: string };
-                setError(data?.message ?? 'Errore nella risposta AI');
+                // Error — BE sends `{ errorMessage, errorCode }` (StreamingErrorEvent).
+                // Read both names defensively. #1814.
+                const data = event.data as {
+                  errorMessage?: string;
+                  errorCode?: string;
+                  message?: string;
+                };
+                setError(data?.errorMessage ?? data?.message ?? 'Errore nella risposta AI');
                 abortController.abort();
                 return;
               }

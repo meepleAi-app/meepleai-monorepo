@@ -422,6 +422,44 @@ describe('ChatThreadView — thread-message invariants (characterization)', () =
   });
 
   // -------------------------------------------------------------------------
+  // Invariant 4b — Error event surfaces the BE `errorMessage` field (#1814)
+  //
+  // The BE serializes `StreamingErrorEvent` with `{ errorMessage, errorCode }`
+  // (apps/api/src/Api/Models/Contracts.cs). Pre-#1814 the FE only read
+  // `data.message` and silently fell back to a generic string, hiding the
+  // actual reason from the user (e.g. "No relevant information found in the
+  // rulebook.", "Rate limited", "Provider unavailable"). This guard pins the
+  // BE-shaped path so a future refactor cannot regress to swallowing it.
+  // -------------------------------------------------------------------------
+
+  it('invariant 4b: surfaces BE `errorMessage` field verbatim (#1814)', async () => {
+    setQaStreamScript([
+      {
+        type: QA_EVENT_TYPES_REAL.ERROR,
+        data: {
+          errorMessage: 'No relevant information found in the rulebook.',
+          errorCode: 'NO_RESULTS',
+        },
+      },
+    ]);
+
+    const user = userEvent.setup();
+    await renderView();
+    await waitFor(() => expect(screen.getByTestId('message-input')).toBeInTheDocument());
+
+    await user.type(screen.getByTestId('message-input'), 'asks something');
+    await user.click(screen.getByTestId('send-btn'));
+
+    // The BE-supplied error text must appear in the UI (via the page-level
+    // error banner rendered by ChatThreadView on `setError`).
+    await waitFor(() => {
+      expect(
+        screen.getByText('No relevant information found in the rulebook.')
+      ).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Invariant 5 — Hydration aborts stream
   //
   // After `useThreadMessages` extraction (Task 7): the hydration effect in

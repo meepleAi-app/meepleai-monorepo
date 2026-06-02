@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Administration.Application.Attributes;
 using MediatR;
 
 namespace Api.BoundedContexts.KbQuality.Application.Commands.StartEvaluation;
@@ -15,6 +16,7 @@ namespace Api.BoundedContexts.KbQuality.Application.Commands.StartEvaluation;
 /// <item><c>OverrideCostCap</c> — admin-only opt-out from the per-tenant monthly cap (D-H, A1)</item>
 /// </list>
 /// </summary>
+[AuditableAction("DocumentEvaluationTriggered", "Document", Level = 2)]
 public sealed record StartEvaluationCommand(
     Guid DocId,
     string? GoldsetVersion,

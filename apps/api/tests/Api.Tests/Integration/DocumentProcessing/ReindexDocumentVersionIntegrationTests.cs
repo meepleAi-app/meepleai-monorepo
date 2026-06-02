@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Api.BoundedContexts.Administration.Application.Behaviors;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.Infrastructure;
@@ -9,8 +10,10 @@ using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
 using MediatR;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 using Npgsql;
 using Xunit;
 
@@ -51,6 +54,14 @@ public sealed class ReindexDocumentVersionIntegrationTests : IAsyncLifetime
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
         var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
+
+        // Required for audit tests: replicate Program.cs MediatR pipeline behavior wiring.
+        // CreateBase does not register IPipelineBehavior — that is a Program.cs concern.
+        // Without these, tests 4 and 5 assert against an empty outbox and fail.
+        services.AddSingleton<IHttpContextAccessor>(
+            new Mock<IHttpContextAccessor>().Object); // returns null HttpContext — behavior handles this
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AuditLoggingBehavior<,>));
+
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
         _mediator = _serviceProvider.GetRequiredService<IMediator>();
@@ -204,8 +215,8 @@ public sealed class ReindexDocumentVersionIntegrationTests : IAsyncLifetime
 
         var rows = await _dbContext!.AuditOutbox.AsNoTracking().ToListAsync(TestCancellationToken);
         rows.Should().Contain(
-            r => HasMatchingAuditPayload(r.PayloadJson, "DocumentReindex", "Document"),
-            "a failed (conflict) reindex must still write an audit outbox row for forensic traceability");
+            r => HasMatchingAuditPayload(r.PayloadJson, "DocumentReindex", "Document", "Error"),
+            "a failed (conflict) reindex must write an Error audit row — not a Success row — for forensic traceability");
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -214,23 +225,43 @@ public sealed class ReindexDocumentVersionIntegrationTests : IAsyncLifetime
 
     /// <summary>
     /// Deserializes <paramref name="payloadJson"/> and checks whether it contains the expected
-    /// Action + Resource values. Client-side filter to avoid jsonb SQL operator dependencies.
+    /// Action + Resource + optional Result values. Client-side filter to avoid jsonb SQL operator
+    /// dependencies. When <paramref name="expectedResult"/> is non-null, the Result property in the
+    /// payload (e.g. "Success" or "Error") must also match.
     /// </summary>
-    private static bool HasMatchingAuditPayload(string payloadJson, string expectedAction, string expectedResource)
+    private static bool HasMatchingAuditPayload(
+        string payloadJson,
+        string expectedAction,
+        string expectedResource,
+        string? expectedResult = null)
     {
         try
         {
             using var doc = JsonDocument.Parse(payloadJson);
             var root = doc.RootElement;
 
-            if (!root.TryGetProperty("Action", out var actionEl) ||
-                !root.TryGetProperty("Resource", out var resourceEl))
+            if (!root.TryGetProperty("Action", out var actionEl)
+                || !string.Equals(actionEl.GetString(), expectedAction, StringComparison.Ordinal))
             {
                 return false;
             }
 
-            return string.Equals(actionEl.GetString(), expectedAction, StringComparison.Ordinal)
-                && string.Equals(resourceEl.GetString(), expectedResource, StringComparison.Ordinal);
+            if (!root.TryGetProperty("Resource", out var resourceEl)
+                || !string.Equals(resourceEl.GetString(), expectedResource, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            if (expectedResult is not null)
+            {
+                if (!root.TryGetProperty("Result", out var resultEl)
+                    || !string.Equals(resultEl.GetString(), expectedResult, StringComparison.Ordinal))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
         catch (JsonException)
         {

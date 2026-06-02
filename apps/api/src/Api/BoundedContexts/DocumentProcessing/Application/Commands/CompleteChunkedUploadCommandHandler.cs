@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
@@ -474,7 +475,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                 pdfId, pdfGuid, allDocumentChunks, embeddings!, pdfDoc, fullText!, db, scope, cancellationToken).ConfigureAwait(false);
 
             // Mark as completed
-            pdfDoc.ProcessingState = "Ready";
+            pdfDoc.ProcessingState = nameof(PdfProcessingState.Ready);
             pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
@@ -519,7 +520,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
 
             if (!extractResult.Success)
             {
-                pdfDoc.ProcessingState = "Failed";
+                pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
                 pdfDoc.ProcessingError = extractResult.ErrorMessage;
                 pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -633,7 +634,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
 
         if (!embeddingResult.Success)
         {
-            pdfDoc.ProcessingState = "Failed";
+            pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
             pdfDoc.ProcessingError = embeddingResult.ErrorMessage;
             pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -647,7 +648,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         {
             var mismatchMessage = $"Embedding service returned {embeddings.Count} vectors for {allDocumentChunks.Count} chunks";
             _logger.LogWarning("Embedding count mismatch for PDF {PdfId}: {Message}", pdfId, mismatchMessage);
-            pdfDoc.ProcessingState = "Failed";
+            pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
             pdfDoc.ProcessingError = mismatchMessage;
             pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -788,7 +789,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                 var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfGuid }, cancellationToken).ConfigureAwait(false);
                 if (pdfDoc != null)
                 {
-                    pdfDoc.ProcessingState = "Failed";
+                    pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
                     pdfDoc.ProcessingError = ex.Message;
                     pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                     await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

@@ -169,7 +169,9 @@ internal sealed class GetKbDocumentByIdHandler : IQueryHandler<GetKbDocumentById
             // Gate B v1 carryover — PdfDocumentEntity has no Tags column yet.
             Tags: Array.Empty<string>(),
             // #1676 scope (a) F1: Size in bytes — mockup sp5-admin-kb.html L147
-            FileSize: data.pdf.FileSizeBytes
+            FileSize: data.pdf.FileSizeBytes,
+            // Issue #1673: indexer version persisted by ReindexDocumentCommandHandler.
+            IndexerVersion: data.pdf.IndexerVersion
         );
 
         return new KbDocResultContainer(

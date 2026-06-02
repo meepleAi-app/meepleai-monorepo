@@ -190,5 +190,11 @@ internal class UserLibraryEntryEntityConfiguration : IEntityTypeConfiguration<Us
                 "(shared_game_id IS NOT NULL AND private_game_id IS NULL) OR " +
                 "(shared_game_id IS NULL AND private_game_id IS NOT NULL)");
         });
+
+        // Issue #1824 (umbrella #1821 L3) — user-uploaded custom cover.
+        builder.Property(e => e.CustomCoverR2Key)
+            .HasMaxLength(512)
+            .HasColumnName("custom_cover_r2_key")
+            .IsRequired(false);
     }
 }

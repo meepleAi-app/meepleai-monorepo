@@ -125,6 +125,27 @@ internal class SharedGameEntityConfiguration : IEntityTypeConfiguration<SharedGa
             .HasColumnName("row_version")
             .IsRowVersion();
 
+        // Issue #1823 (umbrella #1821 L2) — Wikidata cover columns.
+        builder.Property(e => e.WikidataCoverR2Key)
+            .HasMaxLength(512)
+            .HasColumnName("wikidata_cover_r2_key")
+            .IsRequired(false);
+
+        builder.Property(e => e.WikidataCoverSourceUrl)
+            .HasMaxLength(2048)
+            .HasColumnName("wikidata_cover_source_url")
+            .IsRequired(false);
+
+        builder.Property(e => e.WikidataCoverLicense)
+            .HasMaxLength(64)
+            .HasColumnName("wikidata_cover_license")
+            .IsRequired(false);
+
+        builder.Property(e => e.WikidataCoverAttribution)
+            .HasMaxLength(512)
+            .HasColumnName("wikidata_cover_attribution")
+            .IsRequired(false);
+
         // Global query filter for soft deletes
         builder.HasQueryFilter(e => !e.IsDeleted);
 

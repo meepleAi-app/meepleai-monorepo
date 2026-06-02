@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
+using Api.Observability;
 using Api.SharedKernel.Application.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -92,7 +93,21 @@ internal sealed class ReindexDocumentCommandHandler : ICommandHandler<ReindexDoc
         pdf.FailedAtState = null;
         pdf.IndexerVersion = resolvedVersion;
 
-        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(ReindexDocumentCommandHandler),
+                MeepleAiMetrics.PdfConcurrencyCategories.A);
+            _logger.LogWarning(ex,
+                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category A)",
+                command.PdfId, nameof(ReindexDocumentCommandHandler));
+            throw new ConflictException(
+                $"Document {command.PdfId} was modified by another concurrent operation; please retry.");
+        }
 
         // Enqueue Quartz.
         try

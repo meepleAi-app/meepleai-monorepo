@@ -57,6 +57,13 @@ vi.mock('@/hooks/queries/useKbChunksList', () => ({
   useKbChunksList: (options: unknown) => mockUseKbChunksList(options),
 }));
 
+// ── useCurrentUser mock (added in #1675 Task 30 to gate the Quality tab
+// override-cost-cap toggle). Defaults to null so the existing non-quality
+// test cases stay non-admin; the quality-tab cases override per-test.
+vi.mock('@/hooks/queries/useCurrentUser', () => ({
+  useCurrentUser: () => ({ data: null }),
+}));
+
 // ── KbDocActions mock (panel test doesn't exercise action internals) ───────────
 const mockKbDocActions = vi.fn();
 vi.mock('../actions/KbDocActions', () => ({

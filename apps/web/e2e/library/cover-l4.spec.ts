@@ -146,7 +146,6 @@ test.describe('L4 PDF cover propagation (#1852)', () => {
    * provisioned in the E2E CI environment so this assertion can run
    * consistently without requiring a live staging deployment.
    */
-  // eslint-disable-next-line playwright/no-skipped-test
   test.fixme('cover-strict-r2: img src ends with .webp (S3 only — requires STORAGE_PROVIDER=s3)', async ({
     page,
   }) => {

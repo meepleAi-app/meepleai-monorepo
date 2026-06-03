@@ -1767,10 +1767,14 @@
         }
       },
       "emptyState": {
-        "default": {
+        "empty": {
           "title": "Your library is empty",
-          "subtitle": "Add your first game to start building your collection.",
-          "cta": "Add game"
+          "subtitle": "Start by adding your first game. Import your collection from BoardGameGeek or search by title.",
+          "cta": "+ Add your first game",
+          "ctaImportBgg": "↓ Import from BGG",
+          "suggestions": {
+            "heading": "Suggestions from the community"
+          }
         },
         "filteredEmpty": {
           "title": "No results",

@@ -1817,10 +1817,14 @@
         }
       },
       "emptyState": {
-        "default": {
+        "empty": {
           "title": "La tua libreria è vuota",
-          "subtitle": "Aggiungi il tuo primo gioco per iniziare a costruire la collezione.",
-          "cta": "Aggiungi gioco"
+          "subtitle": "Inizia aggiungendo il tuo primo gioco. Importa la collezione da BoardGameGeek o cerca per titolo.",
+          "cta": "+ Aggiungi il tuo primo gioco",
+          "ctaImportBgg": "↓ Importa da BGG",
+          "suggestions": {
+            "heading": "Suggerimenti dalla community"
+          }
         },
         "filteredEmpty": {
           "title": "Nessun risultato",

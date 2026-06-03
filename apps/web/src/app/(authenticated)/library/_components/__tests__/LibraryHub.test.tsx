@@ -191,9 +191,12 @@ const MESSAGES: Record<string, string> = {
     'I giochi selezionati saranno rimossi dalla libreria. La PDF KB resterà disponibile.',
   'pages.library.bulk.confirm.confirmCta': 'Conferma',
   'pages.library.bulk.confirm.cancelCta': 'Annulla',
-  'pages.library.emptyState.default.title': 'La tua libreria è vuota',
-  'pages.library.emptyState.default.subtitle': 'Aggiungi il tuo primo gioco per iniziare.',
-  'pages.library.emptyState.default.cta': 'Aggiungi gioco',
+  'pages.library.emptyState.empty.title': 'La tua libreria è vuota',
+  'pages.library.emptyState.empty.subtitle':
+    'Inizia aggiungendo il tuo primo gioco. Importa la collezione da BGG o cerca per titolo.',
+  'pages.library.emptyState.empty.cta': '+ Aggiungi il tuo primo gioco',
+  'pages.library.emptyState.empty.ctaImportBgg': '↓ Importa da BGG',
+  'pages.library.emptyState.empty.suggestions.heading': 'Suggerimenti dalla community',
   'pages.library.emptyState.filteredEmpty.title': 'Nessun risultato',
   'pages.library.emptyState.filteredEmpty.subtitle': 'Prova a modificare la ricerca o i filtri.',
   'pages.library.emptyState.filteredEmpty.cta': 'Cancella filtri',
@@ -525,7 +528,12 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
     const empty = container.querySelector('[data-slot="library-empty-state"]') as HTMLElement;
     expect(empty).toHaveAttribute('data-kind', 'empty');
     // Scope CTA query to empty state — Hero also renders an "Aggiungi gioco" CTA.
-    expect(within(empty).getByRole('button', { name: 'Aggiungi gioco' })).toBeInTheDocument();
+    // PR2 Task 2.5: SP4 first-run reskin replaced "Aggiungi gioco" with
+    // "+ Aggiungi il tuo primo gioco" + secondary "↓ Importa da BGG".
+    expect(
+      within(empty).getByRole('button', { name: /Aggiungi il tuo primo gioco/i })
+    ).toBeInTheDocument();
+    expect(within(empty).getByRole('button', { name: /Importa.*BGG/i })).toBeInTheDocument();
   });
 
   // ─── FSM: filtered-empty ───────────────────────────────────────────────

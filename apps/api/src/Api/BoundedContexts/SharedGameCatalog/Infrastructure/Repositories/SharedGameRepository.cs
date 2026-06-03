@@ -226,4 +226,13 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
 
         return entities.Select(MapToDomain).ToList();
     }
+
+    public async Task<int> CountAllAsync(CancellationToken cancellationToken = default)
+    {
+        return await DbContext.SharedGames
+            .AsNoTracking()
+            .Where(g => !g.IsDeleted)
+            .CountAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
 }

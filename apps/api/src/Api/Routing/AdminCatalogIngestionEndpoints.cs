@@ -2,6 +2,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.Extensions;
+using Api.Middleware.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -228,6 +229,115 @@ internal static class AdminCatalogIngestionEndpoints
             return operation;
         });
 
+        // ============================================================
+        // #1861 — Catalog sync run history (Phase 4)
+        // ============================================================
+
+        // GET /api/v1/admin/catalog-ingestion/status
+        group.MapGet("/status", async (
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var (authorized, _, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            var result = await mediator.Send(new GetCatalogSyncStatusQuery(), ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("GetCatalogSyncStatus")
+        .WithOpenApi(operation =>
+        {
+            operation.Summary = "Catalog sync status";
+            operation.Description = "Returns current status (running|idle|never_run), last/current run summary, cumulative games total, and next scheduled timestamp.";
+            return operation;
+        });
+
+        // GET /api/v1/admin/catalog-ingestion/runs?page=N&pageSize=M
+        group.MapGet("/runs", async (
+            [FromQuery] int? page,
+            [FromQuery] int? pageSize,
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var (authorized, _, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            var query = new GetCatalogSyncRunsQuery(page ?? 1, pageSize ?? 12);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("GetCatalogSyncRuns")
+        .WithOpenApi(operation =>
+        {
+            operation.Summary = "Catalog sync run history (paged)";
+            operation.Description = "Returns recent catalog sync runs ordered by CreatedAt DESC. Defaults: page=1, pageSize=12. Bounds: pageSize 1-100.";
+            return operation;
+        });
+
+        // GET /api/v1/admin/catalog-ingestion/runs/{id}/logs?tail=N
+        group.MapGet("/runs/{id:guid}/logs", async (
+            Guid id,
+            [FromQuery] int? tail,
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var (authorized, _, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            var query = new GetCatalogSyncRunLogsQuery(id, tail ?? 100);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return result is null
+                ? Results.NotFound(new { error = $"Catalog sync run {id} not found." })
+                : Results.Ok(result);
+        })
+        .WithName("GetCatalogSyncRunLogs")
+        .WithOpenApi(operation =>
+        {
+            operation.Summary = "Catalog sync run logs (tail-N)";
+            operation.Description = "Returns the last N log lines for the given run. 404 if run missing. LogsAvailable=false when no log file attached or unreadable.";
+            return operation;
+        });
+
+        // POST /api/v1/admin/catalog-ingestion/trigger
+        group.MapPost("/trigger", async (
+            TriggerCatalogSyncRequest request,
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            try
+            {
+                var command = new TriggerCatalogSyncCommand(
+                    request.Provider, session!.Principal!.Subject.Id);
+
+                var result = await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.Accepted($"/api/v1/admin/catalog-ingestion/runs/{result.RunId}/logs", result);
+            }
+            catch (ConflictException ex)
+            {
+                return Results.Conflict(new { error = ex.Message });
+            }
+        })
+        .RequireRateLimiting("BulkImportAdmin")
+        .WithName("TriggerCatalogSync")
+        .WithOpenApi(operation =>
+        {
+            operation.Summary = "Trigger manual catalog sync";
+            operation.Description = "Enqueues a new catalog sync run for the given provider. 202 Accepted with runId on success. 409 Conflict if a run is already in progress.";
+            return operation;
+        });
+
         return group;
     }
 }
+
+/// <summary>
+/// Request body for POST /api/v1/admin/catalog-ingestion/trigger (#1861).
+/// </summary>
+public sealed record TriggerCatalogSyncRequest(CatalogSyncProvider Provider);

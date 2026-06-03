@@ -514,6 +514,9 @@ internal static class InfrastructureServiceExtensions
         services.AddScoped<Infrastructure.Services.IBggImportQueueService, Infrastructure.Services.BggImportQueueService>();
         services.AddHostedService<Infrastructure.BackgroundServices.BggImportQueueBackgroundService>();
 
+        // #1861: Catalog sync cron service (opt-in via CatalogSyncCron:Enabled)
+        services.AddHostedService<Infrastructure.BackgroundServices.CatalogSyncCronService>();
+
         // Admin Invitation Flow: background services for invitation lifecycle
         services.AddHostedService<Infrastructure.BackgroundServices.InvitationCleanupService>();
         services.AddHostedService<Infrastructure.BackgroundServices.GameSuggestionProcessorService>();

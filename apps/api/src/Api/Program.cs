@@ -270,6 +270,7 @@ builder.Services.Configure<LlmQueryComplexityRoutingOptions>(
 builder.Services.Configure<HybridSearchConfiguration>(builder.Configuration.GetSection("HybridSearch")); // AI-14: Hybrid search configuration
 builder.Services.Configure<WeeklyEvaluationConfiguration>(builder.Configuration.GetSection("QualityEvaluation")); // BGAI-042: Weekly evaluation configuration
 builder.Services.Configure<BggImportQueueConfiguration>(builder.Configuration.GetSection("BggImportQueue")); // ISSUE-3541: BGG import queue configuration
+builder.Services.Configure<CatalogSyncCronConfiguration>(builder.Configuration.GetSection("CatalogSyncCron")); // #1861: catalog sync cron service
 builder.Services.Configure<Api.BoundedContexts.Administration.Infrastructure.External.PrometheusOptions>(builder.Configuration.GetSection("Prometheus")); // Issue #893: Prometheus HTTP client configuration
 builder.Services.Configure<IndexingSettings>(builder.Configuration.GetSection(IndexingSettings.SectionName)); // ISSUE-3197: Vector indexing batch configuration
 

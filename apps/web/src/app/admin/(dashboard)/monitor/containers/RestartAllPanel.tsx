@@ -111,6 +111,12 @@ export function RestartAllPanel() {
   }, []);
 
   const executeRestartAll = useCallback(async () => {
+    // Close the confirmation dialog immediately so the admin can watch the
+    // ServiceProgressRow stream live. `AdminConfirmationDialog.handleConfirm`
+    // awaits `onConfirm` *before* calling `onClose`, so without this the
+    // dialog would stay open (in "Elaborazione…" state) for the full 5+ s
+    // restart loop, hiding the per-service progress underneath.
+    setShowConfirm(false);
     setIsRestarting(true);
 
     // Initialize progress

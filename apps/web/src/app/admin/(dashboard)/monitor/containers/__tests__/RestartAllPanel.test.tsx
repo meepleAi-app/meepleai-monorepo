@@ -185,6 +185,34 @@ describe('RestartAllPanel', () => {
     );
   });
 
+  it('closes dialog immediately when restart starts so ServiceProgress is visible', async () => {
+    // Regression guard: AdminConfirmationDialog.handleConfirm awaits onConfirm
+    // BEFORE calling onClose. The 5+ second restart loop must NOT keep the
+    // modal open on top of the per-service progress rows — admins need to see
+    // the live status of each tier during the restart.
+    const user = userEvent.setup();
+    // Slow restart so we can observe the dialog state mid-flight.
+    mockRestartService.mockImplementation(
+      () =>
+        new Promise(resolve =>
+          setTimeout(() => resolve({ message: 'OK', estimatedDowntime: '5s' }), 200)
+        )
+    );
+
+    render(<RestartAllPanel />);
+
+    await user.click(screen.getByTestId('restart-all-btn'));
+    await user.type(await screen.findByRole('textbox'), 'RESTART ALL');
+    await user.click(screen.getByRole('button', { name: /confirm restart all/i }));
+
+    // Dialog must be gone almost immediately (well before the first restart
+    // finishes); the in-flight progress panel must already be visible.
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+    expect(screen.getByTestId('restart-progress')).toBeInTheDocument();
+  });
+
   it('passes axe a11y scan with dialog open', async () => {
     const user = userEvent.setup();
     const { container } = render(<RestartAllPanel />);

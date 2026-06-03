@@ -448,7 +448,9 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
     expect(container.querySelector('[data-slot="library-hero-desktop"]')).toBeInTheDocument();
     expect(container.querySelector('[data-slot="library-tabs"]')).toBeInTheDocument();
     expect(container.querySelector('[data-slot="library-toolbar"]')).toBeInTheDocument();
-    expect(container.querySelector('[data-slot="library-hybrid-grid"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="library-hybrid-grid-container"]')
+    ).toBeInTheDocument();
     expect(container.querySelector('[data-slot="library-activity-rail"]')).toBeInTheDocument();
     expect(container.querySelector('[data-slot="library-empty-state"]')).not.toBeInTheDocument();
   });
@@ -474,7 +476,9 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
     const empty = container.querySelector('[data-slot="library-empty-state"]');
     expect(empty).not.toBeNull();
     expect(empty).toHaveAttribute('data-kind', 'loading');
-    expect(container.querySelector('[data-slot="library-hybrid-grid"]')).not.toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="library-hybrid-grid-container"]')
+    ).not.toBeInTheDocument();
   });
 
   // ─── FSM: error (all sources fail) ───────────────────────────────────────
@@ -501,7 +505,9 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
     );
     const root = container.querySelector('[data-slot="library-hub-v2"]');
     expect(root).toHaveAttribute('data-state', 'default');
-    expect(container.querySelector('[data-slot="library-hybrid-grid"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="library-hybrid-grid-container"]')
+    ).toBeInTheDocument();
     expect(container.querySelector('[data-slot="library-empty-state"]')).not.toBeInTheDocument();
   });
 
@@ -571,7 +577,9 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
   it('ignores unknown ?state= values and falls back to real FSM', () => {
     searchParamsState.value = 'totally-bogus';
     const { container } = renderHub(makeHub());
-    expect(container.querySelector('[data-slot="library-hybrid-grid"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="library-hybrid-grid-container"]')
+    ).toBeInTheDocument();
     expect(container.querySelector('[data-slot="library-empty-state"]')).not.toBeInTheDocument();
   });
 

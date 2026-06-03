@@ -119,9 +119,9 @@ describe('LibraryHybridGrid (Phase 2a hybrid items)', () => {
       expect(cards).toHaveLength(3);
     });
 
-    it('exposes data-slot="library-hybrid-grid" on container', () => {
+    it('exposes data-slot="library-hybrid-grid-container" on container', () => {
       const { container } = renderGrid();
-      expect(container.querySelector('[data-slot="library-hybrid-grid"]')).not.toBeNull();
+      expect(container.querySelector('[data-slot="library-hybrid-grid-container"]')).not.toBeNull();
     });
 
     it('passes each item entity through to MeepleCard', () => {
@@ -158,7 +158,7 @@ describe('LibraryHybridGrid (Phase 2a hybrid items)', () => {
 
     it('renders empty container when items=[]', () => {
       const { container } = renderGrid({ items: [] });
-      const grid = container.querySelector('[data-slot="library-hybrid-grid"]');
+      const grid = container.querySelector('[data-slot="library-hybrid-grid-container"]');
       expect(grid).not.toBeNull();
       expect(grid?.querySelectorAll('[data-slot="library-grid-card"]')).toHaveLength(0);
     });
@@ -185,8 +185,46 @@ describe('LibraryHybridGrid (Phase 2a hybrid items)', () => {
 
     it('exposes data-view on container reflecting current view mode', () => {
       const { container } = renderGrid({ view: 'list' });
-      const grid = container.querySelector('[data-slot="library-hybrid-grid"]');
+      const grid = container.querySelector('[data-slot="library-hybrid-grid-container"]');
       expect(grid).toHaveAttribute('data-view', 'list');
+    });
+  });
+
+  // ─── Mockup conformance (Task 2.3 of 2026-06-03 plan) ──────────────────────
+  // Refs admin-mockups/design_files/sp4-library-desktop.jsx:846-890 (LibraryGrid)
+  describe('mockup layout conformance (LibraryGrid jsx:846-890)', () => {
+    it('renders grid view with library-hybrid-grid-container data-slot and Tailwind grid layout', () => {
+      const { container } = renderGrid({ view: 'grid' });
+      const wrapper = container.querySelector('[data-slot="library-hybrid-grid-container"]');
+      expect(wrapper).toBeInTheDocument();
+      expect(wrapper?.getAttribute('data-view')).toBe('grid');
+      // mockup jsx:875-880 → display:grid + gap:12px → Tailwind: grid + gap-3 + responsive cols
+      expect(wrapper?.className).toMatch(/\bgrid\b/);
+      expect(wrapper?.className).toMatch(/grid-cols-/);
+      expect(wrapper?.className).toMatch(/gap-3/);
+    });
+
+    it('renders list view as flex-col stack with tight gap (mockup gap:6px ≈ gap-1.5)', () => {
+      const { container } = renderGrid({ view: 'list' });
+      const wrapper = container.querySelector('[data-slot="library-hybrid-grid-container"]');
+      expect(wrapper).toBeInTheDocument();
+      expect(wrapper?.getAttribute('data-view')).toBe('list');
+      // mockup jsx:849 → display:flex + flexDirection:column + gap:6px → Tailwind: flex flex-col gap-1.5
+      expect(wrapper?.className).toMatch(/\bflex\b/);
+      expect(wrapper?.className).toMatch(/flex-col/);
+      expect(wrapper?.className).toMatch(/gap-1\.5/);
+    });
+
+    it('renders compact view inside a bordered card container (not a grid)', () => {
+      const { container } = renderGrid({ view: 'compact' });
+      const wrapper = container.querySelector('[data-slot="library-hybrid-grid-container"]');
+      expect(wrapper).toBeInTheDocument();
+      expect(wrapper?.getAttribute('data-view')).toBe('compact');
+      // mockup jsx:861-864 → bg-card border border-border rounded-lg overflow-hidden
+      expect(wrapper?.className).toMatch(/bg-card/);
+      expect(wrapper?.className).toMatch(/border-border/);
+      expect(wrapper?.className).toMatch(/rounded-lg/);
+      expect(wrapper?.className).toMatch(/overflow-hidden/);
     });
   });
 

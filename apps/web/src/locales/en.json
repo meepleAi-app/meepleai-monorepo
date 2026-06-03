@@ -1750,6 +1750,7 @@
         "empty": "No recent activity.",
         "viewAll": "View all",
         "viewAllAriaLabel": "Open the full activity history",
+        "collapseAriaLabel": "Collapse panel",
         "error": "Failed to load activity.",
         "fallback": {
           "agent": "New agent created",
@@ -1757,6 +1758,12 @@
           "kbIndexed": "Document indexed",
           "play": "Session",
           "removed": "Removed from library"
+        },
+        "shortcuts": {
+          "heading": "Shortcuts",
+          "focusSearch": "focus search",
+          "advancedFilters": "advanced filters",
+          "allShortcuts": "all shortcuts"
         }
       },
       "emptyState": {

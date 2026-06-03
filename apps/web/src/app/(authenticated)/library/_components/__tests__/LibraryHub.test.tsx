@@ -201,10 +201,15 @@ const MESSAGES: Record<string, string> = {
   'pages.library.emptyState.error.subtitle':
     'Non siamo riusciti a recuperare la tua libreria. Riprova.',
   'pages.library.emptyState.error.cta': 'Riprova',
-  // ─── RecentActivityRail keys (Phase 3b #1593) ───
-  'pages.library.activityRail.title': 'Attività recente',
+  // ─── RecentActivityRail keys (Phase 3b #1593, PR2 Task 2.4 #1585-followup) ───
+  'pages.library.activityRail.title': 'Ultime modifiche',
   'pages.library.activityRail.empty': 'Nessuna attività recente.',
   'pages.library.activityRail.error': "Impossibile caricare l'attività.",
+  'pages.library.activityRail.collapseAriaLabel': 'Comprimi pannello',
+  'pages.library.activityRail.shortcuts.heading': 'Shortcuts',
+  'pages.library.activityRail.shortcuts.focusSearch': 'focus search',
+  'pages.library.activityRail.shortcuts.advancedFilters': 'filtri avanzati',
+  'pages.library.activityRail.shortcuts.allShortcuts': 'tutte le scorciatoie',
   // ─── AdvancedFiltersDrawer header/footer keys (Phase 3a #1606) ───
   'pages.library.filters.title': 'Più filtri',
   'pages.library.filters.description': "Filtra la libreria per dimensioni specifiche dell'entità.",

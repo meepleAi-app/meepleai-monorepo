@@ -23,9 +23,14 @@ import { RecentActivityRail, type ActivityItem } from '../RecentActivityRail';
 
 // ── i18n messages needed by RecentActivityRail ────────────────────────────────
 const messages: Record<string, string> = {
-  'pages.library.activityRail.title': 'Attività recente',
+  'pages.library.activityRail.title': 'Ultime modifiche',
   'pages.library.activityRail.empty': 'Nessuna attività recente.',
   'pages.library.activityRail.error': "Impossibile caricare l'attività.",
+  'pages.library.activityRail.collapseAriaLabel': 'Comprimi pannello',
+  'pages.library.activityRail.shortcuts.heading': 'Shortcuts',
+  'pages.library.activityRail.shortcuts.focusSearch': 'focus search',
+  'pages.library.activityRail.shortcuts.advancedFilters': 'filtri avanzati',
+  'pages.library.activityRail.shortcuts.allShortcuts': 'tutte le scorciatoie',
 };
 
 function renderWithIntl(ui: React.ReactElement) {
@@ -68,7 +73,7 @@ describe('RecentActivityRail (Wave B.3)', () => {
 
     it('renders the i18n heading', () => {
       renderRail();
-      expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(/Attività recente/i);
+      expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent(/Ultime modifiche/i);
     });
 
     it('exposes data-slot="library-activity-rail" + data-state="empty" on root', () => {
@@ -143,6 +148,52 @@ describe('RecentActivityRail (Wave B.3)', () => {
       const items = container.querySelectorAll('[data-slot="library-activity-item"]');
       const kinds = Array.from(items).map(node => node.getAttribute('data-activity-kind'));
       expect(kinds).toEqual(['play', 'add', 'kb-indexed', 'rating-changed', 'removed']);
+    });
+  });
+
+  // ─── PR2 Task 2.4 (#1585 follow-up): mockup conformance ────────────────────
+  // Mockup ref: admin-mockups/design_files/sp4-library-desktop.jsx:949-1017
+  describe('PR2 Task 2.4 — mockup conformance (timeline + shortcuts box)', () => {
+    it('renders timeline circle for each item with entity color matching kind', () => {
+      // 'add' → maps to 'game' entity slot (per ACTIVITY_KIND_ENTITY map)
+      const items: readonly ActivityItem[] = [
+        { id: '1', kind: 'add', entityTitle: 'Catan', timestamp: '5 min fa' },
+      ];
+      const { container } = renderWithIntl(<RecentActivityRail items={items} />);
+      const circle = container.querySelector('[data-slot="library-activity-rail-circle"]');
+      expect(circle).not.toBeNull();
+      // The circle uses Tailwind entity utility for the 'game' slot (add → game)
+      expect(circle?.className).toMatch(/entity-game/);
+    });
+
+    it('renders connecting line between items (n-1 connectors for n items)', () => {
+      const items: readonly ActivityItem[] = [
+        { id: '1', kind: 'play', entityTitle: 'A', timestamp: '1m' },
+        { id: '2', kind: 'agent', entityTitle: 'B', timestamp: '2m' },
+        { id: '3', kind: 'kb-indexed', entityTitle: 'C', timestamp: '3m' },
+      ];
+      const { container } = renderWithIntl(<RecentActivityRail items={items} />);
+      const connectors = container.querySelectorAll(
+        '[data-slot="library-activity-rail-connector"]'
+      );
+      // 3 items → 2 connectors (last item has no trailing line)
+      expect(connectors).toHaveLength(2);
+    });
+
+    it('renders the keyboard shortcuts box at the bottom', () => {
+      renderRail();
+      expect(screen.getByText(/Shortcuts/i)).toBeInTheDocument();
+      expect(screen.getByText(/focus search/i)).toBeInTheDocument();
+      expect(screen.getByText(/filtri avanzati/i)).toBeInTheDocument();
+      expect(screen.getByText(/tutte le scorciatoie/i)).toBeInTheDocument();
+    });
+
+    it('renders the panel header with collapse button (aria-label from i18n)', () => {
+      renderRail();
+      expect(
+        screen.getByRole('heading', { level: 3, name: /Ultime modifiche/i })
+      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Comprimi pannello/i })).toBeInTheDocument();
     });
   });
 });

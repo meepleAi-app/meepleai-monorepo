@@ -1,4 +1,4 @@
-import { Trash2 } from 'lucide-react';
+import { Trash2, Zap } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
 import {
@@ -18,9 +18,22 @@ interface AlertRuleListProps {
   onEdit?: (rule: AlertRule) => void;
   onDelete: (id: string) => void;
   onToggle: (id: string) => void;
+  /**
+   * #1840 SP5 F4-C7: TestAlert handler. Optional perché il BE
+   * endpoint `/alert-rules/{id}/test` non è ancora implementato.
+   * Quando il BE arriverà, AlertsTab passerà questa prop e il bottone
+   * sarà cliccabile invece di disabled.
+   */
+  onTestAlert?: (id: string) => void;
 }
 
-export function AlertRuleList({ rules, onEdit: _onEdit, onDelete, onToggle }: AlertRuleListProps) {
+export function AlertRuleList({
+  rules,
+  onEdit: _onEdit,
+  onDelete,
+  onToggle,
+  onTestAlert,
+}: AlertRuleListProps) {
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'Critical':
@@ -74,6 +87,22 @@ export function AlertRuleList({ rules, onEdit: _onEdit, onDelete, onToggle }: Al
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-2">
+                    {/* #1840 SP5 F4-C7: TestAlert button (BE endpoint pending) */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={!onTestAlert}
+                      aria-label={`Test alert rule ${rule.name}`}
+                      title={
+                        onTestAlert
+                          ? 'Invia notifica di test al canale configurato'
+                          : 'BE endpoint /alert-rules/{id}/test non ancora implementato'
+                      }
+                      onClick={() => onTestAlert?.(rule.id)}
+                      data-testid={`test-alert-${rule.id}`}
+                    >
+                      <Zap className="h-4 w-4" />
+                    </Button>
                     <Button variant="ghost" size="sm" onClick={() => onDelete(rule.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>

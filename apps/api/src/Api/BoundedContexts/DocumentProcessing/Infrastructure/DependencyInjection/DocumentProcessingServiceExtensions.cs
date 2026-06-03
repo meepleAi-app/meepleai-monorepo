@@ -181,7 +181,36 @@ internal static class DocumentProcessingServiceExtensions
         // Issue #4730: Register Quartz job for PDF processing queue (every 10 seconds)
         RegisterPdfProcessingQueueJob(services);
 
+        // Issue #1831: Register Quartz job for L4 PDF cover backfill (every 30 minutes)
+        RegisterBackfillPdfCoversJob(services);
+
         return services;
+    }
+
+    /// <summary>
+    /// Issue #1831 — registers <see cref="Api.BoundedContexts.DocumentProcessing.Application.Jobs.BackfillPdfCoversJob"/>
+    /// with the Quartz scheduler. Runs every 30 minutes to pick up PDFs that
+    /// completed ingestion before the L4 cover stack shipped (or whose cover
+    /// step was deferred) and generate their cover image lazily.
+    /// </summary>
+    private static void RegisterBackfillPdfCoversJob(IServiceCollection services)
+    {
+        services.AddQuartz(q =>
+        {
+            var jobKey = new Quartz.JobKey("BackfillPdfCoversJob", "DocumentProcessing");
+
+            q.AddJob<Api.BoundedContexts.DocumentProcessing.Application.Jobs.BackfillPdfCoversJob>(opts =>
+                opts.WithIdentity(jobKey));
+
+            q.AddTrigger(opts => opts
+                .ForJob(jobKey)
+                .WithIdentity("BackfillPdfCoversTrigger", "DocumentProcessing")
+                .WithSimpleSchedule(x => x
+                    .WithIntervalInMinutes(30)
+                    .RepeatForever())
+                .WithDescription("Backfills L4 PDF covers for PDFs whose ingestion completed without a cover")
+            );
+        });
     }
 
     /// <summary>

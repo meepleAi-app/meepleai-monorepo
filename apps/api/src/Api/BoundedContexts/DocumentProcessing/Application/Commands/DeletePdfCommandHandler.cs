@@ -1,10 +1,12 @@
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
+using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Infrastructure;
 using Api.Services;
 using Api.Services.Exceptions;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Application.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
@@ -14,18 +16,21 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
     private readonly MeepleAiDbContext _db;
     private readonly IBlobStorageService _blobStorageService;
     private readonly IAiResponseCacheService _cacheService;
+    private readonly IDomainEventCollector? _eventCollector;
     private readonly ILogger<DeletePdfCommandHandler> _logger;
 
     public DeletePdfCommandHandler(
         MeepleAiDbContext db,
         IBlobStorageService blobStorageService,
         IAiResponseCacheService cacheService,
-        ILogger<DeletePdfCommandHandler> logger)
+        ILogger<DeletePdfCommandHandler> logger,
+        IDomainEventCollector? eventCollector = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
         _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _eventCollector = eventCollector;
     }
 
     public async Task<PdfDeleteResult> Handle(DeletePdfCommand command, CancellationToken cancellationToken)
@@ -45,9 +50,16 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
             }
 
             var gameId = pdfDoc.SharedGameId;
+            var coverR2Key = pdfDoc.CoverR2Key;
 
             // Delete associated vector document and vectors from pgvector
             await DeleteVectorDocumentAsync(pdfGuid, pdfId, cancellationToken).ConfigureAwait(false);
+
+            // Issue #1831 AC: raise PdfDeletedDomainEvent so PdfDeletedEventHandler
+            // can evict the L4 cover thumb/preview from R2. Collected BEFORE
+            // SaveChangesAsync so the DbContext dispatches it post-commit
+            // (atomic-save flow per issue #661).
+            _eventCollector?.Collect(new PdfDeletedDomainEvent(pdfGuid, coverR2Key));
 
             // Delete PDF document record
             _db.PdfDocuments.Remove(pdfDoc);

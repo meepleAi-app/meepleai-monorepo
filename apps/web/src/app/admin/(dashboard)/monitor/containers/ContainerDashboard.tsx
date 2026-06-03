@@ -168,6 +168,40 @@ function StatusSummary({ containers }: { containers: ContainerInfo[] }) {
 /*  Main Component                                                     */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Cap the polling backoff multiplier at 5× the base interval so the worst case
+ * stays at 5 minutes (60s base × 5 = 300s). Beyond that admins should reach for
+ * the manual refresh button or investigate why the BE is down.
+ */
+const MAX_BACKOFF_MULTIPLIER = 5;
+const MAX_BACKOFF_DELAY_SECONDS = 300;
+
+/**
+ * Compute the next polling delay applying exponential backoff.
+ *
+ * Schedule (with baseSeconds=60):
+ *   failures=0 → 60s  (1×, no backoff)
+ *   failures=1 → 60s  (2^0=1×, first failure tolerated)
+ *   failures=2 → 120s (2×)
+ *   failures=3 → 240s (4×)
+ *   failures≥4 → 300s (capped at MAX_BACKOFF_DELAY_SECONDS)
+ *
+ * Exported for unit testing — keeps the React component free of fake-timer
+ * tests that are fragile against StrictMode + nested setTimeout chains.
+ */
+export function computePollingBackoff(
+  baseSeconds: number,
+  failures: number,
+  caps: { maxMultiplier: number; maxDelaySeconds: number } = {
+    maxMultiplier: MAX_BACKOFF_MULTIPLIER,
+    maxDelaySeconds: MAX_BACKOFF_DELAY_SECONDS,
+  }
+): number {
+  if (failures <= 0) return baseSeconds;
+  const multiplier = Math.min(Math.pow(2, failures - 1), caps.maxMultiplier);
+  return Math.min(baseSeconds * multiplier, caps.maxDelaySeconds);
+}
+
 export function ContainerDashboard() {
   const [containers, setContainers] = useState<ContainerInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -175,9 +209,15 @@ export function ContainerDashboard() {
   const [refreshInterval, setRefreshInterval] = useState<number>(DEFAULT_REFRESH_INTERVAL);
   const [countdown, setCountdown] = useState<number>(DEFAULT_REFRESH_INTERVAL);
 
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const hasLoadedRef = useRef(false);
+  /**
+   * Tracks consecutive `fetchContainers` failures so the polling fallback can
+   * apply exponential backoff (1×, 2×, 4×, 5× cap). Reset to 0 on the first
+   * successful fetch. Capped at 4 to bound the multiplier exponent.
+   */
+  const consecutiveFailuresRef = useRef(0);
   const { toast } = useToast();
 
   const fetchContainers = useCallback(async () => {
@@ -185,7 +225,9 @@ export function ContainerDashboard() {
       const data = await api.admin.getDockerContainers();
       setContainers(data);
       hasLoadedRef.current = true;
+      consecutiveFailuresRef.current = 0;
     } catch {
+      consecutiveFailuresRef.current = Math.min(consecutiveFailuresRef.current + 1, 4);
       if (!hasLoadedRef.current) {
         toast({ title: 'Failed to load container data', variant: 'destructive' });
       }
@@ -193,6 +235,16 @@ export function ContainerDashboard() {
       setLoading(false);
     }
   }, [toast]);
+
+  /**
+   * Bound the polling delay against the current `consecutiveFailuresRef`.
+   * Uses the exported `computePollingBackoff` helper so the schedule stays
+   * unit-testable in isolation.
+   */
+  const computeNextPollingDelay = useCallback(
+    () => computePollingBackoff(refreshInterval, consecutiveFailuresRef.current),
+    [refreshInterval]
+  );
 
   // -----------------------------------------------------------------
   // #1853 — SSE-driven refresh (primary path)
@@ -227,33 +279,41 @@ export function ContainerDashboard() {
   }, [fetchContainers]);
 
   // -----------------------------------------------------------------
-  // Polling fallback (low-frequency: 60s minimum)
+  // Polling fallback (low-frequency: 60s minimum) with exponential backoff
   // -----------------------------------------------------------------
+  // Two coordinated timers:
+  //   1. `pollTimerRef` (setTimeout, recursive) — backoff-aware fetch scheduler.
+  //      The next delay is computed by `computeNextPollingDelay()` so the
+  //      `consecutiveFailuresRef` count drives the wait between polls.
+  //   2. `countdownRef` (setInterval, 1s) — drives the visible "Xs" countdown.
+  //      The updater is pure (no side effects), so StrictMode's double-invoke
+  //      validation can't trigger extra fetches.
   useEffect(() => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
     if (countdownRef.current) clearInterval(countdownRef.current);
+    if (!autoRefresh) return;
 
-    if (autoRefresh) {
-      setCountdown(refreshInterval);
+    setCountdown(refreshInterval);
 
-      countdownRef.current = setInterval(() => {
-        setCountdown(prev => {
-          if (prev <= 1) return refreshInterval;
-          return prev - 1;
-        });
-      }, 1000);
+    countdownRef.current = setInterval(() => {
+      // Pure updater — no fetch side effects (would double-fire under StrictMode).
+      setCountdown(prev => (prev > 1 ? prev - 1 : computeNextPollingDelay()));
+    }, 1000);
 
-      intervalRef.current = setInterval(() => {
-        fetchContainers();
-        setCountdown(refreshInterval);
-      }, refreshInterval * 1000);
-    }
+    const scheduleNextPoll = () => {
+      const delaySeconds = computeNextPollingDelay();
+      pollTimerRef.current = setTimeout(async () => {
+        await fetchContainers();
+        scheduleNextPoll(); // chain — next delay reflects updated failure count
+      }, delaySeconds * 1000);
+    };
+    scheduleNextPoll();
 
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
       if (countdownRef.current) clearInterval(countdownRef.current);
     };
-  }, [autoRefresh, refreshInterval, fetchContainers]);
+  }, [autoRefresh, refreshInterval, fetchContainers, computeNextPollingDelay]);
 
   return (
     <div className="space-y-6" data-testid="container-dashboard">
@@ -281,6 +341,8 @@ export function ContainerDashboard() {
             onClick={() => setAutoRefresh(!autoRefresh)}
             className="gap-1.5"
             data-testid="auto-refresh-toggle"
+            aria-pressed={autoRefresh}
+            aria-label={autoRefresh ? 'Pause auto-refresh' : 'Resume auto-refresh'}
           >
             {autoRefresh ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
             {autoRefresh ? 'Pause' : 'Resume'}

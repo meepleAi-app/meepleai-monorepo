@@ -30,7 +30,7 @@ vi.mock('@/components/admin/monitor/use-live-events', () => ({
   useLiveEvents: mockUseLiveEvents,
 }));
 
-import { ContainerDashboard } from '../ContainerDashboard';
+import { ContainerDashboard, computePollingBackoff } from '../ContainerDashboard';
 
 const mockContainers = [
   {
@@ -299,6 +299,27 @@ describe('ContainerDashboard', () => {
     });
   });
 
+  it('exposes aria-pressed on the Pause/Resume toggle (a11y)', async () => {
+    const user = userEvent.setup();
+    mockGetDockerContainers.mockResolvedValue(mockContainers);
+    render(<ContainerDashboard />);
+
+    const toggle = await screen.findByTestId('auto-refresh-toggle');
+    // Initially auto-refresh is ON → aria-pressed="true"
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    expect(toggle).toHaveAttribute('aria-label', 'Pause auto-refresh');
+
+    await user.click(toggle);
+
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    expect(toggle).toHaveAttribute('aria-label', 'Resume auto-refresh');
+  });
+
+  // Backoff is unit-tested in isolation below (`computePollingBackoff` table)
+  // because exercising it through the real component would require fake
+  // timers + a nested `setTimeout` chain + StrictMode double-invoke handling,
+  // which together are very flaky.
+
   it('polling fallback offers 60s/2m/5m intervals only', async () => {
     mockGetDockerContainers.mockResolvedValue(mockContainers);
     render(<ContainerDashboard />);
@@ -307,5 +328,28 @@ describe('ContainerDashboard', () => {
     const optionValues = Array.from(select.options).map(o => Number(o.value));
     expect(optionValues).toEqual([60, 120, 300]);
     expect(select.value).toBe('60'); // default
+  });
+});
+
+describe('computePollingBackoff (unit)', () => {
+  // Schedule table, baseSeconds=60, default caps (5× / 300s):
+  it.each([
+    [0, 60], // no failures → base interval
+    [1, 60], // 2^0 = 1× — first failure tolerated, no backoff yet
+    [2, 120], // 2^1 = 2×
+    [3, 240], // 2^2 = 4×
+    [4, 300], // 2^3 = 8× would be 480, but multiplier capped at 5 → 300
+    [5, 300], // multiplier still 5 → 300
+    [10, 300], // worst case stays at the 300s ceiling
+  ])('failures=%d → %ds (base 60)', (failures, expected) => {
+    expect(computePollingBackoff(60, failures)).toBe(expected);
+  });
+
+  it('honours custom caps', () => {
+    expect(computePollingBackoff(30, 5, { maxMultiplier: 3, maxDelaySeconds: 60 })).toBe(60); // 30 * min(2^4, 3) = 30 * 3 = 90, clamped at 60
+  });
+
+  it('treats negative failures as 0', () => {
+    expect(computePollingBackoff(60, -1)).toBe(60);
   });
 });

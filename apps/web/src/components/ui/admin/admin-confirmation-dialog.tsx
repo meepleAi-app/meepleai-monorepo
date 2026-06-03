@@ -145,13 +145,22 @@ export function AdminConfirmationDialog({
               {title}
             </DialogTitle>
           </div>
-          <DialogDescription className="pt-3 space-y-2">
-            <p className="text-base">{message}</p>
-            {warningMessage && (
-              <p className="text-sm text-yellow-600 dark:text-yellow-500 font-medium">
-                ⚠️ {warningMessage}
-              </p>
-            )}
+          {/*
+            #1854-review — `DialogDescription` is rendered as `<p>` by Radix.
+            Wrapping the message + warning paragraphs in another `<p>` triggers
+            "<p> cannot contain a nested <p>" hydration warnings. `asChild`
+            re-roots the description as the `<div>` below so the two children
+            stay valid `<p>` elements without nesting.
+          */}
+          <DialogDescription className="pt-3 space-y-2" asChild>
+            <div>
+              <p className="text-base">{message}</p>
+              {warningMessage && (
+                <p className="text-sm text-yellow-600 dark:text-yellow-500 font-medium">
+                  ⚠️ {warningMessage}
+                </p>
+              )}
+            </div>
           </DialogDescription>
         </DialogHeader>
 

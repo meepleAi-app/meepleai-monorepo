@@ -136,14 +136,21 @@ export function CrossEntityFilters({
   const searchRef = useRef<HTMLInputElement>(null);
 
   // Global "/" shortcut — focus the search input unless the user is already
-  // typing somewhere editable.
+  // typing somewhere editable. Skips browser-reserved combos (Ctrl+/, Cmd+/,
+  // Alt+/) and uses `instanceof HTMLElement` for safer type narrowing than
+  // the previous `as HTMLElement | null` cast.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key !== '/') return;
-      const target = e.target as HTMLElement | null;
-      const tag = target?.tagName ?? '';
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-      if (target?.isContentEditable) return;
+      // Skip when any modifier is held — Ctrl+/ / Cmd+/ / Alt+/ are
+      // browser/devtools shortcuts the page should not hijack.
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      // Skip when the event originates from an editable element.
+      if (e.target instanceof HTMLElement) {
+        const tag = e.target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+        if (e.target.isContentEditable) return;
+      }
       e.preventDefault();
       searchRef.current?.focus();
     };

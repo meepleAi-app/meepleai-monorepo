@@ -170,8 +170,6 @@ const MESSAGES: Record<string, string> = {
   'pages.library.filters.stato.wishlist': 'Wishlist',
   'pages.library.filters.stato.loaned': 'In prestito',
   'pages.library.filters.stato.withKb': 'Con Knowledge Base',
-  'pages.library.sort.label': 'Ordina',
-  'pages.library.sort.ariaLabel': 'Ordina i risultati',
   'pages.library.sort.recent': 'Più recenti',
   'pages.library.sort.title': 'Titolo A-Z',
   'pages.library.sort.rating': 'Voto più alto',

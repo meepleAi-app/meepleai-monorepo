@@ -128,8 +128,12 @@ export function LibraryTabs<K extends string = LibraryEntityKey>({
   const activeAccent: LibraryTabEntity = activeTab?.entity ?? 'game';
 
   // Animated indicator: measure the active tab's offsetLeft/offsetWidth after
-  // each render, recompute on tab key change OR tabs reorder OR compact swap.
-  // Mirrors mockup jsx:135-140.
+  // each render, recompute on tab key change OR tabs reorder OR compact swap
+  // OR container resize OR font load reflow. Mirrors mockup jsx:135-140.
+  // PR1 polish (#1585-followup): replaced `tabs.length` with full `tabs`
+  // reference (catches reorder/relabel) + added ResizeObserver to keep the
+  // indicator aligned when the container changes width (responsive layouts,
+  // sidebar collapse, font load).
   const buttonRefs = useRef<Map<K, HTMLButtonElement>>(new Map());
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [indicator, setIndicator] = useState<{ left: number; width: number }>({
@@ -138,11 +142,39 @@ export function LibraryTabs<K extends string = LibraryEntityKey>({
   });
 
   useEffect(() => {
-    const el = buttonRefs.current.get(active);
-    if (el) {
-      setIndicator({ left: el.offsetLeft, width: el.offsetWidth });
+    const measure = () => {
+      const el = buttonRefs.current.get(active);
+      if (el) {
+        setIndicator({ left: el.offsetLeft, width: el.offsetWidth });
+      }
+    };
+    measure();
+    const container = containerRef.current;
+    if (!container) return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [active, tabs, compact]);
+
+  // Honor prefers-reduced-motion for the inline transition. Tailwind's
+  // `motion-safe:transition-[left,width,background]` already disables itself
+  // under reduce, but the inline `transition` style would override Tailwind.
+  // We listen to the media query and zero out the inline transition when
+  // the user has opted in to reduced motion.
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setPrefersReducedMotion(mql.matches);
+    const onChange = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+    // Older Safari uses addListener; modern uses addEventListener.
+    if (typeof mql.addEventListener === 'function') {
+      mql.addEventListener('change', onChange);
+      return () => mql.removeEventListener('change', onChange);
     }
-  }, [active, tabs.length, compact]);
+    mql.addListener(onChange);
+    return () => mql.removeListener(onChange);
+  }, []);
 
   return (
     <div
@@ -228,15 +260,17 @@ export function LibraryTabs<K extends string = LibraryEntityKey>({
           left: `${indicator.left}px`,
           width: `${indicator.width}px`,
           background: INDICATOR_BG_VAR[activeAccent],
-          transition: INDICATOR_TRANSITION,
+          transition: prefersReducedMotion ? 'none' : INDICATOR_TRANSITION,
         }}
       />
 
       {/*
-        Legacy `data-slot="library-tabs-underline"` kept for E2E spec
-        a11y/library.spec.ts that reads the underline by data-slot. It's hidden
-        and tracks the same coords as the new indicator. Removing it is a
-        follow-up coordinated with the E2E spec rename (issue #1856 same wave).
+        Legacy `data-slot="library-tabs-underline"` retained as a 0×0 hidden
+        placeholder for E2E test back-compat (a11y/library.spec.ts asserts the
+        selector exists). It does NOT track the active tab — the static
+        `left-0`/`w-0` deliberately keeps it visually inert. The real animated
+        bar is `data-slot="library-tabs-indicator"` above. To be removed
+        alongside the E2E spec rename in issue #1856.
       */}
       <span
         data-slot="library-tabs-underline"

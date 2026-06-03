@@ -117,10 +117,12 @@ export function LibraryHub(): ReactElement {
   const [selectionMode, setSelectionMode] = useState<LibrarySelectionMode>('browse');
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
   const [query, setQuery] = useState('');
-  // setSortKey is wired but not yet user-facing: the mockup SORT chip is a
-  // non-interactive stub. Task 1.4 keeps the setter as `_setSortKey` for the
-  // forthcoming chip-popover follow-up.
-  const [sortKey, _setSortKey] = useState<LibrarySortKey>('recent');
+  // SORT chip is currently a non-interactive visual stub (mockup admin-mockups/
+  // design_files/sp4-library-desktop.jsx:213). Until the chip-popover lands
+  // we pass a literal 'recent' down to CrossEntityFilters; the LibrarySortKey
+  // type import below documents the contract for the follow-up wiring.
+  // TODO(#1585-followup): wire sortKey state + setter when SORT chip popover ships.
+  const SORT_KEY_STUB: LibrarySortKey = 'recent';
   const [gameStateFilter, setGameStateFilter] = useState<GameStateFilter>({
     states: [],
     withKb: false,
@@ -229,8 +231,8 @@ export function LibraryHub(): ReactElement {
   }, [hub.sources, gameStateFilter]);
 
   const merged = useMemo<HybridHubItem[]>(
-    () => deriveHybridItems(filteredSources, tab, query, sortKey),
-    [filteredSources, tab, query, sortKey]
+    () => deriveHybridItems(filteredSources, tab, query, SORT_KEY_STUB),
+    [filteredSources, tab, query]
   );
 
   // Hero stats: hybrid counts (games/agents/docs/chats) from pre-filter totals.
@@ -553,7 +555,7 @@ export function LibraryHub(): ReactElement {
                 onSearchChange={setQuery}
                 view={view as LibraryViewMode}
                 onViewChange={setView}
-                sortKey={sortKey}
+                sortKey={SORT_KEY_STUB}
               />
               {effectiveKind === 'default' ? (
                 <LibraryHybridGrid

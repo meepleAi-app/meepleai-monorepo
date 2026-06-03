@@ -1705,11 +1705,25 @@
       },
       "filters": {
         "search": {
-          "placeholder": "Cerca per titolo, editore o anno…",
-          "ariaLabel": "Cerca nella libreria",
-          "clearAriaLabel": "Cancella la ricerca"
+          "placeholder": "Cerca in libreria... (premi /)",
+          "ariaLabel": "Cerca in libreria",
+          "clearAriaLabel": "Cancella la ricerca",
+          "keyboardHintAriaLabel": "Scorciatoia tastiera"
         },
         "title": "Più filtri",
+        "advanced": {
+          "label": "Filtri avanzati"
+        },
+        "chips": {
+          "stato": "STATO",
+          "gioco": "GIOCO",
+          "data": "DATA",
+          "sort": "SORT",
+          "value": {
+            "all": "Tutti",
+            "always": "Sempre"
+          }
+        },
         "description": "Filtra la libreria per dimensioni specifiche dell'entità.",
         "apply": "Applica",
         "clear": "Reimposta",

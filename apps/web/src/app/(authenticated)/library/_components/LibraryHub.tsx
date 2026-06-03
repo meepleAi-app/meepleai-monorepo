@@ -117,7 +117,10 @@ export function LibraryHub(): ReactElement {
   const [selectionMode, setSelectionMode] = useState<LibrarySelectionMode>('browse');
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
   const [query, setQuery] = useState('');
-  const [sortKey, setSortKey] = useState<LibrarySortKey>('recent');
+  // setSortKey is wired but not yet user-facing: the mockup SORT chip is a
+  // non-interactive stub. Task 1.4 keeps the setter as `_setSortKey` for the
+  // forthcoming chip-popover follow-up.
+  const [sortKey, _setSortKey] = useState<LibrarySortKey>('recent');
   const [gameStateFilter, setGameStateFilter] = useState<GameStateFilter>({
     states: [],
     withKb: false,
@@ -546,62 +549,12 @@ export function LibraryHub(): ReactElement {
                 onGameStateFilterChange={setGameStateFilter}
                 onMoreFilters={() => setDrawerOpen(true)}
                 activeFiltersCount={activeFiltersCount}
+                search={query}
+                onSearchChange={setQuery}
+                view={view as LibraryViewMode}
+                onViewChange={setView}
+                sortKey={sortKey}
               />
-              <div
-                data-slot="library-toolbar"
-                className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm"
-              >
-                <input
-                  type="search"
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
-                  placeholder={t('pages.library.filters.search.placeholder')}
-                  aria-label={t('pages.library.filters.search.ariaLabel')}
-                  data-slot="library-search-input"
-                  className="min-w-[12rem] flex-1 rounded-full border border-input bg-background px-4 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
-                <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span className="sr-only sm:not-sr-only">{t('pages.library.sort.label')}</span>
-                  <select
-                    value={sortKey}
-                    onChange={e => setSortKey(e.target.value as LibrarySortKey)}
-                    aria-label={t('pages.library.sort.ariaLabel')}
-                    data-slot="library-sort-select"
-                    className="rounded-full border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <option value="recent">{t('pages.library.sort.recent')}</option>
-                    <option value="title">{t('pages.library.sort.title')}</option>
-                    <option value="rating">{t('pages.library.sort.rating')}</option>
-                    <option value="state">{t('pages.library.sort.state')}</option>
-                  </select>
-                </label>
-                <div
-                  role="group"
-                  aria-label={t('pages.library.view.ariaLabel')}
-                  data-slot="library-view-toggle"
-                  className="inline-flex items-center gap-1 rounded-full border border-input bg-background p-1"
-                >
-                  {(['grid', 'list', 'compact'] as const).map(mode => (
-                    <button
-                      key={mode}
-                      type="button"
-                      onClick={() => setView(mode)}
-                      aria-pressed={view === mode}
-                      data-view-mode={mode}
-                      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                        view === mode
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      {t(`pages.library.view.${mode}` as const)}
-                    </button>
-                  ))}
-                </div>
-                {/* #1566: the enter-select-mode button was deleted — it is not in
-                    the games branch (handled by GamesFiltersInline) and not re-added
-                    here. The else-branch exists only for non-games tabs. */}
-              </div>
               {effectiveKind === 'default' ? (
                 <LibraryHybridGrid
                   items={merged}

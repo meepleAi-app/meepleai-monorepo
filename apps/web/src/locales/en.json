@@ -1655,11 +1655,25 @@
       },
       "filters": {
         "search": {
-          "placeholder": "Search by title, publisher or year…",
+          "placeholder": "Search the library… (press /)",
           "ariaLabel": "Search the library",
-          "clearAriaLabel": "Clear search"
+          "clearAriaLabel": "Clear search",
+          "keyboardHintAriaLabel": "Keyboard shortcut"
         },
         "title": "More filters",
+        "advanced": {
+          "label": "Advanced filters"
+        },
+        "chips": {
+          "stato": "STATUS",
+          "gioco": "GAME",
+          "data": "DATE",
+          "sort": "SORT",
+          "value": {
+            "all": "All",
+            "always": "Always"
+          }
+        },
         "description": "Filter the library by entity-specific dimensions.",
         "apply": "Apply",
         "clear": "Reset",

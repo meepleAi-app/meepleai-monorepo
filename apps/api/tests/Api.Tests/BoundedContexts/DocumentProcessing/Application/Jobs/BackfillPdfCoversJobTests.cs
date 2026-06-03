@@ -222,7 +222,10 @@ public sealed class BackfillPdfCoversJobTests : IDisposable
 
         var refreshedFirst = _db.PdfDocuments.AsNoTracking().Single(p => p.Id == first.Id);
         refreshedFirst.CoverGenerationStatus.Should().Be(nameof(PdfCoverGenerationStatus.Failed));
-        refreshedFirst.CoverGenerationError.Should().Contain("boom");
+        // Error message encodes the orphan-check hint (#1873 review fix H2): contains the
+        // exception type name and the resourceKey operators must inspect for orphan blobs.
+        refreshedFirst.CoverGenerationError.Should().Contain(nameof(InvalidOperationException));
+        refreshedFirst.CoverGenerationError.Should().Contain($"pdf-cover-{first.Id}");
 
         var refreshedSecond = _db.PdfDocuments.AsNoTracking().Single(p => p.Id == second.Id);
         refreshedSecond.CoverGenerationStatus.Should().Be(nameof(PdfCoverGenerationStatus.Skipped));
@@ -253,28 +256,30 @@ public sealed class BackfillPdfCoversJobTests : IDisposable
     [Fact]
     public async Task RunBatchAsync_OldestFirst_ProcessesByUploadedAtAsc()
     {
-        var older = SeedPdf(uploadedAt: DateTime.UtcNow.AddDays(-5));
+        // Seed in reverse order to confirm we are not relying on insert order
+        // — the older PDF must be picked first by UploadedAt, regardless of
+        // when it was added to the in-memory store.
         var newer = SeedPdf(uploadedAt: DateTime.UtcNow);
+        var older = SeedPdf(uploadedAt: DateTime.UtcNow.AddDays(-5));
 
         ConfigureBlobReturningStream();
-        ConfigureExtractorReturning(PdfCoverExtractionOutcome.Skipped);
 
-        var processedIds = new List<Guid>();
-        _extractor.Setup(e => e.ExtractAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
-                  .Callback<byte[], CancellationToken>((_, _) =>
-                  {
-                      // The first call must correspond to the older PDF (UploadedAt asc).
-                      // We capture order via the side-effect on the entity below.
-                  })
-                  .ReturnsAsync(new PdfCoverExtractionResult { Outcome = PdfCoverExtractionOutcome.Skipped, SelectedPageIndex = 0 });
+        // Capture blob retrieval order — the file ID encodes the PDF Id via
+        // PdfStorageKey.ForPdf, so we can map call sequence back to entities.
+        var retrieveCallOrder = new List<string>();
+        _blob.Setup(b => b.RetrieveAsync(It.IsAny<string>(), BlobCategory.Pdf, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+             .Callback<string, BlobCategory, string, CancellationToken>((fileId, _, _, _) => retrieveCallOrder.Add(fileId))
+             .ReturnsAsync(() => new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 }));
+
+        ConfigureExtractorReturning(PdfCoverExtractionOutcome.Skipped);
 
         await CreateJob().RunBatchAsync(_db, _extractor.Object, _blob.Object, _eventCollector.Object, default);
 
-        // Both processed (batch size = 5 > 2 eligible).
-        _db.PdfDocuments.AsNoTracking().Single(p => p.Id == older.Id).CoverGenerationStatus
-            .Should().Be(nameof(PdfCoverGenerationStatus.Skipped));
-        _db.PdfDocuments.AsNoTracking().Single(p => p.Id == newer.Id).CoverGenerationStatus
-            .Should().Be(nameof(PdfCoverGenerationStatus.Skipped));
+        retrieveCallOrder.Should().HaveCount(2);
+        var olderKey = PdfStorageKey.ForPdf(older.Id);
+        var newerKey = PdfStorageKey.ForPdf(newer.Id);
+        retrieveCallOrder[0].Should().Be(olderKey, "the older UploadedAt entity must be processed first");
+        retrieveCallOrder[1].Should().Be(newerKey);
     }
 
     private void ConfigureBlobReturningStream()

@@ -206,11 +206,21 @@ public sealed class BackfillPdfCoversJob : IJob
         catch (Exception ex)
 #pragma warning restore CA1031
         {
+            // Operator-recovery hint: when StoreAsync succeeded for one or both
+            // sizes BUT the subsequent SaveChangesAsync threw (transient DB
+            // error, RowVersion conflict, etc.), R2 will contain orphan
+            // thumb.webp / preview.webp under "game-images/pdf-cover-{Id}/".
+            // The entity ends up Failed without a CoverR2Key so
+            // PdfDeletedEventHandler can't reach them. We embed the prospective
+            // resourceKey in CoverGenerationError so operators can grep the bucket.
+            var resourceKey = $"pdf-cover-{pdf.Id}";
             _logger.LogWarning(ex,
-                "BackfillPdfCoversJob: unexpected error processing PDF {PdfId}; marking Failed",
-                pdf.Id);
+                "BackfillPdfCoversJob: unexpected error processing PDF {PdfId}; marking Failed. " +
+                "Inspect R2 prefix game-images/{ResourceKey}/ for orphan blobs and clean up manually if present.",
+                pdf.Id, resourceKey);
             pdf.CoverGenerationStatus = nameof(PdfCoverGenerationStatus.Failed);
-            pdf.CoverGenerationError = ex.Message.Length > 500 ? ex.Message[..500] : ex.Message;
+            var detail = ex.GetType().Name + ": orphan-check-key=" + resourceKey;
+            pdf.CoverGenerationError = detail.Length > 500 ? detail[..500] : detail;
             try
             {
                 await db.SaveChangesAsync(ct).ConfigureAwait(false);

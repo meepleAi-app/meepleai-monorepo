@@ -1675,31 +1675,76 @@
           }
         },
         "description": "Filter the library by entity-specific dimensions.",
+        "closeAriaLabel": "Close filters panel",
+        "header": {
+          "subtitle": "{count, plural, =0 {No filters · scope: library} =1 {1 active · scope: library} other {# active · scope: library}}"
+        },
         "apply": "Apply",
+        "applyWithCount": "Apply ({count})",
         "clear": "Reset",
+        "reset": "Reset",
         "section": {
-          "state": "State",
-          "withKb": "With Knowledge Base only",
-          "rating": "Minimum rating",
-          "players": "Player count",
-          "year": "Year published",
-          "agentType": "Agent type",
-          "activeOnly": "Active only",
-          "sessionStatus": "Session status",
-          "sessionType": "Session type",
-          "playerCount": "Players (min)",
-          "processingState": "Processing state",
-          "messageCountMin": "Messages (min)"
-        },
-        "state": {
-          "owned": "Owned",
-          "wishlist": "Wishlist",
-          "loaned": "Loaned"
-        },
-        "kbState": {
-          "ready": "Ready",
-          "pending": "Pending",
-          "failed": "Failed"
+          "status": {
+            "title": "Status",
+            "options": {
+              "owned": "Owned",
+              "wishlist": "Wishlist",
+              "setup": "Setting up",
+              "archived": "Archived"
+            }
+          },
+          "entity": {
+            "title": "Entity type",
+            "options": {
+              "game": "Games",
+              "agent": "Agents",
+              "kb": "KB documents",
+              "session": "Sessions",
+              "chat": "Chat"
+            }
+          },
+          "game": {
+            "title": "Game",
+            "placeholder": "Filter by a specific game...",
+            "empty": "No game available from the current library."
+          },
+          "period": {
+            "title": "Period",
+            "options": {
+              "7d": "Last 7 days",
+              "30d": "Last 30 days",
+              "1y": "Last year",
+              "all": "Always",
+              "range": "Custom range..."
+            }
+          },
+          "tags": {
+            "title": "Tag",
+            "options": {
+              "family": "Family",
+              "strategy": "Strategy",
+              "coop": "Co-op",
+              "engine": "Engine builder",
+              "auction": "Auction",
+              "rollAndWrite": "Roll & Write",
+              "cardDriven": "Card driven",
+              "tableau": "Tableau"
+            }
+          },
+          "rating": {
+            "title": "Rating",
+            "minAriaLabel": "Minimum rating",
+            "maxAriaLabel": "Maximum rating"
+          },
+          "weight": {
+            "title": "Complexity",
+            "options": {
+              "light": "Light · 1.0–2.0",
+              "medium": "Medium · 2.0–3.0",
+              "heavy": "Heavy · 3.0–4.0",
+              "extra": "Extra heavy · 4.0+"
+            }
+          }
         },
         "stato": {
           "label": "State",

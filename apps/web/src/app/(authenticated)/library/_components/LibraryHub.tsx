@@ -39,6 +39,7 @@ import {
   LibraryHybridGrid,
   LibraryTabs,
   RecentActivityRail,
+  countActiveFilters,
   type ActivityItem,
   type BulkSelectionBarLabels,
   type EmptyLibraryLabels,
@@ -62,7 +63,7 @@ import {
   type HybridHubSources,
   type HybridHubTab,
 } from '@/lib/library/hybrid-hub.derive';
-import type { HybridHubEntity, HybridHubItem } from '@/lib/library/hybrid-hub.types';
+import type { HybridHubItem } from '@/lib/library/hybrid-hub.types';
 import type { LibrarySortKey } from '@/lib/library/library-filters';
 import { useLibraryView } from '@/lib/library/use-library-view';
 import { IS_VISUAL_TEST_BUILD } from '@/lib/library/visual-test-fixture';
@@ -135,45 +136,14 @@ export function LibraryHub(): ReactElement {
   const [gamesQuery, setGamesQuery] = useState('');
   const [gamesView, setGamesView] = useState<GamesViewKey>('grid');
 
-  // Phase 3b #1593: AdvancedFiltersDrawer state
+  // AdvancedFiltersDrawer cross-entity hub-level state (#1585-followup Task 3.3).
+  // Refactored from scope-conditional (one filter shape per tab) to a single
+  // cross-entity `LibraryFilters` that survives tab switches — matches the
+  // mockup hub-level filter surface.
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [activeFilters, setActiveFilters] = useState<LibraryFilters>({ scope: 'game' });
+  const [activeFilters, setActiveFilters] = useState<LibraryFilters>({});
 
-  const drawerEntityScope = useMemo<HybridHubEntity>(() => {
-    switch (tab) {
-      case 'games':
-        return 'game';
-      case 'agents':
-        return 'agent';
-      case 'kb':
-        return 'kb';
-      case 'sessions':
-        return 'session';
-      case 'chat':
-        return 'chat';
-      case 'all':
-      default:
-        return 'game';
-    }
-  }, [tab]);
-
-  // Reset filters to the new scope's empty variant when the tab changes.
-  useEffect(() => {
-    setActiveFilters({ scope: drawerEntityScope } as LibraryFilters);
-  }, [drawerEntityScope]);
-
-  // Count non-empty filter fields (excluding the `scope` discriminant) for the chip badge.
-  const activeFiltersCount = useMemo(() => {
-    let count = 0;
-    for (const [key, value] of Object.entries(activeFilters)) {
-      if (key === 'scope') continue;
-      if (value === undefined || value === null) continue;
-      if (Array.isArray(value) && value.length === 0) continue;
-      if (value === false) continue;
-      count++;
-    }
-    return count;
-  }, [activeFilters]);
+  const activeFiltersCount = useMemo(() => countActiveFilters(activeFilters), [activeFilters]);
 
   const stateOverride = parseStateOverride(searchParams.get('state'));
 
@@ -604,10 +574,9 @@ export function LibraryHub(): ReactElement {
       <AdvancedFiltersDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
-        entityScope={drawerEntityScope}
         activeFilters={activeFilters}
         onApply={setActiveFilters}
-        onClear={() => setActiveFilters({ scope: drawerEntityScope } as LibraryFilters)}
+        onClear={() => setActiveFilters({})}
       />
     </div>
   );

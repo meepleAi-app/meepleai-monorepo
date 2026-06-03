@@ -1,74 +1,92 @@
 /**
- * AdvancedFiltersDrawer — type definitions (Phase 3a #1606).
+ * AdvancedFiltersDrawer — type definitions.
  *
- * `LibraryFilters` is a discriminated union keyed by `scope` so the public API
- * doesn't leak `Record<string, unknown>`. Each variant only carries the fields
- * relevant to its entity type — Phase 1's `HybridHubEntity` literal drives the
- * scope discriminant.
+ * SP4 mockup conformance (Issue #1585-followup, plan
+ * docs/superpowers/plans/2026-06-03-library-sp4-mockup-conformance.md Task 3.3).
+ * Mapped from `admin-mockups/design_files/sp4-library-desktop.jsx`
+ * (AdvancedFiltersDrawer + DRAWER_SECTIONS, lines 312–637).
  *
- * Section config types (in `./sections.ts`) describe each section declaratively
- * so the renderer doesn't switch on scope at every level — `getSectionsForScope`
- * returns the array, the renderer iterates.
+ * REFACTORED from scope-conditional (game/agent/session/kb/chat discriminated
+ * union with per-scope filter shapes) to **cross-entity hub-level** filter
+ * model. The drawer now exposes the same 7 sections regardless of which tab
+ * the user is viewing; filter outcomes apply across all hub entities. This
+ * matches the mockup which has no `scope` discriminator and presents a
+ * unified library-wide filter surface.
+ *
+ * Each field is independently optional — absence means "no filter on that
+ * dimension". `period === 'range'` enables the optional `periodFrom`/`periodTo`
+ * ISO-date bounds for custom date pickers (UI for the custom range itself
+ * is intentionally out of scope for this PR — the radio option is rendered
+ * but the bound fields stay undefined until a future enhancement).
  */
 
-import type { GameStateType } from '@/lib/api/schemas/library.schemas';
-import type { HybridHubEntity } from '@/lib/library/hybrid-hub.types';
+export type LibraryFilterStatus = 'owned' | 'wishlist' | 'setup' | 'archived';
 
-export interface GameLibraryFilters {
-  readonly scope: 'game';
-  readonly states?: ReadonlyArray<GameStateType>;
-  readonly withKb?: boolean;
+export type LibraryFilterEntity = 'game' | 'agent' | 'kb' | 'session' | 'chat';
+
+export type LibraryFilterPeriod = '7d' | '30d' | '1y' | 'all' | 'range';
+
+export type LibraryFilterTag =
+  | 'family'
+  | 'strategy'
+  | 'coop'
+  | 'engine'
+  | 'auction'
+  | 'roll-and-write'
+  | 'card-driven'
+  | 'tableau';
+
+export type LibraryFilterWeight = 'light' | 'medium' | 'heavy' | 'extra';
+
+export interface LibraryFilters {
+  readonly statuses?: ReadonlyArray<LibraryFilterStatus>;
+  readonly entities?: ReadonlyArray<LibraryFilterEntity>;
+  readonly games?: ReadonlyArray<string>;
+  readonly period?: LibraryFilterPeriod;
+  readonly periodFrom?: string;
+  readonly periodTo?: string;
+  readonly tags?: ReadonlyArray<LibraryFilterTag>;
   readonly ratingMin?: number;
-  readonly playersMin?: number;
-  readonly playersMax?: number;
-  readonly yearMin?: number;
-  readonly yearMax?: number;
+  readonly ratingMax?: number;
+  readonly weights?: ReadonlyArray<LibraryFilterWeight>;
 }
 
-export interface AgentLibraryFilters {
-  readonly scope: 'agent';
-  readonly types?: ReadonlyArray<string>;
-  readonly activeOnly?: boolean;
+export interface AdvancedFiltersDrawerGameOption {
+  readonly id: string;
+  readonly title: string;
 }
-
-export interface SessionLibraryFilters {
-  readonly scope: 'session';
-  readonly statuses?: ReadonlyArray<string>;
-  readonly sessionTypes?: ReadonlyArray<string>;
-  readonly playerCountMin?: number;
-}
-
-export interface KbLibraryFilters {
-  readonly scope: 'kb';
-  readonly processingStates?: ReadonlyArray<'Ready' | 'Pending' | 'Failed'>;
-}
-
-export interface ChatLibraryFilters {
-  readonly scope: 'chat';
-  readonly messageCountMin?: number;
-}
-
-export type LibraryFilters =
-  | GameLibraryFilters
-  | AgentLibraryFilters
-  | SessionLibraryFilters
-  | KbLibraryFilters
-  | ChatLibraryFilters;
-
-/**
- * Narrow `LibraryFilters` to the variant matching a given `HybridHubEntity` scope.
- */
-export type FiltersForScope<S extends HybridHubEntity> = Extract<LibraryFilters, { scope: S }>;
 
 export interface AdvancedFiltersDrawerProps {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
-  /** Drives which sections render. Single entity — NOT 'all' from HybridHubTab. */
-  readonly entityScope: HybridHubEntity;
   /** Active filters applied to the surface; shown in the drawer when it opens. */
   readonly activeFilters: LibraryFilters;
-  /** Called with the new draft when the user clicks Apply. Drawer closes after. */
+  /**
+   * Optional list of games surfaced in the "Gioco" select-multi section.
+   * When omitted, the section renders an empty-state hint instead of options.
+   */
+  readonly availableGames?: ReadonlyArray<AdvancedFiltersDrawerGameOption>;
+  /** Called with the new draft when the user clicks Applica. Drawer closes after. */
   readonly onApply: (filters: LibraryFilters) => void;
-  /** Called when the user clicks Clear. Drawer resets draft to default empty. */
+  /** Called when the user clicks Reset. Drawer resets draft to {} but stays open. */
   readonly onClear: () => void;
+}
+
+/**
+ * Count of non-empty filter fields, used to drive the header subtitle "N attivi"
+ * and the footer Apply button suffix "(N)".
+ */
+export function countActiveFilters(filters: LibraryFilters): number {
+  let count = 0;
+  for (const value of Object.values(filters)) {
+    if (value === undefined || value === null) continue;
+    if (Array.isArray(value)) {
+      if (value.length > 0) count += value.length;
+    } else if (typeof value === 'string' && value.length === 0) {
+      continue;
+    } else {
+      count += 1;
+    }
+  }
+  return count;
 }

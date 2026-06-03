@@ -94,4 +94,51 @@ describe('ProviderTable', () => {
       expect(placeholders.length).toBeGreaterThanOrEqual(3);
     });
   });
+
+  it('renders primary tag only on the deepseek row (PR1 entity-token mapping)', async () => {
+    renderWithQuery(<ProviderTable />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('provider-row-deepseek')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('provider-primary-tag-deepseek')).toHaveTextContent('primary');
+    expect(screen.queryByTestId('provider-primary-tag-openrouter')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('provider-primary-tag-ollama-local')).not.toBeInTheDocument();
+  });
+
+  it('exposes aria-label on token + circuit status chips for screen readers (PR3 a11y)', async () => {
+    renderWithQuery(<ProviderTable />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('provider-circuit-deepseek')).toBeInTheDocument();
+    });
+    // Circuit chips carry "Circuit breaker: {state}" aria-label
+    expect(screen.getByTestId('provider-circuit-deepseek')).toHaveAttribute(
+      'aria-label',
+      expect.stringMatching(/circuit breaker:/i)
+    );
+    expect(screen.getByTestId('provider-circuit-openrouter')).toHaveAttribute(
+      'aria-label',
+      expect.stringMatching(/circuit breaker:/i)
+    );
+    // Token status chips: one per provider row (3 providers)
+    const tokenChips = screen.getAllByLabelText(/token status:/i);
+    expect(tokenChips.length).toBe(3);
+  });
+
+  it('renders entity-colored mark per provider (no shared gradient)', async () => {
+    renderWithQuery(<ProviderTable />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('provider-mark-deepseek')).toBeInTheDocument();
+    });
+    const dsMark = screen.getByTestId('provider-mark-deepseek');
+    const orMark = screen.getByTestId('provider-mark-openrouter');
+    const ollMark = screen.getByTestId('provider-mark-ollama-local');
+
+    // Each mark gets its tone class — bg-entity-{tool|chat|kb}
+    expect(dsMark.className).toMatch(/bg-entity-tool/);
+    expect(orMark.className).toMatch(/bg-entity-chat/);
+    expect(ollMark.className).toMatch(/bg-entity-kb/);
+  });
 });

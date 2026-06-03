@@ -26,28 +26,47 @@ import { KNOWN_PROVIDERS, type ProviderName } from '@/lib/api/schemas/providers'
 
 import { RotateKeyModal } from './RotateKeyModal';
 
+type ProviderTone = 'tool' | 'chat' | 'kb';
+
 const PROVIDER_DISPLAY: Record<
   ProviderName,
-  { mark: string; name: string; host: string; defaultModel: string }
+  {
+    readonly mark: string;
+    readonly name: string;
+    readonly host: string;
+    readonly defaultModel: string;
+    readonly tone: ProviderTone;
+    readonly primary?: boolean;
+  }
 > = {
-  openrouter: {
-    mark: 'O',
-    name: 'OpenRouter',
-    host: 'openrouter.ai/api/v1',
-    defaultModel: 'anthropic/claude-3.5-sonnet',
-  },
   deepseek: {
     mark: 'D',
     name: 'DeepSeek',
     host: 'api.deepseek.com',
     defaultModel: 'deepseek-chat',
+    tone: 'tool',
+    primary: true,
+  },
+  openrouter: {
+    mark: 'O',
+    name: 'OpenRouter',
+    host: 'openrouter.ai/api/v1',
+    defaultModel: 'anthropic/claude-3.5-sonnet',
+    tone: 'chat',
   },
   'ollama-local': {
     mark: 'L',
     name: 'Ollama (locale)',
     host: 'localhost:11434',
     defaultModel: 'llama3.1:8b-instruct',
+    tone: 'kb',
   },
+};
+
+const TONE_MARK_CLASS: Record<ProviderTone, string> = {
+  tool: 'bg-entity-tool/15 text-entity-tool ring-1 ring-entity-tool/30',
+  chat: 'bg-entity-chat/15 text-entity-chat ring-1 ring-entity-chat/30',
+  kb: 'bg-entity-kb/15 text-entity-kb ring-1 ring-entity-kb/30',
 };
 
 type CircuitState = 'closed' | 'open' | 'half-open' | 'unknown';
@@ -122,11 +141,25 @@ function ProviderRow({
           href={`/admin/providers/${encodeURIComponent(name)}`}
           className="flex items-center gap-3 outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md"
         >
-          <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-amber-500 to-rose-500 font-quicksand text-base font-bold text-white">
+          <div
+            className={`grid h-9 w-9 place-items-center rounded-lg font-quicksand text-base font-bold ${TONE_MARK_CLASS[display.tone]}`}
+            aria-hidden="true"
+            data-testid={`provider-mark-${name}`}
+          >
             {display.mark}
           </div>
           <div className="min-w-0">
-            <div className="font-quicksand text-sm font-bold text-foreground">{display.name}</div>
+            <div className="font-quicksand text-sm font-bold text-foreground flex items-center gap-1.5">
+              {display.name}
+              {display.primary && (
+                <span
+                  className="font-mono text-[9px] font-bold uppercase tracking-wider bg-entity-event/12 text-entity-event px-1.5 py-px rounded"
+                  data-testid={`provider-primary-tag-${name}`}
+                >
+                  primary
+                </span>
+              )}
+            </div>
             <div className="font-mono text-[10.5px] text-muted-foreground truncate">
               {display.host}
             </div>
@@ -136,6 +169,7 @@ function ProviderRow({
       <td className="py-3 px-3">
         <span
           className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full border ${tokenStatus.cls}`}
+          aria-label={`Token status: ${tokenStatus.label}`}
         >
           {tokenStatus.label}
         </span>
@@ -163,6 +197,7 @@ function ProviderRow({
         <span
           className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full border ${circuitChipClass(circuit)}`}
           data-testid={`provider-circuit-${name}`}
+          aria-label={`Circuit breaker: ${circuit}`}
         >
           {circuit}
         </span>

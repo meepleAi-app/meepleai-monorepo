@@ -5,18 +5,21 @@
  * #1834 SP5 F4-C3 — CircuitBreakerGrid
  *
  * Grid degli stati Polly circuit breaker per servizi LLM
- * (mockup `sp5-admin-providers.html` cluster sotto la routing chain).
+ * (mockup `sp5-admin-providers.html` §4).
  *
- * Sostituisce il pattern client-direct di `monitor/services/CircuitBreakerPanel.tsx`
- * (vecchio) con uno SP5-conformant che usa `useCircuitBreakerStates` (hook condiviso).
+ * PR2: layout 2×2 stat-grid (mockup-aligned) + cooldown bar countdown per
+ * stati open/half-open. Cooldown derivato da
+ * `useLlmSystemConfig().circuitBreakerOpenDurationSeconds` + `lastTrippedAt`.
  *
  * Stato visivo:
  * - `Closed` → emerald (verde) — flow normale
- * - `Open` → rose (rosso) — circuit aperto, last failure visibile
+ * - `Open` → rose (rosso) — circuit aperto, cooldown countdown attivo
  * - `HalfOpen` → amber (giallo) — recupero in corso
  */
 
-import { useCircuitBreakerStates } from '@/hooks/queries/useProviders';
+import { useEffect, useState } from 'react';
+
+import { useCircuitBreakerStates, useLlmSystemConfig } from '@/hooks/queries/useProviders';
 import type { CircuitBreakerState } from '@/lib/api/schemas/admin/admin-circuit-breakers.schemas';
 
 function stateClass(state: string): string {
@@ -47,58 +50,187 @@ function chipClass(state: string): string {
   }
 }
 
-function CircuitCard({ breaker }: { readonly breaker: CircuitBreakerState }) {
+function isCooldownState(state: string): boolean {
+  const s = state.toLowerCase();
+  return s === 'open' || s === 'half-open' || s === 'halfopen';
+}
+
+function formatRelative(iso: string): string {
+  const then = new Date(iso).getTime();
+  const now = Date.now();
+  const diffSec = Math.max(0, Math.floor((now - then) / 1000));
+  if (diffSec < 60) return `${diffSec}s fa`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m fa`;
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH < 24) return `${diffH}h fa`;
+  const diffD = Math.floor(diffH / 24);
+  return `${diffD}g fa`;
+}
+
+interface CooldownBarProps {
+  readonly trippedAtIso: string;
+  readonly cooldownSec: number;
+}
+
+/**
+ * Cooldown bar with live countdown. Updates every 1s via state tick.
+ * Stops re-rendering once countdown completes.
+ */
+function CooldownBar({ trippedAtIso, cooldownSec }: CooldownBarProps) {
+  const computeRemaining = () => {
+    const trippedMs = new Date(trippedAtIso).getTime();
+    const elapsed = Math.max(0, (Date.now() - trippedMs) / 1000);
+    return Math.max(0, cooldownSec - elapsed);
+  };
+  const [remaining, setRemaining] = useState(computeRemaining);
+
+  useEffect(() => {
+    if (remaining <= 0) return;
+    const id = setInterval(() => {
+      setRemaining(computeRemaining());
+    }, 1000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trippedAtIso, cooldownSec]);
+
+  const pct = cooldownSec > 0 ? Math.max(0, Math.min(100, (remaining / cooldownSec) * 100)) : 0;
+
+  return (
+    <div className="mt-1" data-testid="cb-cooldown-bar">
+      <div
+        className="h-1.5 w-full overflow-hidden rounded-full bg-muted/60 dark:bg-zinc-800"
+        role="progressbar"
+        aria-label="Cooldown timer residuo"
+        aria-valuenow={Math.round(remaining)}
+        aria-valuemin={0}
+        aria-valuemax={cooldownSec}
+      >
+        <div
+          className="h-full rounded-full bg-amber-500 transition-[width] duration-500 ease-linear"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <div className="mt-0.5 flex justify-between font-mono text-[9.5px] text-muted-foreground">
+        <span>cooldown</span>
+        <span
+          className="font-bold text-amber-700 dark:text-amber-300"
+          data-testid="cb-cooldown-remaining"
+        >
+          {Math.ceil(remaining)}s
+        </span>
+      </div>
+    </div>
+  );
+}
+
+interface StatItemProps {
+  readonly label: string;
+  readonly value: string | number;
+  readonly tone?: 'default' | 'warn' | 'muted';
+}
+
+function StatItem({ label, value, tone = 'default' }: StatItemProps) {
+  const toneClass: Record<NonNullable<StatItemProps['tone']>, string> = {
+    default: 'text-foreground',
+    warn: 'text-amber-700 dark:text-amber-300',
+    muted: 'text-muted-foreground',
+  };
+  return (
+    <div className="flex flex-col gap-px">
+      <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground font-bold">
+        {label}
+      </span>
+      <span className={`font-mono text-xs font-bold tabular-nums ${toneClass[tone]}`}>{value}</span>
+    </div>
+  );
+}
+
+interface CircuitCardProps {
+  readonly breaker: CircuitBreakerState;
+  readonly cooldownSec: number | undefined;
+  readonly failureThreshold: number | undefined;
+}
+
+function CircuitCard({ breaker, cooldownSec, failureThreshold }: CircuitCardProps) {
+  const showCooldown =
+    isCooldownState(breaker.state) && breaker.lastTrippedAt !== null && cooldownSec != null;
+
   return (
     <div
       data-testid={`circuit-card-${breaker.serviceName}`}
-      className={`rounded-lg border p-3 ${stateClass(breaker.state)}`}
+      className={`rounded-lg border p-3 flex flex-col gap-2 ${stateClass(breaker.state)}`}
     >
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div
+            className="font-quicksand text-sm font-bold text-foreground truncate"
+            title={breaker.serviceName}
+          >
+            {breaker.serviceName}
+          </div>
+          <div className="font-mono text-[9.5px] uppercase tracking-wider text-muted-foreground font-bold">
+            circuit breaker
+          </div>
+        </div>
         <span
-          className="font-quicksand text-sm font-bold text-foreground truncate"
-          title={breaker.serviceName}
-        >
-          {breaker.serviceName}
-        </span>
-        <span
-          className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full border ${chipClass(breaker.state)}`}
+          className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full border whitespace-nowrap ${chipClass(breaker.state)}`}
+          aria-label={`Circuit breaker state: ${breaker.state}`}
         >
           {breaker.state}
         </span>
       </div>
-      <dl className="mt-2 font-mono text-[10.5px] text-muted-foreground space-y-0.5">
-        <div>
-          <dt className="inline">Trips: </dt>
-          <dd className="inline text-foreground">{breaker.tripCount}</dd>
+
+      <div
+        className="grid grid-cols-2 gap-1.5 gap-x-3 mt-auto"
+        data-testid={`circuit-card-statgrid-${breaker.serviceName}`}
+      >
+        <StatItem
+          label="Trips"
+          value={breaker.tripCount}
+          tone={breaker.tripCount > 0 ? 'warn' : 'default'}
+        />
+        <StatItem
+          label="Soglia"
+          value={failureThreshold ?? '—'}
+          tone={failureThreshold == null ? 'muted' : 'default'}
+        />
+        <StatItem
+          label="Ultima apertura"
+          value={breaker.lastTrippedAt ? formatRelative(breaker.lastTrippedAt) : '—'}
+          tone={breaker.lastTrippedAt ? 'default' : 'muted'}
+        />
+        <StatItem
+          label="Reset"
+          value={breaker.lastResetAt ? formatRelative(breaker.lastResetAt) : '—'}
+          tone={breaker.lastResetAt ? 'default' : 'muted'}
+        />
+      </div>
+
+      {showCooldown && breaker.lastTrippedAt && cooldownSec != null && (
+        <CooldownBar trippedAtIso={breaker.lastTrippedAt} cooldownSec={cooldownSec} />
+      )}
+
+      {breaker.lastError && (
+        <div
+          className="font-mono text-[10px] text-rose-700 dark:text-rose-300 truncate"
+          title={breaker.lastError}
+        >
+          err: {breaker.lastError}
         </div>
-        {breaker.lastTrippedAt && (
-          <div>
-            <dt className="inline">Last trip: </dt>
-            <dd className="inline">{new Date(breaker.lastTrippedAt).toLocaleString('it-IT')}</dd>
-          </div>
-        )}
-        {breaker.lastResetAt && (
-          <div>
-            <dt className="inline">Last reset: </dt>
-            <dd className="inline">{new Date(breaker.lastResetAt).toLocaleString('it-IT')}</dd>
-          </div>
-        )}
-        {breaker.lastError && (
-          <div className="text-rose-700 dark:text-rose-300 truncate" title={breaker.lastError}>
-            <dt className="inline">Err: </dt>
-            <dd className="inline">{breaker.lastError}</dd>
-          </div>
-        )}
-      </dl>
+      )}
     </div>
   );
 }
 
 export function CircuitBreakerGrid() {
   const breakersQuery = useCircuitBreakerStates();
+  const configQuery = useLlmSystemConfig();
 
   const breakers = breakersQuery.data ?? [];
   const issueCount = breakers.filter(b => b.state.toLowerCase() !== 'closed').length;
+  const cooldownSec = configQuery.data?.circuitBreakerOpenDurationSeconds;
+  const failureThreshold = configQuery.data?.circuitBreakerFailureThreshold;
 
   return (
     <section
@@ -117,8 +249,20 @@ export function CircuitBreakerGrid() {
           {breakersQuery.isLoading ? 'caricamento…' : `${breakers.length} servizi`}
         </span>
         {issueCount > 0 && (
-          <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full border bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40">
+          <span
+            className="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full border bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40"
+            role="status"
+            aria-label={`${issueCount} circuit breaker${issueCount === 1 ? '' : 's'} require attention`}
+          >
             {issueCount} issue
+          </span>
+        )}
+        {cooldownSec != null && failureThreshold != null && (
+          <span
+            className="ml-auto font-mono text-[10px] text-muted-foreground"
+            data-testid="cb-policy-meta"
+          >
+            policy: {failureThreshold} fail → open · cooldown {cooldownSec}s
           </span>
         )}
       </header>
@@ -144,7 +288,12 @@ export function CircuitBreakerGrid() {
       {breakers.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {breakers.map(b => (
-            <CircuitCard key={b.serviceName} breaker={b} />
+            <CircuitCard
+              key={b.serviceName}
+              breaker={b}
+              cooldownSec={cooldownSec}
+              failureThreshold={failureThreshold}
+            />
           ))}
         </div>
       )}

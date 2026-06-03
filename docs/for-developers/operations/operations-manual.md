@@ -2283,6 +2283,35 @@ dmesg | grep -i "oom\|killed" | tail -20
 | Security breach suspected | Isolate affected service, rotate all secrets |
 | Infrastructure failure | Consider VPS migration (see DR section) |
 
+### LLM Provider Outage Recovery — Reset Circuit Breakers
+
+**When to use**: All LLM circuits stuck in `Open` after upstream provider outage is resolved. Default cooldown is `circuitBreakerOpenDurationSeconds` (configured in `/admin/ai` LLM config, typically 30s). If you can't wait — or if the cooldown was misconfigured to a high value — manually reset.
+
+> 🟡 **Note (2026-06-03 per #1834 spec-panel review)**: There is NO admin UI button for "Reset all circuit breakers". The Polly circuit breaker state is in-memory per API process — restarting the `api` container is the simplest reset. Direct in-process reset via admin endpoint is tracked separately if/when on-call composition justifies it.
+
+#### Option A — Restart API container (fastest, zero state loss)
+
+```bash
+# Production / staging via SSH
+ssh meepleai-staging
+cd /opt/meepleai
+docker compose restart api
+
+# Verify circuits closed
+curl -s -H "Cookie: <admin-session>" http://localhost:8080/api/v1/admin/circuit-breakers \
+  | jq '.[] | {service: .serviceName, state: .state}'
+```
+
+Trade-off: brief (~5s) API unavailability while container restarts. No data loss (state is in-memory and disposable).
+
+#### Option B — Force-trip a single circuit manually
+
+Not currently supported. If a single provider needs to be ejected from the routing chain (e.g. compromised key suspected), use `/admin/ai` → LLM config → `fallbackChainJson` to remove the entry, save, then restart `api`.
+
+#### Verify recovery
+
+Visit `/admin/providers` (admin role required). The `CircuitBreakerGrid` section should show all chips `closed` (green) and the cooldown bar should disappear. The KPI `Circuit health` in the hero should read `N/N` (all healthy).
+
 ### Communication Template
 
 ```

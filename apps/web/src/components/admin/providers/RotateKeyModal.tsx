@@ -7,12 +7,13 @@
  * Richiede ruolo superadmin + step-up 2FA (S3 strict cutover #1597).
  *
  * **Stato attuale**: BE endpoint `POST /api/v1/admin/providers/{name}/rotate-key` NON ancora
- * implementato. Questa UI è pre-built per quando il BE arriverà. Comportamento corrente:
+ * implementato. Tracked in #1859. Questa UI è pre-built per quando il BE arriverà.
+ * Comportamento corrente:
  * - Button "Rotate" sempre disabled
- * - Tooltip "BE endpoint pending — track ⊥ Sicurezza S3 followup"
+ * - Tooltip esplicativo che cita #1859
  * - Modale NON apre (button disabled)
  *
- * Quando il BE arriverà (issue follow-up da aprire):
+ * Quando #1859 sarà mergiato:
  * - Wire mutation POST /providers/{name}/rotate-key con header X-StepUp-Token
  * - Typed-confirm input ("type the provider name to confirm")
  * - Display nuova key UNA volta + checkbox "Ho copiato la key"
@@ -36,9 +37,7 @@ export function RotateKeyModal({ providerName }: RotateKeyModalProps) {
   const beAvailable = false;
   const disabled = !isSuper || !beAvailable;
 
-  const title = !isSuper
-    ? 'Richiede ruolo superadmin'
-    : 'BE endpoint pending — track ⊥ Sicurezza S3 followup';
+  const title = !isSuper ? 'Richiede ruolo superadmin' : 'BE endpoint pending — tracked in #1859';
 
   return (
     <button

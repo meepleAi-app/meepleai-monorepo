@@ -1,65 +1,27 @@
-/* eslint-disable local/no-hardcoded-color-utility -- admin routing chain: amber/emerald/zinc priority palette (admin convention DS-13c, scope deferred to DS-16) */
+/* eslint-disable local/no-hardcoded-color-utility -- admin routing chain: amber/cyan/teal/zinc priority palette (admin convention DS-13c, scope deferred to DS-16) */
 'use client';
 
 /**
  * #1834 SP5 F4-C3 — RoutingChainViz
  *
  * Visualizzazione catena di fallback LLM (mockup `sp5-admin-providers.html` §3).
- * Parsing della stringa `fallbackChainJson` da `LlmSystemConfigDto`.
  *
- * Formato atteso (best-effort):
- *   [
- *     { "provider": "deepseek", "model": "deepseek-chat", "priority": "primary" },
- *     { "provider": "openrouter", "model": "...", "priority": "secondary" },
- *     ...
- *   ]
+ * PR2: parsing migrato a Zod schema condiviso (`parseFallbackChain`).
+ * Arrow tra nodi mostra le `failoverConditions` ("on 429 / 5xx / timeout").
  *
- * Tollerante a varianti: campi mancanti → fallback "—".
- * Se il JSON non è parsabile → empty state.
+ * Schema tollerante a varianti BE (vedi `FallbackChainEntrySchema`); follow-up
+ * BE per schema rigido + persistenza tipata.
  */
 
 import { useMemo } from 'react';
 
 import { useLlmSystemConfig } from '@/hooks/queries/useProviders';
+import {
+  parseFallbackChain,
+  type FallbackChainEntry,
+} from '@/lib/api/schemas/llm-system-config.schemas';
 
-interface ChainNode {
-  readonly provider: string;
-  readonly model: string;
-  readonly priority: 'primary' | 'secondary' | 'tertiary' | 'standby' | 'unknown';
-}
-
-function parseFallbackChain(json: string | undefined | null): ChainNode[] {
-  if (!json) return [];
-  try {
-    const parsed: unknown = JSON.parse(json);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.map((raw, idx) => {
-      if (typeof raw !== 'object' || raw === null) {
-        return { provider: '—', model: '—', priority: 'unknown' as const };
-      }
-      const obj = raw as Record<string, unknown>;
-      const providerKey = obj.provider ?? obj.name ?? obj.providerName;
-      const modelKey = obj.model ?? obj.defaultModel ?? obj.modelName;
-      const priorityKey =
-        obj.priority ?? (idx === 0 ? 'primary' : idx === 1 ? 'secondary' : 'tertiary');
-      const priority =
-        typeof priorityKey === 'string'
-          ? ['primary', 'secondary', 'tertiary', 'standby'].includes(priorityKey.toLowerCase())
-            ? (priorityKey.toLowerCase() as ChainNode['priority'])
-            : 'unknown'
-          : 'unknown';
-      return {
-        provider: typeof providerKey === 'string' ? providerKey : '—',
-        model: typeof modelKey === 'string' ? modelKey : '—',
-        priority,
-      };
-    });
-  } catch {
-    return [];
-  }
-}
-
-function priorityChipClass(priority: ChainNode['priority']): string {
+function priorityChipClass(priority: FallbackChainEntry['priority']): string {
   switch (priority) {
     case 'primary':
       return 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40';
@@ -74,10 +36,25 @@ function priorityChipClass(priority: ChainNode['priority']): string {
   }
 }
 
-function ChainArrow() {
+function formatConditions(conditions: readonly string[]): string {
+  if (conditions.length === 0) return 'on any failure';
+  return `on ${conditions.join(' / ')}`;
+}
+
+function ChainArrow({ conditions }: { readonly conditions: readonly string[] }) {
   return (
-    <div className="hidden sm:flex items-center text-muted-foreground" aria-hidden="true">
-      →
+    <div
+      className="hidden sm:flex flex-col items-center justify-center gap-1 px-2"
+      aria-hidden="true"
+      data-testid="routing-chain-arrow"
+    >
+      <span className="font-mono text-lg text-muted-foreground">→</span>
+      <span
+        className="font-mono text-[9.5px] uppercase tracking-wider text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-full px-2 py-px whitespace-nowrap"
+        data-testid="routing-chain-condition"
+      >
+        {formatConditions(conditions)}
+      </span>
     </div>
   );
 }
@@ -103,7 +80,11 @@ export function RoutingChainViz() {
           Routing chain
         </h3>
         <span className="font-mono text-[10.5px] text-muted-foreground">
-          {chain.length > 0 ? `${chain.length} hops` : 'fallback'}
+          {chain.length > 0
+            ? chain.length === 1
+              ? '1 hop'
+              : `${chain.length - 1 === 0 ? '' : `${chain.length - 1} fallback · `}${chain.length} hops`
+            : 'fallback'}
         </span>
         {configQuery.data && (
           <span className="ml-auto font-mono text-[10.5px] text-muted-foreground">
@@ -135,27 +116,35 @@ export function RoutingChainViz() {
 
       {chain.length > 0 && (
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center flex-wrap">
-          {chain.map((node, idx) => (
-            <div key={`${node.provider}-${idx}`} className="flex items-center gap-2 sm:gap-3">
-              <div
-                className="rounded-lg border border-border/60 dark:border-zinc-700/60 bg-card/60 px-3 py-2 min-w-[180px]"
-                data-testid={`routing-chain-node-${idx}`}
-              >
-                <span
-                  className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full border ${priorityChipClass(node.priority)}`}
+          {chain.map((node, idx) => {
+            const nextNode = chain[idx + 1];
+            // Arrow conditions are the conditions that trigger transition to NEXT node.
+            // They come from the *next* node's `failoverConditions` (what makes us fall there).
+            const arrowConditions = nextNode?.failoverConditions ?? [];
+            return (
+              <div key={`${node.provider}-${idx}`} className="flex items-center gap-2 sm:gap-3">
+                <div
+                  className="rounded-lg border border-border/60 dark:border-zinc-700/60 bg-card/60 px-3 py-2 min-w-[180px]"
+                  data-testid={`routing-chain-node-${idx}`}
                 >
-                  {node.priority}
-                </span>
-                <div className="mt-1.5 font-quicksand text-sm font-bold text-foreground">
-                  {node.provider}
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full border ${priorityChipClass(node.priority)}`}
+                    data-testid={`routing-chain-priority-${idx}`}
+                    aria-label={`Priority: ${node.priority}`}
+                  >
+                    {node.priority}
+                  </span>
+                  <div className="mt-1.5 font-quicksand text-sm font-bold text-foreground">
+                    {node.provider}
+                  </div>
+                  <div className="font-mono text-[10.5px] text-muted-foreground truncate">
+                    {node.model}
+                  </div>
                 </div>
-                <div className="font-mono text-[10.5px] text-muted-foreground truncate">
-                  {node.model}
-                </div>
+                {nextNode && <ChainArrow conditions={arrowConditions} />}
               </div>
-              {idx < chain.length - 1 && <ChainArrow />}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </section>

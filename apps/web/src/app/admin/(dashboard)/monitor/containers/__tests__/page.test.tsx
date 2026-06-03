@@ -3,7 +3,7 @@
  * Issue #144 — Container Management tests
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 vi.mock('@/hooks/useSetNavConfig', () => ({
@@ -16,12 +16,16 @@ vi.mock('next/navigation', () => ({
 
 const mockGetDockerContainers = vi.hoisted(() => vi.fn());
 const mockRestartService = vi.hoisted(() => vi.fn());
+const mockGetMetricsTimeSeries = vi.hoisted(() => vi.fn());
+const mockGetAllBatchJobs = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/api', () => ({
   api: {
     admin: {
       getDockerContainers: mockGetDockerContainers,
       restartService: mockRestartService,
+      getMetricsTimeSeries: mockGetMetricsTimeSeries,
+      getAllBatchJobs: mockGetAllBatchJobs,
     },
   },
 }));
@@ -47,8 +51,14 @@ vi.mock('@/components/admin/monitor/use-live-events', () => ({
 import ContainerDashboardPage from '../page';
 
 describe('ContainerDashboardPage', () => {
-  it('renders page with title', () => {
+  beforeEach(() => {
+    // Hanging promise for "loading" state; tests only check structure
     mockGetDockerContainers.mockReturnValue(new Promise(() => {}));
+    mockGetMetricsTimeSeries.mockReturnValue(new Promise(() => {}));
+    mockGetAllBatchJobs.mockReturnValue(new Promise(() => {}));
+  });
+
+  it('renders page with title', () => {
     render(<ContainerDashboardPage />);
 
     expect(screen.getByTestId('containers-page')).toBeInTheDocument();
@@ -56,11 +66,19 @@ describe('ContainerDashboardPage', () => {
     expect(screen.getByText('Infrastructure & Containers')).toBeInTheDocument();
   });
 
-  it('renders container dashboard and restart panel', () => {
-    mockGetDockerContainers.mockReturnValue(new Promise(() => {}));
+  it('renders all SP5 #1837 sections', () => {
     render(<ContainerDashboardPage />);
 
+    expect(screen.getByTestId('kpi-sparkline-strip')).toBeInTheDocument();
     expect(screen.getByTestId('container-dashboard')).toBeInTheDocument();
+    expect(screen.getByTestId('live-event-log')).toBeInTheDocument();
     expect(screen.getByTestId('restart-all-panel')).toBeInTheDocument();
+  });
+
+  it('LiveEventLog has role=log + aria-live=polite (a11y)', () => {
+    render(<ContainerDashboardPage />);
+
+    const log = screen.getByRole('log');
+    expect(log).toHaveAttribute('aria-live', 'polite');
   });
 });

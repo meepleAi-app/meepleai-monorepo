@@ -2,6 +2,7 @@
  * ContainerDashboard Component Tests
  * Issue #144  — Container Management tests (original polling implementation).
  * Issue #1853 — SSE-driven refresh + polling fallback (60s minimum).
+ * Issue #1837 — Lift useLiveEvents subscription to page.tsx; props-driven SSE forwarding.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -9,10 +10,8 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import type { DomainEventDto } from '@/components/admin/monitor/live-event-types';
-import type { UseLiveEventsResult } from '@/components/admin/monitor/use-live-events';
 
 const mockGetDockerContainers = vi.hoisted(() => vi.fn());
-const mockUseLiveEvents = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/api', () => ({
   api: {
@@ -24,10 +23,6 @@ vi.mock('@/lib/api', () => ({
 
 vi.mock('@/hooks/useToast', () => ({
   useToast: () => ({ toast: vi.fn() }),
-}));
-
-vi.mock('@/components/admin/monitor/use-live-events', () => ({
-  useLiveEvents: mockUseLiveEvents,
 }));
 
 import { ContainerDashboard, computePollingBackoff } from '../ContainerDashboard';
@@ -62,20 +57,6 @@ const mockContainers = [
   },
 ];
 
-/** Build a stable UseLiveEventsResult, overridable per test. */
-function liveEventsResult(overrides: Partial<UseLiveEventsResult> = {}): UseLiveEventsResult {
-  return {
-    events: [],
-    isLoading: false,
-    isStreaming: false,
-    error: null,
-    pause: vi.fn(),
-    resume: vi.fn(),
-    refetch: vi.fn(),
-    ...overrides,
-  };
-}
-
 function makeEvent(id: string): DomainEventDto {
   return {
     id,
@@ -94,8 +75,6 @@ function makeEvent(id: string): DomainEventDto {
 describe('ContainerDashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default: SSE disconnected, no events
-    mockUseLiveEvents.mockReturnValue(liveEventsResult());
   });
 
   it('shows loading state initially', () => {
@@ -243,43 +222,29 @@ describe('ContainerDashboard', () => {
   /*  #1853 — SSE wiring                                                 */
   /* ------------------------------------------------------------------ */
 
-  it('shows SSE status badge "Polling only" when SSE is disconnected', async () => {
+  it('shows SSE status badge "Polling only" when sseConnected prop is false', async () => {
     mockGetDockerContainers.mockResolvedValue(mockContainers);
-    render(<ContainerDashboard />);
+    render(<ContainerDashboard liveEvents={[]} sseConnected={false} />);
 
     const badge = await screen.findByTestId('sse-status-indicator');
     expect(badge).toHaveTextContent(/polling only/i);
   });
 
-  it('shows SSE status badge "Live" when SSE is connected', async () => {
+  it('shows SSE status badge "Live" when sseConnected prop is true', async () => {
     mockGetDockerContainers.mockResolvedValue(mockContainers);
-    mockUseLiveEvents.mockReturnValue(liveEventsResult({ isStreaming: true }));
-    render(<ContainerDashboard />);
+    render(<ContainerDashboard liveEvents={[]} sseConnected={true} />);
 
     const badge = await screen.findByTestId('sse-status-indicator');
     expect(badge).toHaveTextContent(/^live$/i);
   });
 
-  it('subscribes to Container + Infrastructure aggregateTypes', async () => {
+  it('refreshes containers when a new live event arrives via prop change', async () => {
     mockGetDockerContainers.mockResolvedValue(mockContainers);
-    render(<ContainerDashboard />);
-
-    await waitFor(() => {
-      expect(mockUseLiveEvents).toHaveBeenCalled();
-    });
-
-    const firstCallArg = mockUseLiveEvents.mock.calls[0]?.[0] as {
-      aggregateTypes?: string[];
-    };
-    expect(firstCallArg?.aggregateTypes).toEqual(['Container', 'Infrastructure']);
-  });
-
-  it('refreshes containers when a new live event arrives', async () => {
-    mockGetDockerContainers.mockResolvedValue(mockContainers);
-    // First render: events seeded by SSE backfill (counts as "first observation",
+    // First render: events seeded by backfill (counts as "first observation",
     // so we expect NO extra fetch beyond the initial mount fetch).
-    mockUseLiveEvents.mockReturnValue(liveEventsResult({ events: [makeEvent('ev-1')] }));
-    const { rerender } = render(<ContainerDashboard />);
+    const { rerender } = render(
+      <ContainerDashboard liveEvents={[makeEvent('ev-1')]} sseConnected={true} />
+    );
 
     // Wait for the initial mount fetch to settle (StrictMode may invoke it twice;
     // we rely on a delta comparison below rather than an absolute call count).
@@ -289,10 +254,9 @@ describe('ContainerDashboard', () => {
     const callsAfterMount = mockGetDockerContainers.mock.calls.length;
 
     // New event arrives mid-session — the dashboard must refresh containers.
-    mockUseLiveEvents.mockReturnValue(
-      liveEventsResult({ events: [makeEvent('ev-2'), makeEvent('ev-1')] })
+    rerender(
+      <ContainerDashboard liveEvents={[makeEvent('ev-2'), makeEvent('ev-1')]} sseConnected={true} />
     );
-    rerender(<ContainerDashboard />);
 
     await waitFor(() => {
       expect(mockGetDockerContainers.mock.calls.length).toBeGreaterThan(callsAfterMount);

@@ -1,34 +1,38 @@
 'use client';
 
 /**
- * #1837 SP5 F4-C1 — `/admin/monitor/containers` re-skin
+ * #1837 SP5 F4-C1 — `/admin/monitor/containers` re-skin (composition layer).
  *
  * Layout SP5 (mockup `sp5-admin-infra.html`):
- *   1. Hero header (titolo + descrizione + crumbs)
- *   2. ContainerDashboard — grid container con auto-refresh + StatusSummary KPI
- *   3. RestartAllPanel — restart dependency-ordered (typed-confirm)
+ *   1. Hero header (titolo + crumbs)
+ *   2. KPISparklineStrip — 4 KPI con sparkline (CPU/Memory inline)
+ *   3. ContainerDashboard — grid container + auto-refresh + StatusSummary KPI
+ *   4. LiveEventLog — feed SSE Container/Infrastructure con fade-out 30s
+ *   5. RestartAllPanel — restart dependency-ordered (typed-confirm)
  *
- * Originale (Issue #143): page admin Phase 4. Re-skin SP5 introduce:
- *   - Header SP5-style con breadcrumb-like crumbs
- *   - StatusSummary KPI con token semantici emerald/rose (era green/red hardcoded)
- *   - ContainerStatusBadge dot color token-aligned
+ * SSE subscription è ora "lifted" a questa page: ContainerDashboard +
+ * LiveEventLog ricevono `events` / `isStreaming` come prop e condividono
+ * una singola EventSource (no doppia connessione SSE).
  *
- * BE pending (documentato, follow-up issue da aprire):
- *   - KPISparkline per CPU/Memory/Network — richiede endpoint metrics aggregato
- *
- * Resolved follow-ups:
- *   - #1853 — ContainerDashboard now subscribes to `useLiveEvents({ aggregateTypes:
- *     ['Container', 'Infrastructure'] })`. The hook activates automatically when BE
- *     starts emitting those event types; until then the polling fallback (60s minimum)
- *     keeps the UI accurate.
- *   - #1854 — RestartAllPanel inline confirmation replaced with `AdminConfirmationDialog`
- *     (Radix Dialog → role=dialog + aria-labelledby + focus trap + Escape, axe-clean).
+ * Resolved follow-ups: #1853 (SSE wiring) · #1854 (typed-confirm dialog).
+ * Open gap (out of scope, follow-up issue tracciato in spec):
+ *   - Per-container CPU/Memory metrics (richiede estensione ContainerInfo BE)
+ *   - Resources section (disco + memoria host breakdown)
  */
 
+import { useLiveEvents } from '@/components/admin/monitor/use-live-events';
+
 import { ContainerDashboard } from './ContainerDashboard';
+import { KPISparklineStrip } from './KPISparklineStrip';
+import { LiveEventLog } from './LiveEventLog';
 import { RestartAllPanel } from './RestartAllPanel';
 
 export default function ContainerDashboardPage() {
+  const { events, isStreaming, isLoading } = useLiveEvents({
+    aggregateTypes: ['Container', 'Infrastructure'],
+    initialLimit: 50,
+  });
+
   return (
     <div data-testid="containers-page" className="space-y-6">
       {/* SP5 hero header */}
@@ -47,7 +51,19 @@ export default function ContainerDashboardPage() {
         </p>
       </header>
 
-      <ContainerDashboard />
+      <KPISparklineStrip />
+
+      <ContainerDashboard liveEvents={events} sseConnected={isStreaming} />
+
+      <section aria-labelledby="live-events-heading" className="space-y-2">
+        <h2
+          id="live-events-heading"
+          className="font-quicksand text-sm font-semibold text-foreground"
+        >
+          Eventi live
+        </h2>
+        <LiveEventLog events={events} isStreaming={isStreaming} isLoading={isLoading} />
+      </section>
 
       {/* Issue #145: Restart All with dependency-ordered restart */}
       <RestartAllPanel />

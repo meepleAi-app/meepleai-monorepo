@@ -4,12 +4,15 @@
  * ContainerDashboard — Container status grid with SSE-driven refresh + polling fallback.
  * Issue #143  — Admin Infrastructure Panel Phase 4 (original polling implementation).
  * Issue #1853 — Wire `useLiveEvents` for real-time updates; demote polling to 60s+ fallback.
+ * Issue #1837 — Lift `useLiveEvents` subscription to page.tsx so ContainerDashboard +
+ *               LiveEventLog share a single EventSource. Accept `liveEvents` + `sseConnected`
+ *               as props instead of subscribing internally.
  *
  * Refresh strategy:
- *   - SSE primary: `useLiveEvents({ aggregateTypes: ['Container', 'Infrastructure'] })`
- *     triggers `fetchContainers()` whenever a new infra/container event arrives.
- *   - Polling fallback: 60s default (was 30s), settable up to 5m, guarantees state
- *     converges even when SSE is offline or the BE has not yet emitted relevant events.
+ *   - SSE primary: parent owns `useLiveEvents({ aggregateTypes: ['Container', 'Infrastructure'] })`
+ *     and forwards events here. New events trigger `fetchContainers()`.
+ *   - Polling fallback: 60s default, settable up to 5m, guarantees state converges even when
+ *     SSE is offline or the BE has not yet emitted relevant events.
  *
  * BE event-type gap (known, out of scope per #1853):
  *   The backend currently does not emit `Container.*` / `Infrastructure.*` domain
@@ -24,7 +27,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Box, Clock, Loader2, Pause, Play, RadioTower, RefreshCw, ScrollText } from 'lucide-react';
 import Link from 'next/link';
 
-import { useLiveEvents } from '@/components/admin/monitor/use-live-events';
+import type { DomainEventDto } from '@/components/admin/monitor/live-event-types';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { useToast } from '@/hooks/useToast';
@@ -202,7 +205,15 @@ export function computePollingBackoff(
   return Math.min(baseSeconds * multiplier, caps.maxDelaySeconds);
 }
 
-export function ContainerDashboard() {
+interface ContainerDashboardProps {
+  liveEvents?: ReadonlyArray<DomainEventDto>;
+  sseConnected?: boolean;
+}
+
+export function ContainerDashboard({
+  liveEvents = [],
+  sseConnected = false,
+}: ContainerDashboardProps = {}) {
   const [containers, setContainers] = useState<ContainerInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -247,16 +258,12 @@ export function ContainerDashboard() {
   );
 
   // -----------------------------------------------------------------
-  // #1853 — SSE-driven refresh (primary path)
+  // #1853 / #1837 — SSE-driven refresh (primary path)
   // -----------------------------------------------------------------
-  // `useLiveEvents` opens an EventSource scoped to Container/Infrastructure
-  // events. When any matching event arrives the latest item id changes and
-  // we trigger a fresh `fetchContainers()`. The hook handles backoff,
-  // pause/resume and unmount cleanup internally — no `EventSource` leak.
-  const { events: liveEvents, isStreaming: sseConnected } = useLiveEvents({
-    aggregateTypes: ['Container', 'Infrastructure'],
-    initialLimit: 10,
-  });
+  // The parent page owns the `useLiveEvents` subscription and forwards
+  // events here. When the most-recent event id changes we trigger a
+  // `fetchContainers()`. This avoids opening a second EventSource for
+  // LiveEventLog and keeps a single source of truth for the SSE stream.
   const lastSeenEventIdRef = useRef<string | null>(null);
 
   useEffect(() => {

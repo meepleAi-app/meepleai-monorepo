@@ -46,6 +46,9 @@ public sealed class SharedGame : AggregateRoot<Guid>
     private GameStatus _status;
     private GameDataStatus _gameDataStatus = GameDataStatus.Complete;
     private bool _hasUploadedPdf;
+    // Issue #1852: L4 PDF cover key, denormalized from PdfDocumentEntity.CoverR2Key
+    // via PdfCoverGeneratedEventHandler. Set via SetPdfCoverR2Key().
+    private string? _pdfCoverR2Key;
     private bool _isDeleted;
     private Guid _createdBy;
     private Guid? _modifiedBy;
@@ -154,6 +157,13 @@ public sealed class SharedGame : AggregateRoot<Guid>
     /// Cached flag updated via domain events.
     /// </summary>
     public bool HasUploadedPdf => _hasUploadedPdf;
+
+    /// <summary>
+    /// Gets the R2 key of the generated PDF cover image, if available.
+    /// Denormalized from PdfDocumentEntity.CoverR2Key via PdfCoverGeneratedEventHandler.
+    /// Issue #1852.
+    /// </summary>
+    public string? PdfCoverR2Key => _pdfCoverR2Key;
 
     /// <summary>
     /// Gets whether this game has been soft-deleted.
@@ -300,7 +310,8 @@ public sealed class SharedGame : AggregateRoot<Guid>
         int? bggId = null,
         Guid? agentDefinitionId = null,
         GameDataStatus gameDataStatus = GameDataStatus.Complete,
-        bool hasUploadedPdf = false) : base(id)
+        bool hasUploadedPdf = false,
+        string? pdfCoverR2Key = null) : base(id)
     {
         _id = id;
         _title = title;
@@ -318,6 +329,7 @@ public sealed class SharedGame : AggregateRoot<Guid>
         _status = status;
         _gameDataStatus = gameDataStatus;
         _hasUploadedPdf = hasUploadedPdf;
+        _pdfCoverR2Key = pdfCoverR2Key;
         _isDeleted = isDeleted;
         _createdBy = createdBy;
         _modifiedBy = modifiedBy;
@@ -530,6 +542,22 @@ public sealed class SharedGame : AggregateRoot<Guid>
     public void SetHasUploadedPdf()
     {
         _hasUploadedPdf = true;
+    }
+
+    /// <summary>
+    /// Records the L4 PDF cover R2 key. Called by PdfCoverGeneratedEventHandler.
+    /// Idempotent: returns silently when the supplied key matches the current value.
+    /// Issue #1852.
+    /// </summary>
+    public void SetPdfCoverR2Key(string coverR2Key)
+    {
+        if (string.IsNullOrWhiteSpace(coverR2Key))
+            throw new ArgumentException("Cover R2 key cannot be empty", nameof(coverR2Key));
+
+        if (string.Equals(_pdfCoverR2Key, coverR2Key, StringComparison.Ordinal))
+            return;
+
+        _pdfCoverR2Key = coverR2Key;
     }
 
     /// <summary>

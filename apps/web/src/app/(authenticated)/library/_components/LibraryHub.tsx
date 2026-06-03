@@ -224,7 +224,10 @@ export function LibraryHub(): ReactElement {
     () => ({
       title: t('pages.library.hero.title'),
       subtitle: t('pages.library.hero.subtitle'),
+      eyebrow: t('pages.library.hero.eyebrow'),
       ctaAdd: t('pages.library.hero.cta.add'),
+      ctaImportBgg: t('pages.library.hero.cta.importBgg'),
+      ctaExportAriaLabel: t('pages.library.hero.cta.exportAriaLabel'),
     }),
     [t]
   );
@@ -235,10 +238,26 @@ export function LibraryHub(): ReactElement {
         key: 'totalGames',
         label: t('pages.library.hero.stats.totalGames'),
         value: heroStats.games,
+        entity: 'game',
       },
-      { key: 'agents', label: t('pages.library.hero.stats.agents'), value: heroStats.agents },
-      { key: 'docs', label: t('pages.library.hero.stats.docs'), value: heroStats.docs },
-      { key: 'chats', label: t('pages.library.hero.stats.chats'), value: heroStats.chats },
+      {
+        key: 'agents',
+        label: t('pages.library.hero.stats.agents'),
+        value: heroStats.agents,
+        entity: 'agent',
+      },
+      {
+        key: 'docs',
+        label: t('pages.library.hero.stats.docs'),
+        value: heroStats.docs,
+        entity: 'kb',
+      },
+      {
+        key: 'chats',
+        label: t('pages.library.hero.stats.chats'),
+        value: heroStats.chats,
+        entity: 'chat',
+      },
     ],
     [t, heroStats]
   );
@@ -366,6 +385,7 @@ export function LibraryHub(): ReactElement {
 
   // ─── Callbacks ───
   const handleAddGame = useCallback(() => router.push('/library?action=add'), [router]);
+  const handleImportBgg = useCallback(() => router.push('/library?action=import-bgg'), [router]);
 
   const handleCardClick = useCallback(
     (itemId: string) => {
@@ -452,7 +472,12 @@ export function LibraryHub(): ReactElement {
       data-state={effectiveKind}
       className="mx-auto flex max-w-[1440px] flex-col gap-6 p-6 pb-24 sm:p-7"
     >
-      <LibraryHeroDesktop labels={heroLabels} stats={heroStatRows} onAddGame={handleAddGame} />
+      <LibraryHeroDesktop
+        labels={heroLabels}
+        stats={heroStatRows}
+        onAddGame={handleAddGame}
+        onImportBgg={handleImportBgg}
+      />
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
         <div className="flex flex-1 flex-col gap-4">
           <LibraryTabs<HybridHubTab> tabs={tabsConfig} active={tab} onChange={setTab} />

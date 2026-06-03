@@ -138,7 +138,10 @@ vi.mock('@/hooks/useActivityFeed', () => ({
 const MESSAGES: Record<string, string> = {
   'pages.library.hero.title': 'La mia libreria',
   'pages.library.hero.subtitle': 'Tutta la tua collezione, gli agenti AI e le partite recenti.',
+  'pages.library.hero.eyebrow': 'Library · power-user view',
   'pages.library.hero.cta.add': 'Aggiungi gioco',
+  'pages.library.hero.cta.importBgg': '↓ Importa BGG',
+  'pages.library.hero.cta.exportAriaLabel': 'Esporta',
   'pages.library.hero.stats.totalGames': 'Giochi totali',
   'pages.library.hero.stats.kbReady': 'Knowledge base',
   'pages.library.hero.stats.wishlist': 'Wishlist',

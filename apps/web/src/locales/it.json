@@ -1610,8 +1610,9 @@
         "description": "La tua collezione di giochi: knowledge base, prestiti, wishlist e attività recenti."
       },
       "hero": {
-        "title": "La mia libreria",
-        "subtitle": "Tutta la tua collezione, gli agenti AI e le partite recenti in un colpo d'occhio.",
+        "title": "La tua libreria",
+        "subtitle": "Tutti i tuoi giochi, agenti e documenti in un posto.",
+        "eyebrow": "Library · power-user view",
         "stats": {
           "totalGames": "Giochi totali",
           "kbReady": "Knowledge base",
@@ -1622,8 +1623,10 @@
           "chats": "Chat"
         },
         "cta": {
-          "add": "Aggiungi gioco",
-          "addAriaLabel": "Aggiungi un nuovo gioco alla libreria"
+          "add": "+ Aggiungi gioco",
+          "addAriaLabel": "Aggiungi un nuovo gioco alla libreria",
+          "importBgg": "↓ Importa BGG",
+          "exportAriaLabel": "Esporta"
         }
       },
       "tabs": {

@@ -1560,8 +1560,9 @@
         "description": "Your game collection: knowledge bases, loans, wishlist and recent activity."
       },
       "hero": {
-        "title": "My library",
-        "subtitle": "Your entire collection, AI agents and recent plays at a glance.",
+        "title": "Your library",
+        "subtitle": "All your games, agents and documents in one place.",
+        "eyebrow": "Library · power-user view",
         "stats": {
           "totalGames": "Total games",
           "kbReady": "Knowledge bases",
@@ -1572,8 +1573,10 @@
           "chats": "Chats"
         },
         "cta": {
-          "add": "Add game",
-          "addAriaLabel": "Add a new game to your library"
+          "add": "+ Add game",
+          "addAriaLabel": "Add a new game to your library",
+          "importBgg": "↓ Import from BGG",
+          "exportAriaLabel": "Export"
         }
       },
       "tabs": {

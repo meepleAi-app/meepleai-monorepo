@@ -211,6 +211,39 @@ describe('CircuitBreakerGrid', () => {
       expect(screen.queryByTestId('cb-cooldown-bar')).not.toBeInTheDocument();
     });
 
+    it('exposes aria-label on state chip + issue counter for screen readers (PR3 a11y)', async () => {
+      getCircuitBreakerStates.mockResolvedValue([
+        {
+          serviceName: 'deepseek',
+          state: 'Closed',
+          tripCount: 0,
+          lastTrippedAt: null,
+          lastResetAt: null,
+          lastError: null,
+        },
+        {
+          serviceName: 'openrouter',
+          state: 'Open',
+          tripCount: 5,
+          lastTrippedAt: null,
+          lastResetAt: null,
+          lastError: null,
+        },
+      ]);
+
+      renderWithQuery(<CircuitBreakerGrid />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('circuit-card-deepseek')).toBeInTheDocument();
+      });
+
+      // State chips have "Circuit breaker state: {Open|Closed|...}" aria-label
+      expect(screen.getByLabelText(/circuit breaker state: closed/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/circuit breaker state: open/i)).toBeInTheDocument();
+      // Issue counter has role=status with descriptive aria-label
+      expect(screen.getByLabelText(/circuit breaker.* require attention/i)).toBeInTheDocument();
+    });
+
     it('does NOT render cooldown bar when lastTrippedAt is null even for Open state', async () => {
       getCircuitBreakerStates.mockResolvedValue([
         {

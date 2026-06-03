@@ -53,6 +53,32 @@ describe('RoutingChainViz', () => {
     expect(screen.getByTestId('routing-chain-node-2')).toHaveTextContent('standby');
   });
 
+  it('exposes aria-label on priority chip for screen readers (PR3 a11y)', async () => {
+    getLlmSystemConfig.mockResolvedValue({
+      circuitBreakerFailureThreshold: 5,
+      circuitBreakerOpenDurationSeconds: 60,
+      circuitBreakerSuccessThreshold: 1,
+      dailyBudgetUsd: 50,
+      monthlyBudgetUsd: 1000,
+      fallbackChainJson: JSON.stringify([
+        { provider: 'deepseek', model: 'deepseek-chat', priority: 'primary' },
+        { provider: 'openrouter', model: 'm', priority: 'secondary' },
+      ]),
+      source: 'database',
+      lastUpdatedAt: '2026-06-02T10:00:00+00:00',
+      lastUpdatedByUserId: '00000000-0000-0000-0000-000000000001',
+    });
+
+    renderWithQuery(<RoutingChainViz />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('routing-chain-priority-0')).toBeInTheDocument();
+    });
+
+    expect(screen.getByLabelText(/priority: primary/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/priority: secondary/i)).toBeInTheDocument();
+  });
+
   it('shows empty state when fallbackChainJson is invalid', async () => {
     getLlmSystemConfig.mockResolvedValue({
       circuitBreakerFailureThreshold: 5,

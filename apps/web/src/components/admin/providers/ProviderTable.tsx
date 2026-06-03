@@ -169,6 +169,7 @@ function ProviderRow({
       <td className="py-3 px-3">
         <span
           className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full border ${tokenStatus.cls}`}
+          aria-label={`Token status: ${tokenStatus.label}`}
         >
           {tokenStatus.label}
         </span>
@@ -196,6 +197,7 @@ function ProviderRow({
         <span
           className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full border ${circuitChipClass(circuit)}`}
           data-testid={`provider-circuit-${name}`}
+          aria-label={`Circuit breaker: ${circuit}`}
         >
           {circuit}
         </span>

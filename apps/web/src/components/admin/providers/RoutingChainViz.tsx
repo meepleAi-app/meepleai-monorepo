@@ -130,6 +130,7 @@ export function RoutingChainViz() {
                   <span
                     className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full border ${priorityChipClass(node.priority)}`}
                     data-testid={`routing-chain-priority-${idx}`}
+                    aria-label={`Priority: ${node.priority}`}
                   >
                     {node.priority}
                   </span>

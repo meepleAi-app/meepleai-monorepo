@@ -175,6 +175,7 @@ function CircuitCard({ breaker, cooldownSec, failureThreshold }: CircuitCardProp
         </div>
         <span
           className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full border whitespace-nowrap ${chipClass(breaker.state)}`}
+          aria-label={`Circuit breaker state: ${breaker.state}`}
         >
           {breaker.state}
         </span>
@@ -248,7 +249,11 @@ export function CircuitBreakerGrid() {
           {breakersQuery.isLoading ? 'caricamento…' : `${breakers.length} servizi`}
         </span>
         {issueCount > 0 && (
-          <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full border bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40">
+          <span
+            className="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full border bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40"
+            role="status"
+            aria-label={`${issueCount} circuit breaker${issueCount === 1 ? '' : 's'} require attention`}
+          >
             {issueCount} issue
           </span>
         )}

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Services.Pdf;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
@@ -24,6 +25,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Queries;
 public sealed class SearchSharedGamesQuery_KbFilterTests
 {
     private readonly Mock<ILogger<SearchSharedGamesQueryHandler>> _logger = new();
+    private readonly Mock<IBlobStorageService> _blobStorageMock = new();
 
     private static SharedGameEntity CreateGame(string title, bool hasKb) => new()
     {
@@ -87,7 +89,7 @@ public sealed class SearchSharedGamesQuery_KbFilterTests
             CreateGame("Without KB", hasKb: false));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object);
 
         // Act
         var result = await handler.Handle(BuildQuery(hasKnowledgeBase: null), CancellationToken.None);
@@ -107,7 +109,7 @@ public sealed class SearchSharedGamesQuery_KbFilterTests
             CreateGame("Monopoly", hasKb: false));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object);
 
         // Act
         var result = await handler.Handle(BuildQuery(hasKnowledgeBase: true), CancellationToken.None);
@@ -129,7 +131,7 @@ public sealed class SearchSharedGamesQuery_KbFilterTests
             CreateGame("Risk", hasKb: false));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object);
 
         // Act
         var result = await handler.Handle(BuildQuery(hasKnowledgeBase: false), CancellationToken.None);
@@ -147,7 +149,7 @@ public sealed class SearchSharedGamesQuery_KbFilterTests
         db.SharedGames.Add(CreateGame("Azul", hasKb: true));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object);
 
         // Act
         var result = await handler.Handle(BuildQuery(hasKnowledgeBase: null), CancellationToken.None);

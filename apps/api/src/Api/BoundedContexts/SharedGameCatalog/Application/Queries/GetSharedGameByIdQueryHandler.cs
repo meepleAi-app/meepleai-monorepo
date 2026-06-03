@@ -1,9 +1,11 @@
 using System.Diagnostics;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Observability;
 using Api.Services;
+using Api.Services.Pdf;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
@@ -59,6 +61,7 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
 
     private readonly ISharedGameRepository _repository;
     private readonly MeepleAiDbContext _context;
+    private readonly IBlobStorageService _blobStorage;
     private readonly HybridCache _cache;
     private readonly ILogger<GetSharedGameByIdQueryHandler> _logger;
     private readonly decimal _topRatedThreshold;
@@ -67,12 +70,14 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
     public GetSharedGameByIdQueryHandler(
         ISharedGameRepository repository,
         MeepleAiDbContext context,
+        IBlobStorageService blobStorage,
         HybridCache cache,
         IConfiguration configuration,
         ILogger<GetSharedGameByIdQueryHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _context = context ?? throw new ArgumentNullException(nameof(context));
+        _blobStorage = blobStorage ?? throw new ArgumentNullException(nameof(blobStorage));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         ArgumentNullException.ThrowIfNull(configuration);
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -376,6 +381,23 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
         // sp3-shared-games.jsx:127) for cross-page consistency.
         var isNew = newThisWeekCount >= 2;
 
+        // Issue #1852 (Gap A): CoverUrlResolver requires the EF entity (carries both
+        // PdfCoverR2Key and WikidataCoverR2Key). The domain aggregate only exposes
+        // PdfCoverR2Key, so we load the entity here from the already-open DbContext.
+        // _context.SharedGames is already queried above (aggregates query), so EF's
+        // identity map will typically satisfy this from its first-level cache.
+        var sharedGameEntity = await _context.SharedGames
+            .AsNoTracking()
+            .Where(g => g.Id == gameId)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var coverUrl = sharedGameEntity is not null
+            ? await CoverUrlResolver
+                .ResolvePublicAsync(sharedGameEntity, _blobStorage)
+                .ConfigureAwait(false)
+            : null;
+
         return new SharedGameDetailDto(
             game.Id,
             game.BggId,
@@ -412,6 +434,7 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
             contributorsCount,
             hasKnowledgeBase,
             isTopRated,
-            isNew);
+            isNew,
+            CoverUrl: coverUrl);
     }
 }

@@ -4,7 +4,9 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Services;
+using Api.Services.Pdf;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
@@ -23,12 +25,19 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 public class GetSharedGameByIdQueryHandlerTests
 {
     private readonly Mock<ISharedGameRepository> _repositoryMock;
+    private readonly Mock<IBlobStorageService> _blobStorageMock;
     private readonly Mock<ILogger<GetSharedGameByIdQueryHandler>> _loggerMock;
 
     public GetSharedGameByIdQueryHandlerTests()
     {
         _repositoryMock = new Mock<ISharedGameRepository>();
         _loggerMock = new Mock<ILogger<GetSharedGameByIdQueryHandler>>();
+        _blobStorageMock = new Mock<IBlobStorageService>();
+        // Default: presigned URL returns null (dev/local — no R2 configured).
+        _blobStorageMock
+            .Setup(b => b.GetPresignedDownloadUrlAsync(
+                It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<int?>()))
+            .ReturnsAsync((string?)null);
     }
 
     private static HybridCache CreateHybridCache()
@@ -45,7 +54,7 @@ public class GetSharedGameByIdQueryHandlerTests
         new ConfigurationBuilder().AddInMemoryCollection().Build();
 
     private GetSharedGameByIdQueryHandler CreateHandler(MeepleAiDbContext db) =>
-        new(_repositoryMock.Object, db, CreateHybridCache(), CreateConfiguration(), _loggerMock.Object);
+        new(_repositoryMock.Object, db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _loggerMock.Object);
 
     [Fact]
     public async Task Handle_WithExistingGame_ReturnsDetailDto()
@@ -172,5 +181,77 @@ public class GetSharedGameByIdQueryHandlerTests
         result!.Rules.Should().BeNull();
         // No AverageRating ⇒ IsTopRated=false.
         result.IsTopRated.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Handle_SharedGameWithPdfCover_ProjectsCoverUrl()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        const string pdfKey = "pdf-cover-key";
+        const string expectedUrl = "https://r2/pdf-cover-key-preview.webp";
+
+        var game = SharedGame.Create(
+            "Cover Game",
+            2021,
+            "Description",
+            2,
+            4,
+            45,
+            8,
+            null,
+            null,
+            "https://example.com/image.jpg",
+            "https://example.com/thumb.jpg",
+            rules: null,
+            createdBy: Guid.NewGuid(),
+            bggId: null);
+
+        // Seed the EF entity with PdfCoverR2Key so CoverUrlResolver finds it.
+        var sharedGameEntity = new SharedGameEntity
+        {
+            Id = gameId,
+            Title = "Cover Game",
+            YearPublished = 2021,
+            Description = "Description",
+            MinPlayers = 2,
+            MaxPlayers = 4,
+            PlayingTimeMinutes = 45,
+            MinAge = 8,
+            ImageUrl = "https://example.com/image.jpg",
+            ThumbnailUrl = "https://example.com/thumb.jpg",
+            Status = (int)GameStatus.Published,
+            CreatedBy = Guid.NewGuid(),
+            CreatedAt = DateTime.UtcNow,
+            PdfCoverR2Key = pdfKey,
+        };
+
+        var query = new GetSharedGameByIdQuery(gameId);
+
+        _repositoryMock
+            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+
+        // CoverUrlResolver calls GetPresignedDownloadUrlAsync("{key}-preview.webp", GameImage, key, null)
+        _blobStorageMock
+            .Setup(b => b.GetPresignedDownloadUrlAsync(
+                $"{pdfKey}-preview.webp",
+                BlobCategory.GameImage,
+                pdfKey,
+                null))
+            .ReturnsAsync(expectedUrl);
+
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        await db.SharedGames.AddAsync(sharedGameEntity);
+        await db.SaveChangesAsync();
+
+        var handler = CreateHandler(db);
+
+        // Act
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.CoverUrl.Should().Be(expectedUrl);
     }
 }

@@ -1,9 +1,11 @@
 using System.Security.Cryptography;
 using System.Text;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.Infrastructure;
 using Api.Models;
 using Api.Services;
+using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -42,6 +44,7 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
     private const int IsNewMinThreshold = 2;
 
     private readonly MeepleAiDbContext _context;
+    private readonly IBlobStorageService _blobStorage;
     private readonly HybridCache _cache;
     private readonly ILogger<SearchSharedGamesQueryHandler> _logger;
     private readonly decimal _topRatedThreshold;
@@ -49,11 +52,13 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
 
     public SearchSharedGamesQueryHandler(
         MeepleAiDbContext context,
+        IBlobStorageService blobStorage,
         HybridCache cache,
         IConfiguration configuration,
         ILogger<SearchSharedGamesQueryHandler> logger)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
+        _blobStorage = blobStorage ?? throw new ArgumentNullException(nameof(blobStorage));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         ArgumentNullException.ThrowIfNull(configuration);
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -392,10 +397,22 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
                 : projected.OrderBy(p => p.Game.HasKnowledgeBase ? 0 : 1).ThenBy(p => p.Game.Title)
         };
 
-        var games = await sorted
+        // Materialize the projected shape first; CoverUrlResolver is async and cannot
+        // be called inside an EF expression tree. Issue #1852 (Gap A).
+        var projected2 = await sorted
             .Skip((query.PageNumber - 1) * query.PageSize)
             .Take(query.PageSize)
-            .Select(p => new SharedGameDto(
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var games = new List<SharedGameDto>(projected2.Count);
+        foreach (var p in projected2)
+        {
+            var coverUrl = await CoverUrlResolver
+                .ResolvePublicAsync(p.Game, _blobStorage)
+                .ConfigureAwait(false);
+
+            games.Add(new SharedGameDto(
                 p.Game.Id,
                 p.Game.BggId,
                 p.Game.Title,
@@ -422,9 +439,9 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
                 // IsTopRated: AverageRating >= configured threshold (spec §9 decision 1).
                 p.Game.AverageRating != null && p.Game.AverageRating >= topRatedThreshold,
                 // IsNew: derived from NewThisWeekCount per mockup sp3-shared-games.jsx:127.
-                p.NewThisWeekCount >= IsNewMinThreshold))
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+                p.NewThisWeekCount >= IsNewMinThreshold,
+                CoverUrl: coverUrl));
+        }
 
         _logger.LogInformation(
             "Search completed: Found {Count} games (Total: {Total}) for page {Page}",

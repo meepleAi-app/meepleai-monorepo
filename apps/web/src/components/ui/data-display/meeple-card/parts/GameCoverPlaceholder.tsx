@@ -38,7 +38,9 @@ export function GameCoverPlaceholder({ gameId, title, className }: GameCoverPlac
       data-game-id={gameId}
       aria-hidden="true"
       className={cn(
-        'relative flex h-full w-full items-center justify-center overflow-hidden text-white',
+        'relative flex h-full w-full items-center justify-center overflow-hidden',
+        // eslint-disable-next-line local/no-hardcoded-color-utility -- gradient applied via inline style below (mockup .e-bg pattern); see #1849
+        'text-white',
         className
       )}
       style={{

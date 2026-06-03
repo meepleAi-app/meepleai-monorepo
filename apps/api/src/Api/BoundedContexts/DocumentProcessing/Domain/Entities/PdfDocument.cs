@@ -89,6 +89,12 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     public DateTime? UpdatedAt { get; private set; }
     public Guid? UpdatedBy { get; private set; }
 
+    // Issue #1852: L4 PDF cover extraction state (mirrors PdfDocumentEntity columns).
+    public string? CoverR2Key { get; private set; }
+    public PdfCoverGenerationStatus CoverGenerationStatus { get; private set; } = PdfCoverGenerationStatus.Pending;
+    public int? CoverPageIndex { get; private set; }
+    public string? CoverGenerationError { get; private set; }
+
     // Issue #4219: Per-state timing tracking for metrics and ETA
     public DateTime? UploadingStartedAt { get; private set; }
     public DateTime? ExtractingStartedAt { get; private set; }
@@ -203,7 +209,11 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         string? title = null,
         IReadOnlyList<string>? tags = null,
         DateTime? updatedAt = null,
-        Guid? updatedBy = null)
+        Guid? updatedBy = null,
+        string? coverR2Key = null,
+        string? coverGenerationStatus = null,
+        int? coverPageIndex = null,
+        string? coverGenerationError = null)
     {
         var document = new PdfDocument
         {
@@ -269,7 +279,15 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             // Issue #1687: editable metadata + audit columns
             Title = title,
             UpdatedAt = updatedAt,
-            UpdatedBy = updatedBy
+            UpdatedBy = updatedBy,
+
+            // Issue #1852: cover state round-trip
+            CoverR2Key = coverR2Key,
+            CoverGenerationStatus = string.IsNullOrEmpty(coverGenerationStatus)
+                ? PdfCoverGenerationStatus.Pending
+                : Enum.Parse<PdfCoverGenerationStatus>(coverGenerationStatus, ignoreCase: true),
+            CoverPageIndex = coverPageIndex,
+            CoverGenerationError = coverGenerationError
         };
 
         if (tags is { Count: > 0 })
@@ -791,6 +809,52 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     public void OverrideLanguage(string? languageCode)
     {
         LanguageOverride = string.IsNullOrWhiteSpace(languageCode) ? null : languageCode;
+    }
+
+    /// <summary>
+    /// Records successful PDF cover extraction and raises <see cref="PdfCoverGeneratedEvent"/>
+    /// so SharedGame catalog can propagate the key. Issue #1852 (Gap A).
+    /// </summary>
+    public void MarkCoverGenerated(string coverR2Key, int pageIndex)
+    {
+        if (string.IsNullOrWhiteSpace(coverR2Key))
+            throw new ArgumentException("Cover R2 key cannot be empty", nameof(coverR2Key));
+        if (pageIndex < 0)
+            throw new ArgumentException("Page index must be non-negative", nameof(pageIndex));
+
+        CoverR2Key = coverR2Key;
+        CoverGenerationStatus = PdfCoverGenerationStatus.Generated;
+        CoverPageIndex = pageIndex;
+        CoverGenerationError = null;
+
+        AddDomainEvent(new PdfCoverGeneratedEvent(Id, SharedGameId, coverR2Key, pageIndex));
+    }
+
+    /// <summary>
+    /// Records that the cover-extraction heuristic rejected all candidate pages
+    /// (typically text-only PDFs). No event is raised — there is no L4 to propagate.
+    /// Issue #1852.
+    /// </summary>
+    public void MarkCoverSkipped()
+    {
+        CoverGenerationStatus = PdfCoverGenerationStatus.Skipped;
+        CoverR2Key = null;
+        CoverPageIndex = null;
+        CoverGenerationError = null;
+    }
+
+    /// <summary>
+    /// Records a cover-extraction failure (extractor exception, R2 unreachable, etc.).
+    /// Error is truncated to 512 chars to fit the DB column. No event is raised.
+    /// Issue #1852.
+    /// </summary>
+    public void MarkCoverFailed(string error)
+    {
+        if (string.IsNullOrWhiteSpace(error))
+            throw new ArgumentException("Error message cannot be empty", nameof(error));
+
+        CoverGenerationStatus = PdfCoverGenerationStatus.Failed;
+        CoverGenerationError = error.Length > 512 ? error[..512] : error;
     }
 
     // Issue #2051: Assign document to collection

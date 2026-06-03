@@ -1,15 +1,30 @@
 'use client';
 
 /**
- * ContainerDashboard — Container status grid with auto-refresh, metrics, and action buttons.
- * Issue #143 — Admin Infrastructure Panel Phase 4
+ * ContainerDashboard — Container status grid with SSE-driven refresh + polling fallback.
+ * Issue #143  — Admin Infrastructure Panel Phase 4 (original polling implementation).
+ * Issue #1853 — Wire `useLiveEvents` for real-time updates; demote polling to 60s+ fallback.
+ *
+ * Refresh strategy:
+ *   - SSE primary: `useLiveEvents({ aggregateTypes: ['Container', 'Infrastructure'] })`
+ *     triggers `fetchContainers()` whenever a new infra/container event arrives.
+ *   - Polling fallback: 60s default (was 30s), settable up to 5m, guarantees state
+ *     converges even when SSE is offline or the BE has not yet emitted relevant events.
+ *
+ * BE event-type gap (known, out of scope per #1853):
+ *   The backend currently does not emit `Container.*` / `Infrastructure.*` domain
+ *   events — `RestartServiceCommandHandler` only writes audit logs. The SSE filter
+ *   above is a structural no-op until BE adds those event types, but the polling
+ *   fallback keeps the UI accurate. When BE starts emitting events, no FE change is
+ *   needed: the live-refresh path activates automatically.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { Box, Clock, Loader2, Pause, Play, RefreshCw, ScrollText } from 'lucide-react';
+import { Box, Clock, Loader2, Pause, Play, RadioTower, RefreshCw, ScrollText } from 'lucide-react';
 import Link from 'next/link';
 
+import { useLiveEvents } from '@/components/admin/monitor/use-live-events';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { useToast } from '@/hooks/useToast';
@@ -21,11 +36,17 @@ import { cn } from '@/lib/utils';
 /*  Constants                                                          */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Polling intervals — minimum 60s as #1853 demoted polling to a fallback path.
+ * SSE handles real-time updates when BE emits Container/Infrastructure events.
+ */
 const REFRESH_OPTIONS = [
-  { value: 15, label: '15s' },
-  { value: 30, label: '30s' },
   { value: 60, label: '60s' },
+  { value: 120, label: '2m' },
+  { value: 300, label: '5m' },
 ] as const;
+
+const DEFAULT_REFRESH_INTERVAL = 60;
 
 /* ------------------------------------------------------------------ */
 /*  Sub-components                                                     */
@@ -151,8 +172,8 @@ export function ContainerDashboard() {
   const [containers, setContainers] = useState<ContainerInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [refreshInterval, setRefreshInterval] = useState(30);
-  const [countdown, setCountdown] = useState(30);
+  const [refreshInterval, setRefreshInterval] = useState<number>(DEFAULT_REFRESH_INTERVAL);
+  const [countdown, setCountdown] = useState<number>(DEFAULT_REFRESH_INTERVAL);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -173,12 +194,41 @@ export function ContainerDashboard() {
     }
   }, [toast]);
 
+  // -----------------------------------------------------------------
+  // #1853 — SSE-driven refresh (primary path)
+  // -----------------------------------------------------------------
+  // `useLiveEvents` opens an EventSource scoped to Container/Infrastructure
+  // events. When any matching event arrives the latest item id changes and
+  // we trigger a fresh `fetchContainers()`. The hook handles backoff,
+  // pause/resume and unmount cleanup internally — no `EventSource` leak.
+  const { events: liveEvents, isStreaming: sseConnected } = useLiveEvents({
+    aggregateTypes: ['Container', 'Infrastructure'],
+    initialLimit: 10,
+  });
+  const lastSeenEventIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const latest = liveEvents[0];
+    if (!latest) return;
+    if (latest.id === lastSeenEventIdRef.current) return;
+    const previousId = lastSeenEventIdRef.current;
+    lastSeenEventIdRef.current = latest.id;
+    // Skip the very first observation (initial backfill on mount) — the
+    // dedicated mount effect already triggers an HTTP `fetchContainers()`.
+    if (previousId === null) return;
+    void fetchContainers();
+  }, [liveEvents, fetchContainers]);
+
+  // -----------------------------------------------------------------
   // Initial fetch
+  // -----------------------------------------------------------------
   useEffect(() => {
     fetchContainers();
   }, [fetchContainers]);
 
-  // Auto-refresh interval
+  // -----------------------------------------------------------------
+  // Polling fallback (low-frequency: 60s minimum)
+  // -----------------------------------------------------------------
   useEffect(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (countdownRef.current) clearInterval(countdownRef.current);
@@ -209,7 +259,21 @@ export function ContainerDashboard() {
     <div className="space-y-6" data-testid="container-dashboard">
       {/* Header Controls */}
       <div className="flex flex-wrap items-center gap-3">
-        {/* Auto-refresh toggle */}
+        {/* SSE liveness indicator */}
+        <Badge
+          variant={sseConnected ? 'secondary' : 'outline'}
+          className="gap-1.5 text-xs"
+          data-testid="sse-status-indicator"
+          aria-live="polite"
+          aria-label={sseConnected ? 'Live updates connected' : 'Live updates disconnected'}
+        >
+          <RadioTower
+            className={cn('h-3 w-3', sseConnected ? 'text-emerald-500' : 'text-muted-foreground')}
+          />
+          {sseConnected ? 'Live' : 'Polling only'}
+        </Badge>
+
+        {/* Auto-refresh toggle (polling fallback control) */}
         <div className="flex items-center gap-2" data-testid="auto-refresh-controls">
           <Button
             variant="outline"
@@ -237,6 +301,7 @@ export function ContainerDashboard() {
             }}
             className="rounded-md border bg-background px-2 py-1 text-xs"
             data-testid="refresh-interval-select"
+            aria-label="Polling interval"
           >
             {REFRESH_OPTIONS.map(opt => (
               <option key={opt.value} value={opt.value}>

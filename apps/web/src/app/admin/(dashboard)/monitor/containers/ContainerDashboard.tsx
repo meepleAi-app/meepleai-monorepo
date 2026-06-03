@@ -35,8 +35,9 @@ function ContainerStatusBadge({ state }: { state: string }) {
   const variant =
     state === 'running' ? 'secondary' : state === 'exited' ? 'destructive' : 'outline';
 
+  // SP5 #1837: token-aligned dot colors (was hardcoded bg-green/red/yellow-500).
   const dotColor =
-    state === 'running' ? 'bg-green-500' : state === 'exited' ? 'bg-red-500' : 'bg-yellow-500';
+    state === 'running' ? 'bg-emerald-500' : state === 'exited' ? 'bg-rose-500' : 'bg-amber-500';
 
   return (
     <Badge variant={variant} className="gap-1.5 text-xs" data-testid="container-status-badge">
@@ -113,19 +114,30 @@ function StatusSummary({ containers }: { containers: ContainerInfo[] }) {
   const stopped = containers.filter(c => c.state !== 'running').length;
   const total = containers.length;
 
+  // SP5 #1837: token-aligned KPI strip (was green-600/red-600 hardcoded).
   return (
     <div className="grid grid-cols-3 gap-3" data-testid="status-summary">
-      <div className="rounded-xl border bg-card/70 p-3 backdrop-blur-md">
-        <p className="text-xs text-muted-foreground">Total</p>
-        <p className="text-lg font-semibold font-mono">{total}</p>
+      <div className="rounded-xl border border-border/60 bg-card/70 p-3 backdrop-blur-md">
+        <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+          Total
+        </p>
+        <p className="font-quicksand text-lg font-bold text-foreground">{total}</p>
       </div>
-      <div className="rounded-xl border bg-card/70 p-3 backdrop-blur-md">
-        <p className="text-xs text-green-600">Running</p>
-        <p className="text-lg font-semibold font-mono text-green-600">{running}</p>
+      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 backdrop-blur-md">
+        <p className="font-mono text-[10px] uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+          Running
+        </p>
+        <p className="font-quicksand text-lg font-bold text-emerald-700 dark:text-emerald-300">
+          {running}
+        </p>
       </div>
-      <div className="rounded-xl border bg-card/70 p-3 backdrop-blur-md">
-        <p className="text-xs text-red-600">Stopped</p>
-        <p className="text-lg font-semibold font-mono text-red-600">{stopped}</p>
+      <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-3 backdrop-blur-md">
+        <p className="font-mono text-[10px] uppercase tracking-wider text-rose-700 dark:text-rose-300">
+          Stopped
+        </p>
+        <p className="font-quicksand text-lg font-bold text-rose-700 dark:text-rose-300">
+          {stopped}
+        </p>
       </div>
     </div>
   );

@@ -38,7 +38,8 @@ describe('ContainerDashboardPage', () => {
     render(<ContainerDashboardPage />);
 
     expect(screen.getByTestId('containers-page')).toBeInTheDocument();
-    expect(screen.getByText('Container Dashboard')).toBeInTheDocument();
+    // SP5 #1837: titolo aggiornato da "Container Dashboard" a "Infrastructure & Containers"
+    expect(screen.getByText('Infrastructure & Containers')).toBeInTheDocument();
   });
 
   it('renders container dashboard and restart panel', () => {

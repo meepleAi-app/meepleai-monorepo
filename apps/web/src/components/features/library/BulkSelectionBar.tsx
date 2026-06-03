@@ -74,8 +74,8 @@ export interface BulkSelectionBarProps {
 
 const ACTION_BUTTON_CLASS = clsx(
   'inline-flex flex-shrink-0 items-center gap-1.5 rounded-md border-0',
-  'bg-white/[0.12] text-inherit font-display text-[11.5px] font-bold',
-  'hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60',
+  'bg-[hsl(0_0%_100%_/_0.12)] text-inherit font-display text-[11.5px] font-bold',
+  'hover:bg-[hsl(0_0%_100%_/_0.20)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60',
   'disabled:cursor-not-allowed disabled:opacity-50',
   'motion-safe:transition-colors motion-safe:duration-150'
 );
@@ -205,8 +205,8 @@ export function BulkSelectionBar({
         aria-label={labels.closeAriaLabel}
         className={clsx(
           'inline-flex flex-shrink-0 items-center justify-center rounded-md',
-          'border border-white/20 bg-transparent px-2.5 py-1.5 text-xs text-inherit',
-          'hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60',
+          'border border-[hsl(0_0%_100%_/_0.20)] bg-transparent px-2.5 py-1.5 text-xs text-inherit',
+          'hover:bg-[hsl(0_0%_100%_/_0.10)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60',
           'disabled:cursor-not-allowed disabled:opacity-50',
           'motion-safe:transition-colors motion-safe:duration-150'
         )}

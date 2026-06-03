@@ -15,9 +15,14 @@
  *
  * BE pending (documentato, follow-up issue da aprire):
  *   - KPISparkline per CPU/Memory/Network — richiede endpoint metrics aggregato
- *   - LiveEventLog filtrato `type=infra` — richiede event types specifici per
- *     container start/stop/restart (oggi LiveEventLog supporta solo eventi domain
- *     come `agent.created`, `kb.doc.indexed`, etc.)
+ *
+ * Resolved follow-ups:
+ *   - #1853 — ContainerDashboard now subscribes to `useLiveEvents({ aggregateTypes:
+ *     ['Container', 'Infrastructure'] })`. The hook activates automatically when BE
+ *     starts emitting those event types; until then the polling fallback (60s minimum)
+ *     keeps the UI accurate.
+ *   - #1854 — RestartAllPanel inline confirmation replaced with `AdminConfirmationDialog`
+ *     (Radix Dialog → role=dialog + aria-labelledby + focus trap + Escape, axe-clean).
  */
 
 import { ContainerDashboard } from './ContainerDashboard';

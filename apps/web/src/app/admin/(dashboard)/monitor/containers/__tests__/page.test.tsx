@@ -30,6 +30,20 @@ vi.mock('@/hooks/useToast', () => ({
   useToast: () => ({ toast: vi.fn() }),
 }));
 
+// #1853: ContainerDashboard now consumes useLiveEvents — stub it out so
+// the page test does not need a working EventSource / fetch backfill.
+vi.mock('@/components/admin/monitor/use-live-events', () => ({
+  useLiveEvents: () => ({
+    events: [],
+    isLoading: false,
+    isStreaming: false,
+    error: null,
+    pause: vi.fn(),
+    resume: vi.fn(),
+    refetch: vi.fn(),
+  }),
+}));
+
 import ContainerDashboardPage from '../page';
 
 describe('ContainerDashboardPage', () => {

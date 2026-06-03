@@ -9,6 +9,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.UserLibrary;
+using Api.Services.Pdf;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
@@ -32,6 +33,7 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
 {
     private readonly Mock<IUserLibraryRepository> _mockLibraryRepo;
     private readonly Mock<ISharedGameRepository> _mockSharedGameRepo;
+    private readonly Mock<IBlobStorageService> _mockBlobStorage;
     private readonly MeepleAiDbContext _dbContext;
     private readonly GetUserLibraryQueryHandler _handler;
 
@@ -39,13 +41,20 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
     {
         _mockLibraryRepo = new Mock<IUserLibraryRepository>();
         _mockSharedGameRepo = new Mock<ISharedGameRepository>();
+        _mockBlobStorage = new Mock<IBlobStorageService>();
+        // Default: presigned URL returns null (dev/local — no R2 configured).
+        _mockBlobStorage
+            .Setup(b => b.GetPresignedDownloadUrlAsync(
+                It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<int?>()))
+            .ReturnsAsync((string?)null);
 
         _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
 
         _handler = new GetUserLibraryQueryHandler(
             _mockLibraryRepo.Object,
             _mockSharedGameRepo.Object,
-            _dbContext);
+            _dbContext,
+            _mockBlobStorage.Object);
     }
 
     [Fact]
@@ -339,6 +348,91 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
         var item = result.Items.First();
         item.TimesPlayed.Should().Be(1, "One session was recorded");
         item.LastPlayed.Should().Be(expectedLastPlayed, "LastPlayed should equal the session's playedAt");
+    }
+
+    /// <summary>
+    /// Issue #1852 (Gap A): CoverUrl is projected when a SharedGame has a PdfCoverR2Key set.
+    /// The presigned URL returned by IBlobStorageService for the "-preview.webp" variant
+    /// must appear as CoverUrl on the DTO (L4 priority layer).
+    /// </summary>
+    [Fact]
+    public async Task Handle_SharedGameWithPdfCover_ProjectsCoverUrl()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var entryId = Guid.NewGuid();
+        const string pdfCoverKey = "pdf-cover-key-abc";
+        const string expectedCoverUrl = "https://r2.example.com/cover.webp";
+
+        var sharedGame = Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates.SharedGame.Create(
+            title: "Cover Test Game",
+            yearPublished: 2022,
+            description: "A game with a PDF cover",
+            minPlayers: 2,
+            maxPlayers: 6,
+            playingTimeMinutes: 45,
+            minAge: 10,
+            complexityRating: null,
+            averageRating: null,
+            imageUrl: "https://example.com/game.jpg",
+            thumbnailUrl: "https://example.com/game-thumb.jpg",
+            rules: null,
+            createdBy: userId,
+            bggId: 55555);
+
+        var gameId = sharedGame.Id;
+
+        // Seed the EF SharedGameEntity with PdfCoverR2Key so CoverUrlResolver finds it.
+        _dbContext.SharedGames.Add(new SharedGameEntity
+        {
+            Id = gameId,
+            Title = "Cover Test Game",
+            PdfCoverR2Key = pdfCoverKey,
+            IsDeleted = false
+        });
+        await _dbContext.SaveChangesAsync();
+
+        // Configure blob storage: return the expected URL only for the "-preview.webp" variant key.
+        _mockBlobStorage
+            .Setup(b => b.GetPresignedDownloadUrlAsync(
+                $"{pdfCoverKey}-preview.webp",
+                BlobCategory.GameImage,
+                pdfCoverKey,
+                It.IsAny<int?>()))
+            .ReturnsAsync(expectedCoverUrl);
+
+        var libraryEntry = new UserLibraryEntry(entryId, userId, gameId);
+
+        _mockLibraryRepo
+            .Setup(r => r.GetUserLibraryPaginatedAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<string?>(),
+                It.IsAny<bool?>(),
+                It.IsAny<string[]?>(),
+                It.IsAny<string?>(),
+                It.IsAny<bool>(),
+                It.IsAny<int>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((new[] { libraryEntry }, 1));
+
+        _mockSharedGameRepo
+            .Setup(r => r.GetByIdsAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates.SharedGame>
+            {
+                [gameId] = sharedGame
+            });
+
+        var query = new GetUserLibraryQuery(userId);
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Items.Should().ContainSingle();
+        result.Items.Single().CoverUrl.Should().Be(expectedCoverUrl,
+            "CoverUrl should be the presigned URL minted for the PDF cover R2 key (L4 priority)");
     }
 
     public void Dispose()

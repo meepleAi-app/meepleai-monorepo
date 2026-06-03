@@ -108,9 +108,20 @@ export default function FeatureFlagsTab({
       c => c.category === 'FeatureFlag' || c.key.startsWith('Features:')
     );
     setFeatureFlags(flags);
-    // Clear selection + pending changes when configurations change (server refetch).
     setSelectedFlags(new Set());
-    setPendingChanges(new Map());
+    // Issue #1836 review fix: a refetch after Apply MUST NOT wipe the
+    // partial-failure map (those entries are exactly what the admin needs to
+    // retry). We only drop entries for flags that no longer exist server-side.
+    // Pending changes for still-present flags are preserved verbatim.
+    setPendingChanges(prev => {
+      if (prev.size === 0) return prev;
+      const liveIds = new Set(flags.map(f => f.id));
+      const next = new Map<string, PendingChange>();
+      for (const [id, change] of prev) {
+        if (liveIds.has(id)) next.set(id, change);
+      }
+      return next.size === prev.size ? prev : next;
+    });
   }, [configurations]);
 
   // Issue #1836: Warn before navigating away with unsaved changes.

@@ -18,6 +18,7 @@ import type { ReactNode } from 'react';
 import { Brain, Flag, Layers, Plug, ShieldCheck } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
+import { useTablistKeyboardNav } from '@/hooks/useTablistKeyboardNav';
 import { cn } from '@/lib/utils';
 
 export type FlagCategory = 'all' | 'features' | 'ai' | 'integrations' | 'security';
@@ -101,6 +102,13 @@ export function FlagCategoryTabs({
   className,
 }: FlagCategoryTabsProps) {
   const counts = computeCategoryCounts(flagKeys);
+  // Issue #1836 review fix: wire WAI-ARIA APG roving-tabindex + Arrow/Home/End
+  // keyboard navigation per the project's `useTablistKeyboardNav` pattern.
+  const { tabRefs, handleKeyDown } = useTablistKeyboardNav<FlagCategory>({
+    orderedKeys: FLAG_CATEGORIES,
+    onChange: onCategoryChange,
+    orientation: 'horizontal',
+  });
 
   return (
     <div
@@ -122,7 +130,13 @@ export function FlagCategoryTabs({
             aria-selected={isActive}
             data-active={isActive}
             data-testid={`flag-category-tab-${cat}`}
+            tabIndex={isActive ? 0 : -1}
+            ref={node => {
+              if (node) tabRefs.current.set(cat, node);
+              else tabRefs.current.delete(cat);
+            }}
             onClick={() => onCategoryChange(cat)}
+            onKeyDown={e => handleKeyDown(e, cat)}
             className={cn(
               'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium',
               'transition-all duration-200 shrink-0',

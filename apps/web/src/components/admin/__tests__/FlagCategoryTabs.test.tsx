@@ -117,6 +117,63 @@ describe('FlagCategoryTabs', () => {
     await user.click(screen.getByTestId('flag-category-tab-security'));
     expect(onChange).toHaveBeenCalledWith('security');
   });
+
+  describe('WAI-ARIA APG keyboard navigation (review fix #4)', () => {
+    it('applies roving tabIndex (0 on active, -1 on the rest)', () => {
+      render(
+        <FlagCategoryTabs flagKeys={flagKeys} activeCategory="ai" onCategoryChange={vi.fn()} />
+      );
+
+      expect(screen.getByTestId('flag-category-tab-ai')).toHaveAttribute('tabindex', '0');
+      expect(screen.getByTestId('flag-category-tab-all')).toHaveAttribute('tabindex', '-1');
+      expect(screen.getByTestId('flag-category-tab-security')).toHaveAttribute('tabindex', '-1');
+    });
+
+    it('ArrowRight on the active tab activates the next category (wrap-around)', async () => {
+      const onChange = vi.fn();
+      const user = userEvent.setup();
+
+      render(
+        <FlagCategoryTabs flagKeys={flagKeys} activeCategory="all" onCategoryChange={onChange} />
+      );
+
+      const allTab = screen.getByTestId('flag-category-tab-all');
+      allTab.focus();
+      await user.keyboard('{ArrowRight}');
+
+      expect(onChange).toHaveBeenCalledWith('features');
+    });
+
+    it('ArrowLeft on the first tab wraps to the last', async () => {
+      const onChange = vi.fn();
+      const user = userEvent.setup();
+
+      render(
+        <FlagCategoryTabs flagKeys={flagKeys} activeCategory="all" onCategoryChange={onChange} />
+      );
+
+      screen.getByTestId('flag-category-tab-all').focus();
+      await user.keyboard('{ArrowLeft}');
+
+      expect(onChange).toHaveBeenCalledWith('security');
+    });
+
+    it('Home / End jump to first / last', async () => {
+      const onChange = vi.fn();
+      const user = userEvent.setup();
+
+      render(
+        <FlagCategoryTabs flagKeys={flagKeys} activeCategory="ai" onCategoryChange={onChange} />
+      );
+
+      screen.getByTestId('flag-category-tab-ai').focus();
+      await user.keyboard('{End}');
+      expect(onChange).toHaveBeenLastCalledWith('security');
+
+      await user.keyboard('{Home}');
+      expect(onChange).toHaveBeenLastCalledWith('all');
+    });
+  });
 });
 
 describe('readCategoryFromHash / writeCategoryToHash', () => {

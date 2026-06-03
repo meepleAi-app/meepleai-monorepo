@@ -328,6 +328,61 @@ describe('FeatureFlagsTab', () => {
       // Failed flag remains in dirty state.
       expect(screen.getByText('1 unsaved flag')).toBeInTheDocument();
     });
+
+    it('preserves pending changes when configurations is refetched (review fix #1)', async () => {
+      const user = userEvent.setup();
+
+      const { rerender } = render(
+        <FeatureFlagsTab
+          configurations={mockRoleOnlyConfigurations}
+          onConfigurationChange={mockOnChange}
+        />
+      );
+
+      // Stage a pending change.
+      const betaSurveyToggle = screen.getAllByRole('switch')[2];
+      await user.click(betaSurveyToggle);
+      expect(screen.getByText('1 unsaved flag')).toBeInTheDocument();
+
+      // Simulate a refetch: the wrapper re-renders with the same list (new
+      // array reference). Without the fix the useEffect would wipe pending.
+      rerender(
+        <FeatureFlagsTab
+          configurations={[...mockRoleOnlyConfigurations]}
+          onConfigurationChange={mockOnChange}
+        />
+      );
+
+      // The dirty bar must persist — otherwise the partial-failure retry flow
+      // breaks for the admin.
+      expect(screen.getByText('1 unsaved flag')).toBeInTheDocument();
+    });
+
+    it('drops pending entries when the underlying flag disappears server-side', async () => {
+      const user = userEvent.setup();
+
+      const { rerender } = render(
+        <FeatureFlagsTab
+          configurations={mockRoleOnlyConfigurations}
+          onConfigurationChange={mockOnChange}
+        />
+      );
+
+      const betaSurveyToggle = screen.getAllByRole('switch')[2];
+      await user.click(betaSurveyToggle);
+      expect(screen.getByText('1 unsaved flag')).toBeInTheDocument();
+
+      // Refetch returns a configuration set without BetaSurvey (id=3) → pending
+      // entry must be dropped.
+      rerender(
+        <FeatureFlagsTab
+          configurations={mockRoleOnlyConfigurations.filter(f => f.id !== '3')}
+          onConfigurationChange={mockOnChange}
+        />
+      );
+
+      expect(screen.queryByTestId('feature-flags-dirty-bar')).not.toBeInTheDocument();
+    });
   });
 
   describe('Tier-Based Feature Flags (Issue #3079)', () => {

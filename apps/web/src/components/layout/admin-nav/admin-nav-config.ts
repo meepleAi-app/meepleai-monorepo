@@ -6,6 +6,7 @@ import {
   Bot,
   BookOpen,
   Database,
+  DollarSign,
   FileSearch,
   Gamepad2,
   Globe,
@@ -83,6 +84,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     icon: Globe,
     items: [
       { label: 'Providers', href: '/admin/providers', icon: Globe },
+      { label: 'Budget & Cost', href: '/admin/business', icon: DollarSign },
       { label: 'Analytics', href: '/admin/analytics', icon: BarChart2 },
       {
         label: 'Staging Access',

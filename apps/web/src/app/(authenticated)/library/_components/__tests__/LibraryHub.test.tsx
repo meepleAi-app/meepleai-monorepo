@@ -184,6 +184,12 @@ const MESSAGES: Record<string, string> = {
   'pages.library.selectionMode.exitAriaLabel': 'Esci dalla modalità selezione',
   'pages.library.selectionMode.selectedCount':
     '{count, plural, =0 {Nessuno selezionato} =1 {1 selezionato} other {# selezionati}}',
+  'pages.library.bulk.counter': '{count, plural, =1 {selezionato} other {selezionati}}',
+  'pages.library.bulk.counterCompact': 'sel.',
+  'pages.library.bulk.closeAriaLabel': 'Annulla selezione',
+  'pages.library.bulk.actions.archive': 'Archivia',
+  'pages.library.bulk.actions.tag': 'Tag',
+  'pages.library.bulk.actions.export': 'Esporta',
   'pages.library.bulk.actions.delete': 'Elimina',
   'pages.library.bulk.confirm.deleteTitle':
     '{count, plural, =1 {Confermi rimozione di 1 gioco?} other {Confermi rimozione di # giochi?}}',

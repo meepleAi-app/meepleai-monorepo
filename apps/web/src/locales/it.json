@@ -1775,7 +1775,14 @@
         "compact": "Compatta"
       },
       "bulk": {
+        "counter": "{count, plural, =1 {selezionato} other {selezionati}}",
+        "counterCompact": "sel.",
+        "closeAriaLabel": "Annulla selezione",
         "actions": {
+          "archive": "Archivia",
+          "archiveAriaLabel": "Archivia gli elementi selezionati",
+          "tag": "Tag",
+          "tagAriaLabel": "Aggiungi tag agli elementi selezionati",
           "delete": "Elimina",
           "deleteAriaLabel": "Elimina gli elementi selezionati",
           "favorite": "Aggiungi ai preferiti",

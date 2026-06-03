@@ -1725,7 +1725,14 @@
         "compact": "Compact"
       },
       "bulk": {
+        "counter": "selected",
+        "counterCompact": "sel.",
+        "closeAriaLabel": "Cancel selection",
         "actions": {
+          "archive": "Archive",
+          "archiveAriaLabel": "Archive the selected items",
+          "tag": "Tag",
+          "tagAriaLabel": "Add tags to the selected items",
           "delete": "Delete",
           "deleteAriaLabel": "Delete the selected items",
           "favorite": "Mark favorite",

@@ -341,9 +341,12 @@ export function LibraryHub(): ReactElement {
     const count = selected.size;
     return {
       regionLabel: t('pages.library.selectionMode.selectedCount', { count }),
-      counter: t('pages.library.selectionMode.selectedCount', { count }),
-      cancel: t('pages.library.selectionMode.exit'),
-      archive: t('pages.library.bulk.actions.delete'),
+      counter: t('pages.library.bulk.counter', { count }),
+      counterCompact: t('pages.library.bulk.counterCompact'),
+      closeAriaLabel: t('pages.library.bulk.closeAriaLabel'),
+      archive: t('pages.library.bulk.actions.archive'),
+      tag: t('pages.library.bulk.actions.tag'),
+      exportLabel: t('pages.library.bulk.actions.export'),
       confirmTitle: t('pages.library.bulk.confirm.deleteTitle', { count }),
       confirmDescription: t('pages.library.bulk.confirm.deleteMessage'),
       confirmCta: t('pages.library.bulk.confirm.confirmCta'),

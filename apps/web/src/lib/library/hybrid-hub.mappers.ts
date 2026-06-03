@@ -61,7 +61,7 @@ export function libraryEntryToHubItem(entry: UserLibraryEntry): GameHubItem {
     gameId: entry.gameId,
     rating: entry.averageRating ?? undefined,
     state: entry.currentState,
-    imageUrl: entry.gameImageUrl ?? entry.gameIconUrl ?? undefined,
+    imageUrl: entry.coverUrl ?? entry.gameImageUrl ?? entry.gameIconUrl ?? undefined,
     hasKb: isKbEntry(entry),
   };
 }

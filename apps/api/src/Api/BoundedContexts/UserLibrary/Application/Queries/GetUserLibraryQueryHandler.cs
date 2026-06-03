@@ -1,9 +1,11 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure;
+using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,15 +21,18 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
     private readonly IUserLibraryRepository _libraryRepository;
     private readonly ISharedGameRepository _sharedGameRepository;
     private readonly MeepleAiDbContext _dbContext;
+    private readonly IBlobStorageService _blobStorage;
 
     public GetUserLibraryQueryHandler(
         IUserLibraryRepository libraryRepository,
         ISharedGameRepository sharedGameRepository,
-        MeepleAiDbContext dbContext)
+        MeepleAiDbContext dbContext,
+        IBlobStorageService blobStorage)
     {
         _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
         _sharedGameRepository = sharedGameRepository ?? throw new ArgumentNullException(nameof(sharedGameRepository));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _blobStorage = blobStorage ?? throw new ArgumentNullException(nameof(blobStorage));
     }
 
     public async Task<PaginatedLibraryResponseDto> Handle(GetUserLibraryQuery query, CancellationToken cancellationToken)
@@ -133,6 +138,23 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
             .ToDictionaryAsync(sg => sg.Id, sg => sg.IsRagPublic, cancellationToken)
             .ConfigureAwait(false);
 
+        // Issue #1852 (Gap A): Batch-load SharedGameEntity objects (cover keys: PdfCoverR2Key,
+        // WikidataCoverR2Key) for CoverUrlResolver. The domain aggregate from ISharedGameRepository
+        // does not carry EF-only columns, so we query the EF DbSet directly.
+        var sharedGameEntityMap = await _dbContext.SharedGames
+            .AsNoTracking()
+            .Where(sg => gameIds.Contains(sg.Id) && !sg.IsDeleted)
+            .ToDictionaryAsync(sg => sg.Id, cancellationToken)
+            .ConfigureAwait(false);
+
+        // Issue #1852 (Gap A): Batch-load UserLibraryEntryEntity for all entries (shared + private)
+        // to access CustomCoverR2Key (L3 user-custom cover layer used by CoverUrlResolver).
+        var entryEntityMap = await _dbContext.UserLibraryEntries
+            .AsNoTracking()
+            .Where(e => entryIds.Contains(e.Id))
+            .ToDictionaryAsync(e => e.Id, cancellationToken)
+            .ConfigureAwait(false);
+
         var userRoleStr = await _dbContext.Users
             .AsNoTracking()
             .Where(u => u.Id == query.UserId)
@@ -152,6 +174,15 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
             {
                 // Issue #4998: Compute KB stats for this game
                 kbStatsByGame.TryGetValue(entry.GameId, out var kbStats);
+
+                // Issue #1852 (Gap A): Resolve cover URL via L3 → L4 → L2 priority.
+                // Requires the EF SharedGameEntity (cover keys) and the EF UserLibraryEntryEntity (custom cover key).
+                sharedGameEntityMap.TryGetValue(entry.GameId, out var sharedGameEntity);
+                entryEntityMap.TryGetValue(entry.Id, out var entryEntity);
+                var coverUrl = sharedGameEntity is not null
+                    ? await CoverUrlResolver.ResolveForUserAsync(sharedGameEntity, entryEntity, _blobStorage).ConfigureAwait(false)
+                    : null;
+
                 entryDtos.Add(new UserLibraryEntryDto(
                     Id: entry.Id,
                     UserId: entry.UserId,
@@ -182,7 +213,8 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
                         || (ragPublicFlags.TryGetValue(entry.GameId, out var isPublic) && isPublic)
                         || entry.OwnershipDeclaredAt != null,
                     TimesPlayed: entry.Stats.TimesPlayed,
-                    LastPlayed: entry.Stats.LastPlayed
+                    LastPlayed: entry.Stats.LastPlayed,
+                    CoverUrl: coverUrl
                 ));
             }
             // Check PrivateGame entries (batch-loaded above)
@@ -193,6 +225,8 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
                 // Issue #4998: Use kbStatsByPrivateGame (keyed by PrivateGameId) for private game KB stats.
                 // kbStatsByGame only covers shared game PDFs (PrivateGameId IS NULL in DB).
                 kbStatsByPrivateGame.TryGetValue(libraryEntity.PrivateGameId!.Value, out var privateKbStats);
+                // Issue #1852: private-game L4 cover deferred to #1824 follow-up.
+                string? privateCoverUrl = null;
                 entryDtos.Add(new UserLibraryEntryDto(
                     Id: entry.Id,
                     UserId: entry.UserId,
@@ -216,7 +250,8 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
                     OwnershipDeclaredAt: entry.OwnershipDeclaredAt,
                     HasRagAccess: isAdmin || entry.OwnershipDeclaredAt != null,
                     TimesPlayed: entry.Stats.TimesPlayed,
-                    LastPlayed: entry.Stats.LastPlayed
+                    LastPlayed: entry.Stats.LastPlayed,
+                    CoverUrl: privateCoverUrl
                 ));
             }
         }

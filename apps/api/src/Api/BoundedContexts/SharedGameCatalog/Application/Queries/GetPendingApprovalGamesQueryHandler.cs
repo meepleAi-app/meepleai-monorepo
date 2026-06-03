@@ -1,6 +1,8 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.Infrastructure;
 using Api.Models;
+using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -15,13 +17,16 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 internal sealed class GetPendingApprovalGamesQueryHandler : IRequestHandler<GetPendingApprovalGamesQuery, PagedResult<SharedGameDto>>
 {
     private readonly MeepleAiDbContext _context;
+    private readonly IBlobStorageService _blobStorage;
     private readonly ILogger<GetPendingApprovalGamesQueryHandler> _logger;
 
     public GetPendingApprovalGamesQueryHandler(
         MeepleAiDbContext context,
+        IBlobStorageService blobStorage,
         ILogger<GetPendingApprovalGamesQueryHandler> logger)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
+        _blobStorage = blobStorage ?? throw new ArgumentNullException(nameof(blobStorage));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -40,12 +45,24 @@ internal sealed class GetPendingApprovalGamesQueryHandler : IRequestHandler<GetP
             .Where(g => g.Status == (int)GameStatus.PendingApproval)
             .OrderBy(g => g.ModifiedAt ?? g.CreatedAt); // Oldest submissions first
 
-        // Pagination
+        // Pagination — materialize entities first so we can call the async
+        // CoverUrlResolver (EF expression trees cannot invoke async methods).
         var total = await dbQuery.CountAsync(cancellationToken).ConfigureAwait(false);
-        var games = await dbQuery
+        var entities = await dbQuery
             .Skip((query.PageNumber - 1) * query.PageSize)
             .Take(query.PageSize)
-            .Select(g => new SharedGameDto(
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        // Issue #1852 (Gap A): resolve cover URL (L4 → L2 priority) per entity sequentially.
+        var games = new List<SharedGameDto>(entities.Count);
+        foreach (var g in entities)
+        {
+            var coverUrl = await CoverUrlResolver
+                .ResolvePublicAsync(g, _blobStorage)
+                .ConfigureAwait(false);
+
+            games.Add(new SharedGameDto(
                 g.Id,
                 g.BggId,
                 g.Title,
@@ -73,9 +90,9 @@ internal sealed class GetPendingApprovalGamesQueryHandler : IRequestHandler<GetP
                 0,      // NewThisWeekCount
                 0,      // ContributorsCount
                 false,  // IsTopRated
-                false)) // IsNew
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+                false,  // IsNew
+                CoverUrl: coverUrl));
+        }
 
         _logger.LogInformation(
             "Retrieved {Count} pending approval games (Total: {Total}) for page {Page}",

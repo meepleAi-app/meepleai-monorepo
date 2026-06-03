@@ -8,6 +8,7 @@ using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Services.Pdf;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
@@ -79,6 +80,7 @@ public sealed class GetSharedGameByIdQueryHandlerCrossBcTests : IAsyncLifetime
         _handler = new GetSharedGameByIdQueryHandler(
             _repository,
             _dbContext,
+            new Mock<IBlobStorageService>().Object,
             CreateHybridCache(),
             CreateConfiguration(),
             new Mock<ILogger<GetSharedGameByIdQueryHandler>>().Object);

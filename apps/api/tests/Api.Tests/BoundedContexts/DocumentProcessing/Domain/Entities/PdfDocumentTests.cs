@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
+using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Xunit;
@@ -538,4 +539,127 @@ public class PdfDocumentTests
     }
 
     #endregion
+
+    // ===== Cover Generation Tests (Issue #1852) =====
+
+    private static PdfDocument CreateValidPdf()
+    {
+        return new PdfDocument(
+            id: Guid.NewGuid(),
+            gameId: Guid.NewGuid(),
+            fileName: new FileName("rulebook.pdf"),
+            filePath: "pdfs/test.pdf",
+            fileSize: new FileSize(1024),
+            uploadedByUserId: Guid.NewGuid());
+    }
+
+    [Fact]
+    public void MarkCoverGenerated_SetsFieldsAndRaisesEvent()
+    {
+        var pdf = CreateValidPdf();
+        pdf.ClearDomainEvents();
+
+        pdf.MarkCoverGenerated("pdf-cover-xyz", pageIndex: 0);
+
+        pdf.CoverR2Key.Should().Be("pdf-cover-xyz");
+        pdf.CoverGenerationStatus.Should().Be(PdfCoverGenerationStatus.Generated);
+        pdf.CoverPageIndex.Should().Be(0);
+        pdf.CoverGenerationError.Should().BeNull();
+
+        pdf.DomainEvents.Should().ContainSingle(e => e is PdfCoverGeneratedEvent);
+        var evt = (PdfCoverGeneratedEvent)pdf.DomainEvents.Single(e => e is PdfCoverGeneratedEvent);
+        evt.PdfDocumentId.Should().Be(pdf.Id);
+        evt.CoverR2Key.Should().Be("pdf-cover-xyz");
+        evt.CoverPageIndex.Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void MarkCoverGenerated_EmptyKey_Throws(string? key)
+    {
+        var pdf = CreateValidPdf();
+
+        Action act = () => pdf.MarkCoverGenerated(key!, 0);
+
+        act.Should().Throw<ArgumentException>().WithParameterName("coverR2Key");
+    }
+
+    [Fact]
+    public void MarkCoverGenerated_NegativePageIndex_Throws()
+    {
+        var pdf = CreateValidPdf();
+
+        Action act = () => pdf.MarkCoverGenerated("key", -1);
+
+        act.Should().Throw<ArgumentException>().WithParameterName("pageIndex");
+    }
+
+    [Fact]
+    public void MarkCoverSkipped_SetsStatusOnly_NoEvent()
+    {
+        var pdf = CreateValidPdf();
+        pdf.ClearDomainEvents();
+
+        pdf.MarkCoverSkipped();
+
+        pdf.CoverGenerationStatus.Should().Be(PdfCoverGenerationStatus.Skipped);
+        pdf.CoverR2Key.Should().BeNull();
+        pdf.CoverPageIndex.Should().BeNull();
+        pdf.CoverGenerationError.Should().BeNull();
+        pdf.DomainEvents.Should().NotContain(e => e is PdfCoverGeneratedEvent);
+    }
+
+    [Fact]
+    public void MarkCoverFailed_SetsErrorAndTruncates()
+    {
+        var pdf = CreateValidPdf();
+        pdf.ClearDomainEvents();
+        var longError = new string('x', 600);
+
+        pdf.MarkCoverFailed(longError);
+
+        pdf.CoverGenerationStatus.Should().Be(PdfCoverGenerationStatus.Failed);
+        pdf.CoverGenerationError.Should().HaveLength(512);
+        pdf.DomainEvents.Should().NotContain(e => e is PdfCoverGeneratedEvent);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void MarkCoverFailed_EmptyError_Throws(string? err)
+    {
+        var pdf = CreateValidPdf();
+
+        Action act = () => pdf.MarkCoverFailed(err!);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void Reconstitute_RoundTripsCoverFields()
+    {
+        var pdf = PdfDocument.Reconstitute(
+            id: Guid.NewGuid(),
+            gameId: Guid.NewGuid(),
+            fileName: new FileName("rulebook.pdf"),
+            filePath: "pdfs/test.pdf",
+            fileSize: new FileSize(1024),
+            uploadedByUserId: Guid.NewGuid(),
+            uploadedAt: DateTime.UtcNow,
+            processedAt: null,
+            pageCount: 10,
+            processingError: null,
+            language: LanguageCode.English,
+            coverR2Key: "pdf-cover-xyz",
+            coverGenerationStatus: "Generated",
+            coverPageIndex: 1,
+            coverGenerationError: null);
+
+        pdf.CoverR2Key.Should().Be("pdf-cover-xyz");
+        pdf.CoverGenerationStatus.Should().Be(PdfCoverGenerationStatus.Generated);
+        pdf.CoverPageIndex.Should().Be(1);
+    }
 }

@@ -60,6 +60,16 @@ public class SharedGameEntity
     /// </summary>
     public string? WikidataCoverR2Key { get; set; }
 
+    /// <summary>
+    /// Issue #1852 (umbrella #1821 L4) — PDF cover key denormalized from
+    /// PdfDocumentEntity.CoverR2Key via PdfCoverGeneratedEventHandler.
+    /// Stored in R2 at <c>covers/pdf/{SharedGameId}/{key}-preview.webp</c>.
+    /// Has higher priority than Wikidata (L2) and user-uploaded (L3) covers
+    /// but only when a PDF with a valid cover has been uploaded and processed.
+    /// Resolved to BlobCategory.GameImage when computing CoverUrl in DTOs.
+    /// </summary>
+    public string? PdfCoverR2Key { get; set; }
+
     /// <summary>Source URL on Wikimedia Commons; surfaced in the attribution footer.</summary>
     public string? WikidataCoverSourceUrl { get; set; }
 

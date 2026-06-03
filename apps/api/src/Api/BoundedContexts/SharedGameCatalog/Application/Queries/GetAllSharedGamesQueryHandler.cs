@@ -1,6 +1,8 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.Infrastructure;
 using Api.Models;
+using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -14,13 +16,16 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 internal sealed class GetAllSharedGamesQueryHandler : IRequestHandler<GetAllSharedGamesQuery, PagedResult<SharedGameDto>>
 {
     private readonly MeepleAiDbContext _context;
+    private readonly IBlobStorageService _blobStorage;
     private readonly ILogger<GetAllSharedGamesQueryHandler> _logger;
 
     public GetAllSharedGamesQueryHandler(
         MeepleAiDbContext context,
+        IBlobStorageService blobStorage,
         ILogger<GetAllSharedGamesQueryHandler> logger)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
+        _blobStorage = blobStorage ?? throw new ArgumentNullException(nameof(blobStorage));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -47,10 +52,22 @@ internal sealed class GetAllSharedGamesQueryHandler : IRequestHandler<GetAllShar
 
         // Pagination
         var total = await dbQuery.CountAsync(cancellationToken).ConfigureAwait(false);
-        var games = await dbQuery
+        var entities = await dbQuery
             .Skip((query.PageNumber - 1) * query.PageSize)
             .Take(query.PageSize)
-            .Select(g => new SharedGameDto(
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        // Issue #1852 (Gap A): CoverUrlResolver is async (presigned URL mint); cannot be called
+        // inside an EF expression tree. Materialize first, then resolve covers sequentially.
+        var games = new List<SharedGameDto>(entities.Count);
+        foreach (var g in entities)
+        {
+            var coverUrl = await CoverUrlResolver
+                .ResolvePublicAsync(g, _blobStorage)
+                .ConfigureAwait(false);
+
+            games.Add(new SharedGameDto(
                 g.Id,
                 g.BggId,
                 g.Title,
@@ -78,9 +95,9 @@ internal sealed class GetAllSharedGamesQueryHandler : IRequestHandler<GetAllShar
                 0,      // NewThisWeekCount
                 0,      // ContributorsCount
                 false,  // IsTopRated
-                false)) // IsNew
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+                false,  // IsNew
+                CoverUrl: coverUrl));
+        }
 
         _logger.LogInformation(
             "Retrieved {Count} games (Total: {Total}) for page {Page}",

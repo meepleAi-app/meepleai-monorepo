@@ -6,6 +6,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Services.Pdf;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
@@ -36,6 +37,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
     private const int DraftStatus = 0;
 
     private readonly Mock<ILogger<SearchSharedGamesQueryHandler>> _logger = new();
+    private readonly Mock<IBlobStorageService> _blobStorageMock = new();
 
     // ---------------------------------------------------------------
     // Seed helpers
@@ -174,7 +176,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
         db.Toolkits.Add(CreateNonDefaultToolkit(game.Id));
 
         await db.SaveChangesAsync();
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object);
 
         // Act
         var result = await handler.Handle(BuildQuery(hasToolkit: true), CancellationToken.None);
@@ -198,7 +200,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
         db.Toolkits.Add(CreateDefaultToolkit(game.Id));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object);
 
         var result = await handler.Handle(BuildQuery(hasToolkit: true), CancellationToken.None);
 
@@ -218,7 +220,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
         db.Toolkits.Add(CreateNonDefaultToolkit(game.Id));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object);
 
         var result = await handler.Handle(BuildQuery(hasToolkit: true), CancellationToken.None);
 
@@ -237,7 +239,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
         db.Toolkits.Add(CreateNonDefaultToolkit(game.Id));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object);
 
         var result = await handler.Handle(BuildQuery(hasToolkit: false), CancellationToken.None);
 
@@ -254,7 +256,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
             CreateSharedGame("Game B"));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object);
 
         var result = await handler.Handle(BuildQuery(hasToolkit: null), CancellationToken.None);
 
@@ -277,7 +279,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
         db.AgentDefinitions.Add(CreateAgentForGame(game.Id));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object);
 
         var result = await handler.Handle(BuildQuery(hasAgent: true), CancellationToken.None);
 
@@ -296,7 +298,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
         db.AgentDefinitions.Add(CreateAgentForGame(game.Id));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object);
 
         var result = await handler.Handle(BuildQuery(hasAgent: true), CancellationToken.None);
 
@@ -315,7 +317,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
         db.AgentDefinitions.Add(CreateAgentForGame(game.Id));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object);
 
         var result = await handler.Handle(BuildQuery(hasAgent: false), CancellationToken.None);
 
@@ -341,7 +343,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
             CreateSharedGame("Unrated", averageRating: null));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object);
 
         var result = await handler.Handle(BuildQuery(isTopRated: true), CancellationToken.None);
 
@@ -360,7 +362,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
             CreateSharedGame("Unrated", averageRating: null));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object);
 
         var result = await handler.Handle(BuildQuery(isTopRated: false), CancellationToken.None);
 
@@ -381,7 +383,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
             CreateSharedGame("Low", averageRating: 3.9m));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(topRatedThreshold: 4.5m), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(topRatedThreshold: 4.5m), _logger.Object);
 
         var result = await handler.Handle(BuildQuery(isTopRated: true), CancellationToken.None);
 
@@ -398,7 +400,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
             CreateSharedGame("Unrated", averageRating: null));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object);
 
         var result = await handler.Handle(BuildQuery(isTopRated: null), CancellationToken.None);
 

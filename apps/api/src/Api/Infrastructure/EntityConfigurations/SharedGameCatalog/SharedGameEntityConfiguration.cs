@@ -131,6 +131,12 @@ internal class SharedGameEntityConfiguration : IEntityTypeConfiguration<SharedGa
             .HasColumnName("wikidata_cover_r2_key")
             .IsRequired(false);
 
+        // Issue #1852 (umbrella #1821 L4) — PDF cover key denormalized from PdfDocumentEntity.
+        builder.Property(e => e.PdfCoverR2Key)
+            .HasMaxLength(512)
+            .HasColumnName("pdf_cover_r2_key")
+            .IsRequired(false);
+
         builder.Property(e => e.WikidataCoverSourceUrl)
             .HasMaxLength(2048)
             .HasColumnName("wikidata_cover_source_url")

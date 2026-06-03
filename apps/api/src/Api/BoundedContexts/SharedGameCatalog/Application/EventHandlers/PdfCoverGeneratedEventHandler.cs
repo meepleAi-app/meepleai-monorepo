@@ -57,6 +57,7 @@ internal sealed class PdfCoverGeneratedEventHandler : INotificationHandler<PdfCo
         }
 
         game.SetPdfCoverR2Key(notification.CoverR2Key);
+        _repository.Update(game);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(

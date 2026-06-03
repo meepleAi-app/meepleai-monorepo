@@ -55,12 +55,13 @@ export type {
 
 export { AdvancedFiltersDrawer } from '@/components/features/library/AdvancedFiltersDrawer';
 export type {
+  AdvancedFiltersDrawerGameOption,
   AdvancedFiltersDrawerProps,
+  LibraryFilterEntity,
+  LibraryFilterPeriod,
   LibraryFilters,
-  GameLibraryFilters,
-  AgentLibraryFilters,
-  SessionLibraryFilters,
-  KbLibraryFilters,
-  ChatLibraryFilters,
-  FiltersForScope,
+  LibraryFilterStatus,
+  LibraryFilterTag,
+  LibraryFilterWeight,
 } from '@/components/features/library/AdvancedFiltersDrawer';
+export { countActiveFilters } from '@/components/features/library/AdvancedFiltersDrawer';

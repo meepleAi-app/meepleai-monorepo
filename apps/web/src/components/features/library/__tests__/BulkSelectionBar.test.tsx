@@ -1,13 +1,23 @@
 /**
  * Wave B.3 (Issue #574) — BulkSelectionBar v2 component tests.
  *
- * Spec §3.2 + AC-6:
+ * SP4 mockup conformance (Issue #1585-followup, plan
+ * docs/superpowers/plans/2026-06-03-library-sp4-mockup-conformance.md Task 3.2):
+ *   - Dark floating bar (`bg-foreground` + `text-background`) at `bottom-4` center.
+ *   - Count chip (entity-game) separate from counter label (no number in counter).
+ *   - 3 action buttons (Archivia / Tag / Esporta) — Archive preserves AlertDialog
+ *     confirm flow; Tag + Export are optional callbacks (stub no-op default).
+ *   - Close affordance: ✕ icon button with `closeAriaLabel` (no more "Annulla"
+ *     pill — that role moved to ✕).
+ *   - Compact mode: counterCompact label + icon-only action buttons.
+ *
+ * Wave B.3 invariants preserved:
  *   - Mounted iff parent decides (selectionMode === 'select'). Component itself
  *     is unconditionally rendered when JSX-mounted; mount/unmount lifecycle
  *     ownership lives in `LibraryHub` orchestrator (Commit 3).
  *   - selectedCount=0 still mounts (no count-conditional unmount, avoids
  *     layout flash on Annulla click).
- *   - Annulla button → onExitSelectMode().
+ *   - Close (✕) button → onExitSelectMode().
  *   - Esc keyboard at root (when dialog NOT open) → onExitSelectMode().
  *   - Archivia button → Radix `<AlertDialog>` opens (role="alertdialog").
  *   - Dialog title via `labels.confirmTitle` (pre-interpolated by parent with
@@ -16,35 +26,37 @@
  *   - ARIA: `role="region"` + `aria-label` + `aria-live="polite"` +
  *     `aria-atomic="true"` su root.
  *   - data-slot="library-bulk-selection-bar" + scoped sub-slots.
- *   - Slide-in animation gated by `motion-safe:transition` Tailwind class
+ *   - Slide-in animation gated by `motion-safe:` Tailwind class
  *     (collapse a 0.01ms sotto `prefers-reduced-motion: reduce`).
  *
  * Pure component: labels resolved via prop (mirror Wave B.1 GamesEmptyState +
  * B.2 EmptyAgents). Parent (LibraryHub) owns `useTranslation()`.
  */
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { BulkSelectionBar, type BulkSelectionBarLabels } from '../BulkSelectionBar';
 
 const baseLabels: BulkSelectionBarLabels = {
   regionLabel: '3 selezionati',
-  counter: '3 selezionati',
-  cancel: 'Annulla',
+  counter: 'selezionati',
+  counterCompact: 'sel.',
   archive: 'Archivia',
+  tag: 'Tag',
+  exportLabel: 'Esporta',
+  closeAriaLabel: 'Annulla selezione',
   confirmTitle: 'Confermi rimozione di 3 giochi dalla libreria?',
   confirmCta: 'Conferma',
   cancelCta: 'Annulla',
 };
 
-describe('BulkSelectionBar (Wave B.3)', () => {
+describe('BulkSelectionBar (Wave B.3 + SP4 mockup conformance)', () => {
   describe('rendering + ARIA', () => {
     it('renders even when selectedCount=0 (no count-conditional unmount)', () => {
       const labels: BulkSelectionBarLabels = {
         ...baseLabels,
         regionLabel: '0 selezionati',
-        counter: '0 selezionati',
       };
       const { container } = render(
         <BulkSelectionBar
@@ -73,7 +85,7 @@ describe('BulkSelectionBar (Wave B.3)', () => {
       expect(region).toHaveAttribute('aria-label', '3 selezionati');
     });
 
-    it('renders the counter label', () => {
+    it('renders counter label without numeric count (count is in chip)', () => {
       render(
         <BulkSelectionBar
           selectedCount={3}
@@ -82,10 +94,13 @@ describe('BulkSelectionBar (Wave B.3)', () => {
           onArchive={vi.fn().mockResolvedValue(undefined)}
         />
       );
-      expect(screen.getByText('3 selezionati')).toBeInTheDocument();
+      const counter = screen.getByText('selezionati');
+      expect(counter).toBeInTheDocument();
+      // Count "3" is rendered in chip, not in the counter label
+      expect(counter.textContent).not.toMatch(/\d/);
     });
 
-    it('renders cancel + archive buttons with resolved labels', () => {
+    it('renders cancel (✕) + archive buttons with resolved labels', () => {
       render(
         <BulkSelectionBar
           selectedCount={3}
@@ -94,11 +109,11 @@ describe('BulkSelectionBar (Wave B.3)', () => {
           onArchive={vi.fn().mockResolvedValue(undefined)}
         />
       );
-      expect(screen.getByRole('button', { name: 'Annulla' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Annulla selezione' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Archivia' })).toBeInTheDocument();
     });
 
-    it('applies motion-safe transition class for prefers-reduced-motion gating', () => {
+    it('applies motion-safe slide-in animation class for prefers-reduced-motion gating', () => {
       const { container } = render(
         <BulkSelectionBar
           selectedCount={3}
@@ -108,14 +123,87 @@ describe('BulkSelectionBar (Wave B.3)', () => {
         />
       );
       const region = container.querySelector('[data-slot="library-bulk-selection-bar"]');
-      // Motion-safe Tailwind class collapses to 0.01ms under prefers-reduced-motion;
+      // Motion-safe Tailwind classes collapse to no-op under prefers-reduced-motion;
       // E2E asserts computed style. Here only class presence.
-      expect(region?.className).toMatch(/motion-safe:transition/);
+      expect(region?.className).toMatch(/motion-safe:/);
+    });
+  });
+
+  describe('SP4 mockup conformance (sp4-library-desktop.jsx:895-944)', () => {
+    it('renders the dark floating bar (bg-foreground + text-background)', () => {
+      const { container } = render(
+        <BulkSelectionBar
+          selectedCount={3}
+          labels={baseLabels}
+          onExitSelectMode={vi.fn()}
+          onArchive={vi.fn().mockResolvedValue(undefined)}
+        />
+      );
+      const bar = container.querySelector('[data-slot="library-bulk-selection-bar"]');
+      expect(bar?.className).toMatch(/bg-foreground/);
+      expect(bar?.className).toMatch(/text-background/);
+    });
+
+    it('renders the count chip with entity-game background and tabular-nums', () => {
+      const { container } = render(
+        <BulkSelectionBar
+          selectedCount={3}
+          labels={baseLabels}
+          onExitSelectMode={vi.fn()}
+          onArchive={vi.fn().mockResolvedValue(undefined)}
+        />
+      );
+      const chip = container.querySelector('[data-slot="library-bulk-selection-count-chip"]');
+      expect(chip).not.toBeNull();
+      expect(chip).toHaveTextContent('3');
+      expect(chip?.className).toMatch(/bg-entity-game/);
+      expect(chip?.className).toMatch(/tabular-nums/);
+    });
+
+    it('renders Archive + Tag + Export action buttons (3 actions)', () => {
+      render(
+        <BulkSelectionBar
+          selectedCount={3}
+          labels={baseLabels}
+          onExitSelectMode={vi.fn()}
+          onArchive={vi.fn().mockResolvedValue(undefined)}
+        />
+      );
+      expect(screen.getByRole('button', { name: /Archivia/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Tag/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Esporta/ })).toBeInTheDocument();
+    });
+
+    it('renders close (✕) button with closeAriaLabel', () => {
+      render(
+        <BulkSelectionBar
+          selectedCount={3}
+          labels={baseLabels}
+          onExitSelectMode={vi.fn()}
+          onArchive={vi.fn().mockResolvedValue(undefined)}
+        />
+      );
+      expect(screen.getByRole('button', { name: 'Annulla selezione' })).toBeInTheDocument();
+    });
+
+    it('positions the bar at fixed bottom-4 center via translate-x', () => {
+      const { container } = render(
+        <BulkSelectionBar
+          selectedCount={3}
+          labels={baseLabels}
+          onExitSelectMode={vi.fn()}
+          onArchive={vi.fn().mockResolvedValue(undefined)}
+        />
+      );
+      const bar = container.querySelector('[data-slot="library-bulk-selection-bar"]');
+      expect(bar?.className).toMatch(/fixed/);
+      expect(bar?.className).toMatch(/bottom-4/);
+      expect(bar?.className).toMatch(/-translate-x-1\/2/);
     });
   });
 
   describe('exit interactions', () => {
-    it('Annulla click → onExitSelectMode()', () => {
+    it('Close (✕) click → onExitSelectMode()', () => {
       const onExitSelectMode = vi.fn();
       render(
         <BulkSelectionBar
@@ -125,7 +213,7 @@ describe('BulkSelectionBar (Wave B.3)', () => {
           onArchive={vi.fn().mockResolvedValue(undefined)}
         />
       );
-      fireEvent.click(screen.getByRole('button', { name: 'Annulla' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Annulla selezione' }));
       expect(onExitSelectMode).toHaveBeenCalledTimes(1);
     });
 
@@ -162,6 +250,85 @@ describe('BulkSelectionBar (Wave B.3)', () => {
     });
   });
 
+  describe('Tag + Export action callbacks', () => {
+    it('Tag click invokes onTag when provided', () => {
+      const onTag = vi.fn();
+      render(
+        <BulkSelectionBar
+          selectedCount={3}
+          labels={baseLabels}
+          onExitSelectMode={vi.fn()}
+          onArchive={vi.fn().mockResolvedValue(undefined)}
+          onTag={onTag}
+        />
+      );
+      fireEvent.click(screen.getByRole('button', { name: /Tag/ }));
+      expect(onTag).toHaveBeenCalledTimes(1);
+    });
+
+    it('Export click invokes onExport when provided', () => {
+      const onExport = vi.fn();
+      render(
+        <BulkSelectionBar
+          selectedCount={3}
+          labels={baseLabels}
+          onExitSelectMode={vi.fn()}
+          onArchive={vi.fn().mockResolvedValue(undefined)}
+          onExport={onExport}
+        />
+      );
+      fireEvent.click(screen.getByRole('button', { name: /Esporta/ }));
+      expect(onExport).toHaveBeenCalledTimes(1);
+    });
+
+    it('Tag/Export buttons are no-op (do not crash) when callbacks omitted', () => {
+      render(
+        <BulkSelectionBar
+          selectedCount={3}
+          labels={baseLabels}
+          onExitSelectMode={vi.fn()}
+          onArchive={vi.fn().mockResolvedValue(undefined)}
+        />
+      );
+      expect(() => fireEvent.click(screen.getByRole('button', { name: /Tag/ }))).not.toThrow();
+      expect(() => fireEvent.click(screen.getByRole('button', { name: /Esporta/ }))).not.toThrow();
+    });
+  });
+
+  describe('compact mode', () => {
+    it('uses counterCompact label instead of counter when compact=true', () => {
+      render(
+        <BulkSelectionBar
+          selectedCount={3}
+          labels={baseLabels}
+          onExitSelectMode={vi.fn()}
+          onArchive={vi.fn().mockResolvedValue(undefined)}
+          compact
+        />
+      );
+      expect(screen.getByText('sel.')).toBeInTheDocument();
+      expect(screen.queryByText('selezionati')).not.toBeInTheDocument();
+    });
+
+    it('hides action labels in compact mode (icons remain via aria-label)', () => {
+      render(
+        <BulkSelectionBar
+          selectedCount={3}
+          labels={baseLabels}
+          onExitSelectMode={vi.fn()}
+          onArchive={vi.fn().mockResolvedValue(undefined)}
+          compact
+        />
+      );
+      // Action labels are no longer in visible text (only icon + aria-label)
+      // The buttons must still be reachable by their accessible name (icon + aria-label fallback).
+      // Archive button still resolves by name='Archivia' (aria-label fallback).
+      expect(screen.getByRole('button', { name: 'Archivia' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Tag' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Esporta' })).toBeInTheDocument();
+    });
+  });
+
   describe('Archivia confirm flow (Radix AlertDialog)', () => {
     it('Archivia click → AlertDialog opens with confirmTitle', async () => {
       render(
@@ -176,7 +343,7 @@ describe('BulkSelectionBar (Wave B.3)', () => {
       // Dialog NOT open initially
       expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Archivia' }));
+      fireEvent.click(screen.getByRole('button', { name: /Archivia/ }));
 
       // Dialog opens (Radix uses Portal → check globally via screen)
       const dialog = await screen.findByRole('alertdialog');
@@ -202,7 +369,7 @@ describe('BulkSelectionBar (Wave B.3)', () => {
         />
       );
 
-      fireEvent.click(screen.getByRole('button', { name: 'Archivia' }));
+      fireEvent.click(screen.getByRole('button', { name: /Archivia/ }));
       await screen.findByRole('alertdialog');
 
       // Confirm button (uses confirmCta label "Conferma")
@@ -225,18 +392,15 @@ describe('BulkSelectionBar (Wave B.3)', () => {
         />
       );
 
-      fireEvent.click(screen.getByRole('button', { name: 'Archivia' }));
+      fireEvent.click(screen.getByRole('button', { name: /Archivia/ }));
       await screen.findByRole('alertdialog');
 
-      // Cancel inside dialog uses cancelCta label. Two buttons share "Annulla":
-      // (1) the bar exit button (already in DOM), (2) dialog cancel.
-      // Dialog cancel is the second one (rendered later). Use within(dialog).
+      // Dialog cancel button (cancelCta label "Annulla" inside dialog). Scope
+      // the search to the dialog to avoid matching the bar's close ✕ aria-label
+      // "Annulla selezione".
       const dialog = screen.getByRole('alertdialog');
-      const cancelInDialog = Array.from(dialog.querySelectorAll('button')).find(
-        b => b.textContent === 'Annulla'
-      );
-      expect(cancelInDialog).toBeDefined();
-      fireEvent.click(cancelInDialog!);
+      const cancelInDialog = within(dialog).getByRole('button', { name: 'Annulla' });
+      fireEvent.click(cancelInDialog);
 
       // Dialog closes
       await waitFor(() => {
@@ -247,7 +411,7 @@ describe('BulkSelectionBar (Wave B.3)', () => {
   });
 
   describe('disabled state', () => {
-    it('disables both cancel + archive buttons when disabled=true', () => {
+    it('disables close + archive + tag + export buttons when disabled=true', () => {
       render(
         <BulkSelectionBar
           selectedCount={3}
@@ -257,11 +421,13 @@ describe('BulkSelectionBar (Wave B.3)', () => {
           disabled
         />
       );
-      expect(screen.getByRole('button', { name: 'Annulla' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Annulla selezione' })).toBeDisabled();
       expect(screen.getByRole('button', { name: 'Archivia' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Tag' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Esporta' })).toBeDisabled();
     });
 
-    it('disabled cancel does NOT trigger onExitSelectMode on click', () => {
+    it('disabled close ✕ does NOT trigger onExitSelectMode on click', () => {
       const onExitSelectMode = vi.fn();
       render(
         <BulkSelectionBar
@@ -272,7 +438,7 @@ describe('BulkSelectionBar (Wave B.3)', () => {
           disabled
         />
       );
-      fireEvent.click(screen.getByRole('button', { name: 'Annulla' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Annulla selezione' }));
       expect(onExitSelectMode).not.toHaveBeenCalled();
     });
   });

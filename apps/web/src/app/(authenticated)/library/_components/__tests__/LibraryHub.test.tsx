@@ -184,6 +184,12 @@ const MESSAGES: Record<string, string> = {
   'pages.library.selectionMode.exitAriaLabel': 'Esci dalla modalità selezione',
   'pages.library.selectionMode.selectedCount':
     '{count, plural, =0 {Nessuno selezionato} =1 {1 selezionato} other {# selezionati}}',
+  'pages.library.bulk.counter': '{count, plural, =1 {selezionato} other {selezionati}}',
+  'pages.library.bulk.counterCompact': 'sel.',
+  'pages.library.bulk.closeAriaLabel': 'Annulla selezione',
+  'pages.library.bulk.actions.archive': 'Archivia',
+  'pages.library.bulk.actions.tag': 'Tag',
+  'pages.library.bulk.actions.export': 'Esporta',
   'pages.library.bulk.actions.delete': 'Elimina',
   'pages.library.bulk.confirm.deleteTitle':
     '{count, plural, =1 {Confermi rimozione di 1 gioco?} other {Confermi rimozione di # giochi?}}',
@@ -213,36 +219,61 @@ const MESSAGES: Record<string, string> = {
   'pages.library.activityRail.shortcuts.focusSearch': 'focus search',
   'pages.library.activityRail.shortcuts.advancedFilters': 'filtri avanzati',
   'pages.library.activityRail.shortcuts.allShortcuts': 'tutte le scorciatoie',
-  // ─── AdvancedFiltersDrawer header/footer keys (Phase 3a #1606) ───
-  'pages.library.filters.title': 'Più filtri',
-  'pages.library.filters.description': "Filtra la libreria per dimensioni specifiche dell'entità.",
-  'pages.library.filters.clear': 'Reimposta',
+  // ─── AdvancedFiltersDrawer cross-entity (#1585-followup Task 3.3) ───
+  'pages.library.filters.title': 'Filtri avanzati',
+  'pages.library.filters.description': 'Filtra la libreria per dimensioni cross-entity.',
+  'pages.library.filters.closeAriaLabel': 'Chiudi pannello filtri',
+  'pages.library.filters.header.subtitle':
+    '{count, plural, =0 {Nessun filtro · scope: library} =1 {1 attivo · scope: library} other {# attivi · scope: library}}',
   'pages.library.filters.apply': 'Applica',
+  'pages.library.filters.applyWithCount': 'Applica ({count})',
+  'pages.library.filters.reset': 'Reset',
+  'pages.library.filters.clear': 'Reimposta',
   'common.cancel': 'Annulla',
-  // ─── Drawer section labels — game scope ───
-  'pages.library.filters.section.state': 'Stato',
-  'pages.library.filters.section.withKb': 'Solo con Knowledge Base',
-  'pages.library.filters.section.rating': 'Rating minimo',
-  'pages.library.filters.section.players': 'Numero di giocatori',
-  'pages.library.filters.section.year': 'Anno di pubblicazione',
-  // ─── Drawer section labels — agent scope ───
-  'pages.library.filters.section.agentType': 'Tipo di agente',
-  'pages.library.filters.section.activeOnly': 'Solo attivi',
-  // ─── Drawer section labels — session scope ───
-  'pages.library.filters.section.sessionStatus': 'Stato sessione',
-  'pages.library.filters.section.sessionType': 'Tipo sessione',
-  'pages.library.filters.section.playerCount': 'Giocatori (min)',
-  // ─── Drawer section labels — kb scope ───
-  'pages.library.filters.section.processingState': 'Stato di elaborazione',
-  'pages.library.filters.kbState.ready': 'Pronto',
-  'pages.library.filters.kbState.pending': 'In elaborazione',
-  'pages.library.filters.kbState.failed': 'Errore',
-  // ─── Drawer section labels — chat scope ───
-  'pages.library.filters.section.messageCountMin': 'Messaggi (min)',
-  // ─── Drawer checkbox option labels ───
-  'pages.library.filters.state.owned': 'Posseduto',
-  'pages.library.filters.state.wishlist': 'Wishlist',
-  'pages.library.filters.state.loaned': 'In prestito',
+  // section: status
+  'pages.library.filters.section.status.title': 'Stato',
+  'pages.library.filters.section.status.options.owned': 'Posseduto',
+  'pages.library.filters.section.status.options.wishlist': 'Wishlist',
+  'pages.library.filters.section.status.options.setup': 'In setup',
+  'pages.library.filters.section.status.options.archived': 'Archiviato',
+  // section: entity
+  'pages.library.filters.section.entity.title': 'Tipo entità',
+  'pages.library.filters.section.entity.options.game': 'Giochi',
+  'pages.library.filters.section.entity.options.agent': 'Agenti',
+  'pages.library.filters.section.entity.options.kb': 'Documenti KB',
+  'pages.library.filters.section.entity.options.session': 'Sessioni',
+  'pages.library.filters.section.entity.options.chat': 'Chat',
+  // section: game (select-multi)
+  'pages.library.filters.section.game.title': 'Gioco',
+  'pages.library.filters.section.game.placeholder': 'Filtra per gioco specifico...',
+  'pages.library.filters.section.game.empty': 'Nessun gioco disponibile.',
+  // section: period
+  'pages.library.filters.section.period.title': 'Periodo',
+  'pages.library.filters.section.period.options.7d': 'Ultimi 7 giorni',
+  'pages.library.filters.section.period.options.30d': 'Ultimi 30 giorni',
+  'pages.library.filters.section.period.options.1y': 'Ultimo anno',
+  'pages.library.filters.section.period.options.all': 'Sempre',
+  'pages.library.filters.section.period.options.range': 'Range personalizzato',
+  // section: tags
+  'pages.library.filters.section.tags.title': 'Tag',
+  'pages.library.filters.section.tags.options.family': 'Family',
+  'pages.library.filters.section.tags.options.strategy': 'Strategy',
+  'pages.library.filters.section.tags.options.coop': 'Coop',
+  'pages.library.filters.section.tags.options.engine': 'Engine builder',
+  'pages.library.filters.section.tags.options.auction': 'Auction',
+  'pages.library.filters.section.tags.options.rollAndWrite': 'Roll & Write',
+  'pages.library.filters.section.tags.options.cardDriven': 'Card driven',
+  'pages.library.filters.section.tags.options.tableau': 'Tableau',
+  // section: rating
+  'pages.library.filters.section.rating.title': 'Rating',
+  'pages.library.filters.section.rating.minAriaLabel': 'Rating minimo',
+  'pages.library.filters.section.rating.maxAriaLabel': 'Rating massimo',
+  // section: weight
+  'pages.library.filters.section.weight.title': 'Complessità',
+  'pages.library.filters.section.weight.options.light': 'Light',
+  'pages.library.filters.section.weight.options.medium': 'Medium',
+  'pages.library.filters.section.weight.options.heavy': 'Heavy',
+  'pages.library.filters.section.weight.options.extra': 'Extra heavy',
   // ─── gamesTab i18n keys (#1566) ───
   'pages.library.gamesTab.filters.search.placeholder': 'Cerca per titolo…',
   'pages.library.gamesTab.filters.search.ariaLabel': 'Cerca giochi nella tua libreria',

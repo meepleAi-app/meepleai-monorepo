@@ -11,6 +11,11 @@
                 /admin/circuit-breakers, /admin/llm/config
                 POST /api/v1/admin/providers/{id}/rotate-key (superadmin)
      Role: admin (rotate-key/disable = superadmin) -->
+<!-- @v1.1 (#1834 PR1, 2026-06-03): allineato a KNOWN_PROVIDERS reale (3 provider).
+     Rimossi OpenAI/Anthropic dal mockup: erano aspirazionali. OpenAI/Anthropic
+     models sono comunque accessibili via OpenRouter come modello (es. openrouter →
+     anthropic/claude-3.5-sonnet). Provider supportati: deepseek (primary), openrouter
+     (fallback), ollama-local (stopped/optional). -->
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
@@ -241,7 +246,7 @@ code,kbd{font-family:var(--f-mono);font-size:.9em}
       <header class="admin-top">
         <div>
           <h1>LLM Providers &amp; Circuit Breakers</h1>
-          <div class="crumbs">Admin › Platform &amp; Operations › Providers · 5 provider · aggiornato 14:23:08</div>
+          <div class="crumbs">Admin › Platform &amp; Operations › Providers · 3 provider · aggiornato 14:23:08</div>
         </div>
         <div class="spacer"></div>
         <div class="admin-top-actions">
@@ -258,7 +263,7 @@ code,kbd{font-family:var(--f-mono);font-size:.9em}
         <section class="kpi-strip">
           <div class="admin-kpi e-tool">
             <div class="admin-kpi-label">Provider attivi</div>
-            <div class="admin-kpi-value">4<span style="font-size:14px;color:var(--text-muted);font-weight:600">/5</span></div>
+            <div class="admin-kpi-value">2<span style="font-size:14px;color:var(--text-muted);font-weight:600">/3</span></div>
             <div class="admin-kpi-trend flat">▬ 1 disabilitato · 0 in cooldown</div>
             <svg class="admin-kpi-spark e-tool" viewBox="0 0 70 28">
               <path class="spark-fill e-fg" d="M0,14 L8,14 L16,14 L24,14 L32,8 L40,8 L48,8 L56,8 L64,8 L70,8 L70,28 L0,28 Z"/>
@@ -301,8 +306,7 @@ code,kbd{font-family:var(--f-mono);font-size:.9em}
         <section class="admin-panel">
           <div class="admin-panel-head">
             <h3>Provider</h3>
-            <span class="status-chip healthy">3 healthy</span>
-            <span class="status-chip warning">1 warn</span>
+            <span class="status-chip healthy">2 healthy</span>
             <span class="status-chip muted">1 stopped</span>
             <div class="head-cluster">
               <span class="sensitive-note"><span class="lock">🔒</span> Rotate key / Disabilita → richiede conferma (superadmin)</span>
@@ -376,56 +380,6 @@ code,kbd{font-family:var(--f-mono);font-size:.9em}
                 </td>
               </tr>
 
-              <tr class="e-toolkit">
-                <td>
-                  <div class="prov-cell">
-                    <div class="prov-mark">⚛</div>
-                    <div class="prov-info">
-                      <span class="prov-name">OpenAI</span>
-                      <span class="prov-host">api.openai.com/v1 · key sk-…12de</span>
-                    </div>
-                  </div>
-                </td>
-                <td><span class="status-chip warning">latency high</span></td>
-                <td><span class="model-cell">gpt-4o-mini</span></td>
-                <td class="lat-cell warn">1 842<span class="ms">ms</span></td>
-                <td class="mono" style="text-align:right">5 718</td>
-                <td class="err-cell warn" style="text-align:right">2.14%</td>
-                <td><span class="status-chip warning">half-open</span></td>
-                <td>
-                  <div class="row-actions">
-                    <button class="btn-admin sm ghost">⚙ Config</button>
-                    <button class="btn-admin sm danger"><span class="lock-mini">🔒</span>⤿ Rotate</button>
-                    <button class="btn-admin sm ghost">⋯</button>
-                  </div>
-                </td>
-              </tr>
-
-              <tr class="e-agent">
-                <td>
-                  <div class="prov-cell">
-                    <div class="prov-mark">A</div>
-                    <div class="prov-info">
-                      <span class="prov-name">Anthropic</span>
-                      <span class="prov-host">api.anthropic.com · key sk-ant-…58a1</span>
-                    </div>
-                  </div>
-                </td>
-                <td><span class="status-chip healthy">healthy</span></td>
-                <td><span class="model-cell">claude-3.5-sonnet-20241022</span></td>
-                <td class="lat-cell">842<span class="ms">ms</span></td>
-                <td class="mono" style="text-align:right">186</td>
-                <td class="err-cell" style="text-align:right">0.00%</td>
-                <td><span class="status-chip healthy">closed</span></td>
-                <td>
-                  <div class="row-actions">
-                    <button class="btn-admin sm ghost">⚙ Config</button>
-                    <button class="btn-admin sm danger"><span class="lock-mini">🔒</span>⤿ Rotate</button>
-                    <button class="btn-admin sm ghost">⋯</button>
-                  </div>
-                </td>
-              </tr>
-
               <tr class="e-kb">
                 <td>
                   <div class="prov-cell">
@@ -459,7 +413,7 @@ code,kbd{font-family:var(--f-mono);font-size:.9em}
         <section class="admin-panel">
           <div class="admin-panel-head">
             <h3>Routing chain · fallback</h3>
-            <span class="status-chip info">3 hops · 1 stand-by</span>
+            <span class="status-chip info">1 hop · 1 fallback</span>
             <div class="head-cluster">
               <span class="meta">policy=cost-first · retry budget 3 · jitter 250ms</span>
               <button class="btn-admin sm ghost">✎ Edita catena</button>
@@ -492,34 +446,6 @@ code,kbd{font-family:var(--f-mono);font-size:.9em}
                 <div class="rc-meta"><span class="ok">●</span> healthy <span>p95 658 ms</span> <span>err 0.32%</span></div>
               </div>
 
-              <div class="rc-arrow">
-                <span class="gl">→</span>
-                <span class="cond">on 429 / 5xx / quota</span>
-              </div>
-
-              <div class="rc-node e-toolkit">
-                <div class="rc-head">
-                  <span class="rc-prio">fallback · p2</span>
-                </div>
-                <div class="rc-name">⚛ OpenAI</div>
-                <div class="rc-model">gpt-4o-mini</div>
-                <div class="rc-meta"><span class="warn">●</span> half-open <span>p95 1 842 ms</span> <span class="warn">err 2.14%</span></div>
-              </div>
-
-              <div class="rc-arrow">
-                <span class="gl">→</span>
-                <span class="cond">on circuit open</span>
-              </div>
-
-              <div class="rc-node e-agent">
-                <div class="rc-head">
-                  <span class="rc-prio">stand-by · p3</span>
-                </div>
-                <div class="rc-name">A Anthropic</div>
-                <div class="rc-model">claude-3.5-sonnet</div>
-                <div class="rc-meta"><span class="ok">●</span> healthy <span>p95 842 ms</span> <span>used 0.4%</span></div>
-              </div>
-
             </div>
 
             <div class="rc-priority-strip">
@@ -527,10 +453,6 @@ code,kbd{font-family:var(--f-mono);font-size:.9em}
               <span class="v">deepseek</span>
               <span class="sep">›</span>
               <span class="v">openrouter</span>
-              <span class="sep">›</span>
-              <span class="v">openai</span>
-              <span class="sep">›</span>
-              <span class="v">anthropic</span>
               <span class="sep">·</span>
               <span class="k">Excluded</span>
               <span class="v" style="color:var(--text-muted)">ollama-local (stopped)</span>
@@ -545,8 +467,7 @@ code,kbd{font-family:var(--f-mono);font-size:.9em}
         <section class="admin-panel">
           <div class="admin-panel-head">
             <h3>Circuit breakers</h3>
-            <span class="status-chip healthy">3 closed</span>
-            <span class="status-chip warning">1 half-open</span>
+            <span class="status-chip healthy">2 closed</span>
             <span class="status-chip muted">1 disabled</span>
             <div class="head-cluster">
               <span class="meta">policy: 5 fail in 60s → open · cooldown 30s · half-open probe 1/req</span>
@@ -585,42 +506,6 @@ code,kbd{font-family:var(--f-mono);font-size:.9em}
                 <div class="cb-stat"><span class="l">Soglia</span><span class="v">5</span></div>
                 <div class="cb-stat"><span class="l">Ultima apertura</span><span class="v">2026-05-21 22:14</span></div>
                 <div class="cb-stat"><span class="l">Reset</span><span class="v">16h 09m fa</span></div>
-              </div>
-            </div>
-
-            <div class="cb-card e-toolkit">
-              <div class="cb-head">
-                <div>
-                  <div class="cb-name">OpenAI</div>
-                  <div class="cb-state">circuit breaker</div>
-                </div>
-                <span class="status-chip warning">half-open</span>
-              </div>
-              <div class="cb-stat-grid">
-                <div class="cb-stat"><span class="l">Fail recenti</span><span class="v warn">4 / 60s</span></div>
-                <div class="cb-stat"><span class="l">Soglia</span><span class="v">5</span></div>
-                <div class="cb-stat"><span class="l">Ultima apertura</span><span class="v">14:22:45</span></div>
-                <div class="cb-stat"><span class="l">Probe</span><span class="v warn">1/1 in volo</span></div>
-              </div>
-              <div class="cb-cooldown">
-                <div class="bar"><i></i></div>
-                <div class="ll"><span>cooldown</span><span class="now">23s</span></div>
-              </div>
-            </div>
-
-            <div class="cb-card e-agent">
-              <div class="cb-head">
-                <div>
-                  <div class="cb-name">Anthropic</div>
-                  <div class="cb-state">circuit breaker</div>
-                </div>
-                <span class="status-chip healthy">closed</span>
-              </div>
-              <div class="cb-stat-grid">
-                <div class="cb-stat"><span class="l">Fail recenti</span><span class="v">0 / 60s</span></div>
-                <div class="cb-stat"><span class="l">Soglia</span><span class="v">5</span></div>
-                <div class="cb-stat"><span class="l">Ultima apertura</span><span class="v">2026-04-30 09:02</span></div>
-                <div class="cb-stat"><span class="l">Reset</span><span class="v">24g fa</span></div>
               </div>
             </div>
 

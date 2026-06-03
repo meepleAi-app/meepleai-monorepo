@@ -508,7 +508,12 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
         try
         {
-            var pdfBytes = await File.ReadAllBytesAsync(filePath, cancellationToken).ConfigureAwait(false);
+            // Issue #1831 Gap B fix (audit 2026-06-02-cover-stack-live-audit.md):
+            // ExtractTextAsync (linee 437-451) usa _blobStorageService.RetrieveAsync con
+            // filesystem fallback — in prod il PDF vive in R2/S3, non su disk. Il pattern
+            // originale (File.ReadAllBytesAsync) faceva fallire silenziosamente l'estrazione
+            // cover su staging/prod (CoverGenerationStatus="Failed" permanente).
+            var pdfBytes = await LoadPdfBytesAsync(pdfDoc.Id, filePath, cancellationToken).ConfigureAwait(false);
             var result = await _pdfCoverExtractor.ExtractAsync(pdfBytes, cancellationToken).ConfigureAwait(false);
 
             switch (result.Outcome)
@@ -936,6 +941,41 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         foreach (var entry in entries)
         {
             entry.State = EntityState.Detached;
+        }
+    }
+
+    /// <summary>
+    /// Issue #1831 Gap B (audit 2026-06-02): load PDF bytes con priorità blob storage
+    /// (R2/S3 in prod) → filesystem fallback (dev senza bucket). Stesso pattern usato da
+    /// <see cref="ExtractTextAsync"/> ma materializzato in byte[] perché
+    /// <see cref="IPdfCoverExtractor.ExtractAsync"/> richiede un byte array (Docnet API).
+    /// </summary>
+    private async Task<byte[]> LoadPdfBytesAsync(
+        Guid pdfDocumentId,
+        string filePath,
+        CancellationToken cancellationToken)
+    {
+        var fileId = PdfStorageKey.ForPdf(pdfDocumentId);
+        var stream = await _blobStorageService
+            .RetrieveAsync(fileId, BlobCategory.Pdf, fileId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (stream is null)
+        {
+            // Fallback al filesystem locale per dev senza bucket (parity con ExtractTextAsync:444-451).
+            if (!File.Exists(filePath))
+            {
+                throw new FileNotFoundException(
+                    $"PDF file not found in blob storage or filesystem: {filePath}", filePath);
+            }
+            stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        }
+
+        await using (stream.ConfigureAwait(false))
+        {
+            using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream, cancellationToken).ConfigureAwait(false);
+            return memoryStream.ToArray();
         }
     }
 

@@ -18,12 +18,12 @@ function renderWithQuery(ui: React.ReactElement) {
   return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
 }
 
-describe('ProvidersHero', () => {
+describe('ProvidersHero (PR1 reduced — 2 KPI reali)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('shows 4 KPI boxes including service count from circuit breakers', async () => {
+  it('renders 2 KPI: Servizi monitorati + Circuit health', async () => {
     getCircuitBreakerStates.mockResolvedValue([
       {
         serviceName: 'deepseek',
@@ -53,24 +53,37 @@ describe('ProvidersHero', () => {
 
     renderWithQuery(<ProvidersHero />);
 
-    // Eventually shows the service count
     await waitFor(() => {
       expect(screen.getByTestId('providers-hero')).toBeInTheDocument();
       expect(screen.getByTestId('providers-kpi-servizi-monitorati')).toHaveTextContent('3');
     });
 
-    // Confirms tripped count appears in trend
-    expect(screen.getByTestId('providers-kpi-servizi-monitorati')).toHaveTextContent(
-      '1 circuit open'
-    );
+    // Circuit health: 2 closed / 3 total + breakdown trend
+    const health = screen.getByTestId('providers-kpi-circuit-health');
+    expect(health).toHaveTextContent('2/3');
+    expect(health).toHaveTextContent('1 open');
   });
 
-  it('shows "—" for BE-pending metrics with explanatory tooltip', () => {
+  it('shows zero state when no circuit breakers registered', async () => {
     getCircuitBreakerStates.mockResolvedValue([]);
     renderWithQuery(<ProvidersHero />);
 
-    const errorRate = screen.getByTestId('providers-kpi-error-rate-24h');
-    expect(errorRate).toHaveTextContent('—');
-    expect(errorRate).toHaveAttribute('title', expect.stringMatching(/backend/i));
+    await waitFor(() => {
+      expect(screen.getByTestId('providers-kpi-servizi-monitorati')).toHaveTextContent('0');
+    });
+    expect(screen.getByTestId('providers-kpi-circuit-health')).toHaveTextContent('—');
+  });
+
+  it('no longer renders the deprecated BE-pending placeholder KPI', async () => {
+    getCircuitBreakerStates.mockResolvedValue([]);
+    renderWithQuery(<ProvidersHero />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('providers-hero')).toBeInTheDocument();
+    });
+    // 3 placeholder KPI (latency-p95, error-rate-24h, costo-24h) removed in PR1
+    expect(screen.queryByTestId('providers-kpi-latency-p95')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('providers-kpi-error-rate-24h')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('providers-kpi-costo-24h')).not.toBeInTheDocument();
   });
 });

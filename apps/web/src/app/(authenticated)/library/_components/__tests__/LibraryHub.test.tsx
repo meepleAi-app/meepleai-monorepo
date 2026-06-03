@@ -191,9 +191,12 @@ const MESSAGES: Record<string, string> = {
     'I giochi selezionati saranno rimossi dalla libreria. La PDF KB resterà disponibile.',
   'pages.library.bulk.confirm.confirmCta': 'Conferma',
   'pages.library.bulk.confirm.cancelCta': 'Annulla',
-  'pages.library.emptyState.default.title': 'La tua libreria è vuota',
-  'pages.library.emptyState.default.subtitle': 'Aggiungi il tuo primo gioco per iniziare.',
-  'pages.library.emptyState.default.cta': 'Aggiungi gioco',
+  'pages.library.emptyState.empty.title': 'La tua libreria è vuota',
+  'pages.library.emptyState.empty.subtitle':
+    'Inizia aggiungendo il tuo primo gioco. Importa la collezione da BGG o cerca per titolo.',
+  'pages.library.emptyState.empty.cta': '+ Aggiungi il tuo primo gioco',
+  'pages.library.emptyState.empty.ctaImportBgg': '↓ Importa da BGG',
+  'pages.library.emptyState.empty.suggestions.heading': 'Suggerimenti dalla community',
   'pages.library.emptyState.filteredEmpty.title': 'Nessun risultato',
   'pages.library.emptyState.filteredEmpty.subtitle': 'Prova a modificare la ricerca o i filtri.',
   'pages.library.emptyState.filteredEmpty.cta': 'Cancella filtri',
@@ -201,10 +204,15 @@ const MESSAGES: Record<string, string> = {
   'pages.library.emptyState.error.subtitle':
     'Non siamo riusciti a recuperare la tua libreria. Riprova.',
   'pages.library.emptyState.error.cta': 'Riprova',
-  // ─── RecentActivityRail keys (Phase 3b #1593) ───
-  'pages.library.activityRail.title': 'Attività recente',
+  // ─── RecentActivityRail keys (Phase 3b #1593, PR2 Task 2.4 #1585-followup) ───
+  'pages.library.activityRail.title': 'Ultime modifiche',
   'pages.library.activityRail.empty': 'Nessuna attività recente.',
   'pages.library.activityRail.error': "Impossibile caricare l'attività.",
+  'pages.library.activityRail.collapseAriaLabel': 'Comprimi pannello',
+  'pages.library.activityRail.shortcuts.heading': 'Shortcuts',
+  'pages.library.activityRail.shortcuts.focusSearch': 'focus search',
+  'pages.library.activityRail.shortcuts.advancedFilters': 'filtri avanzati',
+  'pages.library.activityRail.shortcuts.allShortcuts': 'tutte le scorciatoie',
   // ─── AdvancedFiltersDrawer header/footer keys (Phase 3a #1606) ───
   'pages.library.filters.title': 'Più filtri',
   'pages.library.filters.description': "Filtra la libreria per dimensioni specifiche dell'entità.",
@@ -448,7 +456,9 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
     expect(container.querySelector('[data-slot="library-hero-desktop"]')).toBeInTheDocument();
     expect(container.querySelector('[data-slot="library-tabs"]')).toBeInTheDocument();
     expect(container.querySelector('[data-slot="library-toolbar"]')).toBeInTheDocument();
-    expect(container.querySelector('[data-slot="library-hybrid-grid"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="library-hybrid-grid-container"]')
+    ).toBeInTheDocument();
     expect(container.querySelector('[data-slot="library-activity-rail"]')).toBeInTheDocument();
     expect(container.querySelector('[data-slot="library-empty-state"]')).not.toBeInTheDocument();
   });
@@ -474,7 +484,9 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
     const empty = container.querySelector('[data-slot="library-empty-state"]');
     expect(empty).not.toBeNull();
     expect(empty).toHaveAttribute('data-kind', 'loading');
-    expect(container.querySelector('[data-slot="library-hybrid-grid"]')).not.toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="library-hybrid-grid-container"]')
+    ).not.toBeInTheDocument();
   });
 
   // ─── FSM: error (all sources fail) ───────────────────────────────────────
@@ -501,7 +513,9 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
     );
     const root = container.querySelector('[data-slot="library-hub-v2"]');
     expect(root).toHaveAttribute('data-state', 'default');
-    expect(container.querySelector('[data-slot="library-hybrid-grid"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="library-hybrid-grid-container"]')
+    ).toBeInTheDocument();
     expect(container.querySelector('[data-slot="library-empty-state"]')).not.toBeInTheDocument();
   });
 
@@ -514,7 +528,12 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
     const empty = container.querySelector('[data-slot="library-empty-state"]') as HTMLElement;
     expect(empty).toHaveAttribute('data-kind', 'empty');
     // Scope CTA query to empty state — Hero also renders an "Aggiungi gioco" CTA.
-    expect(within(empty).getByRole('button', { name: 'Aggiungi gioco' })).toBeInTheDocument();
+    // PR2 Task 2.5: SP4 first-run reskin replaced "Aggiungi gioco" with
+    // "+ Aggiungi il tuo primo gioco" + secondary "↓ Importa da BGG".
+    expect(
+      within(empty).getByRole('button', { name: /Aggiungi il tuo primo gioco/i })
+    ).toBeInTheDocument();
+    expect(within(empty).getByRole('button', { name: /Importa.*BGG/i })).toBeInTheDocument();
   });
 
   // ─── FSM: filtered-empty ───────────────────────────────────────────────
@@ -571,7 +590,9 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
   it('ignores unknown ?state= values and falls back to real FSM', () => {
     searchParamsState.value = 'totally-bogus';
     const { container } = renderHub(makeHub());
-    expect(container.querySelector('[data-slot="library-hybrid-grid"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="library-hybrid-grid-container"]')
+    ).toBeInTheDocument();
     expect(container.querySelector('[data-slot="library-empty-state"]')).not.toBeInTheDocument();
   });
 

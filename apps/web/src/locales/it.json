@@ -1795,11 +1795,12 @@
         "clearSelectionAriaLabel": "Deseleziona tutti gli elementi"
       },
       "activityRail": {
-        "title": "Attività recente",
+        "title": "Ultime modifiche",
         "subtitle": "Le ultime aggiunte e modifiche alla tua libreria.",
         "empty": "Nessuna attività recente.",
         "viewAll": "Vedi tutto",
         "viewAllAriaLabel": "Vai allo storico completo dell'attività",
+        "collapseAriaLabel": "Comprimi pannello",
         "error": "Impossibile caricare l'attività.",
         "fallback": {
           "agent": "Nuovo agent creato",
@@ -1807,13 +1808,23 @@
           "kbIndexed": "Documento indicizzato",
           "play": "Sessione",
           "removed": "Rimosso dalla libreria"
+        },
+        "shortcuts": {
+          "heading": "Shortcuts",
+          "focusSearch": "focus search",
+          "advancedFilters": "filtri avanzati",
+          "allShortcuts": "tutte le scorciatoie"
         }
       },
       "emptyState": {
-        "default": {
+        "empty": {
           "title": "La tua libreria è vuota",
-          "subtitle": "Aggiungi il tuo primo gioco per iniziare a costruire la collezione.",
-          "cta": "Aggiungi gioco"
+          "subtitle": "Inizia aggiungendo il tuo primo gioco. Importa la collezione da BoardGameGeek o cerca per titolo.",
+          "cta": "+ Aggiungi il tuo primo gioco",
+          "ctaImportBgg": "↓ Importa da BGG",
+          "suggestions": {
+            "heading": "Suggerimenti dalla community"
+          }
         },
         "filteredEmpty": {
           "title": "Nessun risultato",

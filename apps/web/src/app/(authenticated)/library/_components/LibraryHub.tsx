@@ -315,9 +315,13 @@ export function LibraryHub(): ReactElement {
   const emptyLabels = useMemo<EmptyLibraryLabels>(
     () => ({
       empty: {
-        title: t('pages.library.emptyState.default.title'),
-        subtitle: t('pages.library.emptyState.default.subtitle'),
-        cta: t('pages.library.emptyState.default.cta'),
+        title: t('pages.library.emptyState.empty.title'),
+        subtitle: t('pages.library.emptyState.empty.subtitle'),
+        cta: t('pages.library.emptyState.empty.cta'),
+        ctaImportBgg: t('pages.library.emptyState.empty.ctaImportBgg'),
+        suggestions: {
+          heading: t('pages.library.emptyState.empty.suggestions.heading'),
+        },
       },
       filteredEmpty: {
         title: t('pages.library.emptyState.filteredEmpty.title'),
@@ -571,6 +575,7 @@ export function LibraryHub(): ReactElement {
                   kind={effectiveKind}
                   labels={emptyLabels}
                   onAddGame={handleAddGame}
+                  onImportBgg={handleImportBgg}
                   onClearFilters={handleClearFilters}
                   onRetry={handleRetry}
                 />

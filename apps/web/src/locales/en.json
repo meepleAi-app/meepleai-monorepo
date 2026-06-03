@@ -1750,6 +1750,7 @@
         "empty": "No recent activity.",
         "viewAll": "View all",
         "viewAllAriaLabel": "Open the full activity history",
+        "collapseAriaLabel": "Collapse panel",
         "error": "Failed to load activity.",
         "fallback": {
           "agent": "New agent created",
@@ -1757,13 +1758,23 @@
           "kbIndexed": "Document indexed",
           "play": "Session",
           "removed": "Removed from library"
+        },
+        "shortcuts": {
+          "heading": "Shortcuts",
+          "focusSearch": "focus search",
+          "advancedFilters": "advanced filters",
+          "allShortcuts": "all shortcuts"
         }
       },
       "emptyState": {
-        "default": {
+        "empty": {
           "title": "Your library is empty",
-          "subtitle": "Add your first game to start building your collection.",
-          "cta": "Add game"
+          "subtitle": "Start by adding your first game. Import your collection from BoardGameGeek or search by title.",
+          "cta": "+ Add your first game",
+          "ctaImportBgg": "↓ Import from BGG",
+          "suggestions": {
+            "heading": "Suggestions from the community"
+          }
         },
         "filteredEmpty": {
           "title": "No results",

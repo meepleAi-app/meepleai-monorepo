@@ -19,7 +19,11 @@ const baseLabels: EmptyLibraryLabels = {
   empty: {
     title: 'La tua libreria è vuota',
     subtitle: 'Aggiungi il primo gioco per iniziare.',
-    cta: 'Aggiungi un gioco',
+    cta: '+ Aggiungi il tuo primo gioco',
+    ctaImportBgg: '↓ Importa da BGG',
+    suggestions: {
+      heading: 'Suggerimenti dalla community',
+    },
   },
   filteredEmpty: {
     title: 'Nessun risultato',
@@ -55,25 +59,61 @@ describe('EmptyLibrary (Wave B.3)', () => {
     });
   });
 
-  describe('kind="empty"', () => {
-    it('renders empty title + subtitle + CTA from labels.empty', () => {
+  describe('kind="empty" (SP4 first-run reskin)', () => {
+    it('renders empty title + subtitle + primary CTA from labels.empty', () => {
       render(<EmptyLibrary kind="empty" labels={baseLabels} />);
-      expect(screen.getByText('La tua libreria è vuota')).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { level: 2, name: /La tua libreria è vuota/i })
+      ).toBeInTheDocument();
       expect(screen.getByText('Aggiungi il primo gioco per iniziare.')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Aggiungi un gioco' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Aggiungi il tuo primo gioco/i })
+      ).toBeInTheDocument();
     });
 
-    it('calls onAddGame on CTA click', () => {
+    it('renders the secondary "Importa da BGG" CTA per mockup jsx:1059', () => {
+      render(<EmptyLibrary kind="empty" labels={baseLabels} />);
+      expect(screen.getByRole('button', { name: /Importa.*BGG/i })).toBeInTheDocument();
+    });
+
+    it('calls onAddGame when the primary CTA is clicked', () => {
       const onAddGame = vi.fn();
       render(<EmptyLibrary kind="empty" labels={baseLabels} onAddGame={onAddGame} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Aggiungi un gioco' }));
+      fireEvent.click(screen.getByRole('button', { name: /Aggiungi il tuo primo gioco/i }));
       expect(onAddGame).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onImportBgg when the secondary CTA is clicked', () => {
+      const onImportBgg = vi.fn();
+      render(<EmptyLibrary kind="empty" labels={baseLabels} onImportBgg={onImportBgg} />);
+      fireEvent.click(screen.getByRole('button', { name: /Importa.*BGG/i }));
+      expect(onImportBgg).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders the community suggestions box with heading + 3 placeholder cards', () => {
+      const { container } = render(<EmptyLibrary kind="empty" labels={baseLabels} />);
+      expect(screen.getByText(/Suggerimenti dalla community/i)).toBeInTheDocument();
+      const cards = container.querySelectorAll('[data-slot="empty-suggestion-card"]');
+      expect(cards).toHaveLength(3);
+    });
+
+    it('renders 4 placeholder cards when compact (mobile 2×2 grid per mockup jsx:1075)', () => {
+      const { container } = render(<EmptyLibrary kind="empty" labels={baseLabels} compact />);
+      const cards = container.querySelectorAll('[data-slot="empty-suggestion-card"]');
+      expect(cards).toHaveLength(4);
     });
 
     it('uses role="status" for non-error empty state', () => {
       const { container } = render(<EmptyLibrary kind="empty" labels={baseLabels} />);
       const root = container.querySelector('[data-slot="library-empty-state"]');
       expect(root).toHaveAttribute('role', 'status');
+    });
+
+    it('marks the illustration emoji as aria-hidden', () => {
+      const { container } = render(<EmptyLibrary kind="empty" labels={baseLabels} />);
+      const illustration = container.querySelector('[data-slot="empty-illustration"]');
+      expect(illustration).not.toBeNull();
+      expect(illustration).toHaveAttribute('aria-hidden', 'true');
     });
   });
 

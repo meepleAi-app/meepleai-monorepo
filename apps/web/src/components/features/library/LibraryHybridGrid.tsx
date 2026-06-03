@@ -64,10 +64,20 @@ const VIEW_TO_VARIANT: Record<LibraryViewMode, MeepleCardVariant> = {
   compact: 'compact',
 };
 
+// Mockup conformance — admin-mockups/design_files/sp4-library-desktop.jsx:846-890
+// (LibraryGrid). Wrapper layout per view mode:
+//   grid    → display:grid, repeat(N, minmax(0,1fr)), gap:12px
+//             → Tailwind responsive grid-cols (2/3/4) + gap-3.
+//   list    → display:flex flex-col, gap:6px
+//             → Tailwind flex flex-col gap-1.5.
+//   compact → bordered card container that wraps stacked rows (NOT a grid; the
+//             stacked rows + per-row separators are the compact MeepleCard
+//             primitive's responsibility — Task 2.2 / issue #1856).
+//             → Tailwind bg-card border border-border rounded-lg overflow-hidden.
 const VIEW_TO_LAYOUT: Record<LibraryViewMode, string> = {
-  grid: 'grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4',
-  list: 'flex flex-col gap-2',
-  compact: 'grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6',
+  grid: 'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4',
+  list: 'flex flex-col gap-1.5',
+  compact: 'bg-card border border-border rounded-lg overflow-hidden',
 };
 
 // Game-only visual extras: rating + cover image are part of the `game` variant
@@ -94,7 +104,7 @@ export function LibraryHybridGrid({
 
   return (
     <div
-      data-slot="library-hybrid-grid"
+      data-slot="library-hybrid-grid-container"
       data-view={view}
       data-selection-mode={selectionMode}
       className={clsx(layoutClass, className)}

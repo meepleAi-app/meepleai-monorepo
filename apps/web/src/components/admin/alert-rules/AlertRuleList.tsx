@@ -92,6 +92,7 @@ export function AlertRuleList({
                       variant="ghost"
                       size="sm"
                       disabled={!onTestAlert}
+                      aria-label={`Test alert rule ${rule.name}`}
                       title={
                         onTestAlert
                           ? 'Invia notifica di test al canale configurato'

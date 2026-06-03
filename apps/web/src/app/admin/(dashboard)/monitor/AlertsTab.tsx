@@ -118,6 +118,7 @@ export function AlertsTab() {
           Nuova Regola
         </Button>
       </div>
+      {/* TODO #1840 C7: wire onTestAlert once POST /alert-rules/{id}/test is implemented */}
       <AlertRuleList rules={rules} onDelete={handleDelete} onToggle={handleToggle} />
       <CreateAlertRuleDialog
         open={createDialogOpen}

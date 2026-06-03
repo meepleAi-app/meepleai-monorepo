@@ -1,4 +1,4 @@
-/* eslint-disable local/no-hardcoded-color-utility -- admin circuit breaker grid: emerald/amber/rose status palette (admin convention DS-13c, scope deferred to DS-16) */
+/* eslint-disable local/no-hardcoded-color-utility -- admin circuit breaker grid: emerald/amber/rose status palette + zinc default fallback (admin convention DS-13c, scope deferred to DS-16) */
 'use client';
 
 /**

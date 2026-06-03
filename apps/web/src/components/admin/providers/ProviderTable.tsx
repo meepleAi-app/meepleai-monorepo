@@ -171,9 +171,10 @@ function ProviderRow({
         <div className="inline-flex items-center gap-1">
           <Link
             href={`/admin/providers/${encodeURIComponent(name)}`}
+            aria-label={`Configure ${name}`}
             className="rounded-md border border-border/60 dark:border-zinc-700/60 bg-card/60 px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted/70"
           >
-            ⚙ Config
+            <span aria-hidden="true">⚙</span> Config
           </Link>
           <RotateKeyModal providerName={name} />
         </div>
@@ -204,31 +205,55 @@ export function ProviderTable() {
       </header>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left">
+        <table className="w-full text-left" aria-labelledby="providers-table-heading">
           <thead>
             <tr className="border-b border-border/60 dark:border-zinc-700/60 bg-muted/40 dark:bg-zinc-800/40">
-              <th className="py-2 px-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              <th
+                scope="col"
+                className="py-2 px-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground"
+              >
                 Provider
               </th>
-              <th className="py-2 px-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              <th
+                scope="col"
+                className="py-2 px-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground"
+              >
                 Stato
               </th>
-              <th className="py-2 px-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              <th
+                scope="col"
+                className="py-2 px-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground"
+              >
                 Modello default
               </th>
-              <th className="py-2 px-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground text-right">
+              <th
+                scope="col"
+                className="py-2 px-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground text-right"
+              >
                 P95 latenza
               </th>
-              <th className="py-2 px-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground text-right">
+              <th
+                scope="col"
+                className="py-2 px-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground text-right"
+              >
                 Req 24h
               </th>
-              <th className="py-2 px-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground text-right">
+              <th
+                scope="col"
+                className="py-2 px-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground text-right"
+              >
                 Errori
               </th>
-              <th className="py-2 px-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              <th
+                scope="col"
+                className="py-2 px-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground"
+              >
                 Circuit
               </th>
-              <th className="py-2 px-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground text-right">
+              <th
+                scope="col"
+                className="py-2 px-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground text-right"
+              >
                 Azioni
               </th>
             </tr>

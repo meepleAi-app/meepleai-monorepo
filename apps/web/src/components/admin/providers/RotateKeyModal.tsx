@@ -50,7 +50,7 @@ export function RotateKeyModal({ providerName }: RotateKeyModalProps) {
       data-be-available={beAvailable ? 'true' : 'false'}
       className="inline-flex items-center gap-1 rounded-md border border-rose-500/40 bg-rose-500/5 px-2 py-1 text-[11px] font-medium text-rose-700 dark:text-rose-300 hover:bg-rose-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
     >
-      🔒 Rotate
+      <span aria-hidden="true">🔒</span> Rotate
     </button>
   );
 }

@@ -28,7 +28,7 @@ export function BudgetPlaceholderPanel({
 }: BudgetPlaceholderPanelProps) {
   return (
     <section
-      className="rounded-lg border border-border/60 dark:border-zinc-700/60 bg-card/80 dark:bg-zinc-900/80 p-6"
+      className="rounded-lg border border-border/60 bg-card/80 p-6"
       aria-labelledby={`${id}-heading`}
       data-testid={`budget-placeholder-${id}`}
     >
@@ -36,7 +36,7 @@ export function BudgetPlaceholderPanel({
         <h3 id={`${id}-heading`} className="font-quicksand text-base font-bold text-foreground">
           {title}
         </h3>
-        <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full border bg-zinc-500/10 text-zinc-700 dark:text-zinc-300 border-zinc-500/30">
+        <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full border bg-muted/40 text-muted-foreground border-border/40">
           BE pending
         </span>
       </header>

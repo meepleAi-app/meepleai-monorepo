@@ -38,6 +38,7 @@ export const UserLibraryEntrySchema = z.object({
   gameYearPublished: z.number().nullable().optional(),
   gameIconUrl: z.string().nullable().optional(),
   gameImageUrl: z.string().nullable().optional(),
+  coverUrl: z.string().nullable().optional(),
   addedAt: z.string().datetime({ offset: true }),
   notes: z.string().nullable().optional(),
   isFavorite: z.boolean(),

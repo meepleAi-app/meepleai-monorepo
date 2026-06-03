@@ -80,6 +80,33 @@ type SurfaceKind = 'default' | 'loading' | 'empty' | 'filtered-empty' | 'error';
 
 const HUB_TABS: readonly HybridHubTab[] = ['all', 'games', 'agents', 'kb', 'sessions', 'chat'];
 
+/**
+ * SP4 mockup icon mapping (admin-mockups/design_files/sp4-library-desktop.jsx:142,155,172).
+ * Each tab carries an emoji rendered before the label inside the tab button.
+ */
+const TAB_ICONS: Record<HybridHubTab, string> = {
+  all: '⌗',
+  games: '🎲',
+  agents: '🤖',
+  kb: '📚',
+  sessions: '🎯',
+  chat: '💬',
+};
+
+/**
+ * SP4 mockup entity accent mapping (jsx:142/155). The 'all' tab falls back
+ * to the game accent so the indicator + active background read as the
+ * "primary library hue" when no entity filter is engaged.
+ */
+const TAB_ENTITY: Record<HybridHubTab, 'game' | 'agent' | 'kb' | 'session' | 'chat'> = {
+  all: 'game',
+  games: 'game',
+  agents: 'agent',
+  kb: 'kb',
+  sessions: 'session',
+  chat: 'chat',
+};
+
 export function LibraryHub(): ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
@@ -275,6 +302,8 @@ export function LibraryHub(): ReactElement {
       key: tk,
       label: t(`pages.library.hubTabs.${tk}`),
       count: countFor(tk),
+      icon: TAB_ICONS[tk],
+      entity: TAB_ENTITY[tk],
     }));
   }, [t, hub.totalCounts]);
 

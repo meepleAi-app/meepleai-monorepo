@@ -329,9 +329,9 @@ Run `pnpm lint:tokens` to regenerate the inventory in `audits/2026-05-12-token-v
 
 ### Domain Model — GameNight / Session
 
-**Reference**: [`docs/for-developers/specs/2026-06-04-gamenight-session-domain-model.md`](./docs/for-developers/specs/2026-06-04-gamenight-session-domain-model.md) — 20 invarianti consolidate (9 fatti + 11 derivate), 5 tensioni risolte 2026-06-04.
+**Reference**: [`docs/for-developers/specs/2026-06-04-gamenight-session-domain-model.md`](./docs/for-developers/specs/2026-06-04-gamenight-session-domain-model.md) — 20 invarianti consolidate (9 fatti + 11 derivate), 5 tensioni risolte 2026-06-04. **Vedi anche § Backend Mapping** per la riconciliazione term demo ↔ backend (`GameNightEvent` aggregate, `Session` aggregate, `GameNightRsvp` vs `GameNightInvitation`).
 
-Quando tocchi i bounded context **`SessionTracking`** o **`GameManagement`** (sub-aggregate GameNight), questo spec è la source of truth per:
+Quando tocchi i bounded context **`SessionTracking`** o **`GameManagement`** (sub-aggregate GameNight `GameNightEvent`), questo spec è la source of truth per:
 - Cardinalità GameNight 1→N Session
 - 3 timestamp Session distinti (createdAt always, startedAt/completedAt nullable)
 - State machine GameNight (planned → in-progress via first Session, → completed manuale)
@@ -339,6 +339,8 @@ Quando tocchi i bounded context **`SessionTracking`** o **`GameManagement`** (su
 - Tagging vs RSVP a 5 fasi (tag silente → "Invia inviti" esplicito → pending → confermato)
 - Invariante max 1 live per GameNight (parallel play out of scope MVP)
 - Sidebar 2 voci game-related: Library (personale) + Games (catalogo, Discover come default tab)
+
+**Asse A v2 implementation** (umbrella #1895 sub-issue #1896): plan TDD in [`docs/superpowers/plans/2026-06-04-asse-a-semantic-alignment.md`](./docs/superpowers/plans/2026-06-04-asse-a-semantic-alignment.md). Effort M+ ~12gg, 14 task TDD bite-sized (vs v1 XL 18gg, post-discovery rewrite eliminating ~33% over-scoped task assumendo backend scratch).
 
 Companion: [gap report demo Claude Design](./docs/for-developers/audits/2026-06-04-claude-design-gap-report.md) (38 gap classificati 5-cat: ROUTE/STATE/CTA/ENTITY/TOKEN).
 

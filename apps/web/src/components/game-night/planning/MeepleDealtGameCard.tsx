@@ -25,6 +25,7 @@ export function MeepleDealtGameCard({ game, onRemove, rotation }: MeepleDealtGam
         variant="compact"
         title={game.title}
         imageUrl={game.thumbnailUrl}
+        headingLevel={2}
         actions={[
           {
             icon: XIcon,

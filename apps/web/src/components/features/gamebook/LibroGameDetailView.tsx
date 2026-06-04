@@ -260,9 +260,9 @@ function InfoPanel({ detail }: { detail: LibraryGameDetail }): ReactElement {
   return (
     <div className="grid gap-4">
       <div>
-        <h3 className="mb-2 font-quicksand text-[15px] font-bold uppercase tracking-wide text-[#9a8870]">
+        <h2 className="mb-2 font-quicksand text-[15px] font-bold uppercase tracking-wide text-[#9a8870]">
           Descrizione
-        </h3>
+        </h2>
         <p className="text-[15px] leading-relaxed text-[#5a4a38]">
           {detail.description ??
             `${detail.gameTitle} — campagna libro game. Avvia la modalità per setup tutorial, Q&A regole e traduzione storybook.`}
@@ -271,9 +271,9 @@ function InfoPanel({ detail }: { detail: LibraryGameDetail }): ReactElement {
 
       {/* KB status row */}
       <div>
-        <h3 className="mb-2 font-quicksand text-[15px] font-bold uppercase tracking-wide text-[#9a8870]">
+        <h2 className="mb-2 font-quicksand text-[15px] font-bold uppercase tracking-wide text-[#9a8870]">
           Knowledge base
-        </h3>
+        </h2>
         <div className="flex items-center gap-3 rounded-[10px] border border-[hsl(var(--c-kb)/0.2)] bg-[hsl(var(--c-kb)/0.08)] p-3">
           <span
             aria-hidden="true"

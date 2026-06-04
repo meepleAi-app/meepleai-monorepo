@@ -22,6 +22,7 @@ export function HeroCard(props: MeepleCardProps) {
     ratingMax,
     badge,
     manaPips,
+    headingLevel,
     onClick,
     className = '',
   } = props;
@@ -78,9 +79,14 @@ export function HeroCard(props: MeepleCardProps) {
             {badge}
           </span>
         )}
-        <h3 className="font-[var(--font-quicksand)] text-2xl font-bold leading-tight text-white drop-shadow-md">
-          {title}
-        </h3>
+        {(() => {
+          const HeadingTag = `h${headingLevel ?? 3}` as 'h2' | 'h3' | 'h4';
+          return (
+            <HeadingTag className="font-[var(--font-quicksand)] text-2xl font-bold leading-tight text-white drop-shadow-md">
+              {title}
+            </HeadingTag>
+          );
+        })()}
         {subtitle && <p className="mt-1 text-sm text-white/80">{subtitle}</p>}
         {rating !== undefined && (
           <div className="mt-2 flex items-center gap-1 text-amber-300">

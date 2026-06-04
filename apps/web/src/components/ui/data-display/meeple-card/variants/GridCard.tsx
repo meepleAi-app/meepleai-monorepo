@@ -24,6 +24,7 @@ export function GridCard(props: MeepleCardProps) {
     subtitle,
     imageUrl,
     coverEmoji,
+    headingLevel,
     rating,
     ratingMax,
     metadata = [],
@@ -75,9 +76,14 @@ export function GridCard(props: MeepleCardProps) {
         {showQuickActions && actions.length > 0 && <QuickActions actions={actions} />}
       </div>
       <div className="flex flex-1 flex-col gap-[3px] px-3.5 py-2.5 pb-2">
-        <h3 className="font-[var(--font-quicksand)] text-[0.95rem] font-bold leading-tight text-[var(--mc-text-primary)]">
-          {title}
-        </h3>
+        {(() => {
+          const HeadingTag = `h${headingLevel ?? 3}` as 'h2' | 'h3' | 'h4';
+          return (
+            <HeadingTag className="font-[var(--font-quicksand)] text-[0.95rem] font-bold leading-tight text-[var(--mc-text-primary)]">
+              {title}
+            </HeadingTag>
+          );
+        })()}
         {subtitle && (
           <p className="text-[0.78rem] leading-tight text-[var(--mc-text-secondary)]">{subtitle}</p>
         )}

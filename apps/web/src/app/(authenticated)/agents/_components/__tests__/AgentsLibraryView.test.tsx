@@ -347,17 +347,10 @@ describe('AgentsLibraryView (Wave B.2)', () => {
 
   // ─── jest-axe a11y coverage (#1569) ────────────────────────────────────
 
-  // Default-state scan disables the `heading-order` rule: AgentsHero renders an
-  // <h1> ("Studio agenti") and each MeepleCard renders an <h3>, skipping <h2>.
-  // The <h3> mapping is shared across every v2 entity surface that consumes
-  // MeepleCard (games, players, toolkits, etc.) — a global fix requires a
-  // coordinated change to MeepleCard's heading prop or to every Hero. Tracked
-  // separately so #1569 stays test-only (no component edits).
-  it('passes axe a11y scan in default state with 6 agents (heading-order excluded; follow-up tracked)', async () => {
+  // T12: heading-order rule re-enabled — all 20 consumers now pass headingLevel prop
+  it('passes axe a11y scan in default state with 6 agents', async () => {
     const { container } = renderWithIntl(<AgentsLibraryView />);
-    expect(
-      await axe(container, { rules: { 'heading-order': { enabled: false } } })
-    ).toHaveNoViolations();
+    expect(await axe(container)).toHaveNoViolations();
   });
 
   it('passes axe a11y scan in empty state (no agents)', async () => {

@@ -22,6 +22,7 @@ export function ListCard(props: MeepleCardProps) {
     badge,
     onClick,
     className = '',
+    headingLevel,
   } = props;
   const testId = props['data-testid'];
 
@@ -49,9 +50,14 @@ export function ListCard(props: MeepleCardProps) {
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex items-center gap-2">
-          <h3 className="truncate font-[var(--font-quicksand)] text-[0.88rem] font-bold text-[var(--mc-text-primary)]">
-            {title}
-          </h3>
+          {(() => {
+            const HeadingTag = `h${headingLevel ?? 3}` as 'h2' | 'h3' | 'h4';
+            return (
+              <HeadingTag className="truncate font-[var(--font-quicksand)] text-[0.88rem] font-bold text-[var(--mc-text-primary)]">
+                {title}
+              </HeadingTag>
+            );
+          })()}
           {badge && (
             <span
               className="shrink-0 rounded-full border border-[var(--mc-border)] bg-foreground/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-[var(--mc-text-primary)] dark:bg-card/15"

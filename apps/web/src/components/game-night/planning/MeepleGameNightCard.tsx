@@ -65,6 +65,7 @@ export function MeepleGameNightCard({ night }: MeepleGameNightCardProps) {
         badge={STATUS_BADGE[night.status] ?? 'Sconosciuto'}
         connections={connections}
         className="h-full"
+        headingLevel={2}
         data-testid="game-night-card"
       />
     </Link>

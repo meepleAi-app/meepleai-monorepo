@@ -37,6 +37,7 @@
 
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { axe } from 'jest-axe';
 import { IntlProvider } from 'react-intl';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactElement } from 'react';
@@ -1058,5 +1059,53 @@ describe('LibraryHub — Phase 3b drawer + rail integration (#1593)', () => {
     expect(rail).toHaveAttribute('data-state', 'populated');
     expect(screen.getByText('Catan Tutor')).toBeInTheDocument();
     expect(screen.getByText('rules.pdf')).toBeInTheDocument();
+  });
+});
+
+// ─── a11y axe (#1842) ─────────────────────────────────────────────────────
+
+describe('LibraryHub — a11y axe (#1842)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    searchParamsState.value = '';
+    hubMock.mockReturnValue(makeHub());
+    libraryMock.mockReset();
+    libraryMock.mockReturnValue({ data: undefined, isLoading: false, isError: false, error: null });
+    useRemoveGameFromLibraryMock.mockReturnValue({
+      mutateAsync: vi.fn().mockResolvedValue(undefined),
+      isPending: false,
+    });
+    useActivityFeedMock.mockReturnValue({
+      data: { items: [], count: 0 },
+      isLoading: false,
+      isSuccess: true,
+      isError: false,
+      error: null,
+    });
+    // LibraryHub renders a Drawer (AdvancedFiltersDrawer) which calls
+    // window.matchMedia synchronously via useSyncExternalStore. Without this
+    // stub the hook throws "Cannot read properties of undefined (reading
+    // 'matches')". installMatchMedia(false) → mobile breakpoint path is taken,
+    // which avoids the Radix Dialog render path that would need a portal.
+    installMatchMedia(false);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // P164 axe-rule-suppression-with-tracked-followup pattern:
+  // nested-interactive is suppressed here because the hybrid grid cards use a
+  // <button data-slot="library-grid-card"> wrapper around MeepleCard, which
+  // itself renders an interactive element. This is a pre-existing structural
+  // issue unrelated to #1842 (heading-order). heading-order IS enabled (default).
+  // Follow-up: replace button wrapper with <div role="button"> or restructure
+  // the card click handler to avoid nesting interactives.
+  it('passes heading-order axe rule (#1842)', async () => {
+    const { container } = renderWithIntl(<LibraryHub />);
+    const results = await axe(container, {
+      rules: { 'nested-interactive': { enabled: false } },
+    });
+    expect(results).toHaveNoViolations();
   });
 });

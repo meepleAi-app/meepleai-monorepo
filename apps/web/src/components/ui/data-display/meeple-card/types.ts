@@ -95,6 +95,17 @@ export interface MeepleCardProps {
    * Naming endorses existing FE convention (Toolkit.coverEmoji, play-records StatsHero.tsx:137).
    */
   coverEmoji?: string;
+  /**
+   * Semantic heading level for the card's title element (2, 3, or 4).
+   * Default: 3 for most variants (GridCard/ListCard/FeaturedCard/HeroCard);
+   * 2 for FocusCard (full-focus detail card).
+   *
+   * Pass `headingLevel={2}` when this card is rendered in a grid below an
+   * `<h1>` hero — without this, axe-core flags `heading-order` (h1→h3 jump
+   * skipping h2). See #1842 spec for the audit of 20 grid-below-hero
+   * consumer surfaces that need `headingLevel={2}`.
+   */
+  headingLevel?: 2 | 3 | 4;
   rating?: number;
   ratingMax?: number;
   metadata?: MeepleCardMetadata[];

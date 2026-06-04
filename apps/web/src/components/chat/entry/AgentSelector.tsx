@@ -54,6 +54,7 @@ function SystemAgentGrid({
             subtitle={agent.description}
             badge={agent.icon}
             className={cn(selectedAgentType === agent.type && 'border-amber-500')}
+            headingLevel={2}
           />
         </button>
       ))}
@@ -125,6 +126,7 @@ function CustomAgentGridSection({
                 'border-amber-300/50',
                 selectedCustomAgentId === agent.id && 'border-amber-500'
               )}
+              headingLevel={2}
             />
           </button>
         ))}

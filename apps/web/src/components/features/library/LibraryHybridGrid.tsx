@@ -135,6 +135,7 @@ export function LibraryHybridGrid({
               imageUrl={itemImageUrl(item)}
               rating={itemRating(item)}
               ratingMax={10}
+              headingLevel={2}
             />
             {isSelectMode && isSelected ? (
               <span

@@ -1,17 +1,22 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 
 import { CropDialog } from '../CropDialog';
 
 // jsdom doesn't implement URL.createObjectURL / revokeObjectURL.
 if (typeof URL.createObjectURL === 'undefined') {
   // @ts-expect-error — assign for jsdom
-  URL.createObjectURL = () => 'blob:mock';
+  URL.createObjectURL = vi.fn(() => 'blob:mock');
 }
 if (typeof URL.revokeObjectURL === 'undefined') {
   // @ts-expect-error — assign for jsdom
-  URL.revokeObjectURL = () => {};
+  URL.revokeObjectURL = vi.fn();
 }
+
+// Reset mocks before each test.
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 // Mock react-easy-crop: it needs real browser canvas / ResizeObserver.
 vi.mock('react-easy-crop', () => ({
@@ -81,6 +86,18 @@ describe('CropDialog', () => {
     expect(screen.getByTestId('mock-cropper')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /conferma/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /annulla/i })).toBeInTheDocument();
+  });
+
+  it('revokes blob URL on unmount to prevent memory leak', () => {
+    const { unmount } = render(
+      <CropDialog open={true} imageFile={mockImage} onConfirm={() => {}} onCancel={() => {}} />
+    );
+    expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+    unmount();
+    expect(URL.revokeObjectURL).toHaveBeenCalledOnce();
+    // Verify the URL passed to revokeObjectURL is a string (was created by createObjectURL).
+    const [revokedUrl] = (URL.revokeObjectURL as any).mock.calls[0];
+    expect(typeof revokedUrl).toBe('string');
   });
 
   it('calls onCancel when cancel button is clicked', () => {

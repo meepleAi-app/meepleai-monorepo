@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState, type JSX } from 'react';
+import { useCallback, useEffect, useState, type JSX } from 'react';
 
 import Cropper from 'react-easy-crop';
 
@@ -33,6 +33,11 @@ export function CropDialog({ open, imageFile, onConfirm, onCancel }: CropDialogP
   const [imageUrl] = useState(() => URL.createObjectURL(imageFile));
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Cleanup blob URL on unmount to prevent memory leak.
+  useEffect(() => {
+    return () => URL.revokeObjectURL(imageUrl);
+  }, [imageUrl]);
 
   const handleCropComplete = useCallback((_area: Area, pixels: Area) => {
     setCroppedPixels(pixels);

@@ -22,10 +22,11 @@ public sealed class AlertChannelTests
             AlertChannelType.Slack,
             """{"webhookUrl":"https://hooks.slack.com/services/T/B/x","channel":"#alerts"}""",
             isEnabled: true,
-            updatedBy: "admin@meepleai.dev");
+            createdBy: "admin@meepleai.dev");
 
         channel.Type.Should().Be(AlertChannelType.Slack);
         channel.IsEnabled.Should().BeTrue();
+        channel.CreatedBy.Should().Be("admin@meepleai.dev");
         channel.UpdatedBy.Should().Be("admin@meepleai.dev");
         channel.LastTestedAt.Should().BeNull();
         channel.LastTestStatus.Should().BeNull();
@@ -39,7 +40,7 @@ public sealed class AlertChannelTests
     public void Create_WithEmptyConfigJson_Throws(string configJson)
     {
         Action act = () => Api.BoundedContexts.Administration.Domain.Aggregates.AlertChannels.AlertChannel.Create(
-            AlertChannelType.Slack, configJson, isEnabled: true, updatedBy: "admin");
+            AlertChannelType.Slack, configJson, isEnabled: true, createdBy: "admin");
         act.Should().Throw<ArgumentException>();
     }
 
@@ -50,7 +51,7 @@ public sealed class AlertChannelTests
     public void Create_WithNonObjectJson_Throws(string configJson)
     {
         Action act = () => Api.BoundedContexts.Administration.Domain.Aggregates.AlertChannels.AlertChannel.Create(
-            AlertChannelType.Email, configJson, isEnabled: true, updatedBy: "admin");
+            AlertChannelType.Email, configJson, isEnabled: true, createdBy: "admin");
         act.Should().Throw<ArgumentException>()
             .WithMessage("*JSON object*");
     }
@@ -58,10 +59,10 @@ public sealed class AlertChannelTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void Create_WithEmptyUpdatedBy_Throws(string updatedBy)
+    public void Create_WithEmptyCreatedBy_Throws(string createdBy)
     {
         Action act = () => Api.BoundedContexts.Administration.Domain.Aggregates.AlertChannels.AlertChannel.Create(
-            AlertChannelType.Email, "{}", isEnabled: true, updatedBy: updatedBy);
+            AlertChannelType.Email, "{}", isEnabled: true, createdBy: createdBy);
         act.Should().Throw<ArgumentException>();
     }
 

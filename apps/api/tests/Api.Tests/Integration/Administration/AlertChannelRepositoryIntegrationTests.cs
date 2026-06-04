@@ -91,7 +91,7 @@ public sealed class AlertChannelRepositoryIntegrationTests : IAsyncLifetime
             AlertChannelType.Slack,
             """{"webhookUrl":"https://hooks.slack.com/services/T/B/x","channel":"#alerts"}""",
             isEnabled: true,
-            updatedBy: "admin@meepleai.dev");
+            createdBy: "admin@meepleai.dev");
 
         await _repository!.UpsertAsync(channel, TestCancellationToken);
 

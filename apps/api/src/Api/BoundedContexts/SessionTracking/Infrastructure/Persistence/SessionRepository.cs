@@ -114,6 +114,10 @@ public class SessionRepository : RepositoryBase, ISessionRepository
         // Asse A semantic alignment #1896 (T2): propagate StartedAt so OpenLiveMode()
         // domain transitions are persisted by UpdateAsync. Invariante #11.
         existing.StartedAt = session.StartedAt;
+        // Asse A semantic alignment #1896 (T9, DEC-1): propagate polymorphic
+        // ScoringType + ScoreData so SetScores() domain transitions are persisted.
+        existing.ScoringType = session.ScoringType.ToString();
+        existing.ScoreData = session.ScoreData;
         existing.IsDeleted = session.IsDeleted;
         existing.DeletedAt = session.DeletedAt;
         existing.UpdatedAt = session.UpdatedAt;

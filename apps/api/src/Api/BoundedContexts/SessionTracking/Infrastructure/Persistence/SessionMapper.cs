@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
+using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.Infrastructure.Entities.SessionTracking;
 
 namespace Api.BoundedContexts.SessionTracking.Infrastructure.Persistence;
@@ -24,6 +25,8 @@ internal static class SessionMapper
             Location = domain.Location,
             FinalizedAt = domain.FinalizedAt,
             StartedAt = domain.StartedAt,
+            ScoringType = domain.ScoringType.ToString(),
+            ScoreData = domain.ScoreData,
             IsDeleted = domain.IsDeleted,
             DeletedAt = domain.DeletedAt,
             CreatedAt = domain.CreatedAt,
@@ -58,6 +61,8 @@ internal static class SessionMapper
         typeof(Session).GetProperty(nameof(Session.Location))!.SetValue(session, entity.Location);
         typeof(Session).GetProperty(nameof(Session.FinalizedAt))!.SetValue(session, entity.FinalizedAt);
         typeof(Session).GetProperty(nameof(Session.StartedAt))!.SetValue(session, entity.StartedAt);
+        typeof(Session).GetProperty(nameof(Session.ScoringType))!.SetValue(session, Enum.Parse<ScoreType>(entity.ScoringType));
+        typeof(Session).GetProperty(nameof(Session.ScoreData))!.SetValue(session, entity.ScoreData);
         typeof(Session).GetProperty(nameof(Session.IsDeleted))!.SetValue(session, entity.IsDeleted);
         typeof(Session).GetProperty(nameof(Session.DeletedAt))!.SetValue(session, entity.DeletedAt);
         typeof(Session).GetProperty(nameof(Session.CreatedAt))!.SetValue(session, entity.CreatedAt);

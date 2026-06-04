@@ -105,6 +105,20 @@ public class Session : IDomainEventSource
     public bool IsLive => StartedAt.HasValue && FinalizedAt is null;
 
     /// <summary>
+    /// Polymorphic scoring type for this session (Asse A semantic alignment #1896, T9,
+    /// DEC-1). Defaults to <see cref="ScoreType.Points"/>. Updated via
+    /// <see cref="SetScores"/> together with <see cref="ScoreData"/>.
+    /// </summary>
+    public ScoreType ScoringType { get; private set; } = ScoreType.Points;
+
+    /// <summary>
+    /// Polymorphic score data as JSON string (persisted as JSONB). Shape varies by
+    /// <see cref="ScoringType"/> — validated by the corresponding IScoringStrategy in
+    /// the application layer (T10). Default = empty JSON object <c>"{}"</c>.
+    /// </summary>
+    public string ScoreData { get; private set; } = "{}";
+
+    /// <summary>
     /// Soft delete flag.
     /// </summary>
     public bool IsDeleted { get; private set; }
@@ -421,6 +435,31 @@ public class Session : IDomainEventSource
             var winner = _participants.First(p => p.Id == winnerId.Value);
             winner.SetFinalRank(1);
         }
+    }
+
+    /// <summary>
+    /// Sets the polymorphic score data for this session and raises a
+    /// <see cref="Events.SessionScoresUpdatedEvent"/>.
+    ///
+    /// <para>Asse A semantic alignment #1896 (T9, DEC-1): supersedes any prior
+    /// <see cref="ScoringType"/>/<see cref="ScoreData"/> assignment. JSON validation
+    /// against the per-type schema is performed by FluentValidation in the
+    /// application layer (T10 — <c>SaveSessionCommandHandler</c>); this method only
+    /// guards the trivial empty-string invariant.</para>
+    /// </summary>
+    /// <param name="scoringType">Polymorphic scoring type (Points, BinaryWin, Objectives, Ranking).</param>
+    /// <param name="scoreData">JSON string carrying the per-type score payload. Must not be empty.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="scoreData"/> is null, empty, or whitespace.</exception>
+    public void SetScores(ScoreType scoringType, string scoreData)
+    {
+        if (string.IsNullOrWhiteSpace(scoreData))
+            throw new ArgumentException("ScoreData cannot be empty.", nameof(scoreData));
+
+        ScoringType = scoringType;
+        ScoreData = scoreData;
+        UpdatedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new Events.SessionScoresUpdatedEvent(Id, scoringType, scoreData));
     }
 
     /// <summary>

@@ -61,6 +61,23 @@ public class SessionConfiguration : IEntityTypeConfiguration<SessionEntity>
         builder.Property(s => s.StartedAt)
             .HasColumnName("started_at");
 
+        // Asse A semantic alignment #1896 (T9, DEC-1): Session.ScoringType — polymorphic
+        // scoring type string ("Points" | "BinaryWin" | "Objectives" | "Ranking").
+        // Defaults to "Points" (covers ~50% catalog board games).
+        builder.Property(s => s.ScoringType)
+            .HasColumnName("scoring_type")
+            .HasMaxLength(20)
+            .HasDefaultValue("Points")
+            .IsRequired();
+
+        // Asse A semantic alignment #1896 (T9, DEC-1): Session.ScoreData — polymorphic
+        // score data as JSONB. Shape varies by ScoringType. Default '{}'.
+        builder.Property(s => s.ScoreData)
+            .HasColumnName("score_data")
+            .HasColumnType("jsonb")
+            .HasDefaultValueSql("'{}'::jsonb")
+            .IsRequired();
+
         builder.Property(s => s.IsDeleted)
             .HasColumnName("is_deleted")
             .IsRequired()

@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef } from 'react';
 
-import { AlertTriangleIcon, Plus, RefreshCwIcon } from 'lucide-react';
+import { AlertTriangleIcon, Plus, RefreshCwIcon, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { AlertActivityFeed } from '@/components/admin/alert-rules/AlertActivityFeed';
 import { AlertKpiStrip } from '@/components/admin/alert-rules/AlertKpiStrip';
 import { AlertRuleList } from '@/components/admin/alert-rules/AlertRuleList';
+import { CanaliDrawer } from '@/components/admin/alert-rules/CanaliDrawer';
 import { AlertsBanner } from '@/components/admin/AlertsBanner';
 import { Button } from '@/components/ui/primitives/button';
 import type { DashboardMetrics } from '@/lib/api';
@@ -25,6 +26,7 @@ export function AlertsTab() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [canaliDrawerOpen, setCanaliDrawerOpen] = useState(false);
 
   const loadData = (silent = false) => {
     if (!silent) setLoading(true);
@@ -144,10 +146,22 @@ export function AlertsTab() {
             Configura soglie di alert e destinazioni delle notifiche.
           </p>
         </div>
-        <Button size="sm" onClick={() => setCreateDialogOpen(true)} className="gap-1.5">
-          <Plus className="h-4 w-4" />
-          Nuova Regola
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setCanaliDrawerOpen(true)}
+            className="gap-1.5"
+            data-testid="alerts-canali-button"
+          >
+            <Settings2 className="h-4 w-4" />
+            Canali
+          </Button>
+          <Button size="sm" onClick={() => setCreateDialogOpen(true)} className="gap-1.5">
+            <Plus className="h-4 w-4" />
+            Nuova Regola
+          </Button>
+        </div>
       </div>
       <AlertRuleList
         rules={rules}
@@ -165,6 +179,7 @@ export function AlertsTab() {
           loadData();
         }}
       />
+      <CanaliDrawer open={canaliDrawerOpen} onClose={() => setCanaliDrawerOpen(false)} />
     </div>
   );
 }

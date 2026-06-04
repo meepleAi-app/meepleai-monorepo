@@ -70,7 +70,6 @@ function formatTime(iso: string): string {
 
 function AlertActivityRow({ event }: { event: DomainEventDto }) {
   const payload = useMemo(() => parsePayload(event.payloadJson), [event.payloadJson]);
-  const isFired = event.eventType === 'alert.fired';
   const isResolved = event.eventType === 'alert.resolved';
   const isTest = payload.isTest === true;
   const isDryRun = payload.isDryRun === true;

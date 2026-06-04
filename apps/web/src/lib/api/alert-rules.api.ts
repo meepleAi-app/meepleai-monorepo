@@ -5,6 +5,8 @@ import type {
   CreateAlertRule,
   UpdateAlertRule,
   AlertTemplate,
+  TestAlertRuleMode,
+  TestAlertRuleResult,
 } from './schemas/alert-rules.schemas';
 
 const api = new HttpClient();
@@ -48,5 +50,23 @@ export const alertRulesApi = {
       channel,
     });
     return result || { success: false };
+  },
+
+  /**
+   * Issue #1840 SP5 F4-C7 — Per-rule TestAlert.
+   * Defaults to `dryRun` (no external send, only emits AlertFiredEvent for the
+   * activity feed). Pass `mode: 'live'` to actually dispatch to channels — the
+   * UI MUST gate this behind a confirm dialog.
+   */
+  testRule: async (
+    id: string,
+    mode: TestAlertRuleMode = 'dryRun'
+  ): Promise<TestAlertRuleResult> => {
+    const result = await api.post<TestAlertRuleResult>(
+      `/api/v1/admin/alert-rules/${id}/test?mode=${mode}`,
+      {}
+    );
+    if (!result) throw new Error('Test alert rule returned no payload');
+    return result;
   },
 };

@@ -1,0 +1,67 @@
+import { z } from 'zod';
+
+// Issue #1840 SP5 F4-C7 — alert channel config for the Canali drawer.
+// Backend: AlertChannelDto (GetAllAlertChannelsQuery.cs).
+
+export const alertChannelTypeSchema = z.enum(['email', 'slack']);
+
+export const alertChannelTestStatusSchema = z.enum(['ok', 'error']);
+
+export const alertChannelSchema = z.object({
+  type: alertChannelTypeSchema,
+  // ConfigJson is returned verbatim from the backend today. The Canali drawer
+  // parses this into the appropriate per-type shape (EmailChannelConfig vs
+  // SlackChannelConfig). Webhook URL masking is a deferred follow-up — see the
+  // doc comment on AlertChannelsEndpoints.cs.
+  configJson: z.string(),
+  isEnabled: z.boolean(),
+  lastTestedAt: z.string().datetime({ offset: true }).nullable(),
+  lastTestStatus: alertChannelTestStatusSchema.nullable(),
+  lastTestMessage: z.string().nullable(),
+  updatedAt: z.string().datetime({ offset: true }),
+  updatedBy: z.string().nullable(),
+  // Base64-encoded byte[] from PostgreSQL bytea (RowVersion concurrency token).
+  rowVersion: z.string(),
+});
+
+export const upsertAlertChannelRequestSchema = z.object({
+  configJson: z.string(),
+  isEnabled: z.boolean(),
+  // Required when updating an existing channel, omit on first-time create.
+  rowVersion: z.string().optional().nullable(),
+});
+
+// Backend: TestAlertChannelConnectionResult (#1840 1.6 dispatcher payload).
+// Both shapes (ok/error) get coerced via parse, so the FE can always rely on
+// `status` discriminator.
+export const testAlertChannelConnectionResultSchema = z.object({
+  type: alertChannelTypeSchema,
+  status: alertChannelTestStatusSchema,
+  message: z.string(),
+  testedAt: z.string().datetime({ offset: true }),
+});
+
+// Per-type config shapes for parsing AlertChannelDto.configJson.
+// These match the BE channel write-models — keep in sync with
+// SlackWebhookClient / IEmailClient expectations.
+export const slackChannelConfigSchema = z.object({
+  webhookUrl: z.string().url(),
+  channel: z.string().min(1),
+});
+
+export const emailChannelConfigSchema = z.object({
+  smtpHost: z.string().min(1),
+  smtpPort: z.number().int().min(1).max(65535),
+  fromAddress: z.string().email(),
+  toAddresses: z.array(z.string().email()).min(1),
+});
+
+export type AlertChannelType = z.infer<typeof alertChannelTypeSchema>;
+export type AlertChannelTestStatus = z.infer<typeof alertChannelTestStatusSchema>;
+export type AlertChannel = z.infer<typeof alertChannelSchema>;
+export type UpsertAlertChannelRequest = z.infer<typeof upsertAlertChannelRequestSchema>;
+export type TestAlertChannelConnectionResult = z.infer<
+  typeof testAlertChannelConnectionResultSchema
+>;
+export type SlackChannelConfig = z.infer<typeof slackChannelConfigSchema>;
+export type EmailChannelConfig = z.infer<typeof emailChannelConfigSchema>;

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Commands.AlertRules;
 using Api.BoundedContexts.Administration.Application.Queries.AlertRules;
+using Api.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,6 +21,7 @@ internal static class AlertConfigEndpoints
         MapUpdateAlertRuleEndpoint(group);
         MapDeleteAlertRuleEndpoint(group);
         MapToggleAlertRuleEndpoint(group);
+        MapTestAlertRuleEndpoint(group);
 
         MapGlobalAdminEndpoints(app);
     }
@@ -130,6 +132,36 @@ internal static class AlertConfigEndpoints
         .RequireAuthorization()
         .WithName("ToggleAlertRule")
         .WithOpenApi();
+    }
+
+    private static void MapTestAlertRuleEndpoint(RouteGroupBuilder group)
+    {
+        // POST /api/v1/admin/alert-rules/{id}/test?mode=dryRun|live
+        // Issue #1840 SP5 F4-C7 — per-rule TestAlert action. Default mode is
+        // "dryRun" (safe by default per spec decision D3); explicit
+        // ?mode=live requires the FE to gate behind a confirm dialog.
+        //
+        // Auth: RequireAdminSession() enforces both session + Admin role check.
+        // The plain RequireAuthorization() used by the legacy sibling endpoints
+        // in this file only enforces authentication and would allow any signed-in
+        // user — tracked as a follow-up (legacy hardening, out-of-scope for #1840).
+        group.MapPost("/{id:guid}/test", async (
+                Guid id,
+                [FromQuery] string? mode,
+                HttpContext context,
+                IMediator mediator,
+                CancellationToken ct) =>
+            {
+                var userId = context.User.FindFirst("userId")?.Value ?? "system";
+                var result = await mediator
+                    .Send(new TestAlertRuleCommand(id, mode, userId), ct)
+                    .ConfigureAwait(false);
+                return Results.Ok(result);
+            })
+            .RequireAdminSession()
+            .WithName("TestAlertRule")
+            .WithSummary("Probe an existing alert rule by raising a synthetic AlertFiredEvent")
+            .WithOpenApi();
     }
 
     private static void MapGlobalAdminEndpoints(IEndpointRouteBuilder app)

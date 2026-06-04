@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Administration.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
@@ -63,6 +64,13 @@ public static class EventTypeRegistry
         // in-memory) but the audit row is silently dropped. Tested explicitly in
         // EventTypeRegistryTests.Registry_resolves_pdf_metadata_changed_alias.
         [typeof(PdfMetadataChangedEvent)] = "pdf.metadata.changed",
+
+        // Issue #1840 SP5 F4-C7 — alert lifecycle events powering the
+        // AlertActivityFeed (SSE) in /admin/monitor?tab=alerts. The aliases
+        // are durable identifiers: a rename of the CLR type would orphan
+        // historical log rows otherwise. Tested in EventTypeRegistryTests.
+        [typeof(AlertFiredEvent)] = "alert.fired",
+        [typeof(AlertResolvedEvent)] = "alert.resolved",
     };
 
     /// <summary>

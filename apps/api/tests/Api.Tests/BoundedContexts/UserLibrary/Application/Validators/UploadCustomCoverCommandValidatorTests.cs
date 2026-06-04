@@ -33,7 +33,7 @@ public class UploadCustomCoverCommandValidatorTests
     [Fact]
     public void Validate_FileSizeOverLimit_Fails()
     {
-        var cmd = CreateCommand(fileSizeBytes: 10_485_761);
+        var cmd = CreateCommand(fileSizeBytes: UploadCustomCoverCommandValidator.MaxFileSizeBytes + 1);
         _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(c => c.FileSizeBytes);
     }
 

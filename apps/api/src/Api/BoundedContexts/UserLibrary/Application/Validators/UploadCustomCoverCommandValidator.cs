@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.UserLibrary.Application.Validators;
 /// </summary>
 internal sealed class UploadCustomCoverCommandValidator : AbstractValidator<UploadCustomCoverCommand>
 {
-    private const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10MB
+    internal const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10MB
 
     private static readonly HashSet<string> AllowedMimeTypes = new(StringComparer.OrdinalIgnoreCase)
     {

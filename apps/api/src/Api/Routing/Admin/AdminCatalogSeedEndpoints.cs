@@ -3,6 +3,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.Extensions;
+using Api.Filters;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -41,10 +42,24 @@ internal static class AdminCatalogSeedEndpoints
 
     public static RouteGroupBuilder MapAdminCatalogSeedEndpoints(this RouteGroupBuilder group)
     {
-        // Issue #1903 M7.2: kill-switch endpoint filter. When the runtime flag
-        // is disabled the entire admin pipeline returns 503 Service Unavailable
-        // (covers all REST methods AND the SSE stream — handler writes the
-        // status code directly on the response, before the body opens).
+        // Filter chain order MATTERS. Filters added via AddEndpointFilter execute
+        // in REGISTRATION order on the request (first-added runs first).
+        //
+        //   1. RequireAdminSessionFilter — gates the entire pipeline behind a
+        //      valid Admin session. Unauthenticated callers get 401, non-admins
+        //      get 403, BEFORE the feature-flag check runs. This prevents the
+        //      info-disclosure leak where an anonymous probe could distinguish
+        //      "endpoint exists + flag off" (503) from "endpoint missing" (404).
+        //
+        //   2. Feature flag kill-switch — once auth is established, return 503
+        //      Service Unavailable when the runtime flag is disabled. Covers
+        //      all REST methods AND the SSE stream; the SSE handler writes
+        //      the status code directly on the response when reached without
+        //      a flag block, before the body opens.
+        group.AddEndpointFilter<RequireAdminSessionFilter>();
+
+        // Issue #1903 M7.2: kill-switch endpoint filter. Runs AFTER auth, so
+        // 503 is only ever observable by admins (never by anonymous probes).
         group.AddEndpointFilter(async (filterContext, next) =>
         {
             var flag = filterContext.HttpContext.RequestServices
@@ -112,14 +127,13 @@ internal static class AdminCatalogSeedEndpoints
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var (authorized, session, error) = context.RequireAdminSession();
-        if (!authorized) return error!;
-
+        // Auth + admin role already enforced by group-level
+        // RequireAdminSessionFilter; we only need to extract the user id here.
         var command = new EnqueueCatalogSeedCommand(
             BggId: request.BggId,
             WikidataQid: request.WikidataQid,
             SearchTermInput: request.SearchTermInput,
-            CreatedByUserId: session!.Principal!.Subject.Id);
+            CreatedByUserId: context.User.GetUserId());
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
         return Results.Ok(result);
@@ -132,12 +146,10 @@ internal static class AdminCatalogSeedEndpoints
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var (authorized, session, error) = context.RequireAdminSession();
-        if (!authorized) return error!;
-
+        // Auth gated at group level (RequireAdminSessionFilter).
         var command = new BulkEnqueueCatalogSeedsCommand(
             BggIds: request.BggIds,
-            CreatedByUserId: session!.Principal!.Subject.Id);
+            CreatedByUserId: context.User.GetUserId());
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
         return Results.Ok(result);
@@ -147,13 +159,10 @@ internal static class AdminCatalogSeedEndpoints
         [FromQuery] string? status,
         [FromQuery] int? skip,
         [FromQuery] int? take,
-        HttpContext context,
         IMediator mediator,
         CancellationToken ct)
     {
-        var (authorized, _, error) = context.RequireAdminSession();
-        if (!authorized) return error!;
-
+        // Auth gated at group level (RequireAdminSessionFilter).
         var query = new ListCatalogSeedsQuery(
             StatusFilter: status,
             Skip: skip ?? 0,
@@ -165,13 +174,10 @@ internal static class AdminCatalogSeedEndpoints
 
     private static async Task<IResult> HandleGetById(
         Guid id,
-        HttpContext context,
         IMediator mediator,
         CancellationToken ct)
     {
-        var (authorized, _, error) = context.RequireAdminSession();
-        if (!authorized) return error!;
-
+        // Auth gated at group level (RequireAdminSessionFilter).
         var dto = await mediator.Send(new GetCatalogSeedByIdQuery(id), ct).ConfigureAwait(false);
         return dto is null ? Results.NotFound() : Results.Ok(dto);
     }
@@ -182,11 +188,9 @@ internal static class AdminCatalogSeedEndpoints
         IMediator mediator,
         CancellationToken ct)
     {
-        var (authorized, session, error) = context.RequireAdminSession();
-        if (!authorized) return error!;
-
+        // Auth gated at group level (RequireAdminSessionFilter).
         var result = await mediator
-            .Send(new ApproveCatalogSeedCommand(id, session!.Principal!.Subject.Id), ct)
+            .Send(new ApproveCatalogSeedCommand(id, context.User.GetUserId()), ct)
             .ConfigureAwait(false);
         return Results.Ok(result);
     }
@@ -199,11 +203,9 @@ internal static class AdminCatalogSeedEndpoints
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var (authorized, session, error) = context.RequireAdminSession();
-        if (!authorized) return error!;
-
+        // Auth gated at group level (RequireAdminSessionFilter).
         await mediator
-            .Send(new RejectCatalogSeedCommand(id, session!.Principal!.Subject.Id, request.Reason), ct)
+            .Send(new RejectCatalogSeedCommand(id, context.User.GetUserId(), request.Reason), ct)
             .ConfigureAwait(false);
         return Results.NoContent();
     }
@@ -216,16 +218,11 @@ internal static class AdminCatalogSeedEndpoints
     {
         ArgumentNullException.ThrowIfNull(stream);
 
-        // SSE handlers cannot return IResult once the body has started writing, so
-        // we set the status code directly on the response (mirror of
-        // AdminEventsEndpoints.HandleGetEventsStream).
-        var (authorized, _, error) = context.RequireAdminSession();
-        if (!authorized)
-        {
-            context.Response.StatusCode = ExtractStatusCode(error);
-            return;
-        }
-
+        // Auth gated at group level (RequireAdminSessionFilter) — runs BEFORE
+        // this handler is invoked, so response headers have not been committed
+        // yet and the filter can safely set a 401/403 status code. No in-handler
+        // re-check needed; the previous defense-in-depth call was removed when
+        // the group filter was introduced (M7 review fix).
         context.Response.Headers.ContentType = "text/event-stream";
         context.Response.Headers.CacheControl = "no-cache";
         context.Response.Headers.Connection = "keep-alive";
@@ -275,28 +272,15 @@ internal static class AdminCatalogSeedEndpoints
 
     private static async Task<IResult> HandleWikidataSearch(
         WikidataSearchRequest request,
-        HttpContext context,
         IMediator mediator,
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var (authorized, _, error) = context.RequireAdminSession();
-        if (!authorized) return error!;
-
+        // Auth gated at group level (RequireAdminSessionFilter).
         var result = await mediator
             .Send(new WikidataSearchQuery(request.SearchTerm), ct)
             .ConfigureAwait(false);
         return Results.Ok(result);
-    }
-
-    // =========================================================================
-    // Helpers
-    // =========================================================================
-
-    private static int ExtractStatusCode(IResult? result)
-    {
-        if (result is IStatusCodeHttpResult sc) return sc.StatusCode ?? StatusCodes.Status401Unauthorized;
-        return StatusCodes.Status401Unauthorized;
     }
 }
 

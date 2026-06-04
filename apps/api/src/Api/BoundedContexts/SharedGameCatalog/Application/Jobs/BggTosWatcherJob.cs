@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using System.Text;
-using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +26,14 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Jobs;
 /// exception that propagates is <see cref="OperationCanceledException"/> when
 /// shutdown is requested. Error messages never include <c>ex.Message</c> per
 /// CLAUDE.md memory <c>ex-message-leak-pattern</c>.</para>
+/// <para><b>IMPORTANT — runs regardless of feature flag:</b> this job is NOT
+/// gated by the <c>AdminCatalogSeedEnabled</c> runtime flag. The watcher is
+/// the compliance audit trail mandated by spec §8.5.6 — operators must have
+/// a continuous record of ToS changes BEFORE enabling the pipeline so they
+/// can perform the pre-rollout legal review with full context. Gating the
+/// watcher by the flag would silently miss ToS changes during the staging /
+/// pre-rollout window, defeating the purpose of the audit trail (M7 review
+/// fix).</para>
 /// </remarks>
 [DisallowConcurrentExecution]
 public sealed class BggTosWatcherJob : IJob
@@ -62,18 +69,11 @@ public sealed class BggTosWatcherJob : IJob
 
         using var scope = _serviceProvider.CreateScope();
 
-        // Issue #1903 M7.2: kill-switch. When the catalog seed pipeline is
-        // parked we also skip the ToS watcher — there's no point alerting on
-        // ToS changes for a feature that isn't running. Optional resolution
-        // keeps test doubles working (mirrors CatalogSeedFetchJob pattern).
-        var flag = scope.ServiceProvider.GetService<ICatalogSeedFeatureFlag>();
-        if (flag is not null && !await flag.IsEnabledAsync(ct).ConfigureAwait(false))
-        {
-            _logger.LogDebug(
-                "BggTosWatcherJob: kill-switch active ({Key}=false), skipping ToS check",
-                ICatalogSeedFeatureFlag.FlagKey);
-            return;
-        }
+        // NOTE: this job intentionally runs regardless of the
+        // AdminCatalogSeedEnabled feature flag — see class-level <remarks>
+        // (compliance audit trail per spec §8.5.6). Do NOT add a flag check
+        // here; gating the watcher would silently miss ToS changes during
+        // the pre-rollout window (M7 review fix).
 
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var httpFactory = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>();

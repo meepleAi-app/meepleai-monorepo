@@ -266,7 +266,7 @@ Triage history: #1349 (closed, Phase 2d carryover) → #1422 (2026-05-21, 12 Sha
 
 | Test | File | First observed | Reason | Action |
 |---|---|---|---|---|
-| `PdfDocument_SevenStateProgression_ShouldAdvanceThroughAllStates` | `apps/api/tests/Api.Tests/Integration/DocumentProcessing/PdfPipelineIntegrationTests.cs:788` | 2026-06-04 | Expects 6 `DomainEvents` but finds 7 — regression from PR #1873 (added `PdfDocumentDeleted` event but did not update the count). | Follow-up issue to be filed alongside #1885 PR. |
+| `PdfDocument_SevenStateProgression_ShouldAdvanceThroughAllStates` | `apps/api/tests/Api.Tests/Integration/DocumentProcessing/PdfPipelineIntegrationTests.cs:788` | 2026-06-04 | Expects 6 `DomainEvents` but finds 7 — regression from PR #1873 (added `PdfDocumentDeleted` event but did not update the count). | Tracked in #1887. |
 
 **Resolved 2026-05-22**: 3 documented baseline failures fixed + 1 stale entry removed.
 - `Should_Fail_When_GameId_Is_Empty` — fixed by adding `Cascade(CascadeMode.Stop)` to `CreateRuleConflictFaqCommandValidator.RuleFor(x => x.GameId)` so the async `GameExists` check (which calls `GameRef.Shared(Guid.Empty)` → `ArgumentException`) is skipped when `NotEmpty()` already failed.

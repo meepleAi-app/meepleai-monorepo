@@ -1,8 +1,6 @@
 'use client';
 import { ChevronRight } from 'lucide-react';
 
-import { Card, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-
 import { formatDuration, parseTimeSpanToMs } from '../_utils/run-formatter';
 import { useCatalogSyncRuns } from '../hooks/use-catalog-sync-runs';
 
@@ -32,28 +30,32 @@ function successRate(runs: CatalogSyncRunSummary[]): string {
 export function SyncRunTimeline({ onDrillDown }: SyncRunTimelineProps) {
   const { data, isLoading } = useCatalogSyncRuns();
 
-  if (isLoading) return <Card className="h-40 animate-pulse" />;
+  if (isLoading) return <div className="h-40 animate-pulse rounded-xl bg-card/60" />;
   if (!data || data.items.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Sync history</CardTitle>
-        </CardHeader>
+      <section className="overflow-hidden rounded-xl border border-border bg-card">
+        <header className="flex items-center gap-2.5 border-b border-border bg-muted/30 px-3.5 py-2.5">
+          <h3 className="font-quicksand text-[13px] font-extrabold text-foreground">
+            Sync history
+          </h3>
+        </header>
         <div className="px-4 py-8 text-center text-sm text-muted-foreground">
           Nessun run registrato.
         </div>
-      </Card>
+      </section>
     );
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Sync history · ultime {data.items.length} run</CardTitle>
-        <span className="font-mono text-xs text-muted-foreground">
+    <section className="overflow-hidden rounded-xl border border-border bg-card">
+      <header className="flex items-center gap-2.5 border-b border-border bg-muted/30 px-3.5 py-2.5">
+        <h3 className="font-quicksand text-[13px] font-extrabold text-foreground">
+          Sync history · ultime {data.items.length} run
+        </h3>
+        <span className="ml-auto font-mono text-[10px] text-muted-foreground">
           success rate {successRate(data.items)}
         </span>
-      </CardHeader>
+      </header>
       <div>
         {/* Column header sub-row */}
         <div className="grid grid-cols-[32px_1fr_90px_60px_60px_60px_24px] gap-3 border-b border-border bg-muted/30 px-3.5 py-2 font-mono text-[9.5px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -111,6 +113,6 @@ export function SyncRunTimeline({ onDrillDown }: SyncRunTimelineProps) {
           </div>
         ))}
       </div>
-    </Card>
+    </section>
   );
 }

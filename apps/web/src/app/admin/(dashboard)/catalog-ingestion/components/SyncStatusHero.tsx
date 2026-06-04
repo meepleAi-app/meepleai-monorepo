@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Loader2, Play } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { Card } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
 
 import { formatRelativeTime } from '../_utils/run-formatter';
@@ -36,7 +35,7 @@ export function SyncStatusHero({ onOpenCsvModal, onOpenManualModal }: SyncStatus
   const [autoRetry, setAutoRetry] = useState(true);
   const [isTriggering, setIsTriggering] = useState(false);
 
-  if (!data) return <Card className="h-40 animate-pulse" />;
+  if (!data) return <div className="h-40 animate-pulse rounded-xl bg-card/60" />;
 
   // CatalogRunStatus includes 'Queued'/'Running' which are non-terminal; map those to null for chip derivation
   const rawLastStatus = data.lastRun?.status ?? null;
@@ -73,12 +72,12 @@ export function SyncStatusHero({ onOpenCsvModal, onOpenManualModal }: SyncStatus
   };
 
   return (
-    <Card className="border-toolkit/25 bg-gradient-to-br from-toolkit/[0.14] to-entity-game/[0.08] p-5">
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+    <div className="rounded-xl border border-toolkit/25 bg-gradient-to-br from-toolkit/[0.14] to-entity-game/[0.08] px-6 py-5">
+      <div className="grid items-center gap-6 md:grid-cols-[1fr_320px]">
         {/* Left: status + stats */}
         <div>
           <div className="flex items-center gap-2.5">
-            <h2 className="font-quicksand text-xl font-extrabold text-foreground">
+            <h2 className="font-quicksand text-[22px] font-extrabold leading-none text-foreground">
               🔄 BGG Catalog Sync
             </h2>
             <span
@@ -197,6 +196,6 @@ export function SyncStatusHero({ onOpenCsvModal, onOpenManualModal }: SyncStatus
           </Button>
         </div>
       </div>
-    </Card>
+    </div>
   );
 }

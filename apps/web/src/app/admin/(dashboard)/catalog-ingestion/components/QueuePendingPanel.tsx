@@ -1,13 +1,13 @@
-import { Card, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-
 const ISSUE_URL = 'https://github.com/meepleAi-app/meepleai-monorepo/issues/1874';
 
 export function QueuePendingPanel() {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>⏳ Queue pending re-sync</CardTitle>
-      </CardHeader>
+    <section className="overflow-hidden rounded-xl border border-border bg-card">
+      <header className="flex items-center gap-2.5 border-b border-border bg-muted/30 px-3.5 py-2.5">
+        <h3 className="font-quicksand text-[13px] font-extrabold text-foreground">
+          ⏳ Queue pending re-sync
+        </h3>
+      </header>
       <div className="px-4 py-6 text-center">
         <p className="text-sm text-muted-foreground">
           Queue pending: feature in arrivo (BE{' '}
@@ -22,6 +22,6 @@ export function QueuePendingPanel() {
           ).
         </p>
       </div>
-    </Card>
+    </section>
   );
 }

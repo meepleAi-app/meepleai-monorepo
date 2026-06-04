@@ -1,7 +1,6 @@
 'use client';
 import { X } from 'lucide-react';
 
-import { Card, CardHeader } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
 
 import { useCatalogSyncRunLogs } from '../hooks/use-catalog-sync-run-logs';
@@ -17,17 +16,27 @@ export function LogStream({ runId, onClose }: LogStreamProps) {
   if (runId === null) return null;
 
   return (
-    <Card role="region" aria-label="Sync run logs" className="border-border">
-      <CardHeader className="flex flex-row items-center justify-between border-b border-border pb-3">
+    <section
+      role="region"
+      aria-label="Sync run logs"
+      className="overflow-hidden rounded-xl border border-border bg-card"
+    >
+      <header className="flex items-center gap-2.5 border-b border-border bg-muted/30 px-3.5 py-2.5">
         <div>
-          <h3 className="font-quicksand font-bold text-foreground">Run logs</h3>
-          <p className="font-mono text-[11px] text-muted-foreground">{runId}</p>
+          <h3 className="font-quicksand text-[13px] font-extrabold text-foreground">Run logs</h3>
+          <p className="font-mono text-[10px] text-muted-foreground">{runId}</p>
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close logs">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          aria-label="Close logs"
+          className="ml-auto h-7 w-7"
+        >
           <X className="h-4 w-4" />
         </Button>
-      </CardHeader>
-      <div className="p-4">
+      </header>
+      <div className="p-3.5">
         {isLoading && <p className="text-sm text-muted-foreground">Loading logs…</p>}
 
         {!isLoading && data === null && (
@@ -58,6 +67,6 @@ export function LogStream({ runId, onClose }: LogStreamProps) {
           </>
         )}
       </div>
-    </Card>
+    </section>
   );
 }

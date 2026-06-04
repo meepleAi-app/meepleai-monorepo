@@ -184,6 +184,9 @@ internal static class DocumentProcessingServiceExtensions
         // Issue #1831: Register Quartz job for L4 PDF cover backfill (every 30 minutes)
         RegisterBackfillPdfCoversJob(services);
 
+        // Issue #1831 follow-up: Register Quartz job for orphan cover recovery (daily at 03:00 UTC)
+        RegisterPdfCoverOrphanRecoveryJob(services);
+
         return services;
     }
 
@@ -209,6 +212,30 @@ internal static class DocumentProcessingServiceExtensions
                     .WithIntervalInMinutes(30)
                     .RepeatForever())
                 .WithDescription("Backfills L4 PDF covers for PDFs whose ingestion completed without a cover")
+            );
+        });
+    }
+
+    /// <summary>
+    /// Issue #1831 follow-up — registers <see cref="Api.BoundedContexts.DocumentProcessing.Application.Jobs.PdfCoverOrphanRecoveryJob"/>
+    /// with the Quartz scheduler. Runs daily at 03:00 UTC to scan PDFs with
+    /// <c>CoverGenerationStatus=Generated</c> whose R2 object is missing and
+    /// reset them to <c>Pending</c> for re-generation by <see cref="Api.BoundedContexts.DocumentProcessing.Application.Jobs.BackfillPdfCoversJob"/>.
+    /// </summary>
+    private static void RegisterPdfCoverOrphanRecoveryJob(IServiceCollection services)
+    {
+        services.AddQuartz(q =>
+        {
+            var jobKey = new Quartz.JobKey("PdfCoverOrphanRecoveryJob", "DocumentProcessing");
+
+            q.AddJob<Api.BoundedContexts.DocumentProcessing.Application.Jobs.PdfCoverOrphanRecoveryJob>(opts =>
+                opts.WithIdentity(jobKey));
+
+            q.AddTrigger(opts => opts
+                .ForJob(jobKey)
+                .WithIdentity("PdfCoverOrphanRecoveryTrigger", "DocumentProcessing")
+                .WithCronSchedule("0 0 3 * * ?") // Daily at 03:00 UTC
+                .WithDescription("Detects Generated PDF covers whose R2 object is missing and resets them to Pending for re-generation")
             );
         });
     }

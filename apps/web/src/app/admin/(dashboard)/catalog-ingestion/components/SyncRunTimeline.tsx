@@ -30,7 +30,16 @@ function successRate(runs: CatalogSyncRunSummary[]): string {
 }
 
 export function SyncRunTimeline({ onDrillDown }: SyncRunTimelineProps) {
-  const { data, isLoading, isError, error, refetch } = useCatalogSyncRuns();
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useCatalogSyncRuns();
 
   if (isLoading) return <div className="h-40 animate-pulse rounded-xl bg-card/60" />;
   // Issue #1880: distinguish fetch error from empty state (both had `!data` true).
@@ -58,7 +67,11 @@ export function SyncRunTimeline({ onDrillDown }: SyncRunTimelineProps) {
       </section>
     );
   }
-  if (!data || data.items.length === 0) {
+
+  // Issue #1881: flatten pages from useInfiniteQuery into a single render list.
+  const items: CatalogSyncRunSummary[] = data?.pages.flatMap(p => p.items) ?? [];
+
+  if (items.length === 0) {
     return (
       <section className="overflow-hidden rounded-xl border border-border bg-card">
         <header className="flex items-center gap-2.5 border-b border-border bg-muted/30 px-3.5 py-2.5">
@@ -77,10 +90,10 @@ export function SyncRunTimeline({ onDrillDown }: SyncRunTimelineProps) {
     <section className="overflow-hidden rounded-xl border border-border bg-card">
       <header className="flex items-center gap-2.5 border-b border-border bg-muted/30 px-3.5 py-2.5">
         <h3 className="font-quicksand text-[13px] font-extrabold text-foreground">
-          Sync history · ultime {data.items.length} run
+          Sync history · ultime {items.length} run
         </h3>
         <span className="ml-auto font-mono text-[10px] text-muted-foreground">
-          success rate {successRate(data.items)}
+          success rate {successRate(items)}
         </span>
       </header>
       <div>
@@ -94,7 +107,7 @@ export function SyncRunTimeline({ onDrillDown }: SyncRunTimelineProps) {
           <div className="text-right">×fail</div>
           <div />
         </div>
-        {data.items.map(run => (
+        {items.map(run => (
           <div
             key={run.id}
             data-testid="run-row"
@@ -146,6 +159,20 @@ export function SyncRunTimeline({ onDrillDown }: SyncRunTimelineProps) {
           </div>
         ))}
       </div>
+
+      {/* Issue #1881: Load more footer (append next page on click) */}
+      {hasNextPage && (
+        <div className="flex items-center justify-center border-t border-border bg-muted/20 px-3.5 py-2.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+          >
+            {isFetchingNextPage ? 'Loading…' : 'Load more'}
+          </Button>
+        </div>
+      )}
     </section>
   );
 }

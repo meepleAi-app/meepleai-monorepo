@@ -8,13 +8,13 @@ import { SyncRunTimeline } from './SyncRunTimeline';
 
 vi.mock('../lib/catalog-ingestion-api');
 
-function setup(runs: api.CatalogSyncRunSummary[] = []) {
+function setup(runs: api.CatalogSyncRunSummary[] = [], hasMore = false) {
   vi.mocked(api.fetchCatalogSyncRuns).mockResolvedValue({
     items: runs,
     total: runs.length,
     page: 1,
     pageSize: 12,
-    hasMore: false,
+    hasMore,
   });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return {
@@ -138,5 +138,54 @@ describe('SyncRunTimeline — error state (#1880)', () => {
     // assert call-count because keepPreviousData + visibility refetch can fire extras.
     await waitFor(() => expect(screen.getByText('BGG full sync')).toBeInTheDocument());
     expect(screen.queryByText(/Impossibile caricare la timeline/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('SyncRunTimeline — Load more pagination (#1881)', () => {
+  it('HIDES "Load more" button when hasMore=false on first page', async () => {
+    const { wrapper } = setup([sampleRun({ id: 'r1' })], false);
+    render(<SyncRunTimeline onDrillDown={vi.fn()} />, { wrapper });
+    await waitFor(() => expect(screen.getByText('BGG full sync')).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: /Load more/i })).not.toBeInTheDocument();
+  });
+
+  it('SHOWS "Load more" button when hasMore=true', async () => {
+    const { wrapper } = setup([sampleRun({ id: 'r1' })], true);
+    render(<SyncRunTimeline onDrillDown={vi.fn()} />, { wrapper });
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Load more/i })).toBeInTheDocument()
+    );
+  });
+
+  it('appends next page rows when Load more is clicked', async () => {
+    vi.mocked(api.fetchCatalogSyncRuns)
+      .mockResolvedValueOnce({
+        items: [sampleRun({ id: 'r1', title: 'BGG full sync' })],
+        total: 2,
+        page: 1,
+        pageSize: 12,
+        hasMore: true,
+      })
+      .mockResolvedValueOnce({
+        items: [sampleRun({ id: 'r2', title: 'BGG delta sync' })],
+        total: 2,
+        page: 2,
+        pageSize: 12,
+        hasMore: false,
+      });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+
+    render(<SyncRunTimeline onDrillDown={vi.fn()} />, { wrapper });
+    await waitFor(() => expect(screen.getByText('BGG full sync')).toBeInTheDocument());
+    await userEvent.click(screen.getByRole('button', { name: /Load more/i }));
+
+    // Both rows visible (append, not replace)
+    await waitFor(() => expect(screen.getByText('BGG delta sync')).toBeInTheDocument());
+    expect(screen.getByText('BGG full sync')).toBeInTheDocument();
+    // Button hidden since the second page has hasMore=false
+    expect(screen.queryByRole('button', { name: /Load more/i })).not.toBeInTheDocument();
   });
 });

@@ -82,4 +82,45 @@ public sealed class WikidataCatalogProviderTests
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().Contain("HTTP");
     }
+
+    [Fact]
+    public async Task FetchAsync_AllNullInputs_ReturnsMissingParametersError()
+    {
+        var provider = new WikidataCatalogProvider(MakeClient(HttpStatusCode.OK, "{}"), NullLogger<WikidataCatalogProvider>.Instance);
+
+        var result = await provider.FetchAsync(new CatalogProviderQuery(null, null, null), default);
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Missing");
+    }
+
+    [Fact]
+    public async Task FetchAsync_InvalidWikidataQid_ReturnsValidationError()
+    {
+        var provider = new WikidataCatalogProvider(MakeClient(HttpStatusCode.OK, "{}"), NullLogger<WikidataCatalogProvider>.Instance);
+
+        var result = await provider.FetchAsync(new CatalogProviderQuery(null, "Q123} . ?x ?y ?z", null), default);
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Invalid");
+    }
+
+    [Fact]
+    public async Task FetchAsync_ByValidWikidataQid_BuildsBindQuery()
+    {
+        // Sanity: a valid QID format does NOT trigger validation error.
+        const string body = """
+        { "results": { "bindings": [{
+          "game":        {"value": "http://www.wikidata.org/entity/Q98056728"},
+          "gameLabel":   {"value": "Catan"}
+        }]}}
+        """;
+        var provider = new WikidataCatalogProvider(MakeClient(HttpStatusCode.OK, body), NullLogger<WikidataCatalogProvider>.Instance);
+
+        var result = await provider.FetchAsync(new CatalogProviderQuery(null, "Q98056728", null), default);
+
+        result.Success.Should().BeTrue();
+        result.Fields["title"].Value.Should().Be("Catan");
+        result.Fields["wikidataQid"].Value.Should().Be("Q98056728");
+    }
 }

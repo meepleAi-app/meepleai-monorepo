@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
@@ -17,6 +18,14 @@ internal sealed class WikidataCatalogProvider : ICatalogProvider
     public string Name => "wikidata";
 
     private const string SparqlPath = "sparql";
+
+    // Validates Wikidata QID format (Q followed by digits) before SPARQL interpolation.
+    // Anchored, no backtracking — DoS-safe. Timeout is defensive.
+    private static readonly Regex WikidataQidPattern = new(
+        @"^Q\d+$",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled,
+        TimeSpan.FromMilliseconds(200));
+
     private readonly HttpClient _http;
     private readonly ILogger<WikidataCatalogProvider> _logger;
 
@@ -33,6 +42,11 @@ internal sealed class WikidataCatalogProvider : ICatalogProvider
         if (query.BggId is null && query.WikidataQid is null && string.IsNullOrWhiteSpace(query.SearchTerm))
         {
             return CatalogProviderResult.Empty("Missing query parameters");
+        }
+
+        if (query.WikidataQid is not null && !WikidataQidPattern.IsMatch(query.WikidataQid))
+        {
+            return CatalogProviderResult.Empty("Invalid WikidataQid format");
         }
 
         var sparql = BuildSparql(query);
@@ -75,7 +89,7 @@ SELECT ?game ?gameLabel ?yearPublished ?designerLabel ?publisherLabel
 WHERE {{
   {bind}
   OPTIONAL {{ ?game wdt:P577 ?yearPublished. }}
-  OPTIONAL {{ ?game wdt:P178 ?designer. }}
+  OPTIONAL {{ ?game wdt:P3300 ?designer. }}
   OPTIONAL {{ ?game wdt:P123 ?publisher. }}
   OPTIONAL {{ ?game wdt:P1873 ?minPlayers. }}
   OPTIONAL {{ ?game wdt:P1872 ?maxPlayers. }}
@@ -132,7 +146,7 @@ LIMIT 1";
         var designer = Get("designerLabel");
         if (!string.IsNullOrWhiteSpace(designer))
         {
-            fields["designers"] = new FieldProvenance("wikidata", sourceUrl, "P178", fetchedAt, new List<string> { designer });
+            fields["designers"] = new FieldProvenance("wikidata", sourceUrl, "P3300", fetchedAt, new List<string> { designer });
         }
 
         var publisher = Get("publisherLabel");

@@ -48,7 +48,15 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         builder.Property(e => e.ExtractedTables).HasColumnType("text");
         builder.Property(e => e.ExtractedDiagrams).HasColumnType("text");
         builder.Property(e => e.AtomicRules).HasColumnType("text");
-        builder.Property(e => e.SharedGameId).IsRequired(false);
+        // Issue #1885: align with BC SharedGameCatalog convention (all other entities use
+        // snake_case column names explicitly via HasColumnName). Without this mapping, EF
+        // generated the column as PascalCase "SharedGameId", breaking the snake_case SQL
+        // identifiers in migration 20260603120937. The companion migration
+        // RenamePdfDocumentsSharedGameIdToSnakeCase performs the physical rename for
+        // existing databases.
+        builder.Property(e => e.SharedGameId)
+            .HasColumnName("shared_game_id")
+            .IsRequired(false);
 
         builder.HasOne<SharedGameEntity>()
             .WithMany()
@@ -57,7 +65,7 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasIndex(e => new { e.SharedGameId, e.UploadedAt })
-            .HasDatabaseName("IX_pdf_documents_SharedGameId_UploadedAt");
+            .HasDatabaseName("ix_pdf_documents_shared_game_id_uploaded_at");
 
         builder.HasOne(e => e.UploadedBy)
             .WithMany()

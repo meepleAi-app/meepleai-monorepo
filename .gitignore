@@ -274,3 +274,11 @@ infra/backups/*.txt
 # Per-environment config for game-reset scripts (never commit actual values)
 infra/scripts/game-reset/.env.*
 !infra/scripts/game-reset/.env.example
+
+# Claude Design source bundle (derived folder linked to claude.ai/design, regenerated on demand via cp script)
+# Note: claude-design-handoff/ is intentionally NOT gitignored — exported prototypes are committed
+# so they're shareable across terminals and reviewable via PR (see folder README)
+claude-design-bundle/
+
+# Throwaway screenshot reciclato durante review interattive (drag&drop dall'utente)
+loc.png

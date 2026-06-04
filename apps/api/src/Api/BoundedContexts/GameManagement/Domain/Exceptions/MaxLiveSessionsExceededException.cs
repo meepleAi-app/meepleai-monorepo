@@ -15,7 +15,7 @@ public sealed class MaxLiveSessionsExceededException : DomainException
     public Guid GameNightEventId { get; }
 
     public MaxLiveSessionsExceededException(Guid gameNightEventId)
-        : base($"GameNightEvent {gameNightEventId} already has an active live session (invariante #10: max 1 live).")
+        : base($"GameNightEvent {gameNightEventId} already has an active live session. At most 1 session may be InProgress at a time (invariant #10).")
     {
         GameNightEventId = gameNightEventId;
     }

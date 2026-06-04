@@ -92,6 +92,6 @@ public class GameNightEventMaxLiveTests
         var ex = new MaxLiveSessionsExceededException(id);
         ex.GameNightEventId.Should().Be(id);
         ex.Message.Should().Contain(id.ToString());
-        ex.Message.Should().Contain("invariante #10");
+        ex.Message.Should().Contain("invariant #10");
     }
 }

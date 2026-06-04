@@ -42,4 +42,14 @@ describe('MenuPlaceholder', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Azioni' }));
     expect(parentClick).not.toHaveBeenCalled();
   });
+
+  it('is removed from the keyboard tab order (tabIndex={-1}) — no false a11y affordance', () => {
+    render(<MenuPlaceholder />);
+    const btn = screen.getByRole('button', { name: 'Azioni' });
+    // Without tabIndex={-1}, screen-reader / keyboard users would land on this
+    // non-functional placeholder on every one of the 72 consumer card surfaces.
+    // DEC-4: placeholder is visual-only; restore tabIndex={0} when a real
+    // onActionsMenu handler is wired in a follow-up issue.
+    expect(btn.tabIndex).toBe(-1);
+  });
 });

@@ -6,11 +6,13 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Services.BackgroundAnaly
 using Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExtractor;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Services;
+using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Providers;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Quartz;
 
 // Issue #3918: Catalog Trending Analytics Service
@@ -165,9 +167,90 @@ internal static class SharedGameCatalogServiceExtensions
                 .WithDescription("Runs every 15 min to evict shared-game detail tags for top-N most-viewed games and the search-games list tag"));
         });
 
+        // Issue #1903 M5.2: register HttpClients, keyed catalog providers,
+        // aggregator, and Quartz CatalogSeedFetchJob.
+        RegisterCatalogSeedProviders(services);
+        RegisterCatalogSeedFetchJob(services);
+
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 
         return services;
+    }
+
+    /// <summary>
+    /// Issue #1903 M5.2 — registers Wikidata SPARQL + BGG XMLAPI2 HttpClients with
+    /// the spec-mandated <c>User-Agent</c> (admin-catalog-seed; abuse@meepleai.app),
+    /// then exposes the providers as keyed <see cref="ICatalogProvider"/> services
+    /// (<c>"wikidata"</c> primary, <c>"bgg"</c> fallback) so
+    /// <see cref="ICatalogSeedAggregator"/> can resolve them explicitly without
+    /// relying on registration order.
+    /// </summary>
+    /// <remarks>
+    /// Spec: 2026-06-04-admin-catalog-seed-design.md §7. The User-Agent string is
+    /// mandatory per BGG ToS so they can reach out before legal escalation.
+    /// </remarks>
+    private static void RegisterCatalogSeedProviders(IServiceCollection services)
+    {
+        const string CatalogUserAgent = "MeepleAI/1.0 (admin-catalog-seed; abuse@meepleai.app)";
+
+        // Spec-mandated public endpoints (2026-06-04-admin-catalog-seed-design.md §7).
+        // S1075 suppressed: these are stable third-party service URLs, not internal infra.
+#pragma warning disable S1075 // URIs should not be hardcoded
+        const string WikidataBaseUrl = "https://query.wikidata.org/";
+        const string BggBaseUrl = "https://boardgamegeek.com/";
+#pragma warning restore S1075
+
+        services.AddHttpClient<WikidataCatalogProvider>(client =>
+        {
+            client.BaseAddress = new Uri(WikidataBaseUrl);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(CatalogUserAgent);
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
+        services.AddHttpClient<BggCatalogProvider>(client =>
+        {
+            client.BaseAddress = new Uri(BggBaseUrl);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(CatalogUserAgent);
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
+        // Keyed registration so CatalogSeedAggregator can resolve "wikidata" (primary)
+        // and "bgg" (fallback) explicitly — avoids relying on registration order.
+        services.AddKeyedScoped<ICatalogProvider>("wikidata", (sp, _) =>
+            sp.GetRequiredService<WikidataCatalogProvider>());
+        services.AddKeyedScoped<ICatalogProvider>("bgg", (sp, _) =>
+            sp.GetRequiredService<BggCatalogProvider>());
+
+        services.AddScoped<ICatalogSeedAggregator>(sp =>
+        {
+            var wikidata = sp.GetRequiredKeyedService<ICatalogProvider>("wikidata");
+            var bgg = sp.GetRequiredKeyedService<ICatalogProvider>("bgg");
+            var logger = sp.GetRequiredService<ILogger<CatalogSeedAggregator>>();
+            return new CatalogSeedAggregator(wikidata, bgg, logger);
+        });
+    }
+
+    /// <summary>
+    /// Issue #1903 M5.2 — registers <see cref="CatalogSeedFetchJob"/> with the
+    /// Quartz scheduler. Runs every 1 minute to fetch provider data for
+    /// <c>Pending</c> drafts (batch size 10, 1s inter-item throttle per spec §7).
+    /// </summary>
+    private static void RegisterCatalogSeedFetchJob(IServiceCollection services)
+    {
+        services.AddQuartz(q =>
+        {
+            var jobKey = new JobKey("CatalogSeedFetchJob", "SharedGameCatalog");
+
+            q.AddJob<CatalogSeedFetchJob>(opts => opts.WithIdentity(jobKey));
+
+            q.AddTrigger(opts => opts
+                .ForJob(jobKey)
+                .WithIdentity("CatalogSeedFetchTrigger", "SharedGameCatalog")
+                .WithSimpleSchedule(x => x
+                    .WithIntervalInMinutes(1)
+                    .RepeatForever())
+                .WithDescription("Fetches provider data for Pending CatalogSeedDraft entries every 1 minute"));
+        });
     }
 
     /// <summary>

@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
@@ -7,6 +8,7 @@ using Api.Observability;
 using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
@@ -31,6 +33,7 @@ internal sealed class DeleteKbDocumentCommandHandler : ICommandHandler<DeleteKbD
     private readonly IVectorStoreAdapter _vectorStore;
     private readonly IBlobStorageService _blobStorageService;
     private readonly IAiResponseCacheService _cacheService;
+    private readonly IMediator? _mediator;
     private readonly ILogger<DeleteKbDocumentCommandHandler> _logger;
 
     public DeleteKbDocumentCommandHandler(
@@ -39,7 +42,8 @@ internal sealed class DeleteKbDocumentCommandHandler : ICommandHandler<DeleteKbD
         IVectorStoreAdapter vectorStore,
         IBlobStorageService blobStorageService,
         IAiResponseCacheService cacheService,
-        ILogger<DeleteKbDocumentCommandHandler> logger)
+        ILogger<DeleteKbDocumentCommandHandler> logger,
+        IMediator? mediator = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _agents = agents ?? throw new ArgumentNullException(nameof(agents));
@@ -47,6 +51,7 @@ internal sealed class DeleteKbDocumentCommandHandler : ICommandHandler<DeleteKbD
         _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
         _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _mediator = mediator;
     }
 
     public async Task Handle(DeleteKbDocumentCommand command, CancellationToken cancellationToken)
@@ -91,6 +96,8 @@ internal sealed class DeleteKbDocumentCommandHandler : ICommandHandler<DeleteKbD
 
         // 4. EF delete — cascade removes TextChunks + VectorDocument
         var storageGameId = (doc.PrivateGameId ?? doc.SharedGameId)?.ToString() ?? string.Empty;
+        var coverR2Key = doc.CoverR2Key;
+
         _db.PdfDocuments.Remove(doc);
         try
         {
@@ -110,6 +117,19 @@ internal sealed class DeleteKbDocumentCommandHandler : ICommandHandler<DeleteKbD
         _logger.LogInformation(
             "Deleted KB document {DocId} (detached from {AgentCount} consuming agents)",
             id, consumingAgents.Count);
+
+        // Issue #1831 AC: raise PdfDeletedDomainEvent so PdfDeletedEventHandler
+        // evicts the L4 cover thumb/preview from R2. Published AFTER the
+        // SaveChangesAsync succeeded (not via IDomainEventCollector pre-save):
+        // a stale event left in the collector after the ConflictException path
+        // would otherwise be drained by a later SaveChangesAsync in the same
+        // scope and trigger R2 cleanup for a PDF that was never deleted.
+        if (_mediator is not null && !string.IsNullOrWhiteSpace(coverR2Key))
+        {
+            await _mediator
+                .Publish(new PdfDeletedDomainEvent(id, coverR2Key), cancellationToken)
+                .ConfigureAwait(false);
+        }
 
         // 5. Blob — best-effort physical file deletion
         await DeletePhysicalFileAsync(id.ToString(), storageGameId, cancellationToken).ConfigureAwait(false);

@@ -52,6 +52,7 @@ internal static class SharedGameCatalogServiceExtensions
         services.AddScoped<ICatalogSyncRunRepository, CatalogSyncRunRepository>(); // #1861: F4-A6 catalog sync run history
         services.AddScoped<IEnrichmentQueueRepository, EnrichmentQueueRepository>(); // #1874: queued BGG enrichment requests
         services.AddScoped<IEnrichmentAttemptRepository, EnrichmentAttemptRepository>(); // #1874: BGG enrichment outcome history
+        services.AddScoped<ICatalogSeedDraftRepository, CatalogSeedDraftRepository>(); // #1903 M1.5
         services.AddScoped<IShareRequestRepository, ShareRequestRepository>(); // Issue #2724: CreateShareRequest
         services.AddScoped<IBadgeRepository, BadgeRepository>(); // Issue #2731: Badge gamification system
         services.AddScoped<IUserBadgeRepository, UserBadgeRepository>(); // Issue #2731: User badge awards

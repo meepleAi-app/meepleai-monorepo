@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
+using Api.BoundedContexts.GameManagement.Domain.Exceptions;
 using Api.SharedKernel.Domain.Entities;
 
 namespace Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
@@ -362,10 +363,18 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
 
     /// <summary>
     /// Starts the first pending session.
+    /// Enforces invariante #10 (GameNight/Session domain model): a GameNightEvent
+    /// can have at most 1 GameNightSession in InProgress at a time.
     /// </summary>
+    /// <exception cref="MaxLiveSessionsExceededException">
+    /// Thrown when another session is already in InProgress status on this event.
+    /// </exception>
     public void StartCurrentSession()
     {
         ThrowIfCorrupted();
+
+        if (_sessions.Any(s => s.Status == GameNightSessionStatus.InProgress))
+            throw new MaxLiveSessionsExceededException(Id);
 
         var session = _sessions.FirstOrDefault(s => s.Status == GameNightSessionStatus.Pending)
             ?? throw new InvalidOperationException("No pending session to start.");

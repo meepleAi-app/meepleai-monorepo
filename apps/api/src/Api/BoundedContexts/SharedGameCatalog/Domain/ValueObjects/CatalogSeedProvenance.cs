@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
@@ -21,6 +22,8 @@ public sealed class CatalogSeedProvenance
 
     public T? GetValue<T>(string fieldName)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(fieldName);
+
         if (!_fields.TryGetValue(fieldName, out var fp))
         {
             return default;
@@ -39,8 +42,11 @@ public sealed class CatalogSeedProvenance
             {
                 return je.Deserialize<T>(JsonOpts);
             }
-            catch (JsonException)
+            catch (JsonException ex)
             {
+                Debug.WriteLine(
+                    $"[CatalogSeedProvenance] Corrupted ProvenanceJson for field '{fieldName}' " +
+                    $"(target type {typeof(T).Name}): {ex.Message}");
                 return default;
             }
         }
@@ -49,7 +55,10 @@ public sealed class CatalogSeedProvenance
     }
 
     public string? GetProvider(string fieldName)
-        => _fields.TryGetValue(fieldName, out var fp) ? fp.Provider : null;
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(fieldName);
+        return _fields.TryGetValue(fieldName, out var fp) ? fp.Provider : null;
+    }
 
     /// <summary>
     /// Merges primary and fallback dictionaries. Primary entries win on conflict;

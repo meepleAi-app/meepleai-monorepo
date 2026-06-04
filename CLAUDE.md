@@ -329,6 +329,21 @@ Run `pnpm lint:tokens` to regenerate the inventory in `audits/2026-05-12-token-v
 - ❌ Shared models between commands/queries
 - ❌ Direct service injection in endpoints (use MediatR)
 
+### Domain Model — GameNight / Session
+
+**Reference**: [`docs/for-developers/specs/2026-06-04-gamenight-session-domain-model.md`](./docs/for-developers/specs/2026-06-04-gamenight-session-domain-model.md) — 20 invarianti consolidate (9 fatti + 11 derivate), 5 tensioni risolte 2026-06-04.
+
+Quando tocchi i bounded context **`SessionTracking`** o **`GameManagement`** (sub-aggregate GameNight), questo spec è la source of truth per:
+- Cardinalità GameNight 1→N Session
+- 3 timestamp Session distinti (createdAt always, startedAt/completedAt nullable)
+- State machine GameNight (planned → in-progress via first Session, → completed manuale)
+- Player identity mix (User-linked + guest free)
+- Tagging vs RSVP a 5 fasi (tag silente → "Invia inviti" esplicito → pending → confermato)
+- Invariante max 1 live per GameNight (parallel play out of scope MVP)
+- Sidebar 2 voci game-related: Library (personale) + Games (catalogo, Discover come default tab)
+
+Companion: [gap report demo Claude Design](./docs/for-developers/audits/2026-06-04-claude-design-gap-report.md) (38 gap classificati 5-cat: ROUTE/STATE/CTA/ENTITY/TOKEN).
+
 ### Known Pitfalls (Issues)
 
 | Issue | Rule |

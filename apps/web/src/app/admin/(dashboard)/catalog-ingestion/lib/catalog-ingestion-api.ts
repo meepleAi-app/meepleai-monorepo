@@ -133,7 +133,7 @@ export function useExcelExport() {
 // ====== #1861/#1835 — Catalog sync run history ======
 
 export type CatalogSyncStatusValue = 'running' | 'idle' | 'never_run';
-export type CatalogRunStatus = 'Success' | 'Failed' | 'TimedOut' | 'Running';
+export type CatalogRunStatus = 'Queued' | 'Success' | 'Failed' | 'TimedOut' | 'Running';
 export type CatalogSyncProvider = 'BggApi' | 'CsvImport' | 'Manual';
 
 export interface CatalogSyncRunSummary {

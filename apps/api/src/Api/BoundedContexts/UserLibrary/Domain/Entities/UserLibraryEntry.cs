@@ -277,6 +277,29 @@ internal sealed class UserLibraryEntry : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// R2 storage key for the user-uploaded custom cover image (L3, issue #1824).
+    /// Null when no custom cover has been uploaded for this entry.
+    /// Highest priority in the FE cover-resolution chain (overrides L4/L2/L1).
+    /// </summary>
+    public string? CustomCoverR2Key { get; private set; }
+
+    /// <summary>
+    /// Returns whether this entry has a user-uploaded custom cover.
+    /// </summary>
+    public bool HasCustomCover => !string.IsNullOrWhiteSpace(CustomCoverR2Key);
+
+    /// <summary>
+    /// Sets or clears the R2 storage key for the custom cover image.
+    /// Pass null to clear the custom cover.
+    /// Issue #1824 (L3 cover upload).
+    /// </summary>
+    /// <param name="r2Key">The R2 object key, or null to clear.</param>
+    public void SetCustomCoverR2Key(string? r2Key)
+    {
+        CustomCoverR2Key = string.IsNullOrWhiteSpace(r2Key) ? null : r2Key;
+    }
+
+    /// <summary>
     /// Returns whether this entry uses a custom agent configuration.
     /// </summary>
     public bool HasCustomAgent() => CustomAgentConfig is not null;

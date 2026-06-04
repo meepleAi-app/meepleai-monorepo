@@ -1,5 +1,9 @@
 'use client';
 
+import { useState } from 'react';
+
+import { CustomCoverDialog } from '@/components/features/library/custom-cover/CustomCoverDialog';
+import { EditCoverOverlay } from '@/components/features/library/custom-cover/EditCoverOverlay';
 import { SplitViewLayout } from '@/components/layout/SplitViewLayout/SplitViewLayout';
 import { ConnectionBar, buildGameConnections } from '@/components/ui/data-display/connection-bar';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card/MeepleCard';
@@ -39,6 +43,7 @@ export function GameDetailDesktop({
 }: GameDetailDesktopProps) {
   const { data: game, isLoading, isError } = useLibraryGameDetail(gameId);
   const { handlePipClick } = useConnectionBarNav(gameId);
+  const [coverDialogOpen, setCoverDialogOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -85,18 +90,28 @@ export function GameDetailDesktop({
       })
     : [];
 
+  const hasCustomCover = Boolean(game?.customCoverR2Key);
+
   const listContent = (
     <div className="flex flex-col gap-3">
-      <MeepleCard
-        entity="game"
-        variant="hero"
-        title={game?.gameTitle ?? 'Gioco non in libreria'}
-        subtitle={game?.gamePublisher ?? undefined}
-        imageUrl={game?.gameImageUrl ?? undefined}
-        rating={game?.averageRating ?? undefined}
-        metadata={heroMetadata.length > 0 ? heroMetadata : undefined}
-        data-testid="game-detail-hero-card"
-      />
+      <div className="group relative">
+        <MeepleCard
+          entity="game"
+          variant="hero"
+          title={game?.gameTitle ?? 'Gioco non in libreria'}
+          subtitle={game?.gamePublisher ?? undefined}
+          imageUrl={game?.gameImageUrl ?? undefined}
+          rating={game?.averageRating ?? undefined}
+          metadata={heroMetadata.length > 0 ? heroMetadata : undefined}
+          data-testid="game-detail-hero-card"
+        />
+        {game && (
+          <EditCoverOverlay
+            onEditClick={() => setCoverDialogOpen(true)}
+            hasCustomCover={hasCustomCover}
+          />
+        )}
+      </div>
       <ConnectionBar connections={gameConnections} onPipClick={handlePipClick} />
     </div>
   );
@@ -120,6 +135,14 @@ export function GameDetailDesktop({
         listLabel="Carta del gioco"
         detailLabel="Strumenti e informazioni"
       />
+      {game && (
+        <CustomCoverDialog
+          gameId={game.gameId}
+          open={coverDialogOpen}
+          onClose={() => setCoverDialogOpen(false)}
+          hasCustomCover={hasCustomCover}
+        />
+      )}
     </div>
   );
 }

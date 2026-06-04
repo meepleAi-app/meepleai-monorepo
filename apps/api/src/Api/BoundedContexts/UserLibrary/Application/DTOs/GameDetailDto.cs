@@ -49,7 +49,10 @@ internal record GameDetailDto(
     CustomPdfDto? CustomPdf = null,
 
     // Labels
-    LabelDto[]? Labels = null
+    LabelDto[]? Labels = null,
+
+    // Issue #1824 L3: user-custom cover R2 key (null if no custom cover)
+    string? CustomCoverR2Key = null
 );
 
 /// <summary>

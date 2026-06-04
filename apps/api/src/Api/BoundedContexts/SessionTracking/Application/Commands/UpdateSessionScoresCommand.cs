@@ -18,7 +18,8 @@ namespace Api.BoundedContexts.SessionTracking.Application.Commands;
 public record UpdateSessionScoresCommand(
     Guid SessionId,
     ScoreType ScoringType,
-    string ScoreData
+    string ScoreData,
+    Guid RequestedBy
 ) : IRequest<UpdateSessionScoresResult>;
 
 /// <summary>

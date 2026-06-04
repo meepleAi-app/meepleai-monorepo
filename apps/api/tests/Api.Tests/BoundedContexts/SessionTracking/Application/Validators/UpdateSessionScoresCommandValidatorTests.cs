@@ -31,7 +31,7 @@ public class UpdateSessionScoresCommandValidatorTests
     public void Validate_ValidPointsScoreData_ReturnsValid()
     {
         var json = $$"""{"scores":[{"playerId":"{{PlayerA}}","points":50},{"playerId":"{{PlayerB}}","points":30}]}""";
-        var cmd = new UpdateSessionScoresCommand(Guid.NewGuid(), ScoreType.Points, json);
+        var cmd = new UpdateSessionScoresCommand(Guid.NewGuid(), ScoreType.Points, json, Guid.NewGuid());
 
         var result = _validator.Validate(cmd);
 
@@ -42,7 +42,7 @@ public class UpdateSessionScoresCommandValidatorTests
     public void Validate_NegativePointsScoreData_ReturnsInvalid()
     {
         var json = $$"""{"scores":[{"playerId":"{{PlayerA}}","points":-5}]}""";
-        var cmd = new UpdateSessionScoresCommand(Guid.NewGuid(), ScoreType.Points, json);
+        var cmd = new UpdateSessionScoresCommand(Guid.NewGuid(), ScoreType.Points, json, Guid.NewGuid());
 
         var result = _validator.Validate(cmd);
 
@@ -56,7 +56,7 @@ public class UpdateSessionScoresCommandValidatorTests
     {
         // BinaryWin payload (results[].isWinner) submitted with ScoringType=Points (expects scores[].points)
         var binaryWinJson = $$"""{"results":[{"playerId":"{{PlayerA}}","isWinner":true}]}""";
-        var cmd = new UpdateSessionScoresCommand(Guid.NewGuid(), ScoreType.Points, binaryWinJson);
+        var cmd = new UpdateSessionScoresCommand(Guid.NewGuid(), ScoreType.Points, binaryWinJson, Guid.NewGuid());
 
         var result = _validator.Validate(cmd);
 
@@ -68,7 +68,7 @@ public class UpdateSessionScoresCommandValidatorTests
     public void Validate_ValidBinaryWinScoreData_ReturnsValid()
     {
         var json = $$"""{"results":[{"playerId":"{{PlayerA}}","isWinner":true},{"playerId":"{{PlayerB}}","isWinner":false}]}""";
-        var cmd = new UpdateSessionScoresCommand(Guid.NewGuid(), ScoreType.BinaryWin, json);
+        var cmd = new UpdateSessionScoresCommand(Guid.NewGuid(), ScoreType.BinaryWin, json, Guid.NewGuid());
 
         var result = _validator.Validate(cmd);
 
@@ -79,7 +79,7 @@ public class UpdateSessionScoresCommandValidatorTests
     public void Validate_ValidObjectivesScoreData_ReturnsValid()
     {
         var json = $$"""{"completedByPlayer":[{"playerId":"{{PlayerA}}","objectives":["Obj1","Obj2"]},{"playerId":"{{PlayerB}}","objectives":["Obj1"]}]}""";
-        var cmd = new UpdateSessionScoresCommand(Guid.NewGuid(), ScoreType.Objectives, json);
+        var cmd = new UpdateSessionScoresCommand(Guid.NewGuid(), ScoreType.Objectives, json, Guid.NewGuid());
 
         var result = _validator.Validate(cmd);
 
@@ -90,7 +90,7 @@ public class UpdateSessionScoresCommandValidatorTests
     public void Validate_ValidRankingScoreData_ReturnsValid()
     {
         var json = $$"""{"positions":[{"playerId":"{{PlayerA}}","position":1},{"playerId":"{{PlayerB}}","position":2}]}""";
-        var cmd = new UpdateSessionScoresCommand(Guid.NewGuid(), ScoreType.Ranking, json);
+        var cmd = new UpdateSessionScoresCommand(Guid.NewGuid(), ScoreType.Ranking, json, Guid.NewGuid());
 
         var result = _validator.Validate(cmd);
 
@@ -101,7 +101,7 @@ public class UpdateSessionScoresCommandValidatorTests
     public void Validate_RankingWithDuplicatePosition_ReturnsInvalid()
     {
         var json = $$"""{"positions":[{"playerId":"{{PlayerA}}","position":1},{"playerId":"{{PlayerB}}","position":1}]}""";
-        var cmd = new UpdateSessionScoresCommand(Guid.NewGuid(), ScoreType.Ranking, json);
+        var cmd = new UpdateSessionScoresCommand(Guid.NewGuid(), ScoreType.Ranking, json, Guid.NewGuid());
 
         var result = _validator.Validate(cmd);
 
@@ -112,7 +112,7 @@ public class UpdateSessionScoresCommandValidatorTests
     [Fact]
     public void Validate_EmptyScoreData_ReturnsInvalid()
     {
-        var cmd = new UpdateSessionScoresCommand(Guid.NewGuid(), ScoreType.Points, string.Empty);
+        var cmd = new UpdateSessionScoresCommand(Guid.NewGuid(), ScoreType.Points, string.Empty, Guid.NewGuid());
 
         var result = _validator.Validate(cmd);
 
@@ -124,7 +124,7 @@ public class UpdateSessionScoresCommandValidatorTests
     public void Validate_EmptySessionId_ReturnsInvalid()
     {
         var json = $$"""{"scores":[{"playerId":"{{PlayerA}}","points":10}]}""";
-        var cmd = new UpdateSessionScoresCommand(Guid.Empty, ScoreType.Points, json);
+        var cmd = new UpdateSessionScoresCommand(Guid.Empty, ScoreType.Points, json, Guid.NewGuid());
 
         var result = _validator.Validate(cmd);
 
@@ -135,11 +135,25 @@ public class UpdateSessionScoresCommandValidatorTests
     [Fact]
     public void Validate_MalformedJson_ReturnsInvalid()
     {
-        var cmd = new UpdateSessionScoresCommand(Guid.NewGuid(), ScoreType.Points, "{ not valid json");
+        var cmd = new UpdateSessionScoresCommand(Guid.NewGuid(), ScoreType.Points, "{ not valid json", Guid.NewGuid());
 
         var result = _validator.Validate(cmd);
 
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName == nameof(UpdateSessionScoresCommand.ScoreData));
+    }
+
+    [Fact]
+    public void Validate_EmptyRequestedBy_ReturnsInvalid()
+    {
+        // IDOR guard: RequestedBy is extracted from authenticated user claims and MUST
+        // never be Guid.Empty (endpoint short-circuits 401 in that case, but defense-in-depth).
+        var json = $$"""{"scores":[{"playerId":"{{PlayerA}}","points":10}]}""";
+        var cmd = new UpdateSessionScoresCommand(Guid.NewGuid(), ScoreType.Points, json, Guid.Empty);
+
+        var result = _validator.Validate(cmd);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(UpdateSessionScoresCommand.RequestedBy));
     }
 }

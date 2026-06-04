@@ -26,6 +26,10 @@ public class UpdateSessionScoresCommandValidator : AbstractValidator<UpdateSessi
             .NotEmpty()
             .WithMessage("SessionId is required");
 
+        RuleFor(x => x.RequestedBy)
+            .NotEmpty()
+            .WithMessage("RequestedBy is required (extracted from authenticated user claims)");
+
         RuleFor(x => x.ScoreData)
             .Cascade(CascadeMode.Stop)
             .NotEmpty()

@@ -90,10 +90,19 @@ internal static class SessionCommandEndpoints
         group.MapPut("/game-sessions/{sessionId:guid}/scores-polymorphic", async (
             Guid sessionId,
             UpdateSessionScoresRequest request,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
-            var command = new UpdateSessionScoresCommand(sessionId, request.ScoringType, request.ScoreData);
+            // IDOR guard (security review high-priority): extract authenticated user id
+            // from claims; handler verifies the caller is the session owner or a participant.
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new UpdateSessionScoresCommand(sessionId, request.ScoringType, request.ScoreData, userId);
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
@@ -101,10 +110,11 @@ internal static class SessionCommandEndpoints
         .WithName("UpdateSessionScoresPolymorphic")
         .WithTags("SessionTracking")
         .WithSummary("Update session polymorphic scores (Points/BinaryWin/Objectives/Ranking)")
-        .WithDescription("Asse A #1896 (T10): replaces ScoringType + ScoreData atomically with per-type JSON schema validation.")
+        .WithDescription("Asse A #1896 (T10): replaces ScoringType + ScoreData atomically with per-type JSON schema validation. Caller must be session owner or registered participant (IDOR-protected).")
         .Produces(200)
         .Produces(400)
         .Produces(401)
+        .Produces(403)
         .Produces(404);
     }
 

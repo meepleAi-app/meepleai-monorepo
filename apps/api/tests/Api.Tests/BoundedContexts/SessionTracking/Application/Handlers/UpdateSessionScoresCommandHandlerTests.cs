@@ -52,7 +52,8 @@ public class UpdateSessionScoresCommandHandlerTests
         var cmd = new UpdateSessionScoresCommand(
             Guid.NewGuid(),
             ScoreType.Points,
-            $$"""{"scores":[{"playerId":"{{PlayerA}}","points":10}]}""");
+            $$"""{"scores":[{"playerId":"{{PlayerA}}","points":10}]}""",
+            Guid.NewGuid());
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => _handler.Handle(cmd, CancellationToken.None));
@@ -67,7 +68,7 @@ public class UpdateSessionScoresCommandHandlerTests
             .ReturnsAsync(session);
 
         var json = $$"""{"scores":[{"playerId":"{{PlayerA}}","points":42},{"playerId":"{{PlayerB}}","points":15}]}""";
-        var cmd = new UpdateSessionScoresCommand(session.Id, ScoreType.Points, json);
+        var cmd = new UpdateSessionScoresCommand(session.Id, ScoreType.Points, json, session.UserId);
 
         var result = await _handler.Handle(cmd, CancellationToken.None);
 
@@ -89,7 +90,7 @@ public class UpdateSessionScoresCommandHandlerTests
             .ReturnsAsync(session);
 
         var json = $$"""{"scores":[{"playerId":"{{PlayerA}}","points":50},{"playerId":"{{PlayerB}}","points":50}]}""";
-        var cmd = new UpdateSessionScoresCommand(session.Id, ScoreType.Points, json);
+        var cmd = new UpdateSessionScoresCommand(session.Id, ScoreType.Points, json, session.UserId);
 
         var result = await _handler.Handle(cmd, CancellationToken.None);
 
@@ -105,7 +106,7 @@ public class UpdateSessionScoresCommandHandlerTests
             .ReturnsAsync(session);
 
         var json = $$"""{"results":[{"playerId":"{{PlayerA}}","isWinner":true},{"playerId":"{{PlayerB}}","isWinner":false}]}""";
-        var cmd = new UpdateSessionScoresCommand(session.Id, ScoreType.BinaryWin, json);
+        var cmd = new UpdateSessionScoresCommand(session.Id, ScoreType.BinaryWin, json, session.UserId);
 
         var result = await _handler.Handle(cmd, CancellationToken.None);
 
@@ -124,7 +125,7 @@ public class UpdateSessionScoresCommandHandlerTests
             .ReturnsAsync(session);
 
         var json = $$"""{"results":[{"playerId":"{{PlayerA}}","isWinner":true},{"playerId":"{{PlayerB}}","isWinner":true}]}""";
-        var cmd = new UpdateSessionScoresCommand(session.Id, ScoreType.BinaryWin, json);
+        var cmd = new UpdateSessionScoresCommand(session.Id, ScoreType.BinaryWin, json, session.UserId);
 
         var result = await _handler.Handle(cmd, CancellationToken.None);
 
@@ -140,7 +141,7 @@ public class UpdateSessionScoresCommandHandlerTests
             .ReturnsAsync(session);
 
         var json = $$"""{"completedByPlayer":[{"playerId":"{{PlayerA}}","objectives":["A","B","C"]},{"playerId":"{{PlayerB}}","objectives":["A"]}]}""";
-        var cmd = new UpdateSessionScoresCommand(session.Id, ScoreType.Objectives, json);
+        var cmd = new UpdateSessionScoresCommand(session.Id, ScoreType.Objectives, json, session.UserId);
 
         var result = await _handler.Handle(cmd, CancellationToken.None);
 
@@ -159,7 +160,7 @@ public class UpdateSessionScoresCommandHandlerTests
             .ReturnsAsync(session);
 
         var json = $$"""{"positions":[{"playerId":"{{PlayerA}}","position":1},{"playerId":"{{PlayerB}}","position":2}]}""";
-        var cmd = new UpdateSessionScoresCommand(session.Id, ScoreType.Ranking, json);
+        var cmd = new UpdateSessionScoresCommand(session.Id, ScoreType.Ranking, json, session.UserId);
 
         var result = await _handler.Handle(cmd, CancellationToken.None);
 
@@ -167,6 +168,74 @@ public class UpdateSessionScoresCommandHandlerTests
         result.ComputedWinnerId.Should().Be(PlayerA);
         session.ScoringType.Should().Be(ScoreType.Ranking);
         session.ScoreData.Should().Be(json);
+    }
+
+    [Fact]
+    public async Task Handle_RequestedByIsNotOwnerNorParticipant_ThrowsForbiddenException()
+    {
+        // IDOR guard (security review HIGH finding): mutation MUST be blocked when caller
+        // is neither the session.UserId nor a User-linked participant.
+        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
+        _sessionRepoMock
+            .Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var json = $$"""{"scores":[{"playerId":"{{PlayerA}}","points":10}]}""";
+        var unauthorizedUser = Guid.NewGuid(); // not the session.UserId, not a participant
+        var cmd = new UpdateSessionScoresCommand(session.Id, ScoreType.Points, json, unauthorizedUser);
+
+        await Assert.ThrowsAsync<ForbiddenException>(
+            () => _handler.Handle(cmd, CancellationToken.None));
+
+        // Verify mutation did NOT occur
+        _sessionRepoMock.Verify(r => r.UpdateAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_RequestedByIsSessionOwner_Succeeds()
+    {
+        var ownerId = Guid.NewGuid();
+        var session = Session.Create(ownerId, Guid.NewGuid(), SessionType.Generic);
+        _sessionRepoMock
+            .Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var json = $$"""{"scores":[{"playerId":"{{PlayerA}}","points":10}]}""";
+        var cmd = new UpdateSessionScoresCommand(session.Id, ScoreType.Points, json, ownerId);
+
+        var result = await _handler.Handle(cmd, CancellationToken.None);
+
+        result.Should().NotBeNull();
+        session.ScoringType.Should().Be(ScoreType.Points);
+    }
+
+    [Fact]
+    public async Task Handle_RequestedByIsRegisteredParticipant_Succeeds()
+    {
+        // Owner is different from participant; participant has User-linked identity.
+        // Session.Create already adds the owner as first User-linked participant — we
+        // add a second User-linked participant and verify they can mutate scores.
+        var ownerId = Guid.NewGuid();
+        var participantUserId = Guid.NewGuid();
+        var session = Session.Create(ownerId, Guid.NewGuid(), SessionType.Generic);
+
+        session.AddParticipant(
+            Api.BoundedContexts.SessionTracking.Domain.ValueObjects.ParticipantInfo.Create(
+                displayName: "Player2", isOwner: false, joinOrder: 2),
+            userId: participantUserId);
+
+        _sessionRepoMock
+            .Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var json = $$"""{"scores":[{"playerId":"{{PlayerA}}","points":10}]}""";
+        var cmd = new UpdateSessionScoresCommand(session.Id, ScoreType.Points, json, participantUserId);
+
+        var result = await _handler.Handle(cmd, CancellationToken.None);
+
+        result.Should().NotBeNull();
+        session.ScoringType.Should().Be(ScoreType.Points);
     }
 
     [Fact]
@@ -194,7 +263,7 @@ public class UpdateSessionScoresCommandHandlerTests
                 .Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(session);
 
-            var cmd = new UpdateSessionScoresCommand(session.Id, type, json);
+            var cmd = new UpdateSessionScoresCommand(session.Id, type, json, session.UserId);
             var result = await _handler.Handle(cmd, CancellationToken.None);
 
             result.ScoringType.Should().Be(type, $"round-trip for {type} should echo ScoringType");

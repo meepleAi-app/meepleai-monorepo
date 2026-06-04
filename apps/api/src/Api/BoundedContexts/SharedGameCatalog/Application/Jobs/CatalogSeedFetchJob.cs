@@ -64,21 +64,28 @@ public sealed class CatalogSeedFetchJob : IJob
         var aggregator = scope.ServiceProvider.GetRequiredService<ICatalogSeedAggregator>();
         var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        // Optional resolution — pre-M6.1 deployments won't have it registered and
+        // the job must keep working (tests stub the IServiceProvider). When not
+        // registered, SSE events are simply skipped.
+        var stream = scope.ServiceProvider.GetService<ICatalogSeedStreamService>();
 
-        await RunBatchAsync(repo, aggregator, uow, mediator, ct).ConfigureAwait(false);
+        await RunBatchAsync(repo, aggregator, uow, mediator, ct, stream).ConfigureAwait(false);
     }
 
     /// <summary>
     /// Internal batch runner — extracted from <see cref="Execute"/> so unit tests
     /// can drive it directly without spinning up the Quartz scheduler. Mirrors
     /// <c>BackfillPdfCoversJob.RunBatchAsync</c> from issue #1873.
+    /// Issue #1903 M6.1: also broadcasts batch + per-item events via
+    /// <paramref name="stream"/> when supplied (null = legacy callers).
     /// </summary>
     internal async Task RunBatchAsync(
         ICatalogSeedDraftRepository repo,
         ICatalogSeedAggregator aggregator,
         IUnitOfWork uow,
         IMediator mediator,
-        CancellationToken ct)
+        CancellationToken ct,
+        ICatalogSeedStreamService? stream = null)
     {
         var batch = await repo.GetByStatusAsync("Pending", BatchSize, ct).ConfigureAwait(false);
         if (batch.Count == 0)
@@ -91,26 +98,66 @@ public sealed class CatalogSeedFetchJob : IJob
             "CatalogSeedFetchJob: picked up {Count} Pending drafts for fetching",
             batch.Count);
 
+        var batchId = Guid.NewGuid();
+        var batchStart = DateTime.UtcNow;
+        var succeeded = 0;
+        var failed = 0;
+
+        if (stream is not null)
+        {
+            var draftIds = new List<Guid>(batch.Count);
+            foreach (var d in batch)
+            {
+                draftIds.Add(d.Id);
+            }
+            await stream.PublishAsync(new BatchStartedEvent(batchId, draftIds, batchStart), ct).ConfigureAwait(false);
+        }
+
         for (var i = 0; i < batch.Count; i++)
         {
             ct.ThrowIfCancellationRequested();
             var draft = batch[i];
-            await ProcessOneAsync(draft, aggregator, uow, mediator, ct).ConfigureAwait(false);
+            var outcome = await ProcessOneAsync(draft, aggregator, uow, mediator, ct, stream).ConfigureAwait(false);
+            if (outcome)
+            {
+                succeeded++;
+            }
+            else
+            {
+                failed++;
+            }
 
             if (i < batch.Count - 1)
             {
                 await Task.Delay(DelayBetweenItemsMs, ct).ConfigureAwait(false);
             }
         }
+
+        if (stream is not null)
+        {
+            var completedAt = DateTime.UtcNow;
+            var totalMs = (completedAt - batchStart).TotalMilliseconds;
+            await stream.PublishAsync(
+                new BatchCompletedEvent(batchId, succeeded, failed, totalMs, completedAt),
+                ct).ConfigureAwait(false);
+        }
     }
 
-    private async Task ProcessOneAsync(
+    /// <summary>
+    /// Processes a single draft. Returns <c>true</c> on a successful fetch
+    /// (terminal <c>Fetched</c>), <c>false</c> otherwise (<c>FetchFailed</c> or
+    /// any caught exception). Used by <see cref="RunBatchAsync"/> for batch
+    /// success/failure tallying.
+    /// </summary>
+    private async Task<bool> ProcessOneAsync(
         CatalogSeedDraftEntity draft,
         ICatalogSeedAggregator aggregator,
         IUnitOfWork uow,
         IMediator mediator,
-        CancellationToken ct)
+        CancellationToken ct,
+        ICatalogSeedStreamService? stream = null)
     {
+        var perItemStart = DateTime.UtcNow;
         try
         {
             var query = new CatalogProviderQuery(draft.BggId, draft.WikidataQid, draft.SearchTermInput);
@@ -148,7 +195,25 @@ public sealed class CatalogSeedFetchJob : IJob
                 await mediator.Publish(
                     new CatalogSeedFetchedEvent(draft.Id, result.ProviderUsed, result.Provenance.Fields.Count),
                     ct).ConfigureAwait(false);
+
+                if (stream is not null)
+                {
+                    var durationMs = (DateTime.UtcNow - perItemStart).TotalMilliseconds;
+                    await stream.PublishAsync(new SeedEntryFetchedEvent(
+                        draft.Id, draft.BggId, result.ProviderUsed,
+                        result.Provenance.Fields.Count, durationMs, DateTime.UtcNow), ct).ConfigureAwait(false);
+                }
+
+                return true;
             }
+
+            // FetchFailed (empty-provider case): emit the failure event.
+            if (stream is not null)
+            {
+                await stream.PublishAsync(new SeedEntryFetchFailedEvent(
+                    draft.Id, draft.BggId, "EmptyProviderResponse", DateTime.UtcNow), ct).ConfigureAwait(false);
+            }
+            return false;
         }
         catch (OperationCanceledException)
         {
@@ -182,6 +247,28 @@ public sealed class CatalogSeedFetchJob : IJob
                     "CatalogSeedFetchJob: failed to persist FetchFailed status for draft {DraftId}",
                     draft.Id);
             }
+
+            if (stream is not null)
+            {
+                try
+                {
+                    await stream.PublishAsync(new SeedEntryFetchFailedEvent(
+                        draft.Id, draft.BggId, ex.GetType().Name, DateTime.UtcNow), ct).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+#pragma warning disable CA1031
+                catch (Exception streamEx)
+#pragma warning restore CA1031
+                {
+                    _logger.LogWarning(streamEx,
+                        "CatalogSeedFetchJob: failed to publish SeedEntryFetchFailedEvent for draft {DraftId}",
+                        draft.Id);
+                }
+            }
+            return false;
         }
     }
 }

@@ -172,6 +172,11 @@ internal static class SharedGameCatalogServiceExtensions
         RegisterCatalogSeedProviders(services);
         RegisterCatalogSeedFetchJob(services);
 
+        // Issue #1903 M6.1: in-memory SSE event broadcaster for the admin
+        // catalog seed pipeline. Singleton so the Quartz job publisher and
+        // HTTP SSE subscribers share state across the process.
+        services.AddSingleton<ICatalogSeedStreamService, CatalogSeedStreamService>();
+
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 
         return services;

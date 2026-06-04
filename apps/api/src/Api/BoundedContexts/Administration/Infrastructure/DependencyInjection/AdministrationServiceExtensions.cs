@@ -168,6 +168,14 @@ internal static class AdministrationServiceExtensions
             .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
                 "SlackWebhook", sp.GetService<ICircuitBreakerStateTracker>()));
 
+        // Issue #1840 SP5 F4-C7: Prometheus labels passthrough — separate HttpClient
+        // from PrometheusHttpClient because the labels endpoint uses different cache
+        // semantics (60s static list vs per-query window for PromQL).
+        services.AddHttpClient<IPrometheusLabelsClient, PrometheusLabelsClient>()
+            .AddPolicyHandler(GetRetryPolicy())
+            .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
+                "PrometheusLabels", sp.GetService<ICircuitBreakerStateTracker>()));
+
         // Issue #894: Infrastructure details orchestration service
         services.AddScoped<IInfrastructureDetailsService, InfrastructureDetailsService>();
 

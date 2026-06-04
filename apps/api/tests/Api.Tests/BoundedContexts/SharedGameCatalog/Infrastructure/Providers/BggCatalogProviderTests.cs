@@ -22,6 +22,8 @@ public sealed class BggCatalogProviderTests
         <minplayers value="3"/>
         <maxplayers value="4"/>
         <playingtime value="60"/>
+        <minplaytime value="45"/>
+        <maxplaytime value="120"/>
         <minage value="10"/>
         <link type="boardgamedesigner" id="11" value="Klaus Teuber"/>
         <link type="boardgamepublisher" id="93" value="Kosmos"/>
@@ -62,6 +64,8 @@ public sealed class BggCatalogProviderTests
         r.Fields.Should().ContainKey("title");
         r.Fields["title"].Value.Should().Be("Catan");
         r.Fields["yearPublished"].Value.Should().Be(1995);
+        r.Fields["minPlayingTimeMinutes"].Value.Should().Be(45);
+        r.Fields["maxPlayingTimeMinutes"].Value.Should().Be(120);
         r.Fields["mechanics"].Value.Should().BeOfType<List<string>>().Which.Should().BeEquivalentTo("Trading", "Modular Board");
         r.Fields["designers"].Value.Should().BeOfType<List<string>>().Which.Should().Contain("Klaus Teuber");
     }
@@ -96,5 +100,28 @@ public sealed class BggCatalogProviderTests
         var r = await p.FetchAsync(new CatalogProviderQuery(13, null, null), default);
         r.Success.Should().BeFalse();
         r.ErrorMessage.Should().Contain("HTTP");
+    }
+
+    [Fact]
+    public void Constructor_SetsBggUserAgent_IfMissing()
+    {
+        var http = new HttpClient { BaseAddress = new Uri("https://boardgamegeek.com/") };
+        http.DefaultRequestHeaders.UserAgent.Should().BeEmpty();
+
+        var p = new BggCatalogProvider(http, NullLogger<BggCatalogProvider>.Instance);
+
+        http.DefaultRequestHeaders.UserAgent.ToString().Should().Contain("MeepleAI");
+        http.DefaultRequestHeaders.UserAgent.ToString().Should().Contain("abuse@meepleai.app");
+    }
+
+    [Fact]
+    public void Constructor_PreservesExistingUserAgent_IfAlreadySet()
+    {
+        var http = new HttpClient { BaseAddress = new Uri("https://boardgamegeek.com/") };
+        http.DefaultRequestHeaders.UserAgent.ParseAdd("CustomAgent/2.0");
+
+        var p = new BggCatalogProvider(http, NullLogger<BggCatalogProvider>.Instance);
+
+        http.DefaultRequestHeaders.UserAgent.ToString().Should().Be("CustomAgent/2.0");
     }
 }

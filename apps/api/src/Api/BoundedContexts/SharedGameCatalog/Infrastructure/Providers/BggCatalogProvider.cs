@@ -24,6 +24,15 @@ internal sealed class BggCatalogProvider : ICatalogProvider
     {
         _http = http ?? throw new ArgumentNullException(nameof(http));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+        const string RequiredUserAgent = "MeepleAI/1.0 (admin-catalog-seed; abuse@meepleai.app)";
+        if (_http.DefaultRequestHeaders.UserAgent.Count == 0)
+        {
+            // Spec §7.2 — BGG ToS compliance: identifiable User-Agent with contact email
+            // allows BGG to reach out before legal action. M4 will register via
+            // AddHttpClient with this header; here we defensively set it if missing.
+            _http.DefaultRequestHeaders.UserAgent.ParseAdd(RequiredUserAgent);
+        }
     }
 
     public async Task<CatalogProviderResult> FetchAsync(CatalogProviderQuery query, CancellationToken ct)
@@ -49,6 +58,11 @@ internal sealed class BggCatalogProvider : ICatalogProvider
             return ParseXml(body, query.BggId.Value);
         }
         catch (OperationCanceledException) { throw; }
+        catch (System.Xml.XmlException xmlEx)
+        {
+            _logger.LogWarning(xmlEx, "BGG XML parse failed for BggId={BggId}", query.BggId);
+            return CatalogProviderResult.Empty("Malformed BGG XML response");
+        }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "BGG fetch failed for BggId={BggId}", query.BggId);
@@ -85,6 +99,10 @@ internal sealed class BggCatalogProvider : ICatalogProvider
             fields["maxPlayers"] = new FieldProvenance("bgg", sourceUrl, "maxplayers", fetchedAt, mx);
         if (TryGetInt(item, "playingtime", out var pt))
             fields["playingTimeMinutes"] = new FieldProvenance("bgg", sourceUrl, "playingtime", fetchedAt, pt);
+        if (TryGetInt(item, "minplaytime", out var minPt))
+            fields["minPlayingTimeMinutes"] = new FieldProvenance("bgg", sourceUrl, "minplaytime", fetchedAt, minPt);
+        if (TryGetInt(item, "maxplaytime", out var maxPt))
+            fields["maxPlayingTimeMinutes"] = new FieldProvenance("bgg", sourceUrl, "maxplaytime", fetchedAt, maxPt);
         if (TryGetInt(item, "minage", out var minAge))
             fields["minAge"] = new FieldProvenance("bgg", sourceUrl, "minage", fetchedAt, minAge);
 

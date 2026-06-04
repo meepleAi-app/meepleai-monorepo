@@ -89,3 +89,54 @@ describe('SyncRunTimeline', () => {
     await waitFor(() => expect(screen.getByText(/Nessun run/i)).toBeInTheDocument());
   });
 });
+
+describe('SyncRunTimeline — error state (#1880)', () => {
+  function setupError(errorMessage = '500 Internal Server Error') {
+    vi.mocked(api.fetchCatalogSyncRuns).mockRejectedValue(new Error(errorMessage));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    return {
+      wrapper: ({ children }: { children: React.ReactNode }) => (
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      ),
+    };
+  }
+
+  it('renders distinct error alert (NOT empty state) when /runs fetch fails', async () => {
+    const { wrapper } = setupError('500 Internal Server Error');
+    render(<SyncRunTimeline onDrillDown={vi.fn()} />, { wrapper });
+
+    await waitFor(() =>
+      expect(screen.getByText(/Impossibile caricare la timeline/i)).toBeInTheDocument()
+    );
+    expect(screen.getByText(/500 Internal Server Error/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Riprova/i })).toBeInTheDocument();
+    // Critically: empty state semantics differ from error semantics
+    expect(screen.queryByText(/Nessun run registrato/i)).not.toBeInTheDocument();
+  });
+
+  it('refetches when Retry clicked (recovers after transient error)', async () => {
+    vi.mocked(api.fetchCatalogSyncRuns)
+      .mockRejectedValueOnce(new Error('502 Bad Gateway'))
+      .mockResolvedValue({
+        items: [sampleRun({ id: 'r1' })],
+        total: 1,
+        page: 1,
+        pageSize: 12,
+        hasMore: false,
+      });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+
+    render(<SyncRunTimeline onDrillDown={vi.fn()} />, { wrapper });
+    await waitFor(() =>
+      expect(screen.getByText(/Impossibile caricare la timeline/i)).toBeInTheDocument()
+    );
+    await userEvent.click(screen.getByRole('button', { name: /Riprova/i }));
+    // After Retry the component transitions to the populated rendering; we do not
+    // assert call-count because keepPreviousData + visibility refetch can fire extras.
+    await waitFor(() => expect(screen.getByText('BGG full sync')).toBeInTheDocument());
+    expect(screen.queryByText(/Impossibile caricare la timeline/i)).not.toBeInTheDocument();
+  });
+});

@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 
-import { Loader2, Play } from 'lucide-react';
+import { AlertCircle, Loader2, Play } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/primitives/button';
@@ -28,12 +28,35 @@ interface SyncStatusHeroProps {
 }
 
 export function SyncStatusHero({ onOpenCsvModal, onOpenManualModal }: SyncStatusHeroProps) {
-  const { data } = useCatalogSyncStatus();
+  const { data, isError, error, refetch } = useCatalogSyncStatus();
   const [provider, setProvider] = useState<CatalogSyncProvider>('BggApi');
   const [batchSize, setBatchSize] = useState('100');
   const [rateLimit, setRateLimit] = useState('60/min');
   const [autoRetry, setAutoRetry] = useState(true);
   const [isTriggering, setIsTriggering] = useState(false);
+
+  // Issue #1880: distinguish "loading" (skeleton) from "broken" (error card).
+  if (isError) {
+    return (
+      <div
+        role="alert"
+        className="flex items-center gap-3 rounded-xl border border-entity-event/30 bg-entity-event/[0.04] px-5 py-4"
+      >
+        <AlertCircle className="h-5 w-5 shrink-0 text-entity-event" aria-hidden />
+        <div className="flex-1">
+          <h3 className="font-quicksand text-sm font-bold text-foreground">
+            Impossibile caricare lo stato sync
+          </h3>
+          <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
+            {error instanceof Error ? error.message : 'Errore di rete'}
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => refetch()}>
+          Riprova
+        </Button>
+      </div>
+    );
+  }
 
   if (!data) return <div className="h-40 animate-pulse rounded-xl bg-card/60" />;
 

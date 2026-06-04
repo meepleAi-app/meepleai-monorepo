@@ -1,5 +1,7 @@
 'use client';
-import { ChevronRight } from 'lucide-react';
+import { AlertCircle, ChevronRight } from 'lucide-react';
+
+import { Button } from '@/components/ui/primitives/button';
 
 import { formatDuration, parseTimeSpanToMs } from '../_utils/run-formatter';
 import { useCatalogSyncRuns } from '../hooks/use-catalog-sync-runs';
@@ -28,9 +30,34 @@ function successRate(runs: CatalogSyncRunSummary[]): string {
 }
 
 export function SyncRunTimeline({ onDrillDown }: SyncRunTimelineProps) {
-  const { data, isLoading } = useCatalogSyncRuns();
+  const { data, isLoading, isError, error, refetch } = useCatalogSyncRuns();
 
   if (isLoading) return <div className="h-40 animate-pulse rounded-xl bg-card/60" />;
+  // Issue #1880: distinguish fetch error from empty state (both had `!data` true).
+  if (isError) {
+    return (
+      <section
+        role="alert"
+        className="overflow-hidden rounded-xl border border-entity-event/30 bg-card"
+      >
+        <header className="flex items-center gap-2.5 border-b border-border bg-muted/30 px-3.5 py-2.5">
+          <h3 className="font-quicksand text-[13px] font-extrabold text-foreground">
+            Sync history
+          </h3>
+        </header>
+        <div className="flex items-center gap-3 px-4 py-6">
+          <AlertCircle className="h-4 w-4 shrink-0 text-entity-event" aria-hidden />
+          <p className="flex-1 text-sm text-entity-event">
+            Impossibile caricare la timeline (
+            {error instanceof Error ? error.message : 'errore di rete'})
+          </p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            Riprova
+          </Button>
+        </div>
+      </section>
+    );
+  }
   if (!data || data.items.length === 0) {
     return (
       <section className="overflow-hidden rounded-xl border border-border bg-card">

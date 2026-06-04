@@ -205,3 +205,55 @@ describe('SyncStatusHero — trigger flow', () => {
     expect(onOpenManualModal).toHaveBeenCalled();
   });
 });
+
+describe('SyncStatusHero — error state (#1880)', () => {
+  function setupError(errorMessage = '500 Internal Server Error') {
+    vi.mocked(api.fetchCatalogSyncStatus).mockRejectedValue(new Error(errorMessage));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    return {
+      wrapper: ({ children }: { children: React.ReactNode }) => (
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      ),
+    };
+  }
+
+  it('renders alert card with error message + Retry button when /status fetch fails', async () => {
+    const { wrapper } = setupError('500 Internal Server Error');
+    render(<SyncStatusHero />, { wrapper });
+
+    await waitFor(() =>
+      expect(screen.getByText(/Impossibile caricare lo stato sync/i)).toBeInTheDocument()
+    );
+    expect(screen.getByText(/500 Internal Server Error/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Riprova/i })).toBeInTheDocument();
+    // NOT the skeleton pulse anymore
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('refetches when Retry clicked (recovers after transient error)', async () => {
+    vi.mocked(api.fetchCatalogSyncStatus)
+      .mockRejectedValueOnce(new Error('502 Bad Gateway'))
+      .mockResolvedValue({
+        status: 'idle',
+        lastRun: null,
+        currentRun: null,
+        cumulative: { gamesTotal: 4812 },
+        nextScheduled: null,
+      } as never);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+
+    render(<SyncStatusHero />, { wrapper });
+    await waitFor(() =>
+      expect(screen.getByText(/Impossibile caricare lo stato sync/i)).toBeInTheDocument()
+    );
+    await userEvent.click(screen.getByRole('button', { name: /Riprova/i }));
+    // After Retry the component transitions out of the error branch and renders the
+    // populated status card. We do not assert call-count because the hook also
+    // refetches when document visibility changes during the test setup.
+    await waitFor(() => expect(screen.getByText(/Giochi importati totali/)).toBeInTheDocument());
+    expect(screen.queryByText(/Impossibile caricare lo stato sync/i)).not.toBeInTheDocument();
+  });
+});

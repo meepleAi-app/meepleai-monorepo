@@ -88,6 +88,13 @@ export interface MeepleCardProps {
   id?: string;
   subtitle?: string;
   imageUrl?: string;
+  /**
+   * UTF-8 emoji shown in the squat-band cover mode (when `imageUrl` is absent).
+   * Falls back to `entityIcon[entity]` when omitted.
+   * Example: 🎲 for game, 🎯 for session, 🤖 for agent.
+   * Naming endorses existing FE convention (Toolkit.coverEmoji, play-records StatsHero.tsx:137).
+   */
+  coverEmoji?: string;
   rating?: number;
   ratingMax?: number;
   metadata?: MeepleCardMetadata[];

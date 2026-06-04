@@ -1,4 +1,5 @@
 using System.Reflection;
+using Api.BoundedContexts.Administration.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.Infrastructure.DomainEventLog;
 using Api.SharedKernel.Domain.Interfaces;
@@ -113,5 +114,49 @@ public sealed class EventTypeRegistryTests
             GameId: null);
 
         EventTypeRegistry.TryResolve(ev).Should().Be("pdf.metadata.changed");
+    }
+
+    /// <summary>
+    /// Issue #1840 SP5 F4-C7 — AlertFiredEvent must be aliased so the
+    /// AlertActivityFeed (SSE) and durable log row are emitted for both
+    /// real threshold breaches and admin-triggered TestAlert dry-runs.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "1840")]
+    public void Registry_resolves_alert_fired_alias()
+    {
+        var ev = new AlertFiredEvent(
+            RuleId: Guid.NewGuid(),
+            RuleName: "high_error_rate",
+            AlertType: "HighErrorRate",
+            Metric: "meepleai_api_error_rate",
+            Value: 0.07,
+            Threshold: 0.05,
+            ThresholdUnit: "%",
+            Severity: AlertSeverityKind.Critical,
+            Channels: new[] { "slack", "email" },
+            IsDryRun: true,
+            IsTest: true,
+            TriggeredBy: "admin@meepleai.dev");
+
+        EventTypeRegistry.TryResolve(ev).Should().Be("alert.fired");
+    }
+
+    /// <summary>
+    /// Issue #1840 SP5 F4-C7 — AlertResolvedEvent companion alias so the
+    /// activity feed can render the "after 12m 34s" delta cards.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "1840")]
+    public void Registry_resolves_alert_resolved_alias()
+    {
+        var ev = new AlertResolvedEvent(
+            RuleId: Guid.NewGuid(),
+            RuleName: "high_error_rate",
+            FiredEventId: Guid.NewGuid(),
+            Duration: TimeSpan.FromMinutes(12),
+            IsTest: false);
+
+        EventTypeRegistry.TryResolve(ev).Should().Be("alert.resolved");
     }
 }

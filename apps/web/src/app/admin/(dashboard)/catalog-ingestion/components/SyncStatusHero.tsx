@@ -83,8 +83,9 @@ export function SyncStatusHero({ onOpenCsvModal, onOpenManualModal }: SyncStatus
             <span
               role="status"
               aria-live="polite"
-              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${chip.toneClass} ${isRunning ? 'animate-pulse' : ''}`}
+              className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.04em] ${chip.toneClass}`}
             >
+              <span className={`h-1.5 w-1.5 rounded-full ${chip.dotClass}`} aria-hidden />
               {chip.label}
             </span>
           </div>

@@ -16,33 +16,40 @@ export default function CatalogIngestionPage() {
   const [drillDownRunId, setDrillDownRunId] = useState<string | null>(null);
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <header className="flex items-start justify-between">
+    <div className="flex flex-col gap-4">
+      {/* Header — mockup `.admin-top` (12px 24px padding, sticky) */}
+      <header className="flex items-center gap-4 border-b border-border bg-background/80 px-6 py-3 backdrop-blur-md">
         <div>
-          <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
+          <h1 className="font-quicksand text-[20px] font-extrabold leading-tight tracking-tight text-foreground">
             Catalog ingestion
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">Admin · Catalog · BoardGameGeek sync</p>
+          <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
+            Admin · Catalog · BoardGameGeek sync
+          </p>
         </div>
-        <ExportCatalogButton />
+        <div className="ml-auto">
+          <ExportCatalogButton />
+        </div>
       </header>
 
-      <SyncStatusHero
-        onOpenCsvModal={() => setCsvOpen(true)}
-        onOpenManualModal={() => setManualOpen(true)}
-      />
+      {/* Body — mockup `.admin-body` flex column gap 16px */}
+      <div className="flex flex-col gap-4 px-6">
+        <SyncStatusHero
+          onOpenCsvModal={() => setCsvOpen(true)}
+          onOpenManualModal={() => setManualOpen(true)}
+        />
 
-      <SyncRunTimeline onDrillDown={setDrillDownRunId} />
+        <SyncRunTimeline onDrillDown={setDrillDownRunId} />
 
-      <div className="grid gap-3.5 md:grid-cols-2">
-        <QueuePendingPanel />
-        <FailedItemsPanel />
+        <div className="grid grid-cols-2 gap-3.5">
+          <QueuePendingPanel />
+          <FailedItemsPanel />
+        </div>
+
+        {drillDownRunId !== null && (
+          <LogStream runId={drillDownRunId} onClose={() => setDrillDownRunId(null)} />
+        )}
       </div>
-
-      {drillDownRunId !== null && (
-        <LogStream runId={drillDownRunId} onClose={() => setDrillDownRunId(null)} />
-      )}
 
       <CsvImportModal open={csvOpen} onOpenChange={setCsvOpen} />
       <ManualAssignModal open={manualOpen} onOpenChange={setManualOpen} />

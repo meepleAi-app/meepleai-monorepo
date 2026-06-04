@@ -14,7 +14,13 @@ import { type CatalogSyncProvider, triggerCatalogSync } from '../lib/catalog-ing
 
 /** Italian thousands separator using dot — locale-safe in JSDOM test environments */
 function formatItNumber(n: number): string {
-  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const s = String(Math.trunc(n));
+  let out = '';
+  for (let i = 0; i < s.length; i++) {
+    if (i > 0 && (s.length - i) % 3 === 0) out += '.';
+    out += s[i];
+  }
+  return out;
 }
 
 interface SyncStatusHeroProps {

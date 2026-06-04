@@ -55,6 +55,10 @@ internal class AlertChannelEntityConfiguration : IEntityTypeConfiguration<AlertC
             .IsRequired()
             .HasDefaultValueSql("NOW()");
 
+        builder.Property(e => e.CreatedBy)
+            .HasColumnName("created_by")
+            .HasMaxLength(200);
+
         builder.Property(e => e.UpdatedBy)
             .HasColumnName("updated_by")
             .HasMaxLength(200);

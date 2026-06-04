@@ -44,6 +44,7 @@ internal sealed class AlertChannel
 
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
+    public string? CreatedBy { get; private set; }
     public string? UpdatedBy { get; private set; }
 
     /// <summary>SQL Server / Postgres optimistic concurrency token.
@@ -59,6 +60,7 @@ internal sealed class AlertChannel
         bool isEnabled,
         DateTime createdAt,
         DateTime updatedAt,
+        string? createdBy,
         string? updatedBy)
     {
         Type = type;
@@ -66,21 +68,24 @@ internal sealed class AlertChannel
         IsEnabled = isEnabled;
         CreatedAt = createdAt;
         UpdatedAt = updatedAt;
+        CreatedBy = createdBy;
         UpdatedBy = updatedBy;
     }
 
-    /// <summary>Creates a brand-new channel config (use UpsertCommand).</summary>
+    /// <summary>Creates a brand-new channel config (use UpsertCommand). The
+    /// caller's identity becomes both <see cref="CreatedBy"/> and the initial
+    /// <see cref="UpdatedBy"/>.</summary>
     public static AlertChannel Create(
         AlertChannelType type,
         string configJson,
         bool isEnabled,
-        string updatedBy)
+        string createdBy)
     {
         ValidateConfigJson(configJson);
-        if (string.IsNullOrWhiteSpace(updatedBy)) throw new ArgumentException("updatedBy is required", nameof(updatedBy));
+        if (string.IsNullOrWhiteSpace(createdBy)) throw new ArgumentException("createdBy is required", nameof(createdBy));
 
         var now = DateTime.UtcNow;
-        return new AlertChannel(type, configJson, isEnabled, now, now, updatedBy);
+        return new AlertChannel(type, configJson, isEnabled, now, now, createdBy, createdBy);
     }
 
     /// <summary>Repository-only reconstitution; preserves stored RowVersion and timestamps.</summary>
@@ -93,10 +98,11 @@ internal sealed class AlertChannel
         string? lastTestMessage,
         DateTime createdAt,
         DateTime updatedAt,
+        string? createdBy,
         string? updatedBy,
         byte[] rowVersion)
     {
-        return new AlertChannel(type, configJson, isEnabled, createdAt, updatedAt, updatedBy)
+        return new AlertChannel(type, configJson, isEnabled, createdAt, updatedAt, createdBy, updatedBy)
         {
             LastTestedAt = lastTestedAt,
             LastTestStatus = lastTestStatus,

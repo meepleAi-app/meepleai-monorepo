@@ -42,6 +42,7 @@ public sealed class UpsertAlertChannelCommandHandlerTests
                 lastTestMessage: null,
                 createdAt: DateTime.UtcNow,
                 updatedAt: DateTime.UtcNow,
+                createdBy: "admin",
                 updatedBy: "admin",
                 rowVersion: new byte[] { 1, 2, 3 }));
 
@@ -67,7 +68,7 @@ public sealed class UpsertAlertChannelCommandHandlerTests
             AlertChannelType.Slack,
             """{"webhookUrl":"https://hooks.slack.com/v1"}""",
             true, null, null, null,
-            DateTime.UtcNow, DateTime.UtcNow, "admin",
+            DateTime.UtcNow, DateTime.UtcNow, "admin", "admin",
             rowVersion: new byte[] { 9, 9, 9 });
         _repo.Setup(r => r.GetByTypeAsync(AlertChannelType.Slack, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
@@ -104,7 +105,7 @@ public sealed class UpsertAlertChannelCommandHandlerTests
                 AlertChannelType.Email,
                 """{"recipients":["ops@meepleai.dev"]}""",
                 false, null, null, null,
-                DateTime.UtcNow, DateTime.UtcNow, "admin",
+                DateTime.UtcNow, DateTime.UtcNow, "admin", "admin",
                 new byte[] { 7 }));
 
         var cmd = new UpsertAlertChannelCommand(

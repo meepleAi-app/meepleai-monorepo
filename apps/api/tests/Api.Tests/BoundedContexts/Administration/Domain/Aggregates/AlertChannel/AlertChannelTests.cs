@@ -139,6 +139,7 @@ public sealed class AlertChannelTests
             lastTestMessage: "All good",
             createdAt: createdAt,
             updatedAt: updatedAt,
+            createdBy: "founder@meepleai.dev",
             updatedBy: "ops@meepleai.dev",
             rowVersion: rowVersion);
 
@@ -148,6 +149,7 @@ public sealed class AlertChannelTests
         channel.LastTestedAt.Should().Be(lastTestedAt);
         channel.LastTestStatus.Should().Be("ok");
         channel.LastTestMessage.Should().Be("All good");
+        channel.CreatedBy.Should().Be("founder@meepleai.dev");
         channel.UpdatedBy.Should().Be("ops@meepleai.dev");
     }
 

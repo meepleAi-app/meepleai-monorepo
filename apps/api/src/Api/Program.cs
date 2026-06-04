@@ -885,6 +885,7 @@ v1Api.MapAlertEndpoints();             // Alert management
 v1Api.MapAlertConfigEndpoints();       // Alert rules (Issue #921)
 v1Api.MapAlertConfigurationEndpoints(); // Alert configuration (Issue #915)
 v1Api.MapAdminMetricsEndpoints();      // SP5 F4-C7 #1840: Prometheus metric labels passthrough
+v1Api.MapAlertChannelsEndpoints();     // SP5 F4-C7 #1840: Email/Slack channel CRUD + test-connection
 v1Api.MapNotificationEndpoints();      // User notifications (Issue #2053)
 v1Api.MapNotificationPreferencesEndpoints(); // Notification preferences (Issue #4220)
 v1Api.MapSlackIntegrationEndpoints();        // Slack OAuth connect/disconnect/status

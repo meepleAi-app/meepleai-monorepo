@@ -23,6 +23,7 @@ internal sealed class CatalogSeedDraftRepository : ICatalogSeedDraftRepository
     public Task<CatalogSeedDraftEntity?> GetByIdAsync(Guid id, CancellationToken ct)
         => _db.CatalogSeedDrafts.AsTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
 
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<CatalogSeedDraftEntity>> GetByStatusAsync(
         string status, int take, CancellationToken ct)
         => await _db.CatalogSeedDrafts

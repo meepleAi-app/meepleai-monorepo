@@ -16,8 +16,10 @@ public interface ICatalogSeedDraftRepository
     Task<CatalogSeedDraftEntity?> GetByIdAsync(Guid id, CancellationToken ct);
 
     /// <summary>
-    /// Gets up to <paramref name="take"/> drafts matching the given status,
-    /// ordered by oldest <c>CreatedAt</c> first (FIFO).
+    /// Fetches up to <paramref name="take"/> drafts with the given status, ordered by
+    /// CreatedAt ASC (FIFO). **Entities are returned tracked** because callers
+    /// (notably the CatalogSeedFetchJob) mutate them in the same DbContext scope
+    /// and save the changes. For read-only displays use <see cref="ListAsync"/>.
     /// </summary>
     Task<IReadOnlyList<CatalogSeedDraftEntity>> GetByStatusAsync(string status, int take, CancellationToken ct);
 

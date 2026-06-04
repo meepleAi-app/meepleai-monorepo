@@ -89,6 +89,22 @@ public class Session : IDomainEventSource
     public DateTime? FinalizedAt { get; private set; }
 
     /// <summary>
+    /// When the session transitioned to live mode (via <see cref="OpenLiveMode"/>).
+    /// Null until live mode is opened. Distinct from <see cref="CreatedAt"/> (Asse A
+    /// semantic alignment #1896, invariante #11 — 3 distinct timestamps: createdAt
+    /// always, startedAt/completedAt nullable).
+    /// </summary>
+    public DateTime? StartedAt { get; private set; }
+
+    /// <summary>
+    /// True when the session is currently in live mode: <see cref="StartedAt"/> is set
+    /// AND <see cref="FinalizedAt"/> is still null. Used to enforce invariante #14
+    /// (max 1 live session per GameNight at any given moment) at the GameNight level.
+    /// Computed property (not persisted).
+    /// </summary>
+    public bool IsLive => StartedAt.HasValue && FinalizedAt is null;
+
+    /// <summary>
     /// Soft delete flag.
     /// </summary>
     public bool IsDeleted { get; private set; }
@@ -318,6 +334,45 @@ public class Session : IDomainEventSource
         // Sync IsOwner flag with Host role
         participant.IsOwner = newRole == ParticipantRole.Host;
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Transitions the session to live mode.
+    /// Sets <see cref="StartedAt"/> = UtcNow and raises a
+    /// <see cref="Events.SessionStartedDomainEvent"/> so that
+    /// <c>GameManagement.SessionStartedHandler</c> (T3) can transition the parent
+    /// <c>GameNight</c> from <c>Published</c> → <c>InProgress</c> (invariante #15).
+    ///
+    /// <para>Invariante #11 (Asse A semantic alignment #1896): Session has 3 distinct
+    /// timestamps — <see cref="CreatedAt"/> always, <see cref="StartedAt"/> nullable
+    /// (set here), <see cref="FinalizedAt"/> nullable (set by <see cref="Finalize"/>).
+    /// </para>
+    ///
+    /// <para>Invariante #14: max 1 live session per GameNight at any given moment —
+    /// enforced at the GameNight aggregate (T3 handler) before allowing a
+    /// <see cref="Events.SessionStartedDomainEvent"/> to trigger the GameNight transition.</para>
+    /// </summary>
+    /// <exception cref="ConflictException">Thrown when the session is already in live mode
+    /// or when it has already been finalized.</exception>
+    public void OpenLiveMode()
+    {
+        if (IsLive)
+            throw new ConflictException(
+                $"Session {Id} is already in live mode (StartedAt={StartedAt:O}).");
+        if (FinalizedAt.HasValue)
+            throw new ConflictException(
+                $"Session {Id} is already finalized (FinalizedAt={FinalizedAt:O}). Cannot open live mode.");
+
+        StartedAt = DateTime.UtcNow;
+        UpdatedAt = StartedAt;
+
+        AddDomainEvent(new Events.SessionStartedDomainEvent
+        {
+            SessionId = Id,
+            UserId = UserId,
+            GameId = GameId,
+            StartedAt = StartedAt.Value
+        });
     }
 
     /// <summary>

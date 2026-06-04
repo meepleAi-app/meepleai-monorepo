@@ -27,6 +27,14 @@ public class SessionEntity
     public string? Location { get; set; }
 
     public DateTime? FinalizedAt { get; set; }
+
+    /// <summary>
+    /// When the session transitioned to live mode (via Session.OpenLiveMode).
+    /// Null until live mode is opened. Asse A semantic alignment #1896 (T2,
+    /// invariante #11) — column <c>started_at</c>.
+    /// </summary>
+    public DateTime? StartedAt { get; set; }
+
     public bool IsDeleted { get; set; }
     public DateTime? DeletedAt { get; set; }
     public DateTime CreatedAt { get; set; }

@@ -23,6 +23,7 @@ internal static class SessionMapper
             SessionDate = domain.SessionDate,
             Location = domain.Location,
             FinalizedAt = domain.FinalizedAt,
+            StartedAt = domain.StartedAt,
             IsDeleted = domain.IsDeleted,
             DeletedAt = domain.DeletedAt,
             CreatedAt = domain.CreatedAt,
@@ -56,6 +57,7 @@ internal static class SessionMapper
         typeof(Session).GetProperty(nameof(Session.SessionDate))!.SetValue(session, entity.SessionDate);
         typeof(Session).GetProperty(nameof(Session.Location))!.SetValue(session, entity.Location);
         typeof(Session).GetProperty(nameof(Session.FinalizedAt))!.SetValue(session, entity.FinalizedAt);
+        typeof(Session).GetProperty(nameof(Session.StartedAt))!.SetValue(session, entity.StartedAt);
         typeof(Session).GetProperty(nameof(Session.IsDeleted))!.SetValue(session, entity.IsDeleted);
         typeof(Session).GetProperty(nameof(Session.DeletedAt))!.SetValue(session, entity.DeletedAt);
         typeof(Session).GetProperty(nameof(Session.CreatedAt))!.SetValue(session, entity.CreatedAt);

@@ -111,6 +111,9 @@ public class SessionRepository : RepositoryBase, ISessionRepository
         existing.Status = session.Status.ToString();
         existing.Location = session.Location;
         existing.FinalizedAt = session.FinalizedAt;
+        // Asse A semantic alignment #1896 (T2): propagate StartedAt so OpenLiveMode()
+        // domain transitions are persisted by UpdateAsync. Invariante #11.
+        existing.StartedAt = session.StartedAt;
         existing.IsDeleted = session.IsDeleted;
         existing.DeletedAt = session.DeletedAt;
         existing.UpdatedAt = session.UpdatedAt;

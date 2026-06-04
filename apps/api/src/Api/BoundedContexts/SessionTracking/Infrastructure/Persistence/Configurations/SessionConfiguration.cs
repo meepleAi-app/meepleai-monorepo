@@ -56,6 +56,11 @@ public class SessionConfiguration : IEntityTypeConfiguration<SessionEntity>
         builder.Property(s => s.FinalizedAt)
             .HasColumnName("finalized_at");
 
+        // Asse A semantic alignment #1896 (T2): Session.StartedAt — when the session
+        // transitioned to live mode via OpenLiveMode(). Invariante #11.
+        builder.Property(s => s.StartedAt)
+            .HasColumnName("started_at");
+
         builder.Property(s => s.IsDeleted)
             .HasColumnName("is_deleted")
             .IsRequired()

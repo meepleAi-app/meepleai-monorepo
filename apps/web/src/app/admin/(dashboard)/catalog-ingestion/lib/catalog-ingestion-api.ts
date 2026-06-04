@@ -129,3 +129,123 @@ export function useExcelExport() {
       exportExcel(params.status, params.hasPdf),
   });
 }
+
+// ====== #1861/#1835 — Catalog sync run history ======
+
+export type CatalogSyncStatusValue = 'running' | 'idle' | 'never_run';
+export type CatalogRunStatus = 'Success' | 'Failed' | 'TimedOut' | 'Running';
+export type CatalogSyncProvider = 'BggApi' | 'CsvImport' | 'Manual';
+
+export interface CatalogSyncRunSummary {
+  id: string;
+  provider: CatalogSyncProvider;
+  status: CatalogRunStatus;
+  title: string;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  duration: string | null; // TimeSpan serialised as "hh:mm:ss" or null
+  itemsAdded: number;
+  itemsUpdated: number;
+  itemsFailed: number;
+  errorCode: string | null;
+  errorDetail: string | null;
+  triggeredByUserId: string | null;
+}
+
+export interface CatalogSyncCumulative {
+  gamesTotal: number;
+}
+
+export interface CatalogSyncStatusResponse {
+  status: CatalogSyncStatusValue;
+  lastRun: CatalogSyncRunSummary | null;
+  currentRun: CatalogSyncRunSummary | null;
+  cumulative: CatalogSyncCumulative;
+  nextScheduled: string | null;
+}
+
+export interface PagedCatalogSyncRunsResponse {
+  items: CatalogSyncRunSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+}
+
+export interface CatalogSyncRunLogsResponse {
+  runId: string;
+  status: CatalogRunStatus;
+  errorCode: string | null;
+  errorDetail: string | null;
+  logsAvailable: boolean;
+  logs: string[];
+  logsUnavailableReason: string | null;
+}
+
+export interface TriggerCatalogSyncResponse {
+  runId: string;
+}
+
+export class CatalogSyncApiError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string
+  ) {
+    super(message);
+    this.name = 'CatalogSyncApiError';
+  }
+}
+
+const SYNC_BASE = '/api/v1/admin/catalog-ingestion';
+
+export async function fetchCatalogSyncStatus(): Promise<CatalogSyncStatusResponse> {
+  const res = await fetch(`${SYNC_BASE}/status`, { method: 'GET', credentials: 'include' });
+  if (!res.ok)
+    throw new CatalogSyncApiError(res.status, `Failed to fetch status: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchCatalogSyncRuns({
+  page = 1,
+  pageSize = 12,
+}: { page?: number; pageSize?: number } = {}): Promise<PagedCatalogSyncRunsResponse> {
+  const res = await fetch(`${SYNC_BASE}/runs?page=${page}&pageSize=${pageSize}`, {
+    method: 'GET',
+    credentials: 'include',
+  });
+  if (!res.ok) throw new CatalogSyncApiError(res.status, `Failed to fetch runs: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchCatalogSyncRunLogs(
+  runId: string,
+  tail = 100
+): Promise<CatalogSyncRunLogsResponse | null> {
+  const res = await fetch(`${SYNC_BASE}/runs/${runId}/logs?tail=${tail}`, {
+    method: 'GET',
+    credentials: 'include',
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new CatalogSyncApiError(res.status, `Failed to fetch logs: ${res.statusText}`);
+  return res.json();
+}
+
+export async function triggerCatalogSync(
+  provider: CatalogSyncProvider
+): Promise<TriggerCatalogSyncResponse> {
+  const res = await fetch(`${SYNC_BASE}/trigger`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new CatalogSyncApiError(
+      res.status,
+      (body as { error?: string }).error ?? `Trigger failed: ${res.statusText}`
+    );
+  }
+  return res.json();
+}

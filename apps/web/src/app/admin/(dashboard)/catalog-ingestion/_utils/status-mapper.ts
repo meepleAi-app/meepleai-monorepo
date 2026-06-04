@@ -28,13 +28,13 @@ export const chipPresentation: Record<
   },
   healthy: {
     label: 'Idle',
-    toneClass: 'bg-toolkit/12 text-toolkit',
-    dotClass: 'bg-toolkit ring-4 ring-toolkit/25',
+    toneClass: 'bg-entity-toolkit/12 text-entity-toolkit',
+    dotClass: 'bg-entity-toolkit ring-4 ring-entity-toolkit/25',
   },
   degraded: {
     label: 'Last sync failed',
-    toneClass: 'bg-event/12 text-event',
-    dotClass: 'bg-event',
+    toneClass: 'bg-entity-event/12 text-entity-event',
+    dotClass: 'bg-entity-event',
   },
   setup: {
     label: 'Setup',

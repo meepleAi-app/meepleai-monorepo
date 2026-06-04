@@ -15,7 +15,7 @@ export function FailedItemsPanel() {
             href={ISSUE_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-toolkit underline"
+            className="text-entity-toolkit underline"
           >
             #1874
           </a>

@@ -72,7 +72,7 @@ export function SyncStatusHero({ onOpenCsvModal, onOpenManualModal }: SyncStatus
   };
 
   return (
-    <div className="rounded-xl border border-toolkit/25 bg-gradient-to-br from-toolkit/[0.14] to-entity-game/[0.08] px-6 py-5">
+    <div className="rounded-xl border border-entity-toolkit/25 bg-gradient-to-br from-entity-toolkit/[0.14] to-entity-game/[0.08] px-6 py-5">
       <div className="grid items-center gap-6 md:grid-cols-[1fr_320px]">
         {/* Left: status + stats */}
         <div>
@@ -90,7 +90,7 @@ export function SyncStatusHero({ onOpenCsvModal, onOpenManualModal }: SyncStatus
             </span>
           </div>
           {chipState === 'degraded' && data.lastRun?.errorCode && (
-            <div className="mt-1 inline-flex items-center rounded bg-event/10 px-2 py-0.5 font-mono text-[11px] text-event">
+            <div className="mt-1 inline-flex items-center rounded bg-entity-event/10 px-2 py-0.5 font-mono text-[11px] text-entity-event">
               {data.lastRun.errorCode}
             </div>
           )}

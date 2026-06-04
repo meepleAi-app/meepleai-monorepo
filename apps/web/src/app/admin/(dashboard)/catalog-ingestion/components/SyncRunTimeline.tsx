@@ -11,13 +11,13 @@ interface SyncRunTimelineProps {
 }
 
 function statusDotClass(status: CatalogRunStatus): string {
-  if (status === 'Failed' || status === 'TimedOut') return 'bg-event';
-  if (status === 'Running' || status === 'Queued') return 'bg-kb animate-pulse';
-  return 'bg-toolkit';
+  if (status === 'Failed' || status === 'TimedOut') return 'bg-entity-event';
+  if (status === 'Running' || status === 'Queued') return 'bg-entity-kb animate-pulse';
+  return 'bg-entity-toolkit';
 }
 
 function rowBgClass(status: CatalogRunStatus): string {
-  if (status === 'Failed' || status === 'TimedOut') return 'bg-event/[0.04]';
+  if (status === 'Failed' || status === 'TimedOut') return 'bg-entity-event/[0.04]';
   return '';
 }
 
@@ -94,13 +94,19 @@ export function SyncRunTimeline({ onDrillDown }: SyncRunTimelineProps) {
             </div>
 
             {/* Items added */}
-            <div className="text-right font-mono font-bold text-toolkit">+{run.itemsAdded}</div>
+            <div className="text-right font-mono font-bold text-entity-toolkit">
+              +{run.itemsAdded}
+            </div>
 
             {/* Items updated */}
-            <div className="text-right font-mono font-bold text-chat">~{run.itemsUpdated}</div>
+            <div className="text-right font-mono font-bold text-entity-chat">
+              ~{run.itemsUpdated}
+            </div>
 
             {/* Items failed */}
-            <div className="text-right font-mono font-bold text-event">{run.itemsFailed}</div>
+            <div className="text-right font-mono font-bold text-entity-event">
+              {run.itemsFailed}
+            </div>
 
             {/* Drill-down button */}
             <button

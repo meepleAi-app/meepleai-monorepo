@@ -52,8 +52,10 @@ export function LogStream({ runId, onClose }: LogStreamProps) {
         {!isLoading && data && data.logsAvailable && (
           <>
             {data.status !== 'Success' && data.errorCode && (
-              <div className="mb-3 rounded-md border-l-4 border-event bg-event/[0.04] px-3 py-2">
-                <div className="font-mono text-xs font-bold text-event">{data.errorCode}</div>
+              <div className="mb-3 rounded-md border-l-4 border-entity-event bg-entity-event/[0.04] px-3 py-2">
+                <div className="font-mono text-xs font-bold text-entity-event">
+                  {data.errorCode}
+                </div>
                 {data.errorDetail && (
                   <div className="mt-1 font-mono text-[11px] text-muted-foreground">
                     {data.errorDetail}

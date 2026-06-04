@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { AlertTriangleIcon, Plus, RefreshCwIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { AlertKpiStrip } from '@/components/admin/alert-rules/AlertKpiStrip';
 import { AlertRuleList } from '@/components/admin/alert-rules/AlertRuleList';
 import { AlertsBanner } from '@/components/admin/AlertsBanner';
 import { Button } from '@/components/ui/primitives/button';
@@ -104,6 +105,8 @@ export function AlertsTab() {
         healthyServices={healthyServices}
         totalServices={totalServices}
       />
+      {/* #1840 SP5 F4-C7 — KPI strip sopra la tabella regole */}
+      <AlertKpiStrip />
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="font-quicksand text-lg font-semibold tracking-tight text-foreground">

@@ -1,55 +1,51 @@
 'use client';
+import { useState } from 'react';
 
-import { DatabaseIcon, Download, Upload } from 'lucide-react';
-
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
-
-import { EnrichmentQueueTab } from './components/EnrichmentQueueTab';
-import { ExcelImportTab } from './components/ExcelImportTab';
-import { ExportTab } from './components/ExportTab';
+import { CsvImportModal } from './components/CsvImportModal';
+import { ExportCatalogButton } from './components/ExportCatalogButton';
+import { FailedItemsPanel } from './components/FailedItemsPanel';
+import { LogStream } from './components/LogStream';
+import { ManualAssignModal } from './components/ManualAssignModal';
+import { QueuePendingPanel } from './components/QueuePendingPanel';
+import { SyncRunTimeline } from './components/SyncRunTimeline';
+import { SyncStatusHero } from './components/SyncStatusHero';
 
 export default function CatalogIngestionPage() {
+  const [csvOpen, setCsvOpen] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [drillDownRunId, setDrillDownRunId] = useState<string | null>(null);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div>
-        <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
-          Catalog Ingestion
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Import games from Excel, enqueue enrichment, and export the catalog
-        </p>
+      <header className="flex items-start justify-between">
+        <div>
+          <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
+            Catalog ingestion
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">Admin · Catalog · BoardGameGeek sync</p>
+        </div>
+        <ExportCatalogButton />
+      </header>
+
+      <SyncStatusHero
+        onOpenCsvModal={() => setCsvOpen(true)}
+        onOpenManualModal={() => setManualOpen(true)}
+      />
+
+      <SyncRunTimeline onDrillDown={setDrillDownRunId} />
+
+      <div className="grid gap-3.5 lg:grid-cols-2">
+        <QueuePendingPanel />
+        <FailedItemsPanel />
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="import">
-        <TabsList>
-          <TabsTrigger value="import" className="gap-1.5">
-            <Upload className="h-3.5 w-3.5" />
-            Import
-          </TabsTrigger>
-          <TabsTrigger value="enrichment" className="gap-1.5">
-            <DatabaseIcon className="h-3.5 w-3.5" />
-            Enrichment Queue
-          </TabsTrigger>
-          <TabsTrigger value="export" className="gap-1.5">
-            <Download className="h-3.5 w-3.5" />
-            Export
-          </TabsTrigger>
-        </TabsList>
+      {drillDownRunId !== null && (
+        <LogStream runId={drillDownRunId} onClose={() => setDrillDownRunId(null)} />
+      )}
 
-        <TabsContent value="import">
-          <ExcelImportTab />
-        </TabsContent>
-
-        <TabsContent value="enrichment">
-          <EnrichmentQueueTab />
-        </TabsContent>
-
-        <TabsContent value="export">
-          <ExportTab />
-        </TabsContent>
-      </Tabs>
+      <CsvImportModal open={csvOpen} onOpenChange={setCsvOpen} />
+      <ManualAssignModal open={manualOpen} onOpenChange={setManualOpen} />
     </div>
   );
 }

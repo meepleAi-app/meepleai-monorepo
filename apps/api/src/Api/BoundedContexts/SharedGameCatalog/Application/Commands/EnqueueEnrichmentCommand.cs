@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Infrastructure.Services;
@@ -46,17 +47,20 @@ internal sealed class EnqueueEnrichmentCommandHandler
 {
     private readonly ISharedGameRepository _repository;
     private readonly IBggImportQueueService _queueService;
+    private readonly IEnrichmentQueueRepository _enrichmentQueueRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<EnqueueEnrichmentCommandHandler> _logger;
 
     public EnqueueEnrichmentCommandHandler(
         ISharedGameRepository repository,
         IBggImportQueueService queueService,
+        IEnrichmentQueueRepository enrichmentQueueRepository,
         IUnitOfWork unitOfWork,
         ILogger<EnqueueEnrichmentCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _queueService = queueService ?? throw new ArgumentNullException(nameof(queueService));
+        _enrichmentQueueRepository = enrichmentQueueRepository ?? throw new ArgumentNullException(nameof(enrichmentQueueRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -95,6 +99,21 @@ internal sealed class EnqueueEnrichmentCommandHandler
             .EnqueueEnrichmentBatchAsync(items, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
+        // Issue #1874: also persist EnrichmentQueueEntry aggregates so the admin
+        // Queue Pending panel can surface what's in flight. One entry per eligible
+        // game, Priority=Normal, Reason="manual enqueue", QueuedBy=command.UserId.
+        var queueEntries = eligible
+            .Select(g => EnrichmentQueueEntry.Enqueue(
+                g.Id,
+                EnrichmentPriority.Normal,
+                "manual enqueue",
+                command.UserId))
+            .ToList();
+
+        await _enrichmentQueueRepository
+            .AddRangeAsync(queueEntries, cancellationToken)
+            .ConfigureAwait(false);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
@@ -114,17 +133,20 @@ internal sealed class EnqueueAllSkeletonsCommandHandler
 {
     private readonly ISharedGameRepository _repository;
     private readonly IBggImportQueueService _queueService;
+    private readonly IEnrichmentQueueRepository _enrichmentQueueRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<EnqueueAllSkeletonsCommandHandler> _logger;
 
     public EnqueueAllSkeletonsCommandHandler(
         ISharedGameRepository repository,
         IBggImportQueueService queueService,
+        IEnrichmentQueueRepository enrichmentQueueRepository,
         IUnitOfWork unitOfWork,
         ILogger<EnqueueAllSkeletonsCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _queueService = queueService ?? throw new ArgumentNullException(nameof(queueService));
+        _enrichmentQueueRepository = enrichmentQueueRepository ?? throw new ArgumentNullException(nameof(enrichmentQueueRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -161,6 +183,20 @@ internal sealed class EnqueueAllSkeletonsCommandHandler
 
         var (batchId, enqueued) = await _queueService
             .EnqueueEnrichmentBatchAsync(items, command.UserId, cancellationToken)
+            .ConfigureAwait(false);
+
+        // Issue #1874: persist EnrichmentQueueEntry aggregates for the batch.
+        // Priority=Stale, Reason="stale skeletons batch", QueuedBy=null (system sweep).
+        var queueEntries = eligible
+            .Select(g => EnrichmentQueueEntry.Enqueue(
+                g.Id,
+                EnrichmentPriority.Stale,
+                "stale skeletons batch",
+                queuedBy: null))
+            .ToList();
+
+        await _enrichmentQueueRepository
+            .AddRangeAsync(queueEntries, cancellationToken)
             .ConfigureAwait(false);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

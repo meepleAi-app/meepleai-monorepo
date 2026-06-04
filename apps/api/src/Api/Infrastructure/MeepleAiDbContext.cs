@@ -171,6 +171,8 @@ public class MeepleAiDbContext : DbContext
     public DbSet<CertificationThresholdsConfigEntity> CertificationThresholdsConfigs => Set<CertificationThresholdsConfigEntity>(); // ADR-051 Sprint 1 / M2.0: singleton thresholds config
     public DbSet<MechanicRecalcJobEntity> MechanicRecalcJobs => Set<MechanicRecalcJobEntity>(); // ADR-051 Sprint 2 / M2.1: async recalc pipeline jobs
     public DbSet<CatalogSyncRunEntity> CatalogSyncRuns => Set<CatalogSyncRunEntity>(); // #1861: F4-A6 catalog sync run history (BGG / CSV / Manual)
+    public DbSet<EnrichmentQueueEntryEntity> EnrichmentQueueEntries => Set<EnrichmentQueueEntryEntity>(); // #1874: queued BGG enrichment requests
+    public DbSet<EnrichmentAttemptEntity> EnrichmentAttempts => Set<EnrichmentAttemptEntity>(); // #1874: BGG enrichment outcome history
     public DbSet<QuickQuestionEntity> QuickQuestions => Set<QuickQuestionEntity>(); // ISSUE-2401: Sprint 3 - Quick questions AI generation
     public DbSet<UserLibraryEntryEntity> UserLibraryEntries => Set<UserLibraryEntryEntity>(); // User Library feature
     public DbSet<WishlistItemEntity> WishlistItems => Set<WishlistItemEntity>(); // ISSUE-3917: Wishlist management

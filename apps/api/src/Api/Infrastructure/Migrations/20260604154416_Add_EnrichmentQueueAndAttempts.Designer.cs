@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -13,9 +14,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260604154416_Add_EnrichmentQueueAndAttempts")]
+    partial class Add_EnrichmentQueueAndAttempts
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -10229,105 +10232,6 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("ix_badges_tier");
 
                     b.ToTable("badges", (string)null);
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.CatalogSeedDraftEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime?>("ApprovedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("approved_at");
-
-                    b.Property<Guid?>("ApprovedByUserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("approved_by_user_id");
-
-                    b.Property<int?>("BggId")
-                        .HasColumnType("integer")
-                        .HasColumnName("bgg_id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("NOW()");
-
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("created_by_user_id");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("deleted_at");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("error_message");
-
-                    b.Property<DateTime?>("FetchedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("fetched_at");
-
-                    b.Property<bool>("IsDeleted")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("ProvenanceJson")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("provenance_json");
-
-                    b.Property<string>("RawPayloadJson")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("raw_payload_json");
-
-                    b.Property<Guid?>("ResultingSharedGameId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("resulting_shared_game_id");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea")
-                        .HasColumnName("row_version");
-
-                    b.Property<string>("SearchTermInput")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("search_term_input");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
-                        .HasColumnName("status");
-
-                    b.Property<string>("WikidataQid")
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
-                        .HasColumnName("wikidata_qid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BggId")
-                        .HasDatabaseName("ix_catalog_seed_drafts_bgg_id");
-
-                    b.HasIndex("CreatedAt")
-                        .HasDatabaseName("ix_catalog_seed_drafts_created_at");
-
-                    b.HasIndex("Status")
-                        .HasDatabaseName("ix_catalog_seed_drafts_status");
-
-                    b.HasIndex("WikidataQid")
-                        .HasDatabaseName("ix_catalog_seed_drafts_wikidata_qid");
-
-                    b.ToTable("catalog_seed_drafts", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.CatalogSyncRunEntity", b =>

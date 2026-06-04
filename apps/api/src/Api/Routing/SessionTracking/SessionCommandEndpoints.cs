@@ -123,6 +123,7 @@ internal static class SessionCommandEndpoints
             Guid sessionId,
             FinalizeSessionCommand command,
             IMediator mediator,
+            HttpResponse response,
             CancellationToken ct) =>
         {
             if (sessionId != command.SessionId)
@@ -131,6 +132,15 @@ internal static class SessionCommandEndpoints
             }
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            // Invariante #13 (#1896 WP2 T4): non-blocking warning header for FE toast when
+            // a draft+live session coexist in the same GameNightEvent. The operation itself
+            // succeeded (200 OK); the header is purely informational.
+            if (result.LiveActiveWarning)
+            {
+                response.Headers.Append("X-Warning-Code", "SAVED_WHILE_LIVE_ACTIVE");
+            }
+
             return Results.Ok(result);
         })
         .RequireAuthenticatedUser()

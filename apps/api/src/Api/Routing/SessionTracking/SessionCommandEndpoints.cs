@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SessionTracking.Application.Commands;
+using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.Extensions;
 using MediatR;
 
@@ -13,11 +14,20 @@ internal static class SessionCommandEndpoints
     {
         MapCreateSessionEndpoint(group);
         MapUpdateScoreEndpoint(group);
+        MapUpdateSessionScoresEndpoint(group); // T10 #1896 — polymorphic
         MapAddParticipantEndpoint(group);
         MapAddNoteEndpoint(group);
         MapFinalizeSessionEndpoint(group);
         MapRollDiceEndpoint(group);
     }
+
+    /// <summary>
+    /// Asse A semantic alignment #1896 (T10, DEC-1): request DTO for the polymorphic
+    /// scores update endpoint. Distinct from <see cref="UpdateScoreCommand"/> (per-participant
+    /// score entry) — this carries the polymorphic <c>ScoringType</c> + <c>ScoreData</c>
+    /// JSON payload validated by per-type IScoringStrategy.
+    /// </summary>
+    public record UpdateSessionScoresRequest(ScoreType ScoringType, string ScoreData);
 
     private static void MapCreateSessionEndpoint(RouteGroupBuilder group)
     {
@@ -59,6 +69,39 @@ internal static class SessionCommandEndpoints
         .WithName("UpdateScore")
         .WithTags("SessionTracking")
         .WithSummary("Update participant score")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404);
+    }
+
+    /// <summary>
+    /// Asse A semantic alignment #1896 (T10, DEC-1): polymorphic mid-game score update
+    /// endpoint. Mounted at <c>/game-sessions/{id}/scores-polymorphic</c> to avoid clashing
+    /// with the legacy <see cref="UpdateScoreCommand"/> endpoint at
+    /// <c>/game-sessions/{id}/scores</c> (per-participant score entry).
+    ///
+    /// <para>Payload: <c>{ scoringType: Points|BinaryWin|Objectives|Ranking, scoreData: "JSON string" }</c>.
+    /// FluentValidation enforces per-type JSON schema via <c>ScoringStrategyFactory</c>.
+    /// Returns the computed winner playerId when a single winner can be determined.</para>
+    /// </summary>
+    private static void MapUpdateSessionScoresEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPut("/game-sessions/{sessionId:guid}/scores-polymorphic", async (
+            Guid sessionId,
+            UpdateSessionScoresRequest request,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var command = new UpdateSessionScoresCommand(sessionId, request.ScoringType, request.ScoreData);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("UpdateSessionScoresPolymorphic")
+        .WithTags("SessionTracking")
+        .WithSummary("Update session polymorphic scores (Points/BinaryWin/Objectives/Ranking)")
+        .WithDescription("Asse A #1896 (T10): replaces ScoringType + ScoreData atomically with per-type JSON schema validation.")
         .Produces(200)
         .Produces(400)
         .Produces(401)

@@ -152,7 +152,7 @@ function SlackPanel({
   const handleTest = async () => {
     try {
       const result = await testConnection('slack');
-      if (result.status === 'ok') {
+      if (result.success) {
         toast.success('Slack connesso', { description: result.message });
       } else {
         toast.error('Slack non raggiungibile', { description: result.message });
@@ -312,7 +312,7 @@ function EmailPanel({
   const handleTest = async () => {
     try {
       const result = await testConnection('email');
-      if (result.status === 'ok') {
+      if (result.success) {
         toast.success('SMTP raggiungibile', { description: result.message });
       } else {
         toast.error('SMTP non raggiungibile', { description: result.message });

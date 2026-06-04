@@ -155,6 +155,19 @@ internal static class AdministrationServiceExtensions
             .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
                 "Prometheus", sp.GetService<ICircuitBreakerStateTracker>()));
 
+        // Issue #1840 SP5 F4-C7: Slack webhook client for per-channel alert dispatch.
+        // Separate from the legacy IAlertChannel-based SlackAlertChannel (OPS-07) — this
+        // client accepts the webhook URL as an argument so configuration can come from
+        // the AlertChannel aggregate rather than appsettings.json. Retry/CB policies
+        // mirror the Prometheus client.
+        services.AddHttpClient<ISlackWebhookClient, SlackWebhookClient>(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(10);
+            })
+            .AddPolicyHandler(GetRetryPolicy())
+            .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
+                "SlackWebhook", sp.GetService<ICircuitBreakerStateTracker>()));
+
         // Issue #894: Infrastructure details orchestration service
         services.AddScoped<IInfrastructureDetailsService, InfrastructureDetailsService>();
 

@@ -256,6 +256,7 @@ export function MeepleGameCatalogCard({
         status={inLibrary ? 'owned' : undefined}
         actions={actions}
         connections={connections}
+        headingLevel={2}
         onClick={onClick ? () => onClick(game.id) : undefined}
         className={className}
         data-testid={`catalog-game-card-${game.id}`}

@@ -266,6 +266,7 @@ export function MeepleLibraryGameCard({
         badge={badge}
         status={mappedStatus}
         connections={connections}
+        headingLevel={2}
         onClick={
           selectionMode
             ? undefined

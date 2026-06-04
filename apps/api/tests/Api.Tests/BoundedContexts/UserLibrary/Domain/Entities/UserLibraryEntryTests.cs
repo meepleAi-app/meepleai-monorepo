@@ -794,6 +794,38 @@ public sealed class UserLibraryEntryTests
         entry.DomainEvents.First().Should().BeOfType<GameRemovedFromLibraryEvent>();
     }
 
+    [Fact]
+    public void PrepareForRemoval_PropagatesCustomCoverR2Key_WhenSet()
+    {
+        // Arrange
+        var entry = CreateEntry();
+        var coverKey = $"user-covers/{Guid.NewGuid()}/{Guid.NewGuid()}/cover";
+        entry.SetCustomCoverR2Key(coverKey);
+        entry.ClearDomainEvents();
+
+        // Act
+        entry.PrepareForRemoval();
+
+        // Assert
+        var evt = entry.DomainEvents.OfType<GameRemovedFromLibraryEvent>().Single();
+        evt.CustomCoverR2Key.Should().Be(coverKey);
+    }
+
+    [Fact]
+    public void PrepareForRemoval_PropagatesNullCustomCoverR2Key_WhenNoCoverSet()
+    {
+        // Arrange
+        var entry = CreateEntry();
+        entry.ClearDomainEvents();
+
+        // Act
+        entry.PrepareForRemoval();
+
+        // Assert
+        var evt = entry.DomainEvents.OfType<GameRemovedFromLibraryEvent>().Single();
+        evt.CustomCoverR2Key.Should().BeNull();
+    }
+
     #endregion
 
     #region Helper Methods

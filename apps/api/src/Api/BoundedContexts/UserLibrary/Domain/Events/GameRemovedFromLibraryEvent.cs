@@ -22,10 +22,18 @@ internal sealed class GameRemovedFromLibraryEvent : DomainEventBase
     /// </summary>
     public Guid GameId { get; }
 
-    public GameRemovedFromLibraryEvent(Guid entryId, Guid userId, Guid gameId)
+    /// <summary>
+    /// R2 storage key for the user-uploaded custom cover image (L3, issue #1824).
+    /// Null when the library entry had no custom cover at removal time.
+    /// Used by <c>GameRemovedFromLibraryCustomCoverHandler</c> to clean up the orphan blob.
+    /// </summary>
+    public string? CustomCoverR2Key { get; }
+
+    public GameRemovedFromLibraryEvent(Guid entryId, Guid userId, Guid gameId, string? customCoverR2Key = null)
     {
         EntryId = entryId;
         UserId = userId;
         GameId = gameId;
+        CustomCoverR2Key = customCoverR2Key;
     }
 }

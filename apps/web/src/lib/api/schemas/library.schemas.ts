@@ -327,6 +327,9 @@ export const GameDetailDtoSchema = z.object({
   checklist: z.array(LibraryChecklistItemSchema).nullable().optional(),
   customAgentConfig: z.any().nullable().optional(), // AgentConfigDto
   customPdf: LibraryCustomPdfSchema.nullable().optional(),
+
+  // Issue #1824 L3: user-custom cover R2 key (null if no custom cover)
+  customCoverR2Key: z.string().nullable().optional(),
 });
 
 export type GameDetailDto = z.infer<typeof GameDetailDtoSchema>;

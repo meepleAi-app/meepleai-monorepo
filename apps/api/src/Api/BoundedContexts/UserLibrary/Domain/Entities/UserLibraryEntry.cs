@@ -189,10 +189,12 @@ internal sealed class UserLibraryEntry : AggregateRoot<Guid>
     /// <summary>
     /// Prepares this entry for removal, raising the appropriate domain event.
     /// Call this before deleting the entry from the repository.
+    /// Passes <see cref="CustomCoverR2Key"/> so the event handler can clean up
+    /// the orphan R2 blob (issue #1824 L3).
     /// </summary>
     public void PrepareForRemoval()
     {
-        AddDomainEvent(new GameRemovedFromLibraryEvent(Id, UserId, GameId));
+        AddDomainEvent(new GameRemovedFromLibraryEvent(Id, UserId, GameId, CustomCoverR2Key));
     }
 
     /// <summary>
@@ -274,6 +276,29 @@ internal sealed class UserLibraryEntry : AggregateRoot<Guid>
             userId: UserId,
             gameId: GameId,
             pdfDocumentId: pdfId));
+    }
+
+    /// <summary>
+    /// R2 storage key for the user-uploaded custom cover image (L3, issue #1824).
+    /// Null when no custom cover has been uploaded for this entry.
+    /// Highest priority in the FE cover-resolution chain (overrides L4/L2/L1).
+    /// </summary>
+    public string? CustomCoverR2Key { get; private set; }
+
+    /// <summary>
+    /// Returns whether this entry has a user-uploaded custom cover.
+    /// </summary>
+    public bool HasCustomCover => !string.IsNullOrWhiteSpace(CustomCoverR2Key);
+
+    /// <summary>
+    /// Sets or clears the R2 storage key for the custom cover image.
+    /// Pass null to clear the custom cover.
+    /// Issue #1824 (L3 cover upload).
+    /// </summary>
+    /// <param name="r2Key">The R2 object key, or null to clear.</param>
+    public void SetCustomCoverR2Key(string? r2Key)
+    {
+        CustomCoverR2Key = string.IsNullOrWhiteSpace(r2Key) ? null : r2Key;
     }
 
     /// <summary>

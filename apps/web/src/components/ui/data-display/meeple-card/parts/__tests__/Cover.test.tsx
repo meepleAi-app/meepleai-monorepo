@@ -43,6 +43,35 @@ describe('Cover dual-mode (#1856 DEC-3)', () => {
       expect(container.querySelector('img')).toBeNull();
       expect(screen.getByText(entityIcon.game)).toBeInTheDocument();
     });
+
+    it('resets hasImgError state when imageUrl prop changes (recovery from broken URL)', () => {
+      const { container, rerender } = render(
+        <Cover
+          entity="game"
+          variant="grid"
+          imageUrl="https://cdn.example.com/broken.webp"
+          alt="X"
+        />
+      );
+      // Trigger onError → state flips to error, emoji-band shown.
+      const img = container.querySelector('img') as HTMLImageElement;
+      fireEvent.error(img);
+      expect(container.querySelector('img')).toBeNull();
+
+      // Re-render with a new (valid) imageUrl — state should reset, <img> rendered again.
+      rerender(
+        <Cover
+          entity="game"
+          variant="grid"
+          imageUrl="https://cdn.example.com/new-good.webp"
+          alt="X"
+        />
+      );
+      expect(container.querySelector('img')).not.toBeNull();
+      expect(container.querySelector('img')?.getAttribute('src')).toBe(
+        'https://cdn.example.com/new-good.webp'
+      );
+    });
   });
 
   describe('emoji-band-mode (imageUrl absent or BGG-blocked)', () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import { shouldUsePlaceholder } from '@/lib/games/cover-utils';
 
@@ -43,6 +43,13 @@ export function Cover({ entity, variant, imageUrl, alt, coverEmoji }: CoverProps
   // #1822: refuse to render BGG-hosted URLs at runtime (rate-limit + ToS).
   // `onError` flips this to true so the next render switches to emoji-band.
   const [hasImgError, setHasImgError] = useState(false);
+
+  // Reset hasImgError when imageUrl changes (e.g., consumer updates to a new URL).
+  // This ensures the component recovers from a broken URL to a valid one.
+  useEffect(() => {
+    setHasImgError(false);
+  }, [imageUrl]);
+
   const usePlaceholder = hasImgError || shouldUsePlaceholder(imageUrl);
 
   const emoji = coverEmoji ?? entityIcon[entity];

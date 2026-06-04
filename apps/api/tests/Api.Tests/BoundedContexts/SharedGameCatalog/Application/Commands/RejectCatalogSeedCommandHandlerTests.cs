@@ -46,17 +46,19 @@ public sealed class RejectCatalogSeedCommandHandlerTests
     [Fact]
     public async Task Handle_ExistingDraft_SoftDeletesAndPublishesEvent()
     {
+        const string reason = "Duplicate of BGG:13";
         var draft = Draft(_draftId);
         _repoMock.Setup(r => r.GetByIdAsync(_draftId, It.IsAny<CancellationToken>())).ReturnsAsync(draft);
         _uowMock.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
         await _handler.Handle(
-            new RejectCatalogSeedCommand(_draftId, _rejecter, "spam"),
+            new RejectCatalogSeedCommand(_draftId, _rejecter, reason),
             TestContext.Current.CancellationToken);
 
         draft.Status.Should().Be(nameof(CatalogSeedStatus.Rejected));
         draft.IsDeleted.Should().BeTrue();
         draft.DeletedAt.Should().NotBeNull();
+        draft.ErrorMessage.Should().Be(reason);
 
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         _mediatorMock.Verify(
@@ -64,9 +66,28 @@ public sealed class RejectCatalogSeedCommandHandlerTests
                 It.Is<CatalogSeedRejectedEvent>(e =>
                     e.DraftId == _draftId
                     && e.RejectedByUserId == _rejecter
-                    && e.Reason == "spam"),
+                    && e.Reason == reason),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_EmptyReason_DoesNotOverwriteErrorMessage()
+    {
+        var draft = new CatalogSeedDraftEntity
+        {
+            Id = Guid.NewGuid(),
+            Status = "Fetched",
+            ErrorMessage = "pre-existing",
+            CreatedByUserId = Guid.NewGuid(),
+        };
+        _repoMock.Setup(r => r.GetByIdAsync(draft.Id, It.IsAny<CancellationToken>())).ReturnsAsync(draft);
+        _uowMock.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
+
+        var cmd = new RejectCatalogSeedCommand(draft.Id, Guid.NewGuid(), Reason: "");
+        await _handler.Handle(cmd, TestContext.Current.CancellationToken);
+
+        draft.ErrorMessage.Should().Be("pre-existing");
     }
 
     [Fact]
@@ -111,5 +132,16 @@ public sealed class RejectCatalogSeedCommandHandlerTests
     {
         var act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<ArgumentNullException>().WithParameterName("request");
+    }
+
+    [Fact]
+    public void Constructor_NullMediator_Throws()
+    {
+        var act = () => new RejectCatalogSeedCommandHandler(
+            _repoMock.Object,
+            _uowMock.Object,
+            NullLogger<RejectCatalogSeedCommandHandler>.Instance,
+            mediator: null!);
+        act.Should().Throw<ArgumentNullException>().WithParameterName("mediator");
     }
 }

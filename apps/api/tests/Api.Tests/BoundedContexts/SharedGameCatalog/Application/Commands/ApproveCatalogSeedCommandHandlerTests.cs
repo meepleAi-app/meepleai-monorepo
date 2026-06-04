@@ -144,7 +144,19 @@ public sealed class ApproveCatalogSeedCommandHandlerTests
         var act = () => new ApproveCatalogSeedCommandHandler(
             repository: null!,
             _uowMock.Object,
-            NullLogger<ApproveCatalogSeedCommandHandler>.Instance);
+            NullLogger<ApproveCatalogSeedCommandHandler>.Instance,
+            _mediatorMock.Object);
         act.Should().Throw<ArgumentNullException>().WithParameterName("repository");
+    }
+
+    [Fact]
+    public void Constructor_NullMediator_Throws()
+    {
+        var act = () => new ApproveCatalogSeedCommandHandler(
+            _repoMock.Object,
+            _uowMock.Object,
+            NullLogger<ApproveCatalogSeedCommandHandler>.Instance,
+            mediator: null!);
+        act.Should().Throw<ArgumentNullException>().WithParameterName("mediator");
     }
 }

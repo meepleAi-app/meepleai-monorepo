@@ -23,19 +23,19 @@ internal sealed class RejectCatalogSeedCommandHandler : ICommandHandler<RejectCa
 {
     private readonly ICatalogSeedDraftRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IMediator? _mediator;
+    private readonly IMediator _mediator;
     private readonly ILogger<RejectCatalogSeedCommandHandler> _logger;
 
     public RejectCatalogSeedCommandHandler(
         ICatalogSeedDraftRepository repository,
         IUnitOfWork unitOfWork,
         ILogger<RejectCatalogSeedCommandHandler> logger,
-        IMediator? mediator = null)
+        IMediator mediator)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _mediator = mediator;
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
     }
 
     public async Task Handle(RejectCatalogSeedCommand request, CancellationToken cancellationToken)
@@ -55,6 +55,13 @@ internal sealed class RejectCatalogSeedCommandHandler : ICommandHandler<RejectCa
         draft.IsDeleted = true;
         draft.DeletedAt = DateTime.UtcNow;
 
+        // Persist reason for audit + DB-level recoverability even if no event handler runs.
+        if (!string.IsNullOrWhiteSpace(request.Reason))
+        {
+            var reason = request.Reason.Length > 500 ? request.Reason[..500] : request.Reason;
+            draft.ErrorMessage = reason;
+        }
+
         // Repository was created via AsTracking() GetByIdAsync so SaveChangesAsync
         // will persist these mutations without an explicit Update() call
         // (CLAUDE.md memory: notracking-default-update-gotcha).
@@ -65,13 +72,10 @@ internal sealed class RejectCatalogSeedCommandHandler : ICommandHandler<RejectCa
             request.DraftId,
             request.RejectedByUserId);
 
-        if (_mediator is not null)
-        {
-            await _mediator
-                .Publish(
-                    new CatalogSeedRejectedEvent(request.DraftId, request.RejectedByUserId, request.Reason ?? string.Empty),
-                    cancellationToken)
-                .ConfigureAwait(false);
-        }
+        await _mediator
+            .Publish(
+                new CatalogSeedRejectedEvent(request.DraftId, request.RejectedByUserId, request.Reason ?? string.Empty),
+                cancellationToken)
+            .ConfigureAwait(false);
     }
 }

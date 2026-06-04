@@ -25,19 +25,19 @@ internal sealed class ApproveCatalogSeedCommandHandler
 {
     private readonly ICatalogSeedDraftRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IMediator? _mediator;
+    private readonly IMediator _mediator;
     private readonly ILogger<ApproveCatalogSeedCommandHandler> _logger;
 
     public ApproveCatalogSeedCommandHandler(
         ICatalogSeedDraftRepository repository,
         IUnitOfWork unitOfWork,
         ILogger<ApproveCatalogSeedCommandHandler> logger,
-        IMediator? mediator = null)
+        IMediator mediator)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _mediator = mediator;
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
     }
 
     public async Task<ApproveCatalogSeedResult> Handle(
@@ -79,14 +79,11 @@ internal sealed class ApproveCatalogSeedCommandHandler
             request.ApprovedByUserId,
             resultingSharedGameId);
 
-        if (_mediator is not null)
-        {
-            await _mediator
-                .Publish(
-                    new CatalogSeedApprovedEvent(request.DraftId, resultingSharedGameId, request.ApprovedByUserId),
-                    cancellationToken)
-                .ConfigureAwait(false);
-        }
+        await _mediator
+            .Publish(
+                new CatalogSeedApprovedEvent(request.DraftId, resultingSharedGameId, request.ApprovedByUserId),
+                cancellationToken)
+            .ConfigureAwait(false);
 
         return new ApproveCatalogSeedResult(request.DraftId, resultingSharedGameId);
     }

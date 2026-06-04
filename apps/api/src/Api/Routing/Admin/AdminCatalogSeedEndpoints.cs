@@ -187,6 +187,7 @@ internal static class AdminCatalogSeedEndpoints
     private static async Task HandleStream(
         HttpContext context,
         ICatalogSeedStreamService stream,
+        ILogger<Program> logger,
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(stream);
@@ -226,10 +227,25 @@ internal static class AdminCatalogSeedEndpoints
             // Expected — client disconnected or server shutting down.
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception)
+        catch (Exception ex)
 #pragma warning restore CA1031
         {
-            // Transport-layer I/O failure during shutdown / disconnect — swallow.
+            // Transport-layer I/O failure during shutdown / disconnect. Log at
+            // Debug because OperationCanceledException + ObjectDisposedException
+            // on disconnect is the expected path — anything noisier would spam
+            // logs on every client navigation. Best-effort: connection may already
+            // be torn down so the logger call itself could throw.
+            try
+            {
+                logger.LogDebug(ex,
+                    "CatalogSeed SSE stream terminated for subscriber (likely client disconnect)");
+            }
+#pragma warning disable CA1031
+            catch
+#pragma warning restore CA1031
+            {
+                // Logger itself failed — nothing more we can do.
+            }
         }
     }
 

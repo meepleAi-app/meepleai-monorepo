@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
@@ -75,6 +76,16 @@ internal sealed class CatalogSeedStreamService : ICatalogSeedStreamService
         }
     }
 
+    /// <summary>
+    /// Subscribe to stream. New subscriber receives a replay of recent events
+    /// (up to <see cref="ReplayBufferSize"/>) followed by live events. Replay
+    /// uses an <c>OccurredAt</c> cutoff to prevent the "subscribe/publish seam"
+    /// race from delivering duplicate events — only events strictly before the
+    /// channel-registration timestamp are replayed; everything at or after the
+    /// cutoff arrives via the live channel. In the unlikely case two events
+    /// share the same <c>OccurredAt</c> microsecond, one may be duplicated;
+    /// acceptable for a diagnostic SSE stream.
+    /// </summary>
     /// <inheritdoc />
     public async IAsyncEnumerable<CatalogSeedStreamEvent> SubscribeAsync(
         [EnumeratorCancellation] CancellationToken ct)
@@ -89,6 +100,13 @@ internal sealed class CatalogSeedStreamService : ICatalogSeedStreamService
             });
 
         _subscribers[subscriberId] = channel;
+
+        // Mark cutoff: events with OccurredAt >= cutoff are guaranteed to reach
+        // the channel (since registration above happens-before any subsequent
+        // PublishAsync write). Replay only events strictly before cutoff to
+        // avoid double-delivery at the subscribe/publish seam.
+        var registrationCutoff = DateTime.UtcNow;
+
         _logger.LogDebug(
             "CatalogSeedStreamService: subscriber {SubscriberId} connected (total={Count})",
             subscriberId, _subscribers.Count);
@@ -100,7 +118,9 @@ internal sealed class CatalogSeedStreamService : ICatalogSeedStreamService
             List<CatalogSeedStreamEvent> snapshot;
             lock (_replayLock)
             {
-                snapshot = new List<CatalogSeedStreamEvent>(_replayBuffer);
+                snapshot = _replayBuffer
+                    .Where(e => e.OccurredAt < registrationCutoff)
+                    .ToList();
             }
 
             foreach (var replay in snapshot)

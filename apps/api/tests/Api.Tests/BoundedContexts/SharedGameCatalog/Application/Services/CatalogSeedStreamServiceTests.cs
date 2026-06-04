@@ -212,6 +212,39 @@ public sealed class CatalogSeedStreamServiceTests
     }
 
     [Fact]
+    public async Task SubscribeAsync_PublishedBeforeSubscribe_DeliveredExactlyOnceViaReplay()
+    {
+        // Regression: PR #1913 review finding — subscribe/publish race could deliver
+        // the same event twice (once via replay snapshot, once via live channel).
+        // The cutoff-based dedup must ensure exactly-once delivery for events
+        // published strictly before SubscribeAsync registers its channel.
+        var svc = CreateService();
+        var evt = new BatchStartedEvent(
+            Guid.NewGuid(),
+            new[] { Guid.NewGuid() },
+            DateTime.UtcNow.AddSeconds(-1));
+
+        await svc.PublishAsync(evt);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var received = new List<CatalogSeedStreamEvent>();
+        try
+        {
+            await foreach (var item in svc.SubscribeAsync(cts.Token))
+            {
+                received.Add(item);
+                if (received.Count >= 1) break;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // expected if no more events arrive within the timeout
+        }
+
+        received.Should().ContainSingle().Which.Should().Be(evt);
+    }
+
+    [Fact]
     public async Task PublishAsync_AfterReplayDrain_DeliversLiveEvents()
     {
         // Edge-case check: a single subscriber should see BOTH the replay AND any

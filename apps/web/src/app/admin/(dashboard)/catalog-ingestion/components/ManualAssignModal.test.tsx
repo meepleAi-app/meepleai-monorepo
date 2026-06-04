@@ -61,26 +61,35 @@ describe('ManualAssignModal', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it('shows error toast with BE message when /assign-bgg-id returns 409', async () => {
+  // BE contract: AdminCatalogIngestionEndpoints.cs:222 returns 400 BadRequest with
+  // `{ assigned: false, error: "BGG ID already in use or game not found/eligible" }`
+  // on conflict (NOT 409 — the endpoint uses BadRequest for both "BGG ID taken" and
+  // "shared-game not Skeleton/Failed" via a single boolean from the command handler).
+  it('shows error toast with BE message when /assign-bgg-id returns 400 conflict', async () => {
     fetchMock.mockResolvedValue({
       ok: false,
-      status: 409,
-      json: async () => ({ assigned: false, error: 'BGG ID already in use' }),
+      status: 400,
+      json: async () => ({
+        assigned: false,
+        error: 'BGG ID already in use or game not found/eligible',
+      }),
     });
     const onOpenChange = vi.fn();
     render(<ManualAssignModal open onOpenChange={onOpenChange} />);
 
     await fillAndSubmit();
 
-    await waitFor(() => expect(toastError).toHaveBeenCalledWith('BGG ID already in use'));
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith('BGG ID already in use or game not found/eligible')
+    );
     // Modal stays open so the user can correct input
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
   });
 
-  it('falls back to generic error when 409 body has no error field', async () => {
+  it('falls back to generic error when 400 body has no error field', async () => {
     fetchMock.mockResolvedValue({
       ok: false,
-      status: 409,
+      status: 400,
       json: async () => ({ assigned: false }),
     });
     render(<ManualAssignModal open onOpenChange={vi.fn()} />);

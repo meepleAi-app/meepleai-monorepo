@@ -157,6 +157,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<SharedGameDeleteRequestEntity> SharedGameDeleteRequests => Set<SharedGameDeleteRequestEntity>(); // ISSUE-2370: Delete requests
     public DbSet<SharedGameDocumentEntity> SharedGameDocuments => Set<SharedGameDocumentEntity>(); // ISSUE-2391: Sprint 1 - PDF association
     public DbSet<CatalogSeedDraftEntity> CatalogSeedDrafts => Set<CatalogSeedDraftEntity>(); // ISSUE-1903: Admin catalog seed workflow M1.3
+    public DbSet<BggTosHashEntity> BggTosHashes => Set<BggTosHashEntity>(); // ISSUE-1903: Admin catalog seed workflow M7.1 (BGG ToS hash watcher)
     public DbSet<GameStateTemplateEntity> GameStateTemplates => Set<GameStateTemplateEntity>(); // ISSUE-2400: Sprint 3 - Game state templates
     public DbSet<RulebookAnalysisEntity> RulebookAnalyses => Set<RulebookAnalysisEntity>(); // ISSUE-2402: Sprint 3 - Rulebook analysis service
     public DbSet<MechanicDraftEntity> MechanicDrafts => Set<MechanicDraftEntity>(); // Mechanic Extractor: Variant C draft workspace

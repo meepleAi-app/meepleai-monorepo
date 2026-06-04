@@ -172,10 +172,17 @@ internal static class SharedGameCatalogServiceExtensions
         RegisterCatalogSeedProviders(services);
         RegisterCatalogSeedFetchJob(services);
 
+        // Issue #1903 M7.1: monthly BGG ToS hash watcher (spec §8.5.6).
+        RegisterBggTosWatcherJob(services);
+
         // Issue #1903 M6.1: in-memory SSE event broadcaster for the admin
         // catalog seed pipeline. Singleton so the Quartz job publisher and
         // HTTP SSE subscribers share state across the process.
         services.AddSingleton<ICatalogSeedStreamService, CatalogSeedStreamService>();
+
+        // Issue #1903 M7.2: kill-switch feature flag backed by IConfigurationService.
+        // Scoped to match the lifetime of the underlying IConfigurationService.
+        services.AddScoped<ICatalogSeedFeatureFlag, CatalogSeedFeatureFlag>();
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 
@@ -255,6 +262,44 @@ internal static class SharedGameCatalogServiceExtensions
                     .WithIntervalInMinutes(1)
                     .RepeatForever())
                 .WithDescription("Fetches provider data for Pending CatalogSeedDraft entries every 1 minute"));
+        });
+    }
+
+    /// <summary>
+    /// Issue #1903 M7.1 — registers <see cref="BggTosWatcherJob"/> with the
+    /// Quartz scheduler. Runs every 30 days at the trigger's start time + a
+    /// 1-minute kickoff after process start, so the first deploy primes the
+    /// singleton row almost immediately. Pure HTTP GET against the BGG ToS
+    /// URL; no rate-limit concerns at monthly cadence.
+    /// </summary>
+    private static void RegisterBggTosWatcherJob(IServiceCollection services)
+    {
+        // The job uses IHttpClientFactory.CreateClient() (default client) so we
+        // don't need a typed AddHttpClient registration here. AddHttpClient is
+        // already exposed via Program.cs / other contexts that register typed
+        // clients, which transitively registers IHttpClientFactory itself.
+        services.AddHttpClient();
+
+        services.AddQuartz(q =>
+        {
+            var jobKey = new JobKey("BggTosWatcherJob", "SharedGameCatalog");
+
+            q.AddJob<BggTosWatcherJob>(opts => opts
+                .WithIdentity(jobKey)
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob(jobKey)
+                .WithIdentity("BggTosWatcherTrigger", "SharedGameCatalog")
+                // 30-day interval (~monthly). Quartz SimpleSchedule supports hours,
+                // so 24 * 30 = 720 hours.
+                .WithSimpleSchedule(x => x
+                    .WithIntervalInHours(24 * 30)
+                    .RepeatForever())
+                // Kick off 1 minute after process start so the first deploy
+                // primes the singleton row without delaying boot.
+                .StartAt(DateBuilder.FutureDate(1, IntervalUnit.Minute))
+                .WithDescription("Monthly BGG ToS hash watcher (issue #1903 M7.1, spec §8.5.6)"));
         });
     }
 

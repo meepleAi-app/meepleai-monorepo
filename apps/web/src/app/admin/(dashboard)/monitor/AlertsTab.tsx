@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { AlertTriangleIcon, Plus, RefreshCwIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { AlertActivityFeed } from '@/components/admin/alert-rules/AlertActivityFeed';
 import { AlertKpiStrip } from '@/components/admin/alert-rules/AlertKpiStrip';
 import { AlertRuleList } from '@/components/admin/alert-rules/AlertRuleList';
 import { AlertsBanner } from '@/components/admin/AlertsBanner';
@@ -77,6 +78,33 @@ export function AlertsTab() {
     );
   };
 
+  /**
+   * #1840 SP5 F4-C7 — TestAlert handler (dryRun di default per safety).
+   *
+   * Conferma utente D3: il button azione invia sempre dryRun. La modalità
+   * "live" (notifica reale ai canali) sarà accessibile via dropdown / confirm
+   * dialog dedicato — fuori scope di questo wiring iniziale per evitare
+   * invii accidentali a Slack/Email durante la familiarizzazione con la UI.
+   *
+   * L'evento AlertFiredEvent emesso dal backend viene poi propagato all'
+   * AlertActivityFeed via SSE → l'admin vede il "TEST · DRY RUN" badge in
+   * pochi secondi dopo il toast di conferma.
+   */
+  const handleTestAlert = (id: string) => {
+    const rule = rules.find(r => r.id === id);
+    const ruleName = rule?.name ?? id;
+    alertRulesApi.testRule(id, 'dryRun').then(
+      result =>
+        toast.success(`Test "${ruleName}" eseguito (dry-run)`, {
+          description: `Canali simulati: ${result.channels.join(' + ')} · check Activity feed.`,
+        }),
+      () =>
+        toast.error(`Errore nel test "${ruleName}"`, {
+          description: 'Verifica connessione backend o configurazione canali.',
+        })
+    );
+  };
+
   if (loading) {
     return (
       <div className="space-y-6 animate-pulse">
@@ -121,8 +149,14 @@ export function AlertsTab() {
           Nuova Regola
         </Button>
       </div>
-      {/* TODO #1840 C7: wire onTestAlert once POST /alert-rules/{id}/test is implemented */}
-      <AlertRuleList rules={rules} onDelete={handleDelete} onToggle={handleToggle} />
+      <AlertRuleList
+        rules={rules}
+        onDelete={handleDelete}
+        onToggle={handleToggle}
+        onTestAlert={handleTestAlert}
+      />
+      {/* #1840 SP5 F4-C7 — Live activity feed sotto la tabella */}
+      <AlertActivityFeed />
       <CreateAlertRuleDialog
         open={createDialogOpen}
         onClose={() => setCreateDialogOpen(false)}

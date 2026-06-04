@@ -157,3 +157,33 @@ describe('GridCard SP4 mockup conformance (#1856)', () => {
     expect(screen.getByRole('button', { name: 'Azioni' })).toBeInTheDocument();
   });
 });
+
+/**
+ * #1842 headingLevel prop — dynamic title heading tag.
+ */
+describe('GridCard headingLevel prop (#1842)', () => {
+  it('renders <h3> by default (backwards compat)', () => {
+    render(<GridCard entity="game" title="Catan default" />);
+    const el = screen.getByText('Catan default');
+    expect(el.tagName).toBe('H3');
+  });
+
+  it('renders <h2> when headingLevel={2}', () => {
+    render(<GridCard entity="game" title="Catan h2" headingLevel={2} />);
+    const el = screen.getByText('Catan h2');
+    expect(el.tagName).toBe('H2');
+  });
+
+  it('renders <h4> when headingLevel={4}', () => {
+    render(<GridCard entity="game" title="Catan h4" headingLevel={4} />);
+    const el = screen.getByText('Catan h4');
+    expect(el.tagName).toBe('H4');
+  });
+
+  it('preserves title className across all heading levels (visual stability)', () => {
+    const { rerender } = render(<GridCard entity="game" title="X" />);
+    const h3Class = screen.getByText('X').className;
+    rerender(<GridCard entity="game" title="X" headingLevel={2} />);
+    expect(screen.getByText('X').className).toBe(h3Class);
+  });
+});

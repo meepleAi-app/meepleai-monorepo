@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Commands.AlertChannels;
 using Api.BoundedContexts.Administration.Application.Queries.AlertChannels;
+using Api.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,15 +16,23 @@ namespace Api.Routing;
 /// </list>
 ///
 /// <para>All endpoints follow the CQRS rule: routing → IMediator.Send only.
-/// Auth is enforced via <c>RequireAuthorization()</c> on the group.</para>
+/// Auth is enforced via <c>RequireAdminSession()</c> on the group (Admin/SuperAdmin role check,
+/// matching the convention used by sibling admin endpoints e.g. <c>AdminMetricsEndpoints</c>,
+/// <c>AdminAgentAnalyticsEndpoints</c>). The plain <c>RequireAuthorization()</c> only enforces
+/// authentication and would allow any signed-in user.</para>
+///
+/// <para><b>Secret masking follow-up</b>: the <c>ConfigJson</c> field is returned verbatim
+/// to allow the Canali drawer to round-trip without re-fetching. Defense-in-depth masking of
+/// Slack <c>webhookUrl</c> in GET responses is deferred to a follow-up issue together with the
+/// secret-rotation flow on PUT (mask in transit, require explicit "rotate" intent to change).
+/// Admin-only access enforced here limits exposure today.</para>
 /// </summary>
 internal static class AlertChannelsEndpoints
 {
     public static void MapAlertChannelsEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/v1/admin/alert-channels")
-            .WithTags("Admin", "AlertChannels")
-            .RequireAuthorization();
+            .WithTags("Admin", "AlertChannels");
 
         // GET /api/v1/admin/alert-channels
         group.MapGet("/", async (IMediator mediator, CancellationToken ct) =>
@@ -31,6 +40,7 @@ internal static class AlertChannelsEndpoints
                 var channels = await mediator.Send(new GetAllAlertChannelsQuery(), ct).ConfigureAwait(false);
                 return Results.Ok(channels);
             })
+            .RequireAdminSession()
             .WithName("AlertChannels_GetAll")
             .WithSummary("List all configured alert channels (email + slack)")
             .WithOpenApi();
@@ -56,6 +66,7 @@ internal static class AlertChannelsEndpoints
                 var result = await mediator.Send(command, ct).ConfigureAwait(false);
                 return Results.Ok(result);
             })
+            .RequireAdminSession()
             .WithName("AlertChannels_Upsert")
             .WithSummary("Create or update an alert channel configuration")
             .WithOpenApi();
@@ -71,6 +82,7 @@ internal static class AlertChannelsEndpoints
                     .ConfigureAwait(false);
                 return Results.Ok(result);
             })
+            .RequireAdminSession()
             .WithName("AlertChannels_TestConnection")
             .WithSummary("Probe the channel's transport (Slack: webhook POST · Email: config sanity-check)")
             .WithOpenApi();

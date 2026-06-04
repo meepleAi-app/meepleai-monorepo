@@ -189,10 +189,12 @@ internal sealed class UserLibraryEntry : AggregateRoot<Guid>
     /// <summary>
     /// Prepares this entry for removal, raising the appropriate domain event.
     /// Call this before deleting the entry from the repository.
+    /// Passes <see cref="CustomCoverR2Key"/> so the event handler can clean up
+    /// the orphan R2 blob (issue #1824 L3).
     /// </summary>
     public void PrepareForRemoval()
     {
-        AddDomainEvent(new GameRemovedFromLibraryEvent(Id, UserId, GameId));
+        AddDomainEvent(new GameRemovedFromLibraryEvent(Id, UserId, GameId, CustomCoverR2Key));
     }
 
     /// <summary>

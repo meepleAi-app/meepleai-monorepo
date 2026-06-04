@@ -21,12 +21,18 @@ namespace Api.Infrastructure.Migrations
             // Populates pdf_cover_r2_key for any shared_game that already has a
             // PdfDocument with cover_generation_status = 'Generated' and a non-null
             // cover_r2_key. The sg.pdf_cover_r2_key IS NULL guard makes re-applying safe.
+            //
+            // Issue #1885: At this point in the migration sequence, pdf_documents.SharedGameId
+            // is still PascalCase (EF default — PdfDocumentEntityConfiguration didn't set
+            // HasColumnName). The subsequent migration RenamePdfDocumentsSharedGameIdToSnakeCase
+            // renames it to shared_game_id. We escape "SharedGameId" here so the UPDATE
+            // succeeds in the pre-rename state. Note: shared_games has no updated_at column
+            // (the entity uses ModifiedAt → modified_at, only set on user-driven updates).
             migrationBuilder.Sql(@"
                 UPDATE shared_games sg
-                SET pdf_cover_r2_key = pd.cover_r2_key,
-                    updated_at = NOW()
+                SET pdf_cover_r2_key = pd.cover_r2_key
                 FROM pdf_documents pd
-                WHERE pd.shared_game_id = sg.id
+                WHERE pd.""SharedGameId"" = sg.id
                   AND pd.cover_generation_status = 'Generated'
                   AND pd.cover_r2_key IS NOT NULL
                   AND sg.pdf_cover_r2_key IS NULL;

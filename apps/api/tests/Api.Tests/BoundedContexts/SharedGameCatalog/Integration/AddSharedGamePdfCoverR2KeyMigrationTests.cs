@@ -30,10 +30,13 @@ public sealed class AddSharedGamePdfCoverR2KeyMigrationTests : IAsyncLifetime
     private readonly string _testDbName;
     private MeepleAiDbContext _dbContext = null!;
 
+    // Mirrors the production backfill in migration 20260603120937_AddSharedGamePdfCoverR2Key.
+    // Issue #1885: shared_games has no updated_at column (entity uses ModifiedAt, set only on
+    // user-driven updates, not backfill). The column reference is snake_case post-rename via
+    // migration 20260604130156_RenamePdfDocumentsSharedGameIdToSnakeCase.
     private const string BackfillSql = @"
         UPDATE shared_games sg
-        SET pdf_cover_r2_key = pd.cover_r2_key,
-            updated_at = NOW()
+        SET pdf_cover_r2_key = pd.cover_r2_key
         FROM pdf_documents pd
         WHERE pd.shared_game_id = sg.id
           AND pd.cover_generation_status = 'Generated'

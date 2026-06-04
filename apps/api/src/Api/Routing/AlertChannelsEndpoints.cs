@@ -31,7 +31,12 @@ internal static class AlertChannelsEndpoints
 {
     public static void MapAlertChannelsEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/admin/alert-channels")
+        // Note: Program.cs invokes this on the `v1Api` route group which already
+        // applies the `/api/v1` prefix. The group path is therefore the relative
+        // segment only (matching the AdminMetricsEndpoints pattern). Hardcoding
+        // `/api/v1` here would produce `/api/v1/api/v1/admin/alert-channels`
+        // (double-prefix), causing all FE calls to 404.
+        var group = app.MapGroup("/admin/alert-channels")
             .WithTags("Admin", "AlertChannels");
 
         // GET /api/v1/admin/alert-channels

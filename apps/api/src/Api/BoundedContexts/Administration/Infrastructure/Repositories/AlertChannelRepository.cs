@@ -64,6 +64,7 @@ internal sealed class AlertChannelRepository : RepositoryBase, IAlertChannelRepo
                 LastTestMessage = channel.LastTestMessage,
                 CreatedAt = channel.CreatedAt,
                 UpdatedAt = channel.UpdatedAt,
+                CreatedBy = channel.CreatedBy,
                 UpdatedBy = channel.UpdatedBy,
             };
             await DbContext.AlertChannels.AddAsync(entity, cancellationToken).ConfigureAwait(false);
@@ -97,6 +98,7 @@ internal sealed class AlertChannelRepository : RepositoryBase, IAlertChannelRepo
             e.LastTestMessage,
             e.CreatedAt,
             e.UpdatedAt,
+            e.CreatedBy,
             e.UpdatedBy,
             e.RowVersion);
 }

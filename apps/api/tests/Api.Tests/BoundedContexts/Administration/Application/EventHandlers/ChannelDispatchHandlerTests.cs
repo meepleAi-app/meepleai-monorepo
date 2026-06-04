@@ -61,7 +61,7 @@ public sealed class ChannelDispatchHandlerTests
             AlertChannelType.Slack,
             $$"""{"webhookUrl":"{{webhookUrl}}","channel":"#alerts"}""",
             isEnabled: true,
-            updatedBy: "admin");
+            createdBy: "admin");
 
     private static AlertChannel CreateEmailChannel(params string[] recipients)
     {
@@ -137,7 +137,7 @@ public sealed class ChannelDispatchHandlerTests
             AlertChannelType.Slack,
             """{"webhookUrl":"https://hooks.slack.com/x","channel":"#alerts"}""",
             isEnabled: false,
-            updatedBy: "admin");
+            createdBy: "admin");
         _channelRepo
             .Setup(r => r.GetByTypeAsync(AlertChannelType.Slack, It.IsAny<CancellationToken>()))
             .ReturnsAsync(channel);

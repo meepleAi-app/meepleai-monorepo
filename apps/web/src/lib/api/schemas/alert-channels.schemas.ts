@@ -31,13 +31,15 @@ export const upsertAlertChannelRequestSchema = z.object({
   rowVersion: z.string().optional().nullable(),
 });
 
-// Backend: TestAlertChannelConnectionResult (#1840 1.6 dispatcher payload).
-// Both shapes (ok/error) get coerced via parse, so the FE can always rely on
-// `status` discriminator.
+// Backend: TestAlertChannelConnectionResult (TestAlertChannelConnectionCommand.cs):
+//   internal sealed record TestAlertChannelConnectionResult(
+//       bool Success, string Message, int? StatusCode, DateTime TestedAt);
+// The handler does NOT echo back `type` (the caller already knows what they
+// tested) — the FE keeps the requested type out-of-band.
 export const testAlertChannelConnectionResultSchema = z.object({
-  type: alertChannelTypeSchema,
-  status: alertChannelTestStatusSchema,
+  success: z.boolean(),
   message: z.string(),
+  statusCode: z.number().int().nullable().optional(),
   testedAt: z.string().datetime({ offset: true }),
 });
 

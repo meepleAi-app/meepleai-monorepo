@@ -13,7 +13,14 @@ internal static class AlertConfigEndpoints
 {
     public static void MapAlertConfigEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/admin/alert-rules").WithTags("Admin", "AlertRules");
+        // Note: Program.cs invokes this on the `v1Api` route group which already
+        // applies the `/api/v1` prefix. The group path is therefore the relative
+        // segment only. Hardcoding `/api/v1` here would produce
+        // `/api/v1/api/v1/admin/alert-rules` (double-prefix) — fix #1840 also
+        // addresses this pre-existing latent routing bug from issue #921 because
+        // the new `MapTestAlertRuleEndpoint` is registered inside this group and
+        // would otherwise inherit the same broken path.
+        var group = app.MapGroup("/admin/alert-rules").WithTags("Admin", "AlertRules");
 
         MapGetAllAlertRulesEndpoint(group);
         MapGetAlertRuleByIdEndpoint(group);
@@ -166,8 +173,10 @@ internal static class AlertConfigEndpoints
 
     private static void MapGlobalAdminEndpoints(IEndpointRouteBuilder app)
     {
+        // Same fix as the group above — `app` here is `v1Api` (already `/api/v1`),
+        // so we use relative paths to avoid the `/api/v1/api/v1/...` double prefix.
         // GET /api/v1/admin/alert-templates
-        app.MapGet("/api/v1/admin/alert-templates", async (IMediator mediator, CancellationToken ct) =>
+        app.MapGet("/admin/alert-templates", async (IMediator mediator, CancellationToken ct) =>
         {
             var templates = await mediator.Send(new GetAlertTemplatesQuery(), ct).ConfigureAwait(false);
             return Results.Ok(templates);
@@ -178,7 +187,7 @@ internal static class AlertConfigEndpoints
         .WithOpenApi();
 
         // POST /api/v1/admin/alert-test
-        app.MapPost("/api/v1/admin/alert-test", async ([FromBody] TestAlertRequest request, IMediator mediator, CancellationToken ct) =>
+        app.MapPost("/admin/alert-test", async ([FromBody] TestAlertRequest request, IMediator mediator, CancellationToken ct) =>
         {
             ArgumentNullException.ThrowIfNull(request);
             var success = await mediator.Send(new TestAlertCommand(request.AlertType, request.Channel), ct).ConfigureAwait(false);

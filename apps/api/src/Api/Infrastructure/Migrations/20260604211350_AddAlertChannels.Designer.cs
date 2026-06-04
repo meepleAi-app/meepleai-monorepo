@@ -14,7 +14,7 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    [Migration("20260604181320_AddAlertChannels")]
+    [Migration("20260604211350_AddAlertChannels")]
     partial class AddAlertChannels
     {
         /// <inheritdoc />
@@ -3091,6 +3091,11 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("NOW()");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("created_by");
 
                     b.Property<bool>("IsEnabled")
                         .ValueGeneratedOnAdd()

@@ -49,6 +49,7 @@ internal sealed class UpsertAlertChannelCommandHandler
                         existing.LastTestMessage,
                         existing.CreatedAt,
                         existing.UpdatedAt,
+                        existing.CreatedBy,
                         existing.UpdatedBy,
                         tokenBytes);
                 }

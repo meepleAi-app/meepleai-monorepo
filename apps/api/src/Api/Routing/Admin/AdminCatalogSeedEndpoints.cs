@@ -41,6 +41,30 @@ internal static class AdminCatalogSeedEndpoints
 
     public static RouteGroupBuilder MapAdminCatalogSeedEndpoints(this RouteGroupBuilder group)
     {
+        // Issue #1903 M7.2: kill-switch endpoint filter. When the runtime flag
+        // is disabled the entire admin pipeline returns 503 Service Unavailable
+        // (covers all REST methods AND the SSE stream — handler writes the
+        // status code directly on the response, before the body opens).
+        group.AddEndpointFilter(async (filterContext, next) =>
+        {
+            var flag = filterContext.HttpContext.RequestServices
+                .GetService<ICatalogSeedFeatureFlag>();
+            if (flag is not null)
+            {
+                var enabled = await flag
+                    .IsEnabledAsync(filterContext.HttpContext.RequestAborted)
+                    .ConfigureAwait(false);
+                if (!enabled)
+                {
+                    return Results.Problem(
+                        title: "Catalog seed pipeline disabled",
+                        detail: $"The admin catalog seed pipeline is disabled via runtime flag '{ICatalogSeedFeatureFlag.FlagKey}'.",
+                        statusCode: StatusCodes.Status503ServiceUnavailable);
+                }
+            }
+            return await next(filterContext).ConfigureAwait(false);
+        });
+
         group.MapPost("/", HandleEnqueue)
             .WithName("AdminCatalogSeed_Enqueue")
             .WithTags("Admin", "CatalogSeed");

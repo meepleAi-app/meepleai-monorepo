@@ -180,6 +180,10 @@ internal static class SharedGameCatalogServiceExtensions
         // HTTP SSE subscribers share state across the process.
         services.AddSingleton<ICatalogSeedStreamService, CatalogSeedStreamService>();
 
+        // Issue #1903 M7.2: kill-switch feature flag backed by IConfigurationService.
+        // Scoped to match the lifetime of the underlying IConfigurationService.
+        services.AddScoped<ICatalogSeedFeatureFlag, CatalogSeedFeatureFlag>();
+
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 
         return services;

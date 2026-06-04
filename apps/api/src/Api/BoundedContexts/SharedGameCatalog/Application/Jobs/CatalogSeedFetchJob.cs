@@ -60,6 +60,19 @@ public sealed class CatalogSeedFetchJob : IJob
         _logger.LogDebug("CatalogSeedFetchJob started: FireTime={FireTime}", context.FireTimeUtc);
 
         using var scope = _serviceProvider.CreateScope();
+
+        // Issue #1903 M7.2: kill-switch. Resolve optionally so legacy test
+        // doubles (which stub IServiceProvider with bare mocks) keep working;
+        // when the flag service IS registered, treat disabled as a no-op.
+        var flag = scope.ServiceProvider.GetService<ICatalogSeedFeatureFlag>();
+        if (flag is not null && !await flag.IsEnabledAsync(ct).ConfigureAwait(false))
+        {
+            _logger.LogDebug(
+                "CatalogSeedFetchJob: kill-switch active ({Key}=false), skipping batch",
+                ICatalogSeedFeatureFlag.FlagKey);
+            return;
+        }
+
         var repo = scope.ServiceProvider.GetRequiredService<ICatalogSeedDraftRepository>();
         var aggregator = scope.ServiceProvider.GetRequiredService<ICatalogSeedAggregator>();
         var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();

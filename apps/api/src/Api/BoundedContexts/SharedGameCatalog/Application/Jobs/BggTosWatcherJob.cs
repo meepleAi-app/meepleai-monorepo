@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Microsoft.EntityFrameworkCore;
@@ -60,6 +61,20 @@ public sealed class BggTosWatcherJob : IJob
         _logger.LogDebug("BggTosWatcherJob started: FireTime={FireTime}", context.FireTimeUtc);
 
         using var scope = _serviceProvider.CreateScope();
+
+        // Issue #1903 M7.2: kill-switch. When the catalog seed pipeline is
+        // parked we also skip the ToS watcher — there's no point alerting on
+        // ToS changes for a feature that isn't running. Optional resolution
+        // keeps test doubles working (mirrors CatalogSeedFetchJob pattern).
+        var flag = scope.ServiceProvider.GetService<ICatalogSeedFeatureFlag>();
+        if (flag is not null && !await flag.IsEnabledAsync(ct).ConfigureAwait(false))
+        {
+            _logger.LogDebug(
+                "BggTosWatcherJob: kill-switch active ({Key}=false), skipping ToS check",
+                ICatalogSeedFeatureFlag.FlagKey);
+            return;
+        }
+
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var httpFactory = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>();
 

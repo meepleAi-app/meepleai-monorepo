@@ -83,6 +83,7 @@ export function AgentsResultsGrid({
               subtitle={agent.gameName ?? undefined}
               status={cardStatus}
               tags={tags}
+              headingLevel={2}
             />
           </Link>
         );

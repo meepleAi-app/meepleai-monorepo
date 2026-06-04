@@ -18,6 +18,7 @@
  */
 
 import { render, screen } from '@testing-library/react';
+import { axe } from 'jest-axe';
 import { describe, expect, it } from 'vitest';
 
 import { GamesResultsGrid } from '../GamesResultsGrid';
@@ -157,5 +158,11 @@ describe('GamesResultsGrid (Wave B.1)', () => {
     const root = container.querySelector('[data-slot="games-results-grid"]');
     expect(root).toBeInTheDocument();
     expect(root!.querySelectorAll('[data-entity="game"]')).toHaveLength(0);
+  });
+
+  it('passes heading-order axe rule (#1842)', async () => {
+    const { container } = render(<GamesResultsGrid entries={ENTRIES} view="grid" />);
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

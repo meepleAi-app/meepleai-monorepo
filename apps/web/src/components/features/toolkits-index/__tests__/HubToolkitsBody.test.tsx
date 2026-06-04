@@ -209,4 +209,11 @@ describe('HubToolkitsBody (Issue #1480)', () => {
     const { container } = renderBody({ state: 'default', toolkits: sampleToolkits });
     expect(await axe(container)).toHaveNoViolations();
   });
+
+  // T10 (#1842)
+  it('passes heading-order axe rule (#1842)', async () => {
+    const { container } = renderBody({ state: 'default', toolkits: sampleToolkits });
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
 });

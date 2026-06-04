@@ -22,6 +22,7 @@ public class EnqueueEnrichmentCommandTests
 {
     private readonly Mock<ISharedGameRepository> _mockRepository;
     private readonly Mock<IBggImportQueueService> _mockQueueService;
+    private readonly Mock<IEnrichmentQueueRepository> _mockEnrichmentQueueRepository;
     private readonly Mock<IUnitOfWork> _mockUnitOfWork;
     private readonly Mock<ILogger<EnqueueEnrichmentCommandHandler>> _mockEnqueueLogger;
     private readonly Mock<ILogger<EnqueueAllSkeletonsCommandHandler>> _mockAllSkeletonsLogger;
@@ -37,6 +38,7 @@ public class EnqueueEnrichmentCommandTests
     {
         _mockRepository = new Mock<ISharedGameRepository>();
         _mockQueueService = new Mock<IBggImportQueueService>();
+        _mockEnrichmentQueueRepository = new Mock<IEnrichmentQueueRepository>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
         _mockEnqueueLogger = new Mock<ILogger<EnqueueEnrichmentCommandHandler>>();
         _mockAllSkeletonsLogger = new Mock<ILogger<EnqueueAllSkeletonsCommandHandler>>();
@@ -45,12 +47,14 @@ public class EnqueueEnrichmentCommandTests
         _enqueueHandler = new EnqueueEnrichmentCommandHandler(
             _mockRepository.Object,
             _mockQueueService.Object,
+            _mockEnrichmentQueueRepository.Object,
             _mockUnitOfWork.Object,
             _mockEnqueueLogger.Object);
 
         _allSkeletonsHandler = new EnqueueAllSkeletonsCommandHandler(
             _mockRepository.Object,
             _mockQueueService.Object,
+            _mockEnrichmentQueueRepository.Object,
             _mockUnitOfWork.Object,
             _mockAllSkeletonsLogger.Object);
 
@@ -100,6 +104,19 @@ public class EnqueueEnrichmentCommandTests
 
         _mockUnitOfWork.Verify(
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        // Issue #1874 — EnrichmentQueueEntry must be persisted with
+        // Priority=Normal, QueuedBy=admin user, Reason="manual enqueue".
+        _mockEnrichmentQueueRepository.Verify(
+            r => r.AddRangeAsync(
+                It.Is<IEnumerable<EnrichmentQueueEntry>>(entries =>
+                    entries.Any(e =>
+                        e.SharedGameId == gameId &&
+                        e.Priority == EnrichmentPriority.Normal &&
+                        e.QueuedByUserId == AdminUserId &&
+                        e.Reason == "manual enqueue")),
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -224,6 +241,19 @@ public class EnqueueEnrichmentCommandTests
 
         _mockUnitOfWork.Verify(
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        // Issue #1874 — batch enqueue with Priority=Stale, QueuedBy=null (system),
+        // Reason="stale skeletons batch".
+        _mockEnrichmentQueueRepository.Verify(
+            r => r.AddRangeAsync(
+                It.Is<IEnumerable<EnrichmentQueueEntry>>(entries =>
+                    entries.Count() == 3 &&
+                    entries.All(e =>
+                        e.Priority == EnrichmentPriority.Stale &&
+                        e.QueuedByUserId == null &&
+                        e.Reason == "stale skeletons batch")),
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 

@@ -404,6 +404,7 @@ Popolare on-going durante implementazione asse D.
 
 **Changelog spec consolidato**:
 - 2026-06-04: initial spec-panel review (DEC-1..DEC-6 + 32 findings)
+- 2026-06-05: asse A v2.1 implementation COMPLETE via subagent-driven sessione 32 — branch `feature/issue-1896-semantic-alignment`, ~15 commit (12 feat + 2 fix + 3 docs). 80+ unit test added. WP4 audit-only (T11+T12+T13 già shipped upstream #2053+#1629+#5005). Effort reale ~10.5gg (vs v2 stima 12gg, v1 stima 18gg → -42% rispetto plan iniziale post-discovery). Security: 1 HIGH IDOR finding catched + fixato in `c1efb4fb6`. 0 regression su SessionTracking 472/472 + Scoring 113/113 suites.
 
 ---
 

@@ -20,8 +20,6 @@ import { test, expect, type Page } from '../fixtures';
 const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
-const SEEDS_API = '**/api/v1/admin/catalog/seeds**';
-
 // ─── Mock helpers ─────────────────────────────────────────────────────────────
 
 interface SeedListState {

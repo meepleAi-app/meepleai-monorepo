@@ -2604,6 +2604,91 @@ For beta (CPX31): ~EUR 22/mo. For full production (CPX51): ~EUR 72/mo.
 
 ---
 
+## 19. Catalog Seed Pipeline (#1903)
+
+The catalog seed pipeline lets admins pre-seed the `SharedGameEntity` catalog
+from Wikidata (primary, CC0) and BoardGameGeek (whitelisted fallback, ToS-constrained).
+Full design reference: [`docs/superpowers/specs/2026-06-04-admin-catalog-seed-design.md`](../../superpowers/specs/2026-06-04-admin-catalog-seed-design.md).
+Legal posture: [ADR-059](../../for-claude/architecture/adr/adr-059-catalog-seed-legal-posture.md).
+
+### Enabling the seed pipeline
+
+The pipeline ships with the runtime feature flag `admin.catalog-seed.enabled` set
+to `false`. **Do NOT enable it in production until the pre-rollout legal checklist
+is complete.**
+
+1. **Pre-rollout checklist** (§8.5.6 of spec, mirrored in ADR-059):
+   - [ ] 1 hour legal consultation completed
+   - [ ] MeepleAI ToS updated with "publicly available data sources" clause
+   - [ ] `abuse@meepleai.app` mailbox active and monitored
+   - [ ] `BggTosWatcherJob` running in staging with alert routing
+   - [ ] `/admin/catalog/seeds/export` audit log export functioning
+2. **Toggle the flag**: navigate to `/admin/config` → General → set
+   `admin.catalog-seed.enabled = true`. Persists via `RuntimeConfigEntity`,
+   same pattern as `RegistrationMode`.
+3. **Verify the fetch job runs**: tail logs for `CatalogSeedFetchJob` (Quartz,
+   every 1 min). The first run after enabling consumes one `Pending` draft
+   if any exists.
+4. **Verify the ToS watcher**: `SELECT * FROM bgg_tos_hashes ORDER BY observed_at DESC LIMIT 5;`
+   should show at least one row. If the most recent `change_kind = 'changed'`,
+   trigger immediate legal review and consider disabling the flag.
+
+### Disabling (kill-switch)
+
+Setting `admin.catalog-seed.enabled = false`:
+
+- `CatalogSeedFetchJob` early-returns without making provider calls.
+- HTTP endpoints under `/api/v1/admin/catalog/seeds` return `503 Service
+  Unavailable` (endpoint filter); the admin UI surfaces this in the
+  `CatalogSeedApiError` 503 path.
+- `BggTosWatcherJob` continues running (compliance audit trail must not lapse).
+- In-flight drafts are NOT cleaned up; they resume on re-enable.
+
+Use this when:
+- BGG sends a takedown notice or `BggTosWatcherJob` flags a change.
+- Wikidata or BGG API rate-limits MeepleAI.
+- Legal posture changes mid-rollout.
+
+### Auditing
+
+Filter `domain_event_logs` by event type:
+
+```sql
+SELECT occurred_at, payload
+FROM domain_event_logs
+WHERE event_type IN (
+  'CatalogSeedFetched',
+  'CatalogSeedApproved',
+  'CatalogSeedRejected',
+  'BggFetchInvoked'
+)
+ORDER BY occurred_at DESC
+LIMIT 200;
+```
+
+Each `CatalogSeedFetched` payload includes the provider used and the source URL
+of every captured field (`FieldProvenance`). This supports GDPR Article 17
+erasure requests (designer name → `DELETE WHERE designer_name = 'X'`).
+
+### Troubleshooting
+
+- **All drafts stay `Pending` indefinitely**: feature flag is OFF, or the
+  Quartz scheduler isn't running. Check `CatalogSeedFetchJob` job state via
+  `/admin/jobs` and `admin.catalog-seed.enabled` value.
+- **All drafts transition to `FetchFailed`**: Wikidata/BGG endpoint
+  unreachable, or User-Agent header missing/invalid. BGG requires a
+  `From:` field with a valid email — verify `Bgg:UserAgent` config.
+- **`BggTosWatcherJob` flags `change_kind = 'changed'`**: STOP. Disable the
+  flag, route the diff to legal review. The watcher snapshots the BGG ToS
+  page; even a benign cosmetic change triggers the alert (false positives
+  are acceptable, false negatives would be a compliance failure).
+- **Bulk enqueue rejects with HTTP 400 "Too many IDs"**: hard cap is 100 IDs
+  per request (`BulkEnqueueCatalogSeedsCommandValidator`). Split the paste.
+- **`CatalogSeedApiError` with status 503 in the FE**: kill-switch is active.
+  See "Disabling" above.
+
+---
+
 ## Appendix A: Complete Command Reference
 
 ### Service Management

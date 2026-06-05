@@ -38,6 +38,27 @@
       "tagToInvalidate": "Tag da invalidare",
       "title": "Cache"
     },
+    "catalogSeed": {
+      "title": "Coda seed catalogo",
+      "subtitle": "Admin · Catalogo · Pipeline seed (Wikidata + BGG)",
+      "kpi": {
+        "pending": "In attesa",
+        "fetched": "Recuperati",
+        "approved": "Approvati",
+        "rejected": "Rifiutati"
+      },
+      "actions": {
+        "enqueue": "Accoda",
+        "approve": "Approva",
+        "reject": "Rifiuta",
+        "search": "Cerca",
+        "addToQueue": "Aggiungi alla coda"
+      },
+      "filters": {
+        "all": "Tutti",
+        "failedOnly": "Solo falliti"
+      }
+    },
     "configuration": {
       "aiLlm": "Configurazione AI / LLM",
       "rag": "Configurazione RAG",

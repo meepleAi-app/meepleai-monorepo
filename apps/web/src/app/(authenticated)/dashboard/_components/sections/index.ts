@@ -23,3 +23,27 @@ export {
   type EventsListLabels,
   type EventListItem,
 } from './EventsList';
+export {
+  ProssimiSection,
+  type ProssimiSectionProps,
+  type ProssimiSectionState,
+  type ProssimiStatus,
+  type ProssimiGameNightCard,
+} from './ProssimiSection';
+export {
+  RecentiSection,
+  type RecentiSectionProps,
+  type RecentiSectionState,
+  type RecentiGameNightCard,
+} from './RecentiSection';
+export {
+  SuggestedSection,
+  type SuggestedSectionProps,
+  type SuggestedSectionState,
+  type SuggestedGameCard,
+} from './SuggestedSection';
+export {
+  FriendsActivitySection,
+  type FriendsActivitySectionProps,
+  type FriendsActivitySectionState,
+} from './FriendsActivitySection';

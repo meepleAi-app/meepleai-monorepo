@@ -9,6 +9,7 @@ import { AppTopBar } from '@/components/layout/AppNav/AppTopBar';
 import { isImmersiveRoute } from '@/components/layout/AppNav/immersive-routes';
 import { MobileBottomBar } from '@/components/layout/AppNav/MobileBottomBar';
 import { MobileTopBar } from '@/components/layout/AppNav/MobileTopBar';
+import { MainSidebar } from '@/components/layout/MainSidebar/MainSidebar';
 import { SideDrawer } from '@/components/layout/SideDrawer/SideDrawer';
 import { cn } from '@/lib/utils';
 
@@ -23,6 +24,12 @@ interface DesktopShellProps {
  * Desktop/tablet: {@link AppTopBar}. Mobile: {@link MobileTopBar} (☰ → drawer) +
  * {@link MobileBottomBar}. The hamburger drawer holds the secondary destinations
  * ("tutto il resto"); the bottom bar holds the 5 primary tabs.
+ *
+ * Asse B (#1897) WP7 T7: {@link MainSidebar} is mounted side-by-side with the
+ * main content area on `lg+` screens (`hidden lg:flex` inside the component).
+ * It mirrors the AdminSidebar pattern (8 voci, see {@link MAIN_NAV_ITEMS}) and
+ * coexists with the legacy AppTopBar/MobileBottomBar for now; consolidation is
+ * tracked under asse C (dashboard integration).
  *
  * The bottom-bar clearance padding is dropped on immersive routes, where the
  * bottom bar hides itself (kept in sync via {@link isImmersiveRoute}).
@@ -39,12 +46,20 @@ export function DesktopShell({ children }: DesktopShellProps) {
 
       <SessionBanner />
 
-      <main
-        id="main-content"
-        className={cn('flex-1 overflow-y-auto overflow-x-clip', !immersive && 'pb-16 md:pb-0')}
-      >
-        {children}
-      </main>
+      <div className="flex flex-1 min-h-0">
+        {/* Asse B (#1897) MainSidebar — hidden on <lg, persistent on lg+. */}
+        <MainSidebar />
+
+        <main
+          id="main-content"
+          className={cn(
+            'flex-1 overflow-y-auto overflow-x-clip min-w-0',
+            !immersive && 'pb-16 md:pb-0'
+          )}
+        >
+          {children}
+        </main>
+      </div>
 
       <ChatSlideOverPanel />
       <MobileBottomBar />

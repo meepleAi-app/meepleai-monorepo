@@ -404,6 +404,7 @@ Popolare on-going durante implementazione asse D.
 
 **Changelog spec consolidato**:
 - 2026-06-04: initial spec-panel review (DEC-1..DEC-6 + 32 findings)
+- 2026-06-05: asse B v2 implementation COMPLETE via subagent-driven sessione 33 — branch `feature/issue-1897-ui-shell-pattern`, ~8 commit (7 feat/fix + 1 docs). ~120+ unit test added (T1 design tokens 8 + T2 MainSidebar 37 + T3 cascade-store extend 12 + T4 WizardModal 38 + T5 StatePreview 13 + T6 SSE counter 12 = ~120). 0 regression. Effort actual ~6gg (vs v1 stima 9gg → -33% post-discovery). cascade-store + Drawer + sonner già shipped upstream pre-asse-B.
 
 ---
 

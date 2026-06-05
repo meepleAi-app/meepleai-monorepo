@@ -12,6 +12,46 @@
 
 ---
 
+## 📋 Post-Review Fixes (applicare durante execution)
+
+> Review subagent 2026-06-05 ha identificato 5 issue dopo Grep validation reale del codebase. **Tutti i fix sono applicati inline durante implementation**; le sezioni Task sottostanti restano come "v1" per audit history ma vanno seguite con questi adjustments.
+
+### FIX-1 (CRITICAL): `VectorDocumentEntity` field name mismatch
+
+L'entity reale (`apps/api/src/Api/Infrastructure/Entities/KnowledgeBase/VectorDocumentEntity.cs`) ha:
+- `ChunkCount` (non `TotalChunks`)
+- `IndexedAt` è **`DateTime?`** nullable (non `DateTimeOffset`)
+- **`EmbeddingModel`** + **`EmbeddingDimensions`** denormalizzati DIRETTAMENTE sulla entity → **NO seconda SELECT** su `PgVectorEmbeddings` necessaria
+- **NO field `Language`** — recuperare da `PdfDocumentEntity.Language` (non-nullable, default "en") via JOIN
+
+**Impact su task**:
+- A.1 DTO: `IndexedAt: DateTime?` invece di `DateTimeOffset`
+- B.1 Handler: refactor a single query con JOIN PdfDocuments per Language; usa `v.ChunkCount/EmbeddingModel/EmbeddingDimensions` direct
+- B.1 Test fixture: usa `ChunkCount`, no seed di PgVectorEmbedding, seed `PdfDocumentEntity` con `Language="en"`, `IndexedAt = DateTime.UtcNow`
+- B.2 Test: NotFoundException assertion via `Message` non `ResourceId`
+- **B.3 DELETED** (no more "zero embeddings" case — Model è su VectorDoc stessa)
+- **B.5 DELETED** (PdfDocument.Language non-nullable con default → no null case)
+- C.2/C.3 Integration: stessi fixture adjustments
+
+### FIX-2 (CRITICAL): `useSearchDocumentChunks` FE hook NON ESISTE
+
+Grep `apps/web/src/hooks` → 0 match. FU-4 #1653 ha shipped solo BE search endpoint. **Aggiungere Task G.0** PRIMA di G.1 per creare hook FE che wrappa `POST /admin/kb/docs/{docId}/chunks/search` con `useMutation` TanStack.
+
+### FIX-3 (IMPORTANT): `NotFoundException` constructor semantic
+
+Costruttore `(string resourceType, string? resourceId)` usa `resourceId` come identifier, non message. **Usare** `new NotFoundException("Document not indexed")` single-arg → produce ProblemDetails message corretto. Aggiornare test B.2 assertion → `ex.Message.Should().Contain("Document not indexed")`.
+
+### FIX-4 (IMPORTANT): VecThumb test missing `seed: number` case
+
+Aggiungere in F.2 Step 1: `it('renders gradient for numeric seed', () => render(<VecThumb seed={42} />))` per coprire `String(seed)` coercion path usato da `EmbeddingsResultRow`.
+
+### FIX-5 (SUGGESTION): Date locale + null handling in MetaStrip
+
+- F.3 MetaStrip render: gestire `data.indexedAt === null` → mostra "—"
+- Date format: prefer ISO format invariant o `Intl.DateTimeFormat` con `timeZone: 'UTC'` esplicito (evita flake CI vs dev)
+
+---
+
 ## File Structure
 
 ### Backend (NEW)

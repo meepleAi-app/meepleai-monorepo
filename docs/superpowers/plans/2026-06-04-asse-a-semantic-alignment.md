@@ -993,7 +993,15 @@ git commit -m "feat(session-tracking): #1896 SaveSession polymorphic + 4 ScoreTy
 
 ## WP4 — Notification system extension (DEC-5)
 
-> Backend reference: `Notification` aggregate ESISTE in UserNotifications. `IGameNightEmailService.SendGameNightInvitationEmailAsync` ESISTE via `IEmailService` wrapper. Da verificare: (a) /notifications REST endpoints; (b) IEmailService concrete impl (= Resend?).
+> **🚨 AUDIT 2026-06-04**: WP4 (T11+T12+T13) è **GIÀ INTERAMENTE IMPLEMENTATO upstream**. Plan v2 ipotizzava endpoint mancanti — discovery rivela altro.
+>
+> **Stato reale**:
+> - **T11/T12**: Issue #2053 ha shipped `NotificationEndpoints.cs` con TUTTI gli endpoint richiesti (GET /notifications + GET /unread-count + POST /{id}/mark-read + POST /mark-all-read + GET /stream SSE Issue #5005). Notification entity completa (MarkAsRead idempotente + RestoreReadStatus per persistence). INotificationRepository con GetByUserIdAsync (filtering unread+limit) + GetUnreadCountAsync + MarkAllAsReadAsync. CQRS handlers tutti esistenti: GetNotificationsQuery, GetUnreadCountQuery, MarkNotificationReadCommand, MarkAllNotificationsReadCommand. Rate limiting su mark-all-read (Issue #2155). Auth user-scoped (no IDOR). Registrato in Program.cs:887.
+> - **T13**: Issue #1629 ha shipped `ResendEmailSender : IEmailSender` in `apps/api/src/Api/Services/Email/`. `EmailService` centralizza la scelta SMTP vs Resend via `IEmailSender` DI dependency. Config supporta `RESEND_FROM_EMAIL` fallback. SMTP path mantenuto per legacy/unit-test fallback.
+>
+> **Azione plan v2 → v2.1**: WP4 T11+T12+T13 → **NO IMPLEMENTATION needed**. Solo audit commit + skip-to-T14.
+>
+> **Effort recovered**: 12h (3+5+4) → ~0h. Asse A v2 totale ricalcolato: 12gg → **~10.5gg** (-12.5%).
 
 ### Task 11: Verify Notification entity + repository + endpoint audit
 
@@ -1175,5 +1183,6 @@ Both finish ~2 weeks elapsed time vs solo dev ~3 weeks.
 
 ## Changelog
 
+- **2026-06-05 v2.1**: WP4 audit-only post-discovery (T11+T12+T13 già shipped upstream issue #2053+#1629+#5005). 12h recovered, effort 12gg → ~10.5gg (-12.5% additional). Plan task count: 14 → 11 effective tasks (3 WP4 collassati ad audit doc).
 - **2026-06-04 v2**: rewrite post-discovery. Gap analysis backend reale → effort -33%. 14 task vs 25 task v1.
 - **2026-06-04 v1**: initial plan (now archived in git history). Assumed scratch backend, ~50% over-scoped.

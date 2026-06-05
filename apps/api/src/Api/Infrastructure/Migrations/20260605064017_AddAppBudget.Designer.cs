@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -13,9 +14,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260605064017_AddAppBudget")]
+    partial class AddAppBudget
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -10027,21 +10030,6 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("bytea")
                         .HasColumnName("row_version");
 
-                    b.Property<string>("ScoreData")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("jsonb")
-                        .HasColumnName("score_data")
-                        .HasDefaultValueSql("'{}'::jsonb");
-
-                    b.Property<string>("ScoringType")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasDefaultValue("Points")
-                        .HasColumnName("scoring_type");
-
                     b.Property<string>("SessionCode")
                         .IsRequired()
                         .HasMaxLength(6)
@@ -10057,10 +10045,6 @@ namespace Api.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("session_type");
-
-                    b.Property<DateTime?>("StartedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("started_at");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -10391,43 +10375,6 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("ix_badges_tier");
 
                     b.ToTable("badges", (string)null);
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.BggTosHashEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<int>("ChangeCount")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0)
-                        .HasColumnName("change_count");
-
-                    b.Property<string>("CurrentHash")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("current_hash");
-
-                    b.Property<DateTime?>("LastChangedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_changed_at");
-
-                    b.Property<DateTime>("LastCheckedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_checked_at");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea")
-                        .HasColumnName("row_version");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("bgg_tos_hashes", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.CatalogSeedDraftEntity", b =>

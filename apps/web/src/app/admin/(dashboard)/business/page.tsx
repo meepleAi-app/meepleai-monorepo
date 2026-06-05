@@ -1,81 +1,128 @@
-import { BudgetKpiStrip } from '@/components/admin/business/BudgetKpiStrip';
-import { BudgetPlaceholderPanel } from '@/components/admin/business/BudgetPlaceholderPanel';
-
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = { title: 'Budget & Cost — Admin' };
+'use client';
 
 /**
- * #1838 SP5 F4-C5 — `/admin/business` (NEW page)
+ * #1838 SP5 F4-C5 — `/admin/business` Budget & Cost
  *
- * Layout SP5 (mockup `sp5-admin-budget.html`):
- *   1. Hero header (titolo + crumbs + descrizione)
- *   2. BudgetKpiStrip — 4 KPI (spesa oggi/mese, budget residuo, proiezione)
- *   3. CostStackedArea placeholder — stacked area cost per provider 30gg
- *   4. FeatureCostTable placeholder — costi per feature con drill provider
- *   5. CostSimulator placeholder — what-if calculator
- *   6. BudgetGauge placeholder — gauge spent vs budget mensile
+ * Page allineata al mockup `sp5-admin-budget.html` (619 righe). Chiude l'epic
+ * F4 Ondata Ops (#1833).
  *
- * **Stato attuale**: page nuova creata + nav config aggiornata. Tutti i 4
- * pannelli sono placeholder "BE pending" perché gli endpoint cost aggregation
- * non sono ancora implementati nel backend.
+ * Layout:
+ *   1. Hero header (titolo + crumbs + descrizione + range select + actions)
+ *   2. BudgetKpiStrip (4 KPI)
+ *   3. CostStackedArea (stacked area 30gg/range)
+ *   4. Grid 2-col: BudgetGauge + CostSimulator
+ *   5. FeatureCostTable (drill provider)
  *
- * Endpoint BE attesi (follow-up issue da aprire):
- *   GET /api/v1/admin/business               → KPI aggregati
- *   GET /api/v1/admin/budget                 → budget mensile + spent
- *   GET /api/v1/admin/cost-calculator        → simulator input/output
- *   POST /api/v1/admin/budget/limit          → update budget limit
- *   GET /api/v1/admin/business/breakdown?range=30d → CostStackedArea data
- *   GET /api/v1/admin/business/per-feature   → FeatureCostTable
+ * Range select persiste via URL `?range=30d|7d|90d|1y`. SetBudgetDialog è
+ * un modal controllato da state locale.
  */
+
+import { useState } from 'react';
+
+import { Plus, Settings2 } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+
+import { BudgetGauge } from '@/components/admin/business/BudgetGauge';
+import { BudgetKpiStrip } from '@/components/admin/business/BudgetKpiStrip';
+import { CostSimulator } from '@/components/admin/business/CostSimulator';
+import { CostStackedArea } from '@/components/admin/business/CostStackedArea';
+import { FeatureCostTable } from '@/components/admin/business/FeatureCostTable';
+import { SetBudgetDialog } from '@/components/admin/business/SetBudgetDialog';
+import { Button } from '@/components/ui/primitives/button';
+import { costBreakdownRangeSchema } from '@/lib/api/schemas/business-cost.schemas';
+import type { CostBreakdownRange } from '@/lib/api/schemas/business-cost.schemas';
+
+const RANGE_LABELS: Record<CostBreakdownRange, string> = {
+  '7d': '7 giorni',
+  '30d': '30 giorni',
+  '90d': '90 giorni',
+  '1y': 'Anno',
+};
+
+function parseRange(raw: string | null): CostBreakdownRange {
+  const parsed = costBreakdownRangeSchema.safeParse(raw);
+  return parsed.success ? parsed.data : '30d';
+}
+
 export default function BudgetPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const range = parseRange(searchParams.get('range'));
+  const [setBudgetOpen, setSetBudgetOpen] = useState(false);
+
+  const handleRangeChange = (next: CostBreakdownRange) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('range', next);
+    router.replace(`/admin/business?${params.toString()}`);
+  };
+
   return (
     <div className="space-y-5" data-testid="business-page">
-      {/* SP5 hero header */}
-      <header>
-        <nav
-          aria-label="breadcrumb"
-          className="font-mono text-[10.5px] uppercase tracking-wider text-muted-foreground mb-1"
-        >
-          Admin &middot; Platform &amp; Operations &middot; Budget
-        </nav>
-        <h1 className="font-quicksand text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-          Budget &amp; Cost
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          KPI di spesa per provider/feature, simulator di costo, e configurazione budget mensile.
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <nav
+            aria-label="breadcrumb"
+            className="font-mono text-[10.5px] uppercase tracking-wider text-muted-foreground mb-1"
+          >
+            Admin &middot; Platform &amp; Operations &middot; Budget
+          </nav>
+          <h1 className="font-quicksand text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+            Budget &amp; Cost
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            KPI di spesa per provider/feature, simulator di costo, e configurazione budget mensile.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="sr-only" htmlFor="business-range">
+            Intervallo di tempo
+          </label>
+          <select
+            id="business-range"
+            value={range}
+            onChange={e => handleRangeChange(e.target.value as CostBreakdownRange)}
+            className="rounded border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            data-testid="business-range-select"
+          >
+            {(Object.keys(RANGE_LABELS) as CostBreakdownRange[]).map(r => (
+              <option key={r} value={r}>
+                {RANGE_LABELS[r]}
+              </option>
+            ))}
+          </select>
+          <Button
+            size="sm"
+            onClick={() => setSetBudgetOpen(true)}
+            className="gap-1.5"
+            data-testid="business-set-budget-button"
+          >
+            <Plus className="h-4 w-4" />
+            Imposta budget
+          </Button>
+          <a
+            href="/api/v1/admin/business/usage?period=30"
+            className="inline-flex items-center gap-1.5 rounded border border-border bg-background px-3 py-1.5 text-sm hover:bg-muted"
+            title="Usage statistics endpoint (legacy)"
+          >
+            <Settings2 className="h-4 w-4" aria-hidden />
+            Usage
+          </a>
+        </div>
       </header>
 
       <BudgetKpiStrip />
 
-      <BudgetPlaceholderPanel
-        id="cost-stacked-area"
-        title="Costi per provider · 30 giorni"
-        description="Stacked area chart con breakdown costo giornaliero per provider (DeepSeek, OpenRouter, OpenAI, Anthropic, ...) — last 30 days con linea budget cap."
-        endpoint="GET /api/v1/admin/business/breakdown?range=30d"
-      />
+      <CostStackedArea range={range} />
 
-      <BudgetPlaceholderPanel
-        id="feature-cost-table"
-        title="Costi per feature"
-        description="Tabella per-feature (rag-query, embedding, image-gen, ...) con cost totale + breakdown per provider drillabile."
-        endpoint="GET /api/v1/admin/business/per-feature"
-      />
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <BudgetGauge />
+        <CostSimulator />
+      </div>
 
-      <BudgetPlaceholderPanel
-        id="cost-simulator"
-        title="What-if calculator"
-        description="Simulator: 'se aumento RPM del X% e cambio modello a Y, costo previsto = Z'. Output con warning quando supera budget."
-        endpoint="GET /api/v1/admin/cost-calculator"
-      />
+      <FeatureCostTable range={range} />
 
-      <BudgetPlaceholderPanel
-        id="budget-gauge"
-        title="Budget mensile"
-        description="Gauge spent vs budget mensile + ETA exhaust + threshold alert (80% / 95% / 100%). Configurazione via POST /admin/budget/limit."
-        endpoint="GET /api/v1/admin/budget"
-      />
+      <SetBudgetDialog open={setBudgetOpen} onClose={() => setSetBudgetOpen(false)} />
     </div>
   );
 }

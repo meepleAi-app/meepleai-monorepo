@@ -571,17 +571,31 @@ public async Task<…> SendAsync(…, CancellationToken ct)
 
 `ProviderCredentialResolver` ha cache 5min (`IMemoryCache`). LlmClient può chiamare `ResolveAsync` ad ogni request senza perf penalty (cache hit ratio ~100% in steady state). Cache flush on rotation è istantaneo via event handler (§4.3 + §10.3).
 
-### 10.3 Cache invalidation flow
+### 10.3 Cache invalidation flow (Redis pub/sub — multi-pod safe)
+
+**Risolto 2026-06-05**: riusa il pattern Redis pub/sub stabilito in `SessionBroadcastService` (`BoundedContexts/SessionTracking/Infrastructure/Services`). Pattern: dopo rotation, il pod-A pubblica un message su channel Redis `provider:cache-invalidate`. Tutti i pod (incluso A stesso) sottoscrivono a startup; il subscriber callback invalida la `IMemoryCache` locale per il provider rotato.
 
 ```
 RotateProviderKeyCommandHandler
     └─ SaveChangesAsync()
        ├─ MeepleAiDbContext dispatches ProviderKeyRotatedEvent via MediatR
        └─ ProviderKeyRotatedEventHandler.Handle(event)
-              └─ _resolver.Invalidate(event.ProviderName)
-                    ↓
+              └─ _publisher.PublishAsync("provider:cache-invalidate", event.ProviderName)
+                    │
+                    ↓ (Redis pub/sub propaga a tutti i pod)
+                    │
+              ProviderCacheInvalidationSubscriber (HostedService su ogni pod)
+                    └─ _resolver.Invalidate(providerName)
+                          ↓
               Next ResolveAsync("deepseek", …) ⇒ cache miss ⇒ DB lookup ⇒ new key returned
 ```
+
+**Wiring**:
+- `ProviderCacheInvalidationPublisher` (DI-injected nel `ProviderKeyRotatedEventHandler`): `IConnectionMultiplexer.GetSubscriber().PublishAsync(channel, providerName)`
+- `ProviderCacheInvalidationSubscriber : IHostedService` (Singleton): subscribe a `provider:cache-invalidate` su `StartAsync`, callback chiama `IServiceProvider.GetRequiredService<IProviderCredentialResolver>().Invalidate(message)`
+- Local fallback: anche su single-pod, il publish/subscribe è no-op idempotent (pod publica → riceve → invalida sua cache locale). Stesso flow per N=1 e N>1 pod.
+
+**Stale window in multi-pod**: ~10-50ms (Redis pub/sub round-trip), vs 5min TTL nel caso single-pod-naive. Acceptable per provider key rotation.
 
 ### 10.4 Client touched
 
@@ -605,20 +619,42 @@ Plus probe executor:
 internal sealed record RotateProviderKeyCommand(…) : IRequest<…>;
 ```
 
-### 11.2 Details JSON shape
+### 11.2 Details JSON shape (RESOLVED — automatic via behavior)
 
-`AuditLoggingBehavior` popola `Details` con JSON serializzato (vedi OQ-1 per la verifica dell'attuale comportamento behavior vs manual build). Layout target:
+**Risolto 2026-06-05**: `AuditLoggingBehavior.BuildMetadata` (linea 339-362) **popola Details automaticamente** via reflection su tutti i Command properties. Linea 351 esclude automaticamente proprietà sensitive (`Password`, `Token`, `Secret`, `ApiKey`) ⇒ `NewApiKey` è **filtrata di default**, no leak.
+
+Configurazione richiesta:
+
+```csharp
+[AuditableAction(Action = "ProviderKeyRotated", Resource = "provider_credentials", Level = 3)]
+[AtomicAudit]
+[RequireTwoFactor(MaxAgeMinutes = 5, ForceStrict = true)]
+internal sealed record RotateProviderKeyCommand(…) : IRequest<RotateProviderKeyResponseDto>;
+```
+
+E sull'entity:
+
+```csharp
+[Auditable]   // → AuditingSaveChangesInterceptor cattura BeforeJson/AfterJson
+public sealed class ProviderCredential { … }
+```
+
+Output automatico del behavior:
 
 ```json
+// Details (auto-built by BuildMetadata)
 {
-  "level": 3,
-  "providerName": "deepseek",
-  "previousKeyFingerprint": "sk-de...a3f1",
-  "newKeyFingerprint": "sk-de...f7a2",
-  "probeLatencyMs": 312,
-  "stepUpVerifiedAt": "2026-06-05T11:00:00Z"
+  "confirmationLevel": 3,
+  "adminEmail": "admin@meepleai.it",
+  "commandType": "RotateProviderKeyCommand",
+  "ProviderName": "deepseek",
+  "ConfirmedProviderName": "deepseek",
+  "RequestingUserId": "..."
+  // NewApiKey: SKIPPED (reflection exclusion)
 }
 ```
+
+Plus `BeforeJson` + `AfterJson` con snapshot completi delle row `provider_credentials` (vecchia inattivata + nuova attiva), incluso `KeyFingerprint`. **Zero manual handler code** richiesto per audit completeness.
 
 ### 11.3 Step-up token reference
 
@@ -671,13 +707,31 @@ internal sealed record RotateProviderKeyCommand(…) : IRequest<…>;
 - Test 403: login admin (non superadmin) + verify button disabled
 - Test 400: type wrong provider name confirm → error message
 
-### 13.3 Step-up flow
+### 13.3 Step-up flow (NET-NEW `StepUpTwoFactorModal`)
 
-Se la mutation ritorna 401 `step_up_required`, il client deve:
-1. Mostrare modal step-up TOTP (component esistente `StepUpTwoFactorModal` da #1597)
-2. Su success step-up, retry rotation automaticamente
+**Risolto 2026-06-05**: `StepUpTwoFactorModal` **non esiste** in `apps/web/src/components/auth/` (grep ritorna 0 file). I component `TwoFactor*` esistenti coprono solo setup/disable/recovery/verification; non c'è modal step-up dedicato.
 
-Pattern già presente per altre azioni S3-gated.
+**Net-new component** in `apps/web/src/components/auth/StepUpTwoFactorModal.tsx`:
+
+- Wrapper modal-shell che usa `TwoFactorVerification` come body interno (riuso)
+- Props: `{ isOpen, onClose, onSuccess, reason?: string }`
+- On `onVerify`: chiama `POST /api/v1/auth/2fa/step-up` con TOTP code
+- On 200: chiude modal + callback `onSuccess()` → permette al caller di re-eseguire l'azione originale
+- On error: surface a `TwoFactorVerification` per UX consistente
+
+**Flow Given/When/Then**:
+
+```
+Given:    superadmin in /admin/providers, last TOTP verifica >5min fa
+When:     clicca "Rotate" sul provider DeepSeek
+Then:     BE risponde 401 step_up_required
+And:      FE intercetta error subcode → apre StepUpTwoFactorModal
+And:      user inserisce TOTP corrente nel modal
+And:      FE POST /api/v1/auth/2fa/step-up → 200 + updated session.LastTotpVerifiedAt
+And:      FE retry POST /api/v1/admin/providers/deepseek/rotate-key → 200
+```
+
+**Pattern riutilizzabile**: questo modal sarà utilizzabile da qualsiasi altra azione S3-gated futura (delete user con strict, rotate user password, ecc).
 
 ---
 
@@ -768,9 +822,9 @@ Per disabilitare completamente la feature (in caso di vuln):
 
 | ID | Question | Decision | Owner |
 |---|---|---|---|
-| **OQ-1** | `AuditLoggingBehavior` popola automaticamente `Details` con il command shape JSON, o serve custom build dei details nel handler? | Verificare in implementation phase. Se automatic, vediamo se il shape generato include i fingerprint senza esporli plaintext. Fallback: manual `Details = JsonSerializer.Serialize(...)` nel handler. | Implementer |
+| ~~**OQ-1**~~ | ~~Audit Details JSON automatic vs manual?~~ | ✅ **RESOLVED 2026-06-05 — AUTOMATIC**: `AuditLoggingBehavior.BuildMetadata` auto-genera Details via reflection; auto-esclude `ApiKey` (linea 351); `[Auditable]` su entity → snapshot before/after via interceptor. Zero manual handler code. Vedi §11.2. | — |
 | **OQ-2** | Cache TTL 5min ragionevole? | Default 5min. Tunable via config se necessario. | Implementer (configurable via `appsettings.json` key `AI:Providers:CredentialCacheTtlMinutes`) |
-| **OQ-3** | Multi-instance / horizontal scaling cache invalidation cross-pod? | Per ora Singolo-pod assumption (dev/staging). Multi-pod richiede Redis pub/sub o database polling. Doc come known limitation. Per ora invalidation locale + 5min TTL = max 5min staleness in multi-pod. | Implementer (docs only) |
+| ~~**OQ-3**~~ | ~~Multi-instance / horizontal scaling cache invalidation cross-pod?~~ | ✅ **RESOLVED 2026-06-05 — REDIS PUB/SUB**: riusa pattern da `SessionBroadcastService` con `IConnectionMultiplexer.Subscriber.PublishAsync`. Stale window ~10-50ms cross-pod. Stesso flow per N=1 e N>1 pod. Vedi §10.3. | — |
 | **OQ-4** | Test integration richiede mock provider o real provider call? | Mock provider HttpClient con `MockHttpMessageHandler`. Probe restituisce success/failure controllata. | Implementer |
 | **OQ-5** | Should the endpoint emit a Slack/email notification a SecOps? | Out of scope per #1859. Audit row sufficiente; notification è UserNotifications BC follow-up. | Punt to follow-up |
 
@@ -788,27 +842,35 @@ Per disabilitare completamente la feature (in caso di vuln):
 
 ---
 
-## 18. Effort Estimate
+## 18. Effort Estimate (rev. post-socratic 2026-06-05)
 
 | Phase | Effort |
 |---|---|
 | Migration + EntityConfig + Repository | ~3h |
 | Domain (aggregate + VOs + events) | ~2h |
-| Application (Command + Validator + Handler) | ~5h |
+| Application (Command + Validator + Handler) — automatic audit via behavior | ~4h |
 | `IProviderCredentialResolver` + cache + provider client refactor (2 clients) | ~4h |
+| **Redis pub/sub cache invalidation** (publisher + subscriber HostedService) | ~2h |
 | `RequireTwoFactor.ForceStrict` extension + behavior change | ~1h |
 | Rate-limit policy + endpoint | ~1h |
 | Unit tests (40+ tests) | ~4h |
 | Integration tests (10+ scenarios) | ~3h |
 | FE wire (RotateKeyModal + mutation + E2E) | ~5h |
+| **FE net-new `StepUpTwoFactorModal`** (riusa TwoFactorVerification) | ~3h |
 | Code review + adjustments + PR merge | ~2h |
-| **Total** | **~30h** (~4 giornate-uomo) |
+| **Total** | **~34h** (~4-5 giornate-uomo) |
 
-Spec originale stimava 10-14h: questa è la stima realistica post-discovery (DB-backed approach + provider client refactor non era stato considerato).
+Spec originale stimava 10-14h; rev. post-discovery 30h; rev. post-socratic 34h. Le aggiunte sono:
+- +2h Redis pub/sub (OQ-3): garantisce cross-pod correctness vs documentare come limitation
+- +3h `StepUpTwoFactorModal` net-new (§13.3): non riusabile da componente esistente
+- -1h audit automatic (OQ-1): zero manual code per audit Details
+
+Net Change: +4h ⇒ totale ~34h.
 
 ---
 
 **Approvals**:
 - [x] Architecture decisions D-1..D-5 (user 2026-06-05)
+- [x] Socratic resolution OQ-1, OQ-3, §13.3, §14.4 (user 2026-06-05)
 - [ ] Design doc review (user)
 - [ ] Implementation plan (writing-plans skill, post-approval)

@@ -99,11 +99,14 @@ internal sealed class RotateProviderKeyCommandHandler
 
         // 3. Probe new key (pre-flight). Use the explicit-key overload — we don't want to read
         //    the env var: we're validating the candidate key, not the currently configured one.
+        // CLAUDE.md issue #2568: never throw InvalidOperationException (HTTP 500); map to
+        // ProviderCredentialNotConfiguredException (HTTP 503) — the allowed-provider whitelist
+        // (ProviderName.Allowed) means this branch is only reachable on a DI misconfiguration,
+        // semantically equivalent to "the credential infrastructure is not configured".
         var probeExecutor = _probeFactory.GetExecutor(providerName.Value)
-            ?? throw new InvalidOperationException(
-                $"No probe executor registered for provider '{providerName.Value}'");
+            ?? throw new ProviderCredentialNotConfiguredException(providerName.Value);
         var probeResult = await probeExecutor
-            .ExecuteAsync(command.NewApiKey, expectedModel: null, cancellationToken)
+            .ExecuteAsync(command.ApiKey, expectedModel: null, cancellationToken)
             .ConfigureAwait(false);
 
         if (probeResult.Outcome != ProbeOutcome.Success)
@@ -117,8 +120,8 @@ internal sealed class RotateProviderKeyCommandHandler
 
         // 4. Encrypt the key + derive masked fingerprint.
         var protector = _protectionProvider.CreateProtector(DataProtectionPurpose);
-        var ciphertext = protector.Protect(command.NewApiKey);
-        var fingerprint = KeyFingerprint.FromPlaintext(command.NewApiKey);
+        var ciphertext = protector.Protect(command.ApiKey);
+        var fingerprint = KeyFingerprint.FromPlaintext(command.ApiKey);
 
         // 5. Deactivate previous active row + insert new (atomic via [AtomicAudit]).
         var activePrevious = await _repository

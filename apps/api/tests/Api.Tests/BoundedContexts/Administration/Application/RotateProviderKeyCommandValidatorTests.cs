@@ -70,7 +70,7 @@ public sealed class RotateProviderKeyCommandValidatorTests
     public void Validate_InvalidNewApiKey_Errors(string key)
     {
         _sut.TestValidate(ValidCommand(newKey: key))
-            .ShouldHaveValidationErrorFor(x => x.NewApiKey);
+            .ShouldHaveValidationErrorFor(x => x.ApiKey);
     }
 
     [Fact]
@@ -78,7 +78,7 @@ public sealed class RotateProviderKeyCommandValidatorTests
     {
         // Exactly 10 chars — boundary
         _sut.TestValidate(ValidCommand(newKey: new string('a', 10)))
-            .ShouldNotHaveValidationErrorFor(x => x.NewApiKey);
+            .ShouldNotHaveValidationErrorFor(x => x.ApiKey);
     }
 
     [Fact]
@@ -86,14 +86,14 @@ public sealed class RotateProviderKeyCommandValidatorTests
     {
         // Exactly 512 chars — upper boundary
         _sut.TestValidate(ValidCommand(newKey: new string('a', 512)))
-            .ShouldNotHaveValidationErrorFor(x => x.NewApiKey);
+            .ShouldNotHaveValidationErrorFor(x => x.ApiKey);
     }
 
     [Fact]
     public void Validate_ApiKeyTooLong_Errors()
     {
         _sut.TestValidate(ValidCommand(newKey: new string('a', 513)))
-            .ShouldHaveValidationErrorFor(x => x.NewApiKey);
+            .ShouldHaveValidationErrorFor(x => x.ApiKey);
     }
 
     [Fact]

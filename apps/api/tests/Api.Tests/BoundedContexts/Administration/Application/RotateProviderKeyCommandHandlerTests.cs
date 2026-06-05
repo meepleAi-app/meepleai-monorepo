@@ -309,8 +309,10 @@ public sealed class RotateProviderKeyCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_NoProbeExecutorRegistered_ThrowsInvalidOperation()
+    public async Task Handle_NoProbeExecutorRegistered_ThrowsProviderCredentialNotConfigured()
     {
+        // CLAUDE.md issue #2568: handler maps the misconfiguration to
+        // ProviderCredentialNotConfiguredException (HTTP 503), not InvalidOperationException (500).
         var requesterId = Guid.NewGuid();
         _userRepo.GetByIdAsync(requesterId, Arg.Any<CancellationToken>())
             .Returns(CreateUser(requesterId, "root@test.com", Role.SuperAdmin));
@@ -326,7 +328,7 @@ public sealed class RotateProviderKeyCommandHandlerTests
             requesterId);
 
         var act = async () => await _sut.Handle(command, CancellationToken.None);
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*probe executor*");
+        await act.Should().ThrowAsync<ProviderCredentialNotConfiguredException>();
     }
 
     [Fact]

@@ -75,7 +75,7 @@ internal static class AdminProviderEndpoints
 
                 var result = await mediator.Send(new RotateProviderKeyCommand(
                     ProviderName: name,
-                    NewApiKey: body.NewApiKey,
+                    ApiKey: body.NewApiKey,
                     ConfirmedProviderName: body.ConfirmedProviderName,
                     RequestingUserId: actorId), ct).ConfigureAwait(false);
 

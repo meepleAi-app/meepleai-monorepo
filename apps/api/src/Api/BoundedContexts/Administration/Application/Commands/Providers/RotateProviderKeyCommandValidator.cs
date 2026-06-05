@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Application.Commands.Providers;
 /// - <c>ProviderName</c>: NotEmpty + whitelist (case-insensitive against
 ///   <see cref="ProviderName.Allowed"/>).
 /// - <c>ConfirmedProviderName</c>: must equal <c>ProviderName</c> (typo guard, FE double-entry).
-/// - <c>NewApiKey</c>: NotEmpty + length 10..512 + no whitespace.
+/// - <c>ApiKey</c>: NotEmpty + length 10..512 + no whitespace.
 /// - <c>RequestingUserId</c>: NotEqual(Guid.Empty).
 /// </summary>
 internal sealed class RotateProviderKeyCommandValidator
@@ -30,7 +30,7 @@ internal sealed class RotateProviderKeyCommandValidator
             .Equal(x => x.ProviderName)
                 .WithMessage("Provider name confirmation does not match the route parameter (typo guard)");
 
-        RuleFor(x => x.NewApiKey).Cascade(CascadeMode.Stop)
+        RuleFor(x => x.ApiKey).Cascade(CascadeMode.Stop)
             .NotEmpty()
                 .WithMessage("New API key is required")
             .MinimumLength(MinApiKeyLength)

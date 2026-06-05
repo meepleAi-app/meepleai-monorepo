@@ -474,6 +474,18 @@
   body::after {
     opacity: 0 !important;
   }
+
+  /* Drawer primitive (Issue #1897 T3): override Vaul inline transitions
+   * + Radix Dialog animate-in motion. The global `*` rule above already
+   * sets `transition-duration: 0.01ms`, but Vaul controls transitions via
+   * inline `style.transition` which bypasses class-based rules. */
+  [data-vaul-drawer],
+  [data-vaul-drawer-wrapper],
+  [data-vaul-overlay],
+  [role="dialog"] {
+    transition: none !important;
+    animation: none !important;
+  }
 }
 
 @theme inline {

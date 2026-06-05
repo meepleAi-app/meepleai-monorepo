@@ -30,3 +30,9 @@ export {
   type ProssimiStatus,
   type ProssimiGameNightCard,
 } from './ProssimiSection';
+export {
+  RecentiSection,
+  type RecentiSectionProps,
+  type RecentiSectionState,
+  type RecentiGameNightCard,
+} from './RecentiSection';

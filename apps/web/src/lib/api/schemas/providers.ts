@@ -46,3 +46,29 @@ export type ProviderQuota = z.infer<typeof ProviderQuotaSchema>;
  */
 export const KNOWN_PROVIDERS = ['openrouter', 'deepseek', 'ollama-local'] as const;
 export type ProviderName = (typeof KNOWN_PROVIDERS)[number];
+
+/**
+ * Issue #1859 — Rotate provider API key (superadmin + step-up 2FA).
+ *
+ * Request: typed-confirm input (`confirmedProviderName`) must match the URL
+ * provider name; the new key is sent in `newApiKey`. The BE probes the new
+ * key against the live provider before persisting (fail-fast on bad keys).
+ */
+export interface RotateProviderKeyRequest {
+  readonly newApiKey: string;
+  readonly confirmedProviderName: string;
+}
+
+/**
+ * Issue #1859 — Rotate provider API key response.
+ *
+ * On success the BE returns a short fingerprint of the new key (display once),
+ * the rotation timestamp, and the timestamp at which the previous key was
+ * disabled (used for audit display).
+ */
+export interface RotateProviderKeyResponse {
+  readonly providerName: string;
+  readonly newKeyFingerprint: string;
+  readonly rotatedAt: string;
+  readonly previousKeyDisabledAt: string;
+}

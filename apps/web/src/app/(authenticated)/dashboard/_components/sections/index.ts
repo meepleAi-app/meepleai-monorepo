@@ -36,3 +36,9 @@ export {
   type RecentiSectionState,
   type RecentiGameNightCard,
 } from './RecentiSection';
+export {
+  SuggestedSection,
+  type SuggestedSectionProps,
+  type SuggestedSectionState,
+  type SuggestedGameCard,
+} from './SuggestedSection';

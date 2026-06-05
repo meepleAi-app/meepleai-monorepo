@@ -26,7 +26,7 @@ describe('BulkPasteForm', () => {
 
   it('shows valid + invalid badges from the paste', async () => {
     render(<BulkPasteForm />, { wrapper: wrapper() });
-    await userEvent.type(screen.getByLabelText(/BGG IDs textarea/i), '13, 42, foo');
+    await userEvent.type(screen.getByRole('textbox', { name: /BGG IDs/i }), '13, 42, foo');
     expect(screen.getByTestId('bgg-id-badge-13').getAttribute('data-state')).toBe('valid');
     expect(screen.getByTestId('bgg-id-badge-42').getAttribute('data-state')).toBe('valid');
     expect(screen.getByTestId('bgg-id-badge-foo').getAttribute('data-state')).toBe('invalid');
@@ -40,7 +40,7 @@ describe('BulkPasteForm', () => {
       newDraftIds: ['d1', 'd2'],
     });
     render(<BulkPasteForm />, { wrapper: wrapper() });
-    await userEvent.type(screen.getByLabelText(/BGG IDs textarea/i), '13, 42');
+    await userEvent.type(screen.getByRole('textbox', { name: /BGG IDs/i }), '13, 42');
     await userEvent.click(screen.getByRole('button', { name: /Enqueue 2 IDs/i }));
     await waitFor(() => expect(api.bulkEnqueueSeeds).toHaveBeenCalledWith({ bggIds: [13, 42] }));
   });
@@ -48,9 +48,9 @@ describe('BulkPasteForm', () => {
   it('rejects > 100 IDs with an error message', async () => {
     render(<BulkPasteForm />, { wrapper: wrapper() });
     const ids = Array.from({ length: 101 }, (_, i) => i + 1).join('\n');
-    await userEvent.click(screen.getByLabelText(/BGG IDs textarea/i));
+    await userEvent.click(screen.getByRole('textbox', { name: /BGG IDs/i }));
     // Use fireEvent-style direct set to avoid 101 keystrokes
-    const textarea = screen.getByLabelText(/BGG IDs textarea/i) as HTMLTextAreaElement;
+    const textarea = screen.getByRole('textbox', { name: /BGG IDs/i }) as HTMLTextAreaElement;
     textarea.focus();
     // jsdom does not pump native input; use userEvent.paste for bulk insertion
     await userEvent.paste(ids);

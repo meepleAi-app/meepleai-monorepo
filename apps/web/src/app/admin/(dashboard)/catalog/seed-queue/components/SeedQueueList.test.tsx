@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import * as api from '../lib/catalog-seed-api';
 import type { CatalogSeedDraftDto } from '../lib/catalog-seed-types';
@@ -35,6 +35,10 @@ const ROW: CatalogSeedDraftDto = {
 };
 
 describe('SeedQueueList', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('renders the loading state on first mount', () => {
     vi.mocked(api.listSeeds).mockImplementation(
       () => new Promise(() => undefined) // never resolves → stays in loading
@@ -81,5 +85,47 @@ describe('SeedQueueList', () => {
     await waitFor(() =>
       expect(spy).toHaveBeenCalledWith(expect.objectContaining({ status: 'Pending' }))
     );
+  });
+
+  it('opens an inline reject form, accepts a reason, and calls rejectSeed', async () => {
+    vi.mocked(api.listSeeds).mockResolvedValue({ total: 1, skip: 0, take: 50, items: [ROW] });
+    vi.mocked(api.rejectSeed).mockResolvedValue(undefined);
+    render(<SeedQueueList />, { wrapper: wrapper() });
+
+    // Click the Reject trigger
+    await waitFor(() => expect(screen.getByTestId('reject-d1')).toBeInTheDocument());
+    await userEvent.click(screen.getByTestId('reject-d1'));
+
+    // Inline form appears with the textarea + confirm/cancel
+    const form = await screen.findByTestId('reject-form-d1');
+    expect(form).toBeInTheDocument();
+    const textarea = screen.getByLabelText(/Rejection reason/i) as HTMLTextAreaElement;
+    expect(textarea).toBeInTheDocument();
+
+    // Confirm is disabled until reason is non-empty
+    const confirmBtn = screen.getByTestId('reject-confirm-d1');
+    expect(confirmBtn).toBeDisabled();
+
+    await userEvent.type(textarea, 'Not a real game');
+    expect(confirmBtn).not.toBeDisabled();
+
+    await userEvent.click(confirmBtn);
+    await waitFor(() => expect(api.rejectSeed).toHaveBeenCalledWith('d1', 'Not a real game'));
+
+    // Inline form is dismissed after success
+    await waitFor(() => expect(screen.queryByTestId('reject-form-d1')).not.toBeInTheDocument());
+  });
+
+  it('cancels the inline reject form without calling rejectSeed', async () => {
+    vi.mocked(api.listSeeds).mockResolvedValue({ total: 1, skip: 0, take: 50, items: [ROW] });
+    render(<SeedQueueList />, { wrapper: wrapper() });
+
+    await waitFor(() => expect(screen.getByTestId('reject-d1')).toBeInTheDocument());
+    await userEvent.click(screen.getByTestId('reject-d1'));
+    await userEvent.type(screen.getByLabelText(/Rejection reason/i), 'never sent');
+    await userEvent.click(screen.getByTestId('reject-cancel-d1'));
+
+    expect(screen.queryByTestId('reject-form-d1')).not.toBeInTheDocument();
+    expect(api.rejectSeed).not.toHaveBeenCalled();
   });
 });

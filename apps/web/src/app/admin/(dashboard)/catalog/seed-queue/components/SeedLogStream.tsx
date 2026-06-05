@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useCatalogSeedStream } from '../hooks/use-catalog-seed-stream';
+
+type SeedStreamEvent = ReturnType<typeof useCatalogSeedStream>['events'][number];
 
 /**
  * Issue #1903 M8.3 — live SSE log of the catalog seed fetch job.
@@ -45,8 +47,23 @@ export function SeedLogStream() {
   const [filter, setFilter] = useState<'all' | 'failed'>('all');
 
   const visible = filter === 'failed' ? events.filter(e => e.eventType === 'seed.failed') : events;
-  // Snapshot when paused so the stream stops updating visually.
-  const displayed = paused ? visible.slice(0, visible.length) : visible;
+
+  // M8 review (PR #1916) — Pause was a no-op because `visible.slice(0, visible.length)`
+  // returns a fresh copy of the live array on every render. Snapshot the array on
+  // the rising edge of `paused` via a ref and serve that until unpaused.
+  const pausedSnapshotRef = useRef<SeedStreamEvent[] | null>(null);
+  useEffect(() => {
+    if (paused && pausedSnapshotRef.current === null) {
+      pausedSnapshotRef.current = visible;
+    } else if (!paused) {
+      pausedSnapshotRef.current = null;
+    }
+    // We intentionally do NOT depend on `visible` here — we only want to snapshot
+    // the *first* visible array seen after `paused` flips true.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paused]);
+
+  const displayed = paused && pausedSnapshotRef.current ? pausedSnapshotRef.current : visible;
 
   return (
     <section

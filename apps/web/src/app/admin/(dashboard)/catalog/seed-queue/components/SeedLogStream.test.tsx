@@ -79,4 +79,40 @@ describe('SeedLogStream', () => {
     await userEvent.click(screen.getByRole('button', { name: /Clear/i }));
     expect(clearMock).toHaveBeenCalled();
   });
+
+  it('pause freezes the displayed list even when the hook produces new events', async () => {
+    const initialEvents = [
+      { eventType: 'seed.fetched', occurredAt: '2026-06-04T12:34:57Z', draftId: 'a' },
+    ];
+    vi.mocked(streamHook.useCatalogSeedStream).mockReturnValue({
+      events: initialEvents,
+      isConnected: true,
+      clear: vi.fn(),
+    });
+
+    const { rerender } = render(<SeedLogStream />);
+    expect(screen.getByText(/SeedFetched/)).toBeInTheDocument();
+
+    // Click pause — list should snapshot the current view
+    await userEvent.click(screen.getByRole('button', { name: /Pause/i }));
+
+    // Hook now produces a new failed event — but the snapshot should hide it
+    vi.mocked(streamHook.useCatalogSeedStream).mockReturnValue({
+      events: [
+        ...initialEvents,
+        { eventType: 'seed.failed', occurredAt: '2026-06-04T12:34:58Z', draftId: 'b' },
+      ],
+      isConnected: true,
+      clear: vi.fn(),
+    });
+    rerender(<SeedLogStream />);
+
+    expect(screen.queryByText(/SeedFailed/)).not.toBeInTheDocument();
+    expect(screen.getByText(/SeedFetched/)).toBeInTheDocument();
+
+    // Resume — both events should appear
+    await userEvent.click(screen.getByRole('button', { name: /Resume/i }));
+    expect(screen.getByText(/SeedFailed/)).toBeInTheDocument();
+    expect(screen.getByText(/SeedFetched/)).toBeInTheDocument();
+  });
 });

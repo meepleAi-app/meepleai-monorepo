@@ -42,7 +42,14 @@ function StatusDot({ status }: { status: string }) {
           : status === 'FetchFailed' || status === 'Rejected'
             ? 'bg-entity-event'
             : 'bg-muted-foreground';
-  return <span className={`h-2 w-2 rounded-full ${tone}`} aria-hidden />;
+  // The colored dot is purely decorative; the adjacent text label
+  // (`{draft.status}`) carries the accessible name for SR users.
+  return (
+    <span className="inline-flex items-center">
+      <span className={`h-2 w-2 rounded-full ${tone}`} aria-hidden />
+      <span className="sr-only">Status: {status}</span>
+    </span>
+  );
 }
 
 interface SeedRowProps {
@@ -54,6 +61,8 @@ interface SeedRowProps {
 function SeedRow({ draft, expanded, onToggle }: SeedRowProps) {
   const approve = useApproveSeed();
   const reject = useRejectSeed();
+  const [rejecting, setRejecting] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
 
   const canApprove = draft.status === 'Fetched';
   const canReject = draft.status !== 'Approved' && draft.status !== 'Rejected';
@@ -67,12 +76,22 @@ function SeedRow({ draft, expanded, onToggle }: SeedRowProps) {
     }
   };
 
-  const handleReject = async () => {
-    const reason = typeof window !== 'undefined' ? window.prompt('Reject reason?') : null;
-    if (!reason || reason.trim().length === 0) return;
+  const cancelReject = () => {
+    setRejecting(false);
+    setRejectReason('');
+  };
+
+  const confirmReject = async () => {
+    const reason = rejectReason.trim();
+    if (reason.length === 0) {
+      toast.error('Rejection reason is required');
+      return;
+    }
     try {
-      await reject.mutateAsync({ id: draft.id, reason: reason.trim() });
+      await reject.mutateAsync({ id: draft.id, reason });
       toast.success(`Draft ${draft.id} rejected`);
+      setRejecting(false);
+      setRejectReason('');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Reject failed');
     }
@@ -117,13 +136,14 @@ function SeedRow({ draft, expanded, onToggle }: SeedRowProps) {
               Approve
             </Button>
           )}
-          {canReject && (
+          {canReject && !rejecting && (
             <Button
               size="sm"
               variant="outline"
-              onClick={handleReject}
+              onClick={() => setRejecting(true)}
               disabled={reject.isPending}
               aria-label={`Reject ${draft.id}`}
+              data-testid={`reject-${draft.id}`}
             >
               {reject.isPending ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -135,6 +155,49 @@ function SeedRow({ draft, expanded, onToggle }: SeedRowProps) {
           )}
         </div>
       </div>
+      {rejecting && (
+        <div
+          className="border-t border-border bg-muted/10 px-3.5 py-3"
+          data-testid={`reject-form-${draft.id}`}
+        >
+          <label
+            htmlFor={`reject-reason-${draft.id}`}
+            className="font-mono text-[10px] uppercase tracking-[0.04em] text-muted-foreground"
+          >
+            Rejection reason
+          </label>
+          <textarea
+            id={`reject-reason-${draft.id}`}
+            value={rejectReason}
+            onChange={e => setRejectReason(e.target.value)}
+            rows={2}
+            maxLength={500}
+            className="mt-1 w-full rounded-md border border-border bg-background p-2 text-sm"
+            placeholder="Why reject this draft?"
+            autoFocus
+          />
+          <div className="mt-2 flex items-center justify-end gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={cancelReject}
+              disabled={reject.isPending}
+              data-testid={`reject-cancel-${draft.id}`}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={confirmReject}
+              disabled={reject.isPending || rejectReason.trim().length === 0}
+              data-testid={`reject-confirm-${draft.id}`}
+            >
+              {reject.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+              Confirm reject
+            </Button>
+          </div>
+        </div>
+      )}
       {expanded && (
         <div className="border-t border-border bg-muted/20 p-3">
           <SeedPreviewPanel draft={draft} />

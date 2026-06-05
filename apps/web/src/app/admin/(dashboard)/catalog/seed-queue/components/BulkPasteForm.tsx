@@ -51,7 +51,6 @@ export function BulkPasteForm() {
       <label className="mt-3 block">
         <span className="font-mono text-[10px] uppercase text-muted-foreground">BGG IDs</span>
         <textarea
-          aria-label="BGG IDs textarea"
           value={text}
           onChange={e => setText(e.target.value)}
           rows={6}

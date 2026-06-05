@@ -32,6 +32,7 @@ function StatusPill({ status }: { status: string }) {
             : 'bg-muted text-muted-foreground';
   return (
     <span
+      aria-label={`Status: ${status}`}
       className={`inline-flex items-center rounded-full px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.04em] ${tone}`}
     >
       {status}

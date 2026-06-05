@@ -9,13 +9,20 @@ import { useCatalogSeeds } from '../hooks/use-catalog-seeds';
  *
  * Adapted from `SyncStatusHero` (#1835). Instead of provider config, this hero
  * shows aggregate counts per status (Pending / Fetched / Approved / Rejected).
- * Each count drives a single `useCatalogSeeds` query with `take=0` so the BE
+ * Each count drives a single `useCatalogSeeds` query with `take=1` so the BE
  * can return just the total without paying the projection cost — this mirrors
  * the pattern used by AdminCacheStats etc.
+ *
+ * Note: M8 review (PR #1916) — the previous implementation also called
+ * `useCatalogSeeds({ skip: 0, take: 1 })` at the hero level (no status filter)
+ * just to detect global errors. That was a redundant 5th query. We now lift
+ * the four per-status queries into the hero and pass `data`/`isError` down
+ * to dumb `StatusCountCard` children, aggregating error state at the source.
  */
 const STATUSES = ['Pending', 'Fetched', 'Approved', 'Rejected'] as const;
+type SeedStatus = (typeof STATUSES)[number];
 
-const TONE: Record<(typeof STATUSES)[number], { ring: string; text: string; label: string }> = {
+const TONE: Record<SeedStatus, { ring: string; text: string; label: string }> = {
   Pending: { ring: 'ring-entity-toolkit/30', text: 'text-entity-toolkit', label: 'Pending' },
   Fetched: { ring: 'ring-entity-game/30', text: 'text-entity-game', label: 'Fetched' },
   Approved: {
@@ -27,13 +34,14 @@ const TONE: Record<(typeof STATUSES)[number], { ring: string; text: string; labe
 };
 
 interface StatusCountCardProps {
-  status: (typeof STATUSES)[number];
+  status: SeedStatus;
+  total: number | undefined;
+  isError: boolean;
 }
 
-function StatusCountCard({ status }: StatusCountCardProps) {
-  const { data, isError } = useCatalogSeeds({ status, skip: 0, take: 1 });
+function StatusCountCard({ status, total, isError }: StatusCountCardProps) {
   const tone = TONE[status];
-  const value = data?.total ?? (isError ? '—' : '…');
+  const value = total ?? (isError ? '—' : '…');
   return (
     <div
       className={`rounded-lg border border-border bg-card px-4 py-3 ring-1 ${tone.ring}`}
@@ -48,9 +56,17 @@ function StatusCountCard({ status }: StatusCountCardProps) {
 }
 
 export function SeedQueueStatusHero() {
-  const { isError, error, refetch } = useCatalogSeeds({ skip: 0, take: 1 });
+  // One query per status — React Query dedupes by queryKey if any other
+  // component (e.g. SeedQueueList) happens to issue the same filtered call.
+  const pending = useCatalogSeeds({ status: 'Pending', skip: 0, take: 1 });
+  const fetched = useCatalogSeeds({ status: 'Fetched', skip: 0, take: 1 });
+  const approved = useCatalogSeeds({ status: 'Approved', skip: 0, take: 1 });
+  const rejected = useCatalogSeeds({ status: 'Rejected', skip: 0, take: 1 });
 
-  if (isError) {
+  const queries = { Pending: pending, Fetched: fetched, Approved: approved, Rejected: rejected };
+  const firstErrored = STATUSES.map(s => queries[s]).find(q => q.isError);
+
+  if (firstErrored) {
     return (
       <div
         role="alert"
@@ -62,12 +78,17 @@ export function SeedQueueStatusHero() {
             Catalog seed queue unavailable
           </h3>
           <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
-            {error instanceof Error ? error.message : 'Errore di rete'}
+            {firstErrored.error instanceof Error ? firstErrored.error.message : 'Errore di rete'}
           </p>
         </div>
         <button
           type="button"
-          onClick={() => refetch()}
+          onClick={() => {
+            pending.refetch();
+            fetched.refetch();
+            approved.refetch();
+            rejected.refetch();
+          }}
           className="rounded-md border border-border bg-background px-3 py-1 text-xs font-medium hover:bg-muted"
         >
           Riprova
@@ -91,7 +112,12 @@ export function SeedQueueStatusHero() {
       </header>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {STATUSES.map(s => (
-          <StatusCountCard key={s} status={s} />
+          <StatusCountCard
+            key={s}
+            status={s}
+            total={queries[s].data?.total}
+            isError={queries[s].isError}
+          />
         ))}
       </div>
     </section>

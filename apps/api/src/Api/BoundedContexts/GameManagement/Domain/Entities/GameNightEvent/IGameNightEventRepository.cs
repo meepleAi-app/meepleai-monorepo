@@ -23,4 +23,15 @@ internal interface IGameNightEventRepository : IRepository<GameNightEvent, Guid>
     /// </summary>
     Task<IReadOnlyList<GameNightEvent>> GetEventsNeedingReminderAsync(
         DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Finds the GameNightEvent aggregate containing a linked Session
+    /// (matched via <c>GameNightSession.SessionId</c>). Returns null if the Session
+    /// is standalone (not linked to any GameNight).
+    /// </summary>
+    /// <remarks>
+    /// Used by <c>SessionStartedHandler</c> (Asse A WP2 T3, invariante #15) to locate
+    /// the parent game night when a Session transitions to live mode.
+    /// </remarks>
+    Task<GameNightEvent?> FindByLinkedSessionIdAsync(Guid sessionId, CancellationToken cancellationToken = default);
 }

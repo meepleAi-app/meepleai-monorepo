@@ -333,6 +333,56 @@ internal static class AdminCatalogIngestionEndpoints
             return operation;
         });
 
+        // ============================================================
+        // #1874 — Enrichment queue + failed items aggregator
+        // ============================================================
+
+        // GET /api/v1/admin/catalog-ingestion/enrichment-queue?priority=&limit=
+        group.MapGet("/enrichment-queue", async (
+            [FromQuery] EnrichmentPriority? priority,
+            [FromQuery] int? limit,
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var (authorized, _, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            var query = new GetEnrichmentQueueQuery(priority, limit ?? 25);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("GetEnrichmentQueue")
+        .WithOpenApi(operation =>
+        {
+            operation.Summary = "Enrichment queue (pending entries)";
+            operation.Description = "Returns queued BGG enrichment requests sorted by Priority DESC, QueuedAt ASC. Filters by priority when supplied. Default limit=25 (1-100).";
+            return operation;
+        });
+
+        // GET /api/v1/admin/catalog-ingestion/failed-items?days=&limit=
+        group.MapGet("/failed-items", async (
+            [FromQuery] int? days,
+            [FromQuery] int? limit,
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var (authorized, _, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            var query = new GetFailedItemsQuery(days ?? 30, limit ?? 50);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("GetFailedItems")
+        .WithOpenApi(operation =>
+        {
+            operation.Summary = "Failed enrichment items (aggregated)";
+            operation.Description = "Returns the most recent failed enrichment attempt per shared game within the trailing N days. Default days=30 (1-365), default limit=50 (1-100).";
+            return operation;
+        });
+
         return group;
     }
 }

@@ -6,11 +6,13 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Services.BackgroundAnaly
 using Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExtractor;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Services;
+using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Providers;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Quartz;
 
 // Issue #3918: Catalog Trending Analytics Service
@@ -50,6 +52,9 @@ internal static class SharedGameCatalogServiceExtensions
         services.AddScoped<ICertificationThresholdsConfigRepository, CertificationThresholdsConfigRepository>(); // ADR-051 Sprint 1 / Task 15: thresholds config
         services.AddScoped<IMechanicRecalcJobRepository, MechanicRecalcJobRepository>(); // ADR-051 Sprint 2 / Task 7: async recalc job persistence + SKIP LOCKED claim
         services.AddScoped<ICatalogSyncRunRepository, CatalogSyncRunRepository>(); // #1861: F4-A6 catalog sync run history
+        services.AddScoped<IEnrichmentQueueRepository, EnrichmentQueueRepository>(); // #1874: queued BGG enrichment requests
+        services.AddScoped<IEnrichmentAttemptRepository, EnrichmentAttemptRepository>(); // #1874: BGG enrichment outcome history
+        services.AddScoped<ICatalogSeedDraftRepository, CatalogSeedDraftRepository>(); // #1903 M1.5
         services.AddScoped<IShareRequestRepository, ShareRequestRepository>(); // Issue #2724: CreateShareRequest
         services.AddScoped<IBadgeRepository, BadgeRepository>(); // Issue #2731: Badge gamification system
         services.AddScoped<IUserBadgeRepository, UserBadgeRepository>(); // Issue #2731: User badge awards
@@ -162,9 +167,140 @@ internal static class SharedGameCatalogServiceExtensions
                 .WithDescription("Runs every 15 min to evict shared-game detail tags for top-N most-viewed games and the search-games list tag"));
         });
 
+        // Issue #1903 M5.2: register HttpClients, keyed catalog providers,
+        // aggregator, and Quartz CatalogSeedFetchJob.
+        RegisterCatalogSeedProviders(services);
+        RegisterCatalogSeedFetchJob(services);
+
+        // Issue #1903 M7.1: monthly BGG ToS hash watcher (spec §8.5.6).
+        RegisterBggTosWatcherJob(services);
+
+        // Issue #1903 M6.1: in-memory SSE event broadcaster for the admin
+        // catalog seed pipeline. Singleton so the Quartz job publisher and
+        // HTTP SSE subscribers share state across the process.
+        services.AddSingleton<ICatalogSeedStreamService, CatalogSeedStreamService>();
+
+        // Issue #1903 M7.2: kill-switch feature flag backed by IConfigurationService.
+        // Scoped to match the lifetime of the underlying IConfigurationService.
+        services.AddScoped<ICatalogSeedFeatureFlag, CatalogSeedFeatureFlag>();
+
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 
         return services;
+    }
+
+    /// <summary>
+    /// Issue #1903 M5.2 — registers Wikidata SPARQL + BGG XMLAPI2 HttpClients with
+    /// the spec-mandated <c>User-Agent</c> (admin-catalog-seed; abuse@meepleai.app),
+    /// then exposes the providers as keyed <see cref="ICatalogProvider"/> services
+    /// (<c>"wikidata"</c> primary, <c>"bgg"</c> fallback) so
+    /// <see cref="ICatalogSeedAggregator"/> can resolve them explicitly without
+    /// relying on registration order.
+    /// </summary>
+    /// <remarks>
+    /// Spec: 2026-06-04-admin-catalog-seed-design.md §7. The User-Agent string is
+    /// mandatory per BGG ToS so they can reach out before legal escalation.
+    /// </remarks>
+    private static void RegisterCatalogSeedProviders(IServiceCollection services)
+    {
+        const string CatalogUserAgent = "MeepleAI/1.0 (admin-catalog-seed; abuse@meepleai.app)";
+
+        // Spec-mandated public endpoints (2026-06-04-admin-catalog-seed-design.md §7).
+        // S1075 suppressed: these are stable third-party service URLs, not internal infra.
+#pragma warning disable S1075 // URIs should not be hardcoded
+        const string WikidataBaseUrl = "https://query.wikidata.org/";
+        const string BggBaseUrl = "https://boardgamegeek.com/";
+#pragma warning restore S1075
+
+        services.AddHttpClient<WikidataCatalogProvider>(client =>
+        {
+            client.BaseAddress = new Uri(WikidataBaseUrl);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(CatalogUserAgent);
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
+        services.AddHttpClient<BggCatalogProvider>(client =>
+        {
+            client.BaseAddress = new Uri(BggBaseUrl);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(CatalogUserAgent);
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
+        // Keyed registration so CatalogSeedAggregator can resolve "wikidata" (primary)
+        // and "bgg" (fallback) explicitly — avoids relying on registration order.
+        services.AddKeyedScoped<ICatalogProvider>("wikidata", (sp, _) =>
+            sp.GetRequiredService<WikidataCatalogProvider>());
+        services.AddKeyedScoped<ICatalogProvider>("bgg", (sp, _) =>
+            sp.GetRequiredService<BggCatalogProvider>());
+
+        services.AddScoped<ICatalogSeedAggregator>(sp =>
+        {
+            var wikidata = sp.GetRequiredKeyedService<ICatalogProvider>("wikidata");
+            var bgg = sp.GetRequiredKeyedService<ICatalogProvider>("bgg");
+            var logger = sp.GetRequiredService<ILogger<CatalogSeedAggregator>>();
+            return new CatalogSeedAggregator(wikidata, bgg, logger);
+        });
+    }
+
+    /// <summary>
+    /// Issue #1903 M5.2 — registers <see cref="CatalogSeedFetchJob"/> with the
+    /// Quartz scheduler. Runs every 1 minute to fetch provider data for
+    /// <c>Pending</c> drafts (batch size 10, 1s inter-item throttle per spec §7).
+    /// </summary>
+    private static void RegisterCatalogSeedFetchJob(IServiceCollection services)
+    {
+        services.AddQuartz(q =>
+        {
+            var jobKey = new JobKey("CatalogSeedFetchJob", "SharedGameCatalog");
+
+            q.AddJob<CatalogSeedFetchJob>(opts => opts.WithIdentity(jobKey));
+
+            q.AddTrigger(opts => opts
+                .ForJob(jobKey)
+                .WithIdentity("CatalogSeedFetchTrigger", "SharedGameCatalog")
+                .WithSimpleSchedule(x => x
+                    .WithIntervalInMinutes(1)
+                    .RepeatForever())
+                .WithDescription("Fetches provider data for Pending CatalogSeedDraft entries every 1 minute"));
+        });
+    }
+
+    /// <summary>
+    /// Issue #1903 M7.1 — registers <see cref="BggTosWatcherJob"/> with the
+    /// Quartz scheduler. Runs every 30 days at the trigger's start time + a
+    /// 1-minute kickoff after process start, so the first deploy primes the
+    /// singleton row almost immediately. Pure HTTP GET against the BGG ToS
+    /// URL; no rate-limit concerns at monthly cadence.
+    /// </summary>
+    private static void RegisterBggTosWatcherJob(IServiceCollection services)
+    {
+        // The job uses IHttpClientFactory.CreateClient() (default client) so we
+        // don't need a typed AddHttpClient registration here. AddHttpClient is
+        // already exposed via Program.cs / other contexts that register typed
+        // clients, which transitively registers IHttpClientFactory itself.
+        services.AddHttpClient();
+
+        services.AddQuartz(q =>
+        {
+            var jobKey = new JobKey("BggTosWatcherJob", "SharedGameCatalog");
+
+            q.AddJob<BggTosWatcherJob>(opts => opts
+                .WithIdentity(jobKey)
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob(jobKey)
+                .WithIdentity("BggTosWatcherTrigger", "SharedGameCatalog")
+                // 30-day interval (~monthly). Quartz SimpleSchedule supports hours,
+                // so 24 * 30 = 720 hours.
+                .WithSimpleSchedule(x => x
+                    .WithIntervalInHours(24 * 30)
+                    .RepeatForever())
+                // Kick off 1 minute after process start so the first deploy
+                // primes the singleton row without delaying boot.
+                .StartAt(DateBuilder.FutureDate(1, IntervalUnit.Minute))
+                .WithDescription("Monthly BGG ToS hash watcher (issue #1903 M7.1, spec §8.5.6)"));
+        });
     }
 
     /// <summary>

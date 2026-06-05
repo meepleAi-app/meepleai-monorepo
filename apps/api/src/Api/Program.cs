@@ -837,6 +837,7 @@ if (!app.Environment.IsProduction())
 app.MapAdminBulkImportEndpoints();       // Issue #4354: Bulk import endpoint routing
 app.MapAdminProviderEndpoints();         // Issue #936: Provider token probe observability
 v1Api.MapGroup("/admin/catalog-ingestion").MapAdminCatalogIngestionEndpoints(); // Admin bulk Excel import + enrichment
+v1Api.MapGroup("/admin/catalog/seeds").MapAdminCatalogSeedEndpoints();          // Issue #1903 M6.2: admin catalog seed pipeline
 app.MapPdfAnalyticsEndpoints();          // Issue #3715: PDF analytics dashboard
 app.MapChatAnalyticsEndpoints();         // Issue #3714: Chat analytics dashboard
 app.MapModelPerformanceEndpoints();      // Issue #3716: Model performance dashboard
@@ -884,6 +885,8 @@ v1Api.MapAdminSeedingEndpoints();      // Epic #318: Admin seeding re-trigger
 v1Api.MapAlertEndpoints();             // Alert management
 v1Api.MapAlertConfigEndpoints();       // Alert rules (Issue #921)
 v1Api.MapAlertConfigurationEndpoints(); // Alert configuration (Issue #915)
+v1Api.MapAdminMetricsEndpoints();      // SP5 F4-C7 #1840: Prometheus metric labels passthrough
+v1Api.MapAlertChannelsEndpoints();     // SP5 F4-C7 #1840: Email/Slack channel CRUD + test-connection
 v1Api.MapNotificationEndpoints();      // User notifications (Issue #2053)
 v1Api.MapNotificationPreferencesEndpoints(); // Notification preferences (Issue #4220)
 v1Api.MapSlackIntegrationEndpoints();        // Slack OAuth connect/disconnect/status
@@ -937,6 +940,7 @@ v1Api.MapGroup("/rag").MapRagStrategyEndpoints(); // Issue #8: Public RAG strate
 
 // Business Simulations
 v1Api.MapBudgetEndpoints();           // Budget display system (credit tracking)
+v1Api.MapAdminBudgetEndpoints();     // SP5 F4-C5 #1838: Singleton AppBudget config (GET + PUT /admin/budget)
 v1Api.MapFinancialLedgerEndpoints();  // Financial Ledger CRUD (Issue #3722)
 v1Api.MapCostCalculatorEndpoints();   // Agent Cost Calculator (Issue #3725)
 v1Api.MapResourceForecastEndpoints(); // Resource Forecasting Simulator (Issue #3726)

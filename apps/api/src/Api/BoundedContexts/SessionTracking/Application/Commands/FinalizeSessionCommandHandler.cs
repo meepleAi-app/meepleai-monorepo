@@ -195,9 +195,31 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
         // Channel — it does NOT go through MediatR — so there is no dual-dispatch risk.
         await _syncService.PublishEventAsync(request.SessionId, sessionFinalizedEvent, cancellationToken).ConfigureAwait(false);
 
+        // Invariante #13 (#1896 WP2 T4): detect a coexisting live session linked to the same
+        // GameNightEvent. When present, the response will carry X-Warning-Code:
+        // SAVED_WHILE_LIVE_ACTIVE so the FE can surface a non-blocking toast informing the
+        // user that draft+live siblings coexist. The operation itself is NOT blocked — 200 OK.
+        // Reuses gameNightId already resolved on line 150 (avoids a second round-trip).
+        // IsLive == (StartedAt != null && FinalizedAt == null). We exclude the current session
+        // by Id (its FinalizedAt was just set, but explicit exclusion is defensive against
+        // tracking-state ambiguity in InMemory provider used by unit tests).
+        bool liveActiveWarning = false;
+        if (gameNightId is not null)
+        {
+            liveActiveWarning = await _db.SessionTrackingSessions
+                .AsNoTracking()
+                .Where(s => s.Id != session.Id)
+                .Where(s => s.StartedAt != null && s.FinalizedAt == null)
+                .Where(s => _db.GameNightSessions.Any(link =>
+                    link.SessionId == s.Id && link.GameNightEventId == gameNightId))
+                .AnyAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
+
         return new FinalizeSessionResult(
             winnerId != Guid.Empty ? winnerId : null,
-            finalScores
+            finalScores,
+            LiveActiveWarning: liveActiveWarning
         );
     }
 }

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
+using Api.BoundedContexts.GameManagement.Domain.Exceptions;
 using Api.SharedKernel.Domain.Entities;
 
 namespace Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
@@ -362,10 +363,18 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
 
     /// <summary>
     /// Starts the first pending session.
+    /// Enforces invariante #10 (GameNight/Session domain model): a GameNightEvent
+    /// can have at most 1 GameNightSession in InProgress at a time.
     /// </summary>
+    /// <exception cref="MaxLiveSessionsExceededException">
+    /// Thrown when another session is already in InProgress status on this event.
+    /// </exception>
     public void StartCurrentSession()
     {
         ThrowIfCorrupted();
+
+        if (_sessions.Any(s => s.Status == GameNightSessionStatus.InProgress))
+            throw new MaxLiveSessionsExceededException(Id);
 
         var session = _sessions.FirstOrDefault(s => s.Status == GameNightSessionStatus.Pending)
             ?? throw new InvalidOperationException("No pending session to start.");
@@ -404,6 +413,46 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
         UpdatedAt = DateTimeOffset.UtcNow;
 
         AddDomainEvent(new NightFinalizedEvent(Id, OrganizerId, Title, _sessions.Count));
+    }
+
+    /// <summary>
+    /// Invariante #15 (Asse A semantic alignment, WP2 T3): trigger transition
+    /// Published → InProgress when the first Session in the game night becomes live.
+    ///
+    /// <para>Behavior:
+    /// <list type="bullet">
+    ///   <item>Published → InProgress (typical first-session-started case).</item>
+    ///   <item>InProgress → no-op (idempotent: AdHoc events start as InProgress, or
+    ///         subsequent sessions started after the first don't transition again).</item>
+    ///   <item>Other status (Draft/Cancelled/Completed/Corrupted) → throws.</item>
+    /// </list></para>
+    ///
+    /// <para>Called by <c>GameManagement.SessionStartedHandler</c>
+    /// (MediatR <c>INotificationHandler</c>) when a
+    /// <see cref="Api.BoundedContexts.SessionTracking.Domain.Events.SessionStartedDomainEvent"/>
+    /// is raised by <c>Session.OpenLiveMode()</c>.</para>
+    /// </summary>
+    /// <param name="sessionId">The Session aggregate ID that started (informational for events/logs).</param>
+    /// <exception cref="InvalidOperationException">When status is Draft/Cancelled/Completed/Corrupted.</exception>
+    public void HandleFirstSessionStarted(Guid sessionId)
+    {
+        ThrowIfCorrupted();
+
+        if (Status == GameNightStatus.Published)
+        {
+            Status = GameNightStatus.InProgress;
+            UpdatedAt = DateTimeOffset.UtcNow;
+            return;
+        }
+
+        if (Status == GameNightStatus.InProgress)
+        {
+            return; // idempotent
+        }
+
+        throw new InvalidOperationException(
+            $"Cannot start session {sessionId} on GameNightEvent {Id}: status is {Status}. " +
+            $"Invariant #15 requires Published or InProgress status.");
     }
 
     /// <summary>

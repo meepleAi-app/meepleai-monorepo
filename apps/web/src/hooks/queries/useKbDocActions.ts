@@ -17,6 +17,7 @@
 
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 
+import { documentEmbeddingsKeys } from '@/hooks/admin/use-document-embeddings-meta';
 import { api } from '@/lib/api';
 import type { DocChunkSearchResult } from '@/lib/api/clients/pdfClient';
 
@@ -82,6 +83,8 @@ export function useReindexDoc(
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: kbDocDetailKeys.byId(docId) });
       qc.invalidateQueries({ queryKey: kbChunksListKeys.all });
+      // Issue #1674: refresh embeddings meta strip after reindex completes
+      qc.invalidateQueries({ queryKey: documentEmbeddingsKeys.meta(docId) });
     },
   });
 }

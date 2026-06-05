@@ -14,6 +14,7 @@ import { useKbDocConsumingAgents } from '@/hooks/queries/useKbDocConsumingAgents
 import { api } from '@/lib/api';
 
 import { KbReindexDropdown } from './KbReindexDropdown';
+import { DocumentEmbeddingsDrawer } from '../../document-embeddings-drawer';
 import { downloadAsFile } from '../utils/downloadAsFile';
 
 export interface KbDocActionsProps {
@@ -46,6 +47,7 @@ const FOCUS_RING =
 export function KbDocActions({ docId, fileName, gameId, processingStatus }: KbDocActionsProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [exportPending, setExportPending] = useState(false);
+  const [embeddingsOpen, setEmbeddingsOpen] = useState(false);
 
   // ── Mutation hooks ──────────────────────────────────────────────────────────
   const deleteMutation = useDeleteKbDoc(gameId);
@@ -100,7 +102,18 @@ export function KbDocActions({ docId, fileName, gameId, processingStatus }: KbDo
       {/* 1. Re-index (split-button con dropdown versione — Issue #1673) */}
       <KbReindexDropdown docId={docId} processingStatus={processingStatus} />
 
-      {/* 2. Download — plain anchor styled as button */}
+      {/* 2. View embeddings (Issue #1674) — disabled unless doc is ready */}
+      <button
+        type="button"
+        onClick={() => setEmbeddingsOpen(true)}
+        disabled={processingStatus !== 'ready'}
+        aria-label="Mostra embeddings del documento"
+        className={`px-3 py-1.5 text-xs font-medium border border-border rounded-md hover:bg-muted/70 disabled:opacity-50 disabled:cursor-not-allowed ${FOCUS_RING}`}
+      >
+        📋 View embeddings
+      </button>
+
+      {/* 3. Download — plain anchor styled as button */}
       {}
       <a
         href={api.pdf.getPdfDownloadUrl(docId)}
@@ -148,6 +161,14 @@ export function KbDocActions({ docId, fileName, gameId, processingStatus }: KbDo
         message={`Stai per eliminare il documento "${fileName}" dalla knowledge base. L'operazione è irreversibile.`}
         warningMessage={deleteWarning}
         isLoading={deleteMutation.isPending}
+      />
+
+      {/* Issue #1674: Per-doc embeddings viewer drawer */}
+      <DocumentEmbeddingsDrawer
+        open={embeddingsOpen}
+        onOpenChange={setEmbeddingsOpen}
+        docId={docId}
+        docFileName={fileName}
       />
     </div>
   );

@@ -56,6 +56,14 @@ vi.mock('../KbReindexDropdown', () => ({
   ),
 }));
 
+// ── DocumentEmbeddingsDrawer mock — isolated from KbDocActions (Issue #1674) ──
+// Path resolves from KbDocActions.tsx (actions/) → ../../document-embeddings-drawer,
+// but vi.mock matches by module ID; the absolute alias is more robust here.
+vi.mock('@/components/admin/knowledge-base/document-embeddings-drawer', () => ({
+  DocumentEmbeddingsDrawer: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="embeddings-drawer-stub" /> : null,
+}));
+
 // ── useKbDocActions mock ───────────────────────────────────────────────────────
 const mockDeleteMutate = vi.fn();
 const mockUseDeleteKbDoc = vi.fn();

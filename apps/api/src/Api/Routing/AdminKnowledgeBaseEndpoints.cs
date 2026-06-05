@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.EstimateAgentCost;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.ExportDocumentChunks;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetDocumentEmbeddingsMeta;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGamesWithoutKb;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbNavCounts;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.SearchDocumentChunks;
@@ -123,6 +124,18 @@ internal static class AdminKnowledgeBaseEndpoints
         })
         .WithName("SearchKbDocChunks")
         .WithSummary("Per-document semantic chunk search (scored).");
+
+        // GET /api/v1/admin/kb/docs/{docId}/embeddings/meta — Issue #1674 (spin-out FU-4)
+        kbGroup.MapGet("/docs/{docId:guid}/embeddings/meta", async (
+            Guid docId,
+            IMediator m,
+            CancellationToken ct) =>
+        {
+            var result = await m.Send(new GetDocumentEmbeddingsMetaQuery(docId), ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("GetDocumentEmbeddingsMeta")
+        .WithSummary("Get document embeddings metadata (model, dimensions, total chunks, indexed at).");
 
         // GET /api/v1/admin/kb/docs/{docId}/agents — Issue #1651 F3-FU-2
         kbGroup.MapGet("/docs/{docId:guid}/agents", async (

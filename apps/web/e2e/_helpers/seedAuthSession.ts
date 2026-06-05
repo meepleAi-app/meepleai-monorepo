@@ -110,11 +110,25 @@ export async function seedAuthSession(
  */
 export async function mockAuthEndpoints(
   page: Page,
-  options: { role?: AuthSessionRole; userId?: string; email?: string } = {}
+  options: {
+    role?: AuthSessionRole;
+    userId?: string;
+    email?: string;
+    /**
+     * Override the `user.onboardingCompleted` flag returned by
+     * `GET /api/v1/auth/me`. Default `true` because most authenticated specs
+     * want to land on their target route without bouncing through the
+     * onboarding wizard. Specs that need to exercise `/onboarding` itself
+     * (e.g. asse-d-p3) must pass `onboardingCompleted: false`, otherwise the
+     * page redirects to `/library`.
+     */
+    onboardingCompleted?: boolean;
+  } = {}
 ): Promise<void> {
   const role = options.role ?? 'user';
   const userId = options.userId ?? '00000000-0000-4000-8000-000000000fff';
   const email = options.email ?? 'fixture-user@meepleai.test';
+  const onboardingCompleted = options.onboardingCompleted ?? true;
 
   const authMeDto = {
     user: {
@@ -122,7 +136,7 @@ export async function mockAuthEndpoints(
       email,
       role: role === 'admin' ? 'Admin' : 'User',
       displayName: 'Fixture User',
-      onboardingCompleted: true,
+      onboardingCompleted,
       onboardingSkipped: false,
     },
   };

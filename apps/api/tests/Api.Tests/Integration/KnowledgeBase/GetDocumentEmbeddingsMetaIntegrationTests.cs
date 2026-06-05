@@ -91,14 +91,23 @@ public sealed class GetDocumentEmbeddingsMetaIntegrationTests : IAsyncLifetime
         int chunkCount = 412)
     {
         var pdfId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
 
-        _dbContext!.PdfDocuments.Add(new PdfDocumentEntity
+        _dbContext!.Users.Add(new UserEntity
+        {
+            Id = userId,
+            Email = $"test-{userId:N}@meepleai.test",
+            DisplayName = "Integration Test User",
+            Role = "user",
+        });
+
+        _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
             FileName = $"test-{pdfId:N}.pdf",
             FilePath = $"/tmp/test-{pdfId:N}.pdf",
             FileSizeBytes = 1024,
-            UploadedByUserId = Guid.NewGuid(),
+            UploadedByUserId = userId,
             Language = language,
         });
 
@@ -106,7 +115,7 @@ public sealed class GetDocumentEmbeddingsMetaIntegrationTests : IAsyncLifetime
         {
             Id = Guid.NewGuid(),
             PdfDocumentId = pdfId,
-            GameId = Guid.NewGuid(),
+            GameId = null,
             ChunkCount = chunkCount,
             EmbeddingModel = model,
             EmbeddingDimensions = dimensions,

@@ -47,6 +47,27 @@
       "tagToInvalidate": "Tag to invalidate",
       "title": "Cache"
     },
+    "catalogSeed": {
+      "title": "Catalog seed queue",
+      "subtitle": "Admin · Catalog · Seed pipeline (Wikidata + BGG)",
+      "kpi": {
+        "pending": "Pending",
+        "fetched": "Fetched",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "actions": {
+        "enqueue": "Enqueue",
+        "approve": "Approve",
+        "reject": "Reject",
+        "search": "Search",
+        "addToQueue": "Add to queue"
+      },
+      "filters": {
+        "all": "All",
+        "failedOnly": "Failed only"
+      }
+    },
     "configuration": {
       "aiLlm": "AI / LLM Configuration",
       "rag": "RAG Configuration",

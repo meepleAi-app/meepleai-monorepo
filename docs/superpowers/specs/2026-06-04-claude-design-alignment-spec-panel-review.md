@@ -416,4 +416,4 @@ Popolare on-going durante implementazione asse D.
 - Prototipo runnable: `claude-design-handoff/2026-06-04/` (gitignored)
 - CLAUDE.md § Domain Model — GameNight / Session
 - v2 migration matrix: [`v2-migration-matrix.md`](../../for-developers/frontend/v2-migration-matrix.md)
-- ADR-054 DevOps Multi-Branch Strategy: [`adr-054-devops-multi-branch-strategy.md`](../../for-developers/architecture/adr/adr-054-devops-multi-branch-strategy.md)
+- ADR-054 DevOps Multi-Branch Strategy: [`adr-054-devops-multi-branch-strategy.md`](../../for-claude/architecture/adr/adr-054-devops-multi-branch-strategy.md)

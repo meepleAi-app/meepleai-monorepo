@@ -32,6 +32,7 @@ namespace Api.Extensions;
 /// - AccessRequest:         5 req/hour — access request spam prevention (IP-based)
 /// - AdminProviderProbe:   10 req/min  — provider token probes per user (Issue #936)
 /// - AdminProviderProbeGlobal: 60 req/h — provider token probes per provider name (Issue #936)
+/// - AdminProviderRotateKey: 1 req/24h — provider key rotation per (provider,user) (Issue #1859)
 /// - GameNightTokenRead:   60 req/min  — public RSVP token lookup per IP (Issue #1169)
 /// - GameNightTokenRespond: 10 req/min — public RSVP submission per IP (Issue #1169)
 /// - UsersSearch:         600 req/min  — authenticated player autocomplete (~10 req/s avg via 1min sliding window, Issue #950 W1-PR2)
@@ -127,6 +128,10 @@ internal static class RateLimitingServiceExtensions
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
 
                 options.AddPolicy("AdminProviderProbeGlobal", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                // Issue #1859: Admin provider key rotation (1/24h per provider+user)
+                options.AddPolicy("AdminProviderRotateKey", _ =>
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
 
                 // Issue #1169: Public game-night RSVP token policies (disabled in tests)
@@ -548,6 +553,27 @@ internal static class RateLimitingServiceExtensions
                         Window = TimeSpan.FromHours(1),
                         PermitLimit = 60,
                         SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // Policy 24: AdminProviderRotateKey - 1 req/24h per (provider, user) for key rotation (Issue #1859)
+            // Defence-in-depth on top of the 24h rotation cooldown enforced in the command handler:
+            // the handler reads from the DB (last RotatedAt), this policy short-circuits at the edge
+            // so probe + DB write + audit aren't even attempted. Partition is per provider AND user
+            // so concurrent admins still each get one shot (the handler still rejects on DB cooldown).
+            options.AddPolicy("AdminProviderRotateKey", httpContext =>
+            {
+                var providerName = (httpContext.Request.RouteValues["name"] as string) ?? "unknown";
+                var userId = GetUserId(httpContext);
+
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: $"rotate:{providerName}:{userId}",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromHours(24),
+                        PermitLimit = 1,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,
                     });

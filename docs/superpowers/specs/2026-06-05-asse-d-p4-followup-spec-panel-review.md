@@ -496,3 +496,25 @@ public class SeedTestXxxCommandHandlerTests : IAsyncLifetime
 
 - **2026-06-05 sessione 39 fase 1**: initial spec-panel critique sequenziale #1928 + #1929. Output: 21 findings + 13 DEC lockate + 2 SPEC ERROR codebase-confirmed + sequencing aggregato 8-13gg distribuito 2 sessioni. Pattern P181 esteso a follow-up scope.
 - **2026-06-05 sessione 39 fase 3**: DEC-B-7 lockata (Integration-trait reuse) per blocker fixture T1 scoperto durante subagent-driven. Pattern P186 (implementer-report-trust-but-verify) + P187 (dbcontext-di-services-block-unit-inmemory) + P188 (mid-task-architectural-stop) documentati.
+- **2026-06-06 sessione 40 fase 1**: T1 Integration-trait re-implementation con `IntegrationWebApplicationFactory.Create()` + `EnsureCreatedAsync`. Scoperti 3 sub-blocker risolti progressivamente: (1) shadow property `TestRunId` su `User` aggregate triggerava BackupCode private ctor binding regression → FIX: registrare su `UserEntity` (persistence model); (2) handler usa `GameNightEventEntity` (persistence) ma shadow su `GameNightEvent` (domain) → FIX: tutte le 5 shadow property registrate su persistence entities (xxxEntity); (3) `MigrateAsync` non includeva shadow property nella schema → FIX: `EnsureCreatedAsync`. **4° blocker NON risolto sessione 40 fase 1**: shadow property value `null` dopo SaveChanges + re-fetch (EF Core 9 + Npgsql interaction unclear). **DEC-B-8 lockata**: replace shadow property con **explicit column** `TestRunId` su 5 persistence entities — più robusto, EF Core tracking-friendly, no shadow property gotchas. Sessione 40 fase 2 implementa DEC-B-8.
+
+### DEC-B-8 (lockata sessione 40 fase 1) · Explicit column TestRunId vs shadow property
+
+Modifica per 5 persistence entity:
+
+```csharp
+// apps/api/src/Api/Infrastructure/Entities/GameManagement/GameNightEventEntity.cs (+ 4 altre)
+[Column("test_run_id")]
+[MaxLength(64)]
+public string? TestRunId { get; set; }
+```
+
+Cleanup OnModelCreating: rimuovere 5 `modelBuilder.Entity<xxxEntity>().Property<string?>("TestRunId").HasMaxLength(64);` registrations.
+
+Handler update: usa property direct (`gameNightEntity.TestRunId = request.TestRunId;`) invece di `_db.Entry(...).Property<string?>("TestRunId").CurrentValue = ...`.
+
+CleanupTestEntitiesCommand: ExecuteDeleteAsync usa `WHERE TestRunId = @testRunId` esplicito (entity property, no shadow).
+
+**Rationale**: shadow property bugs intermittenti con EF Core 9 + Npgsql + IntegrationWebApplicationFactory. Explicit column è produzione-proven pattern (esistente altrove nel codebase) + tracking-friendly + introspectable via raw SQL.
+
+**Effort T1 re-implementation DEC-B-8**: ~30-45min (5 entity edits + handler + DbContext cleanup + test verify), partirà sessione 40 fase 2.

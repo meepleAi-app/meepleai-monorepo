@@ -428,15 +428,18 @@ public class MeepleAiDbContext : DbContext
         // Issue #1928 Task B (DEC-B-5) — Shadow property TestRunId for E2E test seeding cleanup scope.
         // Null for production entities; non-null only when seeded via Testing BC commands.
         // CleanupTestEntitiesCommand uses ExecuteDeleteAsync with WHERE TestRunId = @testRunId.
-        modelBuilder.Entity<BoundedContexts.GameManagement.Domain.Entities.GameNightEvent.GameNightEvent>()
+        // NOTE: registered on PERSISTENCE entities (xxxEntity), NOT domain aggregates,
+        // because shadow property on domain aggregates triggers private ctor binding errors
+        // for value objects like BackupCode (sessione 39 fase 4 finding).
+        modelBuilder.Entity<Api.Infrastructure.Entities.GameManagement.GameNightEventEntity>()
             .Property<string?>("TestRunId").HasMaxLength(64);
-        modelBuilder.Entity<BoundedContexts.GameManagement.Domain.Entities.GameNightEvent.GameNightSession>()
+        modelBuilder.Entity<Api.Infrastructure.Entities.GameManagement.GameNightSessionEntity>()
             .Property<string?>("TestRunId").HasMaxLength(64);
-        modelBuilder.Entity<BoundedContexts.GameManagement.Domain.Entities.GameNightEvent.GameNightInvitation>()
+        modelBuilder.Entity<Api.Infrastructure.Entities.GameManagement.GameNightInvitationEntity>()
             .Property<string?>("TestRunId").HasMaxLength(64);
-        modelBuilder.Entity<BoundedContexts.GameManagement.Domain.Entities.GameNightEvent.GameNightRsvp>()
+        modelBuilder.Entity<Api.Infrastructure.Entities.GameManagement.GameNightRsvpEntity>()
             .Property<string?>("TestRunId").HasMaxLength(64);
-        modelBuilder.Entity<BoundedContexts.Authentication.Domain.Entities.User>()
+        modelBuilder.Entity<Api.Infrastructure.Entities.UserEntity>()
             .Property<string?>("TestRunId").HasMaxLength(64);
     }
 

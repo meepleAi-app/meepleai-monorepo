@@ -4,9 +4,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MainSidebar } from '../MainSidebar';
 
 const mockUseCurrentUser = vi.fn();
+const mockUseNotificationsCounter = vi.fn();
 
 vi.mock('@/hooks/queries/useCurrentUser', () => ({
   useCurrentUser: () => mockUseCurrentUser(),
+}));
+
+vi.mock('@/hooks/use-notifications-counter', () => ({
+  useNotificationsCounter: (opts?: { enabled?: boolean }) => mockUseNotificationsCounter(opts),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -14,7 +19,16 @@ vi.mock('next/navigation', () => ({
 }));
 
 describe('MainSidebar', () => {
-  beforeEach(() => mockUseCurrentUser.mockReset());
+  beforeEach(() => {
+    mockUseCurrentUser.mockReset();
+    mockUseNotificationsCounter.mockReset();
+    // Default: counter is closed, zero (parity with previous default test expectations)
+    mockUseNotificationsCounter.mockReturnValue({
+      count: 0,
+      connectionState: 'closed',
+      error: null,
+    });
+  });
 
   it('renders all 8 voci for an authenticated user', () => {
     mockUseCurrentUser.mockReturnValue({ data: { id: 'u', email: 'a@b.c', role: 'user' } });
@@ -84,5 +98,42 @@ describe('MainSidebar', () => {
       'aria-current',
       'page'
     );
+  });
+
+  // ── T6 (DEC-3) wiring tests ────────────────────────────────────────────
+
+  it('shows badge from SSE-driven counter when no prop is provided', () => {
+    mockUseCurrentUser.mockReturnValue({ data: { id: 'u', email: 'a@b.c', role: 'user' } });
+    mockUseNotificationsCounter.mockReturnValue({
+      count: 7,
+      connectionState: 'open',
+      error: null,
+    });
+    render(<MainSidebar />);
+    expect(screen.getByLabelText(/7 unread/i)).toHaveTextContent('7');
+  });
+
+  it('prop `notificationCount` overrides SSE-driven counter (Storybook/test escape hatch)', () => {
+    mockUseCurrentUser.mockReturnValue({ data: { id: 'u', email: 'a@b.c', role: 'user' } });
+    mockUseNotificationsCounter.mockReturnValue({
+      count: 7,
+      connectionState: 'open',
+      error: null,
+    });
+    render(<MainSidebar notificationCount={12} />);
+    expect(screen.getByLabelText(/12 unread/i)).toHaveTextContent('12');
+    expect(screen.queryByLabelText(/7 unread/i)).not.toBeInTheDocument();
+  });
+
+  it('passes enabled=false to useNotificationsCounter when user is null', () => {
+    mockUseCurrentUser.mockReturnValue({ data: null });
+    render(<MainSidebar />);
+    expect(mockUseNotificationsCounter).toHaveBeenCalledWith({ enabled: false });
+  });
+
+  it('passes enabled=true to useNotificationsCounter when user is authenticated', () => {
+    mockUseCurrentUser.mockReturnValue({ data: { id: 'u', email: 'a@b.c', role: 'user' } });
+    render(<MainSidebar />);
+    expect(mockUseNotificationsCounter).toHaveBeenCalledWith({ enabled: true });
   });
 });

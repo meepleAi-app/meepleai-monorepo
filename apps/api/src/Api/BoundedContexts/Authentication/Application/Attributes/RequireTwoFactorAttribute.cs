@@ -32,4 +32,12 @@ internal sealed class RequireTwoFactorAttribute : Attribute
     /// surfaced in audit logs and (future) UI prompts.
     /// </summary>
     public string? Reason { get; set; }
+
+    /// <summary>
+    /// When true, the <c>TwoFactorEnforcementBehavior</c> enforces strict step-up even if the
+    /// global <c>TwoFactor:StrictMode</c> flag is OFF. Use for security-critical commands (provider
+    /// key rotation, etc — issue #1859) that must always block on stale 2FA, regardless of the
+    /// global rollout phase. Default: false (respects flag).
+    /// </summary>
+    public bool ForceStrict { get; set; }
 }

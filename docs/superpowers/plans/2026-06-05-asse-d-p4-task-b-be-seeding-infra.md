@@ -157,16 +157,18 @@ Tutte le entity seeded ricevono nuova colonna shadow `TestRunId NVARCHAR(64) NUL
 
 ---
 
-## Task 1: `SeedTestGameNightCommand` + Handler + Validator + Unit Tests
+## Task 1: `SeedTestGameNightCommand` + Handler + Validator + Tests
+
+> **⚠️ UPDATE sessione 39 fase 3 — DEC-B-7 lockata**: handler tests sono **Integration-trait** (non Unit-trait) per blocker MeepleAiDbContext DI (vedi spec doc DEC-B-7). Pattern: `[Collection("SharedTestcontainers")]` + `IAsyncLifetime` + `IntegrationWebApplicationFactory.Create()`. **Validator tests rimangono Unit-trait**. Sessione 39 commit `26927f635` + `5c757f9d1` (compile OK, 6/15 runtime fail per pattern errato) NON da riusare — re-implementare test handler sessione 40 con pattern DEC-B-7.
 
 **Files:**
-- Create: `apps/api/src/Api/BoundedContexts/Testing/Application/Commands/SeedTestGameNightCommand.cs`
-- Create: `apps/api/src/Api/BoundedContexts/Testing/Application/Commands/SeedTestGameNightCommandHandler.cs`
-- Create: `apps/api/src/Api/BoundedContexts/Testing/Application/Commands/SeedTestGameNightCommandValidator.cs`
-- Create: `apps/api/src/Api/BoundedContexts/Testing/Application/DTOs/SeedTestGameNightResponse.cs`
-- Create: `apps/api/src/Api/BoundedContexts/Testing/Infrastructure/TestRunIdMetadata.cs`
-- Test: `apps/api/tests/Api.Tests/Unit/Testing/SeedTestGameNightCommandHandlerTests.cs`
-- Test: `apps/api/tests/Api.Tests/Unit/Testing/Validators/SeedTestGameNightCommandValidatorTests.cs`
+- Create: `apps/api/src/Api/BoundedContexts/Testing/Application/Commands/SeedTestGameNightCommand.cs` (✅ shipped commit `26927f635`)
+- Create: `apps/api/src/Api/BoundedContexts/Testing/Application/Commands/SeedTestGameNightCommandHandler.cs` (✅ shipped)
+- Create: `apps/api/src/Api/BoundedContexts/Testing/Application/Commands/SeedTestGameNightCommandValidator.cs` (✅ shipped)
+- Create: `apps/api/src/Api/BoundedContexts/Testing/Application/DTOs/SeedTestGameNightResponse.cs` (✅ shipped)
+- Create: `apps/api/src/Api/BoundedContexts/Testing/Infrastructure/TestRunIdMetadata.cs` (✅ shipped)
+- ~~Test: `apps/api/tests/Api.Tests/Unit/Testing/SeedTestGameNightCommandHandlerTests.cs`~~ → **REWRITE sessione 40 a** `apps/api/tests/Api.Tests/Integration/Testing/SeedTestGameNightCommandHandlerTests.cs` con DEC-B-7 pattern
+- Test: `apps/api/tests/Api.Tests/Unit/Testing/Validators/SeedTestGameNightCommandValidatorTests.cs` (✅ shipped, 9/9 pass)
 
 - [ ] **Step 1: Write the failing test (handler happy path)**
 

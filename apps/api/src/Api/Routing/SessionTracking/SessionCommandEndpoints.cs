@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SessionTracking.Application.Commands;
+using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.Extensions;
 using MediatR;
 
@@ -13,11 +14,20 @@ internal static class SessionCommandEndpoints
     {
         MapCreateSessionEndpoint(group);
         MapUpdateScoreEndpoint(group);
+        MapUpdateSessionScoresEndpoint(group); // T10 #1896 — polymorphic
         MapAddParticipantEndpoint(group);
         MapAddNoteEndpoint(group);
         MapFinalizeSessionEndpoint(group);
         MapRollDiceEndpoint(group);
     }
+
+    /// <summary>
+    /// Asse A semantic alignment #1896 (T10, DEC-1): request DTO for the polymorphic
+    /// scores update endpoint. Distinct from <see cref="UpdateScoreCommand"/> (per-participant
+    /// score entry) — this carries the polymorphic <c>ScoringType</c> + <c>ScoreData</c>
+    /// JSON payload validated by per-type IScoringStrategy.
+    /// </summary>
+    public record UpdateSessionScoresRequest(ScoreType ScoringType, string ScoreData);
 
     private static void MapCreateSessionEndpoint(RouteGroupBuilder group)
     {
@@ -62,6 +72,49 @@ internal static class SessionCommandEndpoints
         .Produces(200)
         .Produces(400)
         .Produces(401)
+        .Produces(404);
+    }
+
+    /// <summary>
+    /// Asse A semantic alignment #1896 (T10, DEC-1): polymorphic mid-game score update
+    /// endpoint. Mounted at <c>/game-sessions/{id}/scores-polymorphic</c> to avoid clashing
+    /// with the legacy <see cref="UpdateScoreCommand"/> endpoint at
+    /// <c>/game-sessions/{id}/scores</c> (per-participant score entry).
+    ///
+    /// <para>Payload: <c>{ scoringType: Points|BinaryWin|Objectives|Ranking, scoreData: "JSON string" }</c>.
+    /// FluentValidation enforces per-type JSON schema via <c>ScoringStrategyFactory</c>.
+    /// Returns the computed winner playerId when a single winner can be determined.</para>
+    /// </summary>
+    private static void MapUpdateSessionScoresEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPut("/game-sessions/{sessionId:guid}/scores-polymorphic", async (
+            Guid sessionId,
+            UpdateSessionScoresRequest request,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            // IDOR guard (security review high-priority): extract authenticated user id
+            // from claims; handler verifies the caller is the session owner or a participant.
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new UpdateSessionScoresCommand(sessionId, request.ScoringType, request.ScoreData, userId);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("UpdateSessionScoresPolymorphic")
+        .WithTags("SessionTracking")
+        .WithSummary("Update session polymorphic scores (Points/BinaryWin/Objectives/Ranking)")
+        .WithDescription("Asse A #1896 (T10): replaces ScoringType + ScoreData atomically with per-type JSON schema validation. Caller must be session owner or registered participant (IDOR-protected).")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(403)
         .Produces(404);
     }
 
@@ -123,6 +176,7 @@ internal static class SessionCommandEndpoints
             Guid sessionId,
             FinalizeSessionCommand command,
             IMediator mediator,
+            HttpResponse response,
             CancellationToken ct) =>
         {
             if (sessionId != command.SessionId)
@@ -131,6 +185,15 @@ internal static class SessionCommandEndpoints
             }
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            // Invariante #13 (#1896 WP2 T4): non-blocking warning header for FE toast when
+            // a draft+live session coexist in the same GameNightEvent. The operation itself
+            // succeeded (200 OK); the header is purely informational.
+            if (result.LiveActiveWarning)
+            {
+                response.Headers.Append("X-Warning-Code", "SAVED_WHILE_LIVE_ACTIVE");
+            }
+
             return Results.Ok(result);
         })
         .RequireAuthenticatedUser()

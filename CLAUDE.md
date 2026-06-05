@@ -329,9 +329,9 @@ Run `pnpm lint:tokens` to regenerate the inventory in `audits/2026-05-12-token-v
 
 ### Domain Model — GameNight / Session
 
-**Reference**: [`docs/for-developers/specs/2026-06-04-gamenight-session-domain-model.md`](./docs/for-developers/specs/2026-06-04-gamenight-session-domain-model.md) — 20 invarianti consolidate (9 fatti + 11 derivate), 5 tensioni risolte 2026-06-04.
+**Reference**: [`docs/for-developers/specs/2026-06-04-gamenight-session-domain-model.md`](./docs/for-developers/specs/2026-06-04-gamenight-session-domain-model.md) — 20 invarianti consolidate (9 fatti + 11 derivate), 5 tensioni risolte 2026-06-04. **Vedi anche § Backend Mapping** per la riconciliazione term demo ↔ backend (`GameNightEvent` aggregate, `Session` aggregate, `GameNightRsvp` vs `GameNightInvitation`).
 
-Quando tocchi i bounded context **`SessionTracking`** o **`GameManagement`** (sub-aggregate GameNight), questo spec è la source of truth per:
+Quando tocchi i bounded context **`SessionTracking`** o **`GameManagement`** (sub-aggregate GameNight `GameNightEvent`), questo spec è la source of truth per:
 - Cardinalità GameNight 1→N Session
 - 3 timestamp Session distinti (createdAt always, startedAt/completedAt nullable)
 - State machine GameNight (planned → in-progress via first Session, → completed manuale)
@@ -339,6 +339,10 @@ Quando tocchi i bounded context **`SessionTracking`** o **`GameManagement`** (su
 - Tagging vs RSVP a 5 fasi (tag silente → "Invia inviti" esplicito → pending → confermato)
 - Invariante max 1 live per GameNight (parallel play out of scope MVP)
 - Sidebar 2 voci game-related: Library (personale) + Games (catalogo, Discover come default tab)
+
+**Asse A v2 implementation** (umbrella #1895 sub-issue #1896): plan TDD in [`docs/superpowers/plans/2026-06-04-asse-a-semantic-alignment.md`](./docs/superpowers/plans/2026-06-04-asse-a-semantic-alignment.md). Plan v2.1 effort ~10.5gg dopo discovery WP4 già shipped upstream (#2053+#1629+#5005). **Stato shipped 2026-06-05 sessione 32**: WP1 (max 1 live) + WP2 (Session.StartedAt+invariante #15+X-Warning-Code+mapping doc) + WP3 (polymorphic ScoreType 4 strategies + UpdateSessionScoresCommand + IDOR guard) + WP4 audit-only + WP5 acceptance. Branch `feature/issue-1896-semantic-alignment` con ~15 commit (12 feat + 2 fix + 3 docs/audit). ~80+ unit test added, 0 regression. Security: 1 HIGH IDOR finding identificato post-merge T10 + fixato in `c1efb4fb6`.
+
+**Backend semantic mapping** (sezione "Backend Mapping" nel domain model spec): demo "GameNight" ↔ backend `GameNightEvent`, demo "tagged player" ↔ `GameNightEvent.PreInvite` (Draft, no event), demo "invited player" ↔ `Publish()` (raises events → email via `GameNightEmailService`), demo `Session.IsLive` ↔ `StartedAt != null && FinalizedAt == null`. Invariante #10 enforcement via `GameNightEvent.StartCurrentSession()` guard → `MaxLiveSessionsExceededException` (HTTP 409 via middleware). Invariante #15 wire via `SessionStartedHandler : INotificationHandler<SessionStartedDomainEvent>`.
 
 Companion: [gap report demo Claude Design](./docs/for-developers/audits/2026-06-04-claude-design-gap-report.md) (38 gap classificati 5-cat: ROUTE/STATE/CTA/ENTITY/TOKEN).
 

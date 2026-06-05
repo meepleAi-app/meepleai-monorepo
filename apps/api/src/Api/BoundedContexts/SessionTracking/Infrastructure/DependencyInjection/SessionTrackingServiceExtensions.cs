@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
+using Api.BoundedContexts.SessionTracking.Domain.Scoring;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Health;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Persistence;
@@ -84,6 +85,11 @@ internal static class SessionTrackingServiceExtensions
         // Singleton: NTextCatLanguageDetectionService loads ~2.4MB profile once at startup
         // and is thread-safe (RankedLanguageIdentifier is read-only post-construction).
         services.AddSingleton<ILanguageDetectionService, NTextCatLanguageDetectionService>();
+
+        // Asse A semantic alignment #1896 (T10, DEC-1): polymorphic scoring strategy factory.
+        // Singleton — instantiates stateless strategies on demand (no internal state, thread-safe).
+        // Consumed by UpdateSessionScoresCommandValidator + UpdateSessionScoresCommandHandler.
+        services.AddSingleton<ScoringStrategyFactory>();
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 

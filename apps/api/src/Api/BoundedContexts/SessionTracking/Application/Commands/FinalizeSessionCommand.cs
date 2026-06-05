@@ -9,5 +9,6 @@ public record FinalizeSessionCommand(
 
 public record FinalizeSessionResult(
     Guid? WinnerId,
-    Dictionary<Guid, decimal> FinalScores
+    Dictionary<Guid, decimal> FinalScores,
+    bool LiveActiveWarning = false
 );

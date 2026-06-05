@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -13,9 +14,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260604205354_AddSessionScoringType")]
+    partial class AddSessionScoringType
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3069,74 +3072,6 @@ namespace Api.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("admin_reports");
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.Administration.AlertChannelEntity", b =>
-                {
-                    b.Property<string>("Type")
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
-                        .HasColumnName("type");
-
-                    b.Property<string>("ConfigJson")
-                        .IsRequired()
-                        .HasColumnType("jsonb")
-                        .HasColumnName("config_json");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("NOW()");
-
-                    b.Property<string>("CreatedBy")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("created_by");
-
-                    b.Property<bool>("IsEnabled")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true)
-                        .HasColumnName("is_enabled");
-
-                    b.Property<string>("LastTestMessage")
-                        .HasColumnType("text")
-                        .HasColumnName("last_test_message");
-
-                    b.Property<string>("LastTestStatus")
-                        .HasMaxLength(16)
-                        .HasColumnType("character varying(16)")
-                        .HasColumnName("last_test_status");
-
-                    b.Property<DateTime?>("LastTestedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_tested_at");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea")
-                        .HasColumnName("row_version");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("NOW()");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("updated_by");
-
-                    b.HasKey("Type");
-
-                    b.ToTable("alert_channels", null, t =>
-                        {
-                            t.HasCheckConstraint("ck_alert_channels_type", "type IN ('email', 'slack')");
-                        });
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.Administration.AlertConfigurationEntity", b =>
@@ -10318,142 +10253,6 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("badges", (string)null);
                 });
 
-            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.BggTosHashEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<int>("ChangeCount")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0)
-                        .HasColumnName("change_count");
-
-                    b.Property<string>("CurrentHash")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("current_hash");
-
-                    b.Property<DateTime?>("LastChangedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_changed_at");
-
-                    b.Property<DateTime>("LastCheckedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_checked_at");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea")
-                        .HasColumnName("row_version");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("bgg_tos_hashes", (string)null);
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.CatalogSeedDraftEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime?>("ApprovedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("approved_at");
-
-                    b.Property<Guid?>("ApprovedByUserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("approved_by_user_id");
-
-                    b.Property<int?>("BggId")
-                        .HasColumnType("integer")
-                        .HasColumnName("bgg_id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("NOW()");
-
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("created_by_user_id");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("deleted_at");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("error_message");
-
-                    b.Property<DateTime?>("FetchedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("fetched_at");
-
-                    b.Property<bool>("IsDeleted")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("ProvenanceJson")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("provenance_json");
-
-                    b.Property<string>("RawPayloadJson")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("raw_payload_json");
-
-                    b.Property<Guid?>("ResultingSharedGameId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("resulting_shared_game_id");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea")
-                        .HasColumnName("row_version");
-
-                    b.Property<string>("SearchTermInput")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("search_term_input");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
-                        .HasColumnName("status");
-
-                    b.Property<string>("WikidataQid")
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
-                        .HasColumnName("wikidata_qid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BggId")
-                        .HasDatabaseName("ix_catalog_seed_drafts_bgg_id");
-
-                    b.HasIndex("CreatedAt")
-                        .HasDatabaseName("ix_catalog_seed_drafts_created_at");
-
-                    b.HasIndex("Status")
-                        .HasDatabaseName("ix_catalog_seed_drafts_status");
-
-                    b.HasIndex("WikidataQid")
-                        .HasDatabaseName("ix_catalog_seed_drafts_wikidata_qid");
-
-                    b.ToTable("catalog_seed_drafts", (string)null);
-                });
-
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.CatalogSyncRunEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -10693,115 +10492,6 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("ix_contributors_user_shared_game_unique");
 
                     b.ToTable("contributors", (string)null);
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.EnrichmentAttemptEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTimeOffset>("AttemptedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("attempted_at");
-
-                    b.Property<Guid?>("CatalogSyncRunId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("catalog_sync_run_id");
-
-                    b.Property<string>("ErrorCode")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("error_code");
-
-                    b.Property<string>("ErrorDetail")
-                        .HasColumnType("text")
-                        .HasColumnName("error_detail");
-
-                    b.Property<int>("RetryCount")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0)
-                        .HasColumnName("retry_count");
-
-                    b.Property<Guid>("SharedGameId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("shared_game_id");
-
-                    b.Property<bool>("Success")
-                        .HasColumnType("boolean")
-                        .HasColumnName("success");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CatalogSyncRunId");
-
-                    b.HasIndex("SharedGameId", "AttemptedAt")
-                        .IsDescending(false, true)
-                        .HasDatabaseName("ix_enrichment_attempts_shared_game_attempted_at");
-
-                    b.HasIndex("Success", "AttemptedAt")
-                        .IsDescending(false, true)
-                        .HasDatabaseName("ix_enrichment_attempts_success_attempted_at");
-
-                    b.ToTable("enrichment_attempts", (string)null);
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.EnrichmentQueueEntryEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<bool>("IsProcessed")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("is_processed");
-
-                    b.Property<int>("Priority")
-                        .HasColumnType("integer")
-                        .HasColumnName("priority");
-
-                    b.Property<DateTimeOffset?>("ProcessedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("processed_at");
-
-                    b.Property<DateTimeOffset>("QueuedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("queued_at");
-
-                    b.Property<Guid?>("QueuedByUserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("queued_by_user_id");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("reason");
-
-                    b.Property<Guid>("SharedGameId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("shared_game_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("QueuedByUserId");
-
-                    b.HasIndex("SharedGameId")
-                        .HasDatabaseName("ix_enrichment_queue_entries_shared_game_id");
-
-                    b.HasIndex("IsProcessed", "Priority", "QueuedAt")
-                        .HasDatabaseName("ix_enrichment_queue_entries_pending_listing")
-                        .HasFilter("is_processed = false");
-
-                    b.ToTable("enrichment_queue_entries", null, t =>
-                        {
-                            t.HasCheckConstraint("ck_enrichment_queue_entries_priority_range", "priority BETWEEN 0 AND 2");
-                        });
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.GameAnalyticsEventEntity", b =>
@@ -16984,42 +16674,6 @@ namespace Api.Infrastructure.Migrations
                         .HasForeignKey("SharedGameId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("SharedGame");
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.EnrichmentAttemptEntity", b =>
-                {
-                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.CatalogSyncRunEntity", "CatalogSyncRun")
-                        .WithMany()
-                        .HasForeignKey("CatalogSyncRunId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "SharedGame")
-                        .WithMany()
-                        .HasForeignKey("SharedGameId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CatalogSyncRun");
-
-                    b.Navigation("SharedGame");
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.EnrichmentQueueEntryEntity", b =>
-                {
-                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "QueuedByUser")
-                        .WithMany()
-                        .HasForeignKey("QueuedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "SharedGame")
-                        .WithMany()
-                        .HasForeignKey("SharedGameId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("QueuedByUser");
 
                     b.Navigation("SharedGame");
                 });

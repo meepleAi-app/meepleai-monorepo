@@ -89,6 +89,36 @@ public class Session : IDomainEventSource
     public DateTime? FinalizedAt { get; private set; }
 
     /// <summary>
+    /// When the session transitioned to live mode (via <see cref="OpenLiveMode"/>).
+    /// Null until live mode is opened. Distinct from <see cref="CreatedAt"/> (Asse A
+    /// semantic alignment #1896, invariante #11 — 3 distinct timestamps: createdAt
+    /// always, startedAt/completedAt nullable).
+    /// </summary>
+    public DateTime? StartedAt { get; private set; }
+
+    /// <summary>
+    /// True when the session is currently in live mode: <see cref="StartedAt"/> is set
+    /// AND <see cref="FinalizedAt"/> is still null. Used to enforce invariante #14
+    /// (max 1 live session per GameNight at any given moment) at the GameNight level.
+    /// Computed property (not persisted).
+    /// </summary>
+    public bool IsLive => StartedAt.HasValue && FinalizedAt is null;
+
+    /// <summary>
+    /// Polymorphic scoring type for this session (Asse A semantic alignment #1896, T9,
+    /// DEC-1). Defaults to <see cref="ScoreType.Points"/>. Updated via
+    /// <see cref="SetScores"/> together with <see cref="ScoreData"/>.
+    /// </summary>
+    public ScoreType ScoringType { get; private set; } = ScoreType.Points;
+
+    /// <summary>
+    /// Polymorphic score data as JSON string (persisted as JSONB). Shape varies by
+    /// <see cref="ScoringType"/> — validated by the corresponding IScoringStrategy in
+    /// the application layer (T10). Default = empty JSON object <c>"{}"</c>.
+    /// </summary>
+    public string ScoreData { get; private set; } = "{}";
+
+    /// <summary>
     /// Soft delete flag.
     /// </summary>
     public bool IsDeleted { get; private set; }
@@ -321,6 +351,45 @@ public class Session : IDomainEventSource
     }
 
     /// <summary>
+    /// Transitions the session to live mode.
+    /// Sets <see cref="StartedAt"/> = UtcNow and raises a
+    /// <see cref="Events.SessionStartedDomainEvent"/> so that
+    /// <c>GameManagement.SessionStartedHandler</c> (T3) can transition the parent
+    /// <c>GameNight</c> from <c>Published</c> → <c>InProgress</c> (invariante #15).
+    ///
+    /// <para>Invariante #11 (Asse A semantic alignment #1896): Session has 3 distinct
+    /// timestamps — <see cref="CreatedAt"/> always, <see cref="StartedAt"/> nullable
+    /// (set here), <see cref="FinalizedAt"/> nullable (set by <see cref="Finalize"/>).
+    /// </para>
+    ///
+    /// <para>Invariante #14: max 1 live session per GameNight at any given moment —
+    /// enforced at the GameNight aggregate (T3 handler) before allowing a
+    /// <see cref="Events.SessionStartedDomainEvent"/> to trigger the GameNight transition.</para>
+    /// </summary>
+    /// <exception cref="ConflictException">Thrown when the session is already in live mode
+    /// or when it has already been finalized.</exception>
+    public void OpenLiveMode()
+    {
+        if (IsLive)
+            throw new ConflictException(
+                $"Session {Id} is already in live mode (StartedAt={StartedAt:O}).");
+        if (FinalizedAt.HasValue)
+            throw new ConflictException(
+                $"Session {Id} is already finalized (FinalizedAt={FinalizedAt:O}). Cannot open live mode.");
+
+        StartedAt = DateTime.UtcNow;
+        UpdatedAt = StartedAt;
+
+        AddDomainEvent(new Events.SessionStartedDomainEvent
+        {
+            SessionId = Id,
+            UserId = UserId,
+            GameId = GameId,
+            StartedAt = StartedAt.Value
+        });
+    }
+
+    /// <summary>
     /// Pauses an active session.
     /// </summary>
     public void Pause()
@@ -366,6 +435,31 @@ public class Session : IDomainEventSource
             var winner = _participants.First(p => p.Id == winnerId.Value);
             winner.SetFinalRank(1);
         }
+    }
+
+    /// <summary>
+    /// Sets the polymorphic score data for this session and raises a
+    /// <see cref="Events.SessionScoresUpdatedEvent"/>.
+    ///
+    /// <para>Asse A semantic alignment #1896 (T9, DEC-1): supersedes any prior
+    /// <see cref="ScoringType"/>/<see cref="ScoreData"/> assignment. JSON validation
+    /// against the per-type schema is performed by FluentValidation in the
+    /// application layer (T10 — <c>SaveSessionCommandHandler</c>); this method only
+    /// guards the trivial empty-string invariant.</para>
+    /// </summary>
+    /// <param name="scoringType">Polymorphic scoring type (Points, BinaryWin, Objectives, Ranking).</param>
+    /// <param name="scoreData">JSON string carrying the per-type score payload. Must not be empty.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="scoreData"/> is null, empty, or whitespace.</exception>
+    public void SetScores(ScoreType scoringType, string scoreData)
+    {
+        if (string.IsNullOrWhiteSpace(scoreData))
+            throw new ArgumentException("ScoreData cannot be empty.", nameof(scoreData));
+
+        ScoringType = scoringType;
+        ScoreData = scoreData;
+        UpdatedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new Events.SessionScoresUpdatedEvent(Id, scoringType, scoreData));
     }
 
     /// <summary>

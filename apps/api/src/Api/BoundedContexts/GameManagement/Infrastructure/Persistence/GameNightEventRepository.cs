@@ -150,6 +150,23 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .AnyAsync(e => e.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<GameNightEvent?> FindByLinkedSessionIdAsync(
+        Guid sessionId, CancellationToken cancellationToken = default)
+    {
+        // No AsNoTracking — the caller (SessionStartedHandler, invariante #15) mutates
+        // the aggregate via HandleFirstSessionStarted and persists via UpdateAsync,
+        // so the entity must be tracked end-to-end for change detection on Status/UpdatedAt.
+        var entity = await DbContext.GameNightEvents
+            .Include(e => e.Rsvps)
+            .Include(e => e.Sessions)
+            .FirstOrDefaultAsync(
+                e => e.Sessions.Any(s => s.SessionId == sessionId),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        return entity != null ? MapToDomain(entity) : null;
+    }
+
     private static GameNightEventEntity MapToPersistence(GameNightEvent domain)
     {
         ArgumentNullException.ThrowIfNull(domain);

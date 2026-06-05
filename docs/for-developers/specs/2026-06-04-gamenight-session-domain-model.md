@@ -262,9 +262,40 @@ Tensioni meno gravi emerse durante la risoluzione delle 5 principali. Non blocca
 
 ---
 
+## Backend Mapping (terminologia demo ↔ codice)
+
+> Aggiunto post asse A v2 implementation (sessione 32, 2026-06-04). Riconcilia i termini usati in questo doc con le entità reali del backend, evitando confusione downstream.
+
+| Demo term | Backend term | Note |
+|-----------|--------------|------|
+| GameNight (Planned) | `GameNightEvent` con `Status = Published` | Dopo `Publish()` call sends invitations e crea RSVPs |
+| GameNight (Planned, ad-hoc) | `GameNightEvent.CreateAdHoc()` factory | Skip RSVP, direct `Status = InProgress` (no Published phase) |
+| GameNight (InProgress) | `GameNightEvent.Status = InProgress` | Via `HandleFirstSessionStarted` (T3 invariante #15) o `CreateAdHoc` |
+| GameNight (Completed) | `GameNightEvent.Status = Completed` | Via `Complete()` (Published path) o `CompleteAdHoc()` (AdHoc path) |
+| Session (created) | `Session` aggregate (`CreatedAt` valorizzato, `StartedAt = null`) | Draft mode equivalent (default after `Session.Create()`) |
+| Session (live) | `Session.IsLive` = `StartedAt != null && FinalizedAt == null` | Via `Session.OpenLiveMode()` (T2) — raises `SessionStartedDomainEvent` |
+| Session (completed) | `Session` con `FinalizedAt` valorizzato | Via `session.Finalize()` |
+| Player tagged (no notification) | `GameNightEvent.PreInvite(userIds)` | Status=Draft, creates RSVPs Pending, **no events emitted** |
+| Player invited (notification sent) | `GameNightEvent.Publish(invitedUserIds)` | Draft→Published, raises `GameNightPublishedEvent` → triggers `GameNightEmailService.SendGameNightInvitationEmailAsync` |
+| GameNightPlayer.RsvpStatus.Pending | `GameNightRsvp.Status = Pending` | Default dopo Publish/AddInvitees |
+| GameNightPlayer.RsvpStatus.Confirmed | `GameNightRsvp.Accept()` → `Status = Accepted` | Via responder action |
+| Max 1 live invariant (#10) | Guard in `GameNightEvent.StartCurrentSession()` → `MaxLiveSessionsExceededException` (Code `MAX_LIVE_SESSIONS_EXCEEDED`) | T1 implementation |
+| First-session-started transition (#15) | `GameNightEvent.HandleFirstSessionStarted(sessionId)` chiamato da `SessionStartedHandler` (MediatR) on `SessionStartedDomainEvent` | T3 implementation; standalone Session = no-op, idempotent su InProgress |
+| Draft+live warning header (#13) | `FinalizeSessionResult.LiveActiveWarning = true` → endpoint set `X-Warning-Code: SAVED_WHILE_LIVE_ACTIVE` | T4 implementation; non-bloccante |
+
+**Note semantiche aggiuntive**:
+- "Tagged" demo è il **PreInvite** backend (Draft phase, RSVP creati ma no notifica → user non vede).
+- "Invited" demo è la transizione **Publish**/`AddInvitees` (Published phase, eventi → email + notifica → user vede).
+- Il backend ha 3 stati intermedi che il demo collassa: `Draft` + `Cancelled` + `Corrupted` non hanno equivalente demo (l'umbrella tratta `Cancelled` come fuori-flusso, `Corrupted` come guard interno).
+- Il backend ha **2 tipi di "invitation"**: `GameNightRsvp` (per User-linked) e `GameNightInvitation` (token-based per email guest, issue #607 Wave A.5a + #1169). Il demo confonde i due → in v2 sono solo "invited player" generico, ma il backend deve gestire entrambi i flow.
+
+---
+
 ## Riferimenti
 
 - **Gap report demo**: [`2026-06-04-claude-design-gap-report.md`](../audits/2026-06-04-claude-design-gap-report.md)
 - **Mockup canonici**: `admin-mockups/design_files/sp4-dashboard.html`, `sp4-game-detail.html`, `sp4-sessions-index.html`, `sp4-session-skeleton-live.html`, `sp7-game-night-create.html`, `sp7-game-night-detail-rsvp.html`, `sp7-game-night-live.html`
-- **Bounded context backend**: `apps/api/src/Api/BoundedContexts/SessionTracking/` + `BoundedContexts/GameManagement/Domain/GameNight*`
+- **Bounded context backend**: `apps/api/src/Api/BoundedContexts/SessionTracking/` + `BoundedContexts/GameManagement/Domain/Entities/GameNightEvent/`
 - **Mockup index**: [`admin-mockups/MOCKUPS_INDEX.md`](../../../admin-mockups/MOCKUPS_INDEX.md)
+- **Plan asse A implementation**: [`docs/superpowers/plans/2026-06-04-asse-a-semantic-alignment.md`](../../superpowers/plans/2026-06-04-asse-a-semantic-alignment.md)
+- **Spec consolidato spec-panel**: [`docs/superpowers/specs/2026-06-04-claude-design-alignment-spec-panel-review.md`](../../superpowers/specs/2026-06-04-claude-design-alignment-spec-panel-review.md)

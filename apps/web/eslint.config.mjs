@@ -645,4 +645,36 @@ export default [
       "local/no-hardcoded-color-utility": "error",
     },
   },
+  // StatePreviewProvider tree-shake guarantee (Asse B WP5 T5, Issue #1897):
+  // Direct import of state-preview-provider bypasses the dynamic({ssr:false})
+  // loader, which is the mechanism that guarantees the provider implementation
+  // tree-shakes out of production chunks (DEC-4 + CRIT-5). Consumers MUST use
+  // the barrel `@/components/ui/state-preview`, which re-exports the loader.
+  //
+  // Scope excludes the state-preview folder itself: (a) the loader is the only
+  // sanctioned import site of the provider impl, (b) unit tests must wrap the
+  // SUT in the provider tree directly without dynamic indirection.
+  //
+  // Spec: docs/superpowers/plans/2026-06-04-asse-b-ui-shell-pattern.md WP5 T5
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/components/ui/state-preview/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "**/state-preview/state-preview-provider",
+                "@/components/ui/state-preview/state-preview-provider",
+              ],
+              message:
+                "Use '@/components/ui/state-preview' barrel (which uses dynamic({ssr:false}) for tree-shake guarantee). Direct import of state-preview-provider bypasses dev-only isolation.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];

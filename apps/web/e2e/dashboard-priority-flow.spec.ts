@@ -1,66 +1,75 @@
 /**
- * Dashboard priority-driven flow (Asse C, Issue #1898 WP7 T7).
+ * Dashboard priority-driven flow (Asse C, Issue #1898 WP7 T7) — fixtures-wired.
  *
- * E2E skeleton for the 4-priority-section dashboard layout
- * (Prossimi → Recenti → Suggested → Friends).
+ * Originally shipped as a "tolerant redirect" smoke skeleton (waiting for the
+ * Asse-D follow-up P4 cross-asse E2E harness, see PR #1930). Issue #1927
+ * (Task A) wires the pre-existing `seedAuthSession` + `mockAuthEndpoints` +
+ * `seedCookieConsent` helpers (Wave B.1 #633) so we always exercise the
+ * authenticated DOM tree and assert directly on the priority-sections layout.
  *
- * NOTE: full data-driven assertions are deferred until E2E auth seeding
- * lands (consistent with sibling Stage 3 E2E skeletons). The skeleton:
- *  - verifies /dashboard route reachable (or redirects to login when
- *    unauthenticated)
- *  - asserts presence of the priority sections container slot when
- *    authenticated
- *  - asserts Prossimi section is queryable when authenticated
- *
- * Live data wiring + GameNight drawer interaction is exercised in the
- * unit + RTL tests for ProssimiSection / RecentiSection / SuggestedSection
- * / FriendsActivitySection (T2-T6) and in the orchestrator smoke test
- * (T7).
+ * Scope kept FE-only — BE entity seeding (and data-driven card content
+ * assertions) ride on Issue #1928 (Task B). Until then we assert structural
+ * slots that always render (DashboardHero / StatsRow / priority-sections
+ * container / Prossimi section), since Recenti/Suggested/Friends silently
+ * fall back to `null` when the upstream queries return empty.
  */
 
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+
+import { mockAuthEndpoints, seedAuthSession } from './_helpers/seedAuthSession';
+import { seedCookieConsent } from './_helpers/seedCookieConsent';
 
 test.describe('Dashboard priority-driven flow (asse C)', () => {
   test.skip(({ browserName }) => browserName !== 'chromium', 'Chromium-only for speed');
 
-  test('renders priority sections container OR redirects unauthenticated user', async ({
+  test.beforeEach(async ({ page }) => {
+    await seedCookieConsent(page);
+    await seedAuthSession(page);
+    await mockAuthEndpoints(page);
+  });
+
+  test('mounts priority sections container with Prossimi always rendered', async ({ page }) => {
+    await page.goto('/dashboard');
+
+    // Authenticated path enforced by fixtures — no `/login` fallback branch.
+    await expect(page).not.toHaveURL(/\/(login|auth|sign-in)/);
+
+    const grid = page.locator('[data-slot="dashboard-priority-sections"]');
+    await expect(grid).toBeVisible({ timeout: 10_000 });
+
+    // Prossimi is the only section that ALWAYS renders (empty → EmptySection
+    // inside, default → cards). Recenti/Suggested/Friends may return `null`
+    // when their respective queries are empty (silent fallback per MAJ-6).
+    const prossimi = page.locator('[data-section-id="prossimi"]');
+    await expect(prossimi).toBeVisible();
+  });
+
+  test('renders DashboardHero + StatsRow entry surfaces (preserved by C refactor)', async ({
     page,
   }) => {
     await page.goto('/dashboard');
 
-    // Tolerant authentication check — if the test environment doesn't seed
-    // an auth session, the app redirects to /login (or similar). Otherwise
-    // the priority sections container must be present.
-    const grid = page.locator('[data-slot="dashboard-priority-sections"]');
-    const url = page.url();
-
-    if (/\/(login|auth|sign-in)/.test(url)) {
-      // Unauthenticated path — verify redirect happened, skeleton done.
-      await expect(page).toHaveURL(/\/(login|auth|sign-in)/);
-      return;
-    }
-
-    // Authenticated path — verify the priority sections wrapper renders.
-    await expect(grid).toBeVisible({ timeout: 10_000 });
+    // Hero kicker is unconditional (data-testid hard-coded in
+    // `components/dashboard/DashboardHero.tsx`). The KPI navigation row is
+    // also unconditional; its `nav` element exposes a fixed Italian aria-label.
+    await expect(page.locator('[data-testid="hero-kicker"]').first()).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(page.locator('nav[aria-label="Statistiche personali"]')).toBeVisible();
   });
 
-  test('priority sections appear in fixed order (when authenticated)', async ({ page }) => {
+  test('exposes section ordering: priority-sections renders BEFORE legacy sections', async ({
+    page,
+  }) => {
     await page.goto('/dashboard');
 
-    const url = page.url();
-    if (/\/(login|auth|sign-in)/.test(url)) {
-      test.skip(true, 'Authenticated dashboard required for ordering assertion');
-      return;
-    }
-
-    // Wait for the priority sections grid to render.
+    // DEC-1 refactor-in-place: 4 priority sections appear in fixed order
+    // ABOVE any preserved entry surface. The priority container must
+    // appear at least once, and the Prossimi section sits inside it.
     const grid = page.locator('[data-slot="dashboard-priority-sections"]');
-    await expect(grid).toBeVisible({ timeout: 10_000 });
+    await expect(grid).toBeVisible();
 
-    // Prossimi (slot #1) is the only section that ALWAYS renders (empty
-    // shows EmptySection inside, default shows cards). Recenti/Suggested/
-    // Friends may return null when empty/silent.
-    const prossimi = page.locator('[data-section-id="prossimi"]');
-    await expect(prossimi).toBeVisible();
+    const prossimiInsideGrid = grid.locator('[data-section-id="prossimi"]');
+    await expect(prossimiInsideGrid).toHaveCount(1);
   });
 });

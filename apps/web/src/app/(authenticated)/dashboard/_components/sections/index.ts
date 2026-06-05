@@ -42,3 +42,8 @@ export {
   type SuggestedSectionState,
   type SuggestedGameCard,
 } from './SuggestedSection';
+export {
+  FriendsActivitySection,
+  type FriendsActivitySectionProps,
+  type FriendsActivitySectionState,
+} from './FriendsActivitySection';

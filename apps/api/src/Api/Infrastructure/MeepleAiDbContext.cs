@@ -424,6 +424,20 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.ProcessingJob>();
         modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.ProcessingStep>();
         modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.StepLogEntry>();
+
+        // Issue #1928 Task B (DEC-B-5) — Shadow property TestRunId for E2E test seeding cleanup scope.
+        // Null for production entities; non-null only when seeded via Testing BC commands.
+        // CleanupTestEntitiesCommand uses ExecuteDeleteAsync with WHERE TestRunId = @testRunId.
+        modelBuilder.Entity<BoundedContexts.GameManagement.Domain.Entities.GameNightEvent.GameNightEvent>()
+            .Property<string?>("TestRunId").HasMaxLength(64);
+        modelBuilder.Entity<BoundedContexts.GameManagement.Domain.Entities.GameNightEvent.GameNightSession>()
+            .Property<string?>("TestRunId").HasMaxLength(64);
+        modelBuilder.Entity<BoundedContexts.GameManagement.Domain.Entities.GameNightEvent.GameNightInvitation>()
+            .Property<string?>("TestRunId").HasMaxLength(64);
+        modelBuilder.Entity<BoundedContexts.GameManagement.Domain.Entities.GameNightEvent.GameNightRsvp>()
+            .Property<string?>("TestRunId").HasMaxLength(64);
+        modelBuilder.Entity<BoundedContexts.Authentication.Domain.Entities.User>()
+            .Property<string?>("TestRunId").HasMaxLength(64);
     }
 
     /// <summary>

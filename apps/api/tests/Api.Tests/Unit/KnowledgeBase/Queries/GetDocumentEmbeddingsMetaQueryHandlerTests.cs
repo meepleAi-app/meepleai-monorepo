@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Api.BoundedContexts.Administration.Application.Attributes;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetDocumentEmbeddingsMeta;
 using Api.Infrastructure;
@@ -123,5 +124,35 @@ public sealed class GetDocumentEmbeddingsMetaQueryHandlerTests : IDisposable
             CancellationToken.None).ConfigureAwait(false);
 
         result.Language.Should().Be("it");
+    }
+
+    [Fact]
+    public async Task DTO_Serializes_Without_Any_Raw_Vector_Field()
+    {
+        // Security guarantee from spec §7 (Newman corpus-reconstruction risk mitigation):
+        // Verifica che la DTO whitelist non esponga MAI valori vector raw nella JSON response.
+        var pdfId = await SeedIndexedDocAsync().ConfigureAwait(false);
+        var dto = await _handler.Handle(
+            new GetDocumentEmbeddingsMetaQuery(pdfId),
+            CancellationToken.None).ConfigureAwait(false);
+
+        var jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        };
+        var json = JsonSerializer.Serialize(dto, jsonOptions);
+
+        json.Should().NotContain("\"vector\"", because: "DTO must not expose raw vector values");
+        json.Should().NotContain("\"Vector\"", because: "DTO must not expose raw vector values (PascalCase)");
+        json.Should().NotContain("\"embedding\"", because: "DTO must not expose embedding values");
+        json.Should().NotContain("\"coordinates\"", because: "DTO must not expose vector coordinates");
+        json.Should().NotContain("\"values\"", because: "DTO must not include arbitrary values arrays");
+
+        // Whitelist: only the 6 documented DTO fields are present
+        json.Should().Contain("\"docId\"");
+        json.Should().Contain("\"model\"");
+        json.Should().Contain("\"dimensions\"");
+        json.Should().Contain("\"totalChunks\"");
+        json.Should().Contain("\"indexedAt\"");
     }
 }

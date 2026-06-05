@@ -5,47 +5,26 @@ using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using Xunit;
 
 namespace Api.Tests.Unit.Testing;
 
 [Trait("Category", "Unit")]
 [Trait("BoundedContext", "Testing")]
-public class SeedTestGameNightCommandHandlerTests : IDisposable
+public class SeedTestGameNightCommandHandlerTests
 {
-    private readonly DbContextOptions<Api.Infrastructure.MeepleAiDbContext> _options;
-
-    public SeedTestGameNightCommandHandlerTests()
-    {
-        _options = new DbContextOptionsBuilder<Api.Infrastructure.MeepleAiDbContext>()
-            .UseInMemoryDatabase($"TestDb-{Guid.NewGuid()}")
-            .Options;
-    }
-
     private Api.Infrastructure.MeepleAiDbContext CreateDbContext()
     {
-        // Create a mock mediator and event collector for DI
-        var mockMediator = MockMediator();
-        var mockEventCollector = MockEventCollector();
-        return new Api.Infrastructure.MeepleAiDbContext(_options, mockMediator, mockEventCollector, null, NullLogger<Api.Infrastructure.MeepleAiDbContext>.Instance);
-    }
-
-    private static IMediator MockMediator()
-    {
-        return new Moq.Mock<IMediator>().Object;
-    }
-
-    private static Api.SharedKernel.Application.Services.IDomainEventCollector MockEventCollector()
-    {
-        var mock = new Moq.Mock<Api.SharedKernel.Application.Services.IDomainEventCollector>();
-        mock.Setup(m => m.PeekEvents()).Returns((System.Collections.Generic.List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>)null);
-        return mock.Object;
-    }
-
-    public void Dispose()
-    {
-        using var db = CreateDbContext();
-        db.Database.EnsureDeleted();
+        var options = new DbContextOptionsBuilder<Api.Infrastructure.MeepleAiDbContext>()
+            .UseInMemoryDatabase($"TestDb-{Guid.NewGuid()}")
+            .Options;
+        return new Api.Infrastructure.MeepleAiDbContext(
+            options,
+            Mock.Of<IMediator>(),
+            Mock.Of<Api.SharedKernel.Application.Services.IDomainEventCollector>(),
+            null,
+            NullLogger<Api.Infrastructure.MeepleAiDbContext>.Instance);
     }
 
     [Fact]
@@ -67,7 +46,7 @@ public class SeedTestGameNightCommandHandlerTests : IDisposable
         response.OwnerId.Should().NotBe(Guid.Empty);
         var seeded = await db.GameNightEvents.SingleOrDefaultAsync(g => g.Id == response.GameNightId);
         seeded.Should().NotBeNull();
-        seeded!.Status.Should().Be(GameNightStatus.Published);
+        seeded!.Status.Should().Be("Published");
         var testRunIdShadow = db.Entry(seeded).Property<string?>("TestRunId").CurrentValue;
         testRunIdShadow.Should().Be(testRunId);
     }
@@ -87,7 +66,7 @@ public class SeedTestGameNightCommandHandlerTests : IDisposable
         var response = await handler.Handle(cmd, CancellationToken.None);
 
         var seeded = await db.GameNightEvents.SingleAsync(g => g.Id == response.GameNightId);
-        seeded.Status.Should().Be(GameNightStatus.Draft);
+        seeded.Status.Should().Be("Draft");
     }
 
     [Fact]
@@ -107,10 +86,10 @@ public class SeedTestGameNightCommandHandlerTests : IDisposable
         var seeded = await db.GameNightEvents
             .Include(g => g.Sessions)
             .SingleAsync(g => g.Id == response.GameNightId);
-        seeded.Status.Should().Be(GameNightStatus.Published);
+        seeded.Status.Should().Be("Published");
         seeded.Sessions.Should().HaveCount(1);
         seeded.Sessions[0].StartedAt.Should().NotBeNull();
-        seeded.Sessions[0].FinalizedAt.Should().BeNull();
+        seeded.Sessions[0].CompletedAt.Should().BeNull();
     }
 
     [Fact]
@@ -131,7 +110,7 @@ public class SeedTestGameNightCommandHandlerTests : IDisposable
             .Include(g => g.Sessions)
             .SingleAsync(g => g.Id == response.GameNightId);
         seeded.Sessions.Should().HaveCount(1);
-        seeded.Sessions[0].FinalizedAt.Should().NotBeNull();
+        seeded.Sessions[0].CompletedAt.Should().NotBeNull();
     }
 
     [Fact]

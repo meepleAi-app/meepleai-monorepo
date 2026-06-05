@@ -21,6 +21,14 @@ vi.mock('@/components/layout/SideDrawer/SideDrawer', () => ({
   SideDrawer: () => null,
 }));
 
+// Asse B (#1897) WP7 T7: MainSidebar is mounted in DesktopShell. It pulls
+// `useCurrentUser` (TanStack Query) and `usePathname`; stub it here so the
+// shell test stays focused on layout structure (the sidebar has its own
+// suite under `MainSidebar/__tests__/`).
+vi.mock('@/components/layout/MainSidebar/MainSidebar', () => ({
+  MainSidebar: () => <div data-testid="main-sidebar" />,
+}));
+
 vi.mock('@/components/layout/UserShell/SessionBanner', () => ({
   SessionBanner: () => null,
 }));

@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -361,6 +364,91 @@ describe('Drawer (auto mode)', () => {
       </Drawer>
     );
     expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+});
+
+describe('Drawer (prefers-reduced-motion) — Issue #1897 T3', () => {
+  // jsdom does not actually apply CSS media queries to layout, so we verify the
+  // contract at two layers:
+  //  1. Drawer renders without error when matchMedia('(prefers-reduced-motion: reduce)')
+  //     returns matches: true. This guarantees consumers do not need to special-case
+  //     reduced-motion preference in their callers — the primitive owns the contract.
+  //  2. The reduced-motion rule exists in the global stylesheet targeting Vaul and
+  //     Radix-rendered surfaces. We read the source file to assert the selector exists
+  //     (rather than relying on jsdom getComputedStyle, which does not implement
+  //     prefers-reduced-motion evaluation).
+
+  function installReducedMotionMatchMedia(): void {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: query.includes('prefers-reduced-motion'),
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        onchange: null,
+        dispatchEvent: vi.fn(),
+      })),
+    });
+  }
+
+  it('desktop Drawer renders without error when reduced-motion is preferred', () => {
+    installReducedMotionMatchMedia();
+    render(
+      <Drawer open onOpenChange={() => {}} side="desktop-right">
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>reduced-motion-desktop</DrawerTitle>
+          </DrawerHeader>
+        </DrawerContent>
+      </Drawer>
+    );
+    // Drawer must still render content — reduced-motion only disables animations.
+    expect(screen.getByText('reduced-motion-desktop')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('mobile Drawer renders without error when reduced-motion is preferred', async () => {
+    installReducedMotionMatchMedia();
+    render(
+      <Drawer open onOpenChange={() => {}} side="mobile-bottom">
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>reduced-motion-mobile</DrawerTitle>
+          </DrawerHeader>
+        </DrawerContent>
+      </Drawer>
+    );
+    expect(await screen.findByText('reduced-motion-mobile')).toBeInTheDocument();
+    expect(document.querySelector('[data-vaul-drawer]')).not.toBeNull();
+  });
+
+  // Stylesheet contract: jsdom does not evaluate media queries, so we read the
+  // globals.css source and assert the reduced-motion rule targets both Vaul and
+  // Radix Dialog surfaces (the two render paths used by Drawer).
+  describe('globals.css reduced-motion contract', () => {
+    const css = fs.readFileSync(path.join(__dirname, '../../../styles/globals.css'), 'utf8');
+
+    it('contains a prefers-reduced-motion media block targeting Vaul drawer', () => {
+      // Find every prefers-reduced-motion block and assert at least one matches
+      // the Vaul + Radix dialog contract (transition: none + animation: none).
+      const blocks = css.match(/@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\n\}/g);
+      expect(blocks).not.toBeNull();
+      const drawerBlock = blocks!.find(
+        block => block.includes('[data-vaul-drawer]') && block.includes('[role="dialog"]')
+      );
+      expect(drawerBlock).toBeDefined();
+      expect(drawerBlock!).toMatch(/transition:\s*none\s*!important/);
+      expect(drawerBlock!).toMatch(/animation:\s*none\s*!important/);
+    });
+
+    it('targets Vaul overlay surface for reduced motion', () => {
+      // The overlay is the backdrop layer — it must not fade-in either.
+      expect(css).toMatch(/\[data-vaul-overlay\]/);
+    });
   });
 });
 

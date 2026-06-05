@@ -346,6 +346,10 @@ Quando tocchi i bounded context **`SessionTracking`** o **`GameManagement`** (su
 
 Companion: [gap report demo Claude Design](./docs/for-developers/audits/2026-06-04-claude-design-gap-report.md) (38 gap classificati 5-cat: ROUTE/STATE/CTA/ENTITY/TOKEN).
 
+### Asse B — UI Shell + Navigation Pattern (#1897)
+
+**Asse B v2 implementation** (umbrella #1895 sub-issue #1897): plan TDD in [`docs/superpowers/plans/2026-06-04-asse-b-ui-shell-pattern.md`](./docs/superpowers/plans/2026-06-04-asse-b-ui-shell-pattern.md). Plan v2 effort ~6gg dopo discovery (cascade-store + Drawer + sonner già shipped upstream). **Stato shipped 2026-06-05 sessione 33**: WP1 token additions + WP2 MainSidebar 8 voci replicating AdminSidebar pattern + WP3 cascade-store generic DrawerStack semantics + Drawer prefers-reduced-motion + WP4 WizardModal primitive sync/async validate normalize + WP5 StatePreview dev-tool `dynamic({ssr:false})` (tree-shake guaranteed, verified by `apps/web/__tests__/state-preview-tree-shake.test.ts`) + WP6 useNotificationsCounter SSE consumer + WP7 final integration (MainSidebar mounted in `DesktopShell.tsx` `lg+`, StatePreviewProvider wrapped in `app/providers.tsx`). ~120+ unit test, 0 regression. E2E + axe AA gate skeleton in `apps/web/e2e/asse-b-drawer-stack-flow.spec.ts` + `apps/web/__tests__/asse-b-axe.test.tsx`.
+
 ### Known Pitfalls (Issues)
 
 | Issue | Rule |

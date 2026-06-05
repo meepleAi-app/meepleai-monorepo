@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { GameDetailDesktop } from '../GameDetailDesktop';
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 import type { LibraryGameDetail } from '@/hooks/queries/useLibrary';
 
 // Mockable stub for the library game detail hook
@@ -78,33 +79,33 @@ describe('GameDetailDesktop', () => {
 
   it('renders loading state while data is loading', () => {
     mockHookState.isLoading = true;
-    render(<GameDetailDesktop gameId={GAME_ID} />);
+    renderWithQuery(<GameDetailDesktop gameId={GAME_ID} />);
     expect(screen.getByTestId('game-detail-desktop-loading')).toBeInTheDocument();
   });
 
   it('renders error state when the hook reports an error', () => {
     mockHookState.isError = true;
-    render(<GameDetailDesktop gameId={GAME_ID} />);
+    renderWithQuery(<GameDetailDesktop gameId={GAME_ID} />);
     expect(screen.getByTestId('game-detail-desktop-error')).toBeInTheDocument();
   });
 
   it('renders MeepleCard hero and tabs panel when game is loaded', () => {
     mockHookState.data = createGame();
-    render(<GameDetailDesktop gameId={GAME_ID} />);
+    renderWithQuery(<GameDetailDesktop gameId={GAME_ID} />);
     expect(screen.getByTestId('meeple-card')).toHaveTextContent('Catan');
     expect(screen.getByRole('tablist', { name: /dettagli gioco/i })).toBeInTheDocument();
   });
 
   it('renders connection-bar with session pip when game has sessions played', () => {
     mockHookState.data = createGame({ timesPlayed: 3 });
-    render(<GameDetailDesktop gameId={GAME_ID} />);
+    renderWithQuery(<GameDetailDesktop gameId={GAME_ID} />);
     expect(screen.getByTestId('connection-bar')).toBeInTheDocument();
   });
 
   it('renders with fallback title when game is not in library', () => {
     mockHookState.data = null;
     // isLoading false, isError false, data null → isNotInLibrary path
-    render(<GameDetailDesktop gameId={GAME_ID} />);
+    renderWithQuery(<GameDetailDesktop gameId={GAME_ID} />);
     expect(screen.getByTestId('meeple-card')).toHaveTextContent(/non in libreria/i);
     // Tabs still render (they handle isNotInLibrary internally)
     expect(screen.getByRole('tablist', { name: /dettagli gioco/i })).toBeInTheDocument();

@@ -21,15 +21,11 @@ export function VecThumb({ seed }: VecThumbProps): JSX.Element {
 
   return (
     <div
-      className="relative mt-1.5 h-7 overflow-hidden rounded-md"
+      className="mt-1.5 h-7 overflow-hidden rounded-md"
       style={{
         background: `linear-gradient(90deg, hsl(${hue1} 60% 50% / .35), hsl(${hue2} 60% 50% / .05), hsl(${hue3} 60% 50% / .25))`,
       }}
       aria-hidden="true"
-    >
-      <span className="absolute right-1.5 top-1/2 -translate-y-1/2 font-mono text-[9px] font-bold opacity-75">
-        768d · float32
-      </span>
-    </div>
+    />
   );
 }

@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/na
 import { Button } from '@/components/ui/primitives/button';
 import { useDocumentEmbeddingsMeta } from '@/hooks/admin/use-document-embeddings-meta';
 import { getDocumentChunksExportUrl } from '@/lib/api/admin-kb-embeddings';
+import { isNotFoundError } from '@/lib/api/core/errors';
 
 import { EmbeddingsMetaStrip, type EmbeddingsMetaState } from './embeddings-meta-strip';
 import { EmbeddingsSearchPanel } from './embeddings-search-panel';
@@ -41,7 +42,7 @@ export function DocumentEmbeddingsDrawer({
   const metaState: EmbeddingsMetaState = metaQuery.isPending
     ? { status: 'loading' }
     : metaQuery.isError
-      ? is404Error(metaQuery.error)
+      ? isNotFoundError(metaQuery.error)
         ? { status: 'not-indexed' }
         : { status: 'error', message: metaQuery.error.message }
       : metaQuery.data
@@ -72,13 +73,5 @@ export function DocumentEmbeddingsDrawer({
         </div>
       </SheetContent>
     </Sheet>
-  );
-}
-
-function is404Error(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
-  const message = error.message.toLowerCase();
-  return (
-    message.includes('404') || message.includes('not found') || message.includes('not indexed')
   );
 }

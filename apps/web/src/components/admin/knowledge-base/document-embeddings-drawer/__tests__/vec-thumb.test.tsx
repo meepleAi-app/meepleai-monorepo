@@ -21,9 +21,10 @@ describe('VecThumb', () => {
     );
   });
 
-  it('renders "768d · float32" label and aria-hidden (decorative)', () => {
-    const { container, getByText } = render(<VecThumb seed={1} />);
-    expect(getByText(/768d · float32/)).toBeInTheDocument();
-    expect(container.firstElementChild).toHaveAttribute('aria-hidden', 'true');
+  it('is decorative (aria-hidden) with no textual content', () => {
+    const { container } = render(<VecThumb seed={1} />);
+    const root = container.firstElementChild;
+    expect(root).toHaveAttribute('aria-hidden', 'true');
+    expect(root?.textContent).toBe('');
   });
 });

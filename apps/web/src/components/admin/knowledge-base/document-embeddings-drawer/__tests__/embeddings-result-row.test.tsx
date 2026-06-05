@@ -11,18 +11,18 @@ const FIXTURE: ScoredChunkDto = {
 };
 
 describe('EmbeddingsResultRow', () => {
-  it('renders collapsed by default (no VecThumb visible)', () => {
+  it('renders collapsed by default (no expanded meta visible)', () => {
     render(<EmbeddingsResultRow chunk={FIXTURE} />);
-    expect(screen.queryByText(/768d · float32/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/cosine/)).not.toBeInTheDocument();
     expect(screen.getByText('p.22')).toBeInTheDocument();
     expect(screen.getByText('#218')).toBeInTheDocument();
     expect(screen.getByText('0.912')).toBeInTheDocument();
   });
 
   it('expands and shows VecThumb + meta on click', () => {
-    render(<EmbeddingsResultRow chunk={FIXTURE} />);
+    const { container } = render(<EmbeddingsResultRow chunk={FIXTURE} />);
     fireEvent.click(screen.getByRole('button', { name: /espandi|collassa/i }));
-    expect(screen.getByText(/768d · float32/)).toBeInTheDocument();
+    expect(container.querySelector('[aria-hidden="true"]')).toBeInTheDocument();
     expect(screen.getByText('0.9120 (cosine)')).toBeInTheDocument();
   });
 

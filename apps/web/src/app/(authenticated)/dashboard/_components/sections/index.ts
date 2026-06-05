@@ -23,3 +23,10 @@ export {
   type EventsListLabels,
   type EventListItem,
 } from './EventsList';
+export {
+  ProssimiSection,
+  type ProssimiSectionProps,
+  type ProssimiSectionState,
+  type ProssimiStatus,
+  type ProssimiGameNightCard,
+} from './ProssimiSection';

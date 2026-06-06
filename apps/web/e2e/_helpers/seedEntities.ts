@@ -43,6 +43,13 @@ export interface SeedPlayerResponse {
   testRunId: string;
 }
 
+export interface SeedLibraryGameResponse {
+  gameId: string;
+  libraryEntryId: string;
+  ownerId: string;
+  testRunId: string;
+}
+
 export interface CleanupResponse {
   testRunId: string;
   deletedGameNights: number;
@@ -50,6 +57,8 @@ export interface CleanupResponse {
   deletedInvitations: number;
   deletedRsvps: number;
   deletedUsers: number;
+  deletedLibraryEntries: number;
+  deletedSharedGames: number;
   durationMs: number;
 }
 
@@ -122,6 +131,33 @@ export async function seedPlayer(
     throw new Error(`seedPlayer failed (${response.status()}): ${body}`);
   }
   return (await response.json()) as SeedPlayerResponse;
+}
+
+/**
+ * Issue #1929 Task C Macro 3a (DEC-C-8) — Seeds a SharedGame catalog entity +
+ * a UserLibraryEntry owned by `ownerEmail`. Used by Journey #2/#3 to set up the
+ * "user has a game in library" precondition. Cascade-cleaned by
+ * `cleanupTestEntities` via DEC-B-8 TestRunId scope.
+ */
+export async function seedLibraryGame(
+  page: Page,
+  opts: {
+    testRunId: string;
+    ownerEmail: string;
+    title?: string;
+    publisher?: string;
+    minPlayers?: number;
+    maxPlayers?: number;
+  }
+): Promise<SeedLibraryGameResponse> {
+  const response = await page.request.post(`${SEED_BASE}/library-game`, {
+    data: opts,
+  });
+  if (!response.ok()) {
+    const body = await response.text();
+    throw new Error(`seedLibraryGame failed (${response.status()}): ${body}`);
+  }
+  return (await response.json()) as SeedLibraryGameResponse;
 }
 
 export async function cleanupTestEntities(

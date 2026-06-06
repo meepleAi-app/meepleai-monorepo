@@ -2,6 +2,8 @@ using Api.BoundedContexts.Testing.Application.Commands;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.GameManagement;
+using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Infrastructure.Entities.UserLibrary;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
@@ -14,8 +16,10 @@ using Xunit;
 namespace Api.Tests.Integration.Testing;
 
 /// <summary>
-/// Issue #1928 Task B (DEC-B-1, DEC-B-3, DEC-B-8) — Integration tests for
-/// CleanupTestEntitiesCommandHandler cascade-by-TestRunId.
+/// Issue #1928 Task B (DEC-B-1, DEC-B-3, DEC-B-8) + Issue #1929 Task C Macro 3a
+/// (DEC-C-8) — Integration tests for CleanupTestEntitiesCommandHandler
+/// cascade-by-TestRunId. Macro 3a extends cascade to UserLibraryEntries +
+/// SharedGames; new test verifies library cascade.
 /// </summary>
 [Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
@@ -54,12 +58,13 @@ public sealed class CleanupTestEntitiesCommandHandlerTests : IAsyncLifetime
         }
     }
 
-    /// <summary>Seeds 1 GameNight Published + 1 RSVP player + 1 guest invitation + 1 live session.</summary>
+    /// <summary>Seeds 1 GameNight Published + 1 RSVP player + 1 guest invitation + 1 live session + 1 library-game (Macro 3a).</summary>
     private async Task SeedFullScopeAsync(MeepleAiDbContext db, string testRunId)
     {
         var gnHandler = new SeedTestGameNightCommandHandler(db, NullLogger<SeedTestGameNightCommandHandler>.Instance);
         var sessHandler = new SeedTestSessionCommandHandler(db, NullLogger<SeedTestSessionCommandHandler>.Instance);
         var playerHandler = new SeedTestPlayerCommandHandler(db, NullLogger<SeedTestPlayerCommandHandler>.Instance);
+        var libGameHandler = new SeedTestLibraryGameCommandHandler(db, NullLogger<SeedTestLibraryGameCommandHandler>.Instance);
 
         var gn = await gnHandler.Handle(new SeedTestGameNightCommand
         {
@@ -89,6 +94,13 @@ public sealed class CleanupTestEntitiesCommandHandlerTests : IAsyncLifetime
             Role = "guest",
             DisplayName = "E2E Guest",
         }, TestCancellationToken);
+
+        // Issue #1929 Macro 3a — also seed library game (separate owner email to avoid User uniqueness collision).
+        await libGameHandler.Handle(new SeedTestLibraryGameCommand
+        {
+            TestRunId = testRunId,
+            OwnerEmail = $"libowner-{testRunId[..16]}@e2e.test",
+        }, TestCancellationToken);
     }
 
     [Fact]
@@ -112,12 +124,23 @@ public sealed class CleanupTestEntitiesCommandHandlerTests : IAsyncLifetime
         response.DeletedInvitations.Should().Be(1);
         response.DeletedRsvps.Should().Be(1);
         response.DeletedUsers.Should().BeGreaterThanOrEqualTo(1);
+        // Issue #1929 Macro 3a — library cascade assertions
+        response.DeletedLibraryEntries.Should().Be(1);
+        response.DeletedSharedGames.Should().Be(1);
 
         // Scope A fully deleted
         (await db.GameNightEvents.AnyAsync(g => g.TestRunId == testRunIdA, TestCancellationToken))
             .Should().BeFalse();
+        (await db.UserLibraryEntries.AnyAsync(e => e.TestRunId == testRunIdA, TestCancellationToken))
+            .Should().BeFalse();
+        (await db.SharedGames.AnyAsync(g => g.TestRunId == testRunIdA, TestCancellationToken))
+            .Should().BeFalse();
         // Scope B preserved
         (await db.GameNightEvents.AnyAsync(g => g.TestRunId == testRunIdB, TestCancellationToken))
+            .Should().BeTrue();
+        (await db.UserLibraryEntries.AnyAsync(e => e.TestRunId == testRunIdB, TestCancellationToken))
+            .Should().BeTrue();
+        (await db.SharedGames.AnyAsync(g => g.TestRunId == testRunIdB, TestCancellationToken))
             .Should().BeTrue();
     }
 
@@ -136,6 +159,8 @@ public sealed class CleanupTestEntitiesCommandHandlerTests : IAsyncLifetime
         response.DeletedInvitations.Should().Be(0);
         response.DeletedRsvps.Should().Be(0);
         response.DeletedUsers.Should().Be(0);
+        response.DeletedLibraryEntries.Should().Be(0);
+        response.DeletedSharedGames.Should().Be(0);
     }
 
     [Fact]
@@ -212,5 +237,52 @@ public sealed class CleanupTestEntitiesCommandHandlerTests : IAsyncLifetime
 
         response.TestRunId.Should().Be(testRunId);
         response.DurationMs.Should().BeGreaterThanOrEqualTo(0);
+    }
+
+    /// <summary>
+    /// Issue #1929 Task C Macro 3a (DEC-C-8) — Library-only cascade scope verifies
+    /// UserLibraryEntries + SharedGames are deleted by TestRunId without depending
+    /// on GameNight entities being present.
+    /// </summary>
+    [Fact]
+    public async Task Handle_LibraryGameOnly_CascadesLibraryEntryAndSharedGame()
+    {
+        using var scope = _factory!.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var testRunIdA = "e2e-libonlyAaaaa0-1717603200000";
+        var testRunIdB = "e2e-libonlyBbbbb0-1717603200000";
+
+        var libHandler = new SeedTestLibraryGameCommandHandler(db, NullLogger<SeedTestLibraryGameCommandHandler>.Instance);
+        await libHandler.Handle(new SeedTestLibraryGameCommand
+        {
+            TestRunId = testRunIdA,
+            OwnerEmail = "libA@e2e.test",
+        }, TestCancellationToken);
+        await libHandler.Handle(new SeedTestLibraryGameCommand
+        {
+            TestRunId = testRunIdB,
+            OwnerEmail = "libB@e2e.test",
+        }, TestCancellationToken);
+
+        var handler = new CleanupTestEntitiesCommandHandler(db, NullLogger<CleanupTestEntitiesCommandHandler>.Instance);
+        var response = await handler.Handle(
+            new CleanupTestEntitiesCommand { TestRunId = testRunIdA },
+            TestCancellationToken);
+
+        response.DeletedLibraryEntries.Should().Be(1);
+        response.DeletedSharedGames.Should().Be(1);
+        response.DeletedUsers.Should().Be(1);
+        response.DeletedGameNights.Should().Be(0);
+
+        // Scope A library fully deleted
+        (await db.UserLibraryEntries.AnyAsync(e => e.TestRunId == testRunIdA, TestCancellationToken))
+            .Should().BeFalse();
+        (await db.SharedGames.AnyAsync(g => g.TestRunId == testRunIdA, TestCancellationToken))
+            .Should().BeFalse();
+        // Scope B library preserved
+        (await db.UserLibraryEntries.AnyAsync(e => e.TestRunId == testRunIdB, TestCancellationToken))
+            .Should().BeTrue();
+        (await db.SharedGames.AnyAsync(g => g.TestRunId == testRunIdB, TestCancellationToken))
+            .Should().BeTrue();
     }
 }

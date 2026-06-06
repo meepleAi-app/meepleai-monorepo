@@ -10,9 +10,10 @@
 
 **Issue:** [#1929 Task C](https://github.com/meepleAi-app/meepleai-monorepo/issues/1929) — Asse D P4 follow-up
 **Spec consolidato:** [`docs/superpowers/specs/2026-06-05-asse-d-p4-followup-spec-panel-review.md`](../specs/2026-06-05-asse-d-p4-followup-spec-panel-review.md) (committed HEAD main-dev `63571685f`)
-**DEC lockate:** DEC-C-1 (Anna persona) · DEC-C-2 (hybrid assertion taxonomy) · DEC-C-3 (spec corrections wizard 4-step + rail rescope) · DEC-C-4 (non-blocking main-dev + blocking main-staging) · DEC-C-5 (3 PR sequenziali shared baseline) · DEC-C-6 (retry 1x + 500ms + prefers-reduced-motion) · DEC-C-7 (edge case matrix inline)
-**Effort target:** 4-7 giorni distribuito 3 PR sequenziali
-**Sessione 41 scope:** Macro 1 (PR baseline) + Macro 2 (PR Journey #1) — Macro 3 + Macro 4 in sessioni successive
+**DEC lockate:** DEC-C-1 (Anna persona) · DEC-C-2 (hybrid assertion taxonomy) · DEC-C-3 (spec corrections wizard 4-step + rail rescope) · DEC-C-4 (non-blocking main-dev + blocking main-staging) · DEC-C-5 (3 PR sequenziali shared baseline) · DEC-C-6 (retry 1x + 500ms + prefers-reduced-motion) · DEC-C-7 (edge case matrix inline) · **DEC-C-8** (Real BE seedLibraryGame factory Task B extension, user-locked sessione 42) · **DEC-C-9** (Full live opt-in flow: publish → add partita → create session → verify /live, user-locked sessione 42) · **DEC-C-10** (Macro 4 uses SP4 seed SharedGame stable UUID, user-locked sessione 42)
+**Effort target (revised sessione 42):** 5-7 giorni distribuito 4 PR sequenziali (Macros 1+2 already shipped sessione 41)
+**Sessione 41 scope:** ✅ Macro 1 (PR #1945 baseline) + ✅ Macro 2 (PR #1948 Journey #1) — both MERGED
+**Sessione 42+ scope:** Macro 3a (BE+TS factory foundation) → Macro 3b (FE Journey #2 spec) → Macro 4 (FE Journey #3 spec)
 
 ---
 
@@ -1846,3 +1847,945 @@ Two execution options:
 **Sessione 41 scope (user-confirmed)**: Macro 1 + Macro 2 = ~2gg.
 
 **Which approach? (subagent-driven recommended)**
+
+---
+
+## Sessione 42 Addendum — Scope Extension (DP-A/B/C user-locked 2026-06-06)
+
+> **Rationale**: post Macros 1+2 ship sessione 41, user locked tre decisioni AGGRESSIVE per Macros 3+4 che ESPANDONO lo scope a favore di Real BE integration + Full coverage + SP4 seed reuse. Le TBD bounded sections del piano originale (T3.2-3.5 + T4.2-4.4) sono SUPERSEDED dalle sezioni qui sotto.
+
+### DEC nuove (sessione 42)
+
+| DEC | Decisione | Rationale | Impact |
+|---|---|---|---|
+| **DEC-C-8** | Real BE seedLibraryGame factory (Task B extension) | User-locked DP-A: Real BE integration over mock per wizard step 4 + GamePickerDialog parity | +~0.5-1gg Macro 3a foundation, sblocca Macro 4 |
+| **DEC-C-9** | Full live opt-in flow (publish → add partita → GamePickerDialog → create session → /live) | User-locked DP-B: Max coverage Journey #2 spec literal compliance | +~150 LOC Macro 3b, +1gg effort vs verify-redirect-only |
+| **DEC-C-10** | Macro 4 uses SP4 seed SharedGame stable UUID (NOT factory) | User-locked DP-C: Reuse esistente `make seed-sp4` dataset come prerequisite documented | +1 PR step (CI workflow seed-sp4), -1 factory extension scope |
+
+### Sequencing revised sessione 42+ (4 PR sequenziali)
+
+```
+main-dev
+  ├── ✅ PR #1945 baseline shared helpers (Macro 1) — MERGED sessione 41
+  ├── ✅ PR #1948 Journey #1 dashboard drawer stack (Macro 2) — MERGED sessione 41
+  ├── 🆕 PR Macro 3a: seedLibraryGame BE+TS factory foundation — sessione 42 phase 1
+  ├── 🆕 PR Macro 3b: FE Journey #2 spec full data-driven (gated 3a) — sessione 42 phase 2 OR 43
+  └── 🆕 PR Macro 4: FE Journey #3 spec rail navigate (uses SP4 seed) — sessione 43+
+```
+
+**Effort revised totale**: ~5-7gg distribuito 3 PR (3a+3b+4) post-Macros 1+2.
+
+---
+
+## Macro 3a — PR Foundation: seedLibraryGame Factory Extension (Task B style)
+
+> **Output**: 1 MediatR command + 1 admin endpoint + 1 TS factory function + 5+ unit tests. PR review-friendly <600 LOC. Effort target: 0.5-1gg. **Sessione 42 phase 1.**
+
+### Pre-flight check
+
+- [ ] **Step 1: Verify Macros 1+2 merged + baseline state**
+
+```bash
+git checkout main-dev && git pull --ff-only
+git log --oneline -5
+ls apps/web/e2e/_helpers/seedEntities.ts  # Task B factory present
+ls apps/api/src/Api/Routing/Admin/AdminTestSeedEndpoints.cs  # Task B admin endpoint present
+```
+
+Expected: latest commits include `6edf7fc6f` (Macro 2) + `605089dd0` (Macro 1) + `ff95de834` (Task B).
+
+- [ ] **Step 2: Create branch from main-dev**
+
+```bash
+git branch --show-current  # MUST print main-dev
+git status                 # MUST show clean tree
+git checkout -b feature/issue-1929-macro-3a-library-factory
+```
+
+### Task 3a.1: BE SeedTestLibraryGameCommand MediatR
+
+**Files:**
+- Create: `apps/api/src/Api/BoundedContexts/Testing/Commands/SeedTestLibraryGameCommand.cs`
+- Create: `apps/api/src/Api/BoundedContexts/Testing/Commands/SeedTestLibraryGameCommandValidator.cs`
+- Create: `apps/api/src/Api/BoundedContexts/Testing/Commands/SeedTestLibraryGameCommandHandler.cs`
+- Create: `apps/api/tests/Api.Tests/Integration/Testing/SeedTestLibraryGameCommandHandlerTests.cs`
+- Create: `apps/api/tests/Api.Tests/Unit/Testing/SeedTestLibraryGameCommandValidatorTests.cs`
+
+- [ ] **Step 1: Read Task B pattern reference**
+
+Read `apps/api/src/Api/BoundedContexts/Testing/Commands/SeedTestGameNightCommand.cs` (+ Handler + Validator) come canonical pattern.
+
+- [ ] **Step 2: Create command DTOs + handler**
+
+`SeedTestLibraryGameCommand.cs`:
+
+```csharp
+namespace Api.BoundedContexts.Testing.Commands;
+
+public record SeedTestLibraryGameCommand(
+    string TestRunId,
+    string OwnerEmail,
+    string? Title = null,
+    string? Publisher = null,
+    int? MinPlayers = null,
+    int? MaxPlayers = null
+) : IRequest<SeedTestLibraryGameResponse>;
+
+public record SeedTestLibraryGameResponse(
+    Guid GameId,           // SharedGame UUID generated
+    Guid LibraryEntryId,   // LibraryEntry UUID for owner
+    string OwnerId,
+    string TestRunId
+);
+```
+
+`SeedTestLibraryGameCommandValidator.cs`:
+
+```csharp
+public class SeedTestLibraryGameCommandValidator : AbstractValidator<SeedTestLibraryGameCommand>
+{
+    public SeedTestLibraryGameCommandValidator()
+    {
+        RuleFor(x => x.TestRunId)
+            .NotEmpty()
+            .Matches(@"^e2e-[a-zA-Z0-9]+-\d+$")
+            .WithMessage("TestRunId must match canonical format 'e2e-{id}-{epochMs}'");
+
+        RuleFor(x => x.OwnerEmail)
+            .NotEmpty()
+            .EmailAddress();
+
+        RuleFor(x => x.MinPlayers)
+            .GreaterThan(0)
+            .LessThanOrEqualTo(99)
+            .When(x => x.MinPlayers.HasValue);
+
+        RuleFor(x => x.MaxPlayers)
+            .GreaterThanOrEqualTo(x => x.MinPlayers ?? 1)
+            .LessThanOrEqualTo(99)
+            .When(x => x.MaxPlayers.HasValue);
+    }
+}
+```
+
+`SeedTestLibraryGameCommandHandler.cs` segue pattern Task B DEC-B-7+B-8:
+- Crea SharedGameEntity (catalog) con TestRunId column populated
+- Crea LibraryEntryEntity per ownerEmail con TestRunId populated
+- SaveChangesAsync con domain events collected
+- Return response con UUIDs
+
+**Pattern reference**: copia struttura `SeedTestGameNightCommandHandler.cs` adattando per SharedGame + LibraryEntry entities. Importante: testRunId column DEC-B-8 explicit (NOT shadow property).
+
+- [ ] **Step 3: Unit tests validator (4 test)**
+
+`SeedTestLibraryGameCommandValidatorTests.cs`:
+
+```csharp
+[Trait("Category", "Unit")]
+[Trait("BoundedContext", "Testing")]
+public class SeedTestLibraryGameCommandValidatorTests
+{
+    private readonly SeedTestLibraryGameCommandValidator _v = new();
+
+    [Fact]
+    public void TestRunId_Invalid_Fails()
+    {
+        var cmd = new SeedTestLibraryGameCommand("invalid", "anna.host@meepleai.test");
+        var r = _v.TestValidate(cmd);
+        r.ShouldHaveValidationErrorFor(x => x.TestRunId);
+    }
+
+    [Fact]
+    public void OwnerEmail_Empty_Fails() { /* ... */ }
+
+    [Fact]
+    public void MinPlayers_Above99_Fails() { /* ... */ }
+
+    [Fact]
+    public void MaxPlayers_BelowMinPlayers_Fails() { /* ... */ }
+}
+```
+
+- [ ] **Step 4: Integration tests handler (5+ test)**
+
+`SeedTestLibraryGameCommandHandlerTests.cs` segue pattern DEC-B-7:
+
+```csharp
+[Collection("SharedTestcontainers")]
+[Trait("Category", "Integration")]
+[Trait("BoundedContext", "Testing")]
+public class SeedTestLibraryGameCommandHandlerTests : IAsyncLifetime
+{
+    // Pattern identical to SeedTestGameNightCommandHandlerTests
+    // 5+ tests: happy path, owner email lookup, testRunId column populated,
+    // cleanup respects testRunId scoping, duplicate detection
+}
+```
+
+- [ ] **Step 5: Run tests + verify all pass**
+
+```bash
+cd apps/api
+dotnet test --filter "FullyQualifiedName~SeedTestLibraryGame" --logger "console;verbosity=normal"
+```
+
+Expected: 9+ tests pass.
+
+- [ ] **Step 6: Commit T3a.1**
+
+```bash
+git add apps/api/src/Api/BoundedContexts/Testing/Commands/SeedTestLibraryGame*.cs \
+        apps/api/tests/Api.Tests/Integration/Testing/SeedTestLibraryGameCommandHandlerTests.cs \
+        apps/api/tests/Api.Tests/Unit/Testing/SeedTestLibraryGameCommandValidatorTests.cs
+git commit -m "feat(testing): #1929 T3a.1 SeedTestLibraryGameCommand (DEC-C-8)
+
+MediatR command + validator + handler for E2E library game seeding.
+Creates SharedGameEntity (catalog) + LibraryEntryEntity per owner with
+testRunId column DEC-B-8 explicit. Pattern Task B style + Integration-
+trait reuse SharedTestcontainersFixture (DEC-B-7). 9+ tests.
+
+Refs #1929"
+```
+
+### Task 3a.2: Admin endpoint POST /api/v1/admin/test/seed/library-game
+
+**Files:**
+- Modify: `apps/api/src/Api/Routing/Admin/AdminTestSeedEndpoints.cs`
+
+- [ ] **Step 1: Read existing endpoint pattern**
+
+Read 4 existing endpoint registrations (`game-night`, `session`, `player`, `cleanup`) in `AdminTestSeedEndpoints.cs` come canonical pattern.
+
+- [ ] **Step 2: Add library-game endpoint to MapAdminTestSeedEndpoints group**
+
+Append after existing `seed/player` endpoint registration:
+
+```csharp
+group.MapPost("/seed/library-game", async (
+    SeedTestLibraryGameCommand command,
+    IMediator mediator) =>
+{
+    var response = await mediator.Send(command);
+    return Results.Ok(response);
+})
+.WithName("SeedTestLibraryGame")
+.WithSummary("E2E seed library game (DEC-C-8 Macro 3a foundation)")
+.WithDescription("Creates a SharedGame (catalog) + LibraryEntry (owner) for E2E wizard step 4 testing");
+```
+
+- [ ] **Step 3: Add admin endpoint integration test**
+
+`apps/api/tests/Api.Tests/Integration/Routing/AdminTestSeedEndpointsTests.cs` — append test:
+
+```csharp
+[Fact]
+public async Task SeedLibraryGame_AdminAuth_ReturnsCreated()
+{
+    using var scope = _factory.Services.CreateScope();
+    var client = _factory.CreateClient();
+    await SeedAdminSessionAsync(client);
+
+    var payload = new
+    {
+        testRunId = "e2e-test123-1234567890",
+        ownerEmail = "anna.host@meepleai.test"
+    };
+
+    var response = await client.PostAsJsonAsync("/api/v1/admin/test/seed/library-game", payload);
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    var body = await response.Content.ReadFromJsonAsync<SeedTestLibraryGameResponse>();
+    Assert.NotNull(body);
+    Assert.Equal("e2e-test123-1234567890", body!.TestRunId);
+}
+
+[Fact]
+public async Task SeedLibraryGame_NoAdminAuth_Returns401() { /* ... */ }
+
+[Fact]
+public async Task SeedLibraryGame_EnvFlagDisabled_Returns404() { /* ... */ }
+```
+
+- [ ] **Step 4: Run integration tests**
+
+```bash
+cd apps/api
+dotnet test --filter "FullyQualifiedName~AdminTestSeedEndpoints" --logger "console;verbosity=normal"
+```
+
+Expected: existing tests + 3 new tests pass.
+
+- [ ] **Step 5: Commit T3a.2**
+
+```bash
+git add apps/api/src/Api/Routing/Admin/AdminTestSeedEndpoints.cs \
+        apps/api/tests/Api.Tests/Integration/Routing/AdminTestSeedEndpointsTests.cs
+git commit -m "feat(testing): #1929 T3a.2 admin endpoint /seed/library-game (DEC-C-8)
+
+POST /api/v1/admin/test/seed/library-game wired via MediatR + triple
+gate (env + ASPNETCORE + AdminFilter). 3 new integration tests covering
+admin auth + env gate + happy path.
+
+Refs #1929"
+```
+
+### Task 3a.3: TS factory seedLibraryGame extension
+
+**Files:**
+- Modify: `apps/web/e2e/_helpers/seedEntities.ts`
+
+- [ ] **Step 1: Extend seedEntities.ts with new factory function**
+
+Append after `seedPlayer` function:
+
+```typescript
+export interface SeedLibraryGameResponse {
+  gameId: string;
+  libraryEntryId: string;
+  ownerId: string;
+  testRunId: string;
+}
+
+/**
+ * Issue #1929 Task C (DEC-C-8) — Seed library game for wizard step 4.
+ *
+ * Creates a SharedGame (catalog) + LibraryEntry (owner) with testRunId
+ * column populated. Cleaned up by cleanupTestEntities cascade.
+ */
+export async function seedLibraryGame(
+  page: Page,
+  opts: {
+    testRunId: string;
+    ownerEmail: string;
+    title?: string;
+    publisher?: string;
+    minPlayers?: number;
+    maxPlayers?: number;
+  }
+): Promise<SeedLibraryGameResponse> {
+  const response = await page.request.post(`${SEED_BASE}/library-game`, {
+    data: opts,
+  });
+  if (!response.ok()) {
+    const body = await response.text();
+    throw new Error(`seedLibraryGame failed (${response.status()}): ${body}`);
+  }
+  return (await response.json()) as SeedLibraryGameResponse;
+}
+```
+
+- [ ] **Step 2: Update CleanupResponse interface (if cleanup returns deletedLibraryEntries)**
+
+If handler for cleanup cascades to LibraryEntry:
+
+```typescript
+export interface CleanupResponse {
+  testRunId: string;
+  deletedGameNights: number;
+  deletedSessions: number;
+  deletedInvitations: number;
+  deletedRsvps: number;
+  deletedUsers: number;
+  deletedLibraryEntries: number;  // ← new
+  deletedSharedGames: number;     // ← new
+  durationMs: number;
+}
+```
+
+- [ ] **Step 3: Verify typecheck**
+
+```bash
+cd apps/web && pnpm typecheck
+```
+
+Expected: 0 errors.
+
+- [ ] **Step 4: Commit T3a.3**
+
+```bash
+git add apps/web/e2e/_helpers/seedEntities.ts
+git commit -m "feat(testing): #1929 T3a.3 TS factory seedLibraryGame (DEC-C-8)
+
+TypeScript wrapper for POST /api/v1/admin/test/seed/library-game. Pattern
+identical to seedGameNight/seedSession/seedPlayer factories. CleanupResponse
+extended with deletedLibraryEntries + deletedSharedGames counters.
+
+Refs #1929"
+```
+
+### Task 3a.4: Cleanup cascade update
+
+**Files:**
+- Modify: `apps/api/src/Api/BoundedContexts/Testing/Commands/CleanupTestEntitiesCommandHandler.cs`
+
+- [ ] **Step 1: Add LibraryEntry + SharedGame deletion to cleanup cascade**
+
+Read existing `CleanupTestEntitiesCommandHandler.cs` and append two ExecuteDeleteAsync calls:
+
+```csharp
+var deletedLibraryEntries = await _db.LibraryEntries
+    .Where(e => EF.Property<string?>(e, "TestRunId") == request.TestRunId)
+    .ExecuteDeleteAsync(cancellationToken);
+
+var deletedSharedGames = await _db.SharedGames
+    .Where(e => EF.Property<string?>(e, "TestRunId") == request.TestRunId)
+    .ExecuteDeleteAsync(cancellationToken);
+```
+
+NOTE: per DEC-B-8 use explicit column property:
+
+```csharp
+var deletedLibraryEntries = await _db.LibraryEntries
+    .Where(e => e.TestRunId == request.TestRunId)
+    .ExecuteDeleteAsync(cancellationToken);
+```
+
+- [ ] **Step 2: Update CleanupResponse to include new counters**
+
+- [ ] **Step 3: Run cleanup integration test**
+
+```bash
+dotnet test --filter "FullyQualifiedName~CleanupTestEntitiesCommandHandlerTests"
+```
+
+Expected: pass + new counters validated.
+
+- [ ] **Step 4: Commit T3a.4**
+
+```bash
+git add apps/api/src/Api/BoundedContexts/Testing/Commands/CleanupTestEntitiesCommand*.cs \
+        apps/api/tests/Api.Tests/Integration/Testing/CleanupTestEntitiesCommandHandlerTests.cs
+git commit -m "feat(testing): #1929 T3a.4 cleanup cascade LibraryEntry+SharedGame (DEC-C-8)
+
+CleanupTestEntitiesCommand handler extended to cascade-delete LibraryEntry
++ SharedGame rows scoped by testRunId column DEC-B-8. Response payload
+includes deletedLibraryEntries + deletedSharedGames counters.
+
+Refs #1929"
+```
+
+### Task 3a.5: Push branch + open PR Macro 3a
+
+- [ ] **Step 1: Verify full BE+FE test sweep**
+
+```bash
+cd apps/api
+dotnet test --filter "FullyQualifiedName~SeedTestLibraryGame|FullyQualifiedName~CleanupTestEntities|FullyQualifiedName~AdminTestSeedEndpoints"
+
+cd ../web
+pnpm typecheck
+pnpm lint e2e/_helpers/seedEntities.ts
+```
+
+Expected: 0 errors / failures.
+
+- [ ] **Step 2: Push branch**
+
+```bash
+git push -u origin feature/issue-1929-macro-3a-library-factory
+```
+
+- [ ] **Step 3: Open PR Macro 3a**
+
+```bash
+gh pr create --base main-dev --title "feat(testing): #1929 Macro 3a — seedLibraryGame factory extension (DEC-C-8)" --body "$(cat <<'EOF'
+## Summary
+
+Macro 3a foundation for Issue #1929 Task C Journey #2 spec (Macro 3b gated this PR).
+
+Extends Task B factory with `seedLibraryGame` to provide Real BE integration for wizard step 4 (Cosa/Library games) per DEC-C-8 user-locked sessione 42.
+
+**Components**:
+1. `SeedTestLibraryGameCommand` MediatR + validator + handler (DEC-B-7 Integration-trait reuse SharedTestcontainersFixture)
+2. Admin endpoint POST `/api/v1/admin/test/seed/library-game` (triple gate per DEC-B-4)
+3. TS factory `seedLibraryGame()` in `seedEntities.ts`
+4. Cleanup cascade extended to LibraryEntry + SharedGame (testRunId column DEC-B-8)
+
+**Sequencing**: PR Macro 3b (FE Journey #2 spec) gated this PR merge.
+
+## Files
+
+| File | Purpose | LOC |
+|---|---|---|
+| `apps/api/src/Api/BoundedContexts/Testing/Commands/SeedTestLibraryGame*.cs` | MediatR command + validator + handler | ~200 |
+| `apps/api/src/Api/Routing/Admin/AdminTestSeedEndpoints.cs` | Endpoint registration | +15 |
+| `apps/api/src/Api/BoundedContexts/Testing/Commands/CleanupTestEntitiesCommandHandler.cs` | Cleanup cascade update | +20 |
+| `apps/api/tests/Api.Tests/**/SeedTestLibraryGame*.cs` | Unit + Integration tests | ~250 |
+| `apps/api/tests/Api.Tests/**/CleanupTestEntitiesCommandHandlerTests.cs` | Cleanup test update | +30 |
+| `apps/web/e2e/_helpers/seedEntities.ts` | TS factory + CleanupResponse | +35 |
+
+Total: ~550 LOC.
+
+## Test plan
+
+- [x] Validator unit tests (4 tests) pass
+- [x] Handler integration tests (5+ tests) pass via SharedTestcontainersFixture
+- [x] Admin endpoint integration tests (3 tests: admin auth + env gate + happy path)
+- [x] Cleanup cascade integration test extended
+- [x] TS typecheck 0 errors
+
+## Refs
+
+Refs #1929
+Builds on Task B (#1928 `ff95de834`)
+Part of #1895 umbrella
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"
+```
+
+- [ ] **Step 4: Monitor CI + merge**
+
+```bash
+gh pr merge --squash --delete-branch
+```
+
+---
+
+## Macro 3b — PR Journey #2 SUPERSEDED (replaces Tasks 3.2-3.5 TBD above)
+
+> **Output**: 1 nuovo spec file `cross-asse-journey-2-empty-cta-wizard-live.spec.ts` (~450 LOC con full publish/live flow). PR target ~500 LOC. Effort target: 1.5-2gg. **Sessione 42 phase 2 OR sessione 43+.**
+
+### Pre-flight check (sessione 42 phase 2)
+
+- [ ] **Step 1: Verify Macro 3a PR merged**
+
+```bash
+git checkout main-dev && git pull --ff-only
+git log --oneline -5
+```
+
+Expected: latest commit is Macro 3a squash merge.
+
+- [ ] **Step 2: Create branch from main-dev**
+
+```bash
+git branch --show-current  # MUST print main-dev
+git status                 # MUST show clean tree
+git checkout -b feature/issue-1929-macro-3b-journey-2-spec
+```
+
+### Task 3b.1: Spec skeleton + empty CTA test (T3.1 already drafted at line 1444, refine if needed)
+
+(Refer to T3.1 above for skeleton + empty CTA test — reuse verbatim.)
+
+### Task 3b.2: Wizard step 1 fill (Quando — date)
+
+**Files:**
+- Modify: `apps/web/e2e/cross-asse-journey-2-empty-cta-wizard-live.spec.ts`
+
+- [ ] **Step 1: Append wizard step 1 fill test**
+
+```typescript
+  test('fills wizard step 1 (Quando) → next', async ({ page }) => {
+    // ... empty CTA navigation prelude (extracted to helper or inline)
+    await page.goto('/dashboard');
+    const cta = page.locator('[data-testid="prossimi-empty"]').getByRole('link');
+    await cta.click();
+
+    // Wizard step 1 mounted
+    await expect(page.locator('[data-slot="wizard-modal"]')).toBeVisible({ timeout: 10_000 });
+
+    // Fill title (above wizard)
+    await page.locator('[data-slot="game-night-create-title-input"]').fill('Anna E2E Test GN');
+
+    // Fill date input — DateTimePicker uses native input type="datetime-local"
+    // Pick tomorrow at 20:00 deterministic
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(20, 0, 0, 0);
+    const isoForInput = tomorrow.toISOString().slice(0, 16);  // 'YYYY-MM-DDTHH:mm'
+
+    const dateInput = page.locator('input[type="datetime-local"]').first();
+    await dateInput.fill(isoForInput);
+
+    // Wait for conflict check to complete (no conflict expected for tomorrow 20:00)
+    await page.waitForTimeout(500);  // debounce
+    // Verify conflict check NOT surfaced (no conflict warning)
+    await expect(page.locator('[data-slot="conflict-warning"]')).not.toBeVisible();
+
+    // Click Next
+    await page.getByRole('button', { name: /avanti|next/i }).click();
+
+    // Verify step 2 mounted
+    await expect(page.locator('[data-testid="wizard-step-indicator"]')).toContainText(/2.*4/);
+  });
+```
+
+> **CONTINGENCY**: If date input doesn't accept `fill()` (some pickers are custom UI), inspect `step1` component (`@/components/features/game-night-create`) and adjust selector.
+
+- [ ] **Step 2: Run test + commit**
+
+### Task 3b.3: Wizard step 2 fill (Dove — location kind)
+
+```typescript
+  test('fills wizard step 2 (Dove) → next', async ({ page }) => {
+    // ... (T3b.2 prelude + step 1 fill) ...
+
+    // Step 2: select kind 'home' radio
+    await page.getByRole('radio', { name: /a casa|home/i }).click();
+
+    // Fill details textarea
+    await page.locator('textarea').first().fill('Casa di Anna, via Roma 1');
+
+    // Click Next
+    await page.getByRole('button', { name: /avanti|next/i }).click();
+
+    // Verify step 3 mounted
+    await expect(page.locator('[data-testid="wizard-step-indicator"]')).toContainText(/3.*4/);
+  });
+```
+
+### Task 3b.4: Wizard step 3 skip (Chi — no invitees MVP)
+
+```typescript
+  test('skips wizard step 3 (Chi) with no invitees → next', async ({ page }) => {
+    // ... (prelude + step 1+2 fill) ...
+
+    // Step 3 is optional invitations. Skip without action.
+    // Verify regulars empty (no library presence) or skip
+    await page.getByRole('button', { name: /avanti|next/i }).click();
+
+    // Verify step 4 mounted
+    await expect(page.locator('[data-testid="wizard-step-indicator"]')).toContainText(/4.*4/);
+  });
+```
+
+### Task 3b.5: Wizard step 4 fill (Cosa — select library game from seedLibraryGame)
+
+**Pre-requisite**: seedLibraryGame called in beforeEach with `ownerEmail: ANNA_PERSONA.email`.
+
+Update `beforeEach`:
+
+```typescript
+  test.beforeEach(async ({ page }, testInfo) => {
+    testRunId = newTestRunId(testInfo.testId);
+
+    await seedCookieConsent(page);
+    await seedAuthSession(page, { role: ANNA_PERSONA.role });
+    await mockAuthEndpoints(page, { ... });
+
+    // DEC-C-8: seed library game via Real BE factory
+    const libGame = await withRetry(
+      () => seedLibraryGame(page, {
+        testRunId,
+        ownerEmail: ANNA_PERSONA.email,
+        title: 'Catan E2E Test',
+        publisher: 'KOSMOS E2E',
+        minPlayers: 3,
+        maxPlayers: 4,
+      }),
+      { reason: 'seedLibraryGame journey2 beforeEach' }
+    );
+    libraryGameId = libGame.gameId;
+  });
+```
+
+```typescript
+  test('selects library game step 4 + submits → redirects /game-nights/{id}', async ({ page }) => {
+    // ... (prelude + step 1+2+3 fill) ...
+
+    // Step 4: library shows seeded "Catan E2E Test" card
+    const libraryCard = page.locator(`[data-testid="library-game-${libraryGameId}"]`);
+    await expect(libraryCard).toBeVisible({ timeout: 5_000 });
+
+    // Click to select
+    await libraryCard.click();
+
+    // Verify selected count = 1
+    await expect(page.locator('[data-slot="selected-games-count"]')).toContainText('1');
+
+    // Click Submit (final step)
+    await page.getByRole('button', { name: /crea|submit|salva/i }).click();
+
+    // Wait for redirect with retry [1s, 2s, 4s] backoff (per _content.tsx:42)
+    await page.waitForURL(/\/game-nights\/[a-f0-9-]+(\?.*)?$/, { timeout: 10_000 });
+
+    // Verify navigated to /game-nights/{id}
+    const url = page.url();
+    expect(url).toMatch(/\/game-nights\/[a-f0-9-]+/);
+
+    // Extract gameNightId for follow-up tests
+    const match = url.match(/\/game-nights\/([a-f0-9-]+)/);
+    expect(match).toBeTruthy();
+    const createdGnId = match![1];
+    expect(createdGnId).toBeDefined();
+  });
+```
+
+> **CONTINGENCY**: If library-game card testid doesn't exist (look in `@/components/features/game-night-create` step 4 component), add additive testid `data-testid="library-game-{id}"` in a separate commit.
+
+### Task 3b.6: Live opt-in flow (DEC-C-9 full coverage)
+
+**Pre-requisite**: previous test created Draft GN. Now publish + add partita + verify GamePickerDialog + create session + verify /live.
+
+**Files:**
+- Modify: `apps/web/src/components/game-night/GameNightActions.tsx` (additive: `data-testid="game-night-add-partita"`)
+
+- [ ] **Step 1: Add testid to "Aggiungi partita" Button**
+
+```typescript
+// GameNightActions.tsx line 71-78
+<Button
+  variant="outline"
+  data-testid="game-night-add-partita"  // ← NEW
+  onClick={() => setShowGamePicker(true)}
+  disabled={hasActiveSession}
+>
+  <PlusCircle className="h-4 w-4 mr-1" />
+  Aggiungi partita
+</Button>
+```
+
+- [ ] **Step 2: Publish GN via UI**
+
+After redirect to /game-nights/{id}, GN is Draft → GameNightPlanningLayout. Need to click Publish button.
+
+Inspect `GameNightPlanningLayout` for Publish button selector (likely `data-slot="publish-game-night"` or similar). If not present, add additive testid.
+
+```typescript
+  test('publishes GN + clicks Aggiungi partita → GamePickerDialog opens', async ({ page }) => {
+    // ... (prelude + wizard 4-step fill + redirect) ...
+
+    // GN is Draft → publish first
+    const publishBtn = page.getByRole('button', { name: /pubblica|publish/i });
+    await expect(publishBtn).toBeVisible({ timeout: 5_000 });
+    await publishBtn.click();
+
+    // Wait for status transition (BE call + cache invalidate)
+    // Re-fetched event status === 'Published' → GameNightDetailView rendering changes
+    await expect(page.locator('[data-testid="game-night-add-partita"]')).toBeVisible({
+      timeout: 5_000,
+    });
+
+    // Click "Aggiungi partita" → GamePickerDialog opens
+    await page.locator('[data-testid="game-night-add-partita"]').click();
+
+    // Verify dialog opens
+    await expect(page.locator('[data-testid="game-picker-dialog"]')).toBeVisible({ timeout: 2_000 });
+
+    // Verify dialog shows library games (Catan E2E Test from seedLibraryGame)
+    await expect(page.locator(`[data-testid="game-picker-list"]`)).toContainText('Catan E2E Test');
+  });
+```
+
+### Task 3b.7: Full session creation + navigate /live (DEC-C-9 complete)
+
+```typescript
+  test('selects game in dialog + starts session → navigates /game-nights/{id}/live', async ({ page }) => {
+    // ... (prelude + publish + open dialog) ...
+
+    // Select Catan E2E Test in dialog
+    const dialogGame = page.locator('[data-testid="game-picker-list"]').getByText('Catan E2E Test');
+    await dialogGame.click();
+
+    // Confirm start session
+    await page.getByRole('button', { name: /inizia|start/i }).click();
+
+    // Wait for navigate to /live route (useStartSession mutation + router.push)
+    await page.waitForURL(/\/game-nights\/[a-f0-9-]+\/live(\?.*)?$/, { timeout: 10_000 });
+
+    // Verify live session view rendered
+    await expect(page.locator('[data-testid="live-session-header"]')).toBeVisible({ timeout: 5_000 });
+  });
+```
+
+> **CONTINGENCY**: Multiple cross-component testids may be missing (publish button, GamePickerDialog list items, start session button). Each missing testid requires additive PR-scope change. Track in PR body if 3+ testid additions needed.
+
+### Task 3b.8: Edge case + push + PR
+
+- [ ] **Step 1: Append edge case test (e.g., wizard cancel mid-flow restores draft)**
+
+```typescript
+  test('cancel mid-wizard restores draft autosave on next visit', async ({ page }) => {
+    // ... fill step 1+2 ...
+    await page.getByRole('button', { name: /annulla|cancel/i }).click();
+
+    // Navigate away + back
+    await page.goto('/dashboard');
+    await page.goto('/game-nights/new');
+
+    // Verify autosave restored (step 1 date pre-filled, step 2 location pre-filled)
+    await expect(page.locator('input[type="datetime-local"]').first()).not.toBeEmpty();
+  });
+```
+
+- [ ] **Step 2: Push branch + open PR**
+
+```bash
+gh pr create --base main-dev --title "feat(testing): #1929 Macro 3b — Journey #2 full data-driven (DEC-C-8+C-9)" --body "..."
+```
+
+PR body documents:
+- DEC-C-8 seedLibraryGame consumer
+- DEC-C-9 full publish/live opt-in flow
+- Additive testids in `GameNightActions.tsx` + possibly others (list)
+- 6-7 tests (CTA + 4 wizard step + publish/dialog + session creation/live navigate)
+
+---
+
+## Macro 4 OVERRIDE — Tasks 4.2-4.4 SUPERSEDED (uses SP4 seed SharedGame, DEC-C-10)
+
+> **Output**: 1 nuovo spec file `cross-asse-journey-3-game-detail-tab-partite.spec.ts` (~250 LOC). PR review-friendly <300 LOC. Effort target: 1.5-2gg con SP4 seed prerequisite. **Sessione 43+.**
+
+### Pre-flight check (sessione 43+)
+
+- [ ] **Step 1: Verify Macros 3a+3b PRs merged**
+
+- [ ] **Step 2: Verify SP4 seed dataset available**
+
+```bash
+# Identify a stable SharedGame UUID from 20-games.sh
+grep -nE "INSERT INTO SharedGames|gameId.*'[a-f0-9-]{36}'" infra/scripts/seed-sp4/20-games.sh | head -5
+```
+
+Document chosen stable UUID in spec file constant (e.g., `STABLE_SHARED_GAME_ID = '...'`).
+
+### Task 4.1 — happy path rail navigate (T4.1 above already drafted, refine if needed)
+
+**Update beforeEach** to seed 15 sessions linked to the stable SharedGame:
+
+```typescript
+  test.beforeEach(async ({ page }, testInfo) => {
+    testRunId = newTestRunId(testInfo.testId);
+
+    await seedCookieConsent(page);
+    await seedAuthSession(page, { role: ANNA_PERSONA.role });
+    await mockAuthEndpoints(page, { ... });
+
+    // DEC-C-10: seed 15 sessions against stable SharedGame from seed-sp4
+    // Prerequisite: dev DB seeded via `make seed-sp4` before E2E run.
+    // CI workflow includes seed-sp4 step in the job.
+    const STABLE_GAME_ID = '...'  // documented constant from 20-games.sh
+
+    const gn = await withRetry(
+      () => seedGameNight(page, {
+        testRunId,
+        status: 'Completed',
+        ownerEmail: ANNA_PERSONA.email,
+      }),
+      { reason: 'seedGameNight journey3' }
+    );
+
+    for (let i = 0; i < 15; i++) {
+      await withRetry(
+        () => seedSession(page, {
+          testRunId,
+          gameNightId: gn.gameNightId,
+          sharedGameId: STABLE_GAME_ID,  // ← references stable SP4 entity
+          isLive: false,
+          scoreType: 'Points',
+        }),
+        { reason: `seedSession journey3 (#${i + 1}/15)` }
+      );
+    }
+  });
+```
+
+> **NOTE**: `seedSession` may need extension to accept optional `sharedGameId` linking to a Game catalog entity (for game-detail rail to surface this game's sessions). Verify Task B seedSession API. If not, this is a follow-up scope.
+
+### Task 4.2: Boundary 0 session → rail hidden
+
+```typescript
+  test('boundary 0 sessions: rail empty state, no Storico partite link', async ({ page }) => {
+    // No seed sessions in beforeEach for this test (override)
+    await page.goto(`/games/${STABLE_GAME_ID}`);
+
+    const rail = page.locator('[data-slot="game-detail-sessions-rail"]');
+    await expect(rail).toBeVisible();
+    await expect(rail).toHaveAttribute('data-empty', 'true');
+
+    // No view-all link
+    await expect(page.locator('[data-slot="game-detail-sessions-view-all"]')).not.toBeVisible();
+  });
+```
+
+### Task 4.3: Boundary 1-5 sessions → rail shows all, NO link
+
+```typescript
+  test('boundary 1-5 sessions: rail full, no Storico partite link', async ({ page }) => {
+    // Adjust beforeEach for THIS test to seed only 3 sessions
+    // (use test.use({ ... }) override pattern OR refactor seeding)
+    // ...
+
+    await page.goto(`/games/${STABLE_GAME_ID}`);
+
+    const rail = page.locator('[data-slot="game-detail-sessions-rail"]');
+    await expect(rail).toBeVisible();
+
+    // All 3 cards present
+    await expect(page.locator('[data-slot="game-detail-session-card"]')).toHaveCount(3);
+
+    // No view-all link (threshold not crossed)
+    await expect(page.locator('[data-slot="game-detail-sessions-view-all"]')).not.toBeVisible();
+  });
+```
+
+### Task 4.4: Filter persistence on navigate
+
+```typescript
+  test('filter ?sortBy=date&dir=desc persists on rail navigate', async ({ page }) => {
+    // ... beforeEach seeds 15 sessions ...
+
+    await page.goto(`/games/${STABLE_GAME_ID}?sortBy=date&dir=desc`);
+
+    const viewAll = page.locator('[data-slot="game-detail-sessions-view-all"]');
+    await viewAll.click();
+
+    // After navigate: query params preserved
+    const url = page.url();
+    expect(url).toMatch(/sortBy=date/);
+    expect(url).toMatch(/dir=desc/);
+  });
+```
+
+### Task 4.5: CI workflow seed-sp4 step + push + PR
+
+- [ ] **Step 1: Add seed-sp4 step to CI workflow (.github/workflows/ci.yml or e2e.yml)**
+
+Per DEC-C-10, E2E job requires `make seed-sp4` prerequisite:
+
+```yaml
+- name: Seed SP4 dataset (DEC-C-10 prerequisite Journey #3)
+  run: cd infra && make seed-sp4
+  env:
+    # ... env vars ...
+```
+
+- [ ] **Step 2: Push + open PR Macro 4**
+
+PR body documents:
+- DEC-C-10 stable SharedGame UUID dependency
+- CI workflow step added
+- 5 tests (happy path + 3 boundary + filter persistence)
+
+---
+
+## Sessione 42 Self-Review checklist update
+
+### Spec coverage (revised)
+
+| Spec requirement | Macro/Task | Status |
+|---|---|---|
+| AC-1: 3 spec file `cross-asse-journey-*.spec.ts` | Macros 2 ✅ + 3b + 4 | 1/3 shipped, 2 planned |
+| AC-9: Journey #2 wizard 4-step verified (DEC-C-3) | Macro 3b T3b.1-3b.5 | ✅ planned (5 wizard tests) |
+| AC-10: Journey #3 rail+navigate verified (DEC-C-3 rescope) | Macro 4 T4.1 | ✅ planned |
+| DEC-C-8 Real BE seedLibraryGame factory | Macro 3a foundation | ✅ planned |
+| DEC-C-9 Full live opt-in flow (publish + add partita + create session + /live) | Macro 3b T3b.6-3b.7 | ✅ planned (3 tests) |
+| DEC-C-10 SP4 seed SharedGame stable UUID | Macro 4 beforeEach + CI step | ✅ planned |
+
+### Placeholder scan (revised)
+
+- ✅ Sessione 41 TBD bounded (T3.2-3.5 + T4.2-4.4) SUPERSEDED by Sessione 42 Addendum (all detailed steps committed)
+- ⚠️ Macro 3b multiple testid additions required (publish button selector + library-game card testid + start session button) — track in PR body
+- ⚠️ Macro 4 `seedSession` API may need `sharedGameId` parameter extension — verify Task B API in pre-flight, follow-up if needed
+
+### Execution Handoff (sessione 42)
+
+**Subagent-Driven path**:
+- Macro 3a (BE+TS factory): sonnet subagent dispatch full scope (~600 LOC, mostly mechanical Task B pattern)
+- Macro 3b (FE spec): sonnet subagent dispatch full scope (~450 LOC, full flow)
+- Macro 4 (FE spec): sonnet subagent dispatch (~250 LOC)
+
+**Sessione 42 target**: ship Macro 3a foundation, plan Macro 3b dispatch for next phase or sessione 43.

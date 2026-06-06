@@ -36,6 +36,10 @@ internal static class AdminTestSeedEndpoints
             .WithName("AdminTestSeed_Player")
             .WithTags("Admin", "TestSeeding");
 
+        group.MapPost("/library-game", HandleSeedLibraryGame)
+            .WithName("AdminTestSeed_LibraryGame")
+            .WithTags("Admin", "TestSeeding");
+
         group.MapPost("/cleanup", HandleCleanup)
             .WithName("AdminTestSeed_Cleanup")
             .WithTags("Admin", "TestSeeding");
@@ -65,6 +69,16 @@ internal static class AdminTestSeedEndpoints
 
     private static async Task<IResult> HandleSeedPlayer(
         SeedTestPlayerCommand command,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleSeedLibraryGame(
+        SeedTestLibraryGameCommand command,
         IMediator mediator,
         CancellationToken ct)
     {

@@ -2,6 +2,8 @@ using Api.BoundedContexts.Testing.Application.DTOs;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.GameManagement;
+using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Infrastructure.Entities.UserLibrary;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -9,10 +11,12 @@ using Microsoft.Extensions.Logging;
 namespace Api.BoundedContexts.Testing.Application.Commands;
 
 /// <summary>
-/// Issue #1928 Task B (DEC-B-1, DEC-B-3, DEC-B-8) — Handler for
-/// <see cref="CleanupTestEntitiesCommand"/>. Cascade-delete by explicit
-/// TestRunId column on 5 persistence entities. FK dependency order:
-/// Sessions → Rsvps → Invitations → GameNightEvents → Users.
+/// Issue #1928 Task B (DEC-B-1, DEC-B-3, DEC-B-8) + Issue #1929 Task C Macro 3a
+/// (DEC-C-8) — Handler for <see cref="CleanupTestEntitiesCommand"/>. Cascade-delete
+/// by explicit TestRunId column on 7 persistence entities. FK dependency order:
+/// Sessions → Rsvps → Invitations → GameNightEvents → UserLibraryEntries →
+/// SharedGames → Users. UserLibraryEntry must be deleted before SharedGame
+/// (FK constraint); SharedGame must be deleted before User (FK CreatedBy).
 /// </summary>
 internal sealed class CleanupTestEntitiesCommandHandler
     : IRequestHandler<CleanupTestEntitiesCommand, CleanupTestEntitiesResponse>
@@ -55,6 +59,18 @@ internal sealed class CleanupTestEntitiesCommandHandler
             .ExecuteDeleteAsync(cancellationToken)
             .ConfigureAwait(false);
 
+        // Issue #1929 Task C Macro 3a (DEC-C-8) — Library catalog cascade.
+        // UserLibraryEntries first (FK SharedGameId), then SharedGames (FK CreatedBy → User).
+        var deletedLibraryEntries = await _db.UserLibraryEntries
+            .Where(e => e.TestRunId == request.TestRunId)
+            .ExecuteDeleteAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var deletedSharedGames = await _db.SharedGames
+            .Where(g => g.TestRunId == request.TestRunId)
+            .ExecuteDeleteAsync(cancellationToken)
+            .ConfigureAwait(false);
+
         var deletedUsers = await _db.Users
             .Where(u => u.TestRunId == request.TestRunId)
             .ExecuteDeleteAsync(cancellationToken)
@@ -63,8 +79,8 @@ internal sealed class CleanupTestEntitiesCommandHandler
         stopwatch.Stop();
 
         _logger.LogInformation(
-            "Cleaned up testRunId={TestRunId} gameNights={GN} sessions={S} invitations={I} rsvps={R} users={U} durationMs={Duration}",
-            request.TestRunId, deletedGameNights, deletedSessions, deletedInvitations, deletedRsvps, deletedUsers, stopwatch.ElapsedMilliseconds);
+            "Cleaned up testRunId={TestRunId} gameNights={GN} sessions={S} invitations={I} rsvps={R} users={U} libraryEntries={LE} sharedGames={SG} durationMs={Duration}",
+            request.TestRunId, deletedGameNights, deletedSessions, deletedInvitations, deletedRsvps, deletedUsers, deletedLibraryEntries, deletedSharedGames, stopwatch.ElapsedMilliseconds);
 
         return new CleanupTestEntitiesResponse(
             request.TestRunId,
@@ -73,6 +89,8 @@ internal sealed class CleanupTestEntitiesCommandHandler
             deletedInvitations,
             deletedRsvps,
             deletedUsers,
+            deletedLibraryEntries,
+            deletedSharedGames,
             stopwatch.ElapsedMilliseconds);
     }
 }

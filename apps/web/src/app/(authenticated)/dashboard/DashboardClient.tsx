@@ -28,6 +28,7 @@
 import { useMemo, type ReactElement } from 'react';
 
 import { useAuth } from '@/components/auth/AuthProvider';
+import { CascadeDrawerHost } from '@/components/dashboard/CascadeDrawerHost';
 import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
 import { useUpcomingGameNights } from '@/hooks/queries/useGameNights';
 import { useGames } from '@/hooks/queries/useGames';
@@ -231,6 +232,9 @@ export function DashboardClient(): ReactElement {
 
         <FriendsActivitySection state={friendsState} activities={friendsActivities} />
       </div>
+
+      {/* #1929 WP5: cascade-store driven drawer renderer for dashboard card clicks */}
+      <CascadeDrawerHost />
     </main>
   );
 }

@@ -94,9 +94,7 @@ public sealed class SeedTestGameNightCommandHandlerTests : IAsyncLifetime
                 .SingleOrDefaultAsync(g => g.Id == response.GameNightId, TestCancellationToken);
             seeded.Should().NotBeNull();
             seeded!.Status.Should().Be("Published");
-
-            var testRunIdShadow = db.Entry(seeded).Property<string?>("TestRunId").CurrentValue;
-            testRunIdShadow.Should().Be(testRunId);
+            seeded.TestRunId.Should().Be(testRunId);
         }
     }
 

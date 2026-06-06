@@ -44,12 +44,11 @@ internal sealed class SeedTestGameNightCommandHandler
             Language = "en",
             EmailNotifications = true,
             Theme = "system",
-            DataRetentionDays = 90
+            DataRetentionDays = 90,
+            TestRunId = request.TestRunId
         };
 
         _db.Users.Add(ownerEntity);
-        _db.Entry(ownerEntity).Property<string?>(TestRunIdMetadata.ShadowPropertyName)
-            .CurrentValue = request.TestRunId;
 
         var gameNightId = Guid.NewGuid();
 
@@ -92,14 +91,14 @@ internal sealed class SeedTestGameNightCommandHandler
                 Status = request.Status is "Completed" ? "Completed" : "InProgress",
                 StartedAt = DateTimeOffset.UtcNow,
                 CompletedAt = request.Status is "Completed" ? DateTimeOffset.UtcNow : null,
-                WinnerId = null
+                WinnerId = null,
+                TestRunId = request.TestRunId
             };
             gameNightEntity.Sessions.Add(session);
         }
 
+        gameNightEntity.TestRunId = request.TestRunId;
         _db.GameNightEvents.Add(gameNightEntity);
-        _db.Entry(gameNightEntity).Property<string?>(TestRunIdMetadata.ShadowPropertyName)
-            .CurrentValue = request.TestRunId;
 
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         stopwatch.Stop();

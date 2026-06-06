@@ -8,7 +8,7 @@
  *   4. Invariante #7: 1 card = 1 GameNight wrapper (NOT N cards per N sessions)
  *   5. MVP rendered when present, omitted when undefined
  *   6. Thumbnails truncated to MAX 3
- *   7. Click on card calls openDrawer('event', id)
+ *   7. Click on card calls openDrawer('gameNightEvent', id)
  *   8. Empty state hidden (null render — spec MAJ-6 matrix)
  *   9. Loading state renders twin skeletons
  *  10. Error state renders ErrorBanner with retry handler
@@ -147,7 +147,7 @@ describe('RecentiSection', () => {
     const user = userEvent.setup();
     render(<RecentiSection state="default" gameNights={baseCards} />);
     await user.click(screen.getByTestId('recenti-card-gn-1'));
-    expect(openDrawerMock).toHaveBeenCalledWith('event', 'gn-1');
+    expect(openDrawerMock).toHaveBeenCalledWith('gameNightEvent', 'gn-1');
   });
 
   it('renders empty state as null (hidden — spec MAJ-6 matrix)', () => {

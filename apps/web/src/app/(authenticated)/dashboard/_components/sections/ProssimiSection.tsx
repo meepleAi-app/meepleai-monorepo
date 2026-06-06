@@ -3,7 +3,7 @@
  *
  * Renders 2-3 upcoming GameNight cards (Published + InProgress, ASC by date)
  * with an inline "+ Nuova" CTA in the header. Clicking a card opens the
- * GameNight cascade drawer via the asse-B cascade-store (`openDrawer('event', id)`).
+ * GameNight cascade drawer via the asse-B cascade-store (`openDrawer('gameNightEvent', id)`).
  *
  * The "IN CORSO" badge highlights InProgress GameNights (asse A invariante #10:
  * max 1 live per GameNight, but UX displays the status whenever present).

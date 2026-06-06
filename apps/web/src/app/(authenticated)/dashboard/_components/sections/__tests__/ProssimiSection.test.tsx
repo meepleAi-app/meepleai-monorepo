@@ -7,7 +7,7 @@
  *   3. "IN CORSO" badge appears only on InProgress status
  *   4. RSVP summary: confirmed-only when pending=0
  *   5. RSVP summary: "X/Y pending" when pending>0
- *   6. Click on card calls openDrawer('event', id)
+ *   6. Click on card calls openDrawer('gameNightEvent', id) [#1929 WP4]
  *   7. Empty state renders EmptySection CTA
  *   8. Loading state renders twin skeletons
  *   9. Error state renders ErrorBanner with retry
@@ -106,7 +106,7 @@ describe('ProssimiSection', () => {
     const user = userEvent.setup();
     render(<ProssimiSection state="default" gameNights={baseCards} />);
     await user.click(screen.getByTestId('prossimi-card-gn-1'));
-    expect(openDrawerMock).toHaveBeenCalledWith('event', 'gn-1');
+    expect(openDrawerMock).toHaveBeenCalledWith('gameNightEvent', 'gn-1');
   });
 
   it('renders empty state with CTA pointing to /game-nights/new', () => {

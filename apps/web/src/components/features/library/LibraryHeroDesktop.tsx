@@ -89,6 +89,8 @@ const STAT_BORDER_CLASS: Record<EntityType, string> = {
   player: 'border-entity-player/20',
   toolkit: 'border-entity-toolkit/20',
   tool: 'border-entity-tool/20',
+  // #1929 WP2: GameNight reuses event token (no separate Tailwind entity-gameNightEvent utility)
+  gameNightEvent: 'border-entity-event/20',
 };
 
 const STAT_TEXT_CLASS: Record<EntityType, string> = {
@@ -101,6 +103,7 @@ const STAT_TEXT_CLASS: Record<EntityType, string> = {
   player: 'text-entity-player',
   toolkit: 'text-entity-toolkit',
   tool: 'text-entity-tool',
+  gameNightEvent: 'text-entity-event',
 };
 
 // Mockup palette: 3-stop linear gradient on the hero container background.

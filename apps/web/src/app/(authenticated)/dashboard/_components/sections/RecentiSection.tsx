@@ -4,7 +4,7 @@
  * Renders 2-3 completed GameNight cards (DESC by date) with MVP, mini cover
  * thumbnails (max 3), session count, and a "Vedi tutti i completati" footer
  * link (MAJ-7 pagination). Clicking a card opens the GameNight cascade drawer
- * via the asse-B cascade-store (`openDrawer('event', id)`).
+ * via the asse-B cascade-store (`openDrawer('gameNightEvent', id)`).
  *
  * Invariante #7 (CRITICAL): 1 card = 1 GameNight wrapper. We DO NOT render N
  * cards per N session inside the GameNight; sessionCount is shown as text.
@@ -116,7 +116,7 @@ export function RecentiSection({
   );
 
   const handleCardClick = (id: string): void => {
-    openDrawer('event', id);
+    openDrawer('gameNightEvent', id);
   };
 
   return (

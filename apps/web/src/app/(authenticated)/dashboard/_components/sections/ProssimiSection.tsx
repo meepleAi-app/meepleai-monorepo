@@ -3,7 +3,7 @@
  *
  * Renders 2-3 upcoming GameNight cards (Published + InProgress, ASC by date)
  * with an inline "+ Nuova" CTA in the header. Clicking a card opens the
- * GameNight cascade drawer via the asse-B cascade-store (`openDrawer('event', id)`).
+ * GameNight cascade drawer via the asse-B cascade-store (`openDrawer('gameNightEvent', id)`).
  *
  * The "IN CORSO" badge highlights InProgress GameNights (asse A invariante #10:
  * max 1 live per GameNight, but UX displays the status whenever present).
@@ -130,7 +130,10 @@ export function ProssimiSection({ state, gameNights, onRetry }: ProssimiSectionP
   );
 
   const handleCardClick = (id: string): void => {
-    openDrawer('event', id);
+    // #1929 WP4: migrated 'event' → 'gameNightEvent' so the cascade drawer
+    // renders GameNightEventDrawerContent (with Giocatori tab + pushDrawer)
+    // instead of EventDrawerContent which expects a different data shape.
+    openDrawer('gameNightEvent', id);
   };
 
   return (

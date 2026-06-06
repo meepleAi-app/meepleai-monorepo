@@ -44,6 +44,7 @@ import { DrawerLoadingSkeleton, DrawerErrorState } from './drawer-states';
 import { DRAWER_TEST_IDS } from './drawer-test-ids';
 import { AgentChatDrawerLayout } from './entities/AgentChatDrawerLayout';
 import { EventDrawerContent } from './entities/EventDrawerContent';
+import { GameNightEventDrawerContent } from './entities/GameNightEventDrawerContent';
 import { PlayerDrawerContent } from './entities/PlayerDrawerContent';
 import { SessionDrawerContent } from './entities/SessionDrawerContent';
 import { ToolDrawerContent } from './entities/ToolDrawerContent';
@@ -120,6 +121,8 @@ const ENTITY_CONFIG: Record<
   event: { label: 'Dettaglio Evento', color: '350 89% 60%', Icon: Calendar },
   toolkit: { label: 'Dettaglio Toolkit', color: '142 70% 45%', Icon: ToolCase },
   tool: { label: 'Dettaglio Strumento', color: '195 80% 50%', Icon: Wrench },
+  // #1929 WP2: GameNight-specific drawer entity (reuses rose/event palette)
+  gameNightEvent: { label: 'Dettaglio Game Night', color: '350 89% 60%', Icon: Calendar },
 };
 
 // ============================================================================
@@ -280,6 +283,8 @@ function DrawerEntityRouter({
       return <SessionDrawerContent entityId={entityId} initialTabId={activeTabId ?? undefined} />;
     case 'event':
       return <EventDrawerContent entityId={entityId} />;
+    case 'gameNightEvent':
+      return <GameNightEventDrawerContent entityId={entityId} />;
     case 'toolkit':
       return <ToolkitDrawerContent entityId={entityId} />;
     case 'tool':

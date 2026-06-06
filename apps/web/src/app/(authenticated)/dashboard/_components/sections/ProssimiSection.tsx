@@ -130,7 +130,10 @@ export function ProssimiSection({ state, gameNights, onRetry }: ProssimiSectionP
   );
 
   const handleCardClick = (id: string): void => {
-    openDrawer('event', id);
+    // #1929 WP4: migrated 'event' → 'gameNightEvent' so the cascade drawer
+    // renders GameNightEventDrawerContent (with Giocatori tab + pushDrawer)
+    // instead of EventDrawerContent which expects a different data shape.
+    openDrawer('gameNightEvent', id);
   };
 
   return (

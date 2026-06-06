@@ -120,6 +120,8 @@ const ENTITY_CONFIG: Record<
   event: { label: 'Dettaglio Evento', color: '350 89% 60%', Icon: Calendar },
   toolkit: { label: 'Dettaglio Toolkit', color: '142 70% 45%', Icon: ToolCase },
   tool: { label: 'Dettaglio Strumento', color: '195 80% 50%', Icon: Wrench },
+  // #1929 WP2: GameNight-specific drawer entity (reuses rose/event palette)
+  gameNightEvent: { label: 'Dettaglio Game Night', color: '350 89% 60%', Icon: Calendar },
 };
 
 // ============================================================================

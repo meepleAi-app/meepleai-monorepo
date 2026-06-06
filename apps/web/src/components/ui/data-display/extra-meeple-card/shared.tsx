@@ -89,6 +89,14 @@ export const ENTITY_COLORS = {
     accentBorder: 'border-cyan-200/60',
     activeAccent: 'data-[state=active]:text-cyan-700',
   },
+  // #1929 WP2: GameNight-specific entity, reuses event/rose palette
+  gameNightEvent: {
+    hsl: '350 89% 60%',
+    accent: 'text-rose-700',
+    accentBg: 'bg-rose-100',
+    accentBorder: 'border-rose-200/60',
+    activeAccent: 'data-[state=active]:text-rose-700',
+  },
 } as const;
 
 export type EntityVariant = keyof typeof ENTITY_COLORS;

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 import type { ManaPip } from './parts/ManaPips';
 
-// 9 entity types only
+// 10 entity types (#1929 WP2: added 'gameNightEvent' for cascade drawer flow)
 export type MeepleEntityType =
   | 'game'
   | 'player'
@@ -12,7 +12,8 @@ export type MeepleEntityType =
   | 'chat'
   | 'event'
   | 'toolkit'
-  | 'tool';
+  | 'tool'
+  | 'gameNightEvent';
 
 // 6 variants
 export type MeepleCardVariant = 'grid' | 'list' | 'compact' | 'featured' | 'hero' | 'focus';

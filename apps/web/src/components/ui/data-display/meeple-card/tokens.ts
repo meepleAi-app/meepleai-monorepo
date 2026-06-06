@@ -31,6 +31,8 @@ export const entityColors: Record<MeepleEntityType, { h: number; s: string; l: s
   event: { h: 350, s: '89%', l: '48%' },
   toolkit: { h: 142, s: '70%', l: '31%' },
   tool: { h: 195, s: '80%', l: '35%' },
+  // #1929 WP2: GameNight-specific entity, reuses event/rose palette
+  gameNightEvent: { h: 350, s: '89%', l: '48%' },
 };
 
 export function entityHsl(entity: MeepleEntityType, alpha?: number): string {
@@ -105,6 +107,7 @@ export const entityLabel: Record<MeepleEntityType, string> = {
   event: 'Event',
   toolkit: 'Toolkit',
   tool: 'Tool',
+  gameNightEvent: 'Game Night',
 };
 
 export const entityIcon: Record<MeepleEntityType, string> = {
@@ -117,6 +120,7 @@ export const entityIcon: Record<MeepleEntityType, string> = {
   event: '📅',
   toolkit: '🧰',
   tool: '🔧',
+  gameNightEvent: '🌙',
 };
 
 /**

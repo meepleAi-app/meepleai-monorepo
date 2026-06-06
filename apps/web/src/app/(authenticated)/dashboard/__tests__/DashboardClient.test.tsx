@@ -76,8 +76,33 @@ vi.mock('@/hooks/use-friends-activity', () => ({
 
 // cascade-store is consumed by ProssimiSection / RecentiSection /
 // FriendsActivitySection (asse-B integration). Mock as no-op for tests.
+// Mock the cascade store: each call returns a slice of canonical "closed" state
+// or a no-op action. Issue #1929 WP5 adds CascadeDrawerHost which subscribes to
+// `state` / `activeEntityType` / `activeEntityId` / `closeCascade` — the old
+// blanket `vi.fn(() => vi.fn())` made `useCascadeNavigationStore(s => s.state)`
+// resolve to a function reference, which then short-circuited the entityType
+// fallback to a non-string value and crashed ExtraMeepleCardDrawer's ENTITY_CONFIG
+// lookup. Use a typed selector mock so the host renders cleanly in test mode.
+const CLOSED_CASCADE_STATE = {
+  state: 'closed' as const,
+  activeEntityType: null,
+  activeEntityId: null,
+  activeTabId: null,
+  sourceEntityId: null,
+  anchorRect: null,
+  deckStackSkipped: false,
+  drawerStack: [] as ReadonlyArray<unknown>,
+  openDeckStack: vi.fn(),
+  openDrawer: vi.fn(),
+  closeDrawer: vi.fn(),
+  closeCascade: vi.fn(),
+  pushDrawer: vi.fn(),
+  popDrawer: vi.fn(),
+};
 vi.mock('@/lib/stores/cascade-navigation-store', () => ({
-  useCascadeNavigationStore: vi.fn(() => vi.fn()),
+  useCascadeNavigationStore: vi.fn((selector?: (state: typeof CLOSED_CASCADE_STATE) => unknown) =>
+    selector ? selector(CLOSED_CASCADE_STATE) : CLOSED_CASCADE_STATE
+  ),
 }));
 
 import { DashboardClient } from '../DashboardClient';

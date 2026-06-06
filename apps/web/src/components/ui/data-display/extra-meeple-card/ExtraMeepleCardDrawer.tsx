@@ -44,6 +44,7 @@ import { DrawerLoadingSkeleton, DrawerErrorState } from './drawer-states';
 import { DRAWER_TEST_IDS } from './drawer-test-ids';
 import { AgentChatDrawerLayout } from './entities/AgentChatDrawerLayout';
 import { EventDrawerContent } from './entities/EventDrawerContent';
+import { GameNightEventDrawerContent } from './entities/GameNightEventDrawerContent';
 import { PlayerDrawerContent } from './entities/PlayerDrawerContent';
 import { SessionDrawerContent } from './entities/SessionDrawerContent';
 import { ToolDrawerContent } from './entities/ToolDrawerContent';
@@ -282,6 +283,8 @@ function DrawerEntityRouter({
       return <SessionDrawerContent entityId={entityId} initialTabId={activeTabId ?? undefined} />;
     case 'event':
       return <EventDrawerContent entityId={entityId} />;
+    case 'gameNightEvent':
+      return <GameNightEventDrawerContent entityId={entityId} />;
     case 'toolkit':
       return <ToolkitDrawerContent entityId={entityId} />;
     case 'tool':

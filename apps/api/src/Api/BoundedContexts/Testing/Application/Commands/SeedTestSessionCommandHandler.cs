@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Testing.Application.DTOs;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;
+using Api.Middleware.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -39,8 +40,7 @@ internal sealed class SeedTestSessionCommandHandler
 
         if (gameNight is null)
         {
-            throw new InvalidOperationException(
-                $"GameNight {request.GameNightId} not found for testRunId {request.TestRunId}");
+            throw new NotFoundException("GameNight", request.GameNightId.ToString());
         }
 
         var sessionId = Guid.NewGuid();

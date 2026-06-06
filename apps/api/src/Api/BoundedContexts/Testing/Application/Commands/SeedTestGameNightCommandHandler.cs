@@ -36,7 +36,7 @@ internal sealed class SeedTestGameNightCommandHandler
             Id = ownerId,
             Email = request.OwnerEmail,
             DisplayName = $"E2E Host {request.TestRunId[..16]}",
-            PasswordHash = "$2a$12$dummyhashforseeding", // Dummy bcrypt-like hash for MVP
+            PasswordHash = null!, // E2E seed: login bypass via admin session, no auth flow
             Role = "user",
             Tier = "free",
             CreatedAt = DateTime.UtcNow,

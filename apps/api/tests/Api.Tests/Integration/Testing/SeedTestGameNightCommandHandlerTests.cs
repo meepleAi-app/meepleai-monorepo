@@ -45,10 +45,10 @@ public sealed class SeedTestGameNightCommandHandlerTests : IAsyncLifetime
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
         _factory = IntegrationWebApplicationFactory.Create(connectionString);
 
-        // Trigger startup + create schema from current model (includes shadow properties).
-        // NOTE: EnsureCreatedAsync used vs MigrateAsync because shadow property TestRunId
-        // is not in migrations history (would require dedicated migration). For Integration
-        // test scope, model-derived schema is sufficient (DEC-B-7).
+        // Trigger startup + create schema from current model (includes TestRunId column).
+        // NOTE: EnsureCreatedAsync used vs MigrateAsync because the explicit TestRunId column
+        // (DEC-B-8 on 5 persistence entities) is not yet in migrations history. For Integration
+        // test scope, model-derived schema is sufficient (DEC-B-7 + DEC-B-8).
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         await db.Database.EnsureCreatedAsync(TestCancellationToken);

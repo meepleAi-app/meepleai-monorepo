@@ -2,6 +2,7 @@ using Api.BoundedContexts.Testing.Application.DTOs;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.GameManagement;
+using Api.Middleware.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -40,8 +41,7 @@ internal sealed class SeedTestPlayerCommandHandler
 
         if (gameNight is null)
         {
-            throw new InvalidOperationException(
-                $"GameNight {request.GameNightId} not found for testRunId {request.TestRunId}");
+            throw new NotFoundException("GameNight", request.GameNightId.ToString());
         }
 
         Guid playerId;
@@ -65,7 +65,7 @@ internal sealed class SeedTestPlayerCommandHandler
                     Id = userId,
                     Email = $"player-{userId:N}@e2e.test",
                     DisplayName = displayName,
-                    PasswordHash = "e2e-no-password",
+                    PasswordHash = null!, // E2E seed: login bypass via admin session, no auth flow
                     Role = "user",
                     Tier = "free",
                     CreatedAt = DateTime.UtcNow,

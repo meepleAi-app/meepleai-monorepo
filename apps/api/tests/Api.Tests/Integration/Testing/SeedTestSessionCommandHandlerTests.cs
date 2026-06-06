@@ -118,7 +118,7 @@ public sealed class SeedTestSessionCommandHandlerTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Handle_GameNightNotFound_ThrowsInvalidOperationException()
+    public async Task Handle_GameNightNotFound_ThrowsNotFoundException()
     {
         using var scope = _factory!.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -132,7 +132,7 @@ public sealed class SeedTestSessionCommandHandlerTests : IAsyncLifetime
 
         Func<Task> act = async () => await handler.Handle(cmd, TestCancellationToken);
 
-        await act.Should().ThrowAsync<InvalidOperationException>()
+        await act.Should().ThrowAsync<Api.Middleware.Exceptions.NotFoundException>()
             .WithMessage("*not found*");
     }
 

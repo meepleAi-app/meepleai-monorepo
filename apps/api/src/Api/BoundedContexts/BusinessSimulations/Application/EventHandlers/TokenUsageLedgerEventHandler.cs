@@ -33,6 +33,7 @@ internal sealed class TokenUsageLedgerEventHandler : INotificationHandler<TokenU
                 tokensConsumed: notification.TokensConsumed,
                 costUsd: notification.CostUsd,
                 endpoint: notification.Endpoint,
+                sourceEventId: notification.EventId,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)

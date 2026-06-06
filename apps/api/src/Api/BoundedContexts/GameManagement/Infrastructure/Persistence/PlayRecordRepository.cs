@@ -217,7 +217,8 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
                 (PlayRecordVisibility)entity.Visibility,
                 timeProvider: null,
                 groupId: entity.GroupId,
-                scoringConfig: config);
+                scoringConfig: config,
+                sourceEventId: entity.SourceEventId);
         }
         else
         {
@@ -229,7 +230,8 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
                 (PlayRecordVisibility)entity.Visibility,
                 config,
                 timeProvider: null,
-                groupId: entity.GroupId);
+                groupId: entity.GroupId,
+                sourceEventId: entity.SourceEventId);
         }
 
         // Restore state via reflection (private setters)
@@ -279,7 +281,8 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
             Notes = record.Notes,
             Location = record.Location,
             CreatedAt = record.CreatedAt,
-            UpdatedAt = record.UpdatedAt
+            UpdatedAt = record.UpdatedAt,
+            SourceEventId = record.SourceEventId
         };
 
         // Serialize scoring config

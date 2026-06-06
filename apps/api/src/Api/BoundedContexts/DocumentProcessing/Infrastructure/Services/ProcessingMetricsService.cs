@@ -37,6 +37,7 @@ internal sealed class ProcessingMetricsService : IProcessingMetricsService
         TimeSpan duration,
         long pdfSizeBytes,
         int pageCount,
+        Guid? sourceEventId = null,
         CancellationToken cancellationToken = default)
     {
 
@@ -57,7 +58,8 @@ internal sealed class ProcessingMetricsService : IProcessingMetricsService
             DurationSeconds = (decimal)duration.TotalSeconds,
             PdfSizeBytes = pdfSizeBytes,
             PageCount = pageCount,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            SourceEventId = sourceEventId
         };
 
         _context.ProcessingMetrics.Add(metric);

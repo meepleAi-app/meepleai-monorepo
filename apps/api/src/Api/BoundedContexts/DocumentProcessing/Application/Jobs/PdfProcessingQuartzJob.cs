@@ -347,7 +347,7 @@ public sealed class PdfProcessingQuartzJob : IJob
 
             var metricsService = _serviceProvider.GetRequiredService<IProcessingMetricsService>();
             await metricsService.RecordStepDurationAsync(
-                pdfId, state, duration, fileSizeBytes, pageCount, ct).ConfigureAwait(false);
+                pdfId, state, duration, fileSizeBytes, pageCount, cancellationToken: ct).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Metrics failures must not break pipeline
         catch (Exception ex)

@@ -18,6 +18,13 @@ internal sealed class AccessRequest : AggregateRoot<Guid>
     public string? RejectionReason { get; private set; }
     public Guid? InvitationId { get; private set; }
 
+    /// <summary>
+    /// Last <c>AccessRequestCreatedEvent</c> id for which the Slack alert has been sent
+    /// (issue #1940 / iso-1). Handler MUST early-exit when equal to the incoming event id
+    /// to avoid duplicate Slack alerts on a retried/rolled-back event.
+    /// </summary>
+    public Guid? LastNotifiedEventId { get; private set; }
+
     // EF Core constructor
     private AccessRequest() { }
     private AccessRequest(Guid id) : base(id) { }
@@ -92,6 +99,14 @@ internal sealed class AccessRequest : AggregateRoot<Guid>
         InvitationId = invitationId;
     }
 
+    /// <summary>
+    /// Records which AccessRequestCreatedEvent has already been notified (issue #1940 / iso-1).
+    /// </summary>
+    public void MarkNotified(Guid eventId)
+    {
+        LastNotifiedEventId = eventId;
+    }
+
     #region Persistence Hydration Methods (internal - S3011 fix)
 
     /// <summary>
@@ -106,7 +121,8 @@ internal sealed class AccessRequest : AggregateRoot<Guid>
         DateTime? reviewedAt,
         Guid? reviewedBy,
         string? rejectionReason,
-        Guid? invitationId)
+        Guid? invitationId,
+        Guid? lastNotifiedEventId = null)
     {
         Email = email;
         Status = status;
@@ -115,6 +131,7 @@ internal sealed class AccessRequest : AggregateRoot<Guid>
         ReviewedBy = reviewedBy;
         RejectionReason = rejectionReason;
         InvitationId = invitationId;
+        LastNotifiedEventId = lastNotifiedEventId;
     }
 
     #endregion

@@ -18,6 +18,7 @@ internal class AccessRequestEntityConfiguration : IEntityTypeConfiguration<Acces
         builder.Property(e => e.ReviewedBy);
         builder.Property(e => e.RejectionReason).HasMaxLength(500);
         builder.Property(e => e.InvitationId);
+        builder.Property(e => e.LastNotifiedEventId);
 
         // Unique index: only one pending request per email
         builder.HasIndex(e => new { e.Email, e.Status })

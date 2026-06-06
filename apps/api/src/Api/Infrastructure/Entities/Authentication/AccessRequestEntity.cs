@@ -41,6 +41,12 @@ public sealed class AccessRequestEntity
     [Column("invitation_id")]
     public Guid? InvitationId { get; set; }
 
+    /// <summary>
+    /// Issue #1940 / iso-1: dedup key for AccessRequestCreatedEvent Slack alert.
+    /// </summary>
+    [Column("last_notified_event_id")]
+    public Guid? LastNotifiedEventId { get; set; }
+
     // Navigation properties
     [ForeignKey(nameof(ReviewedBy))]
     public UserEntity? ReviewedByUser { get; set; }

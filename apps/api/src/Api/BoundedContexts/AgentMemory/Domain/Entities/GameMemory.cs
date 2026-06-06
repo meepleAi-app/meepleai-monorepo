@@ -26,6 +26,13 @@ internal sealed class GameMemory : AggregateRoot<Guid>
 
     public DateTime CreatedAt { get; private set; }
 
+    /// <summary>
+    /// Last domain event id processed against this aggregate (issue #1939 / CF-3).
+    /// Handlers MUST early-exit when this equals the incoming event id to avoid
+    /// appending the same HouseRule / GlossaryEntry / Note twice on a retried event.
+    /// </summary>
+    public Guid? LastProcessedEventId { get; private set; }
+
     /// <summary>EF Core constructor.</summary>
     private GameMemory() { }
 
@@ -96,5 +103,14 @@ internal sealed class GameMemory : AggregateRoot<Guid>
         }
 
         _glossaryEntries.Add(GlossaryEntry.Create(term, definition, language, source));
+    }
+
+    /// <summary>
+    /// Records which domain event has just been processed against this aggregate
+    /// (issue #1939 / CF-3). Used by handlers to short-circuit on re-dispatch.
+    /// </summary>
+    public void MarkProcessed(Guid eventId)
+    {
+        LastProcessedEventId = eventId;
     }
 }

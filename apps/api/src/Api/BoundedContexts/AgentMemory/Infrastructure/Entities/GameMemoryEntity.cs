@@ -15,4 +15,9 @@ public class GameMemoryEntity
     public string? GlossaryEntriesJson { get; set; }  // JSONB
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+
+    /// <summary>
+    /// Last domain event id processed against this aggregate (issue #1939 / CF-3).
+    /// </summary>
+    public Guid? LastProcessedEventId { get; set; }
 }

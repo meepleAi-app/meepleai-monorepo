@@ -74,11 +74,21 @@ internal sealed class OnSessionCompletedUpdateStatsHandler : INotificationHandle
                 {
                     memory = PlayerMemory.CreateForUser(player.UserId.Value);
                     memory.UpdateGameStats(gameId, won, player.TotalScore);
+                    memory.MarkProcessed(notification.EventId);  // CF-3 / #1939
                     await _playerMemoryRepo.AddAsync(memory, cancellationToken).ConfigureAwait(false);
+                }
+                else if (memory.LastProcessedEventId == notification.EventId)
+                {
+                    // CF-3 / #1939: handler is re-dispatched on a rolled-back / retried event
+                    // — stats already updated for this player, skip to avoid double-increment.
+                    _logger.LogDebug(
+                        "Skipping stats update for player {UserId} on session {SessionId}: event {EventId} already processed",
+                        player.UserId.Value, notification.SessionId, notification.EventId);
                 }
                 else
                 {
                     memory.UpdateGameStats(gameId, won, player.TotalScore);
+                    memory.MarkProcessed(notification.EventId);  // CF-3 / #1939
                     await _playerMemoryRepo.UpdateAsync(memory, cancellationToken).ConfigureAwait(false);
                 }
             }
@@ -92,11 +102,19 @@ internal sealed class OnSessionCompletedUpdateStatsHandler : INotificationHandle
                 {
                     memory = PlayerMemory.CreateForGuest(player.DisplayName);
                     memory.UpdateGameStats(gameId, won, player.TotalScore);
+                    memory.MarkProcessed(notification.EventId);  // CF-3 / #1939
                     await _playerMemoryRepo.AddAsync(memory, cancellationToken).ConfigureAwait(false);
+                }
+                else if (memory.LastProcessedEventId == notification.EventId)
+                {
+                    _logger.LogDebug(
+                        "Skipping stats update for guest {GuestName} on session {SessionId}: event {EventId} already processed",
+                        player.DisplayName, notification.SessionId, notification.EventId);
                 }
                 else
                 {
                     memory.UpdateGameStats(gameId, won, player.TotalScore);
+                    memory.MarkProcessed(notification.EventId);  // CF-3 / #1939
                     await _playerMemoryRepo.UpdateAsync(memory, cancellationToken).ConfigureAwait(false);
                 }
             }
@@ -109,7 +127,14 @@ internal sealed class OnSessionCompletedUpdateStatsHandler : INotificationHandle
                 .GetByIdAsync(notification.GroupId.Value, cancellationToken)
                 .ConfigureAwait(false);
 
-            if (group != null)
+            if (group != null && group.LastProcessedEventId == notification.EventId)
+            {
+                // CF-3 / #1939: re-dispatched event — group stats already updated.
+                _logger.LogDebug(
+                    "Skipping group stats update on session {SessionId}: event {EventId} already processed",
+                    notification.SessionId, notification.EventId);
+            }
+            else if (group != null)
             {
                 var stats = group.Stats ?? new GroupStats();
                 stats.TotalSessions++;
@@ -121,6 +146,7 @@ internal sealed class OnSessionCompletedUpdateStatsHandler : INotificationHandle
                 stats.LastPlayedAt = notification.CompletedAt;
 
                 group.UpdateStats(stats);
+                group.MarkProcessed(notification.EventId);  // CF-3 / #1939
                 await _groupMemoryRepo.UpdateAsync(group, cancellationToken).ConfigureAwait(false);
             }
             else

@@ -73,6 +73,7 @@ internal sealed class GameMemoryRepository : RepositoryBase, IGameMemoryReposito
         // Restore Id and CreatedAt via reflection (factory generates new ones)
         SetPrivateProperty(memory, nameof(GameMemory.Id), entity.Id);
         SetPrivateProperty(memory, nameof(GameMemory.CreatedAt), entity.CreatedAt);
+        SetPrivateProperty(memory, nameof(GameMemory.LastProcessedEventId), entity.LastProcessedEventId);
 
         // Restore house rules from JSONB
         if (entity.HouseRulesJson != null)
@@ -155,6 +156,7 @@ internal sealed class GameMemoryRepository : RepositoryBase, IGameMemoryReposito
             GameId = memory.GameId,
             OwnerId = memory.OwnerId,
             CreatedAt = memory.CreatedAt,
+            LastProcessedEventId = memory.LastProcessedEventId,
         };
 
         // Serialize house rules to JSONB

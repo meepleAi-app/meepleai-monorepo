@@ -18,6 +18,13 @@ internal sealed class GroupMemory : AggregateRoot<Guid>
     public GroupStats Stats { get; private set; } = new();
     public DateTime CreatedAt { get; private set; }
 
+    /// <summary>
+    /// Last domain event id processed against this aggregate (issue #1939 / CF-3).
+    /// Handlers MUST early-exit when this equals the incoming event id to avoid
+    /// double-incrementing GroupStats (TotalSessions, GamePlayCounts) on retry.
+    /// </summary>
+    public Guid? LastProcessedEventId { get; private set; }
+
     /// <summary>EF Core constructor.</summary>
     private GroupMemory() { }
 
@@ -67,5 +74,14 @@ internal sealed class GroupMemory : AggregateRoot<Guid>
     public void UpdateStats(GroupStats stats)
     {
         Stats = stats ?? throw new ArgumentNullException(nameof(stats));
+    }
+
+    /// <summary>
+    /// Records which domain event has just been processed against this aggregate
+    /// (issue #1939 / CF-3). Used by handlers to short-circuit on re-dispatch.
+    /// </summary>
+    public void MarkProcessed(Guid eventId)
+    {
+        LastProcessedEventId = eventId;
     }
 }

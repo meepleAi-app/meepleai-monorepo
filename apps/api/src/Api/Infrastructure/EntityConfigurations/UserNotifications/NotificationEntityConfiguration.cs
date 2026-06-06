@@ -28,11 +28,20 @@ internal class NotificationEntityConfiguration : IEntityTypeConfiguration<Notifi
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
         builder.Property(e => e.ReadAt).HasColumnName("read_at");
         builder.Property(e => e.CorrelationId).HasColumnName("correlation_id");
+        builder.Property(e => e.SourceEventId).HasColumnName("source_event_id");
 
         // CorrelationId index for cross-channel tracking
         builder.HasIndex(e => e.CorrelationId)
             .HasDatabaseName("IX_notifications_correlation_id")
             .HasFilter("correlation_id IS NOT NULL");
+
+        // Issue #1937 / CF-1: SourceEventId UNIQUE (partial — only when not null).
+        // Guards against duplicate notifications when an event handler is re-dispatched
+        // (rolled-back outer tx in #1535, MediatR transient retry, hand-replay).
+        builder.HasIndex(e => e.SourceEventId)
+            .IsUnique()
+            .HasDatabaseName("UX_notifications_source_event_id")
+            .HasFilter("source_event_id IS NOT NULL");
 
         // Critical indexes for notification queries (Issue #2053 code review)
         // Primary query: get user notifications ordered by creation date

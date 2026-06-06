@@ -132,6 +132,14 @@ internal class NotificationRepository : RepositoryBase, INotificationRepository
             .AnyAsync(n => n.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
+    public async Task<bool> ExistsBySourceEventIdAsync(Guid sourceEventId, CancellationToken cancellationToken = default)
+    {
+        return await DbContext.Set<NotificationEntity>()
+            .AsNoTracking()
+            .AnyAsync(n => n.SourceEventId == sourceEventId, cancellationToken).ConfigureAwait(false);
+    }
+
     // Domain → Persistence mapping
     private static NotificationEntity MapToPersistence(Notification notification)
     {
@@ -148,7 +156,8 @@ internal class NotificationRepository : RepositoryBase, INotificationRepository
             IsRead = notification.IsRead,
             CreatedAt = notification.CreatedAt,
             ReadAt = notification.ReadAt,
-            CorrelationId = notification.CorrelationId
+            CorrelationId = notification.CorrelationId,
+            SourceEventId = notification.SourceEventId
         };
     }
 
@@ -181,7 +190,8 @@ internal class NotificationRepository : RepositoryBase, INotificationRepository
             message: entity.Message,
             link: entity.Link,
             metadata: entity.Metadata,
-            correlationId: entity.CorrelationId
+            correlationId: entity.CorrelationId,
+            sourceEventId: entity.SourceEventId
         );
 
         // Restore read status with original timestamp (not MarkAsRead which overwrites)

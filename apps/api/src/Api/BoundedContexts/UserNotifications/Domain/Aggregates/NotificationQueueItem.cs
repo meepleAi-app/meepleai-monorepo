@@ -33,6 +33,14 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
     public Guid CorrelationId { get; private set; }
     public string? DeepLinkPath { get; private set; }
 
+    /// <summary>
+    /// Optional source domain event id used to dedupe at the dispatcher level (issue #1937 / CF-1).
+    /// When set together with <see cref="ChannelType"/> + <see cref="RecipientUserId"/>, the repository
+    /// can short-circuit if an existing queue item is already enqueued for the same channel/recipient/event.
+    /// See <c>NotificationMessage.SourceEventId</c> for the full rationale and propagation contract.
+    /// </summary>
+    public Guid? SourceEventId { get; private set; }
+
 #pragma warning disable CS8618
     private NotificationQueueItem() : base() { }
 #pragma warning restore CS8618
@@ -47,7 +55,8 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
         string? slackTeamId,
         Guid correlationId,
         DateTime? createdAt = null,
-        string? deepLinkPath = null)
+        string? deepLinkPath = null,
+        Guid? sourceEventId = null)
         : base(id)
     {
         ChannelType = channelType ?? throw new ArgumentNullException(nameof(channelType));
@@ -65,6 +74,7 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
         ProcessedAt = null;
         CorrelationId = correlationId;
         DeepLinkPath = deepLinkPath;
+        SourceEventId = sourceEventId;
     }
 
     /// <summary>
@@ -79,7 +89,8 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
         string? slackTeamId = null,
         Guid? correlationId = null,
         DateTime? createdAt = null,
-        string? deepLinkPath = null)
+        string? deepLinkPath = null,
+        Guid? sourceEventId = null)
     {
         return new NotificationQueueItem(
             Guid.NewGuid(),
@@ -91,7 +102,8 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
             slackTeamId,
             correlationId ?? Guid.NewGuid(),
             createdAt,
-            deepLinkPath);
+            deepLinkPath,
+            sourceEventId);
     }
 
     /// <summary>
@@ -199,13 +211,15 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
         DateTime createdAt,
         DateTime? processedAt,
         Guid correlationId,
-        string? deepLinkPath = null)
+        string? deepLinkPath = null,
+        Guid? sourceEventId = null)
     {
         var item = new NotificationQueueItem(
             id, channelType, recipientUserId, notificationType,
             payload, slackChannelTarget, slackTeamId, correlationId,
             createdAt: createdAt,
-            deepLinkPath: deepLinkPath);
+            deepLinkPath: deepLinkPath,
+            sourceEventId: sourceEventId);
         item.Status = status;
         item.RetryCount = retryCount;
         item.MaxRetries = maxRetries;

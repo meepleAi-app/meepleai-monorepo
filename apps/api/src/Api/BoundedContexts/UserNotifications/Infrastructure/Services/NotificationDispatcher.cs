@@ -40,6 +40,22 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
 
     public async Task DispatchAsync(NotificationMessage message, CancellationToken ct = default)
     {
+        // Issue #1937 / CF-1: short-circuit if a Notification already exists for the same domain event.
+        // Guards against duplicate notifications when the calling event handler is re-dispatched
+        // (rolled-back outer tx in #1535, MediatR transient retry, hand-replay). When SourceEventId
+        // is null the dispatcher falls back to legacy behavior (no dedup) — used by hand-triggered
+        // admin notifications without an originating domain event.
+        if (message.SourceEventId is Guid sourceEventId)
+        {
+            if (await _notificationRepository.ExistsBySourceEventIdAsync(sourceEventId, ct).ConfigureAwait(false))
+            {
+                _logger.LogInformation(
+                    "Skipping duplicate notification dispatch: user={UserId}, type={Type}, sourceEventId={SourceEventId} (already dispatched)",
+                    message.RecipientUserId, message.Type, sourceEventId);
+                return;
+            }
+        }
+
         var correlationId = Guid.NewGuid();
 
         // 1. Always create in-app notification
@@ -56,7 +72,8 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
             message: message.Payload.ToString() ?? string.Empty,
             link: message.DeepLinkPath,
             metadata: metadataJson,
-            correlationId: correlationId);
+            correlationId: correlationId,
+            sourceEventId: message.SourceEventId);
 
         await _notificationRepository.AddAsync(notification, ct).ConfigureAwait(false);
 
@@ -90,7 +107,8 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
                     notificationType: message.Type,
                     payload: message.Payload,
                     correlationId: correlationId,
-                    deepLinkPath: message.DeepLinkPath);
+                    deepLinkPath: message.DeepLinkPath,
+                    sourceEventId: message.SourceEventId);
 
                 queueItems.Add(emailItem);
 
@@ -120,7 +138,8 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
                         slackChannelTarget: slackConnection.DmChannelId,
                         slackTeamId: slackConnection.SlackTeamId,
                         correlationId: correlationId,
-                        deepLinkPath: message.DeepLinkPath);
+                        deepLinkPath: message.DeepLinkPath,
+                        sourceEventId: message.SourceEventId);
 
                     queueItems.Add(slackItem);
 
@@ -153,7 +172,8 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
                         slackChannelTarget: settings.WebhookUrl,
                         slackTeamId: teamId,
                         correlationId: correlationId,
-                        deepLinkPath: message.DeepLinkPath);
+                        deepLinkPath: message.DeepLinkPath,
+                        sourceEventId: message.SourceEventId);
 
                     queueItems.Add(teamItem);
 

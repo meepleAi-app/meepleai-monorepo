@@ -93,4 +93,12 @@ public class NotificationEntity
     /// </summary>
     [Column("correlation_id")]
     public Guid? CorrelationId { get; set; }
+
+    /// <summary>
+    /// Optional source domain event id used to dedupe at the dispatcher level (issue #1937 / CF-1).
+    /// UNIQUE (partial — only when not null) so that re-dispatch from a retried/rolled-back event
+    /// handler does not insert duplicate notification rows.
+    /// </summary>
+    [Column("source_event_id")]
+    public Guid? SourceEventId { get; set; }
 }

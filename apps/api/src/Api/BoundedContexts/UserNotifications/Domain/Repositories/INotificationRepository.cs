@@ -33,4 +33,11 @@ internal interface INotificationRepository : IRepository<Notification, Guid>
     /// Bulk update operation for "clear all" functionality.
     /// </summary>
     Task<int> MarkAllAsReadAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns <c>true</c> when a Notification already exists for the given source domain event id
+    /// (issue #1937 / CF-1). Used by <c>NotificationDispatcher</c> to short-circuit re-dispatch
+    /// from a retried/rolled-back event handler — see <c>NotificationMessage.SourceEventId</c>.
+    /// </summary>
+    Task<bool> ExistsBySourceEventIdAsync(Guid sourceEventId, CancellationToken cancellationToken = default);
 }

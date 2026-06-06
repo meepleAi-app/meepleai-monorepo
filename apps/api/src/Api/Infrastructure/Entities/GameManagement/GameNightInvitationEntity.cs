@@ -63,4 +63,9 @@ public class GameNightInvitationEntity
     [Required]
     [Column("created_by")]
     public Guid CreatedBy { get; set; }
+
+    /// <summary>Issue #1928 Task B (DEC-B-8) — E2E test seeding scope marker.</summary>
+    [Column("test_run_id")]
+    [MaxLength(64)]
+    public string? TestRunId { get; set; }
 }

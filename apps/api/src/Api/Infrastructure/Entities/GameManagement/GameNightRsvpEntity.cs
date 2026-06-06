@@ -34,5 +34,10 @@ public class GameNightRsvpEntity
     [Column("created_at")]
     public DateTimeOffset CreatedAt { get; set; }
 
+    /// <summary>Issue #1928 Task B (DEC-B-8) — E2E test seeding scope marker.</summary>
+    [Column("test_run_id")]
+    [MaxLength(64)]
+    public string? TestRunId { get; set; }
+
     public GameNightEventEntity Event { get; set; } = null!;
 }

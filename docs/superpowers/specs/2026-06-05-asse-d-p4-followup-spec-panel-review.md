@@ -411,6 +411,110 @@ Pattern coerente con Sezione 8 spec consolidato MAJ-11.
 
 ---
 
+## Addendum sessione 39 fase 3 (post-restart 2026-06-05) — DEC-B-7 fixture pattern
+
+**Trigger**: durante T1 subagent-driven (`feature/issue-1928-be-seeding-infra` commit `5c757f9d1`) scoperto runtime blocker: `MeepleAiDbContext` constructor richiede DI services (oltre IMediator + IDomainEventCollector mockabili) che pattern `InMemory + Moq` non risolve → `GetRequiredService` fail su `db.Users` access. T1 handler tests 6/15 RUNTIME FAIL (compile OK).
+
+**Impact**: stesso fixture pattern bloccherebbe T2-T7 (tutti i handler tests hanno stessa dipendenza MeepleAiDbContext). Decisione locked PRIMA proseguire (pattern P188 mid-task-architectural-stop).
+
+**Opzioni considerate**:
+- (a) Postgres Testcontainers fresh per Unit class — alto CI cost
+- (b) SQLite InMemory — possibly works ma shadow property + EF Core 9 compatibility unverified
+- (c) Refactor handler con IRepository interface — scope creep significativo
+- (d) **Convert handler tests da Unit-trait a Integration-trait riusando `SharedTestcontainersFixture` + `IntegrationWebApplicationFactory.Create()`** — least invasive, riusa pattern rodato
+
+### DEC-B-7 (lockata sessione 39 fase 3) · Fixture pattern handler tests = Integration-trait + IntegrationWebApplicationFactory
+
+Tutti i handler tests T1-T4 convertiti da `[Trait("Category", "Unit")]` a `[Trait("Category", "Integration")]` con:
+
+```csharp
+[Collection("SharedTestcontainers")]
+[Trait("Category", "Integration")]
+[Trait("BoundedContext", "Testing")]
+public class SeedTestXxxCommandHandlerTests : IAsyncLifetime
+{
+    private readonly SharedTestcontainersFixture _fixture;
+    private WebApplicationFactory<Program>? _factory;
+
+    public SeedTestXxxCommandHandlerTests(SharedTestcontainersFixture fixture)
+    {
+        _fixture = fixture;
+    }
+
+    public Task InitializeAsync()
+    {
+        var dbName = $"testing_{Guid.NewGuid():N}";
+        var connStr = $"{_fixture.PostgresConnectionString};Database={dbName}";
+        _factory = IntegrationWebApplicationFactory.Create(connStr);
+        return Task.CompletedTask;
+    }
+
+    public async Task DisposeAsync()
+    {
+        if (_factory != null) await _factory.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task Handle_HappyPath_...()
+    {
+        await using var scope = _factory!.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        await db.Database.EnsureCreatedAsync();
+        var handler = new SeedTestXxxCommandHandler(db, scope.ServiceProvider.GetRequiredService<ILogger<SeedTestXxxCommandHandler>>());
+        // ... rest of test
+    }
+}
+```
+
+**Rationale**:
+- ✅ Riusa fixture rodato `SharedTestcontainersFixture` (Postgres + Redis shared across tests, ~340s savings vs spin fresh)
+- ✅ DI scope completo via `IntegrationWebApplicationFactory.Create()` → tutti i service necessari risolti (IMediator + IDomainEventCollector + ILogger + others)
+- ✅ Shadow property `TestRunId` opera su real Postgres → comportamento identico a produzione
+- ✅ ExecuteDeleteAsync (T4 cleanup) opera su real SQL → real EF Core translation behavior
+- ✅ Validator tests rimangono Unit-trait (no DI need, AbstractValidator istanziabile direct)
+
+**Trade-offs**:
+- ⚠️ Handler tests run più lenti (Postgres roundtrip) ma `SharedTestcontainersFixture` ammortizza startup → ~50-100ms per test acceptable
+- ⚠️ Test isolation richiede unique DB name per test class (pattern già in uso)
+
+**Update plan T1**:
+- TestDbContextFixture (Unit-trait + InMemory + Moq) **DEPRECATED**, file da rimuovere
+- Handler tests rewrite con pattern sopra (10 test totali, ~250 LOC)
+- Validator tests **NON cambiano** (rimangono Unit-trait, 4 test)
+
+**Effort T1 re-implementation**: ~30-60min (rewrite test file, run, verify), partirà sessione 40 fresh.
+
+**Applicabilità T2-T7**:
+- T2 (Session): identico pattern
+- T3 (Player): identico pattern
+- T4 (Cleanup): identico pattern + cascade Postgres real
+- T5 (Admin endpoint integration): già era Integration-trait, no change
+- T6 (Startup gate): già era Integration-trait, no change
+- T7 (FE + docs): non interessato
+
 ## Changelog
 
-- **2026-06-05 sessione 39**: initial spec-panel critique sequenziale #1928 + #1929. Output: 21 findings + 13 DEC lockate + 2 SPEC ERROR codebase-confirmed + sequencing aggregato 8-13gg distribuito 2 sessioni. Pattern P181 esteso a follow-up scope.
+- **2026-06-05 sessione 39 fase 1**: initial spec-panel critique sequenziale #1928 + #1929. Output: 21 findings + 13 DEC lockate + 2 SPEC ERROR codebase-confirmed + sequencing aggregato 8-13gg distribuito 2 sessioni. Pattern P181 esteso a follow-up scope.
+- **2026-06-05 sessione 39 fase 3**: DEC-B-7 lockata (Integration-trait reuse) per blocker fixture T1 scoperto durante subagent-driven. Pattern P186 (implementer-report-trust-but-verify) + P187 (dbcontext-di-services-block-unit-inmemory) + P188 (mid-task-architectural-stop) documentati.
+- **2026-06-06 sessione 40 fase 1**: T1 Integration-trait re-implementation con `IntegrationWebApplicationFactory.Create()` + `EnsureCreatedAsync`. Scoperti 3 sub-blocker risolti progressivamente: (1) shadow property `TestRunId` su `User` aggregate triggerava BackupCode private ctor binding regression → FIX: registrare su `UserEntity` (persistence model); (2) handler usa `GameNightEventEntity` (persistence) ma shadow su `GameNightEvent` (domain) → FIX: tutte le 5 shadow property registrate su persistence entities (xxxEntity); (3) `MigrateAsync` non includeva shadow property nella schema → FIX: `EnsureCreatedAsync`. **4° blocker NON risolto sessione 40 fase 1**: shadow property value `null` dopo SaveChanges + re-fetch (EF Core 9 + Npgsql interaction unclear). **DEC-B-8 lockata**: replace shadow property con **explicit column** `TestRunId` su 5 persistence entities — più robusto, EF Core tracking-friendly, no shadow property gotchas. Sessione 40 fase 2 implementa DEC-B-8.
+
+### DEC-B-8 (lockata sessione 40 fase 1) · Explicit column TestRunId vs shadow property
+
+Modifica per 5 persistence entity:
+
+```csharp
+// apps/api/src/Api/Infrastructure/Entities/GameManagement/GameNightEventEntity.cs (+ 4 altre)
+[Column("test_run_id")]
+[MaxLength(64)]
+public string? TestRunId { get; set; }
+```
+
+Cleanup OnModelCreating: rimuovere 5 `modelBuilder.Entity<xxxEntity>().Property<string?>("TestRunId").HasMaxLength(64);` registrations.
+
+Handler update: usa property direct (`gameNightEntity.TestRunId = request.TestRunId;`) invece di `_db.Entry(...).Property<string?>("TestRunId").CurrentValue = ...`.
+
+CleanupTestEntitiesCommand: ExecuteDeleteAsync usa `WHERE TestRunId = @testRunId` esplicito (entity property, no shadow).
+
+**Rationale**: shadow property bugs intermittenti con EF Core 9 + Npgsql + IntegrationWebApplicationFactory. Explicit column è produzione-proven pattern (esistente altrove nel codebase) + tracking-friendly + introspectable via raw SQL.
+
+**Effort T1 re-implementation DEC-B-8**: ~30-45min (5 entity edits + handler + DbContext cleanup + test verify), partirà sessione 40 fase 2.

@@ -427,6 +427,10 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.ProcessingJob>();
         modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.ProcessingStep>();
         modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.StepLogEntry>();
+
+        // Issue #1928 Task B (DEC-B-8) — TestRunId column now explicit property on 5 persistence
+        // entities (see xxxEntity.cs files). Shadow property approach abandoned sessione 40 fase 1
+        // due to EF Core 9 + Npgsql null-after-save gotcha. Explicit column is production-proven.
     }
 
     /// <summary>

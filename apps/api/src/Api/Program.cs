@@ -96,6 +96,20 @@ else if (isCIEnv)
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Issue #1928 Task B (DEC-B-4) — Triple gate STARTUP fail-fast.
+// Refuses to start if BOTH E2E_SEEDING_ENABLED=true AND ASPNETCORE_ENVIRONMENT=Production.
+// Defense-in-depth: even if a deployment misconfigures the flag, the app refuses to
+// boot rather than expose admin test endpoints in production.
+// Component 1/3 of triple gate (Component 2/3: endpoint conditional registration in
+// Program.cs ~line 840; Component 3/3: RequireAdminSessionFilter at endpoint group level).
+if (builder.Environment.IsProduction()
+    && builder.Configuration.GetValue<bool>("E2E_SEEDING_ENABLED"))
+{
+    throw new InvalidOperationException(
+        "E2E_SEEDING_ENABLED=true is FORBIDDEN in Production environment. " +
+        "Refusing to start. See docs/for-developers/testing/e2e-entity-seeding.md.");
+}
+
 // OPS-04: Configure Serilog with environment-based settings and sensitive data redaction
 Log.Logger = LoggingConfiguration.ConfigureSerilog(builder).CreateLogger();
 
@@ -838,6 +852,16 @@ app.MapAdminBulkImportEndpoints();       // Issue #4354: Bulk import endpoint ro
 app.MapAdminProviderEndpoints();         // Issue #936: Provider token probe observability
 v1Api.MapGroup("/admin/catalog-ingestion").MapAdminCatalogIngestionEndpoints(); // Admin bulk Excel import + enrichment
 v1Api.MapGroup("/admin/catalog/seeds").MapAdminCatalogSeedEndpoints();          // Issue #1903 M6.2: admin catalog seed pipeline
+
+// Issue #1928 Task B (DEC-B-1 + DEC-B-4) — E2E test seeding endpoints, triple-gated:
+// Component 2/3: conditional registration ENV != Production + E2E_SEEDING_ENABLED=true
+// Component 1/3 (startup fail-fast) is registered earlier in Program.cs (T6).
+// Component 3/3 (RequireAdminSessionFilter) is at endpoint group level.
+if (!app.Environment.IsProduction()
+    && app.Configuration.GetValue<bool>("E2E_SEEDING_ENABLED"))
+{
+    v1Api.MapGroup("/admin/test/seed").MapAdminTestSeedEndpoints();
+}
 app.MapPdfAnalyticsEndpoints();          // Issue #3715: PDF analytics dashboard
 app.MapChatAnalyticsEndpoints();         // Issue #3714: Chat analytics dashboard
 app.MapModelPerformanceEndpoints();      // Issue #3716: Model performance dashboard

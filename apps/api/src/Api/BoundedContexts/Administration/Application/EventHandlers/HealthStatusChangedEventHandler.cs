@@ -1,7 +1,10 @@
 using Api.BoundedContexts.Administration.Domain.Events;
+using Api.Infrastructure;
+using Api.Infrastructure.Entities.Administration;
 using Api.Infrastructure.Health.Models;
 using Api.Services;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Administration.Application.EventHandlers;
 
@@ -28,6 +31,27 @@ internal sealed class HealthStatusChangedEventHandler
     {
         using var scope = _scopeFactory.CreateScope();
         var alertingService = scope.ServiceProvider.GetRequiredService<IAlertingService>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        // Issue #1941 / iso-2 Fix 2: per-service idempotency check. If we already dispatched
+        // an alert for this exact event id (rolled-back/retried domain event), skip the Slack
+        // send to avoid double-pinging oncall. Storage is a single row keyed by ServiceName —
+        // upserted after each successful dispatch. Skip on InMemory (unit tests) — relational only.
+        if (dbContext.Database.IsRelational())
+        {
+            var existing = await dbContext.HealthStatusAlertsSent
+                .AsNoTracking()
+                .FirstOrDefaultAsync(e => e.ServiceName == evt.ServiceName, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (existing is not null && existing.LastEventId == evt.EventId)
+            {
+                _logger.LogDebug(
+                    "[HealthAlert] Skipping dispatch for service {ServiceName}: event {EventId} already sent at {SentAt} (iso-2)",
+                    evt.ServiceName, evt.EventId, existing.LastSentAt);
+                return;
+            }
+        }
 
         var category = MapCategory(evt.ServiceName, evt.Tags);
         var severity = MapSeverity(evt.CurrentStatus);
@@ -56,6 +80,19 @@ internal sealed class HealthStatusChangedEventHandler
             _logger.LogInformation(
                 "[HealthAlert] {AlertType} ({Severity}) → category={Category}",
                 alertType, severity, category);
+
+            // Issue #1941 / iso-2 Fix 2: upsert the dedup record so a retried event short-circuits
+            // at the pre-flight check above. Skip on InMemory (no relational provider in tests).
+            if (dbContext.Database.IsRelational())
+            {
+                await dbContext.Database.ExecuteSqlInterpolatedAsync(
+                    $@"INSERT INTO health_status_alerts_sent (service_name, last_event_id, last_sent_at)
+                       VALUES ({evt.ServiceName}, {evt.EventId}, {DateTime.UtcNow})
+                       ON CONFLICT (service_name) DO UPDATE
+                       SET last_event_id = EXCLUDED.last_event_id,
+                           last_sent_at = EXCLUDED.last_sent_at",
+                    cancellationToken).ConfigureAwait(false);
+            }
         }
         catch (InvalidOperationException ex)
         {

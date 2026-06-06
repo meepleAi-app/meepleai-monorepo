@@ -126,6 +126,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<StagingAllowlistEntity> StagingAllowlist => Set<StagingAllowlistEntity>(); // #845: DevOps Wave 1 staging email allowlist
     public DbSet<AlertConfigurationEntity> AlertConfigurations => Set<AlertConfigurationEntity>(); // ISSUE-921: Dynamic alert config
     public DbSet<AlertChannelEntity> AlertChannels => Set<AlertChannelEntity>(); // Issue #1840 SP5 F4-C7: Per-channel alert notification config
+    public DbSet<HealthStatusAlertSentEntity> HealthStatusAlertsSent => Set<HealthStatusAlertSentEntity>(); // Issue #1941 / iso-2 Fix 2: dedup for HealthStatusChangedEvent dispatch
     public DbSet<ServiceHealthStateEntity> ServiceHealthStates => Set<ServiceHealthStateEntity>(); // ISSUE-448: Service health monitoring
     public DbSet<DatabaseMetricsSnapshotEntity> DatabaseMetricsSnapshots => Set<DatabaseMetricsSnapshotEntity>(); // Database growth tracking
     public DbSet<UserBackupCodeEntity> UserBackupCodes => Set<UserBackupCodeEntity>(); // AUTH-07

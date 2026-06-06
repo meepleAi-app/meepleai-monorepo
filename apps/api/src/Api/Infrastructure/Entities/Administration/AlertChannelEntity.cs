@@ -32,4 +32,7 @@ public class AlertChannelEntity
 
     /// <summary>EF Core optimistic concurrency token (PostgreSQL <c>xmin</c>).</summary>
     public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+
+    /// <summary>Issue #1941 / iso-2 Fix 1: dedup key for AlertFiredEvent dispatch per channel.</summary>
+    public Guid? LastDispatchedEventId { get; set; }
 }

@@ -100,7 +100,9 @@ internal sealed class TwoFactorEnforcementBehavior<TRequest, TResponse> : IPipel
         }
 
         var strictMode = await _twoFactorConfig.GetStrictModeAsync(cancellationToken).ConfigureAwait(false);
-        if (!strictMode)
+        // Issue #1859: commands with [RequireTwoFactor(ForceStrict=true)] bypass the global flag
+        // (e.g. provider key rotation) — always enforced strict regardless of rollout phase.
+        if (!strictMode && !attr.ForceStrict)
         {
             LogShadow(actor, attr);
             return await next().ConfigureAwait(false);

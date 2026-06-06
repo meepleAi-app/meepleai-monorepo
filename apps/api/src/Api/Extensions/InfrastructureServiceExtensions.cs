@@ -84,6 +84,19 @@ internal static class InfrastructureServiceExtensions
         services.AddScoped<IProviderProbeAuditRepository, ProviderProbeAuditRepository>();
         services.AddScoped<IProviderProbeService, ProviderProbeService>();
 
+        // Issue #1859: Provider key rotation infrastructure.
+        // - Repository: Scoped (depends on Scoped DbContext).
+        // - Resolver: Scoped — depends on Scoped repository + Singleton IMemoryCache.
+        //   The cache is Singleton so cross-scope cache hits work; the resolver itself can be
+        //   per-request without re-querying DB on every call.
+        // - Invalidator: Singleton — wraps Singleton IConnectionMultiplexer, stateless.
+        // - Subscriber: HostedService — opens Redis subscription at startup, uses
+        //   IServiceScopeFactory to resolve the Scoped resolver per invalidation message.
+        services.AddScoped<IProviderCredentialRepository, ProviderCredentialRepository>();
+        services.AddScoped<IProviderCredentialResolver, ProviderCredentialResolver>();
+        services.AddSingleton<IProviderCacheInvalidator, RedisProviderCacheInvalidator>();
+        services.AddHostedService<Api.BoundedContexts.Administration.Infrastructure.HostedServices.ProviderCacheInvalidationSubscriber>();
+
         // Issue #936 (G2): Provider quota providers — OpenRouter + DeepSeek only.
         services.AddSingleton<IProviderQuotaProvider, OpenRouterQuotaProvider>();
         services.AddSingleton<IProviderQuotaProvider, DeepSeekQuotaProvider>();

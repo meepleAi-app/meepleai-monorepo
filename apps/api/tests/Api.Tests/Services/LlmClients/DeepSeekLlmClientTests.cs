@@ -1,9 +1,11 @@
+using Api.BoundedContexts.Administration.Infrastructure.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.Services.LlmClients;
 using FluentAssertions;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -14,6 +16,7 @@ namespace Api.Tests.Services.LlmClients;
 /// <summary>
 /// Unit tests for DeepSeekLlmClient
 /// ISSUE-419: Direct DeepSeek provider — unconfigured state and model routing
+/// ISSUE-1859: API key now resolved via IProviderCredentialResolver (DB→env-var cascade)
 /// </summary>
 public class DeepSeekLlmClientTests
 {
@@ -130,7 +133,9 @@ public class DeepSeekLlmClientTests
     // ─── Factory helpers ─────────────────────────────────────────────────────
 
     /// <summary>
-    /// Creates a DeepSeekLlmClient with no DEEPSEEK_API_KEY so _isConfigured = false.
+    /// Creates a DeepSeekLlmClient backed by a resolver that always throws
+    /// <see cref="ProviderCredentialNotConfiguredException"/> — simulates a deployment
+    /// where neither a DB row nor the <c>DEEPSEEK_API_KEY</c> env var is configured.
     /// </summary>
     private static DeepSeekLlmClient CreateUnconfiguredClient()
     {
@@ -138,10 +143,15 @@ public class DeepSeekLlmClientTests
         var httpClient = new HttpClient();
         mockFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
 
-        // Empty configuration — no DEEPSEEK_API_KEY present
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string>()!)
-            .Build();
+        // Resolver throws ProviderCredentialNotConfiguredException — clients must degrade gracefully.
+        var resolver = new Mock<IProviderCredentialResolver>();
+        resolver
+            .Setup(r => r.ResolveAsync(DeepSeekLlmClient.ProviderKey, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ProviderCredentialNotConfiguredException("deepseek"));
+
+        var services = new ServiceCollection();
+        services.AddSingleton(resolver.Object);
+        var scopeFactory = services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
 
         var mockCostCalculator = new Mock<ILlmCostCalculator>();
         mockCostCalculator
@@ -163,6 +173,6 @@ public class DeepSeekLlmClientTests
 
         var logger = Mock.Of<ILogger<DeepSeekLlmClient>>();
 
-        return new DeepSeekLlmClient(mockFactory.Object, config, mockCostCalculator.Object, logger);
+        return new DeepSeekLlmClient(mockFactory.Object, scopeFactory, mockCostCalculator.Object, logger);
     }
 }

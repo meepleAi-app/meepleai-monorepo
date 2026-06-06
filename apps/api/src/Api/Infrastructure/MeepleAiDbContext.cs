@@ -297,6 +297,9 @@ public class MeepleAiDbContext : DbContext
     public DbSet<BoundedContexts.KbQuality.Domain.Evaluation.DocumentEvaluationRun> DocumentEvaluationRuns => Set<BoundedContexts.KbQuality.Domain.Evaluation.DocumentEvaluationRun>();
     public DbSet<BoundedContexts.KbQuality.Domain.Budget.KbQualityBudgetCounter> KbQualityBudgetCounters => Set<BoundedContexts.KbQuality.Domain.Budget.KbQualityBudgetCounter>();
 
+    // Issue #1859: Provider key rotation — DB-backed credential store (encrypted via IDataProtector)
+    public DbSet<BoundedContexts.Administration.Domain.Aggregates.ProviderCredentials.ProviderCredential> ProviderCredentials => Set<BoundedContexts.Administration.Domain.Aggregates.ProviderCredentials.ProviderCredential>();
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         ArgumentNullException.ThrowIfNull(optionsBuilder);

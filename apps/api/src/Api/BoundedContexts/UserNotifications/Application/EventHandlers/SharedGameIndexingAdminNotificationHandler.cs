@@ -66,7 +66,9 @@ internal sealed class SharedGameIndexingAdminNotificationHandler
                 chunkCount = evt.ChunkCount,
                 pdfDocumentId = evt.PdfDocumentId,
                 isSharedGame = true
-            }
+            },
+            // Issue #1937 / CF-1: propagate event id for dispatcher dedup
+            SourceEventId = evt.EventId
         }, cancellationToken).ConfigureAwait(false);
     }
 }

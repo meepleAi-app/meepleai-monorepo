@@ -73,7 +73,9 @@ internal sealed class BadgeEarnedNotificationHandler : INotificationHandler<Badg
                     notification.BadgeId,
                     badge.Name,
                     badge.Description),
-                DeepLinkPath = "/users/me/badges"
+                DeepLinkPath = "/users/me/badges",
+                // Issue #1937 / CF-1: propagate event id for dispatcher dedup
+                SourceEventId = notification.EventId
             }, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(

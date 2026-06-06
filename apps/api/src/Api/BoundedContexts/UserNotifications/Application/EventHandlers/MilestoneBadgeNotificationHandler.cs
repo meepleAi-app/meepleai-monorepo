@@ -91,7 +91,9 @@ internal sealed class MilestoneBadgeNotificationHandler : INotificationHandler<B
                     notification.BadgeId,
                     badge.Name,
                     $"{badge.Description} {milestoneMessage}"),
-                DeepLinkPath = "/users/me/badges"
+                DeepLinkPath = "/users/me/badges",
+                // Issue #1937 / CF-1: propagate event id for dispatcher dedup
+                SourceEventId = notification.EventId
             }, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(

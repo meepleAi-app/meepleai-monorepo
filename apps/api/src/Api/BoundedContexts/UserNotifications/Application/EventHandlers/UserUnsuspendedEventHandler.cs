@@ -55,7 +55,9 @@ internal sealed class UserUnsuspendedEventHandler : INotificationHandler<UserUns
                 Payload = new GenericPayload(
                     "Account Reactivated",
                     "Your account has been reactivated. Welcome back!"),
-                DeepLinkPath = "/dashboard"
+                DeepLinkPath = "/dashboard",
+                // Issue #1937 / CF-1: propagate event id for dispatcher dedup
+                SourceEventId = notification.EventId
             }, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(

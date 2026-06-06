@@ -35,12 +35,16 @@ internal class NotificationEntityConfiguration : IEntityTypeConfiguration<Notifi
             .HasDatabaseName("IX_notifications_correlation_id")
             .HasFilter("correlation_id IS NOT NULL");
 
-        // Issue #1937 / CF-1: SourceEventId UNIQUE (partial — only when not null).
+        // Issue #1937 / CF-1: composite UNIQUE (user_id, source_event_id) — partial (only when not null).
         // Guards against duplicate notifications when an event handler is re-dispatched
         // (rolled-back outer tx in #1535, MediatR transient retry, hand-replay).
-        builder.HasIndex(e => e.SourceEventId)
+        // Composite scope (vs single-column UNIQUE on source_event_id) because a single domain event
+        // can legitimately fan out to multiple users — e.g. SharedGameSubmittedForApprovalEvent →
+        // 1 Notification per admin. The (user_id, source_event_id) pair preserves cross-user fan-out
+        // while still blocking same-user re-dispatch from a retried/rolled-back handler.
+        builder.HasIndex(e => new { e.UserId, e.SourceEventId })
             .IsUnique()
-            .HasDatabaseName("UX_notifications_source_event_id")
+            .HasDatabaseName("UX_notifications_user_source_event_id")
             .HasFilter("source_event_id IS NOT NULL");
 
         // Critical indexes for notification queries (Issue #2053 code review)

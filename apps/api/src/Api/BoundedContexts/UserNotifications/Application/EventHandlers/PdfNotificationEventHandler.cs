@@ -49,7 +49,9 @@ internal class PdfNotificationEventHandler :
                 evt.PdfDocumentId,
                 pdfDoc.FileName.Value,
                 "Ready"),
-            DeepLinkPath = $"/documents/{evt.PdfDocumentId}"
+            DeepLinkPath = $"/documents/{evt.PdfDocumentId}",
+            // Issue #1937 / CF-1: propagate event id for dispatcher dedup
+            SourceEventId = evt.EventId
         }, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("Dispatched PDF ready notification for user {UserId}", evt.UploadedByUserId);
@@ -72,7 +74,9 @@ internal class PdfNotificationEventHandler :
                 evt.PdfDocumentId,
                 pdfDoc.FileName.Value,
                 $"Failed: {evt.ErrorMessage}"),
-            DeepLinkPath = $"/documents/{evt.PdfDocumentId}"
+            DeepLinkPath = $"/documents/{evt.PdfDocumentId}",
+            // Issue #1937 / CF-1: propagate event id for dispatcher dedup
+            SourceEventId = evt.EventId
         }, cancellationToken).ConfigureAwait(false);
 
         _logger.LogWarning("Dispatched PDF failure notification for user {UserId}", evt.UploadedByUserId);
@@ -95,7 +99,9 @@ internal class PdfNotificationEventHandler :
                 evt.PdfDocumentId,
                 pdfDoc.FileName.Value,
                 $"Retry #{evt.RetryCount}"),
-            DeepLinkPath = $"/documents/{evt.PdfDocumentId}"
+            DeepLinkPath = $"/documents/{evt.PdfDocumentId}",
+            // Issue #1937 / CF-1: propagate event id for dispatcher dedup
+            SourceEventId = evt.EventId
         }, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("Dispatched PDF retry notification for user {UserId}", evt.UploadedByUserId);

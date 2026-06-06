@@ -53,7 +53,9 @@ internal class ProcessingJobNotificationEventHandler :
                 evt.PdfDocumentId,
                 fileName,
                 $"Completed in {durationText}"),
-            DeepLinkPath = "/admin/knowledge-base/queue"
+            DeepLinkPath = "/admin/knowledge-base/queue",
+            // Issue #1937 / CF-1: propagate event id for dispatcher dedup
+            SourceEventId = evt.EventId
         }, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("Dispatched job completed notification for user {UserId}, job {JobId}", evt.UserId, evt.JobId);
@@ -80,13 +82,15 @@ internal class ProcessingJobNotificationEventHandler :
                 evt.PdfDocumentId,
                 fileName,
                 $"Failed{stepText}: {evt.ErrorMessage}"),
-            DeepLinkPath = "/admin/knowledge-base/queue"
+            DeepLinkPath = "/admin/knowledge-base/queue",
+            // Issue #1937 / CF-1: propagate event id for dispatcher dedup
+            SourceEventId = evt.EventId
         }, cancellationToken).ConfigureAwait(false);
 
         _logger.LogWarning("Dispatched job failed notification for user {UserId}, job {JobId}", evt.UserId, evt.JobId);
 
         // Admin in-app notifications for failure visibility
-        await NotifyAdminsOnFailureAsync(evt.UserId, fileName, stepText, evt.ErrorMessage, cancellationToken).ConfigureAwait(false);
+        await NotifyAdminsOnFailureAsync(evt.UserId, fileName, stepText, evt.ErrorMessage, evt.EventId, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task NotifyAdminsOnFailureAsync(
@@ -94,6 +98,7 @@ internal class ProcessingJobNotificationEventHandler :
         string fileName,
         string stepText,
         string? errorMessage,
+        Guid sourceEventId,
         CancellationToken cancellationToken)
     {
         try
@@ -113,7 +118,9 @@ internal class ProcessingJobNotificationEventHandler :
                         Guid.Empty,
                         fileName,
                         $"Failed{stepText}: {errorMessage}"),
-                    DeepLinkPath = "/admin/knowledge-base/queue"
+                    DeepLinkPath = "/admin/knowledge-base/queue",
+                    // Issue #1937 / CF-1: propagate event id for dispatcher dedup
+                    SourceEventId = sourceEventId
                 }, cancellationToken).ConfigureAwait(false);
             }
 

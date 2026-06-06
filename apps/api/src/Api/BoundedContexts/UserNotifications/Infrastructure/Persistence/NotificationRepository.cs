@@ -133,11 +133,11 @@ internal class NotificationRepository : RepositoryBase, INotificationRepository
     }
 
     /// <inheritdoc />
-    public async Task<bool> ExistsBySourceEventIdAsync(Guid sourceEventId, CancellationToken cancellationToken = default)
+    public async Task<bool> ExistsBySourceEventIdAsync(Guid userId, Guid sourceEventId, CancellationToken cancellationToken = default)
     {
         return await DbContext.Set<NotificationEntity>()
             .AsNoTracking()
-            .AnyAsync(n => n.SourceEventId == sourceEventId, cancellationToken).ConfigureAwait(false);
+            .AnyAsync(n => n.UserId == userId && n.SourceEventId == sourceEventId, cancellationToken).ConfigureAwait(false);
     }
 
     // Domain → Persistence mapping

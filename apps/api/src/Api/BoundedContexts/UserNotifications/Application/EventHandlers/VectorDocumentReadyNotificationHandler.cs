@@ -41,7 +41,9 @@ internal sealed class VectorDocumentReadyNotificationHandler
                 Guid.Empty,
                 fileName,
                 $"Indexed ({chunkCount} chunks)"),
-            DeepLinkPath = agentLink
+            DeepLinkPath = agentLink,
+            // Issue #1937 / CF-1: propagate event id for dispatcher dedup
+            SourceEventId = evt.EventId
         }, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(

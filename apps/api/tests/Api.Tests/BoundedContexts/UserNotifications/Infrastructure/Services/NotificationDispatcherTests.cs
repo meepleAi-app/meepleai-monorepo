@@ -401,7 +401,7 @@ public class NotificationDispatcherTests
         var message = CreateMessage() with { SourceEventId = sourceEventId };
 
         _notificationRepoMock
-            .Setup(r => r.ExistsBySourceEventIdAsync(sourceEventId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.ExistsBySourceEventIdAsync(It.IsAny<Guid>(), sourceEventId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         var sut = CreateSut();
@@ -426,7 +426,7 @@ public class NotificationDispatcherTests
         var message = CreateMessage() with { SourceEventId = sourceEventId };
 
         _notificationRepoMock
-            .Setup(r => r.ExistsBySourceEventIdAsync(sourceEventId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.ExistsBySourceEventIdAsync(It.IsAny<Guid>(), sourceEventId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
         var sut = CreateSut();
@@ -451,7 +451,7 @@ public class NotificationDispatcherTests
         var message = CreateMessage(recipientUserId: userId) with { SourceEventId = sourceEventId };
 
         _notificationRepoMock
-            .Setup(r => r.ExistsBySourceEventIdAsync(sourceEventId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.ExistsBySourceEventIdAsync(It.IsAny<Guid>(), sourceEventId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         _prefsRepoMock
             .Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
@@ -487,7 +487,7 @@ public class NotificationDispatcherTests
 
         // Assert — ExistsBySourceEventIdAsync never invoked; AddAsync fires once
         _notificationRepoMock.Verify(
-            r => r.ExistsBySourceEventIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            r => r.ExistsBySourceEventIdAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
             Times.Never);
         _notificationRepoMock.Verify(
             r => r.AddAsync(

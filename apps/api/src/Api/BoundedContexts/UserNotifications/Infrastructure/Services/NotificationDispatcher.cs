@@ -40,14 +40,17 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
 
     public async Task DispatchAsync(NotificationMessage message, CancellationToken ct = default)
     {
-        // Issue #1937 / CF-1: short-circuit if a Notification already exists for the same domain event.
-        // Guards against duplicate notifications when the calling event handler is re-dispatched
-        // (rolled-back outer tx in #1535, MediatR transient retry, hand-replay). When SourceEventId
+        // Issue #1937 / CF-1: short-circuit if a Notification already exists for the same
+        // (recipient, source domain event) pair. Guards against duplicate notifications when the
+        // calling event handler is re-dispatched (rolled-back outer tx in #1535, MediatR transient
+        // retry, hand-replay). Per-user scoping preserves legitimate fan-out from a single event
+        // (e.g. notify-all-admins): each admin gets their own Notification row, all sharing the
+        // same SourceEventId but distinct (user_id, source_event_id) UNIQUE pairs. When SourceEventId
         // is null the dispatcher falls back to legacy behavior (no dedup) — used by hand-triggered
         // admin notifications without an originating domain event.
         if (message.SourceEventId is Guid sourceEventId)
         {
-            if (await _notificationRepository.ExistsBySourceEventIdAsync(sourceEventId, ct).ConfigureAwait(false))
+            if (await _notificationRepository.ExistsBySourceEventIdAsync(message.RecipientUserId, sourceEventId, ct).ConfigureAwait(false))
             {
                 _logger.LogInformation(
                     "Skipping duplicate notification dispatch: user={UserId}, type={Type}, sourceEventId={SourceEventId} (already dispatched)",

@@ -697,7 +697,7 @@
   the criteria for re-enabling (duplicate-publish rate > 5% in staging → follow-up issue).
 
 - [x] **Verifica:**
-  - 4/5 acceptance test PASS + 1 SKIP intenzionale ✅ commit `<T7-commit>`
+  - 4/5 acceptance test PASS + 1 SKIP intenzionale ✅ commit `8a706a301`
   - Test class XML doc-comment documenta tutti i 5 scenari + rationale del panel
   - Suite-wide #1535 + DomainEventOutbox + SaveChangesAsync routing: 483/483 PASS, 0
     regressioni

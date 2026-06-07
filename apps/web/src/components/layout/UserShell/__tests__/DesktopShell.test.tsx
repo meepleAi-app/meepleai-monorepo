@@ -21,13 +21,11 @@ vi.mock('@/components/layout/SideDrawer/SideDrawer', () => ({
   SideDrawer: () => null,
 }));
 
-// Asse B (#1897) WP7 T7: MainSidebar is mounted in DesktopShell. It pulls
-// `useCurrentUser` (TanStack Query) and `usePathname`; stub it here so the
-// shell test stays focused on layout structure (the sidebar has its own
-// suite under `MainSidebar/__tests__/`).
-vi.mock('@/components/layout/MainSidebar/MainSidebar', () => ({
-  MainSidebar: () => <div data-testid="main-sidebar" />,
-}));
+// #1977 (audit follow-up of umbrella #1974, finding F18): MainSidebar mount
+// was removed from DesktopShell to dedupe primary navigation with the
+// AppTopBar. The component is no longer imported by the shell, so no stub
+// is needed here. `MAIN_NAV_ITEMS` + `MainNavList` are still consumed by the
+// mobile drawer; their own test suites cover that path.
 
 vi.mock('@/components/layout/UserShell/SessionBanner', () => ({
   SessionBanner: () => null,

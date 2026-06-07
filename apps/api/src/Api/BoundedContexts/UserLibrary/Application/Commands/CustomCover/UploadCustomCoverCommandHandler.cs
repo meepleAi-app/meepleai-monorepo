@@ -56,7 +56,7 @@ internal sealed class UploadCustomCoverCommandHandler : ICommandHandler<UploadCu
             try
             {
                 await _blobStorage.DeleteAsync(
-                    ToObjectKey(entry.CustomCoverR2Key),
+                    ToObjectKey(entry.CustomCoverR2Key!),
                     BlobCategory.GameImage,
                     entry.CustomCoverR2Key!,
                     cancellationToken

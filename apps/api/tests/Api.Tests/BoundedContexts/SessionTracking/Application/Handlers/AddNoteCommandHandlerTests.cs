@@ -4,6 +4,7 @@ using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using MediatR;
@@ -18,7 +19,7 @@ namespace Api.Tests.BoundedContexts.SessionTracking.Application.Handlers;
 public class AddNoteCommandHandlerTests
 {
     private readonly Mock<ISessionRepository> _sessionRepoMock = new();
-    private readonly Mock<MeepleAiDbContext> _contextMock;
+    private readonly MeepleAiDbContext _context;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
     private readonly Mock<ISessionSyncService> _syncServiceMock = new();
 
@@ -27,12 +28,16 @@ public class AddNoteCommandHandlerTests
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
             .UseInMemoryDatabase(databaseName: $"AddNoteTest_{Guid.NewGuid()}")
             .Options;
-        var mediatorMock = new Mock<IMediator>();
-        var eventCollectorMock = new Mock<Api.SharedKernel.Application.Services.IDomainEventCollector>();
-        _contextMock = new Mock<MeepleAiDbContext>(
-            // Issue #661: pass null explicitly for the new optional ILogger<MeepleAiDbContext>
-            // 5th param — Castle proxy generator doesn't resolve C# default values.
-            MockBehavior.Loose, options, mediatorMock.Object, eventCollectorMock.Object, null!, null!);
+        // Real DbContext + InMemory provider instead of Mock<MeepleAiDbContext>: Castle's
+        // proxy generator demands an exact-arity ctor match and breaks every time the
+        // DbContext gains a new optional dependency (Issue #661 → ILogger, Issue #1535 T3
+        // → IOptions<DomainEventOutboxOptions>). The handler's NotFound short-circuit
+        // never touches the context, so a real instance with stub collaborators is the
+        // minimal-coupling fixture that survives future ctor evolution.
+        _context = new MeepleAiDbContext(
+            options,
+            Mock.Of<IMediator>(),
+            Mock.Of<IDomainEventCollector>());
     }
 
     [Fact]
@@ -40,7 +45,7 @@ public class AddNoteCommandHandlerTests
     {
         // Arrange
         var handler = new AddNoteCommandHandler(
-            _sessionRepoMock.Object, _contextMock.Object,
+            _sessionRepoMock.Object, _context,
             _unitOfWorkMock.Object, _syncServiceMock.Object);
 
         var sessionId = Guid.NewGuid();

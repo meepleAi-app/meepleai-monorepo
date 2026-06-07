@@ -2,11 +2,11 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
-using Microsoft.AspNetCore.DataProtection;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -17,13 +17,22 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure;
 /// Unit tests for PgVectorStoreAdapter.
 /// Validates constructor guards, empty-input guards, and domain type integration.
 /// Raw SQL execution is tested via integration tests with Testcontainers (pgvector/pgvector:pg16).
+///
+/// <para>Why a real <see cref="MeepleAiDbContext"/> instance with InMemory provider
+/// instead of <c>Mock&lt;MeepleAiDbContext&gt;</c>: Castle's proxy generator (used by Moq)
+/// requires an exact-arity constructor match and does NOT honour C# default parameter
+/// values. Every time a new optional dependency lands on the DbContext ctor (Issue #661
+/// added <c>ILogger</c>, Issue #1535 T3 added <c>IOptions&lt;DomainEventOutboxOptions&gt;</c>)
+/// the mock breaks. The SUT here never touches <c>_context.Database</c> in any covered
+/// path (constructor guards + early-return empty-list guards + domain-entity assertions),
+/// so we use a real DbContext instance with InMemory + stub collaborators — change-stable
+/// regardless of future ctor evolution.</para>
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
 public sealed class PgVectorStoreAdapterTests
 {
-    private readonly Mock<MeepleAiDbContext> _mockContext;
-    private readonly Mock<DatabaseFacade> _mockDatabase;
+    private readonly MeepleAiDbContext _context;
     private readonly Mock<ILogger<PgVectorStoreAdapter>> _mockLogger;
 
     public PgVectorStoreAdapterTests()
@@ -32,19 +41,14 @@ public sealed class PgVectorStoreAdapterTests
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
 
-        _mockContext = new Mock<MeepleAiDbContext>(
+        // Direct construction — C# honours the three default-null optional params
+        // (IDataProtectionProvider, ILogger, IOptions<DomainEventOutboxOptions>).
+        // Castle.DynamicProxy would not.
+        _context = new MeepleAiDbContext(
             options,
-            Mock.Of<MediatR.IMediator>(),
-            Mock.Of<Api.SharedKernel.Application.Services.IDomainEventCollector>(),
-            Mock.Of<IDataProtectionProvider>(),
-            // Issue #661: MeepleAiDbContext ctor gained an optional ILogger<MeepleAiDbContext>
-            // 5th param. Castle's proxy generator (used by Moq) does NOT resolve C# default
-            // parameter values for positional args, so we must pass it explicitly.
-            (Microsoft.Extensions.Logging.ILogger<MeepleAiDbContext>?)null)
-        { CallBase = false };
+            Mock.Of<IMediator>(),
+            Mock.Of<IDomainEventCollector>());
 
-        _mockDatabase = new Mock<DatabaseFacade>(_mockContext.Object);
-        _mockContext.Setup(c => c.Database).Returns(_mockDatabase.Object);
         _mockLogger = new Mock<ILogger<PgVectorStoreAdapter>>();
     }
 
@@ -65,7 +69,7 @@ public sealed class PgVectorStoreAdapterTests
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new PgVectorStoreAdapter(_mockContext.Object, null!);
+        var act = () => new PgVectorStoreAdapter(_context, null!);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -297,6 +301,6 @@ public sealed class PgVectorStoreAdapterTests
 
     private PgVectorStoreAdapter CreateAdapter()
     {
-        return new PgVectorStoreAdapter(_mockContext.Object, _mockLogger.Object);
+        return new PgVectorStoreAdapter(_context, _mockLogger.Object);
     }
 }

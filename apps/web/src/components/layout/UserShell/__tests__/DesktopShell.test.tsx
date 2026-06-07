@@ -31,6 +31,10 @@ vi.mock('@/components/layout/UserShell/SessionBanner', () => ({
   SessionBanner: () => null,
 }));
 
+vi.mock('@/components/layout/UserShell/MiniNavSlot', () => ({
+  MiniNavSlot: () => <div data-testid="mini-nav-slot" />,
+}));
+
 vi.mock('next/navigation', () => ({
   usePathname: () => '/dashboard',
 }));
@@ -74,5 +78,19 @@ describe('DesktopShell', () => {
       </DesktopShell>
     );
     expect(screen.getByRole('main').className).toContain('pb-16');
+  });
+
+  it('mounts the MiniNavSlot so per-page useMiniNavConfig renders (F23a #1974)', () => {
+    // F23a regression guard: routes like /games + /library register a
+    // mini-nav config via `useMiniNavConfig`, but pre-fix the shell never
+    // mounted any consumer of that store, so the tab strip was silently
+    // dropped. MiniNavSlot is a no-op when no page has registered, so the
+    // shell can keep it mounted unconditionally.
+    render(
+      <DesktopShell>
+        <div>child</div>
+      </DesktopShell>
+    );
+    expect(screen.getByTestId('mini-nav-slot')).toBeInTheDocument();
   });
 });

@@ -258,6 +258,39 @@ Screenshot: `screenshots-reskin/p16-kb-globale-live.png`
 
 ---
 
+## ✅ Night Session Update — 2026-06-07 (sess 45 autonomous loop)
+
+**7 PR shipped + tracker resolution updates** (all merged to main-dev via auto-merge):
+
+| Finding | Status | PR | Note |
+|---|---|---|---|
+| F2 (BGG admin gate) | ✅ SHIPPED | [#1980](https://github.com/meepleAi-app/meepleai-monorepo/pull/1980) | `useAdminRole` gates `onImportBgg` in `LibraryHub`; hero + empty state collapse CTA for non-admins |
+| F4.1 (catalog-fallback h1) | ✅ TEST GUARD | [#1982](https://github.com/meepleAi-app/meepleai-monorepo/pull/1982) | Already fixed in #1968 P2-2; added regression test for `libraryEntryId: ''` path |
+| F25 (onboarding i18n) | ✅ SHIPPED | [#1983](https://github.com/meepleAi-app/meepleai-monorepo/pull/1983) | `InterestsStep.tsx` + `pages.onboarding.interests.*` IT/EN keys |
+| F23a (MiniNavSlot mount) | ✅ SHIPPED | [#1984](https://github.com/meepleAi-app/meepleai-monorepo/pull/1984) | Mount `MiniNavSlot` in `DesktopShell` so `/games`+`/library` mini-nav configs render |
+| F26 (wizard modal overlap) | ✅ SHIPPED | [#1985](https://github.com/meepleAi-app/meepleai-monorepo/pull/1985) | Cap modal at `max-h-[85vh]`, drop sticky positioning, footer in flex flow |
+| F28 (players hero copy) | ✅ SHIPPED | [#1986](https://github.com/meepleAi-app/meepleai-monorepo/pull/1986) | "I tuoi compagni di gioco" / "Your gaming partners" disambiguates from `/play-records` |
+| F4 (KB hub gameTitle) | ✅ SHIPPED | [#1987](https://github.com/meepleAi-app/meepleai-monorepo/pull/1987) | `useLibraryGameDetail` resolves title (TanStack dedup), UUID fallback eliminated |
+
+**Verified — already-correct, no code change**:
+- **F19** — `DesktopShell.tsx:53` main wrapper is `flex-1 overflow-y-auto overflow-x-clip min-w-0` — already no `max-w-*`. Page-level wrappers (`LibraryHub:491` `max-w-[1440px]`, others `max-w-6xl/7xl`) are intentional UX line-length choices, not cross-cutting bugs.
+- **F23b** — already resolved by [#1978](https://github.com/meepleAi-app/meepleai-monorepo/pull/1978) (MainSidebar dedup). The "Library active on /games" highlight was driven by the now-removed MainSidebar mount; AppTopBar uses `isUnifiedNavItemActive` which doesn't suffer the bug.
+- **F29** — `PlayHistory.tsx:122-152` already renders the SP4 first-run empty state (🎯 illustration + h2 "Nessuna partita registrata" + CTA "+ Registra prima partita"). Audit screenshot likely caught the loading skeleton transient.
+- **F32** — `grep "Partito"` returns zero matches in `apps/web/src`. Either the typo was fixed before the audit run or the screenshot misread "Partita". No-action.
+
+**Deferred — workaround documented**:
+- **F23c / F30** — both are Turbopack stale-chunk issues on the initial navigation. Hard refresh fixes. No code-level fix; tracked as known dev-mode noise.
+
+**Out of scope for this batched session** (recommend separate sub-issues):
+- **F5 / F7 / F9 / F10** (KB hub visual polish — stats strip style, KbStatsCard dedup, sparkline 0-data, drop-zone CTA) — each requires HubDefault refactor with design input.
+- **F11 / F12** (chat 3-col layout + quick-starter cards) — flagged as "scope nuova issue" in the original tracker (page 5).
+- **F2.2 AddGameDrawer rebuild** — 8-task plan (T1-T8) with new mockup `sp4-add-game-drawer.{html,jsx}`. Owner-led, multi-PR scope.
+- **F3** (`/library/[gameId]` full rebuild) — 3-4 week multi-PR scope per original tracker.
+
+**Total impact**: 7 sub-issues closed/resolved + 4 verified-no-action + 2 known-issue deferrals + 9 large-scope deferrals.
+
+
+
 ## Pending pages (Round 1 sess 45)
 - [ ] `/library/[gameId]/kb` — mockup `sp4-kb-hub.html`
 - [ ] `/chat/[threadId]` mobile — mockup `chat-fullscreen.html` + `sp4-game-chat-tab.html`

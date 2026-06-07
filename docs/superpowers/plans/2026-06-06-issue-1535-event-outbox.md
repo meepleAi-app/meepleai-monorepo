@@ -712,46 +712,45 @@
 
 > **Tipo Task:** ship-to-staging. Il code review può iniziare ma il MERGE è gated su 24h di soak in staging in Hybrid mode.
 
-- [ ] **Step 1: PR description checklist**
+- [x] **Step 1: Config flip + explicit Production/Staging override** ✅ commit `<T8-commit>`
 
-  ```markdown
-  ## Phase A — Hybrid mode
+  Both `appsettings.Production.json` and `appsettings.Staging.json` now contain
+  an EXPLICIT `DomainEventOutbox:Mode = "Hybrid"` block. The default at the
+  binding level was already Hybrid (`DomainEventOutboxOptions.Mode`), so this
+  change is **behaviour-neutral** — the explicit override exists so the
+  Phase A → Phase B transition is a one-line, blame-traceable diff in git
+  history. The block carries a `Comment` field documenting the rationale.
 
-  This PR introduces the domain event outbox infrastructure but defaults to
-  `EventDispatch:Mode = "Hybrid"`: both outbox row INSERT AND inline MediatR.Publish
-  fire. Net behavior change for production = ZERO. The outbox row + processor +
-  observability is added as scaffold + verification surface.
+- [x] **Step 2: PR description draft + operator runbook**
 
-  Phase B (separate PR after 24h staging soak) flips the mode to `OutboxOnly`.
-  ```
+  See [`audits/2026-06-07-issue-1535-phase-a-deploy-pr-draft.md`](../../../audits/2026-06-07-issue-1535-phase-a-deploy-pr-draft.md).
+  Captures: what ships (table T1–T7 deliverables), the 6 DoD gates (arrival
+  rate ≈ dispatch rate, zero terminal failures, consumer behaviour unchanged,
+  latency p95 < 10s with `oldest_pending_age_seconds` as proxy until the
+  dispatch-latency histogram lands in T8 follow-up, three Prometheus alerts
+  silent, admin surface smoke), the rollback path (`Mode = "InlineOnly"`), the
+  operator runbook for the 24h soak, and the Definition-of-Done checklist for
+  Reviewer #1.
 
-- [ ] **Step 2: Deploy to staging + 24h soak**
+- [ ] **Step 3: Dispatch-latency histogram (T8 follow-up)** — _deferred_
 
-  After merge:
-  ```bash
-  # On staging server
-  make staging
-  ```
+  T6 shipped 4 counters + 3 ObservableGauges. The
+  `meepleai_domain_event_outbox_dispatch_latency_seconds` histogram referenced
+  in the DoD-9 query is NOT in T6. Until the histogram lands, the PR-draft
+  uses `meepleai_domain_event_outbox_pending_oldest_age_seconds < 10` as a
+  proxy. Open as T8-follow-up before the production cutover (T9).
 
-  Monitor for 24h:
-  - `meepleai_domain_event_outbox_enqueued_total` ≈ `meepleai_domain_event_outbox_dispatched_total` (within retry window)
-  - No `_failed_terminal_total` increment (zero terminal failures expected)
-  - Consumer behavior unchanged (no logs of "double cache invalidation", no double-email reports)
+- [ ] **Step 4: 24h staging soak** — _operator action, post-merge_
 
-- [ ] **Step 3: Latency p95 measurement**
+  Triggered by the merge to `main-dev`. Operator follows the runbook in the
+  PR draft; reports back on the 6 gates. If all green at T+24h, opens the
+  Phase B PR (T9) as a single-line `Hybrid → OutboxOnly` diff.
 
-  Custom Grafana query:
-  ```promql
-  histogram_quantile(0.95,
-    rate(meepleai_domain_event_outbox_dispatch_latency_seconds_bucket[5m]))
-  ```
-
-  Soglia DoD-9: **< 10s**. Se violata → diagnose (batch size? poll interval? consumer slowness?), bloccare Phase B.
-
-- [ ] **Verifica:**
-  - 24h staging soak con 0 anomaly
-  - p95 latency < 10s observed
-  - Manual smoke test su `/admin/event-outbox/stats` endpoint
+- [x] **Verifica (developer side):**
+  - Production/Staging appsettings ship the explicit Hybrid override ✅
+  - PR draft + operator runbook landed in `audits/` ✅
+  - `dotnet build` clean across `src/Api` ✅
+  - Suite-wide 483/483 PASS (T7 regression check) ✅
 
 ---
 

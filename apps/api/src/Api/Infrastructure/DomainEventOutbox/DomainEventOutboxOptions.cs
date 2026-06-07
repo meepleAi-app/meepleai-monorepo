@@ -63,4 +63,27 @@ public sealed class DomainEventOutboxOptions
 
     /// <summary>Cap on retry backoff (seconds). Default 64s.</summary>
     public double MaxBackoffSeconds { get; init; } = 64.0;
+
+    /// <summary>
+    /// Issue #1966 retention TTL — Sent rows with <c>DispatchedAt</c> older than this
+    /// number of days are eligible for purge by <c>DomainEventOutboxRetentionService</c>.
+    /// Default 30. Failed and Pending rows are NEVER auto-purged regardless of age.
+    /// </summary>
+    public int SentRetentionDays { get; init; } = 30;
+
+    /// <summary>
+    /// Issue #1966 retention poll interval — the
+    /// <c>DomainEventOutboxRetentionService</c> wakes once per this many hours and
+    /// drains the eligible set in <see cref="RetentionBatchSize"/>-sized chunks until
+    /// nothing remains. Default 1 hour.
+    /// </summary>
+    public int RetentionIntervalHours { get; init; } = 1;
+
+    /// <summary>
+    /// Issue #1966 retention chunk size — number of rows deleted per round-trip when
+    /// the retention service drains the eligible set. Bounded to avoid long-running
+    /// DELETE transactions that would block writes; the service loops chunks until the
+    /// eligible set is empty. Default 10000.
+    /// </summary>
+    public int RetentionBatchSize { get; init; } = 10_000;
 }

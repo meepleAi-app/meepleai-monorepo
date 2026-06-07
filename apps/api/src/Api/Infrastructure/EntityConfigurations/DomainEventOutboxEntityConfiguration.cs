@@ -17,8 +17,15 @@ namespace Api.Infrastructure.EntityConfigurations;
 ///         filtered to <c>Status = Failed</c> — the admin dashboard's "recent failures" feed.</item>
 /// </list>
 ///
-/// <para>Sent rows are NOT indexed. They are subject to TTL cleanup (30-day retention,
-/// see follow-up issue) and don't participate in the read-mostly paths.</para>
+/// <para>Sent rows are indexed by the F15 partial index
+/// <c>ix_domain_event_outbox_sent_dispatched_at</c> for the
+/// <c>GetEventOutboxStatsQuery.SentLast24h</c> dashboard counter. Long-term retention is
+/// handled by <c>DomainEventOutboxRetentionService</c> (Issue #1966): rows older than
+/// <see cref="Api.Infrastructure.DomainEventOutbox.DomainEventOutboxOptions.SentRetentionDays"/>
+/// (default 30) are deleted in chunked DELETE batches once per
+/// <see cref="Api.Infrastructure.DomainEventOutbox.DomainEventOutboxOptions.RetentionIntervalHours"/>.
+/// Failed and Pending rows are NEVER auto-purged — operator triage owns Failed,
+/// the processor owns Pending.</para>
 /// </summary>
 internal sealed class DomainEventOutboxEntityConfiguration : IEntityTypeConfiguration<DomainEventOutboxEntity>
 {

@@ -63,6 +63,18 @@ internal static partial class MeepleAiMetrics
         description: "Total outbox rows transitioned to terminal Failed after retry budget exhaustion (#1535 T6).");
 
     /// <summary>
+    /// Incremented once per row purged by <c>DomainEventOutboxRetentionService</c>
+    /// (Issue #1966). Tag: <c>event_type</c>. Operators can verify the retention TTL
+    /// is draining the Sent partition at the expected rate by comparing
+    /// <c>rate(purged.total)</c> to <c>rate(dispatched.total)</c> shifted by
+    /// <see cref="DomainEventOutboxOptions.SentRetentionDays"/>.
+    /// </summary>
+    public static readonly Counter<long> DomainEventOutboxPurged = Meter.CreateCounter<long>(
+        name: "meepleai.domain_event_outbox.purged.total",
+        unit: "events",
+        description: "Total Sent outbox rows purged by the retention background service (#1966).");
+
+    /// <summary>
     /// Distribution of end-to-end dispatch latency: <c>(MarkSent.now − EnqueuedAt)</c> in
     /// seconds, recorded ONCE per row that transitions Pending → Sent. Tag: <c>event_type</c>.
     /// Bucket bounds chosen for the DoD-9 SLO (p95 &lt; 10s): tight resolution under 10s,

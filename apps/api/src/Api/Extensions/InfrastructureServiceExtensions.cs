@@ -219,6 +219,15 @@ internal static class InfrastructureServiceExtensions
                 .Validate(
                     o => o.PollIntervalSeconds >= 1,
                     "DomainEventOutbox.PollIntervalSeconds must be >= 1 (sub-second polls would saturate the DB without observable throughput gain).")
+                .Validate(
+                    o => o.SentRetentionDays >= 1,
+                    "DomainEventOutbox.SentRetentionDays must be >= 1 (a value of 0 would purge every Sent row on the next retention tick).")
+                .Validate(
+                    o => o.RetentionIntervalHours >= 1,
+                    "DomainEventOutbox.RetentionIntervalHours must be >= 1 (sub-hour polls would saturate the DB without retention benefit).")
+                .Validate(
+                    o => o.RetentionBatchSize >= 1 && o.RetentionBatchSize <= 100_000,
+                    "DomainEventOutbox.RetentionBatchSize must be in [1, 100000] — outside this range the chunked DELETE either becomes a no-op or blocks writes for too long.")
                 .ValidateOnStart();
 
             // Issue #1535 T4 — post-commit event outbox processor.
@@ -228,6 +237,14 @@ internal static class InfrastructureServiceExtensions
             services.AddSingleton<Api.Infrastructure.BackgroundJobs.DomainEventOutboxProcessor>();
             services.AddHostedService(sp =>
                 sp.GetRequiredService<Api.Infrastructure.BackgroundJobs.DomainEventOutboxProcessor>());
+
+            // Issue #1966 — TTL cleanup BackgroundService for Sent outbox rows. Polls
+            // hourly by default; loops chunked DELETE until the eligible set is empty.
+            // Singleton + factory-registered HostedService mirrors the processor pattern
+            // so integration tests can drive RunOnceAsync deterministically.
+            services.AddSingleton<Api.Infrastructure.BackgroundJobs.DomainEventOutboxRetentionService>();
+            services.AddHostedService(sp =>
+                sp.GetRequiredService<Api.Infrastructure.BackgroundJobs.DomainEventOutboxRetentionService>());
 
             // Issue #1535 T6 — health tracker is registered UNGATED in
             // ApplicationServiceExtensions so HTTP integration tests (which skip

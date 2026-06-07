@@ -127,6 +127,8 @@ public sealed class CleanupTestEntitiesCommandHandlerTests : IAsyncLifetime
         // Issue #1929 Macro 3a — library cascade assertions
         response.DeletedLibraryEntries.Should().Be(1);
         response.DeletedSharedGames.Should().Be(1);
+        // Issue #1929 Macro 4 (DEC-C-10 REVISION) — UserGameSessions not seeded in SeedFullScopeAsync
+        response.DeletedUserGameSessions.Should().Be(0);
 
         // Scope A fully deleted
         (await db.GameNightEvents.AnyAsync(g => g.TestRunId == testRunIdA, TestCancellationToken))
@@ -161,6 +163,7 @@ public sealed class CleanupTestEntitiesCommandHandlerTests : IAsyncLifetime
         response.DeletedUsers.Should().Be(0);
         response.DeletedLibraryEntries.Should().Be(0);
         response.DeletedSharedGames.Should().Be(0);
+        response.DeletedUserGameSessions.Should().Be(0);
     }
 
     [Fact]
@@ -273,6 +276,8 @@ public sealed class CleanupTestEntitiesCommandHandlerTests : IAsyncLifetime
         response.DeletedSharedGames.Should().Be(1);
         response.DeletedUsers.Should().Be(1);
         response.DeletedGameNights.Should().Be(0);
+        // Issue #1929 Macro 4 (DEC-C-10 REVISION) — no UserGameSessions seeded in this test
+        response.DeletedUserGameSessions.Should().Be(0);
 
         // Scope A library fully deleted
         (await db.UserLibraryEntries.AnyAsync(e => e.TestRunId == testRunIdA, TestCancellationToken))

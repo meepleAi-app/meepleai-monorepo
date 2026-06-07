@@ -216,9 +216,12 @@ jobs:
     # `-- safe: <rationale>` directive is present.
     name: Migration Safety Gate
     runs-on: ubuntu-latest
-    # Budget: ~5 min for setup-dotnet + tool install + restore + build + script
-    # generation + parser. The parser itself is < 1s on a typical SQL output.
-    timeout-minutes: 8
+    # Budget: setup-dotnet (~2m) + dotnet-ef install (~3m on cold cache) +
+    # setup-python (~30s) + parser self-test (~10s) + Release restore+build
+    # (~4-5m) + Debug build triggered by dotnet ef (~4m) + script generation +
+    # parser (~1m). Total ~15m worst case; 20m budget gives headroom for
+    # GitHub Actions runner variance without masking a real timeout.
+    timeout-minutes: 20
     needs: changes
     if: needs.changes.outputs.migrations == 'true' || github.event_name == 'workflow_dispatch'
     permissions:

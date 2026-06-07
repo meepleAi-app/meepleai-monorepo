@@ -65,4 +65,43 @@ public class SeedTestGameNightCommandValidatorTests
         };
         _sut.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.OwnerEmail);
     }
+
+    [Fact]
+    public void Validate_GameIdEmpty_FailsValidation()
+    {
+        var cmd = new SeedTestGameNightCommand
+        {
+            TestRunId = "e2e-validcase01234-1717603200000",
+            Status = "Draft",
+            OwnerEmail = "ok@e2e.test",
+            GameId = Guid.Empty,
+        };
+        _sut.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.GameId!.Value);
+    }
+
+    [Fact]
+    public void Validate_GameIdValidGuid_PassesAll()
+    {
+        var cmd = new SeedTestGameNightCommand
+        {
+            TestRunId = "e2e-validcase01234-1717603200000",
+            Status = "Draft",
+            OwnerEmail = "ok@e2e.test",
+            GameId = Guid.NewGuid(),
+        };
+        _sut.TestValidate(cmd).ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Validate_GameIdNull_PassesAll()
+    {
+        var cmd = new SeedTestGameNightCommand
+        {
+            TestRunId = "e2e-validcase01234-1717603200000",
+            Status = "Draft",
+            OwnerEmail = "ok@e2e.test",
+            GameId = null,
+        };
+        _sut.TestValidate(cmd).ShouldNotHaveAnyValidationErrors();
+    }
 }

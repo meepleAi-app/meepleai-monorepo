@@ -212,4 +212,76 @@ public sealed class SeedTestGameNightCommandHandlerTests : IAsyncLifetime
             r1.TestRunId.Should().NotBe(r2.TestRunId);
         }
     }
+
+    // ── Issue #1929 Macro 4 (DEC-C-10 PIVOT): GameId extension tests ─────────
+
+    [Fact]
+    public async Task Handle_WithGameId_StoresGameIdInGameIdsJson()
+    {
+        // Arrange: seed a SharedGame first so the handler can reference it.
+        var (scope, db, handler) = CreateHandlerScope();
+        using (scope)
+        {
+            var sharedGameId = Guid.NewGuid();
+            var sharedGame = new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
+            {
+                Id = sharedGameId,
+                Title = "Integration Test Game",
+                Description = "Seeded for Macro4 GameId test",
+                MinPlayers = 2,
+                MaxPlayers = 4,
+                PlayingTimeMinutes = 60,
+                MinAge = 8,
+                ImageUrl = string.Empty,
+                ThumbnailUrl = string.Empty,
+                Status = 1,
+                GameDataStatus = 5,
+                CreatedBy = Guid.NewGuid(),
+                CreatedAt = DateTime.UtcNow,
+                TestRunId = "e2e-gameidtest01234-1717603200000",
+            };
+            db.SharedGames.Add(sharedGame);
+            await db.SaveChangesAsync(TestCancellationToken);
+
+            var cmd = new SeedTestGameNightCommand
+            {
+                TestRunId = "e2e-gameidtest01234-1717603200000",
+                Status = "Published",
+                OwnerEmail = "gameid@e2e.test",
+                GameId = sharedGameId,
+            };
+
+            // Act
+            var response = await handler.Handle(cmd, TestCancellationToken);
+
+            // Assert: GameIdsJson contains the provided SharedGame id.
+            var seeded = await db.GameNightEvents
+                .SingleAsync(g => g.Id == response.GameNightId, TestCancellationToken);
+            seeded.GameIdsJson.Should().Contain(sharedGameId.ToString());
+        }
+    }
+
+    [Fact]
+    public async Task Handle_WithUnknownGameId_ThrowsBadRequestException()
+    {
+        var (scope, _, handler) = CreateHandlerScope();
+        using (scope)
+        {
+            var unknownGameId = Guid.NewGuid(); // Not persisted to DB.
+
+            var cmd = new SeedTestGameNightCommand
+            {
+                TestRunId = "e2e-badgameid01234-1717603200000",
+                Status = "Draft",
+                OwnerEmail = "badgame@e2e.test",
+                GameId = unknownGameId,
+            };
+
+            // Act & Assert
+            await handler.Invoking(h => h.Handle(cmd, TestCancellationToken))
+                .Should()
+                .ThrowAsync<Api.Middleware.Exceptions.BadRequestException>()
+                .WithMessage($"*{unknownGameId}*");
+        }
+    }
 }

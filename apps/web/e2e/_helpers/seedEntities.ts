@@ -50,6 +50,12 @@ export interface SeedLibraryGameResponse {
   testRunId: string;
 }
 
+export interface SeedUserGameSessionResponse {
+  sessionId: string;
+  userLibraryEntryId: string;
+  testRunId: string;
+}
+
 export interface CleanupResponse {
   testRunId: string;
   deletedGameNights: number;
@@ -59,6 +65,8 @@ export interface CleanupResponse {
   deletedUsers: number;
   deletedLibraryEntries: number;
   deletedSharedGames: number;
+  /** Issue #1929 Macro 4 (DEC-C-10 REVISION) — UserGameSessions deleted BEFORE UserLibraryEntries. */
+  deletedUserGameSessions: number;
   durationMs: number;
 }
 
@@ -82,6 +90,8 @@ export async function seedGameNight(
     ownerEmail: string;
     scoringType?: ScoringType;
     rosterCount?: number;
+    /** Issue #1929 Macro 4 (DEC-C-10 PIVOT): optional SharedGame catalog id to associate this GameNight with. */
+    gameId?: string;
   }
 ): Promise<SeedGameNightResponse> {
   const response = await page.request.post(`${SEED_BASE}/game-night`, {
@@ -158,6 +168,36 @@ export async function seedLibraryGame(
     throw new Error(`seedLibraryGame failed (${response.status()}): ${body}`);
   }
   return (await response.json()) as SeedLibraryGameResponse;
+}
+
+/**
+ * Issue #1929 Task C Macro 4 (DEC-C-10 REVISION) — Seeds a UserGameSession linked
+ * to an existing UserLibraryEntry. Used by Journey #3 to set up "user has played
+ * N times" precondition for the GameDetailSessionsRail.
+ *
+ * Requires `libraryEntryId` from `seedLibraryGame` response.
+ * Cascade-cleaned by `cleanupTestEntities` via DEC-B-8 TestRunId scope
+ * (UserGameSessions deleted BEFORE UserLibraryEntries — FK child order).
+ */
+export async function seedUserGameSession(
+  page: Page,
+  opts: {
+    testRunId: string;
+    userLibraryEntryId: string;
+    playedAt?: string;
+    durationMinutes?: number;
+    didWin?: boolean | null;
+    players?: string;
+  }
+): Promise<SeedUserGameSessionResponse> {
+  const response = await page.request.post(`${SEED_BASE}/user-game-session`, {
+    data: opts,
+  });
+  if (!response.ok()) {
+    const body = await response.text();
+    throw new Error(`seedUserGameSession failed (${response.status()}): ${body}`);
+  }
+  return (await response.json()) as SeedUserGameSessionResponse;
 }
 
 export async function cleanupTestEntities(

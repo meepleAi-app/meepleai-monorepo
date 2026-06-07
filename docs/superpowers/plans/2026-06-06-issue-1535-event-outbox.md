@@ -586,7 +586,7 @@
   ```
 
 - [x] **Verifica:**
-  - 3/3 retry test PASS ✅ commit `<T5-commit>`
+  - 3/3 retry test PASS ✅ commit `b8ce26afe`
   - Counter metrics increment correctly — _deferred to T6_
 
 ---

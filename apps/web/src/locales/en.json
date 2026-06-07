@@ -2043,6 +2043,34 @@
         "pageNumber": "Page {n}"
       }
     },
+    "onboarding": {
+      "interests": {
+        "heading": "What do you enjoy?",
+        "subtitle": "Select categories that interest you. We'll use them to personalize recommendations.",
+        "groupLabel": "Game category interests",
+        "categories": {
+          "strategy": "Strategy",
+          "party": "Party",
+          "cooperative": "Cooperative",
+          "family": "Family",
+          "thematic": "Thematic",
+          "abstract": "Abstract",
+          "card": "Card",
+          "dice": "Dice",
+          "miniatures": "Miniatures"
+        },
+        "selectedCount": "{count} selected",
+        "cta": {
+          "continue": "Continue",
+          "skip": "Skip",
+          "skipForNow": "Skip for now"
+        },
+        "loading": "Saving…",
+        "toast": {
+          "saved": "{count} interests saved!"
+        }
+      }
+    },
     "discover": {
       "miniNav": {
         "breadcrumb": "Discover",

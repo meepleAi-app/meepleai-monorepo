@@ -47,7 +47,7 @@ jobs:
           md-to-pdf operations-manual.md --config-file .md-to-pdf.js
 
       - name: Upload as workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: operations-manual-pdf
           path: docs/operations/operations-manual.pdf

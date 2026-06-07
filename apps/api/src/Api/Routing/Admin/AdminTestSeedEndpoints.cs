@@ -40,6 +40,11 @@ internal static class AdminTestSeedEndpoints
             .WithName("AdminTestSeed_LibraryGame")
             .WithTags("Admin", "TestSeeding");
 
+        // Issue #1929 Task C Macro 4 (DEC-C-10 REVISION) — UserGameSession seeding.
+        group.MapPost("/user-game-session", HandleSeedUserGameSession)
+            .WithName("AdminTestSeed_UserGameSession")
+            .WithTags("Admin", "TestSeeding");
+
         group.MapPost("/cleanup", HandleCleanup)
             .WithName("AdminTestSeed_Cleanup")
             .WithTags("Admin", "TestSeeding");
@@ -79,6 +84,16 @@ internal static class AdminTestSeedEndpoints
 
     private static async Task<IResult> HandleSeedLibraryGame(
         SeedTestLibraryGameCommand command,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleSeedUserGameSession(
+        SeedTestUserGameSessionCommand command,
         IMediator mediator,
         CancellationToken ct)
     {

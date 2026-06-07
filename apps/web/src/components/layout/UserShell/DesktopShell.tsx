@@ -12,6 +12,7 @@ import { MobileTopBar } from '@/components/layout/AppNav/MobileTopBar';
 import { SideDrawer } from '@/components/layout/SideDrawer/SideDrawer';
 import { cn } from '@/lib/utils';
 
+import { MiniNavSlot } from './MiniNavSlot';
 import { SessionBanner } from './SessionBanner';
 
 interface DesktopShellProps {
@@ -45,6 +46,15 @@ export function DesktopShell({ children }: DesktopShellProps) {
     <div className="min-h-dvh flex flex-col bg-[var(--bg)]">
       <AppTopBar />
       <MobileTopBar onHamburgerClick={() => setDrawerOpen(true)} />
+
+      {/*
+        F23a #1974 (audit 2026-06-07): mount MiniNavSlot so pages that call
+        `useMiniNavConfig(...)` (e.g. `/games`, `/library`, `/discover`) get
+        their tab strip rendered. The component is a no-op when no page has
+        registered a config — safe to keep mounted globally. Pre-fix, the
+        store was being updated but no consumer rendered it.
+      */}
+      <MiniNavSlot />
 
       <SessionBanner />
 

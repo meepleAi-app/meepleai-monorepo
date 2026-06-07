@@ -4,9 +4,10 @@
  * Footer with CTA buttons and legal links.
  */
 
-import { Github, Twitter, Mail, Heart } from 'lucide-react';
+import { Mail, Heart } from 'lucide-react';
 import Link from 'next/link';
 
+import { GithubIcon, TwitterIcon } from '@/components/icons/brand-icons';
 import { Button } from '@/components/ui/primitives/button';
 
 export function LandingFooter() {
@@ -103,7 +104,7 @@ export function LandingFooter() {
                   className="w-10 h-10 rounded-full bg-muted border border-border flex items-center justify-center hover:bg-primary hover:border-primary hover:text-white transition-all duration-300 hover:scale-110"
                   aria-label="GitHub"
                 >
-                  <Github className="h-5 w-5" />
+                  <GithubIcon className="h-5 w-5" />
                 </a>
                 <a
                   href="https://twitter.com/meepleai"
@@ -112,7 +113,7 @@ export function LandingFooter() {
                   className="w-10 h-10 rounded-full bg-muted border border-border flex items-center justify-center hover:bg-primary hover:border-primary hover:text-white transition-all duration-300 hover:scale-110"
                   aria-label="Twitter"
                 >
-                  <Twitter className="h-5 w-5" />
+                  <TwitterIcon className="h-5 w-5" />
                 </a>
                 <a
                   href="mailto:info@meepleai.dev"

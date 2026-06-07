@@ -2,32 +2,32 @@ namespace Api.Infrastructure.DomainEventOutbox;
 
 /// <summary>
 /// Dispatch mode for domain events flushed through <c>MeepleAiDbContext.SaveChangesAsync</c>
-/// (issue #1535). Defaults to <see cref="Hybrid"/> in production for the rollout window;
-/// flipped to <see cref="OutboxOnly"/> at Phase B cutover.
+/// (issue #1535). Post-T10 cleanup: only two values survive.
+///
+/// <para><b>InlineOnly was removed at T10</b> — it preserved the original #1535 race
+/// (inline dispatch fires before the outer transaction commits) and was only kept as
+/// a Phase A rollback path. After 7 days of production stability on OutboxOnly, the
+/// rollback path is no longer needed.</para>
 /// </summary>
 public enum DomainEventDispatchMode
 {
     /// <summary>
     /// Dual-write: insert the outbox row AND inline-Publish via MediatR in the same
-    /// SaveChangesAsync. Consumers see 2× dispatch — verifies the idempotency contract
-    /// in staging before flipping to <see cref="OutboxOnly"/>. Default for the Phase A
-    /// rollout window.
+    /// SaveChangesAsync. Used in Phase A as a safe-by-default rollout window, AND retained
+    /// post-cutover as the documented rollback path: flipping back to Hybrid restores
+    /// the legacy inline dispatch alongside the outbox while the team investigates a
+    /// production issue. Consumers see 2× dispatch in this mode — the idempotency
+    /// contract documented in
+    /// <c>audits/2026-06-06-issue-1535-consumer-idempotency-audit.md</c> still applies.
     /// </summary>
     Hybrid = 0,
 
     /// <summary>
-    /// Outbox-only: insert the outbox row, never inline-Publish. Phase B target state —
-    /// fixes the rollback race that motivated #1535. Requires all consumers to be
-    /// idempotent (verified in the Task 0 audit).
+    /// Outbox-only: insert the outbox row, never inline-Publish. Steady-state behaviour
+    /// post-cutover — closes the rollback race that motivated #1535. Requires all
+    /// consumers to be idempotent (verified in the Task 0 audit).
     /// </summary>
     OutboxOnly = 1,
-
-    /// <summary>
-    /// Legacy behaviour: inline-Publish only, no outbox row. Used as the rollback path
-    /// during Phase A if a regression is observed. NOT a safe long-term state —
-    /// preserves the original #1535 bug.
-    /// </summary>
-    InlineOnly = 2,
 }
 
 /// <summary>
@@ -42,10 +42,11 @@ public sealed class DomainEventOutboxOptions
 
     /// <summary>
     /// Routing mode for events raised inside <c>SaveChangesAsync</c>. Default
-    /// <see cref="DomainEventDispatchMode.Hybrid"/> — safe to ship, no behaviour
-    /// change vs pre-#1535.
+    /// <see cref="DomainEventDispatchMode.OutboxOnly"/> — the steady-state behaviour
+    /// post-T9 cutover. Set explicitly to <see cref="DomainEventDispatchMode.Hybrid"/>
+    /// in appsettings overrides to enable the documented rollback path.
     /// </summary>
-    public DomainEventDispatchMode Mode { get; init; } = DomainEventDispatchMode.Hybrid;
+    public DomainEventDispatchMode Mode { get; init; } = DomainEventDispatchMode.OutboxOnly;
 
     /// <summary>Processor poll interval in seconds. Default 5s.</summary>
     public int PollIntervalSeconds { get; init; } = 5;

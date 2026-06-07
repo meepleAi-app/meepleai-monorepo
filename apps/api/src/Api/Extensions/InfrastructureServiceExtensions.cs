@@ -197,7 +197,7 @@ internal static class InfrastructureServiceExtensions
 
             // Bind DomainEventOutboxOptions from the "DomainEventOutbox" configuration section.
             // MeepleAiDbContext picks up IOptions<DomainEventOutboxOptions> to route dispatch
-            // based on Mode (Hybrid default → OutboxOnly at Phase B cutover → InlineOnly rollback).
+            // based on Mode (OutboxOnly default post-T9 cutover; Hybrid documented rollback).
             //
             // ValidateOnStart fails fast at app startup if an operator misconfigures the
             // outbox knobs into a degenerate state (e.g. MaxAttempts=0 → every transient

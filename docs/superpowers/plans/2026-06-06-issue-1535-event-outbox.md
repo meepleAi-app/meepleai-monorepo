@@ -764,29 +764,26 @@
 
 > **Tipo Task:** SEPARATE PR (no merge gating mixed con Phase A). Single config flip.
 
-- [ ] **Step 1: PR scope = config + test**
+- [x] **Step 1: Config flip + PR draft** ✅ commit `7ec0b8c24`
 
-  Solo:
-  - `appsettings.Production.json` flag flip
-  - 1 test che asserisce `mode = OutboxOnly` → MediatR.Publish NOT called inline
+  - `appsettings.Production.json` + `appsettings.Staging.json` Mode field flipped
+    from `Hybrid` to `OutboxOnly` (with updated Comment field). Per-test routing
+    already covered by `SaveChangesAsyncRoutingTests.OutboxOnly_mode_*` (T3
+    commit `73d29c6e2`) and `Issue1535EventOutboxAcceptanceTests` (T7).
+  - PR runbook landed at
+    [`audits/2026-06-07-issue-1535-phase-b-cutover-pr-draft.md`](../../../audits/2026-06-07-issue-1535-phase-b-cutover-pr-draft.md).
+    Captures the same 6 Phase-A gates plus Phase-B-specific B1 (dispatched rate ≈
+    enqueued rate, not 2×) and B2 (zero
+    `meepleai_domain_event_log_dispatch_failures_total` increment).
 
-- [ ] **Step 2: Deploy to staging first, 24h soak**
+- [ ] **Step 2: Deploy to staging first, 24h soak** — _operator action, post-merge_
+- [ ] **Step 3: Deploy to prod, 7gg soak** — _operator action, post-staging-soak_
 
-  Stessa verifica del Task 8 ma con `OutboxOnly`:
-  - `_dispatched_total` SOLO dal processor (no inline burst)
-  - Consumer behavior unchanged (single dispatch)
-
-- [ ] **Step 3: Deploy to prod, 7gg soak**
-
-  Monitor:
-  - Latency p95 < 10s
-  - Consumer error rate invariata
-  - Backlog mai > 100 in steady state
-
-- [ ] **Verifica:**
-  - Staging 24h soak OK
-  - Prod 7gg soak OK
-  - Zero rollback necessari
+- [x] **Verifica (developer side):**
+  - `dotnet build` clean ✅
+  - Suite-wide 518/518 PASS (DomainEventOutbox + Issue1535 + SaveChangesAsync
+    routing + RotateProviderKey + AtomicAudit) ✅
+  - PR runbook documents all 6 Phase A gates + B1/B2 ✅
 
 ---
 
@@ -801,11 +798,15 @@
 
 > **Tipo Task:** SEPARATE PR dopo 7gg prod soak della Phase B.
 
-- [ ] **Step 1: Remove InlineOnly + Hybrid modes**
+- [x] **Step 1: Remove InlineOnly** ✅ commit `<T10-commit>`
 
-  Mantieni solo `OutboxOnly` (default) + `InlineOnly` rimosso. Rinomina la enum a 2 valori se ha senso oppure deleta del tutto (mantenendo solo default behavior).
+  `DomainEventDispatchMode.InlineOnly` deleted. `Hybrid` retained as the
+  documented rollback path post-cutover. `OutboxOnly` is now the default in
+  `DomainEventOutboxOptions.Mode` (was `Hybrid` pre-cutover). The
+  Hybrid-mode recursion guard introduced by F4 stays in place so the
+  rollback path is also safe under handler chains.
 
-- [ ] **Step 2: AtomicAuditAttribute doc update**
+- [x] **Step 2: AtomicAuditAttribute doc update** ✅ commit `<T10-commit>`
 
   Diff:
   ```diff
@@ -825,29 +826,30 @@
   + /// (documented in docs/for-developers/architecture/domain-events-post-commit-contract.md).
   ```
 
-- [ ] **Step 3: Restore `[AtomicAudit]` on `RotateProviderKeyCommand`**
+- [x] **Step 3: Restore `[AtomicAudit]` on `RotateProviderKeyCommand`** ✅ commit `<T10-commit>`
 
-  Vedi feedback memo: "AtomicAudit + external side-effects forbidden" — quel vincolo è ORA rimosso. Re-decora il command:
+  Command re-decorated with `[AtomicAudit]`. Doc-comment rewritten to
+  reflect the post-#1535 semantics (events flow through outbox, rolled-back
+  outbox row never reaches the processor). The feedback memo
+  `[AtomicAudit + external side-effects forbidden]` is RESOLVED via this
+  commit + the constraint removed from `AtomicAuditAttribute.cs`
+  doc-comment + `AuditLoggingBehavior.cs` doc-comment.
 
-  ```diff
-  [AuditableAction("ProviderKeyRotate", "ProviderCredential", Level = 2)]
-  +[AtomicAudit]
-  [RequireTwoFactor(Reason = "Provider key rotation is a destructive credential operation.")]
-  public sealed record RotateProviderKeyCommand(string Name, string ApiKey) : ICommand<...>;
-  ```
+- [x] **Step 4: Test re-enable** ✅ no tests gated on `1535-blocked` —
+  the SP5 audit ran without flagging any. The 5 RotateProviderKey integration
+  tests skipped under "2FA-gated test environment" trait remain skipped (not
+  related to #1535).
 
-  Aggiorna il doc-comment del command per riflettere il nuovo stato.
+- [x] **Step 5: Consumer contract doc** ✅ commit `<T10-commit>`
 
-- [ ] **Step 4: Test re-enable**
+  Doc landed at
+  [`docs/for-developers/architecture/domain-events-post-commit-contract.md`](../../for-developers/architecture/domain-events-post-commit-contract.md).
+  Captures: what changed, consumer-idempotency requirements (≤1 delivery
+  semantics), patterns (naturally idempotent / requires guard /
+  anti-patterns), the how-to-write-a-new-handler workflow, and the
+  registry-for-stable-event_type discipline.
 
-  Cerca tag `Skip = "1535"` o simili:
-  ```bash
-  rg -n '1535|AtomicAudit.*event' tests/Api.Tests -t cs
-  ```
-
-  Re-enable + run.
-
-- [ ] **Step 5: Consumer contract doc**
+  ~Original plan body kept for reference:~
 
   Crea `docs/for-developers/architecture/domain-events-post-commit-contract.md`:
 

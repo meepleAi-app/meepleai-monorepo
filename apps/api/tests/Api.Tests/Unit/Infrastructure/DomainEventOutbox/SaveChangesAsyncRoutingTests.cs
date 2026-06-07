@@ -23,7 +23,7 @@ namespace Api.Tests.Unit.Infrastructure.DomainEventOutbox;
 /// <list type="bullet">
 ///   <item><see cref="DomainEventDispatchMode.Hybrid"/>: write outbox row AND publish inline.</item>
 ///   <item><see cref="DomainEventDispatchMode.OutboxOnly"/>: write outbox row only — NO inline publish.</item>
-///   <item><see cref="DomainEventDispatchMode.InlineOnly"/>: publish inline only — NO outbox row.</item>
+///   <item><i>InlineOnly was removed at T10 cleanup — see #1535.</i></item>
 /// </list>
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
@@ -115,23 +115,9 @@ public sealed class SaveChangesAsyncRoutingTests
             "OutboxOnly mode MUST NOT inline-publish: that's the bug #1535 was opened to fix");
     }
 
-    [Fact]
-    public async Task InlineOnly_mode_publishes_inline_but_does_NOT_write_outbox()
-    {
-        var ev = new FakeEvent(Guid.NewGuid());
-        var (db, mediator) = CreateContextWithMode(DomainEventDispatchMode.InlineOnly, new[] { ev });
-        await using var _ = db;
-
-        await db.SaveChangesAsync();
-
-        var rows = await db.DomainEventOutbox.AsNoTracking().ToListAsync();
-        rows.Should().BeEmpty("InlineOnly is the legacy rollback path — no outbox row written");
-
-        mediator.Verify(
-            m => m.Publish(It.Is<IDomainEvent>(o => ReferenceEquals(o, ev)), It.IsAny<CancellationToken>()),
-            Times.Once,
-            "InlineOnly mode preserves the legacy inline publish");
-    }
+    // Issue #1535 T10 cleanup: DomainEventDispatchMode.InlineOnly removed. The legacy
+    // rollback test (`InlineOnly_mode_publishes_inline_but_does_NOT_write_outbox`)
+    // is deleted along with the enum value.
 
     [Fact]
     public async Task Default_mode_when_options_null_is_Hybrid()

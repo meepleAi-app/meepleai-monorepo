@@ -552,8 +552,10 @@ public class MeepleAiDbContext : DbContext
         // Step 4: drain the collector ONLY after successful save.
         _eventCollector.Clear();
 
-        // Step 5 (Issue #1535): dispatch via MediatR — only in Hybrid (dual-write) or InlineOnly
-        // (legacy rollback path). OutboxOnly mode delegates dispatch entirely to the processor.
+        // Step 5 (Issue #1535): inline dispatch via MediatR — only in Hybrid mode (the
+        // documented rollback path). OutboxOnly mode delegates dispatch entirely to the
+        // DomainEventOutboxProcessor BackgroundService. T10 cleanup removed the
+        // InlineOnly mode (was a rollback safety net pre-Phase B; now redundant).
         if (_dispatchMode == DomainEventDispatchMode.OutboxOnly)
         {
             return result;
@@ -564,8 +566,7 @@ public class MeepleAiDbContext : DbContext
         // nested event post-commit. Without this guard, a handler that mutates an aggregate
         // and calls SaveChangesAsync triggers unbounded recursion INSIDE the processor's
         // open transaction, holding row-level locks and risking stack overflow on a long
-        // handler chain. InlineOnly preserves the legacy behavior intentionally (no outbox
-        // row to fall back on), so the depth guard is Hybrid-specific.
+        // handler chain.
         if (_dispatchMode == DomainEventDispatchMode.Hybrid && SaveChangesRecursionDepth.Value > 1)
         {
             _logger?.LogDebug(

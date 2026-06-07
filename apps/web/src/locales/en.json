@@ -2000,6 +2000,15 @@
             "raptorFailed": "RAPTOR rebuild failed.",
             "deleteFailed": "Unable to delete PDF."
           }
+        },
+        "h1": {
+          "loading": "Loading game…",
+          "notFound": "Game not found"
+        },
+        "documentTitle": {
+          "format": "{gameName} · MeepleAI",
+          "loading": "Loading game — MeepleAI",
+          "notFound": "Game not found — MeepleAI"
         }
       }
     },

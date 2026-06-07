@@ -2050,6 +2050,15 @@
             "raptorFailed": "Rebuild RAPTOR fallito.",
             "deleteFailed": "Impossibile eliminare il PDF."
           }
+        },
+        "h1": {
+          "loading": "Caricamento gioco…",
+          "notFound": "Gioco non trovato"
+        },
+        "documentTitle": {
+          "format": "{gameName} · MeepleAI",
+          "loading": "Caricamento gioco — MeepleAI",
+          "notFound": "Gioco non trovato — MeepleAI"
         }
       }
     },

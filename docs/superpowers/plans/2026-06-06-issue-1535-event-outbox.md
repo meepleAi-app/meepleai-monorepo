@@ -712,7 +712,7 @@
 
 > **Tipo Task:** ship-to-staging. Il code review può iniziare ma il MERGE è gated su 24h di soak in staging in Hybrid mode.
 
-- [x] **Step 1: Config flip + explicit Production/Staging override** ✅ commit `<T8-commit>`
+- [x] **Step 1: Config flip + explicit Production/Staging override** ✅ commit `23dc88727`
 
   Both `appsettings.Production.json` and `appsettings.Staging.json` now contain
   an EXPLICIT `DomainEventOutbox:Mode = "Hybrid"` block. The default at the

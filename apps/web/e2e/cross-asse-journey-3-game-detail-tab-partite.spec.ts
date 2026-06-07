@@ -3,34 +3,28 @@
  *
  * Anna (user) navigates to `/games/${gameId}` → clicks the **Sessioni** tab →
  * verifies the `GameDetailSessionsRail` renders correctly with:
- *   - T4.1: happy path 5-cap (BE Take(5)) — rail shows up to 5 cards + viewAll visible
+ *   - T4.1: happy path 15-seed → 5-cap (BE Take(5)) — rail shows 5 cards + viewAll visible
  *   - T4.2: boundary 0 sessions — rail empty-state (`data-empty=true`), no viewAll
  *   - T4.3: boundary 3 sessions — 3 cards + viewAll IS visible (no threshold guard)
- *   - T4.4: filter persistence — URL query params preserved after viewAll navigation
+ *   - T4.4: viewAll navigation — URL changes to `/games/${id}/sessions`
  *
  * **Initial state** (DEC-C-1 journey3):
  *   - 0 GameNight
  *   - 1 library game (seeded via Real BE `seedLibraryGame` factory, DEC-C-8)
- *   - 15 sessionCount (informational only — NOT seeded as UserGameSessionEntity)
+ *   - N UserGameSession rows seeded per-test via `seedUserGameSession` factory (DEC-C-10 REVISION)
  *
- * **PIVOT-3**: Mission brief assumed `seedSession` → `UserGameSessionEntity`.
- *   Reality: `seedSession` creates `GameNightSessionEntity` (different table/entity).
- *   `UserGameSessionEntity` has no TestRunId column and no seeding factory.
- *   Fix: mock `GET /api/v1/library/games/${gameId}` to return synthetic
- *   `recentSessions[]` payload. `seedLibraryGame` provides the valid `gameId`
- *   consumed by the mock URL pattern. (P193 architectural-pivot-documented-inline)
+ * **DEC-C-10 REVISION** (user-locked sessione 43): supersedes PIVOT-3 (mock endpoint) and
+ * PIVOT-4 (userId mismatch). Real BE wire via:
+ *   - `seedLibraryGame` for the library entry (DEC-C-8, Macro 3a)
+ *   - `seedUserGameSession` for per-test session counts (Macro 4 Phase B-E)
+ *   - PIVOT-4 fix: `mockAuthEndpoints({ userId: libGame.ownerId })` → matches seeded user
  *
- * **PIVOT-4**: `GET /api/v1/library/games/${gameId}` endpoint extracts userId from
- *   the real JWT session. The `mockAuthEndpoints` helper returns the static
- *   `ANNA_PERSONA.userId` while `seedLibraryGame` creates a different seeded user.
- *   Fix: mock the library detail endpoint entirely; no real BE call needed.
+ * **PIVOT-1** (preserved): `GameDetailSessionsRail` shows the viewAll link whenever
+ *   `sessions.length > 0` — there is no configurable threshold.
+ *   T4.3 asserts viewAll IS visible (not absent) when N=3.
  *
- * **PIVOT-1** (mission brief correction): `GameDetailSessionsRail` shows the viewAll
- *   link whenever `sessions.length > 0` — there is no configurable threshold.
- *   T4.3 must assert viewAll IS visible (not absent) when N=3.
- *
- * **PIVOT-2** (mission brief correction): BE `GetGameDetailQueryHandler.cs:81` uses
- *   `Take(5)`. T4.1 assertions use `≤5` (capped) not `15`.
+ * **PIVOT-2** (preserved): BE `GetGameDetailQueryHandler.cs:81` uses `Take(5)`.
+ *   T4.1 seeds 15 sessions but asserts exactly 5 cards (capped by BE).
  *
  * **testid contract**:
  *   - Sessions tab button: `id="game-detail-tab-sessions"` (tabIdFor('sessions'))
@@ -42,125 +36,25 @@
  *
  * **Spec ref**: DEC-C-1 + DEC-C-3 (verify-only, no rail refactor) + DEC-C-4 (non-blocking CI)
  *               + DEC-C-8 Real BE seedLibraryGame (Macro 3a `789b3a301`)
- *               + DEC-C-10 PIVOT seedLibraryGame as game-id anchor
+ *               + DEC-C-10 REVISION Real BE seedUserGameSession (Macro 4 Phase B-E)
  *
  * **CI gate**: non-blocking on main-dev (DEC-C-4). Blocking on main-staging.
  *
  * Issue #1929 Task C Macro 4 — Asse D P4 follow-up.
  */
-import { test, expect, type Page, type Route } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 import { ANNA_PERSONA, buildAnnaInitialState } from './_helpers/annaPersona';
 import { assertExactUrl } from './_helpers/dataAssertionUtils';
 import { withRetry } from './_helpers/resilienceWrappers';
 import { mockAuthEndpoints, seedAuthSession } from './_helpers/seedAuthSession';
 import { seedCookieConsent } from './_helpers/seedCookieConsent';
-import { cleanupTestEntities, newTestRunId, seedLibraryGame } from './_helpers/seedEntities';
-
-// ─── Fixtures ─────────────────────────────────────────────────────────────────
-
-/** Minimal valid GameDetailDto for the mock — only required fields + recentSessions. */
-function makeGameDetailDto(gameId: string, userId: string, sessions: unknown[]) {
-  return {
-    id: '00000000-0000-4000-8000-000000000010',
-    userId,
-    gameId,
-    gameTitle: 'Catan E2E Test',
-    gamePublisher: 'KOSMOS E2E',
-    gameYearPublished: 1995,
-    gameDescription: 'Catan seeded for Journey #3 test',
-    gameIconUrl: null,
-    gameImageUrl: null,
-    minPlayers: 3,
-    maxPlayers: 4,
-    playTimeMinutes: 90,
-    complexityRating: null,
-    averageRating: null,
-    addedAt: '2026-01-01T00:00:00+00:00',
-    notes: null,
-    isFavorite: false,
-    currentState: 'Nuovo',
-    stateChangedAt: null,
-    stateNotes: null,
-    isAvailableForPlay: true,
-    timesPlayed: sessions.length,
-    lastPlayed: sessions.length > 0 ? '2026-06-01T10:00:00+00:00' : null,
-    winRate: null,
-    avgDuration: null,
-    hasRagAccess: false,
-    recentSessions: sessions,
-    checklist: null,
-    customAgentConfig: null,
-    customPdf: null,
-    customCoverR2Key: null,
-  };
-}
-
-/** Build N synthetic LibraryGameSession DTOs. */
-function makeSessionDtos(count: number) {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `00000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}`,
-    playedAt: `2026-05-${String(i + 1).padStart(2, '0')}T18:00:00+00:00`,
-    durationMinutes: 60 + i * 5,
-    durationFormatted: `${60 + i * 5} min`,
-    didWin: i % 2 === 0,
-    players: 'Anna, Marco',
-    notes: null,
-  }));
-}
-
-/**
- * Mocks the library game detail endpoint with synthetic `recentSessions`.
- * Called once per test with the desired session count.
- */
-async function mockLibraryGameDetail(page: Page, gameId: string, sessionCount: number) {
-  const dto = makeGameDetailDto(gameId, ANNA_PERSONA.userId, makeSessionDtos(sessionCount));
-
-  // Primary endpoint: GET /api/v1/library/games/{gameId}
-  await page.route(
-    new RegExp(`/api/v1/library/games/${gameId}(?:\\?.*)?$`),
-    async (route: Route) => {
-      if (route.request().method() === 'GET') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(dto),
-        });
-        return;
-      }
-      await route.continue();
-    }
-  );
-
-  // Prevent sharedGames fallback from overriding: return 404 so useLibraryGameDetail
-  // falls through to the mocked gameDetail (which wins since it's non-null).
-  await page.route(
-    new RegExp(`/api/v1/shared-games/${gameId}(?:\\?.*)?$`),
-    async (route: Route) => {
-      if (route.request().method() === 'GET') {
-        await route.fulfill({ status: 404, body: '' });
-        return;
-      }
-      await route.continue();
-    }
-  );
-
-  // Also mock library/games/{gameId}/status so hero variant stays 'own'.
-  await page.route(
-    new RegExp(`/api/v1/library/games/${gameId}/status(?:\\?.*)?$`),
-    async (route: Route) => {
-      if (route.request().method() === 'GET') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ inLibrary: true, isFavorite: false }),
-        });
-        return;
-      }
-      await route.continue();
-    }
-  );
-}
+import {
+  cleanupTestEntities,
+  newTestRunId,
+  seedLibraryGame,
+  seedUserGameSession,
+} from './_helpers/seedEntities';
 
 // ─── Suite ────────────────────────────────────────────────────────────────────
 
@@ -169,21 +63,15 @@ test.describe('Cross-Asse Journey #3 — Game Detail "Storico partite" tab', () 
 
   let testRunId: string;
   let libraryGameId: string;
+  let libraryEntryId: string;
+  let ownerUserId: string;
 
   test.beforeEach(async ({ page }, testInfo) => {
     testRunId = newTestRunId(testInfo.testId);
 
-    // ① FE auth seeding — Anna as authenticated user
     await seedCookieConsent(page);
-    await seedAuthSession(page, { role: ANNA_PERSONA.role });
-    await mockAuthEndpoints(page, {
-      role: ANNA_PERSONA.role,
-      userId: ANNA_PERSONA.userId,
-      email: ANNA_PERSONA.email,
-      onboardingCompleted: ANNA_PERSONA.onboardingCompleted,
-    });
 
-    // ② BE entity seeding — journey3 initial state: 1 library game as gameId anchor
+    // ① BE entity seeding — journey3 initial state: 1 library game (Real BE DEC-C-8)
     const initial = buildAnnaInitialState('journey3');
     expect(initial.libraryGameCount).toBe(1);
 
@@ -192,7 +80,7 @@ test.describe('Cross-Asse Journey #3 — Game Detail "Storico partite" tab', () 
         seedLibraryGame(page, {
           testRunId,
           ownerEmail: ANNA_PERSONA.email,
-          title: 'Catan E2E Test',
+          title: 'Catan E2E Journey3',
           publisher: 'KOSMOS E2E',
           minPlayers: 3,
           maxPlayers: 4,
@@ -200,6 +88,17 @@ test.describe('Cross-Asse Journey #3 — Game Detail "Storico partite" tab', () 
       { reason: 'seedLibraryGame journey3 beforeEach' }
     );
     libraryGameId = libGame.gameId;
+    libraryEntryId = libGame.libraryEntryId;
+    ownerUserId = libGame.ownerId;
+
+    // ② FE auth seeding — DEC-C-10 PIVOT-4 fix: use libGame.ownerId (matches seeded user)
+    await seedAuthSession(page, { role: ANNA_PERSONA.role });
+    await mockAuthEndpoints(page, {
+      role: ANNA_PERSONA.role,
+      userId: ownerUserId, // ← PIVOT-4 fix: seeded user, not static ANNA_PERSONA.userId
+      email: ANNA_PERSONA.email,
+      onboardingCompleted: ANNA_PERSONA.onboardingCompleted,
+    });
   });
 
   test.afterEach(async ({ page }) => {
@@ -208,18 +107,34 @@ test.describe('Cross-Asse Journey #3 — Game Detail "Storico partite" tab', () 
     }
   });
 
-  // ── T4.1: happy path — 5 sessions (BE Take(5) cap) → rail cards + viewAll ─
+  // ── T4.1: happy path — 15 seeded → 5 BE-capped → rail cards + viewAll ─────
 
   /**
-   * T4.1 — Anna navigates to game detail, clicks Sessioni tab.
-   * Mock returns 5 sessions (BE slice cap).
-   * Asserts: rail renders 5 cards, viewAll link visible, empty-state absent.
+   * T4.1 — Anna navigates to game detail; 15 UserGameSessions seeded Real BE.
+   * BE GetGameDetailQueryHandler.cs:81 caps at Take(5).
+   * Asserts: rail renders exactly 5 cards (cap), viewAll link visible, empty-state absent.
    *
-   * PIVOT-2: BE Take(5) cap; original mission expected 15 visible — corrected.
+   * PIVOT-2 preserved: BE Take(5) cap; 15 seeded → 5 visible.
+   * DEC-C-10 REVISION: Real BE seedUserGameSession (no mock routes).
    */
-  test('sessions tab renders N=5 cards + viewAll visible', async ({ page }) => {
-    // Arrange: mock library detail with 5 sessions (= BE slice cap)
-    await mockLibraryGameDetail(page, libraryGameId, 5);
+  test('sessions tab renders N=5 cards + viewAll visible (BE Take(5) cap from 15 seeded)', async ({
+    page,
+  }) => {
+    // Arrange: seed 15 sessions (BE cap = Take(5) → only 5 returned in recentSessions)
+    for (let i = 0; i < 15; i++) {
+      await withRetry(
+        () =>
+          seedUserGameSession(page, {
+            testRunId,
+            userLibraryEntryId: libraryEntryId,
+            playedAt: new Date(2026, 4, i + 1).toISOString(),
+            durationMinutes: 60 + i,
+            didWin: i % 2 === 0,
+            players: 'Anna, Marco',
+          }),
+        { reason: `seedUserGameSession journey3 T4.1 #${i + 1}/15` }
+      );
+    }
 
     // Act: navigate to game detail
     await page.goto(`/games/${libraryGameId}`);
@@ -230,7 +145,7 @@ test.describe('Cross-Asse Journey #3 — Game Detail "Storico partite" tab', () 
     await expect(sessionsTab).toBeVisible({ timeout: 5_000 });
     await sessionsTab.click();
 
-    // Wait for panel to become visible (tab switch is synchronous but ARIA hidden toggle)
+    // Wait for panel to become visible
     const sessionsPanel = page.locator('[data-slot="game-detail-panel-sessions"]');
     await expect(sessionsPanel).not.toHaveAttribute('hidden', { timeout: 5_000 });
 
@@ -239,7 +154,7 @@ test.describe('Cross-Asse Journey #3 — Game Detail "Storico partite" tab', () 
     await expect(rail).toBeVisible({ timeout: 5_000 });
     await expect(rail).toHaveAttribute('data-empty', 'false');
 
-    // 5 session cards
+    // Exactly 5 cards (BE Take(5) cap)
     const cards = rail.locator('[data-slot="game-detail-session-card"]');
     await expect(cards).toHaveCount(5, { timeout: 5_000 });
 
@@ -255,13 +170,15 @@ test.describe('Cross-Asse Journey #3 — Game Detail "Storico partite" tab', () 
   // ── T4.2: boundary 0 sessions — empty-state, no viewAll ──────────────────
 
   /**
-   * T4.2 — Mock returns 0 sessions.
+   * T4.2 — No UserGameSessions seeded (0). Library game exists but no sessions.
    * Asserts: rail `data-empty=true`, empty-state visible, viewAll absent.
+   *
+   * DEC-C-10 REVISION: No seed calls needed — beforeEach seeds only the library entry.
    */
   test('sessions tab empty-state when N=0 (no viewAll link)', async ({ page }) => {
-    // Arrange: mock library detail with 0 sessions
-    await mockLibraryGameDetail(page, libraryGameId, 0);
+    // Arrange: no seedUserGameSession calls — 0 sessions
 
+    // Act: navigate to game detail
     await page.goto(`/games/${libraryGameId}`);
     await expect(page.locator('[data-slot="game-detail-view"]')).toBeVisible({ timeout: 15_000 });
 
@@ -292,18 +209,31 @@ test.describe('Cross-Asse Journey #3 — Game Detail "Storico partite" tab', () 
   // ── T4.3: boundary 3 sessions — 3 cards + viewAll IS visible ──────────────
 
   /**
-   * T4.3 — Mock returns 3 sessions.
+   * T4.3 — 3 UserGameSessions seeded Real BE.
    * Asserts: 3 cards rendered, viewAll IS visible (no threshold — any N>0 shows it).
    *
-   * PIVOT-1: mission brief incorrectly stated "no viewAll when N=3 (threshold non superato)".
-   * Reality: GameDetailSessionsRail shows viewAll whenever sessions.length > 0.
+   * PIVOT-1 preserved: GameDetailSessionsRail shows viewAll whenever sessions.length > 0.
+   * DEC-C-10 REVISION: Real BE seedUserGameSession.
    */
   test('sessions tab renders N=3 cards + viewAll visible (no threshold guard)', async ({
     page,
   }) => {
-    // Arrange: mock library detail with 3 sessions
-    await mockLibraryGameDetail(page, libraryGameId, 3);
+    // Arrange: seed exactly 3 sessions
+    for (let i = 0; i < 3; i++) {
+      await withRetry(
+        () =>
+          seedUserGameSession(page, {
+            testRunId,
+            userLibraryEntryId: libraryEntryId,
+            playedAt: new Date(2026, 4, i + 1).toISOString(),
+            durationMinutes: 90,
+            didWin: i % 2 === 0,
+          }),
+        { reason: `seedUserGameSession journey3 T4.3 #${i + 1}/3` }
+      );
+    }
 
+    // Act
     await page.goto(`/games/${libraryGameId}`);
     await expect(page.locator('[data-slot="game-detail-view"]')).toBeVisible({ timeout: 15_000 });
 
@@ -336,14 +266,24 @@ test.describe('Cross-Asse Journey #3 — Game Detail "Storico partite" tab', () 
    * T4.4 — Click viewAll from sessions tab.
    * Asserts: browser navigates to `/games/${gameId}/sessions`.
    *
-   * Filter-persistence scope note: the viewAll link href is a static
-   * `/games/{gameId}/sessions` (no query param forwarding in GameDetailView).
-   * This test verifies navigation completes to the correct subroute.
+   * DEC-C-10 REVISION: 2 sessions seeded Real BE so viewAll renders.
    */
   test('viewAll link navigates to /games/{gameId}/sessions subroute', async ({ page }) => {
-    // Arrange: mock library detail with 2 sessions so viewAll renders
-    await mockLibraryGameDetail(page, libraryGameId, 2);
+    // Arrange: seed 2 sessions so viewAll renders
+    for (let i = 0; i < 2; i++) {
+      await withRetry(
+        () =>
+          seedUserGameSession(page, {
+            testRunId,
+            userLibraryEntryId: libraryEntryId,
+            playedAt: new Date(2026, 4, i + 1).toISOString(),
+            durationMinutes: 60,
+          }),
+        { reason: `seedUserGameSession journey3 T4.4 #${i + 1}/2` }
+      );
+    }
 
+    // Act
     await page.goto(`/games/${libraryGameId}`);
     await expect(page.locator('[data-slot="game-detail-view"]')).toBeVisible({ timeout: 15_000 });
 

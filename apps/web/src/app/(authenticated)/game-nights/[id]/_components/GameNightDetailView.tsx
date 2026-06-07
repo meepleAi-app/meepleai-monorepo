@@ -290,7 +290,12 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
                   {t('gameNightDetail.actor.host.edit')}
                 </Link>
               </Button>
-              <Button size="sm" onClick={handlePublish} disabled={publishMutation.isPending}>
+              <Button
+                size="sm"
+                data-testid="publish-game-night"
+                onClick={handlePublish}
+                disabled={publishMutation.isPending}
+              >
                 <Send className="mr-1 h-4 w-4" />
                 {t('gameNightDetail.actor.host.publish')}
               </Button>

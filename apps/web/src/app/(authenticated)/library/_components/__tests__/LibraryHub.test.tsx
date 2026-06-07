@@ -113,6 +113,23 @@ vi.mock('@/hooks/useMiniNavConfig', () => ({
   useMiniNavConfig: (cfg: unknown) => useMiniNavConfigMock(cfg),
 }));
 
+// ─── useAdminRole mock (F2 #1975: BGG admin-only gate) ────────────────────
+
+type MockAdminRoleReturn = {
+  user: null;
+  isSuperAdmin: boolean;
+  isAdminOrAbove: boolean;
+  isEditorOrAbove: boolean;
+  hasRole: (role: string) => boolean;
+  isLoading: boolean;
+};
+
+const useAdminRoleMock = vi.fn<[], MockAdminRoleReturn>();
+
+vi.mock('@/hooks/useAdminRole', () => ({
+  useAdminRole: () => useAdminRoleMock(),
+}));
+
 // ─── useActivityFeed mock (Phase 3b #1593) ────────────────────────────────
 
 type MockActivityFeedReturn = {
@@ -461,6 +478,15 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
       isError: false,
       error: null,
     });
+    // F2 #1975 default: regular user (BGG CTAs hidden).
+    useAdminRoleMock.mockReturnValue({
+      user: null,
+      isSuperAdmin: false,
+      isAdminOrAbove: false,
+      isEditorOrAbove: false,
+      hasRole: () => false,
+      isLoading: false,
+    });
   });
 
   // ─── 6 hub tabs ──────────────────────────────────────────────────────────
@@ -565,6 +591,24 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
     expect(
       within(empty).getByRole('button', { name: /Aggiungi il tuo primo gioco/i })
     ).toBeInTheDocument();
+    // F2 #1975: BGG secondary CTA is admin-only; default user → hidden.
+    expect(within(empty).queryByRole('button', { name: /Importa.*BGG/i })).toBeNull();
+  });
+
+  it('renders BGG secondary CTA in empty state only for admin users (F2 #1975)', () => {
+    useAdminRoleMock.mockReturnValue({
+      user: null,
+      isSuperAdmin: false,
+      isAdminOrAbove: true,
+      isEditorOrAbove: true,
+      hasRole: () => true,
+      isLoading: false,
+    });
+    const { container } = renderHub(
+      makeHub({ sources: emptySources, totalCounts: { ...zeroCounts } })
+    );
+    const empty = container.querySelector('[data-slot="library-empty-state"]') as HTMLElement;
+    expect(empty).toHaveAttribute('data-kind', 'empty');
     expect(within(empty).getByRole('button', { name: /Importa.*BGG/i })).toBeInTheDocument();
   });
 
@@ -839,6 +883,15 @@ describe('LibraryHub — games tab (#1566)', () => {
       isError: false,
       error: null,
     });
+    // F2 #1975 default: regular user (BGG CTAs hidden).
+    useAdminRoleMock.mockReturnValue({
+      user: null,
+      isSuperAdmin: false,
+      isAdminOrAbove: false,
+      isEditorOrAbove: false,
+      hasRole: () => false,
+      isLoading: false,
+    });
   });
 
   it('renders GamesFiltersInline + GamesResultsGrid when tab=games with entries', async () => {
@@ -951,6 +1004,15 @@ describe('LibraryHub — Phase 3b drawer + rail integration (#1593)', () => {
       isSuccess: true,
       isError: false,
       error: null,
+    });
+    // F2 #1975 default: regular user (BGG CTAs hidden).
+    useAdminRoleMock.mockReturnValue({
+      user: null,
+      isSuperAdmin: false,
+      isAdminOrAbove: false,
+      isEditorOrAbove: false,
+      hasRole: () => false,
+      isLoading: false,
     });
     // Force Radix Dialog (desktop) mode for drawer tests.
     installMatchMedia(true);
@@ -1081,6 +1143,15 @@ describe('LibraryHub — a11y axe (#1842)', () => {
       isSuccess: true,
       isError: false,
       error: null,
+    });
+    // F2 #1975 default: regular user (BGG CTAs hidden).
+    useAdminRoleMock.mockReturnValue({
+      user: null,
+      isSuperAdmin: false,
+      isAdminOrAbove: false,
+      isEditorOrAbove: false,
+      hasRole: () => false,
+      isLoading: false,
     });
     // LibraryHub renders a Drawer (AdvancedFiltersDrawer) which calls
     // window.matchMedia synchronously via useSyncExternalStore. Without this

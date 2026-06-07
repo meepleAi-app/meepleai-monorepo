@@ -147,6 +147,18 @@ describe('LibraryHeroDesktop (Wave B.3)', () => {
     expect(screen.queryByRole('button', { name: 'Esporta' })).toBeNull();
   });
 
+  it('hides the "Importa BGG" button when onImportBgg is undefined (F2 #1975 admin-only gate)', () => {
+    // F2 #1975: BGG ToS restricts the import flow to admins. When the parent
+    // (LibraryHub) detects a non-admin user it omits the callback; the hero
+    // must collapse the CTA entirely (no disabled button — full removal).
+    render(
+      <LibraryHeroDesktop labels={baseLabels} stats={baseStats} onAddGame={() => undefined} />
+    );
+    expect(screen.queryByRole('button', { name: '↓ Importa BGG' })).toBeNull();
+    // Primary CTA is still rendered — only the BGG secondary CTA is gated.
+    expect(screen.getByRole('button', { name: '+ Aggiungi gioco' })).toBeInTheDocument();
+  });
+
   it('keeps subtitle visible when compact is true (mockup: subtitle is reduced, not removed)', () => {
     // Mockup contract (sp4-library-desktop.jsx:72-75): the subtitle <p> renders
     // unconditionally; only its font-size shrinks (14.5 → 13) in compact mode.

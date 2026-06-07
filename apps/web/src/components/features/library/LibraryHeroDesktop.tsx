@@ -228,13 +228,15 @@ export function LibraryHeroDesktop({
             >
               {labels.ctaAdd}
             </button>
-            <button
-              type="button"
-              onClick={onImportBgg}
-              className="cursor-pointer rounded-md border border-border-strong bg-card px-[14px] py-[9px] font-quicksand text-[13px] font-bold text-foreground"
-            >
-              {labels.ctaImportBgg}
-            </button>
+            {onImportBgg ? (
+              <button
+                type="button"
+                onClick={onImportBgg}
+                className="cursor-pointer rounded-md border border-border-strong bg-card px-[14px] py-[9px] font-quicksand text-[13px] font-bold text-foreground"
+              >
+                {labels.ctaImportBgg}
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={onExport}

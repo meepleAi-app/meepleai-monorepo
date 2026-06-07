@@ -71,19 +71,28 @@ internal sealed class AccessRequestCreatedEventHandler : DomainEventHandlerBase<
                     ["_slack_category"] = "access_request"
                 },
                 cancellationToken).ConfigureAwait(false);
-
-            // Mark notified + persist the guard so re-dispatch dedupes.
-            accessRequest.MarkNotified(domainEvent.EventId);
-            await _repository.UpdateAsync(accessRequest, cancellationToken).ConfigureAwait(false);
-            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // FAIL-OPEN PATTERN: Notification failure must not block access request creation
+        // FAIL-OPEN PATTERN: Notification failure must not block access request creation.
+        // Return WITHOUT persisting the guard so the next outbox retry can attempt the
+        // alert again — silently swallowing the guard write here would mark this event as
+        // "notified" even though no Slack message went out.
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "Failed to send access request notification for {Email}", DataMasking.MaskEmail(domainEvent.Email));
+            return;
         }
 #pragma warning restore CA1031
+
+        // Persist the guard OUTSIDE the fail-open catch: only run when SendAlertAsync
+        // succeeded. If SaveChangesAsync now throws, the exception propagates to MediatR
+        // and the outbox dispatcher will retry the handler. Risk: at-least-once delivery
+        // may resend the Slack alert on the retry — accepted trade-off vs the alternative
+        // where a DB failure after a successful Slack send silently swallows the guard,
+        // which would have the same effect plus no operator signal.
+        accessRequest.MarkNotified(domainEvent.EventId);
+        await _repository.UpdateAsync(accessRequest, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     protected override Guid? GetUserId(AccessRequestCreatedEvent domainEvent)

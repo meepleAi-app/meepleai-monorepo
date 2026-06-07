@@ -69,6 +69,7 @@ export function GamesResultsGrid({
             imageUrl={entry.gameImageUrl ?? undefined}
             rating={entry.averageRating ?? undefined}
             ratingMax={10}
+            headingLevel={2}
           />
         </Link>
       ))}

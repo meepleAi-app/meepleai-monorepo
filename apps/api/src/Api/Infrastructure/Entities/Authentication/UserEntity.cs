@@ -83,6 +83,11 @@ public class UserEntity
     public Guid? InvitedByUserId { get; set; }
     public DateTime? InvitationExpiresAt { get; set; }
 
+    /// <summary>Issue #1928 Task B (DEC-B-8) — E2E test seeding scope marker.</summary>
+    [System.ComponentModel.DataAnnotations.Schema.Column("test_run_id")]
+    [System.ComponentModel.DataAnnotations.MaxLength(64)]
+    public string? TestRunId { get; set; }
+
     // Navigation properties
     public ICollection<UserSessionEntity> Sessions { get; set; } = new List<UserSessionEntity>();
     public ICollection<UserBackupCodeEntity> BackupCodes { get; set; } = new List<UserBackupCodeEntity>();

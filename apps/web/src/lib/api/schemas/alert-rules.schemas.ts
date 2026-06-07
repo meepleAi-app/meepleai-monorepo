@@ -44,7 +44,21 @@ export const alertTemplateSchema = z.object({
   category: z.string(),
 });
 
+// Issue #1840 SP5 F4-C7 — per-rule TestAlert response.
+// Backend: TestAlertRuleResult (TestAlertRuleCommand.cs).
+export const testAlertRuleResultSchema = z.object({
+  ruleId: z.string().uuid(),
+  ruleName: z.string(),
+  isDryRun: z.boolean(),
+  channels: z.array(z.string()),
+  firedAt: z.string().datetime({ offset: true }),
+});
+
+export const testAlertRuleModeSchema = z.enum(['dryRun', 'live']);
+
 export type AlertRule = z.infer<typeof alertRuleSchema>;
 export type CreateAlertRule = z.infer<typeof createAlertRuleSchema>;
 export type UpdateAlertRule = z.infer<typeof updateAlertRuleSchema>;
 export type AlertTemplate = z.infer<typeof alertTemplateSchema>;
+export type TestAlertRuleResult = z.infer<typeof testAlertRuleResultSchema>;
+export type TestAlertRuleMode = z.infer<typeof testAlertRuleModeSchema>;

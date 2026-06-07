@@ -76,7 +76,7 @@ export default defineConfig({
     },
     exclude: [
       '**/node_modules/**',
-      '**/e2e/**',
+      '**/e2e/**/*.spec.{ts,tsx}',
       '**/*.e2e.test.{ts,tsx}',
       '**/.next/**',
       '**/.__tests__/fixtures/**',

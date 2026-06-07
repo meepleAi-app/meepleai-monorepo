@@ -6,11 +6,12 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Api.BoundedContexts.Administration.Infrastructure.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.Services;
 using Api.Services.LlmClients;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
@@ -22,15 +23,19 @@ namespace Api.Tests.Services.LlmClients;
 
 /// <summary>
 /// ISSUE-1725: Tests for streaming token tracking in OpenRouterLlmClient
+/// ISSUE-1859: API key resolved via IProviderCredentialResolver (DB→env-var cascade)
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public class OpenRouterLlmClientStreamingTests
 {
+    private const string TestApiKey = "sk-test-fake-key-12345";
+
     private readonly Mock<IHttpClientFactory> _httpClientFactoryMock;
     private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock;
     private readonly Mock<ILlmCostCalculator> _costCalculatorMock;
     private readonly Mock<ILogger<OpenRouterLlmClient>> _loggerMock;
-    private readonly IConfiguration _config;
+    private readonly Mock<IProviderCredentialResolver> _resolverMock;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly OpenRouterLlmClient _sut;
 
     public OpenRouterLlmClientStreamingTests()
@@ -40,13 +45,14 @@ public class OpenRouterLlmClientStreamingTests
         _costCalculatorMock = new Mock<ILlmCostCalculator>();
         _loggerMock = new Mock<ILogger<OpenRouterLlmClient>>();
 
-        var configData = new Dictionary<string, string?>
-        {
-            { "OPENROUTER_API_KEY", "test-key-12345" }
-        };
-        _config = new ConfigurationBuilder()
-            .AddInMemoryCollection(configData)
-            .Build();
+        _resolverMock = new Mock<IProviderCredentialResolver>();
+        _resolverMock
+            .Setup(r => r.ResolveAsync(OpenRouterLlmClient.ProviderKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TestApiKey);
+
+        var services = new ServiceCollection();
+        services.AddSingleton(_resolverMock.Object);
+        _scopeFactory = services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
 
         var httpClient = new HttpClient(_httpMessageHandlerMock.Object)
         {
@@ -56,7 +62,7 @@ public class OpenRouterLlmClientStreamingTests
 
         _sut = new OpenRouterLlmClient(
             _httpClientFactoryMock.Object,
-            _config,
+            _scopeFactory,
             _costCalculatorMock.Object,
             _loggerMock.Object);
     }

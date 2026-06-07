@@ -37,6 +37,7 @@
 
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { axe } from 'jest-axe';
 import { IntlProvider } from 'react-intl';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactElement } from 'react';
@@ -138,7 +139,10 @@ vi.mock('@/hooks/useActivityFeed', () => ({
 const MESSAGES: Record<string, string> = {
   'pages.library.hero.title': 'La mia libreria',
   'pages.library.hero.subtitle': 'Tutta la tua collezione, gli agenti AI e le partite recenti.',
+  'pages.library.hero.eyebrow': 'Library · power-user view',
   'pages.library.hero.cta.add': 'Aggiungi gioco',
+  'pages.library.hero.cta.importBgg': '↓ Importa BGG',
+  'pages.library.hero.cta.exportAriaLabel': 'Esporta',
   'pages.library.hero.stats.totalGames': 'Giochi totali',
   'pages.library.hero.stats.kbReady': 'Knowledge base',
   'pages.library.hero.stats.wishlist': 'Wishlist',
@@ -152,15 +156,21 @@ const MESSAGES: Record<string, string> = {
   'pages.library.hubTabs.kb': 'KB',
   'pages.library.hubTabs.sessions': 'Sessioni',
   'pages.library.hubTabs.chat': 'Chat',
-  'pages.library.filters.search.placeholder': 'Cerca per titolo, editore o anno…',
-  'pages.library.filters.search.ariaLabel': 'Cerca nella libreria',
+  'pages.library.filters.search.placeholder': 'Cerca in libreria... (premi /)',
+  'pages.library.filters.search.ariaLabel': 'Cerca in libreria',
+  'pages.library.filters.search.keyboardHintAriaLabel': 'Scorciatoia tastiera',
+  'pages.library.filters.advanced.label': 'Filtri avanzati',
+  'pages.library.filters.chips.stato': 'STATO',
+  'pages.library.filters.chips.gioco': 'GIOCO',
+  'pages.library.filters.chips.data': 'DATA',
+  'pages.library.filters.chips.sort': 'SORT',
+  'pages.library.filters.chips.value.all': 'Tutti',
+  'pages.library.filters.chips.value.always': 'Sempre',
   'pages.library.filters.stato.label': 'Stato',
   'pages.library.filters.stato.owned': 'Posseduti',
   'pages.library.filters.stato.wishlist': 'Wishlist',
   'pages.library.filters.stato.loaned': 'In prestito',
   'pages.library.filters.stato.withKb': 'Con Knowledge Base',
-  'pages.library.sort.label': 'Ordina',
-  'pages.library.sort.ariaLabel': 'Ordina i risultati',
   'pages.library.sort.recent': 'Più recenti',
   'pages.library.sort.title': 'Titolo A-Z',
   'pages.library.sort.rating': 'Voto più alto',
@@ -175,6 +185,12 @@ const MESSAGES: Record<string, string> = {
   'pages.library.selectionMode.exitAriaLabel': 'Esci dalla modalità selezione',
   'pages.library.selectionMode.selectedCount':
     '{count, plural, =0 {Nessuno selezionato} =1 {1 selezionato} other {# selezionati}}',
+  'pages.library.bulk.counter': '{count, plural, =1 {selezionato} other {selezionati}}',
+  'pages.library.bulk.counterCompact': 'sel.',
+  'pages.library.bulk.closeAriaLabel': 'Annulla selezione',
+  'pages.library.bulk.actions.archive': 'Archivia',
+  'pages.library.bulk.actions.tag': 'Tag',
+  'pages.library.bulk.actions.export': 'Esporta',
   'pages.library.bulk.actions.delete': 'Elimina',
   'pages.library.bulk.confirm.deleteTitle':
     '{count, plural, =1 {Confermi rimozione di 1 gioco?} other {Confermi rimozione di # giochi?}}',
@@ -182,9 +198,12 @@ const MESSAGES: Record<string, string> = {
     'I giochi selezionati saranno rimossi dalla libreria. La PDF KB resterà disponibile.',
   'pages.library.bulk.confirm.confirmCta': 'Conferma',
   'pages.library.bulk.confirm.cancelCta': 'Annulla',
-  'pages.library.emptyState.default.title': 'La tua libreria è vuota',
-  'pages.library.emptyState.default.subtitle': 'Aggiungi il tuo primo gioco per iniziare.',
-  'pages.library.emptyState.default.cta': 'Aggiungi gioco',
+  'pages.library.emptyState.empty.title': 'La tua libreria è vuota',
+  'pages.library.emptyState.empty.subtitle':
+    'Inizia aggiungendo il tuo primo gioco. Importa la collezione da BGG o cerca per titolo.',
+  'pages.library.emptyState.empty.cta': '+ Aggiungi il tuo primo gioco',
+  'pages.library.emptyState.empty.ctaImportBgg': '↓ Importa da BGG',
+  'pages.library.emptyState.empty.suggestions.heading': 'Suggerimenti dalla community',
   'pages.library.emptyState.filteredEmpty.title': 'Nessun risultato',
   'pages.library.emptyState.filteredEmpty.subtitle': 'Prova a modificare la ricerca o i filtri.',
   'pages.library.emptyState.filteredEmpty.cta': 'Cancella filtri',
@@ -192,40 +211,70 @@ const MESSAGES: Record<string, string> = {
   'pages.library.emptyState.error.subtitle':
     'Non siamo riusciti a recuperare la tua libreria. Riprova.',
   'pages.library.emptyState.error.cta': 'Riprova',
-  // ─── RecentActivityRail keys (Phase 3b #1593) ───
-  'pages.library.activityRail.title': 'Attività recente',
+  // ─── RecentActivityRail keys (Phase 3b #1593, PR2 Task 2.4 #1585-followup) ───
+  'pages.library.activityRail.title': 'Ultime modifiche',
   'pages.library.activityRail.empty': 'Nessuna attività recente.',
   'pages.library.activityRail.error': "Impossibile caricare l'attività.",
-  // ─── AdvancedFiltersDrawer header/footer keys (Phase 3a #1606) ───
-  'pages.library.filters.title': 'Più filtri',
-  'pages.library.filters.description': "Filtra la libreria per dimensioni specifiche dell'entità.",
-  'pages.library.filters.clear': 'Reimposta',
+  'pages.library.activityRail.collapseAriaLabel': 'Comprimi pannello',
+  'pages.library.activityRail.shortcuts.heading': 'Shortcuts',
+  'pages.library.activityRail.shortcuts.focusSearch': 'focus search',
+  'pages.library.activityRail.shortcuts.advancedFilters': 'filtri avanzati',
+  'pages.library.activityRail.shortcuts.allShortcuts': 'tutte le scorciatoie',
+  // ─── AdvancedFiltersDrawer cross-entity (#1585-followup Task 3.3) ───
+  'pages.library.filters.title': 'Filtri avanzati',
+  'pages.library.filters.description': 'Filtra la libreria per dimensioni cross-entity.',
+  'pages.library.filters.closeAriaLabel': 'Chiudi pannello filtri',
+  'pages.library.filters.header.subtitle':
+    '{count, plural, =0 {Nessun filtro · scope: library} =1 {1 attivo · scope: library} other {# attivi · scope: library}}',
   'pages.library.filters.apply': 'Applica',
+  'pages.library.filters.applyWithCount': 'Applica ({count})',
+  'pages.library.filters.reset': 'Reset',
+  'pages.library.filters.clear': 'Reimposta',
   'common.cancel': 'Annulla',
-  // ─── Drawer section labels — game scope ───
-  'pages.library.filters.section.state': 'Stato',
-  'pages.library.filters.section.withKb': 'Solo con Knowledge Base',
-  'pages.library.filters.section.rating': 'Rating minimo',
-  'pages.library.filters.section.players': 'Numero di giocatori',
-  'pages.library.filters.section.year': 'Anno di pubblicazione',
-  // ─── Drawer section labels — agent scope ───
-  'pages.library.filters.section.agentType': 'Tipo di agente',
-  'pages.library.filters.section.activeOnly': 'Solo attivi',
-  // ─── Drawer section labels — session scope ───
-  'pages.library.filters.section.sessionStatus': 'Stato sessione',
-  'pages.library.filters.section.sessionType': 'Tipo sessione',
-  'pages.library.filters.section.playerCount': 'Giocatori (min)',
-  // ─── Drawer section labels — kb scope ───
-  'pages.library.filters.section.processingState': 'Stato di elaborazione',
-  'pages.library.filters.kbState.ready': 'Pronto',
-  'pages.library.filters.kbState.pending': 'In elaborazione',
-  'pages.library.filters.kbState.failed': 'Errore',
-  // ─── Drawer section labels — chat scope ───
-  'pages.library.filters.section.messageCountMin': 'Messaggi (min)',
-  // ─── Drawer checkbox option labels ───
-  'pages.library.filters.state.owned': 'Posseduto',
-  'pages.library.filters.state.wishlist': 'Wishlist',
-  'pages.library.filters.state.loaned': 'In prestito',
+  // section: status
+  'pages.library.filters.section.status.title': 'Stato',
+  'pages.library.filters.section.status.options.owned': 'Posseduto',
+  'pages.library.filters.section.status.options.wishlist': 'Wishlist',
+  'pages.library.filters.section.status.options.setup': 'In setup',
+  'pages.library.filters.section.status.options.archived': 'Archiviato',
+  // section: entity
+  'pages.library.filters.section.entity.title': 'Tipo entità',
+  'pages.library.filters.section.entity.options.game': 'Giochi',
+  'pages.library.filters.section.entity.options.agent': 'Agenti',
+  'pages.library.filters.section.entity.options.kb': 'Documenti KB',
+  'pages.library.filters.section.entity.options.session': 'Sessioni',
+  'pages.library.filters.section.entity.options.chat': 'Chat',
+  // section: game (select-multi)
+  'pages.library.filters.section.game.title': 'Gioco',
+  'pages.library.filters.section.game.placeholder': 'Filtra per gioco specifico...',
+  'pages.library.filters.section.game.empty': 'Nessun gioco disponibile.',
+  // section: period
+  'pages.library.filters.section.period.title': 'Periodo',
+  'pages.library.filters.section.period.options.7d': 'Ultimi 7 giorni',
+  'pages.library.filters.section.period.options.30d': 'Ultimi 30 giorni',
+  'pages.library.filters.section.period.options.1y': 'Ultimo anno',
+  'pages.library.filters.section.period.options.all': 'Sempre',
+  'pages.library.filters.section.period.options.range': 'Range personalizzato',
+  // section: tags
+  'pages.library.filters.section.tags.title': 'Tag',
+  'pages.library.filters.section.tags.options.family': 'Family',
+  'pages.library.filters.section.tags.options.strategy': 'Strategy',
+  'pages.library.filters.section.tags.options.coop': 'Coop',
+  'pages.library.filters.section.tags.options.engine': 'Engine builder',
+  'pages.library.filters.section.tags.options.auction': 'Auction',
+  'pages.library.filters.section.tags.options.rollAndWrite': 'Roll & Write',
+  'pages.library.filters.section.tags.options.cardDriven': 'Card driven',
+  'pages.library.filters.section.tags.options.tableau': 'Tableau',
+  // section: rating
+  'pages.library.filters.section.rating.title': 'Rating',
+  'pages.library.filters.section.rating.minAriaLabel': 'Rating minimo',
+  'pages.library.filters.section.rating.maxAriaLabel': 'Rating massimo',
+  // section: weight
+  'pages.library.filters.section.weight.title': 'Complessità',
+  'pages.library.filters.section.weight.options.light': 'Light',
+  'pages.library.filters.section.weight.options.medium': 'Medium',
+  'pages.library.filters.section.weight.options.heavy': 'Heavy',
+  'pages.library.filters.section.weight.options.extra': 'Extra heavy',
   // ─── gamesTab i18n keys (#1566) ───
   'pages.library.gamesTab.filters.search.placeholder': 'Cerca per titolo…',
   'pages.library.gamesTab.filters.search.ariaLabel': 'Cerca giochi nella tua libreria',
@@ -439,7 +488,9 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
     expect(container.querySelector('[data-slot="library-hero-desktop"]')).toBeInTheDocument();
     expect(container.querySelector('[data-slot="library-tabs"]')).toBeInTheDocument();
     expect(container.querySelector('[data-slot="library-toolbar"]')).toBeInTheDocument();
-    expect(container.querySelector('[data-slot="library-hybrid-grid"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="library-hybrid-grid-container"]')
+    ).toBeInTheDocument();
     expect(container.querySelector('[data-slot="library-activity-rail"]')).toBeInTheDocument();
     expect(container.querySelector('[data-slot="library-empty-state"]')).not.toBeInTheDocument();
   });
@@ -465,7 +516,9 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
     const empty = container.querySelector('[data-slot="library-empty-state"]');
     expect(empty).not.toBeNull();
     expect(empty).toHaveAttribute('data-kind', 'loading');
-    expect(container.querySelector('[data-slot="library-hybrid-grid"]')).not.toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="library-hybrid-grid-container"]')
+    ).not.toBeInTheDocument();
   });
 
   // ─── FSM: error (all sources fail) ───────────────────────────────────────
@@ -492,7 +545,9 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
     );
     const root = container.querySelector('[data-slot="library-hub-v2"]');
     expect(root).toHaveAttribute('data-state', 'default');
-    expect(container.querySelector('[data-slot="library-hybrid-grid"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="library-hybrid-grid-container"]')
+    ).toBeInTheDocument();
     expect(container.querySelector('[data-slot="library-empty-state"]')).not.toBeInTheDocument();
   });
 
@@ -505,7 +560,12 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
     const empty = container.querySelector('[data-slot="library-empty-state"]') as HTMLElement;
     expect(empty).toHaveAttribute('data-kind', 'empty');
     // Scope CTA query to empty state — Hero also renders an "Aggiungi gioco" CTA.
-    expect(within(empty).getByRole('button', { name: 'Aggiungi gioco' })).toBeInTheDocument();
+    // PR2 Task 2.5: SP4 first-run reskin replaced "Aggiungi gioco" with
+    // "+ Aggiungi il tuo primo gioco" + secondary "↓ Importa da BGG".
+    expect(
+      within(empty).getByRole('button', { name: /Aggiungi il tuo primo gioco/i })
+    ).toBeInTheDocument();
+    expect(within(empty).getByRole('button', { name: /Importa.*BGG/i })).toBeInTheDocument();
   });
 
   // ─── FSM: filtered-empty ───────────────────────────────────────────────
@@ -562,7 +622,9 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
   it('ignores unknown ?state= values and falls back to real FSM', () => {
     searchParamsState.value = 'totally-bogus';
     const { container } = renderHub(makeHub());
-    expect(container.querySelector('[data-slot="library-hybrid-grid"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="library-hybrid-grid-container"]')
+    ).toBeInTheDocument();
     expect(container.querySelector('[data-slot="library-empty-state"]')).not.toBeInTheDocument();
   });
 
@@ -997,5 +1059,53 @@ describe('LibraryHub — Phase 3b drawer + rail integration (#1593)', () => {
     expect(rail).toHaveAttribute('data-state', 'populated');
     expect(screen.getByText('Catan Tutor')).toBeInTheDocument();
     expect(screen.getByText('rules.pdf')).toBeInTheDocument();
+  });
+});
+
+// ─── a11y axe (#1842) ─────────────────────────────────────────────────────
+
+describe('LibraryHub — a11y axe (#1842)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    searchParamsState.value = '';
+    hubMock.mockReturnValue(makeHub());
+    libraryMock.mockReset();
+    libraryMock.mockReturnValue({ data: undefined, isLoading: false, isError: false, error: null });
+    useRemoveGameFromLibraryMock.mockReturnValue({
+      mutateAsync: vi.fn().mockResolvedValue(undefined),
+      isPending: false,
+    });
+    useActivityFeedMock.mockReturnValue({
+      data: { items: [], count: 0 },
+      isLoading: false,
+      isSuccess: true,
+      isError: false,
+      error: null,
+    });
+    // LibraryHub renders a Drawer (AdvancedFiltersDrawer) which calls
+    // window.matchMedia synchronously via useSyncExternalStore. Without this
+    // stub the hook throws "Cannot read properties of undefined (reading
+    // 'matches')". installMatchMedia(false) → mobile breakpoint path is taken,
+    // which avoids the Radix Dialog render path that would need a portal.
+    installMatchMedia(false);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // P164 axe-rule-suppression-with-tracked-followup pattern:
+  // nested-interactive is suppressed here because the hybrid grid cards use a
+  // <button data-slot="library-grid-card"> wrapper around MeepleCard, which
+  // itself renders an interactive element. This is a pre-existing structural
+  // issue unrelated to #1842 (heading-order). heading-order IS enabled (default).
+  // Follow-up: replace button wrapper with <div role="button"> or restructure
+  // the card click handler to avoid nesting interactives.
+  it('passes heading-order axe rule (#1842)', async () => {
+    const { container } = renderWithIntl(<LibraryHub />);
+    const results = await axe(container, {
+      rules: { 'nested-interactive': { enabled: false } },
+    });
+    expect(results).toHaveNoViolations();
   });
 });

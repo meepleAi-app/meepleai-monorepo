@@ -47,6 +47,16 @@ public class UserGameSessionEntity
     /// </summary>
     public DateTime? UpdatedAt { get; set; }
 
+    /// <summary>
+    /// Issue #1929 Task C Macro 4 (DEC-B-8, DEC-C-10 REVISION) — E2E test seeding scope marker.
+    /// Explicit column (NOT shadow property) to avoid EF Core 9 + Npgsql null-after-save bug.
+    /// Stamped on insert by SeedTestUserGameSessionCommandHandler; consumed by
+    /// CleanupTestEntitiesCommandHandler.ExecuteDeleteAsync for cascade-delete scope.
+    /// </summary>
+    [System.ComponentModel.DataAnnotations.Schema.Column("test_run_id")]
+    [System.ComponentModel.DataAnnotations.MaxLength(64)]
+    public string? TestRunId { get; set; }
+
     // Navigation property
     public UserLibraryEntryEntity? UserLibraryEntry { get; set; }
 }

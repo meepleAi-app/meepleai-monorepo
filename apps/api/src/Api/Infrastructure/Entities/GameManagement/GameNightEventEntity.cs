@@ -59,6 +59,15 @@ public class GameNightEventEntity
     [Column("updated_at")]
     public DateTimeOffset? UpdatedAt { get; set; }
 
+    /// <summary>
+    /// Issue #1928 Task B (DEC-B-8) — E2E test seeding scope marker.
+    /// Null for production entities; non-null only when seeded via Testing BC.
+    /// CleanupTestEntitiesCommand uses ExecuteDeleteAsync WHERE TestRunId = @testRunId.
+    /// </summary>
+    [Column("test_run_id")]
+    [MaxLength(64)]
+    public string? TestRunId { get; set; }
+
     public List<GameNightRsvpEntity> Rsvps { get; set; } = [];
 
     public List<GameNightSessionEntity> Sessions { get; set; } = [];

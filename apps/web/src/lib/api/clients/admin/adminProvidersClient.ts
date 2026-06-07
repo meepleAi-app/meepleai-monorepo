@@ -2,6 +2,12 @@
  * Admin Providers Sub-Client (Issue #936 — G1+G2 frontend integration)
  *
  * Probe + quota for LLM providers (OpenRouter, DeepSeek, Ollama-local).
+ *
+ * Note: `getCircuitBreakerStates` is exposed by `adminMonitorClient` and
+ * `getLlmSystemConfig` by `adminAiClient` — both are spread into the unified
+ * `api.admin` namespace, so providers-related FE consumers can use them
+ * directly. They are NOT re-declared here to avoid type conflicts in the
+ * spread composition.
  */
 
 import {

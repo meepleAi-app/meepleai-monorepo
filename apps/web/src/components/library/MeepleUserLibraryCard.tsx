@@ -129,6 +129,7 @@ export function MeepleUserLibraryCard({
         badge={badge}
         status="owned"
         connections={connections}
+        headingLevel={2}
         onClick={onClick ? () => onClick(game.id) : undefined}
         className={className}
         data-testid={`library-game-card-${game.id}`}

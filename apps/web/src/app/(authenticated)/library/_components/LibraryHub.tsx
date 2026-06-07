@@ -39,6 +39,7 @@ import {
   LibraryHybridGrid,
   LibraryTabs,
   RecentActivityRail,
+  countActiveFilters,
   type ActivityItem,
   type BulkSelectionBarLabels,
   type EmptyLibraryLabels,
@@ -62,7 +63,7 @@ import {
   type HybridHubSources,
   type HybridHubTab,
 } from '@/lib/library/hybrid-hub.derive';
-import type { HybridHubEntity, HybridHubItem } from '@/lib/library/hybrid-hub.types';
+import type { HybridHubItem } from '@/lib/library/hybrid-hub.types';
 import type { LibrarySortKey } from '@/lib/library/library-filters';
 import { useLibraryView } from '@/lib/library/use-library-view';
 import { IS_VISUAL_TEST_BUILD } from '@/lib/library/visual-test-fixture';
@@ -80,6 +81,33 @@ type SurfaceKind = 'default' | 'loading' | 'empty' | 'filtered-empty' | 'error';
 
 const HUB_TABS: readonly HybridHubTab[] = ['all', 'games', 'agents', 'kb', 'sessions', 'chat'];
 
+/**
+ * SP4 mockup icon mapping (admin-mockups/design_files/sp4-library-desktop.jsx:142,155,172).
+ * Each tab carries an emoji rendered before the label inside the tab button.
+ */
+const TAB_ICONS: Record<HybridHubTab, string> = {
+  all: '⌗',
+  games: '🎲',
+  agents: '🤖',
+  kb: '📚',
+  sessions: '🎯',
+  chat: '💬',
+};
+
+/**
+ * SP4 mockup entity accent mapping (jsx:142/155). The 'all' tab falls back
+ * to the game accent so the indicator + active background read as the
+ * "primary library hue" when no entity filter is engaged.
+ */
+const TAB_ENTITY: Record<HybridHubTab, 'game' | 'agent' | 'kb' | 'session' | 'chat'> = {
+  all: 'game',
+  games: 'game',
+  agents: 'agent',
+  kb: 'kb',
+  sessions: 'session',
+  chat: 'chat',
+};
+
 export function LibraryHub(): ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
@@ -90,7 +118,12 @@ export function LibraryHub(): ReactElement {
   const [selectionMode, setSelectionMode] = useState<LibrarySelectionMode>('browse');
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
   const [query, setQuery] = useState('');
-  const [sortKey, setSortKey] = useState<LibrarySortKey>('recent');
+  // SORT chip is currently a non-interactive visual stub (mockup admin-mockups/
+  // design_files/sp4-library-desktop.jsx:213). Until the chip-popover lands
+  // we pass a literal 'recent' down to CrossEntityFilters; the LibrarySortKey
+  // type import below documents the contract for the follow-up wiring.
+  // TODO(#1585-followup): wire sortKey state + setter when SORT chip popover ships.
+  const SORT_KEY_STUB: LibrarySortKey = 'recent';
   const [gameStateFilter, setGameStateFilter] = useState<GameStateFilter>({
     states: [],
     withKb: false,
@@ -103,45 +136,14 @@ export function LibraryHub(): ReactElement {
   const [gamesQuery, setGamesQuery] = useState('');
   const [gamesView, setGamesView] = useState<GamesViewKey>('grid');
 
-  // Phase 3b #1593: AdvancedFiltersDrawer state
+  // AdvancedFiltersDrawer cross-entity hub-level state (#1585-followup Task 3.3).
+  // Refactored from scope-conditional (one filter shape per tab) to a single
+  // cross-entity `LibraryFilters` that survives tab switches — matches the
+  // mockup hub-level filter surface.
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [activeFilters, setActiveFilters] = useState<LibraryFilters>({ scope: 'game' });
+  const [activeFilters, setActiveFilters] = useState<LibraryFilters>({});
 
-  const drawerEntityScope = useMemo<HybridHubEntity>(() => {
-    switch (tab) {
-      case 'games':
-        return 'game';
-      case 'agents':
-        return 'agent';
-      case 'kb':
-        return 'kb';
-      case 'sessions':
-        return 'session';
-      case 'chat':
-        return 'chat';
-      case 'all':
-      default:
-        return 'game';
-    }
-  }, [tab]);
-
-  // Reset filters to the new scope's empty variant when the tab changes.
-  useEffect(() => {
-    setActiveFilters({ scope: drawerEntityScope } as LibraryFilters);
-  }, [drawerEntityScope]);
-
-  // Count non-empty filter fields (excluding the `scope` discriminant) for the chip badge.
-  const activeFiltersCount = useMemo(() => {
-    let count = 0;
-    for (const [key, value] of Object.entries(activeFilters)) {
-      if (key === 'scope') continue;
-      if (value === undefined || value === null) continue;
-      if (Array.isArray(value) && value.length === 0) continue;
-      if (value === false) continue;
-      count++;
-    }
-    return count;
-  }, [activeFilters]);
+  const activeFiltersCount = useMemo(() => countActiveFilters(activeFilters), [activeFilters]);
 
   const stateOverride = parseStateOverride(searchParams.get('state'));
 
@@ -199,8 +201,8 @@ export function LibraryHub(): ReactElement {
   }, [hub.sources, gameStateFilter]);
 
   const merged = useMemo<HybridHubItem[]>(
-    () => deriveHybridItems(filteredSources, tab, query, sortKey),
-    [filteredSources, tab, query, sortKey]
+    () => deriveHybridItems(filteredSources, tab, query, SORT_KEY_STUB),
+    [filteredSources, tab, query]
   );
 
   // Hero stats: hybrid counts (games/agents/docs/chats) from pre-filter totals.
@@ -224,7 +226,10 @@ export function LibraryHub(): ReactElement {
     () => ({
       title: t('pages.library.hero.title'),
       subtitle: t('pages.library.hero.subtitle'),
+      eyebrow: t('pages.library.hero.eyebrow'),
       ctaAdd: t('pages.library.hero.cta.add'),
+      ctaImportBgg: t('pages.library.hero.cta.importBgg'),
+      ctaExportAriaLabel: t('pages.library.hero.cta.exportAriaLabel'),
     }),
     [t]
   );
@@ -235,10 +240,26 @@ export function LibraryHub(): ReactElement {
         key: 'totalGames',
         label: t('pages.library.hero.stats.totalGames'),
         value: heroStats.games,
+        entity: 'game',
       },
-      { key: 'agents', label: t('pages.library.hero.stats.agents'), value: heroStats.agents },
-      { key: 'docs', label: t('pages.library.hero.stats.docs'), value: heroStats.docs },
-      { key: 'chats', label: t('pages.library.hero.stats.chats'), value: heroStats.chats },
+      {
+        key: 'agents',
+        label: t('pages.library.hero.stats.agents'),
+        value: heroStats.agents,
+        entity: 'agent',
+      },
+      {
+        key: 'docs',
+        label: t('pages.library.hero.stats.docs'),
+        value: heroStats.docs,
+        entity: 'kb',
+      },
+      {
+        key: 'chats',
+        label: t('pages.library.hero.stats.chats'),
+        value: heroStats.chats,
+        entity: 'chat',
+      },
     ],
     [t, heroStats]
   );
@@ -256,15 +277,21 @@ export function LibraryHub(): ReactElement {
       key: tk,
       label: t(`pages.library.hubTabs.${tk}`),
       count: countFor(tk),
+      icon: TAB_ICONS[tk],
+      entity: TAB_ENTITY[tk],
     }));
   }, [t, hub.totalCounts]);
 
   const emptyLabels = useMemo<EmptyLibraryLabels>(
     () => ({
       empty: {
-        title: t('pages.library.emptyState.default.title'),
-        subtitle: t('pages.library.emptyState.default.subtitle'),
-        cta: t('pages.library.emptyState.default.cta'),
+        title: t('pages.library.emptyState.empty.title'),
+        subtitle: t('pages.library.emptyState.empty.subtitle'),
+        cta: t('pages.library.emptyState.empty.cta'),
+        ctaImportBgg: t('pages.library.emptyState.empty.ctaImportBgg'),
+        suggestions: {
+          heading: t('pages.library.emptyState.empty.suggestions.heading'),
+        },
       },
       filteredEmpty: {
         title: t('pages.library.emptyState.filteredEmpty.title'),
@@ -284,9 +311,12 @@ export function LibraryHub(): ReactElement {
     const count = selected.size;
     return {
       regionLabel: t('pages.library.selectionMode.selectedCount', { count }),
-      counter: t('pages.library.selectionMode.selectedCount', { count }),
-      cancel: t('pages.library.selectionMode.exit'),
-      archive: t('pages.library.bulk.actions.delete'),
+      counter: t('pages.library.bulk.counter', { count }),
+      counterCompact: t('pages.library.bulk.counterCompact'),
+      closeAriaLabel: t('pages.library.bulk.closeAriaLabel'),
+      archive: t('pages.library.bulk.actions.archive'),
+      tag: t('pages.library.bulk.actions.tag'),
+      exportLabel: t('pages.library.bulk.actions.export'),
       confirmTitle: t('pages.library.bulk.confirm.deleteTitle', { count }),
       confirmDescription: t('pages.library.bulk.confirm.deleteMessage'),
       confirmCta: t('pages.library.bulk.confirm.confirmCta'),
@@ -366,6 +396,7 @@ export function LibraryHub(): ReactElement {
 
   // ─── Callbacks ───
   const handleAddGame = useCallback(() => router.push('/library?action=add'), [router]);
+  const handleImportBgg = useCallback(() => router.push('/library?action=import-bgg'), [router]);
 
   const handleCardClick = useCallback(
     (itemId: string) => {
@@ -452,7 +483,12 @@ export function LibraryHub(): ReactElement {
       data-state={effectiveKind}
       className="mx-auto flex max-w-[1440px] flex-col gap-6 p-6 pb-24 sm:p-7"
     >
-      <LibraryHeroDesktop labels={heroLabels} stats={heroStatRows} onAddGame={handleAddGame} />
+      <LibraryHeroDesktop
+        labels={heroLabels}
+        stats={heroStatRows}
+        onAddGame={handleAddGame}
+        onImportBgg={handleImportBgg}
+      />
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
         <div className="flex flex-1 flex-col gap-4">
           <LibraryTabs<HybridHubTab> tabs={tabsConfig} active={tab} onChange={setTab} />
@@ -492,62 +528,12 @@ export function LibraryHub(): ReactElement {
                 onGameStateFilterChange={setGameStateFilter}
                 onMoreFilters={() => setDrawerOpen(true)}
                 activeFiltersCount={activeFiltersCount}
+                search={query}
+                onSearchChange={setQuery}
+                view={view as LibraryViewMode}
+                onViewChange={setView}
+                sortKey={SORT_KEY_STUB}
               />
-              <div
-                data-slot="library-toolbar"
-                className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm"
-              >
-                <input
-                  type="search"
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
-                  placeholder={t('pages.library.filters.search.placeholder')}
-                  aria-label={t('pages.library.filters.search.ariaLabel')}
-                  data-slot="library-search-input"
-                  className="min-w-[12rem] flex-1 rounded-full border border-input bg-background px-4 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
-                <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span className="sr-only sm:not-sr-only">{t('pages.library.sort.label')}</span>
-                  <select
-                    value={sortKey}
-                    onChange={e => setSortKey(e.target.value as LibrarySortKey)}
-                    aria-label={t('pages.library.sort.ariaLabel')}
-                    data-slot="library-sort-select"
-                    className="rounded-full border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <option value="recent">{t('pages.library.sort.recent')}</option>
-                    <option value="title">{t('pages.library.sort.title')}</option>
-                    <option value="rating">{t('pages.library.sort.rating')}</option>
-                    <option value="state">{t('pages.library.sort.state')}</option>
-                  </select>
-                </label>
-                <div
-                  role="group"
-                  aria-label={t('pages.library.view.ariaLabel')}
-                  data-slot="library-view-toggle"
-                  className="inline-flex items-center gap-1 rounded-full border border-input bg-background p-1"
-                >
-                  {(['grid', 'list', 'compact'] as const).map(mode => (
-                    <button
-                      key={mode}
-                      type="button"
-                      onClick={() => setView(mode)}
-                      aria-pressed={view === mode}
-                      data-view-mode={mode}
-                      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                        view === mode
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      {t(`pages.library.view.${mode}` as const)}
-                    </button>
-                  ))}
-                </div>
-                {/* #1566: the enter-select-mode button was deleted — it is not in
-                    the games branch (handled by GamesFiltersInline) and not re-added
-                    here. The else-branch exists only for non-games tabs. */}
-              </div>
               {effectiveKind === 'default' ? (
                 <LibraryHybridGrid
                   items={merged}
@@ -562,6 +548,7 @@ export function LibraryHub(): ReactElement {
                   kind={effectiveKind}
                   labels={emptyLabels}
                   onAddGame={handleAddGame}
+                  onImportBgg={handleImportBgg}
                   onClearFilters={handleClearFilters}
                   onRetry={handleRetry}
                 />
@@ -587,10 +574,9 @@ export function LibraryHub(): ReactElement {
       <AdvancedFiltersDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
-        entityScope={drawerEntityScope}
         activeFilters={activeFilters}
         onApply={setActiveFilters}
-        onClear={() => setActiveFilters({ scope: drawerEntityScope } as LibraryFilters)}
+        onClear={() => setActiveFilters({})}
       />
     </div>
   );

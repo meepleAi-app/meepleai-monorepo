@@ -1,5 +1,7 @@
 using System.Security.Claims;
 using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Application.Commands.Providers;
+using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Infrastructure.Services;
 using MediatR;
@@ -53,6 +55,34 @@ internal static class AdminProviderEndpoints
             // ChainedRateLimiter in the future.
             .RequireAuthorization("RequireSuperAdmin")
             .RequireRateLimiting("AdminProviderProbe")
+            .WithOpenApi();
+
+        // POST /api/v1/admin/providers/{name}/rotate-key — Issue #1859.
+        // Superadmin-only. Step-up 2FA enforced by [RequireTwoFactor(ForceStrict=true,MaxAge=5)]
+        // on the command. Rate-limit policy "AdminProviderRotateKey" gates 1 req/24h per
+        // (provider,user) at the edge; the handler additionally checks the DB rotation cooldown
+        // (returns 409 with ConflictException). Probe failure → 502 ProviderProbeFailedException.
+        group.MapPost("/{name}/rotate-key", async (
+                string name,
+                RotateProviderKeyRequestDto body,
+                IMediator mediator,
+                ClaimsPrincipal user,
+                CancellationToken ct) =>
+            {
+                var actorIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!Guid.TryParse(actorIdClaim, out var actorId))
+                    return Results.Unauthorized();
+
+                var result = await mediator.Send(new RotateProviderKeyCommand(
+                    ProviderName: name,
+                    ApiKey: body.NewApiKey,
+                    ConfirmedProviderName: body.ConfirmedProviderName,
+                    RequestingUserId: actorId), ct).ConfigureAwait(false);
+
+                return Results.Ok(result);
+            })
+            .RequireAuthorization("RequireSuperAdmin")
+            .RequireRateLimiting("AdminProviderRotateKey")
             .WithOpenApi();
 
         // GET /api/v1/admin/providers/{name}/quota — Issue #936 (G2). Admin-or-above.

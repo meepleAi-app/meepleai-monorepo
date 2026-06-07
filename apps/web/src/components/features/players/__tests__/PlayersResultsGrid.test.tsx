@@ -13,6 +13,7 @@
  */
 
 import { render, screen, fireEvent } from '@testing-library/react';
+import { axe } from 'jest-axe';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { PlayerListItem } from '@/lib/players/players-filters';
@@ -83,5 +84,20 @@ describe('PlayersResultsGrid', () => {
     expect(announce).not.toBeNull();
     expect(announce!.textContent).toContain(`${ITEMS.length} risultati`);
     expect(announce!.getAttribute('aria-live')).toBe('polite');
+  });
+
+  // P164 axe-rule-suppression-with-tracked-followup pattern:
+  // nested-interactive is suppressed here because PlayersResultsGrid wraps
+  // MeepleCard (which contains a <button>) inside another <button> wrapper.
+  // This is a pre-existing structural bug unrelated to #1842.
+  // Follow-up: replace <button> wrapper with <div role="button"> or lift the
+  // click handler into MeepleCard's own interactive surface.
+  // heading-order IS enabled (default) — this test confirms no heading skip.
+  it('passes heading-order axe rule (#1842)', async () => {
+    const { container } = render(<PlayersResultsGrid {...DEFAULT_PROPS} />);
+    const results = await axe(container, {
+      rules: { 'nested-interactive': { enabled: false } },
+    });
+    expect(results).toHaveNoViolations();
   });
 });

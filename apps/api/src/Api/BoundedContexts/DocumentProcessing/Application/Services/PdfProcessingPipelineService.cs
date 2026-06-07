@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
+using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
@@ -10,6 +11,7 @@ using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Observability;
 using Api.Services;
 using Api.Services.Pdf;
+using Api.SharedKernel.Application.Services;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using KbEntities = Api.BoundedContexts.KnowledgeBase.Domain.Entities;
@@ -49,6 +51,10 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     // NOT fail if cover generation throws; we just mark the row as Failed and
     // continue (the L1 placeholder remains visible client-side).
     private readonly IPdfCoverExtractor? _pdfCoverExtractor;
+    // Issue #1852 (Gap A): collects PdfCoverGeneratedEvent for dispatch at next
+    // SaveChangesAsync so the SharedGame.PdfCoverR2Key column is populated.
+    // Nullable so pre-#1852 test constructors compile without adding a new mock param.
+    private readonly IDomainEventCollector? _eventCollector;
 
     public PdfProcessingPipelineService(
         MeepleAiDbContext db,
@@ -67,7 +73,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         IVectorStoreAdapter? vectorStore = null,
         IFeatureFlagService? featureFlagService = null,
         IRoleClassifierService? roleClassifier = null,
-        IPdfCoverExtractor? pdfCoverExtractor = null)
+        IPdfCoverExtractor? pdfCoverExtractor = null,
+        IDomainEventCollector? eventCollector = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _pdfClaimService = pdfClaimService ?? throw new ArgumentNullException(nameof(pdfClaimService));
@@ -86,6 +93,10 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         _featureFlagService = featureFlagService;
         _roleClassifier = roleClassifier;
         _pdfCoverExtractor = pdfCoverExtractor;
+        // eventCollector is optional so pre-#1852 test constructors continue
+        // to compile without updating every mock site. The Collect() call
+        // in ExtractCoverImageAsync is guarded with a null-check.
+        _eventCollector = eventCollector;
     }
 
     public async Task ProcessAsync(
@@ -508,7 +519,12 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
         try
         {
-            var pdfBytes = await File.ReadAllBytesAsync(filePath, cancellationToken).ConfigureAwait(false);
+            // Issue #1831 Gap B fix (audit 2026-06-02-cover-stack-live-audit.md):
+            // ExtractTextAsync (linee 437-451) usa _blobStorageService.RetrieveAsync con
+            // filesystem fallback — in prod il PDF vive in R2/S3, non su disk. Il pattern
+            // originale (File.ReadAllBytesAsync) faceva fallire silenziosamente l'estrazione
+            // cover su staging/prod (CoverGenerationStatus="Failed" permanente).
+            var pdfBytes = await LoadPdfBytesAsync(pdfDoc.Id, filePath, cancellationToken).ConfigureAwait(false);
             var result = await _pdfCoverExtractor.ExtractAsync(pdfBytes, cancellationToken).ConfigureAwait(false);
 
             switch (result.Outcome)
@@ -537,6 +553,17 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                     pdfDoc.CoverGenerationStatus = "Generated";
                     pdfDoc.CoverPageIndex = result.SelectedPageIndex;
                     pdfDoc.CoverGenerationError = null;
+
+                    // Issue #1852 (Gap A): raise the propagation event so
+                    // PdfCoverGeneratedEventHandler can populate SharedGame.PdfCoverR2Key.
+                    // Dispatched by MeepleAiDbContext.SaveChangesAsync (~line 154) after
+                    // the pipeline transitions to Chunking. Guard is present so existing
+                    // test constructors that omit eventCollector keep working.
+                    _eventCollector?.Collect(new PdfCoverGeneratedEvent(
+                        pdfDocumentId: pdfDoc.Id,
+                        sharedGameId: pdfDoc.SharedGameId,
+                        coverR2Key: resourceKey,
+                        coverPageIndex: result.SelectedPageIndex ?? 0));
 
                     _logger.LogInformation(
                         "[PdfPipeline] Cover image generated for PDF {PdfId} from page {PageIndex} (resourceKey={ResourceKey})",
@@ -936,6 +963,41 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         foreach (var entry in entries)
         {
             entry.State = EntityState.Detached;
+        }
+    }
+
+    /// <summary>
+    /// Issue #1831 Gap B (audit 2026-06-02): load PDF bytes con priorità blob storage
+    /// (R2/S3 in prod) → filesystem fallback (dev senza bucket). Stesso pattern usato da
+    /// <see cref="ExtractTextAsync"/> ma materializzato in byte[] perché
+    /// <see cref="IPdfCoverExtractor.ExtractAsync"/> richiede un byte array (Docnet API).
+    /// </summary>
+    private async Task<byte[]> LoadPdfBytesAsync(
+        Guid pdfDocumentId,
+        string filePath,
+        CancellationToken cancellationToken)
+    {
+        var fileId = PdfStorageKey.ForPdf(pdfDocumentId);
+        var stream = await _blobStorageService
+            .RetrieveAsync(fileId, BlobCategory.Pdf, fileId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (stream is null)
+        {
+            // Fallback al filesystem locale per dev senza bucket (parity con ExtractTextAsync:444-451).
+            if (!File.Exists(filePath))
+            {
+                throw new FileNotFoundException(
+                    $"PDF file not found in blob storage or filesystem: {filePath}", filePath);
+            }
+            stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        }
+
+        await using (stream.ConfigureAwait(false))
+        {
+            using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream, cancellationToken).ConfigureAwait(false);
+            return memoryStream.ToArray();
         }
     }
 

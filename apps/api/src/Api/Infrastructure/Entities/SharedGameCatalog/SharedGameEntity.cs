@@ -60,6 +60,16 @@ public class SharedGameEntity
     /// </summary>
     public string? WikidataCoverR2Key { get; set; }
 
+    /// <summary>
+    /// Issue #1852 (umbrella #1821 L4) — PDF cover key denormalized from
+    /// PdfDocumentEntity.CoverR2Key via PdfCoverGeneratedEventHandler.
+    /// Stored in R2 at <c>covers/pdf/{SharedGameId}/{key}-preview.webp</c>.
+    /// Has higher priority than Wikidata (L2) and user-uploaded (L3) covers
+    /// but only when a PDF with a valid cover has been uploaded and processed.
+    /// Resolved to BlobCategory.GameImage when computing CoverUrl in DTOs.
+    /// </summary>
+    public string? PdfCoverR2Key { get; set; }
+
     /// <summary>Source URL on Wikimedia Commons; surfaced in the attribution footer.</summary>
     public string? WikidataCoverSourceUrl { get; set; }
 
@@ -68,6 +78,16 @@ public class SharedGameEntity
 
     /// <summary>Attribution string ready for display (author + license link).</summary>
     public string? WikidataCoverAttribution { get; set; }
+
+    /// <summary>
+    /// Issue #1929 Task C Macro 3a (DEC-B-8, DEC-C-8) — E2E test seeding scope marker.
+    /// Explicit column (NOT shadow property) to avoid EF Core 9 + Npgsql null-after-save bug.
+    /// Stamped on insert by SeedTestLibraryGameCommandHandler; consumed by
+    /// CleanupTestEntitiesCommandHandler.ExecuteDeleteAsync for cascade-delete scope.
+    /// </summary>
+    [System.ComponentModel.DataAnnotations.Schema.Column("test_run_id")]
+    [System.ComponentModel.DataAnnotations.MaxLength(64)]
+    public string? TestRunId { get; set; }
 
     // Navigation properties (many-to-many)
     public ICollection<GameDesignerEntity> Designers { get; set; } = new List<GameDesignerEntity>();

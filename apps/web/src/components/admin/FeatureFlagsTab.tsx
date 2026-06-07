@@ -14,7 +14,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 
-import { Check, Clock, Crown, Users, Zap } from 'lucide-react';
+import { Check, Clock, Crown, ScrollText, Users, Zap } from 'lucide-react';
 
 import { toast } from '@/components/layout/Toast';
 import { Badge } from '@/components/ui/data-display/badge';
@@ -25,10 +25,21 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/overlays/tooltip';
+import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 
 import { BulkActionBar, type BulkAction } from './BulkActionBar';
+import { ConfigAuditLogDialog } from './ConfigAuditLogDialog';
 import { ConfigHistoryDialog } from './ConfigHistoryDialog';
+import { DirtyStateBar } from './DirtyStateBar';
+import { EnvPill } from './EnvPill';
+import {
+  detectFlagCategory,
+  FlagCategoryTabs,
+  readCategoryFromHash,
+  writeCategoryToHash,
+  type FlagCategory,
+} from './FlagCategoryTabs';
 import {
   api,
   SystemConfigurationDto,
@@ -40,6 +51,17 @@ import {
 interface FeatureFlagsTabProps {
   configurations: SystemConfigurationDto[];
   onConfigurationChange: () => void;
+}
+
+interface PendingChange {
+  newValue: string;
+  originalValue: string;
+}
+
+const CRITICAL_FLAG_KEYWORDS = ['RagCaching', 'StreamingResponses', 'SetupGuide'];
+
+function isCriticalFlag(key: string): boolean {
+  return CRITICAL_FLAG_KEYWORDS.some(cf => key.includes(cf));
 }
 
 type TierField = 'tierFree' | 'tierNormal' | 'tierPremium';
@@ -71,6 +93,14 @@ export default function FeatureFlagsTab({
   const [selectedFlags, setSelectedFlags] = useState<Set<string>>(new Set());
   const [historyConfigId, setHistoryConfigId] = useState<string | null>(null);
   const [historyConfigKey, setHistoryConfigKey] = useState('');
+  // Issue #1836: global audit-log dialog (aggregates history across feature flags).
+  const [auditLogOpen, setAuditLogOpen] = useState(false);
+  // Issue #1836: Batch-save (dirty state) for global toggles.
+  // Tier toggles still apply immediately; only the role-based toggle is staged.
+  const [pendingChanges, setPendingChanges] = useState<Map<string, PendingChange>>(new Map());
+  const [applying, setApplying] = useState(false);
+  // Issue #1836: sub-tab category filter (URL-hash-backed).
+  const [activeCategory, setActiveCategory] = useState<FlagCategory>('all');
 
   useEffect(() => {
     // Filter configurations to show only FeatureFlag category
@@ -78,9 +108,56 @@ export default function FeatureFlagsTab({
       c => c.category === 'FeatureFlag' || c.key.startsWith('Features:')
     );
     setFeatureFlags(flags);
-    // Clear selection when configurations change
     setSelectedFlags(new Set());
+    // Issue #1836 review fix: a refetch after Apply MUST NOT wipe the
+    // partial-failure map (those entries are exactly what the admin needs to
+    // retry). We only drop entries for flags that no longer exist server-side.
+    // Pending changes for still-present flags are preserved verbatim.
+    setPendingChanges(prev => {
+      if (prev.size === 0) return prev;
+      const liveIds = new Set(flags.map(f => f.id));
+      const next = new Map<string, PendingChange>();
+      for (const [id, change] of prev) {
+        if (liveIds.has(id)) next.set(id, change);
+      }
+      return next.size === prev.size ? prev : next;
+    });
   }, [configurations]);
+
+  // Issue #1836: Warn before navigating away with unsaved changes.
+  useEffect(() => {
+    if (pendingChanges.size === 0) return;
+
+    const handler = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      // Some browsers still require returnValue to be set.
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [pendingChanges.size]);
+
+  // Issue #1836: hydrate active category from URL hash on mount, and follow
+  // back/forward navigation via hashchange.
+  useEffect(() => {
+    setActiveCategory(readCategoryFromHash());
+    const handler = () => setActiveCategory(readCategoryFromHash());
+    window.addEventListener('hashchange', handler);
+    return () => window.removeEventListener('hashchange', handler);
+  }, []);
+
+  const handleCategoryChange = useCallback((next: FlagCategory) => {
+    setActiveCategory(next);
+    writeCategoryToHash(next);
+  }, []);
+
+  const visibleFlags = useMemo(() => {
+    if (activeCategory === 'all') return featureFlags;
+    return featureFlags.filter(f => detectFlagCategory(f.key) === activeCategory);
+  }, [featureFlags, activeCategory]);
+
+  const flagKeys = useMemo(() => featureFlags.map(f => f.key), [featureFlags]);
 
   const hasTierSupport = useMemo(() => {
     return featureFlags.some(
@@ -88,36 +165,94 @@ export default function FeatureFlagsTab({
     );
   }, [featureFlags]);
 
-  const handleToggle = async (flag: SystemConfigurationDto) => {
-    // Confirm for critical features
-    const criticalFlags = ['RagCaching', 'StreamingResponses', 'SetupGuide'];
-    const isCritical = criticalFlags.some(cf => flag.key.includes(cf));
+  /**
+   * Issue #1836: Stage a toggle as a pending change instead of persisting it
+   * immediately. The mutation lands on the backend only when the admin clicks
+   * "Apply" in the {@link DirtyStateBar}. If the new value matches the original
+   * server value the entry is removed (no-op).
+   */
+  const handleToggle = useCallback(
+    (flag: SystemConfigurationDto) => {
+      if (!flag.isActive) return;
 
-    if (isCritical && flag.isActive) {
-      const confirmed = window.confirm(
-        `Are you sure you want to disable '${flag.key}'? This may impact user experience.`
-      );
+      const currentValue = pendingChanges.get(flag.id)?.newValue ?? flag.value;
+      const newValue = currentValue === 'true' ? 'false' : 'true';
+
+      setPendingChanges(prev => {
+        const next = new Map(prev);
+        const existing = next.get(flag.id);
+        const originalValue = existing?.originalValue ?? flag.value;
+
+        if (newValue === originalValue) {
+          // Reverted to server state — drop the entry.
+          next.delete(flag.id);
+        } else {
+          next.set(flag.id, { newValue, originalValue });
+        }
+
+        return next;
+      });
+    },
+    [pendingChanges]
+  );
+
+  const revertPendingChanges = useCallback(() => {
+    setPendingChanges(new Map());
+  }, []);
+
+  const applyPendingChanges = useCallback(async () => {
+    if (pendingChanges.size === 0) return;
+
+    // Batch confirm if any critical flag is being disabled.
+    const criticalDisables = Array.from(pendingChanges.entries())
+      .filter(([flagId, change]) => {
+        if (change.newValue !== 'false') return false;
+        const flag = featureFlags.find(f => f.id === flagId);
+        return flag ? isCriticalFlag(flag.key) : false;
+      })
+      .map(([flagId]) => featureFlags.find(f => f.id === flagId)?.key ?? flagId);
+
+    if (criticalDisables.length > 0) {
+      const message =
+        criticalDisables.length === 1
+          ? `You are about to disable '${criticalDisables[0]}'. This may impact user experience. Continue?`
+          : `You are about to disable ${criticalDisables.length} critical flags:\n${criticalDisables
+              .map(k => `• ${k}`)
+              .join('\n')}\n\nContinue?`;
+      const confirmed = window.confirm(message);
       if (!confirmed) return;
     }
 
-    setToggling(flag.id);
+    setApplying(true);
+    const failures = new Map<string, PendingChange>();
+    let successCount = 0;
 
-    try {
-      const newValue = flag.value === 'true' ? 'false' : 'true';
-
-      await api.config.updateConfiguration(flag.id, {
-        value: newValue,
-      });
-
-      toast.success(`Feature flag '${flag.key}' ${newValue === 'true' ? 'enabled' : 'disabled'}`);
-      onConfigurationChange();
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to toggle feature flag';
-      toast.error(errorMessage);
-    } finally {
-      setToggling(null);
+    for (const [flagId, change] of pendingChanges.entries()) {
+      try {
+        await api.config.updateConfiguration(flagId, { value: change.newValue });
+        successCount++;
+      } catch {
+        failures.set(flagId, change);
+      }
     }
-  };
+
+    if (successCount > 0) {
+      const flagWord = successCount === 1 ? 'flag' : 'flags';
+      toast.success(`Applied ${successCount} feature ${flagWord}`);
+    }
+
+    if (failures.size > 0) {
+      const flagWord = failures.size === 1 ? 'flag' : 'flags';
+      toast.error(`Failed to update ${failures.size} ${flagWord} — see audit log.`);
+    }
+
+    setPendingChanges(failures);
+    setApplying(false);
+
+    if (successCount > 0) {
+      onConfigurationChange();
+    }
+  }, [pendingChanges, featureFlags, onConfigurationChange]);
 
   const handleTierToggle = async (flag: SystemConfigurationDto, tier: SubscriptionTier) => {
     // Issue #3335: Tier-based feature access toggle
@@ -313,6 +448,28 @@ export default function FeatureFlagsTab({
           </div>
         )}
 
+        {/* Issue #1836: sub-tab category filter + global audit log entry-point */}
+        <div className="flex items-end justify-between gap-3 flex-wrap">
+          <FlagCategoryTabs
+            flagKeys={flagKeys}
+            activeCategory={activeCategory}
+            onCategoryChange={handleCategoryChange}
+            className="flex-1 min-w-0"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setAuditLogOpen(true)}
+            disabled={featureFlags.length === 0}
+            data-testid="btn-open-audit-log"
+            className="shrink-0"
+          >
+            <ScrollText className="h-4 w-4 mr-1.5" aria-hidden="true" />
+            Audit log
+          </Button>
+        </div>
+
         {/* Feature Flags Table/Grid */}
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -370,18 +527,34 @@ export default function FeatureFlagsTab({
               </tr>
             </thead>
             <tbody>
-              {featureFlags.map(flag => {
-                const isEnabled = flag.value === 'true' && flag.isActive;
-                const isToggling = toggling === flag.id;
+              {visibleFlags.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={hasTierSupport ? 7 : 4}
+                    className="px-4 py-12 text-center text-sm text-muted-foreground"
+                    data-testid="flag-category-empty"
+                  >
+                    No feature flags match this category.
+                  </td>
+                </tr>
+              )}
+              {visibleFlags.map(flag => {
+                const pending = pendingChanges.get(flag.id);
+                const displayValue = pending?.newValue ?? flag.value;
+                const isEnabled = displayValue === 'true' && flag.isActive;
+                const isDirty = pending !== undefined;
                 const isSelected = selectedFlags.has(flag.id);
 
                 return (
                   <tr
                     key={flag.id}
+                    data-dirty={isDirty || undefined}
                     className={cn(
                       'border-b border-border/30 transition-colors',
                       isSelected && 'bg-primary/5',
-                      isEnabled && 'bg-green-50/50 dark:bg-green-900/10'
+                      isEnabled && !isDirty && 'bg-green-50/50 dark:bg-green-900/10',
+                      isDirty &&
+                        'bg-[hsl(var(--c-warning)/0.08)] ring-1 ring-inset ring-[hsl(var(--c-warning)/0.25)]'
                     )}
                   >
                     {/* Selection Checkbox */}
@@ -399,10 +572,15 @@ export default function FeatureFlagsTab({
 
                     {/* Feature Name & Description */}
                     <td className="px-4 py-4">
-                      <div className="flex flex-col">
-                        <span className="font-medium text-foreground">
-                          {flag.key.replace('Features:', '')}
-                        </span>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-foreground">
+                            {flag.key.replace('Features:', '')}
+                          </span>
+                          {/* Issue #1836: env-pill is a static placeholder until the
+                              backend exposes a per-config environment scope. */}
+                          <EnvPill env="prd" compact />
+                        </div>
                         {flag.description && (
                           <span className="text-sm text-muted-foreground">{flag.description}</span>
                         )}
@@ -414,7 +592,7 @@ export default function FeatureFlagsTab({
                       <Switch
                         checked={isEnabled}
                         onCheckedChange={() => handleToggle(flag)}
-                        disabled={isToggling || !flag.isActive}
+                        disabled={applying || !flag.isActive}
                         aria-label={`Toggle ${flag.key}`}
                         className={isEnabled ? 'data-[state=checked]:bg-green-600' : ''}
                       />
@@ -484,6 +662,15 @@ export default function FeatureFlagsTab({
                             'Disabled'
                           )}
                         </Badge>
+                        {isDirty && (
+                          <Badge
+                            variant="outline"
+                            className="text-[hsl(var(--c-warning))] border-[hsl(var(--c-warning)/0.5)]"
+                            data-testid={`flag-${flag.id}-dirty-badge`}
+                          >
+                            Modified
+                          </Badge>
+                        )}
                         {flag.requiresRestart && (
                           <Badge variant="outline" className="text-orange-600 border-orange-300">
                             ⚠️ Restart
@@ -539,8 +726,8 @@ export default function FeatureFlagsTab({
                   features
                 </li>
                 <li>
-                  • <Users className="inline h-3 w-3 text-muted-foreground" /> Free: Basic access with
-                  limitations
+                  • <Users className="inline h-3 w-3 text-muted-foreground" /> Free: Basic access
+                  with limitations
                 </li>
               </>
             )}
@@ -548,7 +735,7 @@ export default function FeatureFlagsTab({
         </div>
       </div>
 
-      {/* History Dialog */}
+      {/* History Dialog (per-flag) */}
       <ConfigHistoryDialog
         open={!!historyConfigId}
         onOpenChange={open => {
@@ -557,6 +744,23 @@ export default function FeatureFlagsTab({
         configId={historyConfigId ?? ''}
         configKey={historyConfigKey}
         onRollbackComplete={onConfigurationChange}
+      />
+
+      {/* Issue #1836: aggregate audit log across all feature flags */}
+      <ConfigAuditLogDialog
+        open={auditLogOpen}
+        onOpenChange={setAuditLogOpen}
+        configurationIds={flagKeys.length > 0 ? featureFlags.map(f => f.id) : []}
+      />
+
+      {/* Issue #1836: batch-save dirty state bar */}
+      <DirtyStateBar
+        dirtyCount={pendingChanges.size}
+        onRevert={revertPendingChanges}
+        onApply={applyPendingChanges}
+        applying={applying}
+        itemLabel={{ singular: 'flag', plural: 'flags' }}
+        testId="feature-flags-dirty-bar"
       />
     </TooltipProvider>
   );

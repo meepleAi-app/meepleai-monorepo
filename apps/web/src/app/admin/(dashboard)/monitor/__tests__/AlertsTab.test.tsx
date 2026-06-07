@@ -35,9 +35,10 @@ vi.mock('@/components/admin/alert-rules/AlertRuleList', () => ({
   ),
 }));
 
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { screen, waitFor, fireEvent } from '@testing-library/react';
 
 import { AlertsTab } from '../AlertsTab';
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 
 vi.mock('../CreateAlertRuleDialog', () => ({
   CreateAlertRuleDialog: ({ open }: { open: boolean }) =>
@@ -69,7 +70,7 @@ describe('AlertsTab', () => {
   });
 
   it('renders AlertsBanner and AlertRuleList after loading', async () => {
-    render(<AlertsTab />);
+    renderWithQuery(<AlertsTab />);
 
     await waitFor(() => {
       expect(screen.getByTestId('alerts-banner')).toBeInTheDocument();
@@ -79,7 +80,7 @@ describe('AlertsTab', () => {
   });
 
   it('displays "Alert Rules" heading', async () => {
-    render(<AlertsTab />);
+    renderWithQuery(<AlertsTab />);
 
     await waitFor(() => {
       expect(screen.getByText('Regole di Alert')).toBeInTheDocument();
@@ -104,7 +105,7 @@ describe('AlertsTab', () => {
     ];
     mockGetAll.mockResolvedValue(mockRules);
 
-    render(<AlertsTab />);
+    renderWithQuery(<AlertsTab />);
 
     await waitFor(() => {
       expect(screen.getByTestId('alert-rule-list')).toHaveAttribute('data-rules-count', '1');
@@ -115,7 +116,7 @@ describe('AlertsTab', () => {
     mockGetAll.mockRejectedValue(new Error('Network error'));
     mockGetAnalytics.mockRejectedValue(new Error('Network error'));
 
-    render(<AlertsTab />);
+    renderWithQuery(<AlertsTab />);
 
     await waitFor(() => {
       expect(screen.getByTestId('alerts-banner')).toBeInTheDocument();
@@ -125,12 +126,12 @@ describe('AlertsTab', () => {
   });
 
   it('mostra il bottone Nuova Regola', async () => {
-    render(<AlertsTab />);
+    renderWithQuery(<AlertsTab />);
     expect(await screen.findByRole('button', { name: /nuova regola/i })).toBeInTheDocument();
   });
 
   it('apre il dialog CreateAlertRule al click', async () => {
-    render(<AlertsTab />);
+    renderWithQuery(<AlertsTab />);
     const btn = await screen.findByRole('button', { name: /nuova regola/i });
     fireEvent.click(btn);
     expect(await screen.findByText('Nuova Alert Rule')).toBeInTheDocument();

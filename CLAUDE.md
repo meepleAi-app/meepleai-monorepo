@@ -264,11 +264,9 @@ tests/Api.Tests/          # Backend test suite
 Tests confirmed failing on `main-dev` baseline independently of any specific PR.
 Triage history: #1349 (closed, Phase 2d carryover) → #1422 (2026-05-21, 12 SharedGameId/PDF cluster resolved) → 2026-05-22 (4 baseline failures cleared; S3Storage entry was stale).
 
-_Baseline currently empty._ Re-add a row here if a new pre-existing failure surfaces in `main-dev`.
-
 | Test | File | First observed | Reason | Action |
 |---|---|---|---|---|
-| _(none)_ | | | | |
+| `PdfDocument_SevenStateProgression_ShouldAdvanceThroughAllStates` | `apps/api/tests/Api.Tests/Integration/DocumentProcessing/PdfPipelineIntegrationTests.cs:788` | 2026-06-04 | Expects 6 `DomainEvents` but finds 7 — regression from PR #1873 (added `PdfDocumentDeleted` event but did not update the count). | Tracked in #1887. |
 
 **Resolved 2026-05-22**: 3 documented baseline failures fixed + 1 stale entry removed.
 - `Should_Fail_When_GameId_Is_Empty` — fixed by adding `Cascade(CascadeMode.Stop)` to `CreateRuleConflictFaqCommandValidator.RuleFor(x => x.GameId)` so the async `GameExists` check (which calls `GameRef.Shared(Guid.Empty)` → `ArgumentException`) is skipped when `NotEmpty()` already failed.
@@ -328,6 +326,39 @@ Run `pnpm lint:tokens` to regenerate the inventory in `audits/2026-05-12-token-v
 - ❌ Domain services directly in endpoints
 - ❌ Shared models between commands/queries
 - ❌ Direct service injection in endpoints (use MediatR)
+
+### Domain Model — GameNight / Session
+
+**Reference**: [`docs/for-developers/specs/2026-06-04-gamenight-session-domain-model.md`](./docs/for-developers/specs/2026-06-04-gamenight-session-domain-model.md) — 20 invarianti consolidate (9 fatti + 11 derivate), 5 tensioni risolte 2026-06-04. **Vedi anche § Backend Mapping** per la riconciliazione term demo ↔ backend (`GameNightEvent` aggregate, `Session` aggregate, `GameNightRsvp` vs `GameNightInvitation`).
+
+Quando tocchi i bounded context **`SessionTracking`** o **`GameManagement`** (sub-aggregate GameNight `GameNightEvent`), questo spec è la source of truth per:
+- Cardinalità GameNight 1→N Session
+- 3 timestamp Session distinti (createdAt always, startedAt/completedAt nullable)
+- State machine GameNight (planned → in-progress via first Session, → completed manuale)
+- Player identity mix (User-linked + guest free)
+- Tagging vs RSVP a 5 fasi (tag silente → "Invia inviti" esplicito → pending → confermato)
+- Invariante max 1 live per GameNight (parallel play out of scope MVP)
+- Sidebar 2 voci game-related: Library (personale) + Games (catalogo, Discover come default tab)
+
+**Asse A v2 implementation** (umbrella #1895 sub-issue #1896): plan TDD in [`docs/superpowers/plans/2026-06-04-asse-a-semantic-alignment.md`](./docs/superpowers/plans/2026-06-04-asse-a-semantic-alignment.md). Plan v2.1 effort ~10.5gg dopo discovery WP4 già shipped upstream (#2053+#1629+#5005). **Stato shipped 2026-06-05 sessione 32**: WP1 (max 1 live) + WP2 (Session.StartedAt+invariante #15+X-Warning-Code+mapping doc) + WP3 (polymorphic ScoreType 4 strategies + UpdateSessionScoresCommand + IDOR guard) + WP4 audit-only + WP5 acceptance. Branch `feature/issue-1896-semantic-alignment` con ~15 commit (12 feat + 2 fix + 3 docs/audit). ~80+ unit test added, 0 regression. Security: 1 HIGH IDOR finding identificato post-merge T10 + fixato in `c1efb4fb6`.
+
+**Backend semantic mapping** (sezione "Backend Mapping" nel domain model spec): demo "GameNight" ↔ backend `GameNightEvent`, demo "tagged player" ↔ `GameNightEvent.PreInvite` (Draft, no event), demo "invited player" ↔ `Publish()` (raises events → email via `GameNightEmailService`), demo `Session.IsLive` ↔ `StartedAt != null && FinalizedAt == null`. Invariante #10 enforcement via `GameNightEvent.StartCurrentSession()` guard → `MaxLiveSessionsExceededException` (HTTP 409 via middleware). Invariante #15 wire via `SessionStartedHandler : INotificationHandler<SessionStartedDomainEvent>`.
+
+Companion: [gap report demo Claude Design](./docs/for-developers/audits/2026-06-04-claude-design-gap-report.md) (38 gap classificati 5-cat: ROUTE/STATE/CTA/ENTITY/TOKEN).
+
+### Asse B — UI Shell + Navigation Pattern (#1897)
+
+**Asse B v2 implementation** (umbrella #1895 sub-issue #1897): plan TDD in [`docs/superpowers/plans/2026-06-04-asse-b-ui-shell-pattern.md`](./docs/superpowers/plans/2026-06-04-asse-b-ui-shell-pattern.md). Plan v2 effort ~6gg dopo discovery (cascade-store + Drawer + sonner già shipped upstream). **Stato shipped 2026-06-05 sessione 33**: WP1 token additions + WP2 MainSidebar 8 voci replicating AdminSidebar pattern + WP3 cascade-store generic DrawerStack semantics + Drawer prefers-reduced-motion + WP4 WizardModal primitive sync/async validate normalize + WP5 StatePreview dev-tool `dynamic({ssr:false})` (tree-shake guaranteed, verified by `apps/web/__tests__/state-preview-tree-shake.test.ts`) + WP6 useNotificationsCounter SSE consumer + WP7 final integration (MainSidebar mounted in `DesktopShell.tsx` `lg+`, StatePreviewProvider wrapped in `app/providers.tsx`). ~120+ unit test, 0 regression. E2E + axe AA gate skeleton in `apps/web/e2e/asse-b-drawer-stack-flow.spec.ts` + `apps/web/__tests__/asse-b-axe.test.tsx`.
+
+### Asse C — Dashboard priority-driven (#1898)
+
+**Asse C v2 implementation** (umbrella #1895 sub-issue #1898): plan TDD in [`docs/superpowers/plans/2026-06-05-asse-c-dashboard-priority-driven.md`](./docs/superpowers/plans/2026-06-05-asse-c-dashboard-priority-driven.md). Effort actual ~6gg (vs v1 stima ~4gg, +2gg post-discovery). **Stato shipped 2026-06-05 sessione 34**: WP1 BE FriendsActivity endpoint (`GET /api/v1/dashboard/friends-activity?limit=10` → `FriendActivityDto[]`) + WP2 ProssimiSection (upcoming GameNights Published+InProgress ASC, "+ Nuova" CTA inline) + WP3 RecentiSection (completed GameNights DESC, MVP/mini-cover thumbnails, "Vedi tutti i completati" footer) + WP4 SuggestedSection (4-6 "Potresti giocare" cards, silent fallback empty/error per MAJ-6 matrix) + WP5 FriendsActivitySection (verbs completed/created/joined, avatar drawer asse-B `openDrawer('player', friendUserId)`) + WP6 GameNightDrawerContent (props-based, asse-B cascade) + WP7 DashboardClient refactor in-place (DEC-1 lockata: 5 entity sections legacy → 4 priority sections in fixed order; DashboardHero + KPI grid preserved). ~75 unit test, 0 regression. E2E skeleton in `apps/web/e2e/dashboard-priority-flow.spec.ts`. Note: Recenti BE endpoint per completed-GN list non yet wired (RecentiSection renderable con empty `null` silent fallback fino al BE wave successivo).
+
+**Asse D follow-up P1 implementation** (umbrella #1895 sub-issue #1899 follow-up): plan TDD in [`docs/superpowers/plans/2026-06-05-asse-d-p1-polymorphic-score-editor.md`](./docs/superpowers/plans/2026-06-05-asse-d-p1-polymorphic-score-editor.md). Polymorphic ScoreType editor primitive (Points/BinaryWin/Objectives/Ranking) wires asse A backend `UpdateSessionScoresCommand`. **Stato shipped 2026-06-05 sessione 35**: T1 types + T2 PointsEditor + BinaryWinEditor + T3 ObjectivesEditor + RankingEditor (`@dnd-kit/sortable`) + T4 dispatcher (tagged `ScoreChangePayload` discriminated union) + T5 `useUpdateSessionScores` mutation hook (`UpdateSessionScoresError` with `kind: 'forbidden' | 'validation' | 'server'`) + T6 wire scores page (backward-compat: `Points` + non-host → legacy `ScoreBoard`; host or non-`Points` → `PolymorphicScoreEditor` + inline `useDebouncedCallback` 500ms autosave) + T7 E2E skeleton in `apps/web/e2e/asse-d-p1-polymorphic-scoring.spec.ts`. ~36 unit test, 0 regression. Known follow-ups: `scoringType` selector + `displayName` field on `PlayerInfo` not yet on `useLiveSessionStore` (T6 hardcodes `'Points'` and adapts `PlayerInfo.name → PlayerOption.displayName`); `MVP_OBJECTIVES_CATALOGUE` is a placeholder array pending game-catalogue wiring.
+
+**Asse D follow-up P2 implementation** (umbrella #1895 sub-issue #1899 follow-up): `/games` hub multi-tab refactor con Discover come default tab (invariante #20 strict). Replaces incondizionato redirect a `/library` (#1521) — risolve broken sidebar link `MainSidebar` `/games?tab=discover`. **Stato shipped 2026-06-05 sessione 36**: DiscoverHub component extracted da `/discover/page.tsx` in `apps/web/src/components/features/discover/DiscoverHub.tsx` (pure render-only, accetta optional `pathnameOverride` per URL writes scoping) + `/games/page.tsx` refactor incondizionato `redirect('/library')` → multi-tab hub orchestrator (DEC-1 lockato: Opt A refactor `/games` come hub multi-tab) con 4 tab (`discover` default / `catalogo` / `trending` / `community`) + 3 ComingSoon placeholder tabs + parseTab fallback su tab invalido (default Discover) + miniNav config 4 tabs strip + `/discover` standalone route preserved per backward compat (existing bookmarks) + unit tests 15 nuovi (11 page hub + 4 DiscoverHub smoke) + E2E skeleton in `apps/web/e2e/asse-d-p2-games-discover-hub.spec.ts` (7 scenari: default route + discover/catalogo/trending/community tabs + invalid fallback + `/discover` backward-compat). 0 regression (159 test discover+games pass). Risolve broken-link issue su `MainSidebar` voice Games → `/games?tab=discover`.
+
+**Asse D follow-up P3 implementation** (umbrella #1895 sub-issue #1899 follow-up): `/onboarding` 3-step generic wizard refactor usando `WizardModal` asse-B (replaces legacy `OnboardingTourClient` 5-step page-flow). Riusa `InterestsStep` + `FirstGameStep` esistenti (Issue #132) come step 1 e 2; step 3 `InviteFriendComingSoonStep` placeholder (feature deferred a sub-issue futura). BGG legal constraint (#1903 ADR): user-side BGG access bloccato per ToS compliance — `FirstGameStep` usa catalog interno (`api.games.getAll`) NON `useSearchBggGames` (admin-only). Invited-user `OnboardingWizard` 5-step token-based (`/accept-invite`) NON toccato. **Stato shipped 2026-06-05 sessione 37**: `OnboardingGenericWizard` orchestrator (gate `validate` su `interestsCompleted` / `firstGameCompleted` flag interno) + `InviteFriendComingSoonStep` skip-only placeholder + `/onboarding/page.tsx` mounts new wizard + deleted deprecated `OnboardingTourClient.tsx` + relativi test. 13 unit test nuovi (9 wizard + 4 placeholder), 91 component test invariati 0 regression. E2E skeleton in `apps/web/e2e/asse-d-p3-onboarding-wizard.spec.ts`.
 
 ### Known Pitfalls (Issues)
 

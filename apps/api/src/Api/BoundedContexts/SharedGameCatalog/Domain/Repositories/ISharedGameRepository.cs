@@ -101,4 +101,9 @@ public interface ISharedGameRepository
     /// Used for querying skeleton games for bulk enrichment.
     /// </summary>
     Task<List<SharedGame>> GetByGameDataStatusAsync(GameDataStatus status, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the total count of non-soft-deleted shared games (#1861: catalog cumulative stats).
+    /// </summary>
+    Task<int> CountAllAsync(CancellationToken cancellationToken = default);
 }

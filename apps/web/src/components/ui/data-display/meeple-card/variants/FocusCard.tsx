@@ -20,6 +20,7 @@ export function FocusCard(props: MeepleCardProps) {
     rating,
     ratingMax,
     metadata = [],
+    headingLevel,
     onClick,
     className = '',
   } = props;
@@ -47,9 +48,14 @@ export function FocusCard(props: MeepleCardProps) {
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
-          <h2 className="font-[var(--font-quicksand)] text-xl font-bold leading-tight text-[var(--mc-text-primary)]">
-            {title}
-          </h2>
+          {(() => {
+            const HeadingTag = `h${headingLevel ?? 2}` as 'h2' | 'h3' | 'h4';
+            return (
+              <HeadingTag className="font-[var(--font-quicksand)] text-xl font-bold leading-tight text-[var(--mc-text-primary)]">
+                {title}
+              </HeadingTag>
+            );
+          })()}
           {subtitle && <p className="text-sm text-[var(--mc-text-secondary)]">{subtitle}</p>}
           {rating !== undefined && <Rating value={rating} max={ratingMax} />}
           {metadata.length > 0 && <MetaChips metadata={metadata} />}

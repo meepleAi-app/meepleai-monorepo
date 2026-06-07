@@ -23,6 +23,7 @@ import { IntlProvider } from '@/components/providers/IntlProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { PWAProvider } from '@/components/pwa';
 import { Toaster } from '@/components/ui/feedback/sonner';
+import { StatePreviewProvider } from '@/components/ui/state-preview';
 import { useGlobalKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { api } from '@/lib/api';
@@ -155,7 +156,18 @@ export function AppProviders({ children }: AppProvidersProps) {
               >
                 <RouteErrorBoundary routeName="AppContent">
                   <AddGameWizardProvider>
-                    <AppContent>{children}</AppContent>
+                    {/*
+                      Asse B (#1897) WP5 T5 — StatePreviewProvider via dynamic loader.
+                      DEC-4: `dynamic({ssr:false, loading:() => null})` guarantees the
+                      provider impl is tree-shaken from production chunks (verified by
+                      apps/web/__tests__/state-preview-tree-shake.test.ts). In prod the
+                      loader renders `null` and the provider impl never lands in entry
+                      chunks. In dev, the StatePreviewToggle is mounted by consumers
+                      that opt in via `useStatePreview`.
+                    */}
+                    <StatePreviewProvider>
+                      <AppContent>{children}</AppContent>
+                    </StatePreviewProvider>
                   </AddGameWizardProvider>
                 </RouteErrorBoundary>
               </ErrorBoundary>

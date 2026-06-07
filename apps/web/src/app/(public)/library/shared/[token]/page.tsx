@@ -156,6 +156,7 @@ export default function SharedLibraryPage() {
                   imageUrl={game.imageUrl || undefined}
                   badge={game.isFavorite ? 'Preferito' : undefined}
                   metadata={metadata.length > 0 ? metadata : undefined}
+                  headingLevel={2}
                 />
               );
             })}

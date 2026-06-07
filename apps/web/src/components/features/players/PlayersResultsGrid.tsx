@@ -83,6 +83,7 @@ export function PlayersResultsGrid({
               id={item.id}
               title={item.gameName}
               subtitle={subtitle}
+              headingLevel={2}
             />
           </button>
         );

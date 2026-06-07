@@ -23,9 +23,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { LibraryTabs, type LibraryEntityKey, type LibraryTabConfig } from '../LibraryTabs';
 
 const baseTabs: readonly LibraryTabConfig[] = [
-  { key: 'all', label: 'Tutti', count: 12 },
-  { key: 'kb', label: 'Con KB', count: 5 },
-  { key: 'loaned', label: 'In prestito', count: 2 },
+  { key: 'all', label: 'Tutti', count: 12, icon: '⌗' },
+  { key: 'kb', label: 'Con KB', count: 5, icon: '📚', entity: 'kb' },
+  { key: 'loaned', label: 'In prestito', count: 2, icon: '📦' },
 ];
 
 /**
@@ -104,15 +104,21 @@ describe('LibraryTabs (Wave B.3)', () => {
       expect(screen.getByRole('tab', { name: /in prestito/i })).toHaveAttribute('tabindex', '-1');
     });
 
-    // #1094 Real-C-misc regression guard: active count badge MUST use the
-    // text-entity-game-text variant (live CSS var, theme-aware, AA-safe).
+    // #1094 Real-C-misc regression guard, evolved in PR1 Task 1.3:
     // The pre-fix `text-primary` snapshot would fail AA in dark theme.
-    it('active count badge uses text-entity-game-text token (AA contrast) — #1094', () => {
+    // SP4 mockup (jsx:175-176) replaces the entity-text token with
+    // `bg-entity-{ent}` + `text-white` on the active count pill — AA-safe
+    // in both themes because the entity orange/amber/etc. CSS vars are
+    // tuned to pass against white (≥4.5:1, see `audits/2026-05-12-token-violations.md`
+    // and design-tokens canonical inventory).
+    it('active count badge uses bg-entity + text-white pair (AA contrast, mockup jsx:175-176)', () => {
       const { container } = render(<ControlledLibraryTabs initial="all" />);
       const counts = container.querySelectorAll('[data-slot="library-tab-count"]');
-      // First tab (active "all") badge should carry text-entity-game-text
-      expect(counts[0].className).toContain('text-entity-game-text');
-      // Inactive tabs should carry text-muted-foreground (the inactive branch)
+      // First tab (active "all" → 'game' accent) badge: bg-entity-game + text-white
+      expect(counts[0].className).toMatch(/bg-entity-game\b/);
+      expect(counts[0].className).toContain('text-white');
+      // Inactive tabs keep the muted token pair
+      expect(counts[1].className).toContain('bg-muted');
       expect(counts[1].className).toContain('text-muted-foreground');
     });
   });
@@ -181,6 +187,47 @@ describe('LibraryTabs (Wave B.3)', () => {
       // Motion-safe Tailwind class collapses to 0.01ms under prefers-reduced-motion;
       // E2E (a11y/library.spec.ts) assert the computed style. Here only presence.
       expect(underline?.className).toMatch(/motion-safe:transition|transition/);
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // SP4 mockup conformance (PR1 Task 1.3) — Library SP4 Mockup Conformance.
+  // Mockup ref: admin-mockups/design_files/sp4-library-desktop.jsx:134-191
+  // ──────────────────────────────────────────────────────────────────────────
+  describe('SP4 conformance — entity icons + entity-colored active state', () => {
+    it('renders each tab with its entity icon (aria-hidden span)', () => {
+      render(<ControlledLibraryTabs />);
+      // Icons are wrapped in `aria-hidden="true"` per mockup jsx:172 (decorative,
+      // excluded from accessible name). We assert presence via textContent on the
+      // tab buttons themselves rather than role-by-name (which strips aria-hidden).
+      const tabs = screen.getAllByRole('tab');
+      expect(tabs[0].textContent).toMatch(/⌗.*Tutti/);
+      expect(tabs[1].textContent).toMatch(/📚.*Con KB/);
+      expect(tabs[2].textContent).toMatch(/📦.*In prestito/);
+      // And the icon spans themselves carry aria-hidden so screen readers skip them.
+      const iconSpans = tabs.map(t => t.querySelector('span[aria-hidden="true"]'));
+      expect(iconSpans[0]?.textContent).toBe('⌗');
+      expect(iconSpans[1]?.textContent).toBe('📚');
+      expect(iconSpans[2]?.textContent).toBe('📦');
+    });
+
+    it('renders the animated indicator slot with data-slot="library-tabs-indicator"', () => {
+      const { container } = render(<ControlledLibraryTabs />);
+      expect(container.querySelector('[data-slot="library-tabs-indicator"]')).toBeInTheDocument();
+    });
+
+    it('applies bg-entity-kb/10 + text-entity-kb on the active "kb" tab', () => {
+      render(<ControlledLibraryTabs initial="kb" />);
+      const kbTab = screen.getByRole('tab', { name: /Con KB/, selected: true });
+      expect(kbTab.className).toMatch(/bg-entity-kb\/10/);
+      expect(kbTab.className).toMatch(/text-entity-kb\b/);
+    });
+
+    it('falls back to game accent (bg-entity-game/10 + text-entity-game) on active "all" tab', () => {
+      render(<ControlledLibraryTabs initial="all" />);
+      const allTab = screen.getByRole('tab', { name: /Tutti/, selected: true });
+      expect(allTab.className).toMatch(/bg-entity-game\/10/);
+      expect(allTab.className).toMatch(/text-entity-game\b/);
     });
   });
 });

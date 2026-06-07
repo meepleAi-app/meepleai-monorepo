@@ -25,14 +25,17 @@ import {
 const baseLabels: LibraryHeroDesktopLabels = {
   title: 'La tua libreria',
   subtitle: 'Esplora, filtra e gestisci i tuoi giochi e le knowledge base.',
-  ctaAdd: 'Aggiungi gioco',
+  ctaAdd: '+ Aggiungi gioco',
+  ctaImportBgg: '↓ Importa BGG',
+  ctaExportAriaLabel: 'Esporta',
+  eyebrow: 'Library · power-user view',
 };
 
 const baseStats: readonly LibraryHeroStat[] = [
-  { key: 'totalGames', label: 'Giochi', value: 12 },
-  { key: 'kbReady', label: 'KB pronti', value: 5 },
-  { key: 'wishlist', label: 'Wishlist', value: 2 },
-  { key: 'loaned', label: 'In prestito', value: 2 },
+  { key: 'totalGames', label: 'Giochi', value: 12, entity: 'game' },
+  { key: 'kbReady', label: 'KB pronti', value: 5, entity: 'kb' },
+  { key: 'wishlist', label: 'Wishlist', value: 2, entity: 'game' },
+  { key: 'loaned', label: 'In prestito', value: 2, entity: 'game' },
 ];
 
 describe('LibraryHeroDesktop (Wave B.3)', () => {
@@ -61,10 +64,10 @@ describe('LibraryHeroDesktop (Wave B.3)', () => {
 
   it('renders zero values explicitly (no fallback dash)', () => {
     const zeroStats: readonly LibraryHeroStat[] = [
-      { key: 'totalGames', label: 'Giochi', value: 0 },
-      { key: 'kbReady', label: 'KB pronti', value: 0 },
-      { key: 'wishlist', label: 'Wishlist', value: 0 },
-      { key: 'loaned', label: 'In prestito', value: 0 },
+      { key: 'totalGames', label: 'Giochi', value: 0, entity: 'game' },
+      { key: 'kbReady', label: 'KB pronti', value: 0, entity: 'kb' },
+      { key: 'wishlist', label: 'Wishlist', value: 0, entity: 'game' },
+      { key: 'loaned', label: 'In prestito', value: 0, entity: 'game' },
     ];
     const { container } = render(<LibraryHeroDesktop labels={baseLabels} stats={zeroStats} />);
     const tiles = container.querySelectorAll('[data-slot="library-hero-stat"]');
@@ -79,17 +82,80 @@ describe('LibraryHeroDesktop (Wave B.3)', () => {
   it('renders the "Aggiungi gioco" CTA and calls onAddGame on click', () => {
     const onAddGame = vi.fn();
     render(<LibraryHeroDesktop labels={baseLabels} stats={baseStats} onAddGame={onAddGame} />);
-    const cta = screen.getByRole('button', { name: 'Aggiungi gioco' });
+    const cta = screen.getByRole('button', { name: '+ Aggiungi gioco' });
     expect(cta).toBeInTheDocument();
     fireEvent.click(cta);
     expect(onAddGame).toHaveBeenCalledTimes(1);
   });
 
-  it('omits subtitle when compact is true (mobile collapse) but keeps title', () => {
+  it('renders the eyebrow pill (📚 Library · power-user view) above the title', () => {
+    render(
+      <LibraryHeroDesktop labels={baseLabels} stats={baseStats} onImportBgg={() => undefined} />
+    );
+    expect(screen.getByText(/Library · power-user view/i)).toBeInTheDocument();
+  });
+
+  it('renders the "Importa BGG" secondary CTA and calls onImportBgg when clicked', () => {
+    const onImportBgg = vi.fn();
+    render(<LibraryHeroDesktop labels={baseLabels} stats={baseStats} onImportBgg={onImportBgg} />);
+    const cta = screen.getByRole('button', { name: '↓ Importa BGG' });
+    expect(cta).toBeInTheDocument();
+    fireEvent.click(cta);
+    expect(onImportBgg).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders the Export icon button with accessible label and triggers onExport', () => {
+    const onExport = vi.fn();
+    render(
+      <LibraryHeroDesktop
+        labels={baseLabels}
+        stats={baseStats}
+        onImportBgg={() => undefined}
+        onExport={onExport}
+      />
+    );
+    const exportBtn = screen.getByRole('button', { name: 'Esporta' });
+    expect(exportBtn).toBeInTheDocument();
+    fireEvent.click(exportBtn);
+    expect(onExport).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders the Export icon button as disabled when onExport is not provided', () => {
+    render(
+      <LibraryHeroDesktop labels={baseLabels} stats={baseStats} onImportBgg={() => undefined} />
+    );
+    const exportBtn = screen.getByRole('button', { name: 'Esporta' });
+    expect(exportBtn).toBeDisabled();
+  });
+
+  it('renders stat pills with entity-colored borders (one pill per stat)', () => {
+    const { container } = render(
+      <LibraryHeroDesktop labels={baseLabels} stats={baseStats} onImportBgg={() => undefined} />
+    );
+    const pills = container.querySelectorAll('[data-slot="library-hero-stat"]');
+    expect(pills).toHaveLength(4);
+    // Each pill carries its entity discriminator so the entity-colored border
+    // (border-entity-{game|kb|agent|chat}) can be asserted via class lookup.
+    const entities = Array.from(pills).map(node => node.getAttribute('data-entity'));
+    expect(entities).toEqual(['game', 'kb', 'game', 'game']);
+  });
+
+  it('hides the action bar when compact is true (mobile collapse)', () => {
+    render(<LibraryHeroDesktop labels={baseLabels} stats={baseStats} compact />);
+    expect(screen.queryByRole('button', { name: '+ Aggiungi gioco' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '↓ Importa BGG' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Esporta' })).toBeNull();
+  });
+
+  it('keeps subtitle visible when compact is true (mockup: subtitle is reduced, not removed)', () => {
+    // Mockup contract (sp4-library-desktop.jsx:72-75): the subtitle <p> renders
+    // unconditionally; only its font-size shrinks (14.5 → 13) in compact mode.
+    // The earlier Wave B.3 behaviour (hide subtitle in compact) was superseded
+    // by the SP4 re-skin (PR1 Task 1.2).
     render(<LibraryHeroDesktop labels={baseLabels} stats={baseStats} compact />);
     expect(
-      screen.queryByText('Esplora, filtra e gestisci i tuoi giochi e le knowledge base.')
-    ).toBeNull();
+      screen.getByText('Esplora, filtra e gestisci i tuoi giochi e le knowledge base.')
+    ).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'La tua libreria' })).toBeInTheDocument();
   });
 

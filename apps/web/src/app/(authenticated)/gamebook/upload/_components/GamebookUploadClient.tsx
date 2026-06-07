@@ -113,6 +113,7 @@ function GamePicker({ onSelect }: GamePickerProps): JSX.Element {
                 title={game.title}
                 subtitle={game.yearPublished ? String(game.yearPublished) : undefined}
                 imageUrl={game.imageUrl || undefined}
+                headingLevel={2}
               />
             </button>
           ))}

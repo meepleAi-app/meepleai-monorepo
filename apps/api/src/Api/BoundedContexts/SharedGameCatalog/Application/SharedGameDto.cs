@@ -44,7 +44,9 @@ public sealed record SharedGameDto(
     int NewThisWeekCount = 0,
     int ContributorsCount = 0,
     bool IsTopRated = false,
-    bool IsNew = false);
+    bool IsNew = false,
+    // Issue #1852 (Gap A): cover URL resolved via L4 → L2 priority; null when no cover available or storage unavailable.
+    string? CoverUrl = null);
 
 /// <summary>
 /// Data transfer object for game rules.
@@ -208,7 +210,9 @@ public sealed record SharedGameDetailDto(
     int ContributorsCount = 0,
     bool HasKnowledgeBase = false,
     bool IsTopRated = false,
-    bool IsNew = false);
+    bool IsNew = false,
+    // Issue #1852 (Gap A): cover URL resolved via L4 → L2 priority; null when no cover available or storage unavailable.
+    string? CoverUrl = null);
 
 /// <summary>
 /// Data transfer object for approval queue items.

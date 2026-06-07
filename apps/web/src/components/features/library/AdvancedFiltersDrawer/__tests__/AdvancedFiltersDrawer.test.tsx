@@ -1,60 +1,83 @@
 /**
- * AdvancedFiltersDrawer — skeleton tests (Phase 3a #1606).
+ * AdvancedFiltersDrawer — cross-entity hub-level tests.
  *
- * Tests: open/close behaviour + Cancel button.
- * No filter section assertions here — those are Tasks 4-6.
+ * SP4 mockup conformance (Issue #1585-followup, plan Task 3.3). Drawer is
+ * no longer scope-conditional; one static 7-section descriptor drives every
+ * tab. Tests assert open/close lifecycle, section rendering, kind-specific
+ * interaction patterns, count subtitle / footer wiring, and a11y basics.
  *
  * Setup notes:
  * - IntlProvider wraps every render so useTranslation (react-intl) works.
  * - installMatchMedia(true) forces desktop (Radix Dialog) mode so
  *   getByRole('dialog') resolves synchronously; otherwise vaul renders
  *   a bottom sheet which exposes no dialog role in jsdom.
- * - The Cancel button is a plain <button> inside DrawerFooter (NOT
- *   DrawerClose) so it can call handleCancel (reset draft + close) in
- *   Task 7 without relying on Radix close semantics.
  */
 
 import React from 'react';
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { axe } from 'jest-axe';
 import { IntlProvider } from 'react-intl';
 
 import { AdvancedFiltersDrawer } from '../AdvancedFiltersDrawer';
-import type { LibraryFilters } from '../types';
+import { countActiveFilters, type LibraryFilters } from '../types';
 
-// ── i18n messages needed by the skeleton + game scope tests ──────────────────
+// ── i18n messages used by the drawer (cross-entity) ─────────────────────────
 const messages: Record<string, string> = {
-  'pages.library.filters.title': 'Più filtri',
-  'pages.library.filters.description': "Filtra la libreria per dimensioni specifiche dell'entità.",
-  'common.cancel': 'Annulla',
+  // header
+  'pages.library.filters.title': 'Filtri avanzati',
+  'pages.library.filters.description': 'Filtra la libreria per dimensioni cross-entity.',
+  'pages.library.filters.closeAriaLabel': 'Chiudi pannello filtri',
+  'pages.library.filters.header.subtitle':
+    '{count, plural, =0 {Nessun filtro · scope: library} =1 {1 attivo · scope: library} other {# attivi · scope: library}}',
+  // footer
   'pages.library.filters.apply': 'Applica',
-  'pages.library.filters.clear': 'Reimposta',
-  // section labels (game scope)
-  'pages.library.filters.section.state': 'Stato',
-  'pages.library.filters.section.withKb': 'Solo con Knowledge Base',
-  'pages.library.filters.section.rating': 'Rating minimo',
-  'pages.library.filters.section.players': 'Numero di giocatori',
-  'pages.library.filters.section.year': 'Anno di pubblicazione',
-  // section labels (agent scope)
-  'pages.library.filters.section.agentType': 'Tipo di agente',
-  'pages.library.filters.section.activeOnly': 'Solo attivi',
-  // section labels (session scope)
-  'pages.library.filters.section.sessionStatus': 'Stato sessione',
-  'pages.library.filters.section.sessionType': 'Tipo sessione',
-  'pages.library.filters.section.playerCount': 'Giocatori (min)',
-  // section labels (kb scope)
-  'pages.library.filters.section.processingState': 'Stato di elaborazione',
-  'pages.library.filters.kbState.ready': 'Pronto',
-  'pages.library.filters.kbState.pending': 'In elaborazione',
-  'pages.library.filters.kbState.failed': 'Errore',
-  // section labels (chat scope)
-  'pages.library.filters.section.messageCountMin': 'Messaggi (min)',
-  // checkbox option labels
-  'pages.library.filters.state.owned': 'Posseduto',
-  'pages.library.filters.state.wishlist': 'Wishlist',
-  'pages.library.filters.state.loaned': 'In prestito',
+  'pages.library.filters.applyWithCount': 'Applica ({count})',
+  'pages.library.filters.reset': 'Reset',
+  // section: status
+  'pages.library.filters.section.status.title': 'Stato',
+  'pages.library.filters.section.status.options.owned': 'Posseduto',
+  'pages.library.filters.section.status.options.wishlist': 'Wishlist',
+  'pages.library.filters.section.status.options.setup': 'In setup',
+  'pages.library.filters.section.status.options.archived': 'Archiviato',
+  // section: entity
+  'pages.library.filters.section.entity.title': 'Tipo entità',
+  'pages.library.filters.section.entity.options.game': 'Giochi',
+  'pages.library.filters.section.entity.options.agent': 'Agenti',
+  'pages.library.filters.section.entity.options.kb': 'Documenti KB',
+  'pages.library.filters.section.entity.options.session': 'Sessioni',
+  'pages.library.filters.section.entity.options.chat': 'Chat',
+  // section: game (select-multi)
+  'pages.library.filters.section.game.title': 'Gioco',
+  'pages.library.filters.section.game.placeholder': 'Filtra per gioco specifico...',
+  'pages.library.filters.section.game.empty': 'Nessun gioco disponibile.',
+  // section: period
+  'pages.library.filters.section.period.title': 'Periodo',
+  'pages.library.filters.section.period.options.7d': 'Ultimi 7 giorni',
+  'pages.library.filters.section.period.options.30d': 'Ultimi 30 giorni',
+  'pages.library.filters.section.period.options.1y': 'Ultimo anno',
+  'pages.library.filters.section.period.options.all': 'Sempre',
+  'pages.library.filters.section.period.options.range': 'Range personalizzato',
+  // section: tags
+  'pages.library.filters.section.tags.title': 'Tag',
+  'pages.library.filters.section.tags.options.family': 'Family',
+  'pages.library.filters.section.tags.options.strategy': 'Strategy',
+  'pages.library.filters.section.tags.options.coop': 'Coop',
+  'pages.library.filters.section.tags.options.engine': 'Engine builder',
+  'pages.library.filters.section.tags.options.auction': 'Auction',
+  'pages.library.filters.section.tags.options.rollAndWrite': 'Roll & Write',
+  'pages.library.filters.section.tags.options.cardDriven': 'Card driven',
+  'pages.library.filters.section.tags.options.tableau': 'Tableau',
+  // section: rating
+  'pages.library.filters.section.rating.title': 'Rating',
+  'pages.library.filters.section.rating.minAriaLabel': 'Rating minimo',
+  'pages.library.filters.section.rating.maxAriaLabel': 'Rating massimo',
+  // section: weight
+  'pages.library.filters.section.weight.title': 'Complessità',
+  'pages.library.filters.section.weight.options.light': 'Light',
+  'pages.library.filters.section.weight.options.medium': 'Medium',
+  'pages.library.filters.section.weight.options.heavy': 'Heavy',
+  'pages.library.filters.section.weight.options.extra': 'Extra heavy',
 };
 
 function renderWithIntl(ui: React.ReactElement) {
@@ -65,7 +88,7 @@ function renderWithIntl(ui: React.ReactElement) {
   );
 }
 
-// ── matchMedia mock — force desktop (Radix Dialog) mode ──────────────────────
+// ── matchMedia mock — force desktop (Radix Dialog) mode ─────────────────────
 function installMatchMedia(matches: boolean) {
   const listeners = new Set<(e: MediaQueryListEvent) => void>();
   const mql = {
@@ -82,28 +105,20 @@ function installMatchMedia(matches: boolean) {
   });
 }
 
-// ── fixture ───────────────────────────────────────────────────────────────────
 const noop = () => {};
-const emptyGameFilters: LibraryFilters = { scope: 'game' };
+const emptyFilters: LibraryFilters = {};
 
-// ── tests ─────────────────────────────────────────────────────────────────────
-describe('AdvancedFiltersDrawer — skeleton (open/close + Cancel)', () => {
-  // Force Radix Dialog (desktop) mode so role="dialog" is available synchronously.
-  beforeEach(() => {
-    installMatchMedia(true);
-  });
+// ── tests ──────────────────────────────────────────────────────────────────
+describe('AdvancedFiltersDrawer — open/close lifecycle', () => {
+  beforeEach(() => installMatchMedia(true));
+  afterEach(() => vi.restoreAllMocks());
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it('does not render content when open=false', () => {
+  it('does not render dialog when open=false', () => {
     renderWithIntl(
       <AdvancedFiltersDrawer
         open={false}
         onOpenChange={noop}
-        entityScope="game"
-        activeFilters={emptyGameFilters}
+        activeFilters={emptyFilters}
         onApply={noop}
         onClear={noop}
       />
@@ -111,302 +126,369 @@ describe('AdvancedFiltersDrawer — skeleton (open/close + Cancel)', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('renders dialog with title when open=true', () => {
+  it('renders dialog with custom header when open=true', () => {
     renderWithIntl(
       <AdvancedFiltersDrawer
         open={true}
         onOpenChange={noop}
-        entityScope="game"
-        activeFilters={emptyGameFilters}
+        activeFilters={emptyFilters}
         onApply={noop}
         onClear={noop}
       />
     );
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText(/più filtri/i)).toBeInTheDocument();
+    // The drawer renders the title twice: once in the visible header (font-display)
+    // and once in the Radix sr-only DrawerTitle (a11y). Pin to the visible
+    // occurrence by scoping to the header slot. Radix renders the dialog
+    // content in a portal, so query `document.body` not the render container.
+    const header = document.body.querySelector('[data-slot="advanced-filters-header"]');
+    expect(header).not.toBeNull();
+    expect(within(header as HTMLElement).getByText(/Filtri avanzati/)).toBeInTheDocument();
   });
 
-  it('Cancel button calls onOpenChange(false)', async () => {
+  it('header subtitle shows zero-state message when no filters active', () => {
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        activeFilters={emptyFilters}
+        onApply={noop}
+        onClear={noop}
+      />
+    );
+    expect(screen.getByText(/Nessun filtro · scope: library/)).toBeInTheDocument();
+  });
+
+  it('header subtitle uses ICU plural for activeFilters count', () => {
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        activeFilters={{ statuses: ['owned', 'wishlist'] }}
+        onApply={noop}
+        onClear={noop}
+      />
+    );
+    expect(screen.getByText(/2 attivi · scope: library/)).toBeInTheDocument();
+  });
+
+  it('Close (✕) button calls onOpenChange(false)', async () => {
     const onOpenChange = vi.fn();
     const user = userEvent.setup();
     renderWithIntl(
       <AdvancedFiltersDrawer
         open={true}
         onOpenChange={onOpenChange}
-        entityScope="game"
-        activeFilters={emptyGameFilters}
+        activeFilters={emptyFilters}
         onApply={noop}
         onClear={noop}
       />
     );
-    await user.click(screen.getByRole('button', { name: /annulla/i }));
+    await user.click(screen.getByRole('button', { name: 'Chiudi pannello filtri' }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });
 
-describe('AdvancedFiltersDrawer — game scope rendering', () => {
-  beforeEach(() => {
-    installMatchMedia(true);
-  });
+describe('AdvancedFiltersDrawer — 7-section rendering', () => {
+  beforeEach(() => installMatchMedia(true));
+  afterEach(() => vi.restoreAllMocks());
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it('renders 5 sections for game scope (state, withKb, rating, players, year)', () => {
+  it('renders all 7 sections in mockup order', () => {
     renderWithIntl(
       <AdvancedFiltersDrawer
         open={true}
         onOpenChange={noop}
-        entityScope="game"
-        activeFilters={{ scope: 'game' }}
+        activeFilters={emptyFilters}
         onApply={noop}
         onClear={noop}
       />
     );
     const slots = screen.getAllByTestId(/^advanced-filters-section-/);
-    expect(slots).toHaveLength(5);
-    expect(slots.map(el => el.getAttribute('data-slot'))).toEqual([
-      'advanced-filters-section-states',
-      'advanced-filters-section-withKb',
-      'advanced-filters-section-rating',
-      'advanced-filters-section-players',
-      'advanced-filters-section-year',
-    ]);
-  });
-
-  it('game.states checkbox group renders 3 options with checked state from activeFilters', () => {
-    renderWithIntl(
-      <AdvancedFiltersDrawer
-        open={true}
-        onOpenChange={noop}
-        entityScope="game"
-        activeFilters={{ scope: 'game', states: ['Owned', 'Wishlist'] }}
-        onApply={noop}
-        onClear={noop}
-      />
-    );
-    const owned = screen.getByRole('checkbox', { name: /posseduto/i });
-    const wishlist = screen.getByRole('checkbox', { name: /wishlist/i });
-    const loaned = screen.getByRole('checkbox', { name: /in prestito/i });
-    expect(owned).toBeChecked();
-    expect(wishlist).toBeChecked();
-    expect(loaned).not.toBeChecked();
-  });
-
-  it('toggling a state checkbox updates internal draft (not yet applied — Apply test in Task 7)', async () => {
-    const user = userEvent.setup();
-    renderWithIntl(
-      <AdvancedFiltersDrawer
-        open={true}
-        onOpenChange={noop}
-        entityScope="game"
-        activeFilters={{ scope: 'game' }}
-        onApply={noop}
-        onClear={noop}
-      />
-    );
-    const owned = screen.getByRole('checkbox', { name: /posseduto/i });
-    await user.click(owned);
-    expect(owned).toBeChecked();
-  });
-
-  it('game.withKb renders a toggle with checked state from activeFilters', () => {
-    renderWithIntl(
-      <AdvancedFiltersDrawer
-        open={true}
-        onOpenChange={noop}
-        entityScope="game"
-        activeFilters={{ scope: 'game', withKb: true }}
-        onApply={noop}
-        onClear={noop}
-      />
-    );
-    const toggle = screen.getByRole('switch', { name: /knowledge base/i });
-    expect(toggle).toBeChecked();
-  });
-
-  it('game.rating slider has correct min/max and reflects activeFilters.ratingMin', () => {
-    renderWithIntl(
-      <AdvancedFiltersDrawer
-        open={true}
-        onOpenChange={noop}
-        entityScope="game"
-        activeFilters={{ scope: 'game', ratingMin: 7 }}
-        onApply={noop}
-        onClear={noop}
-      />
-    );
-    const slider = screen.getByRole('slider', { name: /rating/i });
-    expect(slider).toHaveAttribute('aria-valuenow', '7');
-    expect(slider).toHaveAttribute('aria-valuemin', '0');
-    expect(slider).toHaveAttribute('aria-valuemax', '10');
-  });
-});
-
-describe('AdvancedFiltersDrawer — agent scope rendering', () => {
-  beforeEach(() => {
-    installMatchMedia(true);
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it('renders 2 sections for agent scope (types, activeOnly)', () => {
-    renderWithIntl(
-      <AdvancedFiltersDrawer
-        open={true}
-        onOpenChange={noop}
-        entityScope="agent"
-        activeFilters={{ scope: 'agent' }}
-        onApply={noop}
-        onClear={noop}
-      />
-    );
-    const slots = screen.getAllByTestId(/^advanced-filters-section-/);
-    expect(slots).toHaveLength(2);
-    expect(slots.map(el => el.getAttribute('data-slot'))).toEqual([
-      'advanced-filters-section-types',
-      'advanced-filters-section-activeOnly',
-    ]);
-  });
-
-  it('agent.activeOnly toggle reflects activeFilters and updates draft on click', async () => {
-    const user = userEvent.setup();
-    renderWithIntl(
-      <AdvancedFiltersDrawer
-        open={true}
-        onOpenChange={noop}
-        entityScope="agent"
-        activeFilters={{ scope: 'agent', activeOnly: false }}
-        onApply={noop}
-        onClear={noop}
-      />
-    );
-    const toggle = screen.getByRole('switch', { name: /solo attivi/i });
-    expect(toggle).toHaveAttribute('aria-checked', 'false');
-    await user.click(toggle);
-    expect(toggle).toHaveAttribute('aria-checked', 'true');
-  });
-});
-
-describe('AdvancedFiltersDrawer — session scope rendering', () => {
-  beforeEach(() => {
-    installMatchMedia(true);
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it('renders 3 sections for session scope (statuses, sessionTypes, playerCount)', () => {
-    renderWithIntl(
-      <AdvancedFiltersDrawer
-        open={true}
-        onOpenChange={noop}
-        entityScope="session"
-        activeFilters={{ scope: 'session' }}
-        onApply={noop}
-        onClear={noop}
-      />
-    );
-    const slots = screen.getAllByTestId(/^advanced-filters-section-/);
-    expect(slots).toHaveLength(3);
     expect(slots.map(el => el.getAttribute('data-slot'))).toEqual([
       'advanced-filters-section-statuses',
-      'advanced-filters-section-sessionTypes',
-      'advanced-filters-section-playerCount',
+      'advanced-filters-section-entities',
+      'advanced-filters-section-games',
+      'advanced-filters-section-period',
+      'advanced-filters-section-tags',
+      'advanced-filters-section-rating',
+      'advanced-filters-section-weights',
     ]);
   });
 
-  it('session.playerCount slider has min=1 max=12 and reflects activeFilters.playerCountMin', () => {
+  it('opens the first 3 sections by default (mockup parity)', () => {
     renderWithIntl(
       <AdvancedFiltersDrawer
         open={true}
         onOpenChange={noop}
-        entityScope="session"
-        activeFilters={{ scope: 'session', playerCountMin: 4 }}
+        activeFilters={emptyFilters}
         onApply={noop}
         onClear={noop}
       />
     );
-    const slider = screen.getByRole('slider', { name: /giocatori/i });
-    expect(slider).toHaveAttribute('aria-valuemin', '1');
-    expect(slider).toHaveAttribute('aria-valuemax', '12');
-    expect(slider).toHaveAttribute('aria-valuenow', '4');
-  });
-});
-
-describe('AdvancedFiltersDrawer — kb scope rendering', () => {
-  beforeEach(() => {
-    installMatchMedia(true);
+    expect(screen.getByRole('button', { name: /Stato/, expanded: true })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Tipo entità/, expanded: true })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Gioco/, expanded: true })).toBeInTheDocument();
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it('renders 1 section (processingStates) with 3 checkboxes (Ready/Pending/Failed)', () => {
+  it('keeps sections at index >= 3 collapsed by default', () => {
     renderWithIntl(
       <AdvancedFiltersDrawer
         open={true}
         onOpenChange={noop}
-        entityScope="kb"
-        activeFilters={{ scope: 'kb', processingStates: ['Ready'] }}
+        activeFilters={emptyFilters}
         onApply={noop}
         onClear={noop}
       />
     );
-    const slots = screen.getAllByTestId(/^advanced-filters-section-/);
-    expect(slots).toHaveLength(1);
-    expect(slots[0]?.getAttribute('data-slot')).toBe('advanced-filters-section-processingStates');
-
-    expect(screen.getByRole('checkbox', { name: /pronto/i })).toBeChecked();
-    expect(screen.getByRole('checkbox', { name: /in elaborazione/i })).not.toBeChecked();
-    expect(screen.getByRole('checkbox', { name: /errore/i })).not.toBeChecked();
-  });
-});
-
-describe('AdvancedFiltersDrawer — chat scope rendering', () => {
-  beforeEach(() => {
-    installMatchMedia(true);
+    expect(screen.getByRole('button', { name: /Periodo/, expanded: false })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Complessità/, expanded: false })
+    ).toBeInTheDocument();
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it('renders 1 section (messageCountMin slider) with min=0 max=100', () => {
+  it('expands a collapsed section when the toggle is clicked', async () => {
+    const user = userEvent.setup();
     renderWithIntl(
       <AdvancedFiltersDrawer
         open={true}
         onOpenChange={noop}
-        entityScope="chat"
-        activeFilters={{ scope: 'chat', messageCountMin: 10 }}
+        activeFilters={emptyFilters}
         onApply={noop}
         onClear={noop}
       />
     );
-    const slots = screen.getAllByTestId(/^advanced-filters-section-/);
-    expect(slots).toHaveLength(1);
-    const slider = screen.getByRole('slider', { name: /messaggi/i });
-    expect(slider).toHaveAttribute('aria-valuemin', '0');
-    expect(slider).toHaveAttribute('aria-valuemax', '100');
-    expect(slider).toHaveAttribute('aria-valuenow', '10');
+    const periodToggle = screen.getByRole('button', { name: /Periodo/, expanded: false });
+    await user.click(periodToggle);
+    expect(screen.getByRole('button', { name: /Periodo/, expanded: true })).toBeInTheDocument();
   });
 });
 
-describe('AdvancedFiltersDrawer — Apply / Clear callbacks', () => {
-  beforeEach(() => {
-    installMatchMedia(true);
+describe('AdvancedFiltersDrawer — chips-multi (status section)', () => {
+  beforeEach(() => installMatchMedia(true));
+  afterEach(() => vi.restoreAllMocks());
+
+  it('renders 4 status chips (owned/wishlist/setup/archived)', () => {
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        activeFilters={emptyFilters}
+        onApply={noop}
+        onClear={noop}
+      />
+    );
+    const statusSection = screen.getByTestId('advanced-filters-section-statuses');
+    expect(within(statusSection).getByRole('button', { name: /Posseduto/ })).toBeInTheDocument();
+    expect(within(statusSection).getByRole('button', { name: /Wishlist/ })).toBeInTheDocument();
+    expect(within(statusSection).getByRole('button', { name: /In setup/ })).toBeInTheDocument();
+    expect(within(statusSection).getByRole('button', { name: /Archiviato/ })).toBeInTheDocument();
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
+  it('reflects activeFilters.statuses via aria-pressed', () => {
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        activeFilters={{ statuses: ['owned'] }}
+        onApply={noop}
+        onClear={noop}
+      />
+    );
+    const statusSection = screen.getByTestId('advanced-filters-section-statuses');
+    const ownedChip = within(statusSection).getByRole('button', { name: /Posseduto/ });
+    const wishlistChip = within(statusSection).getByRole('button', { name: /Wishlist/ });
+    expect(ownedChip).toHaveAttribute('aria-pressed', 'true');
+    expect(wishlistChip).toHaveAttribute('aria-pressed', 'false');
   });
 
-  it('Apply button calls onApply with current draft and closes the drawer', async () => {
+  it('toggling a chip then clicking Applica emits the updated draft', async () => {
+    const onApply = vi.fn();
+    const user = userEvent.setup();
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        activeFilters={emptyFilters}
+        onApply={onApply}
+        onClear={noop}
+      />
+    );
+    const statusSection = screen.getByTestId('advanced-filters-section-statuses');
+    await user.click(within(statusSection).getByRole('button', { name: /Posseduto/ }));
+    await user.click(screen.getByRole('button', { name: /^Applica/ }));
+    expect(onApply).toHaveBeenCalledWith({ statuses: ['owned'] });
+  });
+});
+
+describe('AdvancedFiltersDrawer — select-multi (games section)', () => {
+  beforeEach(() => installMatchMedia(true));
+  afterEach(() => vi.restoreAllMocks());
+
+  it('shows the placeholder and an empty-state when availableGames omitted', () => {
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        activeFilters={emptyFilters}
+        onApply={noop}
+        onClear={noop}
+      />
+    );
+    const gamesSection = screen.getByTestId('advanced-filters-section-games');
+    expect(within(gamesSection).getByText('Filtra per gioco specifico...')).toBeInTheDocument();
+    expect(within(gamesSection).getByText('Nessun gioco disponibile.')).toBeInTheDocument();
+  });
+
+  it('renders up to 5 available games as togglable pills', () => {
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        activeFilters={emptyFilters}
+        availableGames={[
+          { id: 'g1', title: 'Catan' },
+          { id: 'g2', title: 'Wingspan' },
+        ]}
+        onApply={noop}
+        onClear={noop}
+      />
+    );
+    const gamesSection = screen.getByTestId('advanced-filters-section-games');
+    expect(within(gamesSection).getByRole('button', { name: /Catan/ })).toBeInTheDocument();
+    expect(within(gamesSection).getByRole('button', { name: /Wingspan/ })).toBeInTheDocument();
+  });
+});
+
+describe('AdvancedFiltersDrawer — period-quick (period section)', () => {
+  beforeEach(() => installMatchMedia(true));
+  afterEach(() => vi.restoreAllMocks());
+
+  it('renders period section as a radiogroup with 5 options', async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        activeFilters={emptyFilters}
+        onApply={noop}
+        onClear={noop}
+      />
+    );
+    // Period collapses by default → expand first
+    await user.click(screen.getByRole('button', { name: /Periodo/ }));
+    const radiogroup = screen.getByRole('radiogroup', { name: /Periodo/ });
+    const options = within(radiogroup).getAllByRole('radio');
+    expect(options).toHaveLength(5);
+  });
+
+  it('selects a period option (aria-checked) and emits on Applica', async () => {
+    const onApply = vi.fn();
+    const user = userEvent.setup();
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        activeFilters={emptyFilters}
+        onApply={onApply}
+        onClear={noop}
+      />
+    );
+    await user.click(screen.getByRole('button', { name: /Periodo/ }));
+    await user.click(screen.getByRole('radio', { name: /Ultimi 30 giorni/ }));
+    await user.click(screen.getByRole('button', { name: /^Applica/ }));
+    expect(onApply).toHaveBeenCalledWith({ period: '30d' });
+  });
+});
+
+describe('AdvancedFiltersDrawer — range (rating section)', () => {
+  beforeEach(() => installMatchMedia(true));
+  afterEach(() => vi.restoreAllMocks());
+
+  it('renders rating section with default readout 6.0 — 10.0', async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        activeFilters={emptyFilters}
+        onApply={noop}
+        onClear={noop}
+      />
+    );
+    await user.click(screen.getByRole('button', { name: /Rating/ }));
+    const readout = screen.getByTestId('advanced-filters-section-rating');
+    expect(within(readout).getByText('6.0')).toBeInTheDocument();
+    expect(within(readout).getByText('10.0')).toBeInTheDocument();
+  });
+
+  it('renders min and max range inputs with aria-labels', async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        activeFilters={emptyFilters}
+        onApply={noop}
+        onClear={noop}
+      />
+    );
+    await user.click(screen.getByRole('button', { name: /Rating/ }));
+    expect(screen.getByLabelText('Rating minimo')).toBeInTheDocument();
+    expect(screen.getByLabelText('Rating massimo')).toBeInTheDocument();
+  });
+});
+
+describe('AdvancedFiltersDrawer — footer actions', () => {
+  beforeEach(() => installMatchMedia(true));
+  afterEach(() => vi.restoreAllMocks());
+
+  it('Reset button calls onClear and clears local draft', async () => {
+    const onClear = vi.fn();
+    const onApply = vi.fn();
+    const user = userEvent.setup();
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        activeFilters={{ statuses: ['owned', 'wishlist'] }}
+        onApply={onApply}
+        onClear={onClear}
+      />
+    );
+    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(onClear).toHaveBeenCalledTimes(1);
+    // After Reset, click Applica should emit an empty draft.
+    await user.click(screen.getByRole('button', { name: /^Applica/ }));
+    expect(onApply).toHaveBeenCalledWith({});
+  });
+
+  it('Applica button shows count suffix when filters are present', () => {
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        activeFilters={{ statuses: ['owned', 'wishlist'] }}
+        onApply={noop}
+        onClear={noop}
+      />
+    );
+    expect(screen.getByRole('button', { name: 'Applica (2)' })).toBeInTheDocument();
+  });
+
+  it('Applica button shows no count when no filters are active', () => {
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        activeFilters={emptyFilters}
+        onApply={noop}
+        onClear={noop}
+      />
+    );
+    expect(screen.getByRole('button', { name: 'Applica' })).toBeInTheDocument();
+  });
+
+  it('Applica button calls onApply with draft and onOpenChange(false)', async () => {
     const onApply = vi.fn();
     const onOpenChange = vi.fn();
     const user = userEvent.setup();
@@ -414,108 +496,35 @@ describe('AdvancedFiltersDrawer — Apply / Clear callbacks', () => {
       <AdvancedFiltersDrawer
         open={true}
         onOpenChange={onOpenChange}
-        entityScope="game"
-        activeFilters={{ scope: 'game' }}
+        activeFilters={{ statuses: ['owned'] }}
         onApply={onApply}
         onClear={noop}
       />
     );
-
-    const owned = screen.getByRole('checkbox', { name: /posseduto/i });
-    await user.click(owned);
-    await user.click(screen.getByRole('button', { name: /applica/i }));
-
-    expect(onApply).toHaveBeenCalledTimes(1);
-    expect(onApply).toHaveBeenCalledWith({ scope: 'game', states: ['Owned'] });
+    await user.click(screen.getByRole('button', { name: /^Applica/ }));
+    expect(onApply).toHaveBeenCalledWith({ statuses: ['owned'] });
     expect(onOpenChange).toHaveBeenCalledWith(false);
-  });
-
-  it('Clear button calls onClear and resets draft to empty scope, drawer stays open', async () => {
-    const onClear = vi.fn();
-    const onOpenChange = vi.fn();
-    const user = userEvent.setup();
-    renderWithIntl(
-      <AdvancedFiltersDrawer
-        open={true}
-        onOpenChange={onOpenChange}
-        entityScope="game"
-        activeFilters={{ scope: 'game', states: ['Owned'], ratingMin: 7 }}
-        onApply={noop}
-        onClear={onClear}
-      />
-    );
-
-    const owned = screen.getByRole('checkbox', { name: /posseduto/i });
-    expect(owned).toBeChecked();
-
-    await user.click(screen.getByRole('button', { name: /reimposta/i }));
-
-    expect(onClear).toHaveBeenCalledTimes(1);
-    expect(onOpenChange).not.toHaveBeenCalledWith(false); // drawer stays open
-    expect(screen.getByRole('checkbox', { name: /posseduto/i })).not.toBeChecked();
-  });
-
-  it('when reopened with new activeFilters, draft resets to the new activeFilters', async () => {
-    const { rerender } = renderWithIntl(
-      <AdvancedFiltersDrawer
-        open={false}
-        onOpenChange={noop}
-        entityScope="game"
-        activeFilters={{ scope: 'game' }}
-        onApply={noop}
-        onClear={noop}
-      />
-    );
-    rerender(
-      <IntlProvider locale="it" messages={messages}>
-        <AdvancedFiltersDrawer
-          open={true}
-          onOpenChange={noop}
-          entityScope="game"
-          activeFilters={{ scope: 'game', states: ['Wishlist'] }}
-          onApply={noop}
-          onClear={noop}
-        />
-      </IntlProvider>
-    );
-    expect(screen.getByRole('checkbox', { name: /wishlist/i })).toBeChecked();
   });
 });
 
-describe('AdvancedFiltersDrawer — a11y', () => {
-  beforeEach(() => {
-    installMatchMedia(true);
+describe('countActiveFilters', () => {
+  it('returns 0 for empty filters', () => {
+    expect(countActiveFilters({})).toBe(0);
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
+  it('counts array values by length (not by field count)', () => {
+    expect(countActiveFilters({ statuses: ['owned', 'wishlist'] })).toBe(2);
   });
 
-  it('renders no axe violations for game scope when open', async () => {
-    const { container } = renderWithIntl(
-      <AdvancedFiltersDrawer
-        open={true}
-        onOpenChange={noop}
-        entityScope="game"
-        activeFilters={{ scope: 'game' }}
-        onApply={noop}
-        onClear={noop}
-      />
-    );
-    expect(await axe(container)).toHaveNoViolations();
+  it('counts scalar truthy values as 1', () => {
+    expect(countActiveFilters({ period: '7d' })).toBe(1);
   });
 
-  it('renders no axe violations for kb scope when open', async () => {
-    const { container } = renderWithIntl(
-      <AdvancedFiltersDrawer
-        open={true}
-        onOpenChange={noop}
-        entityScope="kb"
-        activeFilters={{ scope: 'kb' }}
-        onApply={noop}
-        onClear={noop}
-      />
-    );
-    expect(await axe(container)).toHaveNoViolations();
+  it('counts range fields ratingMin/ratingMax independently', () => {
+    expect(countActiveFilters({ ratingMin: 6, ratingMax: 10 })).toBe(2);
+  });
+
+  it('ignores undefined fields', () => {
+    expect(countActiveFilters({ statuses: undefined, period: undefined })).toBe(0);
   });
 });

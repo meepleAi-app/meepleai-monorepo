@@ -28,6 +28,8 @@ const ENTITY_ICONS: Record<MeepleEntityType, ComponentType<IconProps>> = {
   chat: ChatIcon,
   toolkit: ToolkitIcon,
   tool: ToolIcon,
+  // #1929 WP2: GameNight-specific entity, reuses EventIcon (rose palette)
+  gameNightEvent: EventIcon,
 };
 
 interface EntityIconProps {

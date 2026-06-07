@@ -1,159 +1,175 @@
 /**
- * DashboardClient — Stage 3 cluster orchestrator for `/dashboard` (Issue #1164).
+ * DashboardClient — Asse C priority-driven orchestrator for `/dashboard` (Issue #1898).
  *
- * REFACTOR-FORWARD replacement of PR #309 (chat/session-centric, 749 LOC) per
- * spec `docs/superpowers/specs/2026-05-14-stage3-dashboard.md`.
+ * REFACTOR replacement of Stage 3 cluster (5 entity sections Games/Players/Agents/
+ * Sessions/Events) with 4 priority slots in fixed order:
  *
- * Composes Hero + 5 entity sections (Games / Players / Agents / Sessions /
- * Events) in a responsive grid (mobile stacked, desktop 2×2 + Events full-width
- * row). Players are derived from `useActiveSessions` (no list endpoint).
+ *   1. ProssimiSection      → upcoming GameNights (Published + InProgress, ASC by date)
+ *   2. RecentiSection       → completed GameNights (DESC by date)
+ *   3. SuggestedSection     → "Potresti giocare" game suggestions (MVP fixture)
+ *   4. FriendsActivitySection → recent friend activities (verbs: completed/created/joined)
  *
- * Pixel-faithful to admin-mockups/design_files/sp4-dashboard.jsx — handles
- * default / empty / loading / error states. Hero edge-to-edge with internal
- * padding; sections grid padded 16/32px (mobile/desktop).
+ * DEC-1 (locked plan v2): in-place refactor of /dashboard, no alternative route.
+ * Hero block (DashboardHero) is preserved as the entry surface; KPI grid still
+ * exposes games / sessions / hoursPlayed / winRate (the latter two still
+ * unexposed by the backend, displayed as "—").
+ *
+ * State derivation per section:
+ *   loading → query.isLoading
+ *   error   → query.isError
+ *   empty   → derived (length === 0)
+ *   default → otherwise
+ *
+ * Pixel-faithful to admin-mockups/design_files/sp4-dashboard.jsx.
  */
 
 'use client';
 
-import { useCallback, useMemo, type ReactElement } from 'react';
+import { useMemo, type ReactElement } from 'react';
 
 import { useAuth } from '@/components/auth/AuthProvider';
+import { CascadeDrawerHost } from '@/components/dashboard/CascadeDrawerHost';
 import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
-import { useAgents } from '@/hooks/queries/useAgents';
 import { useUpcomingGameNights } from '@/hooks/queries/useGameNights';
 import { useGames } from '@/hooks/queries/useGames';
 import { useLibraryStats } from '@/hooks/queries/useLibrary';
+import { useFriendsActivity } from '@/hooks/use-friends-activity';
 import { useTranslation } from '@/hooks/useTranslation';
-import { trackEvent } from '@/lib/analytics/track-event';
 
 import { DashboardHero, type DashboardHeroKpi } from './_components/DashboardHero';
-import { AgentsCompactGrid } from './_components/sections/AgentsCompactGrid';
-import { ErrorBanner } from './_components/sections/ErrorBanner';
-import { EventsList, type EventListItem } from './_components/sections/EventsList';
-import { GamesCarousel } from './_components/sections/GamesCarousel';
-import { PlayersAvatarList, type PlayerEntry } from './_components/sections/PlayersAvatarList';
-import { SectionSkeleton } from './_components/sections/SectionSkeleton';
 import {
-  SessionsTimeline,
-  type SessionTimelineItem,
-} from './_components/sections/SessionsTimeline';
+  FriendsActivitySection,
+  type FriendsActivitySectionState,
+  ProssimiSection,
+  type ProssimiGameNightCard,
+  type ProssimiSectionState,
+  type ProssimiStatus,
+  RecentiSection,
+  type RecentiGameNightCard,
+  type RecentiSectionState,
+  SuggestedSection,
+  type SuggestedGameCard,
+  type SuggestedSectionState,
+} from './_components/sections';
 
-const SESSION_STATUS_MAP: Record<string, SessionTimelineItem['status']> = {
-  InProgress: 'live',
-  Live: 'live',
-  Active: 'live',
-  Completed: 'completed',
-  Paused: 'paused',
-  Setup: 'setup',
-  Abandoned: 'abandoned',
-};
-
-function mapSessionStatus(raw: string): SessionTimelineItem['status'] {
-  return SESSION_STATUS_MAP[raw] ?? 'completed';
-}
-
-function computeInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
-function colorIndexFromName(name: string): number {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
-  return Math.abs(hash);
+/**
+ * Derive a 4-state lifecycle (loading | error | empty | default) from
+ * a TanStack Query result + a derived item count.
+ */
+function deriveSectionState(
+  isLoading: boolean,
+  isError: boolean,
+  itemCount: number
+): 'loading' | 'error' | 'empty' | 'default' {
+  if (isLoading) return 'loading';
+  if (isError) return 'error';
+  if (itemCount === 0) return 'empty';
+  return 'default';
 }
 
 export function DashboardClient(): ReactElement {
   const { t } = useTranslation();
   const { user } = useAuth();
 
-  // ── Data hooks ────────────────────────────────────────────────────────────
-  const gamesQuery = useGames(undefined, undefined, 1, 20);
+  // ── Data hooks (re-used from Stage 3 + asse-C additions) ─────────────────
+  const upcomingGNQuery = useUpcomingGameNights();
   const sessionsQuery = useActiveSessions(10);
-  const agentsQuery = useAgents();
-  const eventsQuery = useUpcomingGameNights();
+  const gamesQuery = useGames(undefined, undefined, 1, 20);
   const statsQuery = useLibraryStats();
+  const friendsActivityQuery = useFriendsActivity();
 
-  // ── Aggregate loading / error state ───────────────────────────────────────
-  const isInitialLoading =
-    gamesQuery.isLoading &&
-    sessionsQuery.isLoading &&
-    agentsQuery.isLoading &&
-    eventsQuery.isLoading &&
-    statsQuery.isLoading;
+  // ── Slot #1: Prossimi (upcoming GameNights, Published + InProgress) ──────
+  const prossimiCards = useMemo<ReadonlyArray<ProssimiGameNightCard>>(() => {
+    const data = upcomingGNQuery.data ?? [];
+    return (
+      data
+        .filter(gn => gn.status === 'Published' || gn.status === 'Draft')
+        // Treat "Draft" as future "Published" for the upcoming surface? No — only
+        // Published / InProgress should appear. The backend `getUpcoming()` already
+        // filters server-side, but we re-assert here so a relaxed BE doesn't leak
+        // stale Cancelled/Completed rows.
+        // (InProgress isn't a status emitted by the upcoming endpoint today, but
+        // when asse-A WP1 + #15 lands and the BE starts emitting it on a started
+        // session, the UX is ready.)
+        .filter(gn => gn.status === 'Published')
+        .slice(0, 3)
+        .map<ProssimiGameNightCard>(gn => ({
+          id: gn.id,
+          title: gn.title,
+          date: gn.scheduledAt,
+          status: 'Published' as ProssimiStatus,
+          rsvpConfirmedCount: gn.acceptedCount,
+          rsvpPendingCount: gn.pendingCount,
+          rsvpTotalCount: gn.totalInvited,
+        }))
+    );
+  }, [upcomingGNQuery.data]);
 
-  const hasAnyData =
-    (gamesQuery.data?.games?.length ?? 0) > 0 ||
-    (sessionsQuery.data?.sessions?.length ?? 0) > 0 ||
-    (agentsQuery.data?.length ?? 0) > 0 ||
-    (eventsQuery.data?.length ?? 0) > 0 ||
-    (statsQuery.data?.totalGames ?? 0) > 0;
+  const prossimiState: ProssimiSectionState = deriveSectionState(
+    upcomingGNQuery.isLoading,
+    upcomingGNQuery.isError,
+    prossimiCards.length
+  );
 
-  const hasAnyError =
-    Boolean(gamesQuery.isError) ||
-    Boolean(sessionsQuery.isError) ||
-    Boolean(agentsQuery.isError) ||
-    Boolean(eventsQuery.isError) ||
-    Boolean(statsQuery.isError);
+  // ── Slot #2: Recenti (completed GameNights) ──────────────────────────────
+  // BE endpoint for completed GameNights is not yet wired (out of scope T1).
+  // For now we surface an empty section, which RecentiSection renders as `null`
+  // per spec MAJ-6 (silent fallback). When the BE endpoint lands, swap the
+  // empty array for the query result and adapt the projection.
+  const recentiCards = useMemo<ReadonlyArray<RecentiGameNightCard>>(() => {
+    return [];
+  }, []);
 
-  const showErrorBanner = !isInitialLoading && hasAnyError && !hasAnyData;
+  const recentiState: RecentiSectionState = deriveSectionState(
+    /* isLoading */ false,
+    /* isError */ false,
+    recentiCards.length
+  );
 
-  const handleRetry = useCallback(() => {
-    gamesQuery.refetch();
-    sessionsQuery.refetch();
-    agentsQuery.refetch();
-    eventsQuery.refetch();
-    statsQuery.refetch();
-  }, [gamesQuery, sessionsQuery, agentsQuery, eventsQuery, statsQuery]);
-
-  // ── Derive Players from sessions (no list endpoint per AC0 Path C) ───────
-  const players = useMemo<ReadonlyArray<PlayerEntry>>(() => {
-    const sessions = sessionsQuery.data?.sessions ?? [];
-    const seen = new Map<string, PlayerEntry>();
-    for (const session of sessions) {
-      for (const player of session.players ?? []) {
-        const name = player.playerName;
-        if (!name || seen.has(name)) continue;
-        seen.set(name, {
-          name,
-          initials: computeInitials(name),
-          colorIndex: colorIndexFromName(name),
-        });
-      }
-    }
-    return Array.from(seen.values());
-  }, [sessionsQuery.data]);
-
-  // ── Map sessions to timeline items ───────────────────────────────────────
-  const sessionItems = useMemo<ReadonlyArray<SessionTimelineItem>>(() => {
-    const sessions = sessionsQuery.data?.sessions ?? [];
+  // ── Slot #3: Suggested ("Potresti giocare") ──────────────────────────────
+  // MVP algorithm: surface up to 6 owned games. Future BE endpoint
+  // `GET /dashboard/suggestions` will refine to "owned NOT played last 30d
+  // sorted by play count DESC" + collaborative filtering (plan §"MIN-2").
+  const suggestedCards = useMemo<ReadonlyArray<SuggestedGameCard>>(() => {
     const games = gamesQuery.data?.games ?? [];
-    const gameById = new Map(games.map(g => [g.id, g.title]));
-    return sessions.map(s => ({
-      id: s.id,
-      title: gameById.get(s.gameId) ?? t('pages.dashboard.sections.sessions.untitled'),
-      status: mapSessionStatus(s.status),
-      playerCount: s.playerCount,
-      durationMinutes: s.durationMinutes ?? null,
-    }));
-  }, [sessionsQuery.data, gamesQuery.data, t]);
+    return games.slice(0, 6).map<SuggestedGameCard>(g => {
+      const min = g.minPlayers ?? 0;
+      const max = g.maxPlayers ?? 0;
+      const playerCount =
+        min > 0 && max > 0 && min !== max
+          ? `${min}-${max}`
+          : min > 0
+            ? `${min}`
+            : max > 0
+              ? `${max}`
+              : '—';
+      const durationMin = g.maxPlayTimeMinutes ?? g.minPlayTimeMinutes ?? 60;
+      return {
+        id: g.id,
+        title: g.title,
+        coverImageUrl: g.imageUrl ?? undefined,
+        playerCount,
+        durationMin,
+      };
+    });
+  }, [gamesQuery.data]);
 
-  // ── Map events to list items ─────────────────────────────────────────────
-  const eventItems = useMemo<ReadonlyArray<EventListItem>>(() => {
-    const events = eventsQuery.data ?? [];
-    return events.map(e => ({
-      id: e.id,
-      title: e.title,
-      startsAt: e.scheduledAt,
-      location: e.location,
-      confirmedCount: e.acceptedCount,
-      pendingCount: e.pendingCount,
-    }));
-  }, [eventsQuery.data]);
+  const suggestedState: SuggestedSectionState = deriveSectionState(
+    gamesQuery.isLoading,
+    gamesQuery.isError,
+    suggestedCards.length
+  );
 
-  // ── KPI assembly ──────────────────────────────────────────────────────────
+  // ── Slot #4: Friends Activity ────────────────────────────────────────────
+  const friendsActivities = friendsActivityQuery.data ?? [];
+  const friendsState: FriendsActivitySectionState = deriveSectionState(
+    friendsActivityQuery.isLoading,
+    friendsActivityQuery.isError,
+    friendsActivities.length
+  );
+
+  // ── KPI assembly (preserved from Stage 3 — hero KPIs are independent of
+  //    the 4 priority slots and remain meaningful as a snapshot at the top) ──
   const kpi = useMemo<DashboardHeroKpi>(
     () => ({
       games: statsQuery.data?.totalGames ?? 0,
@@ -164,16 +180,7 @@ export function DashboardClient(): ReactElement {
     [statsQuery.data, sessionsQuery.data]
   );
 
-  // ── Telemetry handlers ────────────────────────────────────────────────────
-  const handleSectionViewAll = useCallback((sectionId: string, viewAllHref: string) => {
-    trackEvent('dashboard_view_all_clicked', { section: sectionId, viewAllHref });
-  }, []);
-
-  const handleEmptyCta = useCallback((sectionId: string, ctaHref: string) => {
-    trackEvent('dashboard_empty_cta_clicked', { section: sectionId, ctaHref });
-  }, []);
-
-  // ── Hero labels ───────────────────────────────────────────────────────────
+  // ── Hero labels (i18n-mediated) ──────────────────────────────────────────
   const heroLabels = {
     greetingMorning: t('pages.dashboard.hero.greetingMorning'),
     greetingAfternoon: t('pages.dashboard.hero.greetingAfternoon'),
@@ -185,12 +192,6 @@ export function DashboardClient(): ReactElement {
     kpiWinRate: t('pages.dashboard.hero.kpiWinRate'),
   };
 
-  const errorLabels = {
-    title: t('pages.dashboard.error.title'),
-    message: t('pages.dashboard.error.message'),
-    retry: t('pages.dashboard.error.retry'),
-  };
-
   return (
     <main data-slot="dashboard-client" className="flex w-full flex-col">
       <DashboardHero
@@ -200,111 +201,40 @@ export function DashboardClient(): ReactElement {
       />
 
       <div
-        data-slot="dashboard-sections-grid"
-        className="grid grid-cols-1 gap-3 px-4 py-3.5 pb-16 sm:grid-cols-2 sm:gap-4 sm:px-8 sm:py-6"
+        data-slot="dashboard-priority-sections"
+        className="container mx-auto flex flex-col gap-8 px-4 py-8 pb-16 sm:px-8"
       >
-        {isInitialLoading ? (
-          <>
-            <SectionSkeleton bodyMinHeight={160} />
-            <SectionSkeleton bodyMinHeight={160} />
-            <SectionSkeleton bodyMinHeight={160} />
-            <SectionSkeleton bodyMinHeight={160} />
-            <SectionSkeleton bodyMinHeight={120} fullWidth />
-          </>
-        ) : showErrorBanner ? (
-          <ErrorBanner labels={errorLabels} onRetry={handleRetry} />
-        ) : (
-          <>
-            <GamesCarousel
-              games={gamesQuery.data?.games ?? []}
-              totalCount={statsQuery.data?.totalGames ?? 0}
-              labels={{
-                title: t('pages.dashboard.sections.games.title'),
-                viewAllLabel: t('pages.dashboard.sections.games.viewAll'),
-                viewAllHref: '/library',
-                emptyTitle: t('pages.dashboard.sections.games.emptyTitle'),
-                emptyCta: t('pages.dashboard.sections.games.emptyCta'),
-                emptyCtaHref: '/library/add',
-              }}
-              onViewAllClick={handleSectionViewAll}
-              onEmptyCtaClick={handleEmptyCta}
-            />
+        <ProssimiSection
+          state={prossimiState}
+          gameNights={prossimiCards}
+          onRetry={() => {
+            void upcomingGNQuery.refetch();
+          }}
+        />
 
-            <PlayersAvatarList
-              players={players}
-              totalCount={players.length}
-              labels={{
-                title: t('pages.dashboard.sections.players.title'),
-                viewAllLabel: t('pages.dashboard.sections.players.viewAll'),
-                viewAllHref: '/players',
-                countTemplate: t('pages.dashboard.sections.players.countTemplate'),
-                emptyTitle: t('pages.dashboard.sections.players.emptyTitle'),
-                emptyCta: t('pages.dashboard.sections.players.emptyCta'),
-                emptyCtaHref: '/players',
-              }}
-              onViewAllClick={handleSectionViewAll}
-              onEmptyCtaClick={handleEmptyCta}
-            />
+        <RecentiSection
+          state={recentiState}
+          gameNights={recentiCards}
+          onRetry={() => {
+            // Placeholder until BE completed-GN endpoint lands; we refetch the
+            // upcoming source so the user gets *some* fresh data on retry.
+            void upcomingGNQuery.refetch();
+          }}
+        />
 
-            <AgentsCompactGrid
-              agents={agentsQuery.data ?? []}
-              labels={{
-                title: t('pages.dashboard.sections.agents.title'),
-                viewAllLabel: t('pages.dashboard.sections.agents.viewAll'),
-                viewAllHref: '/agents',
-                statusActive: t('pages.dashboard.sections.agents.statusActive'),
-                statusIdle: t('pages.dashboard.sections.agents.statusIdle'),
-                callsTemplate: t('pages.dashboard.sections.agents.callsTemplate'),
-                emptyTitle: t('pages.dashboard.sections.agents.emptyTitle'),
-                emptyCta: t('pages.dashboard.sections.agents.emptyCta'),
-                emptyCtaHref: '/hub/agents',
-              }}
-              onViewAllClick={handleSectionViewAll}
-              onEmptyCtaClick={handleEmptyCta}
-            />
+        <SuggestedSection
+          state={suggestedState}
+          games={suggestedCards}
+          onRetry={() => {
+            void gamesQuery.refetch();
+          }}
+        />
 
-            <SessionsTimeline
-              sessions={sessionItems}
-              totalCount={sessionsQuery.data?.total ?? 0}
-              labels={{
-                title: t('pages.dashboard.sections.sessions.title'),
-                liveBadge: t('pages.dashboard.sections.sessions.liveBadge'),
-                viewAllLabel: t('pages.dashboard.sections.sessions.viewAll'),
-                viewAllHref: '/sessions',
-                playerCountTemplate: t('pages.dashboard.sections.sessions.playerCountTemplate'),
-                minutesTemplate: t('pages.dashboard.sections.sessions.minutesTemplate'),
-                emptyTitle: t('pages.dashboard.sections.sessions.emptyTitle'),
-                emptyCta: t('pages.dashboard.sections.sessions.emptyCta'),
-                emptyCtaHref: '/sessions/new',
-                statusLabels: {
-                  live: t('pages.dashboard.sections.sessions.statusLive'),
-                  completed: t('pages.dashboard.sections.sessions.statusCompleted'),
-                  paused: t('pages.dashboard.sections.sessions.statusPaused'),
-                  setup: t('pages.dashboard.sections.sessions.statusSetup'),
-                  abandoned: t('pages.dashboard.sections.sessions.statusAbandoned'),
-                },
-              }}
-              onViewAllClick={handleSectionViewAll}
-              onEmptyCtaClick={handleEmptyCta}
-            />
-
-            <EventsList
-              events={eventItems}
-              labels={{
-                title: t('pages.dashboard.sections.events.title'),
-                viewAllLabel: t('pages.dashboard.sections.events.viewAll'),
-                viewAllHref: '/game-nights',
-                participantsTemplate: t('pages.dashboard.sections.events.participantsTemplate'),
-                emptyTitle: t('pages.dashboard.sections.events.emptyTitle'),
-                emptyCta: t('pages.dashboard.sections.events.emptyCta'),
-                emptyCtaHref: '/game-nights/new',
-              }}
-              onViewAllClick={handleSectionViewAll}
-              onEmptyCtaClick={handleEmptyCta}
-            />
-          </>
-        )}
+        <FriendsActivitySection state={friendsState} activities={friendsActivities} />
       </div>
+
+      {/* #1929 WP5: cascade-store driven drawer renderer for dashboard card clicks */}
+      <CascadeDrawerHost />
     </main>
   );
 }

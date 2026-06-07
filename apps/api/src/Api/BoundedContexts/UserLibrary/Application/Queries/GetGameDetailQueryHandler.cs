@@ -179,7 +179,10 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
                     Checklist: checklist,
                     CustomAgentConfig: customAgentConfig,
                     CustomPdf: customPdf,
-                    Labels: labelsDto
+                    Labels: labelsDto,
+
+                    // Issue #1824 L3: user-custom cover key (null if no custom cover uploaded)
+                    CustomCoverR2Key: entry.CustomCoverR2Key
                 );
             },
             options: CacheOptions,

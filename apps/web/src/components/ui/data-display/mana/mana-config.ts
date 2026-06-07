@@ -41,6 +41,14 @@ export const MANA_DISPLAY: Record<MeepleEntityType, ManaDisplayConfig> = {
     Icon: ToolkitIcon,
   },
   tool: { key: 'tool', displayName: 'Tool', symbol: '🔧', tier: 'tools', Icon: ToolIcon },
+  // #1929 WP2: GameNight-specific entity, reuses EventIcon + core tier
+  gameNightEvent: {
+    key: 'gameNightEvent',
+    displayName: 'Game Night',
+    symbol: '🌙',
+    tier: 'core',
+    Icon: EventIcon,
+  },
 };
 
 export const ENTITY_RELATIONSHIPS: EntityRelationshipMap = {
@@ -53,6 +61,8 @@ export const ENTITY_RELATIONSHIPS: EntityRelationshipMap = {
   chat: ['agent', 'game', 'player'],
   toolkit: ['tool', 'game'],
   tool: ['toolkit', 'game'],
+  // #1929 WP2: GameNight-specific entity; related to session and player
+  gameNightEvent: ['session', 'player'],
 };
 
 export function getManaDisplayName(entityType: MeepleEntityType): string {

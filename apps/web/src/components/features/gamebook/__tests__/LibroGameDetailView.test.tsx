@@ -154,12 +154,8 @@ describe('LibroGameDetailView', () => {
     const gameDetail = makeLibraryGameDetail();
     const { container } = render(<LibroGameDetailView gameDetail={gameDetail} />);
 
-    const results = await axe(container, {
-      rules: {
-        // InfoPanel starts with h3 inside tabpanel; heading hierarchy isolated per panel OK
-        'heading-order': { enabled: false },
-      },
-    });
+    // T12: heading-order rule re-enabled — all consumers now pass headingLevel prop
+    const results = await axe(container);
     expect(results).toHaveNoViolations();
   });
 });

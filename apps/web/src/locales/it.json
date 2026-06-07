@@ -38,6 +38,27 @@
       "tagToInvalidate": "Tag da invalidare",
       "title": "Cache"
     },
+    "catalogSeed": {
+      "title": "Coda seed catalogo",
+      "subtitle": "Admin · Catalogo · Pipeline seed (Wikidata + BGG)",
+      "kpi": {
+        "pending": "In attesa",
+        "fetched": "Recuperati",
+        "approved": "Approvati",
+        "rejected": "Rifiutati"
+      },
+      "actions": {
+        "enqueue": "Accoda",
+        "approve": "Approva",
+        "reject": "Rifiuta",
+        "search": "Cerca",
+        "addToQueue": "Aggiungi alla coda"
+      },
+      "filters": {
+        "all": "Tutti",
+        "failedOnly": "Solo falliti"
+      }
+    },
     "configuration": {
       "aiLlm": "Configurazione AI / LLM",
       "rag": "Configurazione RAG",
@@ -1610,8 +1631,9 @@
         "description": "La tua collezione di giochi: knowledge base, prestiti, wishlist e attività recenti."
       },
       "hero": {
-        "title": "La mia libreria",
-        "subtitle": "Tutta la tua collezione, gli agenti AI e le partite recenti in un colpo d'occhio.",
+        "title": "La tua libreria",
+        "subtitle": "Tutti i tuoi giochi, agenti e documenti in un posto.",
+        "eyebrow": "Library · power-user view",
         "stats": {
           "totalGames": "Giochi totali",
           "kbReady": "Knowledge base",
@@ -1622,8 +1644,10 @@
           "chats": "Chat"
         },
         "cta": {
-          "add": "Aggiungi gioco",
-          "addAriaLabel": "Aggiungi un nuovo gioco alla libreria"
+          "add": "+ Aggiungi gioco",
+          "addAriaLabel": "Aggiungi un nuovo gioco alla libreria",
+          "importBgg": "↓ Importa BGG",
+          "exportAriaLabel": "Esporta"
         }
       },
       "tabs": {
@@ -1702,37 +1726,96 @@
       },
       "filters": {
         "search": {
-          "placeholder": "Cerca per titolo, editore o anno…",
-          "ariaLabel": "Cerca nella libreria",
-          "clearAriaLabel": "Cancella la ricerca"
+          "placeholder": "Cerca in libreria... (premi /)",
+          "ariaLabel": "Cerca in libreria",
+          "clearAriaLabel": "Cancella la ricerca",
+          "keyboardHintAriaLabel": "Scorciatoia tastiera"
         },
         "title": "Più filtri",
+        "advanced": {
+          "label": "Filtri avanzati"
+        },
+        "chips": {
+          "stato": "STATO",
+          "gioco": "GIOCO",
+          "data": "DATA",
+          "sort": "SORT",
+          "value": {
+            "all": "Tutti",
+            "always": "Sempre"
+          }
+        },
         "description": "Filtra la libreria per dimensioni specifiche dell'entità.",
+        "closeAriaLabel": "Chiudi pannello filtri",
+        "header": {
+          "subtitle": "{count, plural, =0 {Nessun filtro · scope: library} =1 {1 attivo · scope: library} other {# attivi · scope: library}}"
+        },
         "apply": "Applica",
+        "applyWithCount": "Applica ({count})",
         "clear": "Reimposta",
+        "reset": "Reset",
         "section": {
-          "state": "Stato",
-          "withKb": "Solo con Knowledge Base",
-          "rating": "Rating minimo",
-          "players": "Numero di giocatori",
-          "year": "Anno di pubblicazione",
-          "agentType": "Tipo di agente",
-          "activeOnly": "Solo attivi",
-          "sessionStatus": "Stato sessione",
-          "sessionType": "Tipo sessione",
-          "playerCount": "Giocatori (min)",
-          "processingState": "Stato di elaborazione",
-          "messageCountMin": "Messaggi (min)"
-        },
-        "state": {
-          "owned": "Posseduto",
-          "wishlist": "Wishlist",
-          "loaned": "In prestito"
-        },
-        "kbState": {
-          "ready": "Pronto",
-          "pending": "In elaborazione",
-          "failed": "Errore"
+          "status": {
+            "title": "Stato",
+            "options": {
+              "owned": "Posseduto",
+              "wishlist": "Wishlist",
+              "setup": "In setup",
+              "archived": "Archiviato"
+            }
+          },
+          "entity": {
+            "title": "Tipo entità",
+            "options": {
+              "game": "Giochi",
+              "agent": "Agenti",
+              "kb": "Documenti KB",
+              "session": "Sessioni",
+              "chat": "Chat"
+            }
+          },
+          "game": {
+            "title": "Gioco",
+            "placeholder": "Filtra per gioco specifico...",
+            "empty": "Nessun gioco disponibile dalla libreria corrente."
+          },
+          "period": {
+            "title": "Periodo",
+            "options": {
+              "7d": "Ultimi 7 giorni",
+              "30d": "Ultimi 30 giorni",
+              "1y": "Ultimo anno",
+              "all": "Sempre",
+              "range": "Range personalizzato..."
+            }
+          },
+          "tags": {
+            "title": "Tag",
+            "options": {
+              "family": "Family",
+              "strategy": "Strategy",
+              "coop": "Coop",
+              "engine": "Engine builder",
+              "auction": "Auction",
+              "rollAndWrite": "Roll & Write",
+              "cardDriven": "Card driven",
+              "tableau": "Tableau"
+            }
+          },
+          "rating": {
+            "title": "Rating",
+            "minAriaLabel": "Rating minimo",
+            "maxAriaLabel": "Rating massimo"
+          },
+          "weight": {
+            "title": "Complessità",
+            "options": {
+              "light": "Light · 1.0–2.0",
+              "medium": "Medium · 2.0–3.0",
+              "heavy": "Heavy · 3.0–4.0",
+              "extra": "Extra heavy · 4.0+"
+            }
+          }
         },
         "stato": {
           "label": "Stato",
@@ -1758,7 +1841,14 @@
         "compact": "Compatta"
       },
       "bulk": {
+        "counter": "{count, plural, =1 {selezionato} other {selezionati}}",
+        "counterCompact": "sel.",
+        "closeAriaLabel": "Annulla selezione",
         "actions": {
+          "archive": "Archivia",
+          "archiveAriaLabel": "Archivia gli elementi selezionati",
+          "tag": "Tag",
+          "tagAriaLabel": "Aggiungi tag agli elementi selezionati",
           "delete": "Elimina",
           "deleteAriaLabel": "Elimina gli elementi selezionati",
           "favorite": "Aggiungi ai preferiti",
@@ -1778,11 +1868,12 @@
         "clearSelectionAriaLabel": "Deseleziona tutti gli elementi"
       },
       "activityRail": {
-        "title": "Attività recente",
+        "title": "Ultime modifiche",
         "subtitle": "Le ultime aggiunte e modifiche alla tua libreria.",
         "empty": "Nessuna attività recente.",
         "viewAll": "Vedi tutto",
         "viewAllAriaLabel": "Vai allo storico completo dell'attività",
+        "collapseAriaLabel": "Comprimi pannello",
         "error": "Impossibile caricare l'attività.",
         "fallback": {
           "agent": "Nuovo agent creato",
@@ -1790,13 +1881,23 @@
           "kbIndexed": "Documento indicizzato",
           "play": "Sessione",
           "removed": "Rimosso dalla libreria"
+        },
+        "shortcuts": {
+          "heading": "Shortcuts",
+          "focusSearch": "focus search",
+          "advancedFilters": "filtri avanzati",
+          "allShortcuts": "tutte le scorciatoie"
         }
       },
       "emptyState": {
-        "default": {
+        "empty": {
           "title": "La tua libreria è vuota",
-          "subtitle": "Aggiungi il tuo primo gioco per iniziare a costruire la collezione.",
-          "cta": "Aggiungi gioco"
+          "subtitle": "Inizia aggiungendo il tuo primo gioco. Importa la collezione da BoardGameGeek o cerca per titolo.",
+          "cta": "+ Aggiungi il tuo primo gioco",
+          "ctaImportBgg": "↓ Importa da BGG",
+          "suggestions": {
+            "heading": "Suggerimenti dalla community"
+          }
         },
         "filteredEmpty": {
           "title": "Nessun risultato",

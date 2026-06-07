@@ -88,6 +88,34 @@ describe('libraryEntryToHubItem', () => {
     expect(result.imageUrl).toBeUndefined();
   });
 
+  it('prefers coverUrl over gameImageUrl', () => {
+    const result = libraryEntryToHubItem({
+      ...baseEntry,
+      coverUrl: 'https://r2/cover.webp',
+      gameImageUrl: 'https://example.test/legacy-bgg.jpg',
+    });
+    expect(result.imageUrl).toBe('https://r2/cover.webp');
+  });
+
+  it('falls back to gameImageUrl when coverUrl is null', () => {
+    const result = libraryEntryToHubItem({
+      ...baseEntry,
+      coverUrl: null,
+      gameImageUrl: 'https://example.test/legacy.jpg',
+    });
+    expect(result.imageUrl).toBe('https://example.test/legacy.jpg');
+  });
+
+  it('returns undefined when coverUrl, gameImageUrl, and gameIconUrl are all null', () => {
+    const result = libraryEntryToHubItem({
+      ...baseEntry,
+      coverUrl: null,
+      gameImageUrl: null,
+      gameIconUrl: null,
+    });
+    expect(result.imageUrl).toBeUndefined();
+  });
+
   it('returns undefined subtitle when gamePublisher is null', () => {
     const result = libraryEntryToHubItem({ ...baseEntry, gamePublisher: null });
     expect(result.subtitle).toBeUndefined();

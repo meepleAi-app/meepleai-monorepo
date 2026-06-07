@@ -75,12 +75,14 @@ export function UserMenuDropdown({ variant = 'icon' }: UserMenuDropdownProps = {
             type="button"
             aria-label="User menu"
             data-testid="user-menu-trigger"
-            className="flex items-center gap-2 rounded-full bg-muted px-2.5 py-1 text-sm font-bold transition-colors hover:bg-muted/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="flex items-center gap-2 rounded-full border border-border bg-card px-2.5 py-1 text-sm font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary">
               {userInitial}
             </span>
-            <span className="max-w-[8rem] truncate">{user.displayName || 'Utente'}</span>
+            <span className="max-w-[10rem] truncate font-quicksand">
+              {user.displayName || 'Utente'}
+            </span>
           </button>
         ) : (
           <Button

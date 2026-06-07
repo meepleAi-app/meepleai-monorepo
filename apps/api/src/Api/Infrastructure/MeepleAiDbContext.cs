@@ -125,6 +125,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<AlertRuleEntity> AlertRules => Set<AlertRuleEntity>(); // ISSUE-921: Dynamic alert rules
     public DbSet<StagingAllowlistEntity> StagingAllowlist => Set<StagingAllowlistEntity>(); // #845: DevOps Wave 1 staging email allowlist
     public DbSet<AlertConfigurationEntity> AlertConfigurations => Set<AlertConfigurationEntity>(); // ISSUE-921: Dynamic alert config
+    public DbSet<AlertChannelEntity> AlertChannels => Set<AlertChannelEntity>(); // Issue #1840 SP5 F4-C7: Per-channel alert notification config
     public DbSet<ServiceHealthStateEntity> ServiceHealthStates => Set<ServiceHealthStateEntity>(); // ISSUE-448: Service health monitoring
     public DbSet<DatabaseMetricsSnapshotEntity> DatabaseMetricsSnapshots => Set<DatabaseMetricsSnapshotEntity>(); // Database growth tracking
     public DbSet<UserBackupCodeEntity> UserBackupCodes => Set<UserBackupCodeEntity>(); // AUTH-07
@@ -155,6 +156,8 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameErrataEntity> GameErrata => Set<GameErrataEntity>(); // ISSUE-2370: Game errata
     public DbSet<SharedGameDeleteRequestEntity> SharedGameDeleteRequests => Set<SharedGameDeleteRequestEntity>(); // ISSUE-2370: Delete requests
     public DbSet<SharedGameDocumentEntity> SharedGameDocuments => Set<SharedGameDocumentEntity>(); // ISSUE-2391: Sprint 1 - PDF association
+    public DbSet<CatalogSeedDraftEntity> CatalogSeedDrafts => Set<CatalogSeedDraftEntity>(); // ISSUE-1903: Admin catalog seed workflow M1.3
+    public DbSet<BggTosHashEntity> BggTosHashes => Set<BggTosHashEntity>(); // ISSUE-1903: Admin catalog seed workflow M7.1 (BGG ToS hash watcher)
     public DbSet<GameStateTemplateEntity> GameStateTemplates => Set<GameStateTemplateEntity>(); // ISSUE-2400: Sprint 3 - Game state templates
     public DbSet<RulebookAnalysisEntity> RulebookAnalyses => Set<RulebookAnalysisEntity>(); // ISSUE-2402: Sprint 3 - Rulebook analysis service
     public DbSet<MechanicDraftEntity> MechanicDrafts => Set<MechanicDraftEntity>(); // Mechanic Extractor: Variant C draft workspace
@@ -169,6 +172,9 @@ public class MeepleAiDbContext : DbContext
     public DbSet<MechanicAnalysisMetricsEntity> MechanicAnalysisMetrics => Set<MechanicAnalysisMetricsEntity>(); // ADR-051 Sprint 1 / M2.0: per-run scoring snapshot
     public DbSet<CertificationThresholdsConfigEntity> CertificationThresholdsConfigs => Set<CertificationThresholdsConfigEntity>(); // ADR-051 Sprint 1 / M2.0: singleton thresholds config
     public DbSet<MechanicRecalcJobEntity> MechanicRecalcJobs => Set<MechanicRecalcJobEntity>(); // ADR-051 Sprint 2 / M2.1: async recalc pipeline jobs
+    public DbSet<CatalogSyncRunEntity> CatalogSyncRuns => Set<CatalogSyncRunEntity>(); // #1861: F4-A6 catalog sync run history (BGG / CSV / Manual)
+    public DbSet<EnrichmentQueueEntryEntity> EnrichmentQueueEntries => Set<EnrichmentQueueEntryEntity>(); // #1874: queued BGG enrichment requests
+    public DbSet<EnrichmentAttemptEntity> EnrichmentAttempts => Set<EnrichmentAttemptEntity>(); // #1874: BGG enrichment outcome history
     public DbSet<QuickQuestionEntity> QuickQuestions => Set<QuickQuestionEntity>(); // ISSUE-2401: Sprint 3 - Quick questions AI generation
     public DbSet<UserLibraryEntryEntity> UserLibraryEntries => Set<UserLibraryEntryEntity>(); // User Library feature
     public DbSet<WishlistItemEntity> WishlistItems => Set<WishlistItemEntity>(); // ISSUE-3917: Wishlist management
@@ -211,6 +217,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.LedgerEntry> LedgerEntries => Set<BoundedContexts.BusinessSimulations.Domain.Entities.LedgerEntry>(); // ISSUE-3720: Financial Ledger
     public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.CostScenario> CostScenarios => Set<BoundedContexts.BusinessSimulations.Domain.Entities.CostScenario>(); // ISSUE-3725: Agent Cost Calculator
     public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.ResourceForecast> ResourceForecasts => Set<BoundedContexts.BusinessSimulations.Domain.Entities.ResourceForecast>(); // ISSUE-3726: Resource Forecasting Simulator
+    public DbSet<Entities.BusinessSimulations.AppBudgetEntity> AppBudgets => Set<Entities.BusinessSimulations.AppBudgetEntity>(); // Issue #1838 SP5 F4-C5: Singleton global app spend budget
     public DbSet<BoundedContexts.KnowledgeBase.Domain.Entities.PlaygroundTestScenario> PlaygroundTestScenarios => Set<BoundedContexts.KnowledgeBase.Domain.Entities.PlaygroundTestScenario>(); // ISSUE-4396: Playground Test Scenarios
     public DbSet<BoundedContexts.EntityRelationships.Domain.Aggregates.EntityLink> EntityLinks => Set<BoundedContexts.EntityRelationships.Domain.Aggregates.EntityLink>(); // ISSUE-5132: Entity relationships
     public DbSet<BoundedContexts.SystemConfiguration.Domain.Entities.TierDefinition> TierDefinitions => Set<BoundedContexts.SystemConfiguration.Domain.Entities.TierDefinition>(); // D3: Tier system definitions
@@ -289,6 +296,9 @@ public class MeepleAiDbContext : DbContext
     // Issue #1675: KbQuality bounded context (per-doc quality eval) — Task 2
     public DbSet<BoundedContexts.KbQuality.Domain.Evaluation.DocumentEvaluationRun> DocumentEvaluationRuns => Set<BoundedContexts.KbQuality.Domain.Evaluation.DocumentEvaluationRun>();
     public DbSet<BoundedContexts.KbQuality.Domain.Budget.KbQualityBudgetCounter> KbQualityBudgetCounters => Set<BoundedContexts.KbQuality.Domain.Budget.KbQualityBudgetCounter>();
+
+    // Issue #1859: Provider key rotation — DB-backed credential store (encrypted via IDataProtector)
+    public DbSet<BoundedContexts.Administration.Domain.Aggregates.ProviderCredentials.ProviderCredential> ProviderCredentials => Set<BoundedContexts.Administration.Domain.Aggregates.ProviderCredentials.ProviderCredential>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -417,6 +427,10 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.ProcessingJob>();
         modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.ProcessingStep>();
         modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.StepLogEntry>();
+
+        // Issue #1928 Task B (DEC-B-8) — TestRunId column now explicit property on 5 persistence
+        // entities (see xxxEntity.cs files). Shadow property approach abandoned sessione 40 fase 1
+        // due to EF Core 9 + Npgsql null-after-save gotcha. Explicit column is production-proven.
     }
 
     /// <summary>

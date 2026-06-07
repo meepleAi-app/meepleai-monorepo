@@ -38,6 +38,7 @@ export const UserLibraryEntrySchema = z.object({
   gameYearPublished: z.number().nullable().optional(),
   gameIconUrl: z.string().nullable().optional(),
   gameImageUrl: z.string().nullable().optional(),
+  coverUrl: z.string().nullable().optional(),
   addedAt: z.string().datetime({ offset: true }),
   notes: z.string().nullable().optional(),
   isFavorite: z.boolean(),
@@ -326,6 +327,9 @@ export const GameDetailDtoSchema = z.object({
   checklist: z.array(LibraryChecklistItemSchema).nullable().optional(),
   customAgentConfig: z.any().nullable().optional(), // AgentConfigDto
   customPdf: LibraryCustomPdfSchema.nullable().optional(),
+
+  // Issue #1824 L3: user-custom cover R2 key (null if no custom cover)
+  customCoverR2Key: z.string().nullable().optional(),
 });
 
 export type GameDetailDto = z.infer<typeof GameDetailDtoSchema>;

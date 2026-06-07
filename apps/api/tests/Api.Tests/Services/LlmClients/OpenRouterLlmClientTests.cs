@@ -1,7 +1,8 @@
+using Api.BoundedContexts.Administration.Infrastructure.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Services;
 using Api.Services.LlmClients;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
@@ -17,9 +18,11 @@ namespace Api.Tests.Services.LlmClients;
 /// <summary>
 /// Comprehensive unit tests for OpenRouterLlmClient
 /// ISSUE-961: BGAI-019 - Complete LLM client testing
+/// ISSUE-1859: API key now resolved via IProviderCredentialResolver (DB→env-var cascade)
 /// </summary>
 public class OpenRouterLlmClientTests
 {
+    private const string TestApiKey = "sk-test-fake-key-12345";
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     [Fact]
@@ -292,12 +295,15 @@ public class OpenRouterLlmClientTests
         mockHttpClientFactory.Setup(f => f.CreateClient(It.IsAny<string>()))
             .Returns(httpClient);
 
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string>
-            {
-                ["OPENROUTER_API_KEY"] = "test-api-key-12345"
-            }!)
-            .Build();
+        // Resolver returns a fake API key — clients add it to the Authorization header per request.
+        var resolver = new Mock<IProviderCredentialResolver>();
+        resolver
+            .Setup(r => r.ResolveAsync(OpenRouterLlmClient.ProviderKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TestApiKey);
+
+        var services = new ServiceCollection();
+        services.AddSingleton(resolver.Object);
+        var scopeFactory = services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
 
         var mockCostCalculator = new Mock<ILlmCostCalculator>();
         mockCostCalculator.Setup(c => c.CalculateCost(
@@ -318,7 +324,7 @@ public class OpenRouterLlmClientTests
 
         var logger = Mock.Of<ILogger<OpenRouterLlmClient>>();
 
-        return new OpenRouterLlmClient(mockHttpClientFactory.Object, config, mockCostCalculator.Object, logger);
+        return new OpenRouterLlmClient(mockHttpClientFactory.Object, scopeFactory, mockCostCalculator.Object, logger);
     }
 
     private sealed class StubHttpMessageHandler : HttpMessageHandler
@@ -336,4 +342,3 @@ public class OpenRouterLlmClientTests
         }
     }
 }
-

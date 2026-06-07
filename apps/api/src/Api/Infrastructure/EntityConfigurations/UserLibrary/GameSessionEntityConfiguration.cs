@@ -60,6 +60,16 @@ internal class GameSessionEntityConfiguration : IEntityTypeConfiguration<UserGam
         builder.HasIndex(e => new { e.UserLibraryEntryId, e.PlayedAt })
             .HasDatabaseName("ix_game_sessions_entry_played");
 
+        // Issue #1929 Task C Macro 4 (DEC-B-8, DEC-C-10 REVISION) — TestRunId partial index.
+        // Null for production entities; non-null only when seeded via Testing BC.
+        builder.Property(e => e.TestRunId)
+            .HasMaxLength(64)
+            .IsRequired(false);
+
+        builder.HasIndex(e => e.TestRunId)
+            .HasDatabaseName("ix_game_sessions_test_run_id")
+            .HasFilter("\"test_run_id\" IS NOT NULL");
+
         // Check constraints for domain validation
         builder.ToTable(t =>
         {

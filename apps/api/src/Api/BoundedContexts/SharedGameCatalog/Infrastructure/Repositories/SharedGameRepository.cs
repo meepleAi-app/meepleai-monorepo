@@ -140,7 +140,8 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             entity.BggId,
             entity.AgentDefinitionId,
             (GameDataStatus)entity.GameDataStatus,
-            entity.HasUploadedPdf);
+            entity.HasUploadedPdf,
+            pdfCoverR2Key: entity.PdfCoverR2Key);
     }
 
     private static SharedGameEntity MapToEntity(SharedGame game)
@@ -166,6 +167,7 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             RulesLanguage = game.Rules?.Language,
             RulesExternalUrl = game.Rules?.ExternalUrl,
             HasUploadedPdf = game.HasUploadedPdf,
+            PdfCoverR2Key = game.PdfCoverR2Key,
             // SearchVector managed by PostgreSQL trigger
             CreatedBy = game.CreatedBy,
             ModifiedBy = game.ModifiedBy,
@@ -223,5 +225,14 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             .ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
+    }
+
+    public async Task<int> CountAllAsync(CancellationToken cancellationToken = default)
+    {
+        return await DbContext.SharedGames
+            .AsNoTracking()
+            .Where(g => !g.IsDeleted)
+            .CountAsync(cancellationToken)
+            .ConfigureAwait(false);
     }
 }

@@ -96,6 +96,20 @@ else if (isCIEnv)
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Issue #1928 Task B (DEC-B-4) — Triple gate STARTUP fail-fast.
+// Refuses to start if BOTH E2E_SEEDING_ENABLED=true AND ASPNETCORE_ENVIRONMENT=Production.
+// Defense-in-depth: even if a deployment misconfigures the flag, the app refuses to
+// boot rather than expose admin test endpoints in production.
+// Component 1/3 of triple gate (Component 2/3: endpoint conditional registration in
+// Program.cs ~line 840; Component 3/3: RequireAdminSessionFilter at endpoint group level).
+if (builder.Environment.IsProduction()
+    && builder.Configuration.GetValue<bool>("E2E_SEEDING_ENABLED"))
+{
+    throw new InvalidOperationException(
+        "E2E_SEEDING_ENABLED=true is FORBIDDEN in Production environment. " +
+        "Refusing to start. See docs/for-developers/testing/e2e-entity-seeding.md.");
+}
+
 // OPS-04: Configure Serilog with environment-based settings and sensitive data redaction
 Log.Logger = LoggingConfiguration.ConfigureSerilog(builder).CreateLogger();
 
@@ -270,6 +284,7 @@ builder.Services.Configure<LlmQueryComplexityRoutingOptions>(
 builder.Services.Configure<HybridSearchConfiguration>(builder.Configuration.GetSection("HybridSearch")); // AI-14: Hybrid search configuration
 builder.Services.Configure<WeeklyEvaluationConfiguration>(builder.Configuration.GetSection("QualityEvaluation")); // BGAI-042: Weekly evaluation configuration
 builder.Services.Configure<BggImportQueueConfiguration>(builder.Configuration.GetSection("BggImportQueue")); // ISSUE-3541: BGG import queue configuration
+builder.Services.Configure<CatalogSyncCronConfiguration>(builder.Configuration.GetSection("CatalogSyncCron")); // #1861: catalog sync cron service
 builder.Services.Configure<Api.BoundedContexts.Administration.Infrastructure.External.PrometheusOptions>(builder.Configuration.GetSection("Prometheus")); // Issue #893: Prometheus HTTP client configuration
 builder.Services.Configure<IndexingSettings>(builder.Configuration.GetSection(IndexingSettings.SectionName)); // ISSUE-3197: Vector indexing batch configuration
 
@@ -836,6 +851,17 @@ if (!app.Environment.IsProduction())
 app.MapAdminBulkImportEndpoints();       // Issue #4354: Bulk import endpoint routing
 app.MapAdminProviderEndpoints();         // Issue #936: Provider token probe observability
 v1Api.MapGroup("/admin/catalog-ingestion").MapAdminCatalogIngestionEndpoints(); // Admin bulk Excel import + enrichment
+v1Api.MapGroup("/admin/catalog/seeds").MapAdminCatalogSeedEndpoints();          // Issue #1903 M6.2: admin catalog seed pipeline
+
+// Issue #1928 Task B (DEC-B-1 + DEC-B-4) — E2E test seeding endpoints, triple-gated:
+// Component 2/3: conditional registration ENV != Production + E2E_SEEDING_ENABLED=true
+// Component 1/3 (startup fail-fast) is registered earlier in Program.cs (T6).
+// Component 3/3 (RequireAdminSessionFilter) is at endpoint group level.
+if (!app.Environment.IsProduction()
+    && app.Configuration.GetValue<bool>("E2E_SEEDING_ENABLED"))
+{
+    v1Api.MapGroup("/admin/test/seed").MapAdminTestSeedEndpoints();
+}
 app.MapPdfAnalyticsEndpoints();          // Issue #3715: PDF analytics dashboard
 app.MapChatAnalyticsEndpoints();         // Issue #3714: Chat analytics dashboard
 app.MapModelPerformanceEndpoints();      // Issue #3716: Model performance dashboard
@@ -883,6 +909,8 @@ v1Api.MapAdminSeedingEndpoints();      // Epic #318: Admin seeding re-trigger
 v1Api.MapAlertEndpoints();             // Alert management
 v1Api.MapAlertConfigEndpoints();       // Alert rules (Issue #921)
 v1Api.MapAlertConfigurationEndpoints(); // Alert configuration (Issue #915)
+v1Api.MapAdminMetricsEndpoints();      // SP5 F4-C7 #1840: Prometheus metric labels passthrough
+v1Api.MapAlertChannelsEndpoints();     // SP5 F4-C7 #1840: Email/Slack channel CRUD + test-connection
 v1Api.MapNotificationEndpoints();      // User notifications (Issue #2053)
 v1Api.MapNotificationPreferencesEndpoints(); // Notification preferences (Issue #4220)
 v1Api.MapSlackIntegrationEndpoints();        // Slack OAuth connect/disconnect/status
@@ -936,6 +964,7 @@ v1Api.MapGroup("/rag").MapRagStrategyEndpoints(); // Issue #8: Public RAG strate
 
 // Business Simulations
 v1Api.MapBudgetEndpoints();           // Budget display system (credit tracking)
+v1Api.MapAdminBudgetEndpoints();     // SP5 F4-C5 #1838: Singleton AppBudget config (GET + PUT /admin/budget)
 v1Api.MapFinancialLedgerEndpoints();  // Financial Ledger CRUD (Issue #3722)
 v1Api.MapCostCalculatorEndpoints();   // Agent Cost Calculator (Issue #3725)
 v1Api.MapResourceForecastEndpoints(); // Resource Forecasting Simulator (Issue #3726)

@@ -16,11 +16,6 @@ import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { api } from '@/lib/api';
 import { fetchUserGamebooks } from '@/lib/api/gamebooks-list';
 import type { LibraryActivityItem } from '@/lib/api/schemas/library-activity.schemas';
-import {
-  libraryFixtures,
-  parseLibraryStateOverride,
-  STATE_OVERRIDE_ENABLED,
-} from '@/lib/library/visual-test-fixture';
 import type {
   PaginatedLibraryResponse,
   UserLibraryStats,
@@ -40,6 +35,11 @@ import type {
   PrivateGameDto,
   AddPrivateGameRequest,
 } from '@/lib/api/schemas/private-games.schemas';
+import {
+  libraryFixtures,
+  parseLibraryStateOverride,
+  STATE_OVERRIDE_ENABLED,
+} from '@/lib/library/visual-test-fixture';
 
 import { sharedGamesKeys } from './useSharedGames';
 
@@ -825,6 +825,8 @@ export interface LibraryGameDetail {
     players: string | null;
     notes: string | null;
   }>;
+  // Issue #1824 L3: user-custom cover R2 key (null if no custom cover)
+  customCoverR2Key?: string | null;
 }
 
 /**
@@ -1013,6 +1015,8 @@ export function useLibraryGameDetail(
         avgDuration: gameDetail.avgDuration,
         // Recent sessions
         recentSessions: gameDetail.recentSessions ?? undefined,
+        // Issue #1824 L3: user-custom cover R2 key
+        customCoverR2Key: gameDetail.customCoverR2Key ?? null,
       };
 
       // Add extended info from SharedGame if available (categories, mechanics, designers)

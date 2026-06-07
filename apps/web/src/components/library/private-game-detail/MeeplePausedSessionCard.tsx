@@ -107,6 +107,7 @@ export function MeeplePausedSessionCard({
         metadata={metadata}
         badge={isOld ? 'Vecchia' : undefined}
         connections={connections}
+        headingLevel={2}
         actions={[
           {
             icon: PlayIcon,

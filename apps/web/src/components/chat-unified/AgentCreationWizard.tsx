@@ -230,6 +230,7 @@ function GameCollectionPicker({
                 variant="compact"
                 title={entry.gameTitle}
                 imageUrl={entry.gameImageUrl ?? undefined}
+                headingLevel={2}
               />
             </button>
           ))}

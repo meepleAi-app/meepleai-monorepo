@@ -15,6 +15,8 @@ import { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+import { CustomCoverDialog } from '@/components/features/library/custom-cover/CustomCoverDialog';
+import { EditCoverOverlay } from '@/components/features/library/custom-cover/EditCoverOverlay';
 import { FocusedGameCard } from '@/components/game-detail/mobile/FocusedGameCard';
 import { GameDetailsDrawer } from '@/components/game-detail/mobile/GameDetailsDrawer';
 import { type GameTabId } from '@/components/game-detail/tabs';
@@ -33,6 +35,7 @@ export default function GameDetailMobile({ gameId }: GameDetailMobileProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [initialTab, setInitialTab] = useState<GameTabId>('info');
   const [sessionSheetOpen, setSessionSheetOpen] = useState(false);
+  const [coverDialogOpen, setCoverDialogOpen] = useState(false);
 
   const handleOpenDrawer = () => {
     setInitialTab('info');
@@ -84,13 +87,21 @@ export default function GameDetailMobile({ gameId }: GameDetailMobileProps) {
     );
   }
 
+  const hasCustomCover = Boolean(game.customCoverR2Key);
+
   return (
     <div className="flex h-full flex-col" data-testid="game-detail-mobile">
-      <FocusedGameCard
-        game={game}
-        onOpenDrawer={handleOpenDrawer}
-        onStartSession={() => setSessionSheetOpen(true)}
-      />
+      <div className="group relative flex-1">
+        <FocusedGameCard
+          game={game}
+          onOpenDrawer={handleOpenDrawer}
+          onStartSession={() => setSessionSheetOpen(true)}
+        />
+        <EditCoverOverlay
+          onEditClick={() => setCoverDialogOpen(true)}
+          hasCustomCover={hasCustomCover}
+        />
+      </div>
       <GameDetailsDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
@@ -103,6 +114,12 @@ export default function GameDetailMobile({ gameId }: GameDetailMobileProps) {
         onOpenChange={setSessionSheetOpen}
         gameId={gameId}
         gameName={game.gameTitle}
+      />
+      <CustomCoverDialog
+        gameId={game.gameId}
+        open={coverDialogOpen}
+        onClose={() => setCoverDialogOpen(false)}
+        hasCustomCover={hasCustomCover}
       />
     </div>
   );

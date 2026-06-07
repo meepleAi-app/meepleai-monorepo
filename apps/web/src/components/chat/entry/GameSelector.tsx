@@ -99,6 +99,7 @@ function GameGrid({
                 variant="compact"
                 title={game.title}
                 className={cn(selectedGameId === game.id && 'border-amber-500')}
+                headingLevel={2}
               />
             </button>
           ))

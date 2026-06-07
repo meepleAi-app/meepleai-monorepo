@@ -49,6 +49,11 @@ public class GameNightSessionEntity
     [Column("completed_at")]
     public DateTimeOffset? CompletedAt { get; set; }
 
+    /// <summary>Issue #1928 Task B (DEC-B-8) — E2E test seeding scope marker.</summary>
+    [Column("test_run_id")]
+    [MaxLength(64)]
+    public string? TestRunId { get; set; }
+
     // Navigation
     public GameNightEventEntity GameNightEvent { get; set; } = null!;
 }

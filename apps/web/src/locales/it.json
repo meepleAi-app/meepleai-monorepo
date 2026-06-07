@@ -219,7 +219,11 @@
       "error": "Codice non valido. Riprova.",
       "submit": "Verifica",
       "title": "Autenticazione a due fattori",
-      "verificationSubtitle": "Inserisci il codice dell'app di autenticazione per continuare."
+      "verificationSubtitle": "Inserisci il codice dell'app di autenticazione per continuare.",
+      "submitting": "Verifica in corso...",
+      "codeRequired": "Inserisci un codice a 6 cifre",
+      "codeInvalid": "Codice non valido",
+      "rememberDevice": "Ricorda questo dispositivo per 30 giorni"
     },
     "emailVerification": {
       "pageTitle": "Verifica email",
@@ -377,6 +381,16 @@
           "resolved": "Incidente risolto"
         }
       }
+    },
+    "entity": {
+      "game": "Gioco",
+      "agent": "Agente",
+      "session": "Sessione",
+      "kb": "KB",
+      "player": "Giocatori",
+      "chat": "Chat",
+      "event": "Eventi",
+      "toolkit": "Toolkit"
     }
   },
   "comments": {
@@ -2060,6 +2074,23 @@
           "loading": "Caricamento gioco — MeepleAI",
           "notFound": "Gioco non trovato — MeepleAI"
         }
+      },
+      "addGame": {
+        "drawerTitle": "Aggiungi un gioco",
+        "manualTitle": "Aggiungi gioco manualmente",
+        "catalogTitle": "Aggiungi da catalogo",
+        "question": "Come vuoi aggiungere il tuo gioco?",
+        "manualLabel": "Aggiungi manualmente",
+        "manualDescription": "Inserisci i dettagli del gioco. Potrai caricare il regolamento e configurare l'agente AI dalla pagina di dettaglio.",
+        "catalogLabel": "Da catalogo condiviso",
+        "catalogDescription": "Cerca nel catalogo della community e aggiungi un gioco con un click. Regolamento e setup agente in seguito."
+      },
+      "catalogPagination": {
+        "firstPage": "Prima pagina",
+        "previousPage": "Pagina precedente",
+        "nextPage": "Pagina successiva",
+        "lastPage": "Ultima pagina",
+        "pageNumber": "Pagina {n}"
       }
     },
     "discover": {

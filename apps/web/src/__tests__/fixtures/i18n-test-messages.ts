@@ -31,6 +31,16 @@ export const twoFactorVerificationMessages = {
   'auth.2fa.verifying': 'Verifying...',
   'auth.2fa.verify': 'Verify',
   'auth.2fa.useBackupCode': 'Use a backup code instead',
+  // #1816 P3-4 — TwoFactorVerification migrated from auth.2fa.* to auth.twoFactor.*
+  // namespace + removed duplicate inline h2/p header (AuthCard/Dialog wrappers
+  // already provide the heading). These keys mirror the runtime locales.
+  'auth.twoFactor.code': 'Verification code',
+  'auth.twoFactor.submit': 'Verify',
+  'auth.twoFactor.submitting': 'Verifying...',
+  'auth.twoFactor.codeRequired': 'Please enter a 6-digit code',
+  'auth.twoFactor.codeInvalid': 'Invalid code format',
+  'auth.twoFactor.rememberDevice': 'Trust this device for 30 days',
+  'auth.twoFactor.backupCode': 'Use a backup code instead',
 } as const;
 
 // =============================================================================
@@ -339,6 +349,43 @@ export const libraryGameDetailHeaderMessages = {
 // All Test Messages (combined)
 // =============================================================================
 
+// =============================================================================
+// #1816 P3 batched i18n — pages.library + common.entity (catalog pagination,
+// AddGameDrawer, ChatNavigationContext)
+// =============================================================================
+
+export const catalogPaginationMessages = {
+  'pages.library.catalogPagination.firstPage': 'First page',
+  'pages.library.catalogPagination.previousPage': 'Previous page',
+  'pages.library.catalogPagination.nextPage': 'Next page',
+  'pages.library.catalogPagination.lastPage': 'Last page',
+  'pages.library.catalogPagination.pageNumber': 'Page {n}',
+} as const;
+
+export const addGameDrawerMessages = {
+  'pages.library.addGame.drawerTitle': 'Add a game',
+  'pages.library.addGame.manualTitle': 'Add game manually',
+  'pages.library.addGame.catalogTitle': 'Add from catalog',
+  'pages.library.addGame.question': 'How do you want to add your game?',
+  'pages.library.addGame.manualLabel': 'Add manually',
+  'pages.library.addGame.manualDescription':
+    'Enter the game details. You can upload the rulebook and configure the AI agent later from the game detail page.',
+  'pages.library.addGame.catalogLabel': 'From shared catalog',
+  'pages.library.addGame.catalogDescription':
+    'Search the community catalog and add a game in one click. Rulebook and AI agent setup come later.',
+} as const;
+
+export const entityLabelMessages = {
+  'common.entity.game': 'Game',
+  'common.entity.agent': 'Agent',
+  'common.entity.session': 'Session',
+  'common.entity.kb': 'KB',
+  'common.entity.player': 'Players',
+  'common.entity.chat': 'Chat',
+  'common.entity.event': 'Events',
+  'common.entity.toolkit': 'Toolkit',
+} as const;
+
 export const allTestMessages: Record<string, string> = {
   ...oauthMessages,
   ...twoFactorVerificationMessages,
@@ -350,6 +397,9 @@ export const allTestMessages: Record<string, string> = {
   ...settingsLabels,
   ...playRecordsIndexMessages,
   ...libraryGameDetailHeaderMessages,
+  ...catalogPaginationMessages,
+  ...addGameDrawerMessages,
+  ...entityLabelMessages,
 };
 
 // =============================================================================

@@ -228,7 +228,11 @@
       "error": "Invalid code. Please try again.",
       "submit": "Verify",
       "title": "Two-Factor Authentication",
-      "verificationSubtitle": "Enter the code from your authenticator app to continue."
+      "verificationSubtitle": "Enter the code from your authenticator app to continue.",
+      "submitting": "Verifying...",
+      "codeRequired": "Please enter a 6-digit code",
+      "codeInvalid": "Invalid code format",
+      "rememberDevice": "Trust this device for 30 days"
     },
     "emailVerification": {
       "pageTitle": "Email verification",
@@ -386,6 +390,16 @@
           "resolved": "Incident resolved"
         }
       }
+    },
+    "entity": {
+      "game": "Game",
+      "agent": "Agent",
+      "session": "Session",
+      "kb": "KB",
+      "player": "Players",
+      "chat": "Chat",
+      "event": "Events",
+      "toolkit": "Toolkit"
     }
   },
   "comments": {
@@ -2010,6 +2024,23 @@
           "loading": "Loading game — MeepleAI",
           "notFound": "Game not found — MeepleAI"
         }
+      },
+      "addGame": {
+        "drawerTitle": "Add a game",
+        "manualTitle": "Add game manually",
+        "catalogTitle": "Add from catalog",
+        "question": "How do you want to add your game?",
+        "manualLabel": "Add manually",
+        "manualDescription": "Enter the game details. You can upload the rulebook and configure the AI agent later from the game detail page.",
+        "catalogLabel": "From shared catalog",
+        "catalogDescription": "Search the community catalog and add a game in one click. Rulebook and AI agent setup come later."
+      },
+      "catalogPagination": {
+        "firstPage": "First page",
+        "previousPage": "Previous page",
+        "nextPage": "Next page",
+        "lastPage": "Last page",
+        "pageNumber": "Page {n}"
       }
     },
     "discover": {

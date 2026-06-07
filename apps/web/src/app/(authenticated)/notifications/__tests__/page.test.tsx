@@ -13,12 +13,18 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import NotificationsPage from '../page';
 import type { NotificationDto } from '@/lib/api';
 import { EMPTY } from '../../../../__tests__/fixtures/test-strings';
+// #1816 P3-i18n: CatalogPagination (rendered when notifications > 20) calls
+// useTranslation which requires IntlProvider in the tree. Use renderWithIntl
+// for all tests so the paginated case has the provider available.
+import { renderWithIntl } from '../../../../__tests__/fixtures/common-fixtures';
+
+const render = renderWithIntl;
 
 // ============================================================================
 // Mocks

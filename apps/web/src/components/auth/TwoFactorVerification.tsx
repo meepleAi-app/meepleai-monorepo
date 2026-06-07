@@ -83,9 +83,9 @@ export function TwoFactorVerification({
   const verificationSchema = z.object({
     code: z
       .string()
-      .min(6, t('auth.2fa.codeRequired', 'Please enter a 6-digit code'))
-      .max(8, t('auth.2fa.codeInvalid', 'Code must be 6-8 characters')) // Allow backup codes (8 chars)
-      .regex(/^[0-9A-Za-z-]+$/, t('auth.2fa.codeInvalid', 'Invalid code format')),
+      .min(6, t('auth.twoFactor.codeRequired'))
+      .max(8, t('auth.twoFactor.codeInvalid')) // Allow backup codes (8 chars)
+      .regex(/^[0-9A-Za-z-]+$/, t('auth.twoFactor.codeInvalid')),
     rememberDevice: z.boolean().default(false),
   });
 
@@ -150,20 +150,20 @@ export function TwoFactorVerification({
     setValue('code', value, { shouldValidate: true });
   };
 
+  // Header rendering: AuthCard / Dialog wrappers already supply h1 + subtitle.
+  // The component renders an optional inline header ONLY when `title` is
+  // passed explicitly (rare); default usage (no title prop) skips the block to
+  // avoid a duplicate heading inside the wrapper. Audit ref: #1816 § P3 2FA i18n.
+  const showInlineHeader = Boolean(title) || Boolean(subtitle);
+
   return (
-    <div
-      className="w-full max-w-md space-y-6"
-      data-testid="two-factor-verification"
-    >
-      {/* Header */}
-      <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold text-foreground">
-          {title || t('auth.2fa.verificationTitle', 'Two-Factor Authentication')}
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          {subtitle || t('auth.2fa.verificationSubtitle', 'Enter the 6-digit code from your authenticator app')}
-        </p>
-      </div>
+    <div className="w-full max-w-md space-y-6" data-testid="two-factor-verification">
+      {showInlineHeader && (
+        <div className="text-center space-y-2">
+          {title && <h2 className="text-2xl font-bold text-foreground">{title}</h2>}
+          {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+        </div>
+      )}
 
       <form
         onSubmit={handleSubmit(onFormSubmit)}
@@ -174,11 +174,11 @@ export function TwoFactorVerification({
         {/* Code Input */}
         <div className="space-y-2">
           <Label htmlFor="2fa-code" className="sr-only">
-            {t('auth.2fa.codeLabel', 'Verification Code')}
+            {t('auth.twoFactor.code')}
           </Label>
           <input
             {...register('code')}
-            ref={(e) => {
+            ref={e => {
               register('code').ref(e);
               inputRef.current = e;
             }}
@@ -196,11 +196,7 @@ export function TwoFactorVerification({
             data-testid="2fa-code-input"
           />
           {errors.code && (
-            <p
-              id="2fa-code-error"
-              className="text-sm text-destructive"
-              role="alert"
-            >
+            <p id="2fa-code-error" className="text-sm text-destructive" role="alert">
               {errors.code.message}
             </p>
           )}
@@ -224,7 +220,7 @@ export function TwoFactorVerification({
             <Checkbox
               id="remember-device"
               checked={watch('rememberDevice')}
-              onCheckedChange={(checked) => setValue('rememberDevice', !!checked)}
+              onCheckedChange={checked => setValue('rememberDevice', !!checked)}
               disabled={isLoading}
               data-testid="remember-device-checkbox"
             />
@@ -232,7 +228,7 @@ export function TwoFactorVerification({
               htmlFor="remember-device"
               className="text-sm text-muted-foreground cursor-pointer"
             >
-              {t('auth.2fa.rememberDevice', 'Trust this device for 30 days')}
+              {t('auth.twoFactor.rememberDevice')}
             </Label>
           </div>
         )}
@@ -242,11 +238,11 @@ export function TwoFactorVerification({
           type="submit"
           className="w-full"
           isLoading={isLoading}
-          loadingText={t('auth.2fa.verifying', 'Verifying...')}
+          loadingText={t('auth.twoFactor.submitting')}
           disabled={codeValue.length < 6}
           data-testid="2fa-verify-button"
         >
-          {t('auth.2fa.verify', 'Verify')}
+          {t('auth.twoFactor.submit')}
         </LoadingButton>
 
         {/* Backup Code Link */}
@@ -259,7 +255,7 @@ export function TwoFactorVerification({
               className="text-sm text-primary hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="use-backup-code-link"
             >
-              {t('auth.2fa.useBackupCode', 'Use a backup code instead')}
+              {t('auth.twoFactor.backupCode')}
             </button>
           </div>
         )}
@@ -274,7 +270,7 @@ export function TwoFactorVerification({
               className="text-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
               data-testid="2fa-cancel-button"
             >
-              {t('common.cancel', 'Cancel')}
+              {t('common.cancel')}
             </button>
           </div>
         )}

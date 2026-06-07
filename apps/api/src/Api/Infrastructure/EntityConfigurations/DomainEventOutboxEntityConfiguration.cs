@@ -79,17 +79,35 @@ internal sealed class DomainEventOutboxEntityConfiguration : IEntityTypeConfigur
             .HasColumnName("correlation_id")
             .HasMaxLength(128);
 
+        // F6 (Issue #1535 T6 code review): optimistic concurrency token via Postgres-native
+        // `xmin` (the row's transaction id, automatically updated on every UPDATE). Mapping
+        // to `xmin` avoids a real RowVersion column and any associated migration — Npgsql
+        // handles the IsRowVersion/IsConcurrencyToken pair as a shadow read of the system
+        // column. Every UPDATE that doesn't match the loaded xmin raises
+        // DbUpdateConcurrencyException, surfacing concurrent admin/processor races as a
+        // catchable signal instead of a silent lost-update.
+        builder.Property(e => e.RowVersion)
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
+
         // Hot path: processor poll. Partial index — Sent/Failed rows excluded.
         // Ordering: NextAttemptAt then EnqueuedAt. Rows with NextAttemptAt NULL
         // (first attempt) collate ahead of those with a future schedule.
+        //
+        // F8: filter literal MUST be smallint-typed (`0::smallint`) for the Postgres
+        // planner to match the partial-index predicate against the Npgsql-parameterised
+        // query (`WHERE status = @p0` with @p0 typed smallint). Without the explicit
+        // cast, predicate matching can degrade to seq-scan on the hot poll path.
         builder.HasIndex(e => new { e.NextAttemptAt, e.EnqueuedAt })
             .HasDatabaseName("ix_domain_event_outbox_pending")
-            .HasFilter("status = 0");
+            .HasFilter("status = 0::smallint");
 
-        // Ops dashboard: list recent terminal failures.
+        // Ops dashboard: list recent terminal failures. Same smallint literal rationale.
         builder.HasIndex(e => e.EnqueuedAt)
             .IsDescending()
             .HasDatabaseName("ix_domain_event_outbox_failed_recent")
-            .HasFilter("status = 2");
+            .HasFilter("status = 2::smallint");
     }
 }

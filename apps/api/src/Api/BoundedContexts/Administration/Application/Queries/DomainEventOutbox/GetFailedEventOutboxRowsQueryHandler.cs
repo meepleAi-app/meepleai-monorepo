@@ -8,8 +8,18 @@ namespace Api.BoundedContexts.Administration.Application.Queries.DomainEventOutb
 
 /// <summary>
 /// Handler for <see cref="GetFailedEventOutboxRowsQuery"/>. Orders by
-/// <c>EnqueuedAt</c> DESC (most-recent failures first) so an operator who opens
-/// the admin panel after a poison-message spike sees the newest rows at the top.
+/// <c>EnqueuedAt</c> DESC — the partial index
+/// <c>ix_domain_event_outbox_failed_recent</c> is built on the same column for
+/// O(limit) lookups.
+///
+/// <para><b>Caveat: ordering is by enqueue time, NOT by the moment the row
+/// transitioned to Failed.</b> <see cref="DomainEventOutboxEntity.MarkFailed"/>
+/// does not update <c>EnqueuedAt</c>. So a row enqueued 6h ago that retried for
+/// hours and failed terminally 30s ago will appear BEHIND a row enqueued 5min
+/// ago that failed on first attempt. Operators investigating a poison-message
+/// spike should cross-reference <c>Attempts</c> + <c>LastError</c> to identify
+/// the actual recent failures. A future <c>FailedAt</c> column is tracked as
+/// follow-up if this becomes a real triage blocker.</para>
 ///
 /// Issue #1535 T6.
 /// </summary>

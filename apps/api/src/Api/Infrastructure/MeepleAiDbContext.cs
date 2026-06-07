@@ -28,12 +28,25 @@ namespace Api.Infrastructure;
 
 public class MeepleAiDbContext : DbContext
 {
+    /// <summary>
+    /// F4: AsyncLocal recursion depth counter for the Hybrid-mode inline-dispatch loop.
+    /// When the processor drains an outbox row and the dispatched handler mutates an
+    /// aggregate then calls <c>_db.SaveChangesAsync</c>, the override re-enters with the
+    /// SAME ambient async context — so this counter is incremented at the top of
+    /// SaveChangesAsync and decremented in a finally. Depth &gt; 1 in Hybrid mode SKIPS
+    /// the inline dispatch and relies on the outbox row alone, preventing unbounded
+    /// recursion inside the processor's open transaction. Static + AsyncLocal so it
+    /// survives the scope-per-call pattern that DI typically uses.
+    /// </summary>
+    private static readonly AsyncLocal<int> SaveChangesRecursionDepth = new();
+
     private readonly IMediator _mediator;
     private readonly IDomainEventCollector _eventCollector;
     private readonly IDataProtectionProvider? _dataProtectionProvider;
     private readonly ILogger<MeepleAiDbContext>? _logger;
     private readonly bool _isInMemoryDatabase;
     private readonly DomainEventDispatchMode _dispatchMode;
+    private readonly TimeProvider _timeProvider;
 
     public MeepleAiDbContext(
         DbContextOptions<MeepleAiDbContext> options,
@@ -41,7 +54,8 @@ public class MeepleAiDbContext : DbContext
         IDomainEventCollector eventCollector,
         IDataProtectionProvider? dataProtectionProvider = null,
         ILogger<MeepleAiDbContext>? logger = null,
-        IOptions<DomainEventOutboxOptions>? domainEventOutboxOptions = null)
+        IOptions<DomainEventOutboxOptions>? domainEventOutboxOptions = null,
+        TimeProvider? timeProvider = null)
         : base(options)
     {
         _mediator = mediator;
@@ -52,6 +66,11 @@ public class MeepleAiDbContext : DbContext
         // rollout window in prod). Hybrid is the safe default — same as pre-#1535 behaviour
         // plus an additive outbox row.
         _dispatchMode = domainEventOutboxOptions?.Value.Mode ?? DomainEventDispatchMode.Hybrid;
+        // Issue #1535 T6 code review: EnqueueOutboxRows used DateTimeOffset.UtcNow directly,
+        // breaking test determinism (the processor uses TimeProvider). Default to
+        // TimeProvider.System so production behaviour is unchanged; tests can inject a
+        // FakeTimeProvider to make EnqueuedAt deterministic across the writer + reader paths.
+        _timeProvider = timeProvider ?? TimeProvider.System;
 
         // Issue #3578: Detect InMemory provider for unit tests
         // Check extensions to see if InMemory provider is being used
@@ -462,7 +481,37 @@ public class MeepleAiDbContext : DbContext
     /// 5. Dispatch each event via MediatR; handler failures log ERROR but don't
     ///    rollback the durable record (it's already committed).
     /// </summary>
+    /// <summary>
+    /// Issue #1535 T6 code review (F11): admin-side handlers that mutate
+    /// <c>domain_event_outbox</c> rows (e.g. <c>RetryEventOutboxRowCommandHandler</c>)
+    /// should NOT route through the overridden <see cref="SaveChangesAsync"/> — its
+    /// step 2b would enqueue any incidentally-collected scoped event as a phantom
+    /// outbox row. This wrapper exposes the BASE DbContext save so the admin path
+    /// commits the rearm without re-firing the routing pipeline.
+    ///
+    /// <para>Visible to <c>Api.Tests</c> via <c>[InternalsVisibleTo]</c>; intentionally
+    /// non-public so general application code is steered toward the standard override.</para>
+    /// </summary>
+    internal Task<int> SaveChangesWithoutDomainEventDispatchAsync(CancellationToken cancellationToken = default)
+        => base.SaveChangesAsync(cancellationToken);
+
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        // F4: track recursion depth so the Hybrid-mode inline dispatch (step 5) can
+        // SKIP when re-entered from a handler. The outbox row is still committed in
+        // step 2b so the post-commit processor will dispatch the nested event.
+        SaveChangesRecursionDepth.Value++;
+        try
+        {
+            return await SaveChangesAsyncCore(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            SaveChangesRecursionDepth.Value--;
+        }
+    }
+
+    private async Task<int> SaveChangesAsyncCore(CancellationToken cancellationToken)
     {
         // Step 1: snapshot events from the collector (non-destructive).
         // Guard against unconfigured Mock collectors in test code paths that
@@ -510,6 +559,21 @@ public class MeepleAiDbContext : DbContext
             return result;
         }
 
+        // F4: in Hybrid mode, SKIP the inline dispatch when re-entered from a handler.
+        // The outbox row was already added in step 2b → the processor will dispatch the
+        // nested event post-commit. Without this guard, a handler that mutates an aggregate
+        // and calls SaveChangesAsync triggers unbounded recursion INSIDE the processor's
+        // open transaction, holding row-level locks and risking stack overflow on a long
+        // handler chain. InlineOnly preserves the legacy behavior intentionally (no outbox
+        // row to fall back on), so the depth guard is Hybrid-specific.
+        if (_dispatchMode == DomainEventDispatchMode.Hybrid && SaveChangesRecursionDepth.Value > 1)
+        {
+            _logger?.LogDebug(
+                "Skipping inline MediatR.Publish at SaveChangesAsync recursion depth {Depth}: {EventCount} event(s) will dispatch via the outbox processor instead",
+                SaveChangesRecursionDepth.Value, pendingEvents.Count);
+            return result;
+        }
+
         foreach (var domainEvent in pendingEvents)
         {
             try
@@ -526,12 +590,12 @@ public class MeepleAiDbContext : DbContext
                     domainEvent.GetType().Name, domainEvent.EventId);
 
                 // G2 (#1590 AC7): expose the otherwise-silent handler crash.
-                // event_type uses the registry alias (CLR-type fallback) so it JOINS with the
-                // G1 inserted.total counter on the same label value. handler_name uses the CLR
-                // type name because MediatR.Publish dispatches to all handlers internally — the
-                // specific failing handler is not available in this scope (acceptable for v1;
-                // only SessionFinalizedEvent has >1 handler).
-                var eventAlias = EventTypeRegistry.TryResolve(domainEvent) ?? domainEvent.GetType().Name;
+                // event_type uses EventTypeRegistry.ResolveOrFullName so it JOINS with the G1
+                // inserted.total counter AND the #1535 outbox counters on the SAME label value
+                // for the same event class (registered alias OR FullName fallback). Issue #1535
+                // T6 review fixed a divergence here where this path used GetType().Name but the
+                // outbox path used FullName — breaking the JOIN for unregistered events.
+                var eventAlias = EventTypeRegistry.ResolveOrFullName(domainEvent);
                 MeepleAiMetrics.DomainEventDispatchFailures.Add(
                     1,
                     new KeyValuePair<string, object?>("event_type", eventAlias),
@@ -550,25 +614,37 @@ public class MeepleAiDbContext : DbContext
     /// </summary>
     private void EnqueueOutboxRows(IReadOnlyList<IDomainEvent> events)
     {
-        var now = DateTimeOffset.UtcNow;
+        // Use the injected TimeProvider (defaults to System) so the EnqueuedAt timestamp
+        // is deterministic in FakeTimeProvider-based tests — matching the processor's use
+        // of TimeProvider for NextAttemptAt comparisons.
+        var now = _timeProvider.GetUtcNow();
         foreach (var domainEvent in events)
         {
             var clrType = domainEvent.GetType();
-            var eventType = EventTypeRegistry.TryResolve(domainEvent) ?? clrType.FullName!;
+            var eventType = EventTypeRegistry.ResolveOrFullName(domainEvent);
             string payloadJson;
+            bool isPoisonPayload = false;
+            string? poisonReason = null;
             try
             {
                 payloadJson = JsonSerializer.Serialize(domainEvent, clrType, DomainEventJsonOptions.Default);
             }
-#pragma warning disable CA1031 // Log + skip — a poison-payload event must not break the SaveChanges path
+#pragma warning disable CA1031 // F7: poison-payload row instead of silent skip
             catch (Exception ex)
-            {
-                _logger?.LogError(ex,
-                    "Failed to serialize domain event {EventType} (EventId={EventId}) for the outbox; skipping enqueue. The inline MediatR.Publish will still fire if Mode=Hybrid/InlineOnly.",
-                    clrType.Name, domainEvent.EventId);
-                continue;
-            }
 #pragma warning restore CA1031
+            {
+                // F7 code review: pre-fix, OutboxOnly mode silently dropped events whose
+                // payload failed to serialize (line continue + no inline fallback). The row
+                // is now persisted with status=Failed + a synthetic empty payload + a
+                // LastError marker, so the event is IMMEDIATELY visible on
+                // /admin/event-outbox/failed instead of vanishing into the log.
+                _logger?.LogError(ex,
+                    "Failed to serialize domain event {EventType} (EventId={EventId}) — persisting a Failed outbox row so ops can triage via /admin/event-outbox/failed.",
+                    clrType.Name, domainEvent.EventId);
+                isPoisonPayload = true;
+                poisonReason = $"Payload serialization failed: {ex.GetType().Name}: {ex.Message}";
+                payloadJson = "{}";
+            }
 
             var outboxRow = DomainEventOutboxEntity.Enqueue(
                 ev: domainEvent,
@@ -577,6 +653,14 @@ public class MeepleAiDbContext : DbContext
                 payloadVersion: 1,
                 correlationId: System.Diagnostics.Activity.Current?.Id,
                 now: now);
+
+            if (isPoisonPayload)
+            {
+                // Immediately mark Failed so the processor never tries to dispatch the
+                // synthetic empty payload. The LastError carries the original exception
+                // type + message for ops triage.
+                outboxRow.MarkFailed(poisonReason!, now);
+            }
 
             DomainEventOutbox.Add(outboxRow);
 

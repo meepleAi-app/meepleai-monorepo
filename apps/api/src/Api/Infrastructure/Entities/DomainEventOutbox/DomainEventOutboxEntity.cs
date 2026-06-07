@@ -87,6 +87,24 @@ public sealed class DomainEventOutboxEntity
     public string? CorrelationId { get; private set; }
 
     /// <summary>
+    /// F6 (Issue #1535 T6 code review): optimistic concurrency token. Every UPDATE on a
+    /// row (MarkSent / MarkRetry / MarkFailed / RearmFromFailed) must match the
+    /// xmin-derived RowVersion loaded by the caller, otherwise EF throws
+    /// <see cref="Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException"/>. This
+    /// protects against lost updates when (a) the admin retry path overlaps a processor
+    /// commit, or (b) a future multi-instance work-stealing variant races on the same
+    /// row. Postgres-native <c>xmin</c> is used so no migration adds a column — the
+    /// EntityConfiguration declares it as a shadow concurrency token bound to
+    /// <c>pg_attribute.xmin</c>.
+    ///
+    /// <para>Setter is private but written by EF Core via materialisation, not by any
+    /// application code; the analyzer flag suppression below is intentional.</para>
+    /// </summary>
+#pragma warning disable S1144 // EF Core materialisation requires the setter
+    public uint RowVersion { get; private set; }
+#pragma warning restore S1144
+
+    /// <summary>
     /// Factory used by <c>MeepleAiDbContext.SaveChangesAsync</c> to persist an event
     /// raised by an aggregate. Sets the lifecycle invariants for a brand-new Pending row.
     /// </summary>

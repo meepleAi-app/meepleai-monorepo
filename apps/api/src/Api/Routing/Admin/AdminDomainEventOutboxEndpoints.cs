@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Commands.DomainEventOutbox;
 using Api.BoundedContexts.Administration.Application.Queries.DomainEventOutbox;
+using Api.BoundedContexts.Administration.Domain.Exceptions;
 using Api.Filters;
 using MediatR;
 using Microsoft.AspNetCore.Http;
@@ -95,12 +96,14 @@ internal static class AdminDomainEventOutboxEndpoints
                 .ConfigureAwait(false);
             return rearmed ? Results.NoContent() : Results.NotFound();
         }
-        catch (InvalidOperationException ex)
+        catch (OutboxRowNotFailedException ex)
         {
-            // Entity guard fired: row exists but is not in Failed status. The processor
-            // may already own this row (Pending) or it has already been dispatched
-            // (Sent). Either way, the operator's action is a no-op that should surface
-            // as a 409 Conflict rather than corrupt state silently.
+            // Narrow domain exception (F5): row exists but is not in Failed status. The
+            // processor may already own this row (Pending) or it has already been
+            // dispatched (Sent). Either way the operator's action is a no-op that should
+            // surface as 409 Conflict. Catching the dedicated exception instead of the
+            // broader InvalidOperationException prevents EF concurrency conflicts /
+            // MediatR pipeline failures from being mis-mapped as 'cannot re-arm'.
             return Results.Problem(
                 title: "Cannot re-arm non-Failed outbox row",
                 detail: ex.Message,

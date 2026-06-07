@@ -117,8 +117,13 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
         // re-run on every attempt — EF does NOT reset entity state between retries, so
         // loading tracked rows (carrying their MarkSent/MarkFailed mutations) outside the
         // delegate would feed stale state into a retried attempt.
+        //
+        // Counter increments are ACCUMULATED locally during the foreach and emitted ONLY
+        // after tx.CommitAsync succeeds — so a strategy retry that replays the delegate
+        // doesn't double-count metrics. Empty/null pendingResult means "no batch processed"
+        // (used in the empty-batch path).
         var strategy = db.Database.CreateExecutionStrategy();
-        return await strategy.ExecuteAsync(async () =>
+        var batchResult = await strategy.ExecuteAsync(async () =>
         {
             db.ChangeTracker.Clear();
             var now = _timeProvider.GetUtcNow();
@@ -130,7 +135,8 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
                 .AsTracking()
                 .Where(r => r.Status == DomainEventOutboxStatus.Pending
                          && (r.NextAttemptAt == null || r.NextAttemptAt <= now))
-                .OrderBy(r => r.EnqueuedAt)
+                .OrderBy(r => r.NextAttemptAt ?? r.EnqueuedAt)
+                .ThenBy(r => r.EnqueuedAt)
                 .ThenBy(r => r.Id)
                 .Take(batchSize)
                 .ToListAsync(cancellationToken)
@@ -138,11 +144,17 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
 
             if (pending.Count == 0)
             {
-                // Refresh health snapshot on empty batches too — gauges must read "quiet
-                // system" values when there really is nothing to dispatch.
-                await UpdateHealthSnapshotAsync(db, cancellationToken).ConfigureAwait(false);
-                return 0;
+                // Signal the empty case to the post-commit metric emission; the caller will
+                // still refresh the health snapshot once outside the strategy delegate.
+                return new BatchOutcome(EmptyBatch: true, Pending: 0, Dispatched: 0, Retried: 0, FailedTerminal: 0,
+                    DispatchedEventTypes: System.Array.Empty<string>(),
+                    RetriedEventTypes: System.Array.Empty<string>(),
+                    FailedTerminalEventTypes: System.Array.Empty<string>());
             }
+
+            var dispatchedEventTypes = new List<string>(pending.Count);
+            var retriedEventTypes = new List<string>(pending.Count);
+            var failedTerminalEventTypes = new List<string>(pending.Count);
 
             var tx = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
             await using var _ = tx.ConfigureAwait(false);
@@ -158,6 +170,7 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
                         // deleted after the row was written). Mark Failed so ops can replay
                         // or discard via the dashboard.
                         row.MarkFailed($"Unknown event type alias: {row.EventType}", now);
+                        failedTerminalEventTypes.Add(row.EventType);
                         _logger.LogError(
                             "Domain event {EventId} has unknown alias {EventType}; marked Failed",
                             row.Id, row.EventType);
@@ -169,6 +182,7 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
                     if (evt is null)
                     {
                         row.MarkFailed("Deserialized payload was null", now);
+                        failedTerminalEventTypes.Add(row.EventType);
                         _logger.LogError(
                             "Domain event {EventId} ({EventType}) deserialised to null; marked Failed",
                             row.Id, row.EventType);
@@ -177,9 +191,7 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
 
                     await mediator.Publish(evt, cancellationToken).ConfigureAwait(false);
                     row.MarkSent(now);
-                    MeepleAiMetrics.DomainEventOutboxDispatched.Add(
-                        1,
-                        new KeyValuePair<string, object?>("event_type", row.EventType));
+                    dispatchedEventTypes.Add(row.EventType);
                 }
 #pragma warning disable CA1031 // Per-row resilience: poison-message must not stop the batch
                 catch (Exception ex)
@@ -192,9 +204,7 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
                     if (nextAttemptCount >= _options.MaxAttempts)
                     {
                         row.MarkFailed(ex.Message, now);
-                        MeepleAiMetrics.DomainEventOutboxFailedTerminal.Add(
-                            1,
-                            new KeyValuePair<string, object?>("event_type", row.EventType));
+                        failedTerminalEventTypes.Add(row.EventType);
                         _logger.LogError(ex,
                             "Domain event {EventId} ({EventType}) FAILED terminally after {Attempts} attempts",
                             row.Id, row.EventType, nextAttemptCount);
@@ -203,9 +213,7 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
                     {
                         var backoff = ComputeBackoff(nextAttemptCount);
                         row.MarkRetry(ex.Message, now + backoff, now);
-                        MeepleAiMetrics.DomainEventOutboxRetried.Add(
-                            1,
-                            new KeyValuePair<string, object?>("event_type", row.EventType));
+                        retriedEventTypes.Add(row.EventType);
                         _logger.LogWarning(ex,
                             "Domain event {EventId} ({EventType}) dispatch failed; scheduling retry #{Attempt} in {BackoffSeconds:F2}s",
                             row.Id, row.EventType, nextAttemptCount, backoff.TotalSeconds);
@@ -216,29 +224,74 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
 
-            // Snapshot AFTER the commit so observers see post-batch counts.
-            await UpdateHealthSnapshotAsync(db, cancellationToken).ConfigureAwait(false);
-
-            return pending.Count;
+            return new BatchOutcome(
+                EmptyBatch: false,
+                Pending: pending.Count,
+                Dispatched: dispatchedEventTypes.Count,
+                Retried: retriedEventTypes.Count,
+                FailedTerminal: failedTerminalEventTypes.Count,
+                DispatchedEventTypes: dispatchedEventTypes,
+                RetriedEventTypes: retriedEventTypes,
+                FailedTerminalEventTypes: failedTerminalEventTypes);
         }).ConfigureAwait(false);
+
+        // Emit counters OUTSIDE the strategy delegate so a strategy retry (which already
+        // re-ran the foreach and reset all state) cannot double-count metrics. Health
+        // snapshot is refreshed against the post-commit DB state, also outside the strategy
+        // so a transient COUNT failure here doesn't replay the (already-committed) batch.
+        foreach (var eventType in batchResult.DispatchedEventTypes)
+        {
+            MeepleAiMetrics.DomainEventOutboxDispatched.Add(
+                1, new KeyValuePair<string, object?>("event_type", eventType));
+        }
+        foreach (var eventType in batchResult.RetriedEventTypes)
+        {
+            MeepleAiMetrics.DomainEventOutboxRetried.Add(
+                1, new KeyValuePair<string, object?>("event_type", eventType));
+        }
+        foreach (var eventType in batchResult.FailedTerminalEventTypes)
+        {
+            MeepleAiMetrics.DomainEventOutboxFailedTerminal.Add(
+                1, new KeyValuePair<string, object?>("event_type", eventType));
+        }
+
+        await UpdateHealthSnapshotAsync(db, cancellationToken).ConfigureAwait(false);
+
+        return batchResult.EmptyBatch ? 0 : batchResult.Pending;
     }
 
     /// <summary>
+    /// Aggregated outcome of a single batch — separates the "what to commit" (entity state
+    /// transitions, owned by the strategy delegate) from the "what to publish" (Prometheus
+    /// counters, MUST be emitted exactly once even if the strategy retries the delegate).
+    /// </summary>
+    private sealed record BatchOutcome(
+        bool EmptyBatch,
+        int Pending,
+        int Dispatched,
+        int Retried,
+        int FailedTerminal,
+        IReadOnlyList<string> DispatchedEventTypes,
+        IReadOnlyList<string> RetriedEventTypes,
+        IReadOnlyList<string> FailedTerminalEventTypes);
+
+    /// <summary>
     /// T5 exponential backoff with jitter. The unjittered delay grows as
-    /// <c>InitialBackoffMs * 2^(attempt-1)</c> seconds and is capped at
-    /// <see cref="DomainEventOutboxOptions.MaxBackoffSeconds"/>. A symmetric ±20% jitter
-    /// is applied on top to avoid thundering-herd retries when many rows fail
-    /// simultaneously (e.g. transient consumer outage). The cap is applied BEFORE the
-    /// jitter so the final delay can land in <c>[cap × 0.8, cap × 1.2]</c>.
+    /// <c>InitialBackoffMs * 2^(attempt-1)</c> seconds; a symmetric ±20% jitter is
+    /// applied to avoid thundering-herd retries when many rows fail simultaneously
+    /// (e.g. transient consumer outage). The
+    /// <see cref="DomainEventOutboxOptions.MaxBackoffSeconds"/> cap is applied AFTER
+    /// jitter so the final delay is a STRICT ceiling (no leak through the jitter band).
     /// </summary>
     /// <param name="attempt">1-based attempt counter — the value Attempts will hold
     /// AFTER the impending <see cref="DomainEventOutboxEntity.MarkRetry"/> call.</param>
     private TimeSpan ComputeBackoff(int attempt)
     {
         var unboundedSeconds = (_options.InitialBackoffMs / 1000.0) * Math.Pow(2, attempt - 1);
-        var seconds = Math.Min(unboundedSeconds, _options.MaxBackoffSeconds);
         var jitterFactor = 1.0 + ((Random.Shared.NextDouble() * 0.4) - 0.2); // [0.8, 1.2]
-        return TimeSpan.FromSeconds(seconds * jitterFactor);
+        var jittered = unboundedSeconds * jitterFactor;
+        var seconds = Math.Min(jittered, _options.MaxBackoffSeconds);
+        return TimeSpan.FromSeconds(seconds);
     }
 
     /// <summary>

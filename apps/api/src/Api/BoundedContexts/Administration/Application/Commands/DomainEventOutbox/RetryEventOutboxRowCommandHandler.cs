@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Administration.Domain.Exceptions;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.DomainEventOutbox;
 using Api.SharedKernel.Application.Interfaces;
@@ -47,11 +48,23 @@ internal sealed class RetryEventOutboxRowCommandHandler
             return false;
         }
 
-        // RearmFromFailed throws InvalidOperationException when called on a
-        // Pending or Sent row — propagated upward so the endpoint can return 409.
+        // Pre-check: translate the entity's broad InvalidOperationException into a
+        // dedicated domain exception. Issue #1535 T6 code review (F5) flagged that
+        // catching IOEx at the endpoint masked unrelated errors (EF concurrency, MediatR
+        // pipeline) as 409 'cannot re-arm'. The narrow OutboxRowNotFailedException carries
+        // the row id + current status for an unambiguous Problem detail.
+        if (row.Status != DomainEventOutboxStatus.Failed)
+        {
+            throw new OutboxRowNotFailedException(row.Id, row.Status.ToString());
+        }
+
         row.RearmFromFailed(_timeProvider.GetUtcNow());
 
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        // F11: bypass the overridden SaveChangesAsync to skip the domain-event routing
+        // pipeline. Without this guard, any event accidentally left in
+        // IDomainEventCollector by an upstream behavior would be enqueued as a phantom
+        // outbox row as a side-effect of the rearm.
+        await _db.SaveChangesWithoutDomainEventDispatchAsync(cancellationToken).ConfigureAwait(false);
         return true;
     }
 }

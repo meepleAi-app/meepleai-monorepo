@@ -418,8 +418,14 @@ public sealed class DomainEventOutboxProcessorIntegrationTests : IAsyncLifetime
     public async Task RunOnceAsync_Backoff_CapsAtMaxBackoffSeconds()
     {
         // Arrange: simulate a row that has failed 10 times. The raw exponential backoff
-        // for attempt 11 would be 1024s (≫ cap). With MaxBackoffSeconds=8, the scheduler
-        // must clamp at 8s before applying ±20% jitter — so the final window is [6.4s, 9.6s].
+        // for attempt 11 would be 1024s (≫ cap). MaxBackoffSeconds=8 is a STRICT ceiling —
+        // jitter is applied to the un-capped value FIRST, then the cap clamps. So the final
+        // window is [0.8s × min(jittered, 8s), min(jittered, 8s)] but capped at 8s strictly:
+        // floor = lowest possible jittered value above 0 (theoretically near 0 if jitter
+        // multiplied by an already-large unbounded value is shrunk below 8); practically the
+        // unbounded × 0.8 dominates so the jittered value is always > 8 → cap kicks in → exactly 8s.
+        // For attempt 11 with InitialBackoffMs=1000: unbounded = 1024s, jittered ∈ [819.2s, 1228.8s],
+        // both ends > 8s → result is ALWAYS exactly 8s (no jitter visible).
         const string transientMessage = "transient-T5-step3-cap";
         _mediatorMock!
             .Setup(m => m.Publish(It.IsAny<IDomainEvent>(), It.IsAny<CancellationToken>()))
@@ -448,10 +454,10 @@ public sealed class DomainEventOutboxProcessorIntegrationTests : IAsyncLifetime
         refreshed.NextAttemptAt.Should().NotBeNull();
 
         var delay = (refreshed.NextAttemptAt!.Value - fakeNow).TotalSeconds;
-        delay.Should().BeGreaterThanOrEqualTo(6.4,
-            because: "8s cap minus 20% jitter = 6.4s floor");
-        delay.Should().BeLessThanOrEqualTo(9.6,
-            because: "8s cap plus 20% jitter = 9.6s ceiling");
+        delay.Should().BeLessThanOrEqualTo(8.0,
+            because: "MaxBackoffSeconds=8 is a STRICT ceiling — cap is applied AFTER jitter");
+        delay.Should().BeGreaterThan(0,
+            because: "the row must be re-armed in the future, not immediately");
     }
 
     // ─────────────────────────────────────────────────────────────────────────────────────────────

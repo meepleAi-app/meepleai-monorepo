@@ -198,8 +198,28 @@ internal static class InfrastructureServiceExtensions
             // Bind DomainEventOutboxOptions from the "DomainEventOutbox" configuration section.
             // MeepleAiDbContext picks up IOptions<DomainEventOutboxOptions> to route dispatch
             // based on Mode (Hybrid default → OutboxOnly at Phase B cutover → InlineOnly rollback).
+            //
+            // ValidateOnStart fails fast at app startup if an operator misconfigures the
+            // outbox knobs into a degenerate state (e.g. MaxAttempts=0 → every transient
+            // failure becomes terminal; InitialBackoffMs=0 → tight-loop retry storm).
             services.AddOptions<DomainEventOutboxOptions>()
-                .Bind(configuration.GetSection(DomainEventOutboxOptions.SectionName));
+                .Bind(configuration.GetSection(DomainEventOutboxOptions.SectionName))
+                .Validate(
+                    o => o.MaxAttempts >= 1,
+                    "DomainEventOutbox.MaxAttempts must be >= 1 (a value of 0 would terminate every event on first dispatch failure).")
+                .Validate(
+                    o => o.InitialBackoffMs > 0,
+                    "DomainEventOutbox.InitialBackoffMs must be > 0 (a value of 0 produces zero-second backoff and a tight-loop retry storm).")
+                .Validate(
+                    o => o.MaxBackoffSeconds > 0,
+                    "DomainEventOutbox.MaxBackoffSeconds must be > 0 (a value of 0 caps every retry at zero seconds, identical to InitialBackoffMs=0).")
+                .Validate(
+                    o => o.BatchSize >= 1 && o.BatchSize <= 10_000,
+                    "DomainEventOutbox.BatchSize must be in [1, 10000] — outside this range the poll cycle is either no-op or risks excessive memory pressure.")
+                .Validate(
+                    o => o.PollIntervalSeconds >= 1,
+                    "DomainEventOutbox.PollIntervalSeconds must be >= 1 (sub-second polls would saturate the DB without observable throughput gain).")
+                .ValidateOnStart();
 
             // Issue #1535 T4 — post-commit event outbox processor.
             // Singleton processor (no per-request state); a thin hosted-service wrapper

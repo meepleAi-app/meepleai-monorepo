@@ -47,6 +47,76 @@ const basePdfs: KbPdf[] = [
 const baseGame = { title: 'Gloomhaven', emoji: '⚔️' };
 
 describe('HubDefault (Issue #1481)', () => {
+  // #1816 P3-7 Phase 2 — indexing-pending banner.
+  describe('indexingPending banner (#1816 P3-7)', () => {
+    const labelsWithBadge = {
+      ...baseLabels,
+      indexingBadge: '⏳ Indexing in progress',
+      indexingDescription: 'The document is uploaded but not yet searchable from chat.',
+    };
+
+    it('does NOT render the indexing banner by default (prop omitted)', () => {
+      const { container } = render(
+        <HubDefault
+          game={baseGame}
+          documentCount={0}
+          coverageLevel="None"
+          pdfs={basePdfs}
+          labels={labelsWithBadge}
+          onUpload={() => {}}
+          onReindexAll={() => {}}
+          onPdfAction={() => {}}
+        />
+      );
+      expect(
+        container.querySelector('[data-slot="kb-hub-default-indexing-banner"]')
+      ).not.toBeInTheDocument();
+    });
+
+    it('renders the indexing banner + description when indexingPending=true', () => {
+      const { container } = render(
+        <HubDefault
+          game={baseGame}
+          documentCount={0}
+          coverageLevel="None"
+          pdfs={basePdfs}
+          labels={labelsWithBadge}
+          onUpload={() => {}}
+          onReindexAll={() => {}}
+          onPdfAction={() => {}}
+          indexingPending={true}
+        />
+      );
+      const banner = container.querySelector('[data-slot="kb-hub-default-indexing-banner"]');
+      expect(banner).toBeInTheDocument();
+      expect(banner).toHaveAttribute('role', 'status');
+      expect(banner).toHaveAttribute('aria-live', 'polite');
+      expect(screen.getByText('⏳ Indexing in progress')).toBeInTheDocument();
+      expect(
+        screen.getByText('The document is uploaded but not yet searchable from chat.')
+      ).toBeInTheDocument();
+    });
+
+    it('does NOT render the banner when indexingPending=true but labels.indexingBadge is missing', () => {
+      const { container } = render(
+        <HubDefault
+          game={baseGame}
+          documentCount={0}
+          coverageLevel="None"
+          pdfs={basePdfs}
+          labels={baseLabels}
+          onUpload={() => {}}
+          onReindexAll={() => {}}
+          onPdfAction={() => {}}
+          indexingPending={true}
+        />
+      );
+      expect(
+        container.querySelector('[data-slot="kb-hub-default-indexing-banner"]')
+      ).not.toBeInTheDocument();
+    });
+  });
+
   it('renders game title with " · KB" suffix and header subtitle', () => {
     render(
       <HubDefault

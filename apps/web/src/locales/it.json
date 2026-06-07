@@ -1949,7 +1949,9 @@
               "document": "Documento",
               "status": "Stato",
               "uploaded": "Caricato"
-            }
+            },
+            "indexingBadge": "⏳ Indicizzazione in corso",
+            "indexingDescription": "Il documento è caricato ma non ancora ricercabile dalla chat."
           },
           "empty": {
             "title": "Nessun PDF indicizzato",
@@ -4148,10 +4150,27 @@
           "cta": "Vai alla libreria"
         },
         "error": {
-          "connection": { "title": "Connessione persa", "body": "Retry automatico in corso…", "action": "Riprova ora" },
-          "timeout": { "title": "Risposta lenta", "body": "Vuoi continuare ad aspettare?", "action": "Continua attesa", "alt": "Cancella" },
-          "partial": { "title": "Risposta incompleta", "body": "Lo stream si è interrotto.", "action": "Ripeti query" },
-          "server": { "title": "Errore del server", "body": "Riprova tra qualche istante.", "action": "Riprova" }
+          "connection": {
+            "title": "Connessione persa",
+            "body": "Retry automatico in corso…",
+            "action": "Riprova ora"
+          },
+          "timeout": {
+            "title": "Risposta lenta",
+            "body": "Vuoi continuare ad aspettare?",
+            "action": "Continua attesa",
+            "alt": "Cancella"
+          },
+          "partial": {
+            "title": "Risposta incompleta",
+            "body": "Lo stream si è interrotto.",
+            "action": "Ripeti query"
+          },
+          "server": {
+            "title": "Errore del server",
+            "body": "Riprova tra qualche istante.",
+            "action": "Riprova"
+          }
         }
       }
     }

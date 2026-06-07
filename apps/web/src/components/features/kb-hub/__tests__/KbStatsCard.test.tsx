@@ -25,6 +25,81 @@ const baseLabels = {
 };
 
 describe('KbStatsCard (Issue #1481)', () => {
+  // #1816 P3-7 Phase 2 — indexing-pending badge.
+  describe('indexingPending badge (#1816 P3-7)', () => {
+    const labelsWithBadge = {
+      ...baseLabels,
+      indexingBadge: '⏳ Indexing in progress',
+      indexingDescription: 'The document is uploaded but not yet searchable from chat.',
+    };
+
+    it('does NOT render the indexing badge by default (prop omitted)', () => {
+      const { container } = render(
+        <KbStatsCard
+          documentCount={0}
+          coverageLevel="None"
+          coverageScore={0}
+          labels={labelsWithBadge}
+        />
+      );
+      expect(
+        container.querySelector('[data-slot="kb-hub-stats-indexing-badge"]')
+      ).not.toBeInTheDocument();
+    });
+
+    it('does NOT render the indexing badge when indexingPending=false', () => {
+      const { container } = render(
+        <KbStatsCard
+          documentCount={3}
+          coverageLevel="Standard"
+          coverageScore={70}
+          labels={labelsWithBadge}
+          indexingPending={false}
+        />
+      );
+      expect(
+        container.querySelector('[data-slot="kb-hub-stats-indexing-badge"]')
+      ).not.toBeInTheDocument();
+    });
+
+    it('renders the indexing badge + description when indexingPending=true and labels provided', () => {
+      const { container } = render(
+        <KbStatsCard
+          documentCount={0}
+          coverageLevel="None"
+          coverageScore={0}
+          labels={labelsWithBadge}
+          indexingPending={true}
+        />
+      );
+      const badge = container.querySelector('[data-slot="kb-hub-stats-indexing-badge"]');
+      expect(badge).toBeInTheDocument();
+      expect(badge).toHaveAttribute('role', 'status');
+      expect(badge).toHaveAttribute('aria-live', 'polite');
+      expect(screen.getByText('⏳ Indexing in progress')).toBeInTheDocument();
+      expect(
+        screen.getByText('The document is uploaded but not yet searchable from chat.')
+      ).toBeInTheDocument();
+    });
+
+    it('does NOT render the badge when indexingPending=true but labels.indexingBadge is missing', () => {
+      const { container } = render(
+        <KbStatsCard
+          documentCount={0}
+          coverageLevel="None"
+          coverageScore={0}
+          labels={baseLabels}
+          indexingPending={true}
+        />
+      );
+      // The component guards on BOTH the flag AND the presence of the label —
+      // an i18n-key resolution miss must not render an empty badge slot.
+      expect(
+        container.querySelector('[data-slot="kb-hub-stats-indexing-badge"]')
+      ).not.toBeInTheDocument();
+    });
+  });
+
   it('renders required fields: documentCount, coverageLevel, coverageScore', () => {
     render(
       <KbStatsCard

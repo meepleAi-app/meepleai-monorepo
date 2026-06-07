@@ -1899,7 +1899,9 @@
               "document": "Document",
               "status": "Status",
               "uploaded": "Uploaded"
-            }
+            },
+            "indexingBadge": "⏳ Indexing in progress",
+            "indexingDescription": "The document is uploaded but not yet searchable from chat."
           },
           "empty": {
             "title": "No PDFs indexed yet",
@@ -4095,10 +4097,27 @@
           "cta": "Go to library"
         },
         "error": {
-          "connection": { "title": "Connection lost", "body": "Auto-retry in progress…", "action": "Retry now" },
-          "timeout": { "title": "Slow response", "body": "Continue waiting?", "action": "Continue waiting", "alt": "Cancel" },
-          "partial": { "title": "Incomplete response", "body": "Stream was interrupted.", "action": "Repeat query" },
-          "server": { "title": "Server error", "body": "Try again in a moment.", "action": "Retry" }
+          "connection": {
+            "title": "Connection lost",
+            "body": "Auto-retry in progress…",
+            "action": "Retry now"
+          },
+          "timeout": {
+            "title": "Slow response",
+            "body": "Continue waiting?",
+            "action": "Continue waiting",
+            "alt": "Cancel"
+          },
+          "partial": {
+            "title": "Incomplete response",
+            "body": "Stream was interrupted.",
+            "action": "Repeat query"
+          },
+          "server": {
+            "title": "Server error",
+            "body": "Try again in a moment.",
+            "action": "Retry"
+          }
         }
       }
     }

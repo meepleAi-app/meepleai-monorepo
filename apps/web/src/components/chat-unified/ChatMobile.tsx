@@ -628,6 +628,7 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
               'max-h-24'
             )}
             disabled={streamState.isStreaming}
+            data-testid="message-input"
           />
           <button
             onClick={() => handleSend()}
@@ -639,6 +640,7 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
                 : 'bg-[var(--glass-bg)] text-[var(--text-sec)]'
             )}
             aria-label="Invia messaggio"
+            data-testid="send-btn"
           >
             {streamState.isStreaming ? (
               <div className="h-5 w-5 border-2 border-border border-t-white rounded-full animate-spin" />

@@ -96,6 +96,6 @@ n8n ignores unknown JSON fields by default. Workflows that have NOT yet been upd
 
 ## References
 
-- Audit doc: [`audits/2026-06-06-issue-1535-consumer-idempotency-audit.md`](../../../audits/2026-06-06-issue-1535-consumer-idempotency-audit.md) § "n8n webhook handlers"
+- Audit doc: `audits/2026-06-06-issue-1535-consumer-idempotency-audit.md` § "n8n webhook handlers" (staged in #1535 umbrella PR)
 - Source: `IN8nWebhookClient` doc-comment in `apps/api/src/Api/BoundedContexts/WorkflowIntegration/Application/Services/IN8nWebhookClient.cs`
 - Caller examples: `GameNightN8nEventHandlers.cs` in `apps/api/src/Api/BoundedContexts/WorkflowIntegration/Application/EventHandlers/`

@@ -1,3 +1,4 @@
+using Api.Infrastructure.DomainEventOutbox;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Hosting;
@@ -188,6 +189,11 @@ internal static class InfrastructureServiceExtensions
             // Register domain event collector as scoped (per-request lifecycle)
             // This ensures events are collected and dispatched within the same HTTP request
             services.AddScoped<IDomainEventCollector, DomainEventCollector>();
+
+            // Issue #1535 — post-commit event outbox dispatch. The type resolver is a
+            // pure read-only lookup (assembly scan at construction); register as a singleton
+            // so the dictionaries are built once at app startup, not per request.
+            services.AddSingleton<IDomainEventTypeResolver, DomainEventTypeResolver>();
         }
 
         return services;

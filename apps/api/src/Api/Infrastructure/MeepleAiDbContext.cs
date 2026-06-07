@@ -1,5 +1,6 @@
 using Api.Infrastructure.DomainEventLog;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.DomainEventOutbox;
 using Api.Observability;
 using Api.Infrastructure.Entities.Administration;
 using Api.Infrastructure.Entities.Authentication;
@@ -101,6 +102,8 @@ public class MeepleAiDbContext : DbContext
     // Issue #661: append-only domain-event durability log (atomic with aggregate save)
     public DbSet<Api.Infrastructure.Entities.DomainEventLog.DomainEventLogEntity> DomainEventLogs
         => Set<Api.Infrastructure.Entities.DomainEventLog.DomainEventLogEntity>();
+    // Issue #1535: post-commit event dispatch via durable outbox
+    public DbSet<DomainEventOutboxEntity> DomainEventOutbox => Set<DomainEventOutboxEntity>();
     // Auth security fifs (hotfix 2026-05-06): SecurityAudit BC immutable event log (I10 prep)
     public DbSet<BoundedContexts.SecurityAudit.Infrastructure.Entities.AuditLogEntity> SecurityAuditLogs
         => Set<BoundedContexts.SecurityAudit.Infrastructure.Entities.AuditLogEntity>();

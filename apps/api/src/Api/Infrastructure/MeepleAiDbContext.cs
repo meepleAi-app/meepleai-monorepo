@@ -1,7 +1,10 @@
 using Api.Infrastructure.DomainEventLog;
+using Api.Infrastructure.DomainEventOutbox;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.DomainEventOutbox;
 using Api.Observability;
+using Microsoft.Extensions.Options;
+using System.Text.Json;
 using Api.Infrastructure.Entities.Administration;
 using Api.Infrastructure.Entities.Authentication;
 using Api.Infrastructure.Entities.DocumentProcessing;
@@ -30,19 +33,25 @@ public class MeepleAiDbContext : DbContext
     private readonly IDataProtectionProvider? _dataProtectionProvider;
     private readonly ILogger<MeepleAiDbContext>? _logger;
     private readonly bool _isInMemoryDatabase;
+    private readonly DomainEventDispatchMode _dispatchMode;
 
     public MeepleAiDbContext(
         DbContextOptions<MeepleAiDbContext> options,
         IMediator mediator,
         IDomainEventCollector eventCollector,
         IDataProtectionProvider? dataProtectionProvider = null,
-        ILogger<MeepleAiDbContext>? logger = null)
+        ILogger<MeepleAiDbContext>? logger = null,
+        IOptions<DomainEventOutboxOptions>? domainEventOutboxOptions = null)
         : base(options)
     {
         _mediator = mediator;
         _eventCollector = eventCollector;
         _dataProtectionProvider = dataProtectionProvider;
         _logger = logger;
+        // Issue #1535: default Hybrid when options are not wired (legacy test fixtures + first
+        // rollout window in prod). Hybrid is the safe default — same as pre-#1535 behaviour
+        // plus an additive outbox row.
+        _dispatchMode = domainEventOutboxOptions?.Value.Mode ?? DomainEventDispatchMode.Hybrid;
 
         // Issue #3578: Detect InMemory provider for unit tests
         // Check extensions to see if InMemory provider is being used
@@ -460,9 +469,9 @@ public class MeepleAiDbContext : DbContext
         // return null from PeekEvents() (Mock.Of default behavior).
         var pendingEvents = _eventCollector.PeekEvents() ?? Array.Empty<IDomainEvent>();
 
-        // Step 2: materialize log entities for registered events. Unregistered
-        // events return null from the mapper and are silently skipped — they
-        // still get dispatched via MediatR below.
+        // Step 2a: materialize log entities for registered events (Issue #661 — unchanged).
+        // Unregistered events return null from the mapper and are silently skipped — they
+        // still get dispatched via MediatR below (or via the outbox processor post-commit).
         if (pendingEvents.Count > 0)
         {
             foreach (var domainEvent in pendingEvents)
@@ -477,16 +486,30 @@ public class MeepleAiDbContext : DbContext
                         new KeyValuePair<string, object?>("event_type", logEntity.EventType));
                 }
             }
+
+            // Step 2b (Issue #1535): materialize outbox rows for ALL events when the routing
+            // mode requires it. The DomainEventOutboxProcessor BackgroundService drains these
+            // rows post-commit and invokes MediatR.Publish — so a rolled-back transaction
+            // never causes a side-effect to escape.
+            if (_dispatchMode is DomainEventDispatchMode.Hybrid or DomainEventDispatchMode.OutboxOnly)
+            {
+                EnqueueOutboxRows(pendingEvents);
+            }
         }
 
-        // Step 3: single SaveChangesAsync — aggregate state + log rows commit atomically.
+        // Step 3: single SaveChangesAsync — aggregate state + log rows + outbox rows commit atomically.
         var result = await base.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Step 4: drain the collector ONLY after successful save.
         _eventCollector.Clear();
 
-        // Step 5: dispatch via MediatR. The log record is already durable, so a
-        // handler failure here is recoverable (re-process from the log).
+        // Step 5 (Issue #1535): dispatch via MediatR — only in Hybrid (dual-write) or InlineOnly
+        // (legacy rollback path). OutboxOnly mode delegates dispatch entirely to the processor.
+        if (_dispatchMode == DomainEventDispatchMode.OutboxOnly)
+        {
+            return result;
+        }
+
         foreach (var domainEvent in pendingEvents)
         {
             try
@@ -518,5 +541,44 @@ public class MeepleAiDbContext : DbContext
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Issue #1535 — materialises a <see cref="DomainEventOutboxEntity"/> for every collected
+    /// event so the post-commit processor can dispatch them out-of-band. <see cref="EventTypeRegistry"/>
+    /// alias is used when registered (#661 stable identifier); CLR <c>FullName</c> is the long-tail fallback.
+    /// </summary>
+    private void EnqueueOutboxRows(IReadOnlyList<IDomainEvent> events)
+    {
+        var now = DateTimeOffset.UtcNow;
+        foreach (var domainEvent in events)
+        {
+            var clrType = domainEvent.GetType();
+            var eventType = EventTypeRegistry.TryResolve(domainEvent) ?? clrType.FullName!;
+            string payloadJson;
+            try
+            {
+                payloadJson = JsonSerializer.Serialize(domainEvent, clrType, DomainEventJsonOptions.Default);
+            }
+#pragma warning disable CA1031 // Log + skip — a poison-payload event must not break the SaveChanges path
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex,
+                    "Failed to serialize domain event {EventType} (EventId={EventId}) for the outbox; skipping enqueue. The inline MediatR.Publish will still fire if Mode=Hybrid/InlineOnly.",
+                    clrType.Name, domainEvent.EventId);
+                continue;
+            }
+#pragma warning restore CA1031
+
+            var outboxRow = DomainEventOutboxEntity.Enqueue(
+                ev: domainEvent,
+                eventType: eventType,
+                payloadJson: payloadJson,
+                payloadVersion: 1,
+                correlationId: System.Diagnostics.Activity.Current?.Id,
+                now: now);
+
+            DomainEventOutbox.Add(outboxRow);
+        }
     }
 }

@@ -194,6 +194,12 @@ internal static class InfrastructureServiceExtensions
             // pure read-only lookup (assembly scan at construction); register as a singleton
             // so the dictionaries are built once at app startup, not per request.
             services.AddSingleton<IDomainEventTypeResolver, DomainEventTypeResolver>();
+
+            // Bind DomainEventOutboxOptions from the "DomainEventOutbox" configuration section.
+            // MeepleAiDbContext picks up IOptions<DomainEventOutboxOptions> to route dispatch
+            // based on Mode (Hybrid default → OutboxOnly at Phase B cutover → InlineOnly rollback).
+            services.AddOptions<DomainEventOutboxOptions>()
+                .Bind(configuration.GetSection(DomainEventOutboxOptions.SectionName));
         }
 
         return services;

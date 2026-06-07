@@ -2093,6 +2093,34 @@
         "pageNumber": "Pagina {n}"
       }
     },
+    "onboarding": {
+      "interests": {
+        "heading": "Cosa ti piace giocare?",
+        "subtitle": "Seleziona le categorie che ti interessano. Useremo le tue scelte per personalizzare i suggerimenti.",
+        "groupLabel": "Categorie di giochi preferite",
+        "categories": {
+          "strategy": "Strategia",
+          "party": "Festa",
+          "cooperative": "Cooperativo",
+          "family": "Famiglia",
+          "thematic": "Tematico",
+          "abstract": "Astratto",
+          "card": "Carte",
+          "dice": "Dadi",
+          "miniatures": "Miniature"
+        },
+        "selectedCount": "{count} selezionate",
+        "cta": {
+          "continue": "Continua",
+          "skip": "Salta",
+          "skipForNow": "Salta per ora"
+        },
+        "loading": "Salvataggio in corso…",
+        "toast": {
+          "saved": "{count} interessi salvati!"
+        }
+      }
+    },
     "discover": {
       "miniNav": {
         "breadcrumb": "Scopri",

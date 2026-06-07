@@ -33,7 +33,9 @@ describe('InterestsStep', () => {
   it('renders all 9 category options', () => {
     renderWithQuery(<InterestsStep onComplete={onComplete} onSkip={onSkip} />);
 
-    expect(screen.getByText('What Do You Enjoy?')).toBeInTheDocument();
+    // F25 #1976: heading driven by `pages.onboarding.interests.heading`
+    // (renderWithQuery loads en.json messages — IT fallback exercised separately).
+    expect(screen.getByText(/what do you enjoy/i)).toBeInTheDocument();
     expect(screen.getByTestId('interest-strategy')).toBeInTheDocument();
     expect(screen.getByTestId('interest-party')).toBeInTheDocument();
     expect(screen.getByTestId('interest-cooperative')).toBeInTheDocument();

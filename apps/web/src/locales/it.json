@@ -2525,11 +2525,11 @@
     "players": {
       "metadata": {
         "title": "Giocatori — MeepleAI",
-        "description": "Riepilogo delle tue partite: giochi giocati, sessioni e vittorie."
+        "description": "I compagni di gioco con cui hai giocato, con sessioni e vittorie."
       },
       "hero": {
-        "title": "Le tue partite",
-        "subtitle": "Riepilogo dei giochi che hai giocato, con sessioni e vittorie.",
+        "title": "I tuoi compagni di gioco",
+        "subtitle": "Vedi con chi hai giocato di più, le sessioni condivise e i risultati al tavolo.",
         "totalPlays": "Sessioni totali",
         "distinctGames": "Giochi distinti"
       },

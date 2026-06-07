@@ -70,8 +70,11 @@ vi.mock('@/lib/players/players-visual-test-fixture', async () => {
 
 const MESSAGES: Record<string, string> = {
   'pages.players.metadata.title': 'Giocatori — MeepleAI',
-  'pages.players.hero.title': 'Le tue partite',
-  'pages.players.hero.subtitle': 'Riepilogo dei giochi che hai giocato, con sessioni e vittorie.',
+  // F28 #1974: hero copy rewritten to disambiguate /players (gaming partners)
+  // from /play-records (your sessions). See it.json `pages.players.hero.*`.
+  'pages.players.hero.title': 'I tuoi compagni di gioco',
+  'pages.players.hero.subtitle':
+    'Vedi con chi hai giocato di più, le sessioni condivise e i risultati al tavolo.',
   'pages.players.hero.totalPlays': 'Sessioni totali',
   'pages.players.hero.distinctGames': 'Giochi distinti',
   'pages.players.filters.searchPlaceholder': 'Cerca per nome del gioco…',

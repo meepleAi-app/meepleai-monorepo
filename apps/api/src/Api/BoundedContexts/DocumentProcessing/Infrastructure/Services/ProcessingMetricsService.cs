@@ -4,6 +4,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.DocumentProcessing;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
@@ -63,7 +64,24 @@ internal sealed class ProcessingMetricsService : IProcessingMetricsService
         };
 
         _context.ProcessingMetrics.Add(metric);
-        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateException ex) when (CounterTableIdempotency.IsUniqueViolation(ex))
+        {
+            // CF-2 / #1938: outbox re-dispatched a domain event whose metric we already
+            // recorded. The UNIQUE partial index on source_event_id won the race; detach
+            // so the tracker is clean for the next SaveChanges, and log at Information
+            // instead of Error — replays are an expected at-least-once behaviour, not a
+            // failure.
+            _context.Entry(metric).State = EntityState.Detached;
+            _logger.LogInformation(
+                ex,
+                "Skipping duplicate processing metric: PdfId={PdfId}, Step={Step}, SourceEventId={SourceEventId} (already recorded)",
+                pdfId, step, sourceEventId);
+            return;
+        }
 
         _logger.LogDebug(
             "Recorded metric: PdfId={PdfId}, Step={Step}, Duration={Duration}s, Size={Size}bytes, Pages={Pages}",

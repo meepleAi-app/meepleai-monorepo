@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.GameManagement.Application.EventHandlers;
 
@@ -81,6 +82,17 @@ internal sealed class SessionPausedAutoSnapshotHandler
             _logger.LogInformation(
                 "Auto-snapshot created for session {SessionId} on pause at turn {Turn}",
                 notification.SessionId, turnNumber);
+        }
+        catch (DbUpdateException ex) when (CounterTableIdempotency.IsUniqueViolation(ex))
+        {
+            // CF-2 / #1938: outbox replay (#1535 at-least-once delivery) for a snapshot
+            // already persisted by an earlier dispatch. The partial UNIQUE index on
+            // session_snapshots.source_event_id blocked the duplicate insert at the DB.
+            // Log at Information — legitimate replays are not failures.
+            _logger.LogInformation(
+                ex,
+                "Skipping duplicate auto-snapshot for session {SessionId}: SourceEventId={SourceEventId} (already recorded)",
+                notification.SessionId, notification.EventId);
         }
 #pragma warning disable CA1031
         catch (Exception ex)

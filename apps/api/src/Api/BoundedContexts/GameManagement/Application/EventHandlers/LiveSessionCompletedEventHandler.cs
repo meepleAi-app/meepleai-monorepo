@@ -4,6 +4,8 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.EventHandlers;
+using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.GameManagement.Application.EventHandlers;
@@ -82,6 +84,17 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
                 "Generated PlayRecord {PlayRecordId} from completed LiveSession {SessionId}",
                 playRecord.Id,
                 domainEvent.SessionId);
+        }
+        catch (DbUpdateException ex) when (CounterTableIdempotency.IsUniqueViolation(ex))
+        {
+            // CF-2 / #1938: outbox replay (#1535 at-least-once delivery) for a session
+            // already mapped to a PlayRecord. The partial UNIQUE index on
+            // play_records.source_event_id blocked the duplicate insert at the DB.
+            // Log at Information — legitimate replays are not failures.
+            Logger.LogInformation(
+                ex,
+                "Skipping duplicate PlayRecord for LiveSession {SessionId}: SourceEventId={SourceEventId} (already recorded)",
+                domainEvent.SessionId, domainEvent.EventId);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         // SERVICE BOUNDARY: EVENT HANDLER PATTERN - Background event processing

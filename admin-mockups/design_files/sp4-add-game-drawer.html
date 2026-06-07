@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SP4 · AddGameDrawer — /library?action=add</title>
+<!--
+  @route   /library  (drawer aperto via ?action=add)
+  @scope   sp4-add-game-drawer
+  @brief   Right-side Sheet (sm:max-w-xl) per aggiungere un gioco alla libreria.
+  @flow    Step 0 choice → Step 1a manuale (placeholder wizard) / Step 1b catalogo
+  @legal   ADR-059 — Wikidata primary, BGG SOLO admin-side. NESSUN path BGG user-side.
+  @fix     C1 i18n · M1 empty-catalogo · M2 already-in-library alert · M3 copy choice
+           · M4 a11y (role=dialog, focus trap, ESC, aria) · N1 toast · N2 skeleton
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+<link rel="stylesheet" href="components.css"/>
+<style>
+  /* ════════════════════════════════════════════════
+     SP4 AddGameDrawer — preview shell
+     Tutti i valori da tokens.css. Nessun hex hardcoded fuori dalle cover demo.
+     ════════════════════════════════════════════════ */
+  html, body { height: 100%; }
+  body { display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ─── Preview control bar ─── */
+  .pv-bar {
+    flex-shrink: 0;
+    display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap;
+    padding: var(--s-3) var(--s-5);
+    background: var(--glass-bg); backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    z-index: var(--z-nav);
+  }
+  .pv-brand {
+    display: inline-flex; align-items: center; gap: var(--s-2);
+    font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-md);
+    color: var(--text);
+  }
+  .pv-mark {
+    width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+    background: linear-gradient(135deg, hsl(var(--c-game)), hsl(var(--c-event)));
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-weight: var(--fw-ext); font-size: 14px;
+  }
+  .pv-brand .url {
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted);
+    font-weight: 700; padding: 2px 8px; border-radius: var(--r-sm);
+    background: var(--bg-muted); border: 1px solid var(--border);
+  }
+  .pv-spacer { flex: 1; }
+
+  .pv-grp { display: inline-flex; align-items: center; gap: 6px; }
+  .pv-lbl {
+    font-family: var(--f-mono); font-size: 9px; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--text-muted); font-weight: 800;
+  }
+  .seg {
+    display: inline-flex; border-radius: var(--r-md); overflow: hidden;
+    border: 1px solid var(--border); background: var(--bg-card);
+  }
+  .seg button {
+    padding: 6px 11px; border: none; background: transparent; color: var(--text-sec);
+    font-family: var(--f-display); font-weight: 700; font-size: var(--fs-xs);
+    cursor: pointer; white-space: nowrap; transition: all var(--dur-sm) var(--ease-out);
+  }
+  .seg button + button { border-left: 1px solid var(--border); }
+  .seg button.on { background: hsl(var(--c-game) / .12); color: hsl(var(--c-game)); }
+  .seg.agent button.on { background: hsl(var(--c-agent) / .14); color: hsl(var(--c-agent)); }
+  .seg button:hover:not(.on) { background: var(--bg-hover); color: var(--text); }
+  .seg.disabled { opacity: .4; pointer-events: none; }
+
+  .pv-toggle {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: var(--r-pill);
+    background: var(--bg-card); border: 1px solid var(--border-strong);
+    color: var(--text); font-family: var(--f-display); font-weight: 700; font-size: var(--fs-xs);
+    cursor: pointer; transition: transform var(--dur-sm) var(--ease-out);
+  }
+  .pv-toggle:hover { transform: translateY(-1px); }
+
+  /* ─── Stage (faux library + drawer) ─── */
+  .pv-stage { flex: 1; min-height: 0; position: relative; overflow: hidden; }
+
+  /* faux /library backdrop */
+  .bg-lib { position: absolute; inset: 0; overflow: hidden; display: flex; flex-direction: column; }
+  .bg-hero {
+    padding: var(--s-6) var(--s-8);
+    background: linear-gradient(135deg, hsl(var(--c-game) / .10) 0%, hsl(var(--c-agent) / .06) 50%, hsl(var(--c-kb) / .08) 100%);
+    border-bottom: 1px solid var(--border-light);
+  }
+  .bg-hero h1 { font-size: var(--fs-3xl); color: var(--text); letter-spacing: -.02em; }
+  .bg-hero p { color: var(--text-sec); font-size: var(--fs-md); margin-top: 4px; font-weight: 500; }
+  .bg-grid {
+    flex: 1; padding: var(--s-6) var(--s-8);
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: var(--s-4); align-content: start; overflow: hidden;
+  }
+  .bg-card {
+    height: 150px; border-radius: var(--r-lg);
+    background: var(--bg-card); border: 1px solid var(--border);
+    box-shadow: var(--shadow-xs);
+  }
+  .bg-card .bar { height: 3px; border-radius: var(--r-lg) var(--r-lg) 0 0; background: hsl(var(--c-game) / .5); }
+
+  #root { position: absolute; inset: 0; pointer-events: none; }
+  #root > * { pointer-events: auto; }
+
+  /* ─── Drawer animation primitives ─── */
+  @keyframes pv-fade-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes pv-shim { 100% { transform: translateX(100%); } }
+  @keyframes pv-slide-up { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes pv-pop { from { transform: scale(.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  .shimmer { position: relative; overflow: hidden; background: var(--bg-muted); }
+  .shimmer::after {
+    content: ''; position: absolute; inset: 0; transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, hsl(var(--c-game) / .09), transparent);
+    animation: pv-shim 1.4s var(--ease-in-out) infinite;
+  }
+
+  /* hide scrollbar inside drawer body */
+  .dw-scroll { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+  .dw-scroll::-webkit-scrollbar { width: 8px; }
+  .dw-scroll::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: var(--r-pill); }
+
+  :focus-visible { outline: 2px solid hsl(var(--c-game)); outline-offset: 2px; border-radius: var(--r-xs); }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .shimmer::after { display: none; }
+    * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  }
+</style>
+</head>
+<body>
+  <!-- Preview control bar -->
+  <div class="pv-bar">
+    <div class="pv-brand">
+      <span class="pv-mark">M</span>
+      <span>AddGameDrawer</span>
+      <span class="url" id="urlChip">/library?action=add</span>
+    </div>
+    <div class="pv-spacer"></div>
+
+    <div class="pv-grp">
+      <span class="pv-lbl">Step</span>
+      <div class="seg" id="stepSeg">
+        <button data-step="choice" class="on">0 · Scelta</button>
+        <button data-step="manual">1a · Manuale</button>
+        <button data-step="catalog">1b · Catalogo</button>
+      </div>
+    </div>
+
+    <div class="pv-grp" id="stateGrp">
+      <span class="pv-lbl">Stato catalogo</span>
+      <div class="seg agent disabled" id="stateSeg">
+        <button data-state="loading">Loading</button>
+        <button data-state="empty">Vuoto</button>
+        <button data-state="results" class="on">Risultati</button>
+      </div>
+    </div>
+
+    <button class="pv-toggle" id="themeToggle" aria-label="Cambia tema">
+      <span id="themeIcon">☾</span><span id="themeText">Scuro</span>
+    </button>
+  </div>
+
+  <!-- Stage -->
+  <div class="pv-stage">
+    <!-- faux library page behind the drawer -->
+    <div class="bg-lib" aria-hidden="true">
+      <div class="bg-hero">
+        <h1>La tua libreria</h1>
+        <p>Tutti i tuoi giochi, agenti e documenti in un posto.</p>
+      </div>
+      <div class="bg-grid" id="bgGrid"></div>
+    </div>
+    <div id="root"></div>
+  </div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script>
+    /* faux backdrop cards */
+    (function () {
+      var g = document.getElementById('bgGrid');
+      for (var i = 0; i < 12; i++) {
+        var c = document.createElement('div');
+        c.className = 'bg-card';
+        c.innerHTML = '<div class="bar"></div>';
+        g.appendChild(c);
+      }
+      /* theme toggle */
+      var html = document.documentElement;
+      var icon = document.getElementById('themeIcon');
+      var text = document.getElementById('themeText');
+      document.getElementById('themeToggle').addEventListener('click', function () {
+        var dark = html.getAttribute('data-theme') === 'dark';
+        html.setAttribute('data-theme', dark ? 'light' : 'dark');
+        icon.textContent = dark ? '☾' : '☀';
+        text.textContent = dark ? 'Scuro' : 'Chiaro';
+      });
+    })();
+  </script>
+  <script type="text/babel" src="sp4-add-game-drawer.jsx"></script>
+</body>
+</html>

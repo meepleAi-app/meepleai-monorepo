@@ -14,6 +14,7 @@
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface CatalogPaginationProps {
   currentPage: number;
@@ -29,6 +30,8 @@ export function CatalogPagination({
   onPageChange,
   totalResults,
 }: CatalogPaginationProps) {
+  const { t } = useTranslation();
+
   // Calculate visible page numbers
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
@@ -73,7 +76,8 @@ export function CatalogPagination({
   const pageNumbers = getPageNumbers();
 
   // Format results count display
-  const resultsText = totalResults !== undefined ? `${totalResults.toLocaleString()} risultati` : null;
+  const resultsText =
+    totalResults !== undefined ? `${totalResults.toLocaleString()} risultati` : null;
   const pageInfoText = `Pagina ${currentPage} di ${totalPages}`;
 
   return (
@@ -91,78 +95,78 @@ export function CatalogPagination({
 
       {/* Pagination controls */}
       <div className="flex items-center justify-center gap-2">
-      {/* First Page */}
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={() => onPageChange(1)}
-        disabled={currentPage === 1}
-        aria-label="First page"
-      >
-        <ChevronsLeft className="h-4 w-4" />
-      </Button>
+        {/* First Page */}
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => onPageChange(1)}
+          disabled={currentPage === 1}
+          aria-label={t('pages.library.catalogPagination.firstPage')}
+        >
+          <ChevronsLeft className="h-4 w-4" />
+        </Button>
 
-      {/* Previous Page */}
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={() => onPageChange(currentPage - 1)}
-        disabled={currentPage === 1}
-        aria-label="Previous page"
-      >
-        <ChevronLeft className="h-4 w-4" />
-      </Button>
+        {/* Previous Page */}
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          aria-label={t('pages.library.catalogPagination.previousPage')}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
 
-      {/* Page Numbers */}
-      <div className="flex items-center gap-1">
-        {pageNumbers.map((page, index) => {
-          if (page === '...') {
+        {/* Page Numbers */}
+        <div className="flex items-center gap-1">
+          {pageNumbers.map((page, index) => {
+            if (page === '...') {
+              return (
+                <span key={`ellipsis-${index}`} className="px-2 text-muted-foreground">
+                  ...
+                </span>
+              );
+            }
+
+            const pageNum = page as number;
+            const isActive = pageNum === currentPage;
+
             return (
-              <span key={`ellipsis-${index}`} className="px-2 text-muted-foreground">
-                ...
-              </span>
+              <Button
+                key={pageNum}
+                variant={isActive ? 'default' : 'outline'}
+                size="icon"
+                onClick={() => onPageChange(pageNum)}
+                aria-label={t('pages.library.catalogPagination.pageNumber', { n: pageNum })}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                {pageNum}
+              </Button>
             );
-          }
+          })}
+        </div>
 
-          const pageNum = page as number;
-          const isActive = pageNum === currentPage;
+        {/* Next Page */}
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          aria-label={t('pages.library.catalogPagination.nextPage')}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
 
-          return (
-            <Button
-              key={pageNum}
-              variant={isActive ? 'default' : 'outline'}
-              size="icon"
-              onClick={() => onPageChange(pageNum)}
-              aria-label={`Page ${pageNum}`}
-              aria-current={isActive ? 'page' : undefined}
-            >
-              {pageNum}
-            </Button>
-          );
-        })}
-      </div>
-
-      {/* Next Page */}
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={() => onPageChange(currentPage + 1)}
-        disabled={currentPage === totalPages}
-        aria-label="Next page"
-      >
-        <ChevronRight className="h-4 w-4" />
-      </Button>
-
-      {/* Last Page */}
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={() => onPageChange(totalPages)}
-        disabled={currentPage === totalPages}
-        aria-label="Last page"
-      >
-        <ChevronsRight className="h-4 w-4" />
-      </Button>
+        {/* Last Page */}
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => onPageChange(totalPages)}
+          disabled={currentPage === totalPages}
+          aria-label={t('pages.library.catalogPagination.lastPage')}
+        >
+          <ChevronsRight className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   );

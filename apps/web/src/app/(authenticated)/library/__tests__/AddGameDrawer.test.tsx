@@ -13,12 +13,18 @@
  * - Direct prop-driven open/close (AddGameDrawer)
  */
 
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 
+import { renderWithIntl } from '../../../../__tests__/fixtures/common-fixtures';
 import { AddGameDrawer, AddGameDrawerController } from '../AddGameDrawer';
+
+// #1816 P3-5 — AddGameDrawer migrated from hardcoded EN strings to i18n keys
+// (`pages.library.addGame.*`). Tests use `renderWithIntl` (loads EN test
+// catalog) so existing 'Add a game'/'Add manually'/... assertions stay valid.
+const render = renderWithIntl;
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -38,10 +44,7 @@ vi.mock('@/app/(authenticated)/library/private/add/client', () => ({
     onCancel?: () => void;
     compactMode?: boolean;
   }) => (
-    <div
-      data-testid="user-wizard-client"
-      data-compact-mode={compactMode ? 'true' : 'false'}
-    >
+    <div data-testid="user-wizard-client" data-compact-mode={compactMode ? 'true' : 'false'}>
       <button data-testid="wizard-complete" onClick={onComplete}>
         Complete wizard
       </button>
@@ -62,10 +65,7 @@ vi.mock('@/app/(authenticated)/library/CatalogSearchStep', () => ({
     onBack: () => void;
   }) => (
     <div data-testid="catalog-search-step">
-      <button
-        data-testid="catalog-select-game"
-        onClick={() => onSelect('game-123', 'Catan')}
-      >
+      <button data-testid="catalog-select-game" onClick={() => onSelect('game-123', 'Catan')}>
         Select Catan
       </button>
       <button data-testid="catalog-back" onClick={onBack}>
@@ -82,9 +82,7 @@ const mockUseSearchParams = useSearchParams as Mock;
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function renderDrawer(props: { open: boolean; onClose?: () => void } = { open: false }) {
-  return render(
-    <AddGameDrawer open={props.open} onClose={props.onClose ?? vi.fn()} />,
-  );
+  return render(<AddGameDrawer open={props.open} onClose={props.onClose ?? vi.fn()} />);
 }
 
 function renderController(searchParamsString = '') {
@@ -160,9 +158,7 @@ describe('AddGameDrawer', () => {
 
       await user.click(screen.getByTestId('add-game-choice-manual'));
 
-      expect(screen.getByTestId('add-game-drawer-title')).toHaveTextContent(
-        'Add game manually',
-      );
+      expect(screen.getByTestId('add-game-drawer-title')).toHaveTextContent('Add game manually');
     });
 
     it('calls onClose when wizard completes', async () => {
@@ -206,9 +202,7 @@ describe('AddGameDrawer', () => {
 
       await user.click(screen.getByTestId('add-game-choice-catalog'));
 
-      expect(screen.getByTestId('add-game-drawer-title')).toHaveTextContent(
-        'Add from catalog',
-      );
+      expect(screen.getByTestId('add-game-drawer-title')).toHaveTextContent('Add from catalog');
     });
 
     it('goes back to choice step when catalog back is clicked', async () => {

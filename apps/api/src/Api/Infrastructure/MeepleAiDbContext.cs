@@ -62,9 +62,14 @@ public class MeepleAiDbContext : DbContext
         _eventCollector = eventCollector;
         _dataProtectionProvider = dataProtectionProvider;
         _logger = logger;
-        // Issue #1535: default Hybrid when options are not wired (legacy test fixtures + first
-        // rollout window in prod). Hybrid is the safe default — same as pre-#1535 behaviour
-        // plus an additive outbox row.
+        // Issue #1535: when constructed without IOptions, fall back to Hybrid (dual-write
+        // outbox row + inline MediatR.Publish). The DI-bound default is OutboxOnly post-T9
+        // cutover, BUT legacy test fixtures construct MeepleAiDbContext directly — without
+        // the IOptions wiring — and rely on the inline-publish pre-#1535 behaviour to assert
+        // handler invocations. Switching this fallback to OutboxOnly would silently break
+        // those fixtures (no exception, just zero handler dispatches inside SaveChangesAsync).
+        // The divergence is INTENTIONAL: SaveChangesAsyncRoutingTests.Default_mode_when_options_null_is_Hybrid
+        // pins this contract.
         _dispatchMode = domainEventOutboxOptions?.Value.Mode ?? DomainEventDispatchMode.Hybrid;
         // Issue #1535 T6 code review: EnqueueOutboxRows used DateTimeOffset.UtcNow directly,
         // breaking test determinism (the processor uses TimeProvider). Default to

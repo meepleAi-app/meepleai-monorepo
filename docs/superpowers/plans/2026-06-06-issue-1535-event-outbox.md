@@ -920,3 +920,14 @@ S1535 è merged + closed quando:
 - **In-flight events during T8 → T9 transition**: Hybrid mode publishes inline AND outbox; consumers see double dispatch. **Mitigation**: T0 audit confirms idempotency before merge.
 - **Multi-instance race on same outbox row** (Scenario 5): degradable to skip + follow-up if test flaky.
 - **OutboxBase abstraction** (Newman): tracked, not in MVP.
+- **RotateProviderKey × AtomicAudit × outbox E2E coverage gap**: the 2 integration tests
+  that would exercise the full pipeline (`Scenario 1 happy path` + `Scenario 8 audit outbox`
+  in `RotateProviderKeyEndpointIntegrationTests.cs`) are skipped pending the #1859 factory
+  follow-up. The T10 doc-comments claim safety based on the underlying outbox mechanism
+  testing (`Issue1535EventOutboxAcceptanceTests.Scenario2_RollbackSafety_*`), which proxies
+  the [AtomicAudit] behavior with an explicit transaction. **Track**: un-skip when #1859
+  factory work lands, OR add a dedicated acceptance test using the existing factory.
+- **Follow-ups resolved in dedicated branches**: `FailedAt` column on
+  `DomainEventOutboxEntity` (replaces the F9 honest-doc workaround) and
+  `dispatch_latency_seconds` histogram (replaces the DoD-9 `pending_oldest_age_seconds`
+  proxy) — see commit history post-T10.

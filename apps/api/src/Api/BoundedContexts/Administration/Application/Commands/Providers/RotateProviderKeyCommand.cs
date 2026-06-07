@@ -26,10 +26,15 @@ namespace Api.BoundedContexts.Administration.Application.Commands.Providers;
 /// event handler's Redis pub/sub broadcast fired INSIDE <c>SaveChangesAsync</c>, so an outer
 /// audit rollback could leave a spurious cache invalidation in flight (the original
 /// <c>AtomicAudit + external side-effects forbidden</c> constraint). Post-#1535 (commits
-/// <c>23dc88727</c> Phase A + this commit Phase B), the event flows through the
-/// post-commit outbox: if the outer audit transaction rolls back, the outbox row is
-/// rolled back too — the broadcast never fires. The original forbidden combination is
-/// now safe.
+/// <c>23dc88727</c> Phase A + T10 cleanup), the event flows through the post-commit outbox:
+/// if the outer audit transaction rolls back, the outbox row is rolled back too — the
+/// broadcast never fires. The original forbidden combination is now safe IN OUTBOXONLY MODE.
+///
+/// ⚠ Hybrid rollback caveat: flipping DomainEventOutbox:Mode back to Hybrid (the documented
+/// rollback path) re-enables the inline MediatR.Publish race for this command. Treat the
+/// rollback as a short-term incident-response measure; if production needs to stay on Hybrid
+/// for an extended window, gate the rotation endpoint behind a feature flag until OutboxOnly
+/// is restored.
 ///
 /// Issue #1859 + #1535. Authorised: superadmin only (handler-level guard, see
 /// <c>RotateProviderKeyCommandHandler</c>). Rate-limit guard: 1 rotation per provider per 24h.

@@ -23,11 +23,20 @@ namespace Api.BoundedContexts.Administration.Application.Behaviors;
 ///
 /// Domain-event safety post-#1535: events raised via <c>IDomainEventCollector</c> are dispatched
 /// POST-COMMIT via the <c>DomainEventOutboxProcessor</c> (Phase B cutover, commit <c>23dc88727</c>
-/// + this commit). A rolled-back transaction never persists the outbox row, so no event
+/// + T10 cleanup). A rolled-back transaction never persists the outbox row, so no event
 /// side-effect leaves the system. The historical CONSTRAINT (domain events forbidden inside
 /// AtomicAudit) is RESOLVED — see <c>audits/2026-06-06-issue-1535-consumer-idempotency-audit.md</c>
 /// for the consumer-contract requirements that every <c>INotificationHandler&lt;TEvent&gt;</c>
 /// MUST honour to make the post-commit dispatch safe.
+///
+/// <para>⚠ <b>Hybrid rollback caveat</b>: flipping <c>DomainEventOutbox:Mode</c> back to
+/// <c>Hybrid</c> re-introduces the inline-dispatch race for any <c>[AtomicAudit]</c> command
+/// whose handler raises a domain event with observable external side-effects (e.g.
+/// <c>RotateProviderKeyCommand</c> → <c>ProviderKeyRotatedEvent</c> → Redis pub/sub broadcast).
+/// In Hybrid, the inline <c>MediatR.Publish</c> fires INSIDE <c>SaveChangesAsync</c>, so a
+/// rolled-back outer audit transaction CAN leave a side-effect in flight. Treat Hybrid as a
+/// short-term incident-response measure; do not run Hybrid as steady state with these
+/// commands enabled.</para>
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public sealed class AtomicAuditAttribute : Attribute { }

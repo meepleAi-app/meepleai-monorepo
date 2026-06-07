@@ -660,9 +660,15 @@ Two-phase deploy to avoid race during rollout:
 
 If outbox processor has critical bug post-deploy:
 
-1. **Immediate:** flip `EventDispatch:Mode = "InlineOnly"` (legacy behavior). Outbox rows continue to accumulate but are ignored. Processor logs warning.
-2. **Diagnostic:** investigate poison rows via `/admin/monitor?tab=events`.
-3. **Recovery:** patch processor, flip back to `OutboxOnly`, replay rows by setting `next_attempt_at = NULL` on stuck rows.
+> **Post-T10 update**: the `InlineOnly` mode was removed in T10 cleanup. The canonical
+> rollback path is now `DomainEventOutbox:Mode = "Hybrid"` — see
+> `audits/2026-06-07-issue-1535-phase-b-cutover-pr-draft.md` § Rollback path for the
+> current production runbook. The Hybrid rollback restores inline `MediatR.Publish`
+> alongside the outbox; consumers see 2× dispatch but the system continues to function.
+
+1. **Immediate (legacy spec — DO NOT FOLLOW):** flip `EventDispatch:Mode = "InlineOnly"`. **Replaced:** flip `DomainEventOutbox:Mode = "Hybrid"`. The outbox processor continues to drain accumulated rows; the inline dispatch path resumes for new events.
+2. **Diagnostic:** investigate poison rows via `/api/v1/admin/event-outbox/failed` (endpoint shipped in T6).
+3. **Recovery:** patch processor, flip back to `OutboxOnly`, replay terminal Failed rows via `POST /api/v1/admin/event-outbox/{id}/retry`.
 4. **Last resort:** truncate `domain_event_outbox` (loses pending work; consumers either tolerate loss or trigger manual replay from `domain_event_logs` for the registered subset).
 
 ---

@@ -27,6 +27,14 @@ vi.mock('@/hooks/queries/useKbHub', () => ({
   useDeletePdf: (gameId: string) => mockUseDeletePdf(gameId),
 }));
 
+// F4 #1974: KbHubContent now consults useLibraryGameDetail to resolve the
+// game title. Mock it as a simple identity hook returning `{ gameTitle }`
+// from a per-test fixture so the orchestrator doesn't need a QueryClient.
+const mockUseLibraryGameDetail = vi.fn();
+vi.mock('@/hooks/queries/useLibrary', () => ({
+  useLibraryGameDetail: (gameId: string) => mockUseLibraryGameDetail(gameId),
+}));
+
 // Mock useTranslation with a lightweight lookup in MESSAGES dict (defined below).
 // Avoids react-intl IntlProvider initialization that becomes pathological under the
 // scale of orchestrator label assembly (~90 t() calls per render).
@@ -180,6 +188,12 @@ describe('KbHubContent orchestrator (Issue #1481)', () => {
     mockUseReindexKb.mockReturnValue({ mutateAsync: vi.fn() });
     mockUseRebuildRaptor.mockReturnValue({ mutateAsync: vi.fn() });
     mockUseDeletePdf.mockReturnValue({ mutateAsync: vi.fn() });
+    // F4 #1974 default: catalog game title resolved; tests override per case.
+    mockUseLibraryGameDetail.mockReturnValue({
+      data: { gameTitle: 'Catan' },
+      isLoading: false,
+      isError: false,
+    });
   });
 
   it('renders skeleton while either query is loading', () => {

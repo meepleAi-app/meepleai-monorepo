@@ -48,6 +48,7 @@ import {
   useRebuildRaptor,
   useUserKbStatus,
 } from '@/hooks/queries/useKbHub';
+import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { GamePdfDto } from '@/lib/api/schemas/pdf.schemas';
 
@@ -99,6 +100,12 @@ export function KbHubContent({ gameId }: KbHubContentProps): ReactElement {
   const reindexMutation = useReindexKb(gameId);
   const _raptorMutation = useRebuildRaptor(gameId);
   const deleteMutation = useDeletePdf(gameId);
+  // F4 #1974 (audit 2026-06-07): pull the game title from the library detail
+  // hook (shared QueryKey with the layout — TanStack dedups) so the KB hub
+  // renders "Catan" instead of the cc1678e8… UUID when the BE status payload
+  // omits `gameTitle`. `useLibraryGameDetail` already falls back to the
+  // shared-catalog title for games not in the user's library.
+  const gameDetailQuery = useLibraryGameDetail(gameId);
 
   const [reindexOpen, setReindexOpen] = useState(false);
   const [reindexPhase, setReindexPhase] = useState<ReindexPhase>('confirm');
@@ -129,7 +136,13 @@ export function KbHubContent({ gameId }: KbHubContentProps): ReactElement {
 
   const status = statusQuery.data;
   const pdfs = pdfsQuery.data ?? [];
-  const gameTitle = status?.gameId ?? gameId; // BE schema has no title; consumer falls back to id MVP
+  // F4 #1974: title resolution order
+  //   1. library-detail (preferred — shared with the layout via TanStack dedup)
+  //   2. KB status.gameId (only ever the UUID — last resort, signals BE schema
+  //      gap rather than a real title; surfaced as the literal id when nothing
+  //      else is available so consumers see the bug instead of a silent blank).
+  //   3. route param (defensive — should never differ from gameId in BE)
+  const gameTitle = gameDetailQuery.data?.gameTitle ?? status?.gameId ?? gameId;
 
   // #1816 P3-7 Phase 2 — derived from the two independent BE endpoints:
   //   - useGamePdfs returns rows from `pdf_documents` (uploaded files)

@@ -82,6 +82,8 @@ export async function seedGameNight(
     ownerEmail: string;
     scoringType?: ScoringType;
     rosterCount?: number;
+    /** Issue #1929 Macro 4 (DEC-C-10 PIVOT): optional SharedGame catalog id to associate this GameNight with. */
+    gameId?: string;
   }
 ): Promise<SeedGameNightResponse> {
   const response = await page.request.post(`${SEED_BASE}/game-night`, {

@@ -3,6 +3,7 @@ using Api.BoundedContexts.Testing.Infrastructure;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.GameManagement;
+using Api.Middleware.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -29,6 +30,18 @@ internal sealed class SeedTestGameNightCommandHandler
         CancellationToken cancellationToken)
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        // Issue #1929 Macro 4 (DEC-C-10 PIVOT): verify GameId exists in SharedGames if provided.
+        if (request.GameId.HasValue)
+        {
+            var gameExists = await _db.SharedGames
+                .AnyAsync(g => g.Id == request.GameId.Value, cancellationToken)
+                .ConfigureAwait(false);
+            if (!gameExists)
+            {
+                throw new BadRequestException($"GameId {request.GameId.Value} not found in SharedGames catalog");
+            }
+        }
 
         var ownerId = Guid.NewGuid();
         var ownerEntity = new UserEntity
@@ -59,6 +72,11 @@ internal sealed class SeedTestGameNightCommandHandler
             _ => request.Status
         };
 
+        // Issue #1929 Macro 4 (DEC-C-10 PIVOT): include GameId in GameIdsJson when provided.
+        var gameIds = request.GameId.HasValue
+            ? new List<Guid> { request.GameId.Value }
+            : new List<Guid>();
+
         var gameNightEntity = new GameNightEventEntity
         {
             Id = gameNightId,
@@ -68,7 +86,7 @@ internal sealed class SeedTestGameNightCommandHandler
             ScheduledAt = DateTimeOffset.UtcNow.AddDays(7),
             Location = "E2E Location",
             MaxPlayers = null,
-            GameIdsJson = JsonSerializer.Serialize(new List<Guid>()),
+            GameIdsJson = JsonSerializer.Serialize(gameIds),
             Status = finalStatus,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,

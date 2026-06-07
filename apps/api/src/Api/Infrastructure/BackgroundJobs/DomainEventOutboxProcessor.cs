@@ -19,12 +19,13 @@ namespace Api.Infrastructure.BackgroundJobs;
 /// that motivated #1535 (an outer audit transaction can no longer roll back AFTER
 /// side-effects have escaped).</para>
 ///
-/// <para>Lifecycle (T4): poll every
+/// <para>Lifecycle (T4 + T5): poll every
 /// <see cref="DomainEventOutboxOptions.PollIntervalSeconds"/>, drain up to
 /// <see cref="DomainEventOutboxOptions.BatchSize"/> rows per batch in a single
-/// transaction. Per-row dispatch failure currently transitions the row directly to
-/// Failed; T5 will introduce exponential-backoff retry semantics + the
-/// <see cref="DomainEventOutboxOptions.MaxAttempts"/> dead-letter threshold.</para>
+/// transaction. On per-row dispatch failure, the row is re-armed Pending with an
+/// exponentially-backed-off <c>NextAttemptAt</c> (T5) until the
+/// <see cref="DomainEventOutboxOptions.MaxAttempts"/> budget is exhausted, after
+/// which it transitions to terminal Failed for ops triage.</para>
 ///
 /// <para>Mirror of <c>AuditOutboxProcessor</c> (PR #1532) — kept separate because the
 /// two outboxes will diverge in their failure semantics (audit is "best-effort write";
@@ -89,8 +90,11 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
     ///     <item>Deserialize <c>PayloadJson</c> into the resolved type.</item>
     ///     <item>Invoke <c>MediatR.Publish</c> with the resulting <see cref="IDomainEvent"/>.</item>
     ///     <item>On success: <see cref="DomainEventOutboxEntity.MarkSent"/>.</item>
-    ///     <item>On failure (T4 scope): <see cref="DomainEventOutboxEntity.MarkFailed"/>.
-    ///           T5 will swap this branch for retry-with-backoff semantics.</item>
+    ///     <item>On failure with budget remaining (T5):
+    ///           <see cref="DomainEventOutboxEntity.MarkRetry"/> with
+    ///           <see cref="ComputeBackoff"/> exponential delay.</item>
+    ///     <item>On failure that exhausts the budget (T5):
+    ///           <see cref="DomainEventOutboxEntity.MarkFailed"/> — terminal, ops-visible.</item>
     ///   </list>
     /// All state transitions commit in a single transaction. Returns the number of rows
     /// considered in this batch. Exposed publicly for deterministic integration testing —
@@ -177,12 +181,25 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
                 catch (Exception ex)
 #pragma warning restore CA1031
                 {
-                    // T4 scope: any per-row failure terminates the row. T5 will swap this for
-                    // retry-with-exponential-backoff up to MaxAttempts, then MarkFailed.
-                    row.MarkFailed(ex.Message, now);
-                    _logger.LogError(ex,
-                        "Failed to dispatch domain event {EventId} ({EventType}); marked Failed",
-                        row.Id, row.EventType);
+                    // T5: budgeted retry. Attempts on the row still reflects the PRIOR
+                    // count when we enter the catch block — both MarkRetry and MarkFailed
+                    // increment it. The decision branch checks the post-increment value.
+                    var nextAttemptCount = row.Attempts + 1;
+                    if (nextAttemptCount >= _options.MaxAttempts)
+                    {
+                        row.MarkFailed(ex.Message, now);
+                        _logger.LogError(ex,
+                            "Domain event {EventId} ({EventType}) FAILED terminally after {Attempts} attempts",
+                            row.Id, row.EventType, nextAttemptCount);
+                    }
+                    else
+                    {
+                        var backoff = ComputeBackoff(nextAttemptCount);
+                        row.MarkRetry(ex.Message, now + backoff, now);
+                        _logger.LogWarning(ex,
+                            "Domain event {EventId} ({EventType}) dispatch failed; scheduling retry #{Attempt} in {BackoffSeconds:F2}s",
+                            row.Id, row.EventType, nextAttemptCount, backoff.TotalSeconds);
+                    }
                 }
             }
 
@@ -194,6 +211,24 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
 
             return pending.Count;
         }).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// T5 exponential backoff with jitter. The unjittered delay grows as
+    /// <c>InitialBackoffMs * 2^(attempt-1)</c> seconds and is capped at
+    /// <see cref="DomainEventOutboxOptions.MaxBackoffSeconds"/>. A symmetric ±20% jitter
+    /// is applied on top to avoid thundering-herd retries when many rows fail
+    /// simultaneously (e.g. transient consumer outage). The cap is applied BEFORE the
+    /// jitter so the final delay can land in <c>[cap × 0.8, cap × 1.2]</c>.
+    /// </summary>
+    /// <param name="attempt">1-based attempt counter — the value Attempts will hold
+    /// AFTER the impending <see cref="DomainEventOutboxEntity.MarkRetry"/> call.</param>
+    private TimeSpan ComputeBackoff(int attempt)
+    {
+        var unboundedSeconds = (_options.InitialBackoffMs / 1000.0) * Math.Pow(2, attempt - 1);
+        var seconds = Math.Min(unboundedSeconds, _options.MaxBackoffSeconds);
+        var jitterFactor = 1.0 + ((Random.Shared.NextDouble() * 0.4) - 0.2); // [0.8, 1.2]
+        return TimeSpan.FromSeconds(seconds * jitterFactor);
     }
 
     /// <summary>

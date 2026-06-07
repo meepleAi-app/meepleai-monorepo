@@ -516,7 +516,7 @@
 - Modify: `DomainEventOutboxProcessor.cs` (retry logic + ComputeBackoff)
 - Tests: aggiungi a `DomainEventOutboxProcessorIntegrationTests.cs`
 
-- [ ] **Step 1: Retry test FIRST**
+- [x] **Step 1: Retry test FIRST**
 
   ```csharp
   [Fact]
@@ -569,13 +569,13 @@
 
   RED.
 
-- [ ] **Step 2: Implement ComputeBackoff + retry logic in catch block**
+- [x] **Step 2: Implement ComputeBackoff + retry logic in catch block**
 
   Riferimento: spec § Processor § `ComputeBackoff`.
 
   RUN: 3/3 GREEN.
 
-- [ ] **Step 3: Verifica counter metrics increment**
+- [ ] **Step 3: Verifica counter metrics increment** _(deferred to T6: counters not yet declared)_
 
   Aggiungi assertion:
   ```csharp
@@ -585,9 +585,9 @@
   Assert.Equal(1, MetricsTestHelper.GetCounterValue("meepleai_domain_event_outbox_failed_terminal_total"));
   ```
 
-- [ ] **Verifica:**
-  - 3/3 retry test PASS
-  - Counter metrics increment correctly
+- [x] **Verifica:**
+  - 3/3 retry test PASS ✅ commit `<T5-commit>`
+  - Counter metrics increment correctly — _deferred to T6_
 
 ---
 

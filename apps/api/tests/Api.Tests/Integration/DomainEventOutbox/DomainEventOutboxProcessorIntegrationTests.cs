@@ -11,7 +11,9 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Npgsql;
 using Xunit;
@@ -318,6 +320,141 @@ public sealed class DomainEventOutboxProcessorIntegrationTests : IAsyncLifetime
     }
 
     // ─────────────────────────────────────────────────────────────────────────────────────────────
+    // T5 — Retry budget + dead-letter (failure path)
+    // ─────────────────────────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task RunOnceAsync_FailingPublish_MarksRetry_WithExponentialBackoff()
+    {
+        // Arrange: 1 Pending row ready immediately; mediator throws a transient error.
+        // We override the mediator setup AFTER InitializeAsync wired the default no-op stub.
+        const string transientMessage = "transient-T5-step1";
+        _mediatorMock!
+            .Setup(m => m.Publish(It.IsAny<IDomainEvent>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException(transientMessage));
+
+        var fakeNow = new DateTimeOffset(2026, 6, 7, 12, 0, 0, TimeSpan.Zero);
+        var timeProvider = new FakeTimeProvider(fakeNow);
+
+        await using (var scope = _serviceProvider!.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var ev = new FakeEvent(Marker: 1);
+            var row = DomainEventOutboxEntity.Enqueue(
+                ev,
+                FakeEventAlias,
+                JsonSerializer.Serialize(ev, DomainEventJsonOptions.Default),
+                payloadVersion: 1,
+                correlationId: null,
+                now: fakeNow);
+            db.DomainEventOutbox.Add(row);
+            await db.SaveChangesAsync(TestCancellationToken);
+        }
+
+        // Default options: MaxAttempts=10, InitialBackoffMs=1000, MaxBackoffSeconds=64.
+        var processor = CreateProcessor(new DomainEventOutboxOptions(), timeProvider);
+
+        // Act
+        var processed = await processor.RunOnceAsync(batchSize: 10, cancellationToken: TestCancellationToken);
+
+        // Assert: row REMAINS Pending (re-enters the queue), attempts incremented, LastError set,
+        // NextAttemptAt scheduled to fakeNow + ~1s (±20% jitter).
+        processed.Should().Be(1, "the row WAS considered in this batch (success/failure both count)");
+
+        await using var verifyScope = _serviceProvider!.CreateAsyncScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var refreshed = await verifyDb.DomainEventOutbox.AsNoTracking().SingleAsync(TestCancellationToken);
+
+        refreshed.LastError.Should().Be(transientMessage,
+            because: "diagnostic: surface which catch branch the processor took");
+        refreshed.Status.Should().Be(DomainEventOutboxStatus.Pending,
+            because: "a transient failure with retry budget remaining must re-arm Pending, not Failed");
+        refreshed.Attempts.Should().Be(1);
+        refreshed.DispatchedAt.Should().BeNull();
+        refreshed.NextAttemptAt.Should().NotBeNull();
+        refreshed.NextAttemptAt!.Value.Should().BeOnOrAfter(fakeNow.AddMilliseconds(800),
+            because: "backoff = InitialBackoffMs (1000) * 2^0 = 1s, jitter floor ≈ 0.8s");
+        refreshed.NextAttemptAt!.Value.Should().BeOnOrBefore(fakeNow.AddMilliseconds(1200),
+            because: "backoff = InitialBackoffMs (1000) * 2^0 = 1s, jitter ceiling ≈ 1.2s");
+    }
+
+    [Fact]
+    public async Task RunOnceAsync_AfterMaxAttempts_MarksFailed_Terminal()
+    {
+        // Arrange: row has already failed twice (Attempts=2); the next failure exhausts a
+        // MaxAttempts=3 budget and must transition to Failed (terminal).
+        const string deterministicMessage = "deterministic-T5-step2";
+        _mediatorMock!
+            .Setup(m => m.Publish(It.IsAny<IDomainEvent>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException(deterministicMessage));
+
+        var fakeNow = new DateTimeOffset(2026, 6, 7, 12, 0, 0, TimeSpan.Zero);
+        var timeProvider = new FakeTimeProvider(fakeNow);
+
+        await SeedRowWithAttemptsAsync(targetAttempts: 2, now: fakeNow);
+
+        // Override MaxAttempts so the next failure tips the row into terminal Failed.
+        var options = new DomainEventOutboxOptions { MaxAttempts = 3 };
+        var processor = CreateProcessor(options, timeProvider);
+
+        // Act
+        await processor.RunOnceAsync(batchSize: 10, cancellationToken: TestCancellationToken);
+
+        // Assert: Status=Failed, Attempts=3 (the entity's MarkFailed increments Attempts).
+        await using var verifyScope = _serviceProvider!.CreateAsyncScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var refreshed = await verifyDb.DomainEventOutbox.AsNoTracking().SingleAsync(TestCancellationToken);
+
+        refreshed.Status.Should().Be(DomainEventOutboxStatus.Failed,
+            because: "Attempts(2)+1 == MaxAttempts(3) ⇒ the row must terminate, not re-schedule");
+        refreshed.Attempts.Should().Be(3,
+            because: "MarkFailed increments Attempts, so a row that had failed twice ends at 3");
+        refreshed.LastError.Should().Be(deterministicMessage);
+        refreshed.NextAttemptAt.Should().BeNull(
+            because: "terminal Failed rows must not be re-attempted; NextAttemptAt is cleared");
+    }
+
+    [Fact]
+    public async Task RunOnceAsync_Backoff_CapsAtMaxBackoffSeconds()
+    {
+        // Arrange: simulate a row that has failed 10 times. The raw exponential backoff
+        // for attempt 11 would be 1024s (≫ cap). With MaxBackoffSeconds=8, the scheduler
+        // must clamp at 8s before applying ±20% jitter — so the final window is [6.4s, 9.6s].
+        const string transientMessage = "transient-T5-step3-cap";
+        _mediatorMock!
+            .Setup(m => m.Publish(It.IsAny<IDomainEvent>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException(transientMessage));
+
+        var fakeNow = new DateTimeOffset(2026, 6, 7, 12, 0, 0, TimeSpan.Zero);
+        var timeProvider = new FakeTimeProvider(fakeNow);
+
+        await SeedRowWithAttemptsAsync(targetAttempts: 10, now: fakeNow);
+
+        // Crank MaxAttempts high so this failure stays in retry territory (we are testing
+        // the BACKOFF math, not the dead-letter transition).
+        var options = new DomainEventOutboxOptions { MaxAttempts = 20, MaxBackoffSeconds = 8.0 };
+        var processor = CreateProcessor(options, timeProvider);
+
+        // Act
+        await processor.RunOnceAsync(batchSize: 10, cancellationToken: TestCancellationToken);
+
+        // Assert: row Pending, Attempts=11, NextAttemptAt-now ∈ [6.4s, 9.6s].
+        await using var verifyScope = _serviceProvider!.CreateAsyncScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var refreshed = await verifyDb.DomainEventOutbox.AsNoTracking().SingleAsync(TestCancellationToken);
+
+        refreshed.Status.Should().Be(DomainEventOutboxStatus.Pending);
+        refreshed.Attempts.Should().Be(11);
+        refreshed.NextAttemptAt.Should().NotBeNull();
+
+        var delay = (refreshed.NextAttemptAt!.Value - fakeNow).TotalSeconds;
+        delay.Should().BeGreaterThanOrEqualTo(6.4,
+            because: "8s cap minus 20% jitter = 6.4s floor");
+        delay.Should().BeLessThanOrEqualTo(9.6,
+            because: "8s cap plus 20% jitter = 9.6s ceiling");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────────────────────
     // Helpers
     // ─────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -335,6 +472,53 @@ public sealed class DomainEventOutboxProcessorIntegrationTests : IAsyncLifetime
                 await Task.Delay(500, TestContext.Current.CancellationToken);
             }
         }
+    }
+
+    /// <summary>
+    /// Builds a <see cref="DomainEventOutboxProcessor"/> with per-test option overrides and
+    /// an optional <see cref="TimeProvider"/>. T5 tests need to deterministically assert on
+    /// backoff windows, so the test rig replaces the live <c>TimeProvider.System</c> with a
+    /// <c>FakeTimeProvider</c> pinned to a known instant.
+    /// </summary>
+    private DomainEventOutboxProcessor CreateProcessor(
+        DomainEventOutboxOptions options,
+        TimeProvider? timeProvider = null)
+    {
+        var scopeFactory = _serviceProvider!.GetRequiredService<IServiceScopeFactory>();
+        var logger = _serviceProvider!.GetRequiredService<ILogger<DomainEventOutboxProcessor>>();
+        var healthTracker = _serviceProvider!.GetRequiredService<IDomainEventOutboxHealthTracker>();
+        return new DomainEventOutboxProcessor(
+            scopeFactory,
+            logger,
+            Options.Create(options),
+            healthTracker,
+            timeProvider);
+    }
+
+    /// <summary>
+    /// Seeds a single Pending row and then drives <see cref="DomainEventOutboxEntity.MarkRetry"/>
+    /// <paramref name="targetAttempts"/> times to simulate prior failure history. After each
+    /// MarkRetry the <c>NextAttemptAt</c> is anchored 1 second IN THE PAST so the processor
+    /// still treats the row as ready when it polls at <paramref name="now"/>.
+    /// </summary>
+    private async Task SeedRowWithAttemptsAsync(int targetAttempts, DateTimeOffset now)
+    {
+        await using var scope = _serviceProvider!.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var ev = new FakeEvent(Marker: 1);
+        var row = DomainEventOutboxEntity.Enqueue(
+            ev,
+            FakeEventAlias,
+            JsonSerializer.Serialize(ev, DomainEventJsonOptions.Default),
+            payloadVersion: 1,
+            correlationId: null,
+            now: now);
+        for (var i = 0; i < targetAttempts; i++)
+        {
+            row.MarkRetry($"seed-history-{i}", now.AddSeconds(-1), now);
+        }
+        db.DomainEventOutbox.Add(row);
+        await db.SaveChangesAsync(TestCancellationToken);
     }
 
     /// <summary>

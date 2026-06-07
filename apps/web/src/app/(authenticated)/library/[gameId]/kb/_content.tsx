@@ -131,6 +131,14 @@ export function KbHubContent({ gameId }: KbHubContentProps): ReactElement {
   const pdfs = pdfsQuery.data ?? [];
   const gameTitle = status?.gameId ?? gameId; // BE schema has no title; consumer falls back to id MVP
 
+  // #1816 P3-7 Phase 2 — derived from the two independent BE endpoints:
+  //   - useGamePdfs returns rows from `pdf_documents` (uploaded files)
+  //   - useUserKbStatus.isIndexed reflects pgvector chunk presence (indexed)
+  // When at least one file exists but pgvector indexing has not produced any
+  // chunk yet, surface the audit-flagged "0 Documenti / Copertura: Nessuna"
+  // state as an explicit "Indicizzazione in corso" badge.
+  const indexingPending = pdfs.length > 0 && status?.isIndexed === false;
+
   // ─── Labels (caller-side i18n resolution) ─────────────
   const emptyLabels: EmptyStateLabels = {
     title: t('pages.library.gameDetail.kb.empty.title'),
@@ -143,6 +151,8 @@ export function KbHubContent({ gameId }: KbHubContentProps): ReactElement {
     headerSubtitle: t('pages.library.gameDetail.kb.header.titleSuffix'),
     uploadCta: t('pages.library.gameDetail.kb.header.uploadCta'),
     reindexAllCta: t('pages.library.gameDetail.kb.header.reindexAllCta'),
+    indexingBadge: t('pages.library.gameDetail.kb.stats.indexingBadge'),
+    indexingDescription: t('pages.library.gameDetail.kb.stats.indexingDescription'),
     statsStrip: {
       docs: t('pages.library.gameDetail.kb.stats.docs', { count: status?.documentCount ?? 0 }),
       chunks: t('pages.library.gameDetail.kb.stats.chunksTemplate'),
@@ -193,6 +203,8 @@ export function KbHubContent({ gameId }: KbHubContentProps): ReactElement {
     sparklineLabel: t('pages.library.gameDetail.kb.stats.sparklineLabel'),
     sparklineStart: t('pages.library.gameDetail.kb.stats.sparklineStart'),
     sparklineEnd: t('pages.library.gameDetail.kb.stats.sparklineEnd'),
+    indexingBadge: t('pages.library.gameDetail.kb.stats.indexingBadge'),
+    indexingDescription: t('pages.library.gameDetail.kb.stats.indexingDescription'),
   };
 
   const raptorLabels: RaptorPanelLabels = {
@@ -338,6 +350,7 @@ export function KbHubContent({ gameId }: KbHubContentProps): ReactElement {
               setReindexOpen(true);
             }}
             onPdfAction={handlePdfActionTrigger}
+            indexingPending={indexingPending}
           />
 
           <KbStatsCard
@@ -345,6 +358,7 @@ export function KbHubContent({ gameId }: KbHubContentProps): ReactElement {
             coverageLevel={status?.coverageLevel ?? 'None'}
             coverageScore={status?.coverageScore ?? 0}
             labels={statsCardLabels}
+            indexingPending={indexingPending}
           />
 
           <RaptorPanel tier="free" labels={raptorLabels} />

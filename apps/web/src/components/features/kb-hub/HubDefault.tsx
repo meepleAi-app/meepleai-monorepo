@@ -53,6 +53,11 @@ export interface HubDefaultLabels {
   readonly coverage: HubDefaultCoverageLabels;
   readonly columnHeaders: HubDefaultColumnHeaders;
   readonly pdfRow: PdfRowLabels;
+  // #1816 P3-7 — indexing-pending badge shown when caller flags the state
+  // (`pdfs.length > 0 && !status.isIndexed`). Optional — when undefined the
+  // hub does not render the badge slot.
+  readonly indexingBadge?: string;
+  readonly indexingDescription?: string;
 }
 
 export interface HubDefaultProps {
@@ -69,6 +74,9 @@ export interface HubDefaultProps {
   readonly embeddings?: number;
   readonly lastReindexRelative?: string;
   readonly className?: string;
+  // #1816 P3-7 Phase 2 — surfaces a banner above the stats strip when a PDF
+  // is uploaded but BE indexing has not yet completed.
+  readonly indexingPending?: boolean;
 }
 
 export function HubDefault(props: HubDefaultProps): ReactElement {
@@ -85,6 +93,7 @@ export function HubDefault(props: HubDefaultProps): ReactElement {
     embeddings,
     lastReindexRelative,
     className,
+    indexingPending = false,
   } = props;
 
   // Locale resolved at runtime (caller's IntlProvider); avoids hardcoded it-IT divergence.
@@ -179,6 +188,23 @@ export function HubDefault(props: HubDefaultProps): ReactElement {
             </button>
           </div>
         </div>
+
+        {/* #1816 P3-7 Phase 2 — indexing-pending banner above the stats strip.
+            Rendered only when the caller flags the state AND provides at least
+            an `indexingBadge` label. Warning tint = transient state, not error. */}
+        {indexingPending && labels.indexingBadge && (
+          <div
+            data-slot="kb-hub-default-indexing-banner"
+            role="status"
+            aria-live="polite"
+            className="mb-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-xs"
+          >
+            <div className="font-display font-bold text-warning">{labels.indexingBadge}</div>
+            {labels.indexingDescription && (
+              <div className="mt-1 text-muted-foreground">{labels.indexingDescription}</div>
+            )}
+          </div>
+        )}
 
         {/* Stats strip */}
         <div

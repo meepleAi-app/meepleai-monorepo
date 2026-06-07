@@ -80,6 +80,9 @@ const MESSAGES: Record<string, string> = {
   'pages.library.gameDetail.kb.stats.coverage.Complete': 'Completa',
   'pages.library.gameDetail.kb.stats.cardTitle': 'KB Coverage Stats',
   'pages.library.gameDetail.kb.stats.cardSubtitle': 'Metriche',
+  'pages.library.gameDetail.kb.stats.indexingBadge': '⏳ Indicizzazione in corso',
+  'pages.library.gameDetail.kb.stats.indexingDescription':
+    'Il documento è caricato ma non ancora ricercabile dalla chat.',
   'pages.library.gameDetail.kb.stats.lifetimeCostLabel': 'Costo lifetime',
   'pages.library.gameDetail.kb.stats.sparklineLabel': 'Consumo',
   'pages.library.gameDetail.kb.stats.sparklineStart': '-7gg',
@@ -214,6 +217,97 @@ describe('KbHubContent orchestrator (Issue #1481)', () => {
     mockUseGamePdfs.mockReturnValue({ isLoading: false, isError: false, data: [] });
     const { container } = renderWithIntl(<KbHubContent gameId={GAME_ID} />);
     expect(container.querySelector('[data-slot="kb-hub-empty-state"]')).toBeInTheDocument();
+  });
+
+  // #1816 P3-7 Phase 2 — indexing-pending state surface.
+  describe('indexing-pending state (#1816 P3-7 Phase 2)', () => {
+    it('renders indexing badges on KbStatsCard + HubDefault when pdfs present and isIndexed=false', () => {
+      mockUseUserKbStatus.mockReturnValue({
+        isLoading: false,
+        isError: false,
+        data: {
+          gameId: GAME_ID,
+          isIndexed: false, // BE has no chunks yet
+          documentCount: 0,
+          coverageScore: 0,
+          coverageLevel: 'None',
+          suggestedQuestions: [],
+        },
+      });
+      mockUseGamePdfs.mockReturnValue({
+        isLoading: false,
+        isError: false,
+        data: [pdfFixture({ id: 'p1' })], // PDF row visible
+      });
+
+      const { container } = renderWithIntl(<KbHubContent gameId={GAME_ID} />);
+
+      expect(
+        container.querySelector('[data-slot="kb-hub-stats-indexing-badge"]')
+      ).toBeInTheDocument();
+      expect(
+        container.querySelector('[data-slot="kb-hub-default-indexing-banner"]')
+      ).toBeInTheDocument();
+      // Audit-quoted IT copy renders end-to-end (orchestrator → child).
+      expect(screen.getAllByText('⏳ Indicizzazione in corso').length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('does NOT render indexing badges when pdfs present and isIndexed=true', () => {
+      mockUseUserKbStatus.mockReturnValue({
+        isLoading: false,
+        isError: false,
+        data: {
+          gameId: GAME_ID,
+          isIndexed: true, // BE indexing complete
+          documentCount: 2,
+          coverageScore: 70,
+          coverageLevel: 'Standard',
+          suggestedQuestions: [],
+        },
+      });
+      mockUseGamePdfs.mockReturnValue({
+        isLoading: false,
+        isError: false,
+        data: [pdfFixture({ id: 'p1' })],
+      });
+
+      const { container } = renderWithIntl(<KbHubContent gameId={GAME_ID} />);
+
+      expect(
+        container.querySelector('[data-slot="kb-hub-stats-indexing-badge"]')
+      ).not.toBeInTheDocument();
+      expect(
+        container.querySelector('[data-slot="kb-hub-default-indexing-banner"]')
+      ).not.toBeInTheDocument();
+    });
+
+    it('does NOT render indexing badges when pdfs.length === 0 (empty state route)', () => {
+      // Empty state takes precedence — the HubDefault + KbStatsCard are not
+      // mounted at all, so neither badge slot exists in DOM.
+      mockUseUserKbStatus.mockReturnValue({
+        isLoading: false,
+        isError: false,
+        data: {
+          gameId: GAME_ID,
+          isIndexed: false,
+          documentCount: 0,
+          coverageScore: 0,
+          coverageLevel: 'None',
+          suggestedQuestions: [],
+        },
+      });
+      mockUseGamePdfs.mockReturnValue({ isLoading: false, isError: false, data: [] });
+
+      const { container } = renderWithIntl(<KbHubContent gameId={GAME_ID} />);
+
+      expect(container.querySelector('[data-slot="kb-hub-empty-state"]')).toBeInTheDocument();
+      expect(
+        container.querySelector('[data-slot="kb-hub-stats-indexing-badge"]')
+      ).not.toBeInTheDocument();
+      expect(
+        container.querySelector('[data-slot="kb-hub-default-indexing-banner"]')
+      ).not.toBeInTheDocument();
+    });
   });
 
   it('renders HubDefault + KbStatsCard + RaptorPanel when PDFs present', () => {

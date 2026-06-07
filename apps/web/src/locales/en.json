@@ -2475,11 +2475,11 @@
     "players": {
       "metadata": {
         "title": "Players — MeepleAI",
-        "description": "Summary of your play history: games played, sessions and wins."
+        "description": "The gaming partners you've played with — shared sessions, results and head-to-head stats."
       },
       "hero": {
-        "title": "Your play history",
-        "subtitle": "Summary of the games you have played, with sessions and wins.",
+        "title": "Your gaming partners",
+        "subtitle": "See who you've played with the most, shared sessions and table results.",
         "totalPlays": "Total sessions",
         "distinctGames": "Distinct games"
       },

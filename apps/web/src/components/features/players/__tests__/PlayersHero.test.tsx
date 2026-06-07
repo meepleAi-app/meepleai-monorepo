@@ -18,8 +18,9 @@ import { PlayersHero } from '../PlayersHero';
 import type { PlayersHeroProps } from '../PlayersHero';
 
 const LABELS: PlayersHeroProps['labels'] = {
-  title: 'Le tue partite',
-  subtitle: 'Riepilogo dei giochi che hai giocato.',
+  // F28 #1974: copy disambiguates /players (gaming partners) from /play-records.
+  title: 'I tuoi compagni di gioco',
+  subtitle: 'Vedi con chi hai giocato di più.',
   totalPlays: 'Sessioni totali',
   distinctGames: 'Giochi distinti',
 };
@@ -38,8 +39,8 @@ describe('PlayersHero', () => {
 
   it('renders title and subtitle from labels', () => {
     render(<PlayersHero {...DEFAULT_PROPS} />);
-    expect(screen.getByText('Le tue partite')).toBeTruthy();
-    expect(screen.getByText('Riepilogo dei giochi che hai giocato.')).toBeTruthy();
+    expect(screen.getByText('I tuoi compagni di gioco')).toBeTruthy();
+    expect(screen.getByText('Vedi con chi hai giocato di più.')).toBeTruthy();
   });
 
   it('renders totalSessions KPI tile with count', () => {

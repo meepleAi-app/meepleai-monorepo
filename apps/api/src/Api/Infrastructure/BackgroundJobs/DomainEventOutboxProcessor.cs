@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Api.Infrastructure.DomainEventOutbox;
 using Api.Infrastructure.Entities.DomainEventOutbox;
+using Api.Observability;
 using Api.SharedKernel.Domain.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -176,6 +177,9 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
 
                     await mediator.Publish(evt, cancellationToken).ConfigureAwait(false);
                     row.MarkSent(now);
+                    MeepleAiMetrics.DomainEventOutboxDispatched.Add(
+                        1,
+                        new KeyValuePair<string, object?>("event_type", row.EventType));
                 }
 #pragma warning disable CA1031 // Per-row resilience: poison-message must not stop the batch
                 catch (Exception ex)
@@ -188,6 +192,9 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
                     if (nextAttemptCount >= _options.MaxAttempts)
                     {
                         row.MarkFailed(ex.Message, now);
+                        MeepleAiMetrics.DomainEventOutboxFailedTerminal.Add(
+                            1,
+                            new KeyValuePair<string, object?>("event_type", row.EventType));
                         _logger.LogError(ex,
                             "Domain event {EventId} ({EventType}) FAILED terminally after {Attempts} attempts",
                             row.Id, row.EventType, nextAttemptCount);
@@ -196,6 +203,9 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
                     {
                         var backoff = ComputeBackoff(nextAttemptCount);
                         row.MarkRetry(ex.Message, now + backoff, now);
+                        MeepleAiMetrics.DomainEventOutboxRetried.Add(
+                            1,
+                            new KeyValuePair<string, object?>("event_type", row.EventType));
                         _logger.LogWarning(ex,
                             "Domain event {EventId} ({EventType}) dispatch failed; scheduling retry #{Attempt} in {BackoffSeconds:F2}s",
                             row.Id, row.EventType, nextAttemptCount, backoff.TotalSeconds);

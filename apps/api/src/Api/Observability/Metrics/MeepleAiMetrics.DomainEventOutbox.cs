@@ -1,0 +1,112 @@
+// Issue #1535 T6 — domain_event_outbox counters + health gauges
+using System.Diagnostics.Metrics;
+using Api.Infrastructure.DomainEventOutbox;
+
+namespace Api.Observability;
+
+internal static partial class MeepleAiMetrics
+{
+    private static bool _domainEventOutboxGaugesRegistered;
+
+    /// <summary>
+    /// Incremented once per row inserted into <c>domain_event_outbox</c> by
+    /// <c>MeepleAiDbContext.SaveChangesAsync</c> (Hybrid + OutboxOnly modes).
+    /// Tag: <c>event_type</c> — registry alias when available, CLR <c>FullName</c> fallback.
+    ///
+    /// <para>Used to compute <i>arrival rate</i>. Pair with
+    /// <see cref="DomainEventOutboxDispatched"/> in dashboards to spot a widening gap
+    /// (rate(enqueued) − rate(dispatched) ≈ 0 means the processor is keeping up).</para>
+    /// </summary>
+    public static readonly Counter<long> DomainEventOutboxEnqueued = Meter.CreateCounter<long>(
+        name: "meepleai.domain_event_outbox.enqueued.total",
+        unit: "events",
+        description: "Total outbox rows INSERTed by the DbContext (#1535 T6).");
+
+    /// <summary>
+    /// Incremented once per successful <c>MediatR.Publish</c> from
+    /// <c>DomainEventOutboxProcessor</c>. Tag: <c>event_type</c> (same labelling as
+    /// <see cref="DomainEventOutboxEnqueued"/>).
+    ///
+    /// <para>Used to compute <i>throughput</i>. The dispatched rate must converge with the
+    /// enqueued rate over a sliding window (otherwise backlog grows — see
+    /// <see cref="MeepleAiMetrics"/> health gauges below).</para>
+    /// </summary>
+    public static readonly Counter<long> DomainEventOutboxDispatched = Meter.CreateCounter<long>(
+        name: "meepleai.domain_event_outbox.dispatched.total",
+        unit: "events",
+        description: "Total outbox rows transitioned Pending → Sent (#1535 T6).");
+
+    /// <summary>
+    /// Incremented when the processor's catch branch takes the
+    /// <c>MarkRetry</c> path (failure with budget remaining). Tag: <c>event_type</c>.
+    ///
+    /// <para>Spikes here signal a transient consumer outage. Distinguish from
+    /// <see cref="DomainEventOutboxFailedTerminal"/> — retried rows return to Pending and
+    /// will eventually dispatch; terminal rows require ops intervention.</para>
+    /// </summary>
+    public static readonly Counter<long> DomainEventOutboxRetried = Meter.CreateCounter<long>(
+        name: "meepleai.domain_event_outbox.retried.total",
+        unit: "events",
+        description: "Total outbox rows scheduled for retry after a transient dispatch failure (#1535 T6).");
+
+    /// <summary>
+    /// Incremented when the processor exhausts the <c>MaxAttempts</c> budget and transitions
+    /// the row to Failed (terminal). Tag: <c>event_type</c>.
+    ///
+    /// <para>This is the ops-paging signal: any non-zero increment over a 10-minute window
+    /// indicates poison messages requiring manual triage. Alert rule in
+    /// <c>prometheus-alerts.yml</c>.</para>
+    /// </summary>
+    public static readonly Counter<long> DomainEventOutboxFailedTerminal = Meter.CreateCounter<long>(
+        name: "meepleai.domain_event_outbox.failed_terminal.total",
+        unit: "events",
+        description: "Total outbox rows transitioned to terminal Failed after retry budget exhaustion (#1535 T6).");
+
+    /// <summary>
+    /// Registers the three <c>ObservableGauges</c> that report the latest health snapshot
+    /// from the singleton <see cref="IDomainEventOutboxHealthTracker"/>. Idempotent — repeat
+    /// calls are a no-op. Mirrors <see cref="RegisterAuditOutboxGauges"/>.
+    ///
+    /// <list type="bullet">
+    ///   <item><c>meepleai.domain_event_outbox.pending.count</c> — Pending rows awaiting dispatch.</item>
+    ///   <item><c>meepleai.domain_event_outbox.pending.oldest_age_seconds</c> — age of the oldest Pending row.</item>
+    ///   <item><c>meepleai.domain_event_outbox.failed.count</c> — Failed rows (terminal, ops-visible).</item>
+    /// </list>
+    /// </summary>
+    public static void RegisterDomainEventOutboxGauges(IDomainEventOutboxHealthTracker tracker)
+    {
+        if (_domainEventOutboxGaugesRegistered)
+        {
+            return;
+        }
+        _domainEventOutboxGaugesRegistered = true;
+
+        Meter.CreateObservableGauge(
+            name: "meepleai.domain_event_outbox.pending.count",
+            observeValue: () => tracker.GetPendingCount(),
+            unit: "rows",
+            description: "Number of domain_event_outbox rows currently in Pending status.");
+
+        Meter.CreateObservableGauge(
+            name: "meepleai.domain_event_outbox.pending.oldest_age_seconds",
+            observeValue: () => tracker.GetOldestPendingAgeSeconds(),
+            unit: "s",
+            description: "Age in seconds of the oldest Pending domain_event_outbox row (0 when the queue is empty).");
+
+        Meter.CreateObservableGauge(
+            name: "meepleai.domain_event_outbox.failed.count",
+            observeValue: () => tracker.GetFailedCount(),
+            unit: "rows",
+            description: "Number of domain_event_outbox rows currently in Failed status (terminal, awaiting operator intervention).");
+    }
+
+    /// <summary>
+    /// Test-only reset hook so suites that exercise
+    /// <see cref="RegisterDomainEventOutboxGauges"/> can be made idempotent across multiple
+    /// fixture instantiations. NOT for production use.
+    /// </summary>
+    internal static void ResetDomainEventOutboxGaugesForTest()
+    {
+        _domainEventOutboxGaugesRegistered = false;
+    }
+}

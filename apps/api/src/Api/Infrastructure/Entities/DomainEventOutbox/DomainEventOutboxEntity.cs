@@ -170,6 +170,30 @@ public sealed class DomainEventOutboxEntity
         NextAttemptAt = null;
     }
 
+    /// <summary>
+    /// Operator-triggered transition Failed → Pending so the processor will pick the row up
+    /// on its next poll. Resets <see cref="Attempts"/>, <see cref="LastError"/>,
+    /// <see cref="NextAttemptAt"/> and clears <see cref="DispatchedAt"/> — the row is treated
+    /// as freshly enqueued for retry purposes (Issue #1535 T6 admin re-arm).
+    ///
+    /// <para>Only legal from <see cref="DomainEventOutboxStatus.Failed"/>. Idempotent guard
+    /// at the entity level: re-arming a Pending or Sent row throws so the endpoint can return
+    /// a clean 409 instead of silently mutating a row that the processor might already own.</para>
+    /// </summary>
+    public void RearmFromFailed(DateTimeOffset now)
+    {
+        if (Status != DomainEventOutboxStatus.Failed)
+            throw new InvalidOperationException(
+                $"Cannot RearmFromFailed from status {Status}.");
+
+        Status = DomainEventOutboxStatus.Pending;
+        Attempts = 0;
+        LastError = null;
+        NextAttemptAt = null;
+        DispatchedAt = null;
+        EnqueuedAt = now;
+    }
+
     private static string Truncate(string s, int max)
         => s.Length <= max ? s : s[..max];
 }

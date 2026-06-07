@@ -121,4 +121,43 @@ public sealed class DomainEventOutboxEntityTests
         row.LastError.Should().NotBeNull();
         row.LastError!.Length.Should().Be(2048);
     }
+
+    [Fact]
+    public void RearmFromFailed_resets_state_and_returns_to_Pending()
+    {
+        // Arrange: a row that has reached terminal Failed.
+        var row = CreatePending();
+        row.MarkFailed("poison message", Now);
+        var rearmedAt = Now.AddSeconds(120);
+
+        // Act: operator triggers re-arm via admin endpoint.
+        row.RearmFromFailed(rearmedAt);
+
+        // Assert: row is fresh-Pending shape — processor will pick it up next poll.
+        row.Status.Should().Be(DomainEventOutboxStatus.Pending);
+        row.Attempts.Should().Be(0,
+            because: "an operator-triggered re-arm gives the row a full retry budget again");
+        row.LastError.Should().BeNull(
+            because: "the prior failure is cleared so the next failure's LastError is unambiguous");
+        row.NextAttemptAt.Should().BeNull(
+            because: "the row is immediately eligible (no backoff carried over)");
+        row.DispatchedAt.Should().BeNull();
+        row.EnqueuedAt.Should().Be(rearmedAt,
+            because: "EnqueuedAt drives FIFO ordering; re-armed rows enter at the tail of the queue");
+    }
+
+    [Fact]
+    public void RearmFromFailed_throws_when_called_on_non_Failed_row()
+    {
+        var pending = CreatePending();
+        var pendingAct = () => pending.RearmFromFailed(Now);
+        pendingAct.Should().Throw<InvalidOperationException>(
+            because: "re-arming a Pending row would corrupt the processor's view");
+
+        var sent = CreatePending();
+        sent.MarkSent(Now);
+        var sentAct = () => sent.RearmFromFailed(Now);
+        sentAct.Should().Throw<InvalidOperationException>(
+            because: "re-arming a Sent row would cause a duplicate dispatch");
+    }
 }

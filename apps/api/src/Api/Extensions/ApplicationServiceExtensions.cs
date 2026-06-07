@@ -121,6 +121,15 @@ internal static class ApplicationServiceExtensions
         services.AddHostedService(sp =>
             sp.GetRequiredService<Api.BoundedContexts.Administration.Infrastructure.BackgroundJobs.AuditOutboxProcessor>());
 
+        // Issue #1535 T6: register the domain_event_outbox health tracker singleton here
+        // (NOT inside the Testing-gated AddDatabaseServices block) so Program.cs's
+        // RegisterDomainEventOutboxGauges resolve call succeeds in both production AND
+        // HTTP integration tests. The tracker holds the latest aggregate-counter snapshot
+        // used by the /metrics ObservableGauges and the admin dashboard.
+        services.AddSingleton<
+            Api.Infrastructure.DomainEventOutbox.IDomainEventOutboxHealthTracker,
+            Api.Infrastructure.DomainEventOutbox.DomainEventOutboxHealthTracker>();
+
         // SP5 Admin Security S2 T7: impersonation active-count health tracker + periodic refresh
         // service feeding the meepleai.security.impersonation.active.count gauge.
         services.AddSingleton<

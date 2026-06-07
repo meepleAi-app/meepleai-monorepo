@@ -579,6 +579,13 @@ public class MeepleAiDbContext : DbContext
                 now: now);
 
             DomainEventOutbox.Add(outboxRow);
+
+            // Issue #1535 T6: arrival-rate counter, tagged by event_type so the dashboard
+            // can JOIN this against DomainEventOutboxDispatched on the same label value to
+            // surface a widening enqueue↔dispatch gap (backlog growing).
+            MeepleAiMetrics.DomainEventOutboxEnqueued.Add(
+                1,
+                new KeyValuePair<string, object?>("event_type", eventType));
         }
     }
 }

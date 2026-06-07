@@ -74,6 +74,18 @@ internal sealed class AccountLockedEventHandler : INotificationHandler<AccountLo
                 return;
             }
 
+            // Issue #1940 / iso-1 Fix 3: pre-flight idempotency check. If the User row already
+            // carries this event's LastLockoutEventId, a prior dispatch already fired the lockout
+            // email and wrote the audit rows. Re-dispatch on a rolled-back/retried event MUST skip
+            // to avoid double-emailing the locked-out user.
+            if (user.LastLockoutEventId == notification.EventId)
+            {
+                _logger.LogDebug(
+                    "Skipping AccountLocked side-effects for user {UserId}: event {EventId} already processed (iso-1)",
+                    notification.UserId, notification.EventId);
+                return;
+            }
+
             // Send email notification first to know if it succeeded
             try
             {
@@ -107,6 +119,18 @@ internal sealed class AccountLockedEventHandler : INotificationHandler<AccountLo
                     ipAddress: notification.IpAddress,
                     cancellationToken: cancellationToken
                 ).ConfigureAwait(false);
+
+                // Issue #1940 / iso-1 Fix 3: mark the event as processed so a retried/rolled-back
+                // dispatch short-circuits at the pre-flight check above. Raw SQL is used to bypass
+                // the AuditingSaveChangesInterceptor — User is [Auditable] but this guard write is
+                // a metadata bookmark, not a user-facing mutation, so it must NOT produce an audit row.
+                // Skip on InMemory provider (unit tests) — relational-only.
+                if (_dbContext.Database.IsRelational())
+                {
+                    await _dbContext.Database.ExecuteSqlInterpolatedAsync(
+                        $"UPDATE users SET last_lockout_event_id = {notification.EventId} WHERE id = {notification.UserId}",
+                        cancellationToken).ConfigureAwait(false);
+                }
             }
             catch (Exception emailEx)
             {

@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Application.Queries.GameNights;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Events;
+using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.Extensions.Caching.Hybrid;
 
@@ -38,6 +39,7 @@ internal sealed class GameNightInvitationRespondedHandler
     private readonly IGameNightEventRepository _gameNightRepository;
     private readonly IGameNightEmailService _emailService;
     private readonly HybridCache _cache;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<GameNightInvitationRespondedHandler> _logger;
 
     public GameNightInvitationRespondedHandler(
@@ -45,12 +47,14 @@ internal sealed class GameNightInvitationRespondedHandler
         IGameNightEventRepository gameNightRepository,
         IGameNightEmailService emailService,
         HybridCache cache,
+        IUnitOfWork unitOfWork,
         ILogger<GameNightInvitationRespondedHandler> logger)
     {
         _invitationRepository = invitationRepository ?? throw new ArgumentNullException(nameof(invitationRepository));
         _gameNightRepository = gameNightRepository ?? throw new ArgumentNullException(nameof(gameNightRepository));
         _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -89,6 +93,17 @@ internal sealed class GameNightInvitationRespondedHandler
             return;
         }
 
+        // Issue #1940 / iso-1 Fix 4: skip if the confirmation email was already sent for this
+        // invitation. Guards against duplicate confirmation emails on a retried/rolled-back event
+        // (SMTP has no remote dedup; the guest would otherwise receive the same confirmation twice).
+        if (invitation.RsvpConfirmationSentAt is not null)
+        {
+            _logger.LogDebug(
+                "Skipping RSVP confirmation email for invitation {InvitationId}: already sent at {SentAt} (iso-1)",
+                invitation.Id, invitation.RsvpConfirmationSentAt.Value);
+            return;
+        }
+
         var gameNight = await _gameNightRepository
             .GetByIdAsync(invitation.GameNightId, cancellationToken)
             .ConfigureAwait(false);
@@ -111,5 +126,10 @@ internal sealed class GameNightInvitationRespondedHandler
             location: gameNight.Location,
             unsubscribeUrl: unsubscribeUrl,
             ct: cancellationToken).ConfigureAwait(false);
+
+        // Mark and persist the confirmation-sent timestamp so a retried event short-circuits above.
+        invitation.MarkConfirmationSent(DateTimeOffset.UtcNow);
+        await _invitationRepository.UpdateAsync(invitation, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

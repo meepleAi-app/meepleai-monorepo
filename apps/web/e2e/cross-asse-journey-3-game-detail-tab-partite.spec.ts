@@ -114,14 +114,19 @@ test.describe('Cross-Asse Journey #3 — Game Detail "Storico partite" tab', () 
    * BE GetGameDetailQueryHandler.cs:81 caps at Take(5).
    * Asserts: rail renders exactly 5 cards (cap), viewAll link visible, empty-state absent.
    *
-   * PIVOT-2 preserved: BE Take(5) cap; 15 seeded → 5 visible.
+   * PIVOT-2 preserved: BE Take(5) cap; seed N=cap+1=6 → 5 visible (Adzic naming:
+   * the invariant under test is the CAP, not the seed count — N>cap is what matters).
    * DEC-C-10 REVISION: Real BE seedUserGameSession (no mock routes).
+   *
+   * Follow-up #1955: T4.1 seed count reduced 15→6 (proves cap with minimal HTTP
+   * round-trips for ~1.5-2.7s CI savings; previous N=15 was speculative defense
+   * against unexpressed BE pagination defects, ruled out by Newman's review).
    */
-  test('sessions tab renders N=5 cards + viewAll visible (BE Take(5) cap from 15 seeded)', async ({
+  test('sessions tab caps at 5 cards even when BE has N=6 seeded (Take(5) invariant)', async ({
     page,
   }) => {
-    // Arrange: seed 15 sessions (BE cap = Take(5) → only 5 returned in recentSessions)
-    for (let i = 0; i < 15; i++) {
+    // Arrange: seed N=cap+1=6 sessions (proves BE Take(5) cap with minimal seed overhead)
+    for (let i = 0; i < 6; i++) {
       await withRetry(
         () =>
           seedUserGameSession(page, {
@@ -132,7 +137,7 @@ test.describe('Cross-Asse Journey #3 — Game Detail "Storico partite" tab', () 
             didWin: i % 2 === 0,
             players: 'Anna, Marco',
           }),
-        { reason: `seedUserGameSession journey3 T4.1 #${i + 1}/15` }
+        { reason: `seedUserGameSession journey3 T4.1 #${i + 1}/6` }
       );
     }
 

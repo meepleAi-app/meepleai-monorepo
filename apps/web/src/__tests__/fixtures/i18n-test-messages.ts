@@ -324,6 +324,18 @@ export const settingsLabels = {
 } as const;
 
 // =============================================================================
+// #1816 P2-2 — library game detail h1 + document.title 3-state machine
+// =============================================================================
+
+export const libraryGameDetailHeaderMessages = {
+  'pages.library.gameDetail.h1.loading': 'Loading game…',
+  'pages.library.gameDetail.h1.notFound': 'Game not found',
+  'pages.library.gameDetail.documentTitle.format': '{gameName} · MeepleAI',
+  'pages.library.gameDetail.documentTitle.loading': 'Loading game — MeepleAI',
+  'pages.library.gameDetail.documentTitle.notFound': 'Game not found — MeepleAI',
+} as const;
+
+// =============================================================================
 // All Test Messages (combined)
 // =============================================================================
 
@@ -337,6 +349,7 @@ export const allTestMessages: Record<string, string> = {
   ...validationMessages,
   ...settingsLabels,
   ...playRecordsIndexMessages,
+  ...libraryGameDetailHeaderMessages,
 };
 
 // =============================================================================

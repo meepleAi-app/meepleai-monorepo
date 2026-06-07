@@ -2048,6 +2048,15 @@
             "raptorFailed": "Rebuild RAPTOR fallito.",
             "deleteFailed": "Impossibile eliminare il PDF."
           }
+        },
+        "h1": {
+          "loading": "Caricamento gioco…",
+          "notFound": "Gioco non trovato"
+        },
+        "documentTitle": {
+          "format": "{gameName} · MeepleAI",
+          "loading": "Caricamento gioco — MeepleAI",
+          "notFound": "Gioco non trovato — MeepleAI"
         }
       }
     },
@@ -4148,10 +4157,27 @@
           "cta": "Vai alla libreria"
         },
         "error": {
-          "connection": { "title": "Connessione persa", "body": "Retry automatico in corso…", "action": "Riprova ora" },
-          "timeout": { "title": "Risposta lenta", "body": "Vuoi continuare ad aspettare?", "action": "Continua attesa", "alt": "Cancella" },
-          "partial": { "title": "Risposta incompleta", "body": "Lo stream si è interrotto.", "action": "Ripeti query" },
-          "server": { "title": "Errore del server", "body": "Riprova tra qualche istante.", "action": "Riprova" }
+          "connection": {
+            "title": "Connessione persa",
+            "body": "Retry automatico in corso…",
+            "action": "Riprova ora"
+          },
+          "timeout": {
+            "title": "Risposta lenta",
+            "body": "Vuoi continuare ad aspettare?",
+            "action": "Continua attesa",
+            "alt": "Cancella"
+          },
+          "partial": {
+            "title": "Risposta incompleta",
+            "body": "Lo stream si è interrotto.",
+            "action": "Ripeti query"
+          },
+          "server": {
+            "title": "Errore del server",
+            "body": "Riprova tra qualche istante.",
+            "action": "Riprova"
+          }
         }
       }
     }

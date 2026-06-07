@@ -28,52 +28,65 @@ public sealed class GameNightN8nEventHandlersTests
     public async Task GameNightPublishedN8nHandler_ForwardsDomainEventIdInPayload()
     {
         // Arrange
+        var evt = new GameNightPublishedEvent(
+            gameNightEventId: Guid.NewGuid(),
+            organizerId: Guid.NewGuid(),
+            title: "Friday Catan",
+            scheduledAt: DateTimeOffset.UtcNow.AddDays(2),
+            invitedUserIds: new List<Guid> { Guid.NewGuid() });
+
         var capturedPayload = await CapturePayloadAsync<GameNightPublishedEvent, GameNightPublishedN8nHandler>(
-            evt => new GameNightPublishedN8nHandler(_clientMock.Object, NullLogger<GameNightPublishedN8nHandler>.Instance),
-            new GameNightPublishedEvent(
-                gameNightEventId: Guid.NewGuid(),
-                organizerId: Guid.NewGuid(),
-                title: "Friday Catan",
-                scheduledAt: DateTimeOffset.UtcNow.AddDays(2),
-                invitedUserIds: new List<Guid> { Guid.NewGuid() }),
+            _ => new GameNightPublishedN8nHandler(_clientMock.Object, NullLogger<GameNightPublishedN8nHandler>.Instance),
+            evt,
             expectedPath: "game-night-published");
 
-        // Assert — payload carries domainEventId equal to the event's EventId.
-        var json = JsonSerializer.SerializeToElement(capturedPayload);
-        json.TryGetProperty("domainEventId", out var domainEventIdProp).Should().BeTrue(
-            "iso-3 BE-side contract requires domainEventId on every domain-event-driven n8n call");
+        // Assert — payload carries domainEventId equal to the originating IDomainEvent.EventId.
+        // Presence alone is insufficient: a refactor that forwarded Guid.Empty (or a fresh Guid
+        // unrelated to the event) would defeat n8n-side dedup. iso-3 contract requires identity.
+        AssertDomainEventIdMatches(capturedPayload, evt.EventId);
     }
 
     [Fact]
     public async Task GameNightCancelledN8nHandler_ForwardsDomainEventIdInPayload()
     {
+        var evt = new GameNightCancelledEvent(
+            gameNightEventId: Guid.NewGuid(),
+            organizerId: Guid.NewGuid(),
+            title: "Friday Catan",
+            invitedUserIds: new List<Guid> { Guid.NewGuid() });
+
         var capturedPayload = await CapturePayloadAsync<GameNightCancelledEvent, GameNightCancelledN8nHandler>(
-            evt => new GameNightCancelledN8nHandler(_clientMock.Object, NullLogger<GameNightCancelledN8nHandler>.Instance),
-            new GameNightCancelledEvent(
-                gameNightEventId: Guid.NewGuid(),
-                organizerId: Guid.NewGuid(),
-                title: "Friday Catan",
-                invitedUserIds: new List<Guid> { Guid.NewGuid() }),
+            _ => new GameNightCancelledN8nHandler(_clientMock.Object, NullLogger<GameNightCancelledN8nHandler>.Instance),
+            evt,
             expectedPath: "game-night-cancelled");
 
-        var json = JsonSerializer.SerializeToElement(capturedPayload);
-        json.TryGetProperty("domainEventId", out _).Should().BeTrue();
+        AssertDomainEventIdMatches(capturedPayload, evt.EventId);
     }
 
     [Fact]
     public async Task GameNightRsvpN8nHandler_ForwardsDomainEventIdInPayload()
     {
+        var evt = new GameNightRsvpReceivedEvent(
+            gameNightEventId: Guid.NewGuid(),
+            userId: Guid.NewGuid(),
+            rsvpStatus: RsvpStatus.Accepted,
+            organizerId: Guid.NewGuid());
+
         var capturedPayload = await CapturePayloadAsync<GameNightRsvpReceivedEvent, GameNightRsvpN8nHandler>(
-            evt => new GameNightRsvpN8nHandler(_clientMock.Object, NullLogger<GameNightRsvpN8nHandler>.Instance),
-            new GameNightRsvpReceivedEvent(
-                gameNightEventId: Guid.NewGuid(),
-                userId: Guid.NewGuid(),
-                rsvpStatus: RsvpStatus.Accepted,
-                organizerId: Guid.NewGuid()),
+            _ => new GameNightRsvpN8nHandler(_clientMock.Object, NullLogger<GameNightRsvpN8nHandler>.Instance),
+            evt,
             expectedPath: "game-night-rsvp-changed");
 
-        var json = JsonSerializer.SerializeToElement(capturedPayload);
-        json.TryGetProperty("domainEventId", out _).Should().BeTrue();
+        AssertDomainEventIdMatches(capturedPayload, evt.EventId);
+    }
+
+    private static void AssertDomainEventIdMatches(object payload, Guid expectedEventId)
+    {
+        var json = JsonSerializer.SerializeToElement(payload);
+        json.TryGetProperty("domainEventId", out var prop).Should().BeTrue(
+            "iso-3 BE-side contract requires domainEventId on every domain-event-driven n8n call");
+        prop.GetGuid().Should().Be(expectedEventId,
+            "domainEventId MUST equal the originating IDomainEvent.EventId so n8n can dedup on it");
     }
 
     private async Task<object> CapturePayloadAsync<TEvent, THandler>(

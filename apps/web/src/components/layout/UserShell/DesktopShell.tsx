@@ -9,7 +9,6 @@ import { AppTopBar } from '@/components/layout/AppNav/AppTopBar';
 import { isImmersiveRoute } from '@/components/layout/AppNav/immersive-routes';
 import { MobileBottomBar } from '@/components/layout/AppNav/MobileBottomBar';
 import { MobileTopBar } from '@/components/layout/AppNav/MobileTopBar';
-import { MainSidebar } from '@/components/layout/MainSidebar/MainSidebar';
 import { SideDrawer } from '@/components/layout/SideDrawer/SideDrawer';
 import { cn } from '@/lib/utils';
 
@@ -25,11 +24,14 @@ interface DesktopShellProps {
  * {@link MobileBottomBar}. The hamburger drawer holds the secondary destinations
  * ("tutto il resto"); the bottom bar holds the 5 primary tabs.
  *
- * Asse B (#1897) WP7 T7: {@link MainSidebar} is mounted side-by-side with the
- * main content area on `lg+` screens (`hidden lg:flex` inside the component).
- * It mirrors the AdminSidebar pattern (8 voci, see {@link MAIN_NAV_ITEMS}) and
- * coexists with the legacy AppTopBar/MobileBottomBar for now; consolidation is
- * tracked under asse C (dashboard integration).
+ * #1977 (audit follow-up of umbrella #1974, finding F18): MainSidebar mount on
+ * lg+ removed — Asse B (#1897) WP7 T7 had introduced a persistent left sidebar
+ * mirroring `AdminSidebar`, but it duplicated the AppTopBar nav items already
+ * present at the top of the page. Design owner directive: topbar is the single
+ * source-of-truth for primary navigation on desktop. The mobile hamburger
+ * drawer (`SideDrawer` below) continues to expose secondary destinations on
+ * `<lg` viewports; `MainNavList` + `MAIN_NAV_ITEMS` remain in place for that
+ * drawer and any future consumer.
  *
  * The bottom-bar clearance padding is dropped on immersive routes, where the
  * bottom bar hides itself (kept in sync via {@link isImmersiveRoute}).
@@ -46,20 +48,15 @@ export function DesktopShell({ children }: DesktopShellProps) {
 
       <SessionBanner />
 
-      <div className="flex flex-1 min-h-0">
-        {/* Asse B (#1897) MainSidebar — hidden on <lg, persistent on lg+. */}
-        <MainSidebar />
-
-        <main
-          id="main-content"
-          className={cn(
-            'flex-1 overflow-y-auto overflow-x-clip min-w-0',
-            !immersive && 'pb-16 md:pb-0'
-          )}
-        >
-          {children}
-        </main>
-      </div>
+      <main
+        id="main-content"
+        className={cn(
+          'flex-1 overflow-y-auto overflow-x-clip min-w-0',
+          !immersive && 'pb-16 md:pb-0'
+        )}
+      >
+        {children}
+      </main>
 
       <ChatSlideOverPanel />
       <MobileBottomBar />

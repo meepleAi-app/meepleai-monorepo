@@ -70,6 +70,7 @@ export function GameNightActions({
       <div className="flex gap-2 flex-wrap">
         <Button
           variant="outline"
+          data-testid="game-night-add-partita"
           onClick={() => setShowGamePicker(true)}
           disabled={hasActiveSession}
         >

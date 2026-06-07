@@ -95,11 +95,14 @@ internal sealed class CreateProposalMigrationOnApprovalHandler : DomainEventHand
         }
 
         // Create the ProposalMigration
+        // Issue #1938 / CF-2: propagate EventId so the resulting row carries the source
+        // event id and the UNIQUE partial index blocks duplicate inserts on retry/replay.
         var migration = ProposalMigration.Create(
             shareRequestId: shareRequest.Id,
             privateGameId: libraryEntry.PrivateGameId.Value,
             sharedGameId: domainEvent.TargetSharedGameId.Value,
-            userId: shareRequest.UserId);
+            userId: shareRequest.UserId,
+            sourceEventId: domainEvent.EventId);
 
         await _migrationRepo.AddAsync(migration, cancellationToken).ConfigureAwait(false);
 

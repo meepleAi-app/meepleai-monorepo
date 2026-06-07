@@ -31,6 +31,7 @@ internal sealed class LedgerTrackingService : ILedgerTrackingService
         int tokensConsumed,
         decimal costUsd,
         string? endpoint = null,
+        Guid? sourceEventId = null,
         CancellationToken cancellationToken = default)
     {
         if (userId == Guid.Empty)
@@ -70,7 +71,8 @@ internal sealed class LedgerTrackingService : ILedgerTrackingService
             amount: costUsd,
             currency: "USD",
             description: $"Token usage: {tokensConsumed} tokens via {modelId}",
-            metadata: metadata);
+            metadata: metadata,
+            sourceEventId: sourceEventId);
 
         await _repository.AddAsync(entry, cancellationToken).ConfigureAwait(false);
 

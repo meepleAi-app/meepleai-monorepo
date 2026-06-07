@@ -143,7 +143,8 @@ internal sealed class SessionSnapshotRepository : RepositoryBase, ISessionSnapsh
             entity.IsCheckpoint,
             entity.TurnIndex,
             entity.PhaseIndex,
-            entity.CreatedByPlayerId);
+            entity.CreatedByPlayerId,
+            sourceEventId: entity.SourceEventId);
     }
 
     private static SessionSnapshotEntity MapToPersistence(SessionSnapshot snapshot)
@@ -160,7 +161,8 @@ internal sealed class SessionSnapshotRepository : RepositoryBase, ISessionSnapsh
             TurnIndex = snapshot.TurnIndex,
             PhaseIndex = snapshot.PhaseIndex,
             Timestamp = snapshot.Timestamp,
-            CreatedByPlayerId = snapshot.CreatedByPlayerId
+            CreatedByPlayerId = snapshot.CreatedByPlayerId,
+            SourceEventId = snapshot.SourceEventId
         };
     }
 }

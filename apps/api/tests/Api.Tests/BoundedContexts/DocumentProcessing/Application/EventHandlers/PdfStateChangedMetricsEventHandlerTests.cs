@@ -57,6 +57,7 @@ public sealed class PdfStateChangedMetricsEventHandlerTests
                 It.IsAny<TimeSpan>(),
                 It.IsAny<long>(),
                 It.IsAny<int>(),
+                It.IsAny<Guid?>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -84,6 +85,7 @@ public sealed class PdfStateChangedMetricsEventHandlerTests
                 It.IsAny<TimeSpan>(),
                 It.IsAny<long>(),
                 It.IsAny<int>(),
+                It.IsAny<Guid?>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -111,6 +113,7 @@ public sealed class PdfStateChangedMetricsEventHandlerTests
                 It.IsAny<TimeSpan>(),
                 It.IsAny<long>(),
                 It.IsAny<int>(),
+                It.IsAny<Guid?>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }

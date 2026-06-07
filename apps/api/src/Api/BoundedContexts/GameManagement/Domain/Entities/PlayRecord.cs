@@ -43,6 +43,14 @@ internal sealed class PlayRecord : AggregateRoot<Guid>
     public DateTime UpdatedAt { get; private set; }
 
     /// <summary>
+    /// Optional source domain event id used to dedupe at the DB level (issue #1938 / CF-2).
+    /// When set, the UNIQUE partial index <c>UX_play_records_source_event_id</c> guards
+    /// against duplicate inserts when the originating event handler is re-dispatched
+    /// (rolled-back outer tx in #1535, MediatR transient retry, hand-replay).
+    /// </summary>
+    public Guid? SourceEventId { get; private set; }
+
+    /// <summary>
     /// Private constructor for EF Core.
     /// </summary>
 #pragma warning disable CS8618
@@ -63,7 +71,8 @@ internal sealed class PlayRecord : AggregateRoot<Guid>
         PlayRecordVisibility visibility,
         TimeProvider? timeProvider = null,
         Guid? groupId = null,
-        SessionScoringConfig? scoringConfig = null)
+        SessionScoringConfig? scoringConfig = null,
+        Guid? sourceEventId = null)
     {
         if (id == Guid.Empty)
             throw new ArgumentException("Id cannot be empty", nameof(id));
@@ -98,7 +107,8 @@ internal sealed class PlayRecord : AggregateRoot<Guid>
             Status = PlayRecordStatus.Planned,
             ScoringConfig = scoringConfig ?? SessionScoringConfig.CreateDefault(),
             CreatedAt = now,
-            UpdatedAt = now
+            UpdatedAt = now,
+            SourceEventId = sourceEventId
         };
 
         record.AddDomainEvent(new PlayRecordCreatedEvent(record.Id, userId, gameId, gameName));
@@ -116,7 +126,8 @@ internal sealed class PlayRecord : AggregateRoot<Guid>
         PlayRecordVisibility visibility,
         SessionScoringConfig scoringConfig,
         TimeProvider? timeProvider = null,
-        Guid? groupId = null)
+        Guid? groupId = null,
+        Guid? sourceEventId = null)
     {
         if (id == Guid.Empty)
             throw new ArgumentException("Id cannot be empty", nameof(id));
@@ -150,7 +161,8 @@ internal sealed class PlayRecord : AggregateRoot<Guid>
             Status = PlayRecordStatus.Planned,
             ScoringConfig = scoringConfig,
             CreatedAt = now,
-            UpdatedAt = now
+            UpdatedAt = now,
+            SourceEventId = sourceEventId
         };
 
         record.AddDomainEvent(new PlayRecordCreatedEvent(record.Id, userId, null, gameName));

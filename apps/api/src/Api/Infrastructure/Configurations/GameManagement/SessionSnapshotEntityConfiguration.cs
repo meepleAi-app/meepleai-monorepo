@@ -59,6 +59,10 @@ internal sealed class SessionSnapshotEntityConfiguration : IEntityTypeConfigurat
         builder.Property(s => s.CreatedByPlayerId)
             .HasColumnName("created_by_player_id");
 
+        // Issue #1938 / CF-2: source domain event id (nullable, UNIQUE partial).
+        builder.Property(s => s.SourceEventId)
+            .HasColumnName("source_event_id");
+
         // Indexes
         builder.HasIndex(s => s.SessionId)
             .HasDatabaseName("ix_session_snapshots_session_id");
@@ -72,5 +76,13 @@ internal sealed class SessionSnapshotEntityConfiguration : IEntityTypeConfigurat
 
         builder.HasIndex(s => s.Timestamp)
             .HasDatabaseName("ix_session_snapshots_timestamp");
+
+        // Issue #1938 / CF-2: SourceEventId UNIQUE (partial — only when not null).
+        // Guards against duplicate snapshot rows when an event handler is re-dispatched
+        // (rolled-back outer tx in #1535, MediatR transient retry, hand-replay).
+        builder.HasIndex(s => s.SourceEventId)
+            .IsUnique()
+            .HasDatabaseName("UX_session_snapshots_source_event_id")
+            .HasFilter("source_event_id IS NOT NULL");
     }
 }

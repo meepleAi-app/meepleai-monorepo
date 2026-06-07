@@ -97,6 +97,8 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
 
     private PlayRecord CreatePlayRecordFromEvent(LiveSessionCompletedEvent domainEvent)
     {
+        // Issue #1938 / CF-2: propagate EventId so the resulting PlayRecord row carries the
+        // source event id and the UNIQUE partial index blocks duplicate inserts on retry/replay.
         if (domainEvent.GameId.HasValue)
         {
             return PlayRecord.CreateWithGame(
@@ -107,7 +109,8 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
                 sessionDate: domainEvent.SessionDate,
                 visibility: domainEvent.Visibility,
                 timeProvider: _timeProvider,
-                groupId: domainEvent.GroupId);
+                groupId: domainEvent.GroupId,
+                sourceEventId: domainEvent.EventId);
         }
 
         return PlayRecord.CreateFreeForm(
@@ -118,7 +121,8 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
             visibility: domainEvent.Visibility,
             scoringConfig: SessionScoringConfig.CreateDefault(),
             timeProvider: _timeProvider,
-            groupId: domainEvent.GroupId);
+            groupId: domainEvent.GroupId,
+            sourceEventId: domainEvent.EventId);
     }
 
     protected override Dictionary<string, object?>? GetAuditMetadata(LiveSessionCompletedEvent domainEvent)

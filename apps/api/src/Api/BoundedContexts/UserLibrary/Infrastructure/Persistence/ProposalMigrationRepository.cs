@@ -89,7 +89,8 @@ public sealed class ProposalMigrationRepository : RepositoryBase, IProposalMigra
             UserId = migration.UserId,
             Choice = (int)migration.Choice,
             CreatedAt = migration.CreatedAt,
-            ChoiceAt = migration.ChoiceAt
+            ChoiceAt = migration.ChoiceAt,
+            SourceEventId = migration.SourceEventId
         };
     }
 
@@ -114,6 +115,8 @@ public sealed class ProposalMigrationRepository : RepositoryBase, IProposalMigra
             .SetValue(migration, entity.CreatedAt);
         typeof(ProposalMigration).GetProperty(nameof(ProposalMigration.ChoiceAt))!
             .SetValue(migration, entity.ChoiceAt);
+        typeof(ProposalMigration).GetProperty(nameof(ProposalMigration.SourceEventId))!
+            .SetValue(migration, entity.SourceEventId);
 
         return migration;
     }

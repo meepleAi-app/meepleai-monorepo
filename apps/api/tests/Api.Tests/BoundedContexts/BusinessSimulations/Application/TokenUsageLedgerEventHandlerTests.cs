@@ -42,7 +42,7 @@ public sealed class TokenUsageLedgerEventHandlerTests
         // Assert
         _ledgerTrackingServiceMock.Verify(
             s => s.TrackTokenUsageAsync(
-                userId, "openai/gpt-4o-mini", 1500, 0.005m, "chat", It.IsAny<CancellationToken>()),
+                userId, "openai/gpt-4o-mini", 1500, 0.005m, "chat", It.IsAny<Guid?>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -59,7 +59,7 @@ public sealed class TokenUsageLedgerEventHandlerTests
         // Assert
         _ledgerTrackingServiceMock.Verify(
             s => s.TrackTokenUsageAsync(
-                It.IsAny<Guid>(), "model", 100, 0.01m, null, It.IsAny<CancellationToken>()),
+                It.IsAny<Guid>(), "model", 100, 0.01m, null, It.IsAny<Guid?>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -70,7 +70,7 @@ public sealed class TokenUsageLedgerEventHandlerTests
         _ledgerTrackingServiceMock
             .Setup(s => s.TrackTokenUsageAsync(
                 It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<int>(),
-                It.IsAny<decimal>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+                It.IsAny<decimal>(), It.IsAny<string?>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Database error"));
 
         var notification = new TokenUsageLedgerEvent(
@@ -90,7 +90,7 @@ public sealed class TokenUsageLedgerEventHandlerTests
         _ledgerTrackingServiceMock
             .Setup(s => s.TrackTokenUsageAsync(
                 It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<int>(),
-                It.IsAny<decimal>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+                It.IsAny<decimal>(), It.IsAny<string?>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Database error"));
 
         var notification = new TokenUsageLedgerEvent(
@@ -125,7 +125,7 @@ public sealed class TokenUsageLedgerEventHandlerTests
         _ledgerTrackingServiceMock.Verify(
             s => s.TrackTokenUsageAsync(
                 It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<int>(),
-                It.IsAny<decimal>(), It.IsAny<string?>(), cts.Token),
+                It.IsAny<decimal>(), It.IsAny<string?>(), It.IsAny<Guid?>(), cts.Token),
             Times.Once);
     }
 

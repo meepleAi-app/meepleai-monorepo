@@ -632,7 +632,7 @@
   Vedi spec § Observability § Alert rules. 3 alert: `Backlog > 1000`, `Stale > 300s`, `FailedSpike > 50/10min`.
 
 - [x] **Verifica:**
-  - 11/11 endpoint integration test PASS (4 endpoint × auth + happy + 404/409 paths) ✅ commit `<T6-commit>`
+  - 11/11 endpoint integration test PASS (4 endpoint × auth + happy + 404/409 paths) ✅ commit `cc2aff262`
   - Gauges + counters defined in `MeepleAiMetrics.DomainEventOutbox.cs`; Program.cs wires
     `RegisterDomainEventOutboxGauges` at startup. Real `/metrics` scrape verification deferred
     to Phase 4 staging soak (T8) — covered by metrics existence at compile time + DI registration.

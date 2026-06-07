@@ -1,0 +1,106 @@
+# Grafana Alert Rules — Domain Event Outbox
+# Issue #1535 T6 — observability for post-commit domain-event dispatch.
+#
+# Three production alerts gate the post-commit dispatch path:
+#   1. Backlog growing beyond 1000 Pending rows         → processor stalled / overloaded.
+#   2. Oldest Pending row age > 300s                    → drain falling behind ingestion.
+#   3. Terminal Failed spike > 50 over 10 minutes       → poison messages, ops triage required.
+#
+# All thresholds are starting points — tune after the first 14 days of Phase B traffic.
+
+apiVersion: 1
+
+groups:
+  - name: domain_event_outbox_alerts
+    interval: 1m
+    rules:
+      # Alert 1 — Backlog: too many Pending rows
+      - uid: domain_event_outbox_backlog_high
+        title: Domain Event Outbox Backlog High
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300  # 5 minutes
+              to: 0
+            datasourceUid: prometheus
+            model:
+              # Gauge from MeepleAiMetrics.RegisterDomainEventOutboxGauges (T6).
+              expr: 'meepleai_domain_event_outbox_pending_count > 1000'
+              intervalMs: 1000
+              maxDataPoints: 43200
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          description: |
+            Domain event outbox has {{ $value }} Pending rows (threshold: 1000) sustained for 5 minutes.
+            Likely cause: processor stalled, batch size too small for arrival rate, or transient downstream failure
+            holding rows in retry. Check meepleai_domain_event_outbox_retried_total rate vs dispatched rate.
+          summary: 'Domain event outbox backlog exceeded 1000 rows'
+        labels:
+          severity: warning
+          team: platform
+          component: domain_event_outbox
+
+      # Alert 2 — Stale Pending: oldest row sitting too long
+      - uid: domain_event_outbox_stale_pending
+        title: Domain Event Outbox Stale Pending Row
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              # Age in seconds of the oldest Pending row; refreshed every poll (5s default).
+              expr: 'meepleai_domain_event_outbox_pending_oldest_age_seconds > 300'
+              intervalMs: 1000
+              maxDataPoints: 43200
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        annotations:
+          description: |
+            Oldest Pending domain_event_outbox row is {{ $value }}s old (threshold: 300s).
+            This is the drain-latency SLO from #1535 spec § DoD-9 (p95 < 10s). A breach for > 2 minutes
+            indicates the processor cannot keep up with arrival rate OR a row is stuck in a long backoff
+            cycle. Cross-check meepleai_domain_event_outbox_failed_count for poison messages.
+          summary: 'Oldest Pending outbox row exceeded 5 minute SLO'
+        labels:
+          severity: critical
+          team: platform
+          component: domain_event_outbox
+
+      # Alert 3 — Failed terminal spike: poison messages requiring triage
+      - uid: domain_event_outbox_failed_spike
+        title: Domain Event Outbox Failed Terminal Spike
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600  # 10 minutes
+              to: 0
+            datasourceUid: prometheus
+            model:
+              # increase() over a 10m window captures spikes that a rate() would smooth out.
+              expr: 'increase(meepleai_domain_event_outbox_failed_terminal_total[10m]) > 50'
+              intervalMs: 1000
+              maxDataPoints: 43200
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          description: |
+            {{ $value }} domain events transitioned to terminal Failed in the last 10 minutes
+            (threshold: 50). Each row represents an exhausted retry budget — visible on
+            /admin/event-outbox/failed. Operator action: inspect LastError, decide replay (POST /retry)
+            or discard. Common causes: schema breaking change in event payload, downstream handler
+            permanently broken, idempotency invariant violation.
+          summary: 'Domain event outbox failed terminal spike — {{ $value }} poison messages in 10 minutes'
+        labels:
+          severity: critical
+          team: platform
+          component: domain_event_outbox
+          page: 'true'

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -13,9 +14,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260607101906_AlignDomainEventOutboxConcurrencyTokenAndIndexes")]
+    partial class AlignDomainEventOutboxConcurrencyTokenAndIndexes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -5094,10 +5097,6 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("event_type");
 
-                    b.Property<DateTimeOffset?>("FailedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("failed_at");
-
                     b.Property<string>("LastError")
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)")
@@ -5134,7 +5133,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("FailedAt")
+                    b.HasIndex("EnqueuedAt")
                         .IsDescending()
                         .HasDatabaseName("ix_domain_event_outbox_failed_recent")
                         .HasFilter("status = 2::smallint");
@@ -14384,11 +14383,6 @@ namespace Api.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<string>("TestRunId")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("test_run_id");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -14399,10 +14393,6 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("PlayedAt")
                         .HasDatabaseName("ix_game_sessions_played_at");
-
-                    b.HasIndex("TestRunId")
-                        .HasDatabaseName("ix_game_sessions_test_run_id")
-                        .HasFilter("\"test_run_id\" IS NOT NULL");
 
                     b.HasIndex("UserLibraryEntryId")
                         .HasDatabaseName("ix_game_sessions_user_library_entry_id");

@@ -21,20 +21,26 @@ namespace Api.BoundedContexts.Administration.Application.Commands.Providers;
 /// still names it <c>NewApiKey</c> for FE-side clarity; the endpoint maps body.NewApiKey →
 /// command.ApiKey at construction time.
 ///
-/// Audit atomicity: <c>[AtomicAudit]</c> is intentionally NOT used here even though the command
-/// is destructive. Reason — <c>ProviderCredential.Create</c> raises a
-/// <c>ProviderKeyRotatedEvent</c> dispatched inside <c>SaveChangesAsync</c> via
-/// <c>MediatR.Publish</c>, and the event handler broadcasts on Redis pub/sub (cross-pod cache
-/// invalidation). This broadcast is observable external side-effect that cannot be undone if
-/// the outer audit transaction rolls back. The <see cref="AtomicAuditAttribute"/> doc-comment
-/// (lines 24-33) explicitly forbids this combination. Best-effort audit (the default
-/// non-atomic path) is acceptable here: a missing audit row is recoverable from logs, but a
-/// spurious cache invalidation followed by a rolled-back rotation is not.
+/// Audit atomicity: <c>[AtomicAudit]</c> is RESTORED here at #1535 T10 cleanup. Reason —
+/// <c>ProviderCredential.Create</c> raises a <c>ProviderKeyRotatedEvent</c>. Pre-#1535, the
+/// event handler's Redis pub/sub broadcast fired INSIDE <c>SaveChangesAsync</c>, so an outer
+/// audit rollback could leave a spurious cache invalidation in flight (the original
+/// <c>AtomicAudit + external side-effects forbidden</c> constraint). Post-#1535 (commits
+/// <c>23dc88727</c> Phase A + T10 cleanup), the event flows through the post-commit outbox:
+/// if the outer audit transaction rolls back, the outbox row is rolled back too — the
+/// broadcast never fires. The original forbidden combination is now safe IN OUTBOXONLY MODE.
 ///
-/// Issue #1859. Authorised: superadmin only (handler-level guard, see
+/// ⚠ Hybrid rollback caveat: flipping DomainEventOutbox:Mode back to Hybrid (the documented
+/// rollback path) re-enables the inline MediatR.Publish race for this command. Treat the
+/// rollback as a short-term incident-response measure; if production needs to stay on Hybrid
+/// for an extended window, gate the rotation endpoint behind a feature flag until OutboxOnly
+/// is restored.
+///
+/// Issue #1859 + #1535. Authorised: superadmin only (handler-level guard, see
 /// <c>RotateProviderKeyCommandHandler</c>). Rate-limit guard: 1 rotation per provider per 24h.
 /// </summary>
 [AuditableAction("ProviderKeyRotated", "provider_credentials", Level = 3)]
+[AtomicAudit]
 [RequireTwoFactor(
     MaxAgeMinutes = 5,
     ForceStrict = true,

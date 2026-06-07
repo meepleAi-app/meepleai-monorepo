@@ -1,3 +1,4 @@
+using Api.Infrastructure.DomainEventOutbox;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Hosting;
@@ -188,6 +189,51 @@ internal static class InfrastructureServiceExtensions
             // Register domain event collector as scoped (per-request lifecycle)
             // This ensures events are collected and dispatched within the same HTTP request
             services.AddScoped<IDomainEventCollector, DomainEventCollector>();
+
+            // Issue #1535 — post-commit event outbox dispatch. The type resolver is a
+            // pure read-only lookup (assembly scan at construction); register as a singleton
+            // so the dictionaries are built once at app startup, not per request.
+            services.AddSingleton<IDomainEventTypeResolver, DomainEventTypeResolver>();
+
+            // Bind DomainEventOutboxOptions from the "DomainEventOutbox" configuration section.
+            // MeepleAiDbContext picks up IOptions<DomainEventOutboxOptions> to route dispatch
+            // based on Mode (OutboxOnly default post-T9 cutover; Hybrid documented rollback).
+            //
+            // ValidateOnStart fails fast at app startup if an operator misconfigures the
+            // outbox knobs into a degenerate state (e.g. MaxAttempts=0 → every transient
+            // failure becomes terminal; InitialBackoffMs=0 → tight-loop retry storm).
+            services.AddOptions<DomainEventOutboxOptions>()
+                .Bind(configuration.GetSection(DomainEventOutboxOptions.SectionName))
+                .Validate(
+                    o => o.MaxAttempts >= 1,
+                    "DomainEventOutbox.MaxAttempts must be >= 1 (a value of 0 would terminate every event on first dispatch failure).")
+                .Validate(
+                    o => o.InitialBackoffMs > 0,
+                    "DomainEventOutbox.InitialBackoffMs must be > 0 (a value of 0 produces zero-second backoff and a tight-loop retry storm).")
+                .Validate(
+                    o => o.MaxBackoffSeconds > 0,
+                    "DomainEventOutbox.MaxBackoffSeconds must be > 0 (a value of 0 caps every retry at zero seconds, identical to InitialBackoffMs=0).")
+                .Validate(
+                    o => o.BatchSize >= 1 && o.BatchSize <= 10_000,
+                    "DomainEventOutbox.BatchSize must be in [1, 10000] — outside this range the poll cycle is either no-op or risks excessive memory pressure.")
+                .Validate(
+                    o => o.PollIntervalSeconds >= 1,
+                    "DomainEventOutbox.PollIntervalSeconds must be >= 1 (sub-second polls would saturate the DB without observable throughput gain).")
+                .ValidateOnStart();
+
+            // Issue #1535 T4 — post-commit event outbox processor.
+            // Singleton processor (no per-request state); a thin hosted-service wrapper
+            // resolves it so integration tests can also drive RunOnceAsync explicitly without
+            // standing up the BackgroundService loop.
+            services.AddSingleton<Api.Infrastructure.BackgroundJobs.DomainEventOutboxProcessor>();
+            services.AddHostedService(sp =>
+                sp.GetRequiredService<Api.Infrastructure.BackgroundJobs.DomainEventOutboxProcessor>());
+
+            // Issue #1535 T6 — health tracker is registered UNGATED in
+            // ApplicationServiceExtensions so HTTP integration tests (which skip
+            // this AddDatabaseServices branch via environment.IsEnvironment("Testing"))
+            // still get a tracker to satisfy Program.cs's RegisterDomainEventOutboxGauges
+            // resolve call. Mirrors the IAuditOutboxHealthTracker registration site.
         }
 
         return services;

@@ -88,4 +88,25 @@ public static class EventTypeRegistry
         ArgumentNullException.ThrowIfNull(ev);
         return _aliasByType.TryGetValue(ev.GetType(), out var alias) ? alias : null;
     }
+
+    /// <summary>
+    /// Single-source-of-truth helper for the <c>event_type</c> Prometheus label and
+    /// the <c>domain_event_outbox.event_type</c> column. Returns the registered alias
+    /// when available, otherwise the CLR <see cref="Type.FullName"/>.
+    ///
+    /// <para><b>Why FullName and not <c>Type.Name</c>?</b> Name collides across
+    /// namespaces (two different bounded contexts can both define an <c>AlertFiredEvent</c>);
+    /// FullName disambiguates and survives namespace moves more gracefully. Issue #1535 T6
+    /// code review flagged that the DbContext's two event_type emissions (outbox enqueue +
+    /// legacy DomainEventLog dispatch-failure) were using different fallbacks (FullName vs
+    /// Name) → dashboard JOINs broke for unregistered events. This helper unifies them.</para>
+    /// </summary>
+    public static string ResolveOrFullName(IDomainEvent ev)
+    {
+        ArgumentNullException.ThrowIfNull(ev);
+        var clrType = ev.GetType();
+        return _aliasByType.TryGetValue(clrType, out var alias)
+            ? alias
+            : (clrType.FullName ?? clrType.Name);
+    }
 }

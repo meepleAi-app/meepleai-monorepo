@@ -97,6 +97,21 @@ internal sealed class ChannelDispatchHandler : INotificationHandler<AlertFiredEv
             return;
         }
 
+        // Issue #1941 / iso-2 Fix 1: pre-flight idempotency check. If this channel already
+        // dispatched the incoming AlertFiredEvent, skip to avoid double-pinging oncall
+        // (Slack webhook + Email SMTP have no remote dedup). Dry-run and test fires are
+        // exempt — those use IsDryRun/IsTest flags, not LastDispatchedEventId, and admins
+        // legitimately may want to test the same channel multiple times.
+        if (!notification.IsDryRun
+            && !notification.IsTest
+            && channel.LastDispatchedEventId == notification.EventId)
+        {
+            _logger.LogDebug(
+                "[ChannelDispatch] Skipping {Type} dispatch for rule {Rule}: event {EventId} already dispatched (iso-2)",
+                type, LogSanitizer.Sanitize(notification.RuleName), notification.EventId);
+            return;
+        }
+
         try
         {
             switch (type)
@@ -112,6 +127,15 @@ internal sealed class ChannelDispatchHandler : INotificationHandler<AlertFiredEv
                         "[ChannelDispatch] No dispatch implementation for channel type {Type}",
                         type);
                     break;
+            }
+
+            // Issue #1941 / iso-2 Fix 1: only mark dispatched on real (non-dry-run, non-test)
+            // alerts that completed without throwing. Concurrency: parallel sibling channels
+            // each upsert their own row, so RowVersion contention is bounded per-channel.
+            if (!notification.IsDryRun && !notification.IsTest)
+            {
+                channel.MarkDispatched(notification.EventId);
+                await _channelRepository.UpsertAsync(channel, cancellationToken).ConfigureAwait(false);
             }
         }
         catch (TaskCanceledException) when (cancellationToken.IsCancellationRequested)

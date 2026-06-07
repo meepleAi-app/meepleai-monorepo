@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -13,9 +14,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260606210753_AddIdempotencyGuardsToAlertChannels_Iso2")]
+    partial class AddIdempotencyGuardsToAlertChannels_Iso2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -754,10 +757,6 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("jsonb")
                         .HasColumnName("house_rules_json");
 
-                    b.Property<Guid?>("LastProcessedEventId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("last_processed_event_id");
-
                     b.Property<string>("NotesJson")
                         .HasColumnType("jsonb")
                         .HasColumnName("notes_json");
@@ -793,10 +792,6 @@ namespace Api.Infrastructure.Migrations
                     b.Property<Guid>("CreatorId")
                         .HasColumnType("uuid")
                         .HasColumnName("creator_id");
-
-                    b.Property<Guid?>("LastProcessedEventId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("last_processed_event_id");
 
                     b.Property<string>("MembersJson")
                         .HasColumnType("jsonb")
@@ -855,10 +850,6 @@ namespace Api.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("guest_name");
-
-                    b.Property<Guid?>("LastProcessedEventId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("last_processed_event_id");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -976,10 +967,6 @@ namespace Api.Infrastructure.Migrations
                     b.Property<int>("Source")
                         .HasColumnType("integer");
 
-                    b.Property<Guid?>("SourceEventId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("source_event_id");
-
                     b.Property<int>("Type")
                         .HasColumnType("integer");
 
@@ -1001,11 +988,6 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("Source")
                         .HasDatabaseName("IX_LedgerEntries_Source");
-
-                    b.HasIndex("SourceEventId")
-                        .IsUnique()
-                        .HasDatabaseName("UX_ledger_entries_source_event_id")
-                        .HasFilter("source_event_id IS NOT NULL");
 
                     b.HasIndex("Type")
                         .HasDatabaseName("IX_LedgerEntries_Type");
@@ -4019,10 +4001,6 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("invitation_id");
 
-                    b.Property<Guid?>("LastNotifiedEventId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("last_notified_event_id");
-
                     b.Property<string>("RejectionReason")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
@@ -4923,10 +4901,6 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("pdf_size_bytes");
 
-                    b.Property<Guid?>("SourceEventId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("source_event_id");
-
                     b.Property<string>("Step")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -4937,11 +4911,6 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("PdfDocumentId")
                         .HasDatabaseName("IX_pdf_processing_metrics_pdf_document_id");
-
-                    b.HasIndex("SourceEventId")
-                        .IsUnique()
-                        .HasDatabaseName("UX_pdf_processing_metrics_source_event_id")
-                        .HasFilter("source_event_id IS NOT NULL");
 
                     b.HasIndex("Step", "CreatedAt")
                         .IsDescending(false, true)
@@ -5120,90 +5089,6 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("domain_event_logs", (string)null);
                 });
 
-            modelBuilder.Entity("Api.Infrastructure.Entities.DomainEventOutbox.DomainEventOutboxEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<int>("Attempts")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0)
-                        .HasColumnName("attempts");
-
-                    b.Property<string>("CorrelationId")
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)")
-                        .HasColumnName("correlation_id");
-
-                    b.Property<DateTimeOffset?>("DispatchedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("dispatched_at");
-
-                    b.Property<DateTimeOffset>("EnqueuedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("enqueued_at");
-
-                    b.Property<string>("EventType")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
-                        .HasColumnName("event_type");
-
-                    b.Property<DateTimeOffset?>("FailedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("failed_at");
-
-                    b.Property<string>("LastError")
-                        .HasMaxLength(2048)
-                        .HasColumnType("character varying(2048)")
-                        .HasColumnName("last_error");
-
-                    b.Property<DateTimeOffset?>("NextAttemptAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("next_attempt_at");
-
-                    b.Property<DateTimeOffset>("OccurredAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("occurred_at");
-
-                    b.Property<string>("PayloadJson")
-                        .IsRequired()
-                        .HasColumnType("jsonb")
-                        .HasColumnName("payload_json");
-
-                    b.Property<int>("PayloadVersion")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1)
-                        .HasColumnName("payload_version");
-
-                    b.Property<uint>("RowVersion")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
-
-                    b.Property<byte>("Status")
-                        .HasColumnType("smallint")
-                        .HasColumnName("status");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FailedAt")
-                        .IsDescending()
-                        .HasDatabaseName("ix_domain_event_outbox_failed_recent")
-                        .HasFilter("status = 2::smallint");
-
-                    b.HasIndex("NextAttemptAt", "EnqueuedAt")
-                        .HasDatabaseName("ix_domain_event_outbox_pending")
-                        .HasFilter("status = 0::smallint");
-
-                    b.ToTable("domain_event_outbox", (string)null);
-                });
-
             modelBuilder.Entity("Api.Infrastructure.Entities.EmailVerificationEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5362,10 +5247,6 @@ namespace Api.Infrastructure.Migrations
                     b.Property<Guid?>("RespondedByUserId")
                         .HasColumnType("uuid")
                         .HasColumnName("responded_by_user_id");
-
-                    b.Property<DateTimeOffset?>("RsvpConfirmationSentAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("rsvp_confirmation_sent_at");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -6189,10 +6070,6 @@ namespace Api.Infrastructure.Migrations
                     b.Property<DateTime>("SessionDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("SourceEventId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("source_event_id");
-
                     b.Property<DateTime?>("StartTime")
                         .HasColumnType("timestamp with time zone");
 
@@ -6217,11 +6094,6 @@ namespace Api.Infrastructure.Migrations
                     b.HasIndex("SessionDate")
                         .IsDescending()
                         .HasDatabaseName("IX_PlayRecords_SessionDate");
-
-                    b.HasIndex("SourceEventId")
-                        .IsUnique()
-                        .HasDatabaseName("UX_play_records_source_event_id")
-                        .HasFilter("source_event_id IS NOT NULL");
 
                     b.HasIndex("Status")
                         .HasDatabaseName("IX_PlayRecords_Status");
@@ -6697,10 +6569,6 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("snapshot_index");
 
-                    b.Property<Guid?>("SourceEventId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("source_event_id");
-
                     b.Property<DateTime>("Timestamp")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("timestamp");
@@ -6722,11 +6590,6 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("SessionId")
                         .HasDatabaseName("ix_session_snapshots_session_id");
-
-                    b.HasIndex("SourceEventId")
-                        .IsUnique()
-                        .HasDatabaseName("UX_session_snapshots_source_event_id")
-                        .HasFilter("source_event_id IS NOT NULL");
 
                     b.HasIndex("Timestamp")
                         .HasDatabaseName("ix_session_snapshots_timestamp");
@@ -13063,11 +12926,6 @@ namespace Api.Infrastructure.Migrations
                         .HasDefaultValue(0)
                         .HasColumnName("status");
 
-                    b.Property<string>("TestRunId")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("test_run_id");
-
                     b.Property<string>("ThumbnailUrl")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -13872,9 +13730,6 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(10)")
                         .HasDefaultValue("en");
 
-                    b.Property<Guid?>("LastLockoutEventId")
-                        .HasColumnType("uuid");
-
                     b.Property<int>("Level")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
@@ -14282,10 +14137,6 @@ namespace Api.Infrastructure.Migrations
                     b.Property<Guid>("SharedGameId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("SourceEventId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("source_event_id");
-
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
@@ -14300,11 +14151,6 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("SharedGameId")
                         .HasDatabaseName("IX_ProposalMigrations_SharedGameId");
-
-                    b.HasIndex("SourceEventId")
-                        .IsUnique()
-                        .HasDatabaseName("UX_proposal_migrations_source_event_id")
-                        .HasFilter("source_event_id IS NOT NULL");
 
                     b.HasIndex("UserId", "Choice")
                         .HasDatabaseName("IX_ProposalMigrations_UserId_Choice");
@@ -14476,11 +14322,6 @@ namespace Api.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<string>("TestRunId")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("test_run_id");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -14491,10 +14332,6 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("PlayedAt")
                         .HasDatabaseName("ix_game_sessions_played_at");
-
-                    b.HasIndex("TestRunId")
-                        .HasDatabaseName("ix_game_sessions_test_run_id")
-                        .HasFilter("\"test_run_id\" IS NOT NULL");
 
                     b.HasIndex("UserLibraryEntryId")
                         .HasDatabaseName("ix_game_sessions_user_library_entry_id");
@@ -14630,11 +14467,6 @@ namespace Api.Infrastructure.Migrations
                     b.Property<string>("StateNotes")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
-
-                    b.Property<string>("TestRunId")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("test_run_id");
 
                     b.Property<int>("TimesPlayed")
                         .ValueGeneratedOnAdd()
@@ -14933,10 +14765,6 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("severity");
 
-                    b.Property<Guid?>("SourceEventId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("source_event_id");
-
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -14965,11 +14793,6 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("UserId", "IsRead")
                         .HasDatabaseName("IX_notifications_user_id_is_read");
-
-                    b.HasIndex("UserId", "SourceEventId")
-                        .IsUnique()
-                        .HasDatabaseName("UX_notifications_user_source_event_id")
-                        .HasFilter("source_event_id IS NOT NULL");
 
                     b.HasIndex("UserId", "IsRead", "CreatedAt")
                         .HasDatabaseName("IX_notifications_user_id_is_read_created_at")
@@ -15186,10 +15009,6 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("slack_team_id");
 
-                    b.Property<Guid?>("SourceEventId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("source_event_id");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -15210,11 +15029,6 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("Status", "NextRetryAt")
                         .HasDatabaseName("IX_notification_queue_items_status_next_retry_at");
-
-                    b.HasIndex("ChannelType", "RecipientUserId", "SourceEventId")
-                        .IsUnique()
-                        .HasDatabaseName("UX_notification_queue_items_channel_recipient_source_event")
-                        .HasFilter("source_event_id IS NOT NULL");
 
                     b.ToTable("notification_queue_items", (string)null);
                 });

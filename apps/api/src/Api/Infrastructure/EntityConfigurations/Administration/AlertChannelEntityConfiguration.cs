@@ -71,6 +71,10 @@ internal class AlertChannelEntityConfiguration : IEntityTypeConfiguration<AlertC
             .IsRowVersion()
             .IsConcurrencyToken();
 
+        // Issue #1941 / iso-2 Fix 1: dedup key for AlertFiredEvent dispatch per channel.
+        builder.Property(e => e.LastDispatchedEventId)
+            .HasColumnName("last_dispatched_event_id");
+
         // Per-spec: enforce the type discriminator at the schema level — only
         // 'email' and 'slack' are valid in #1840 scope.
         builder.ToTable(t => t.HasCheckConstraint(

@@ -798,7 +798,7 @@
 
 > **Tipo Task:** SEPARATE PR dopo 7gg prod soak della Phase B.
 
-- [x] **Step 1: Remove InlineOnly** ✅ commit `<T10-commit>`
+- [x] **Step 1: Remove InlineOnly** ✅ commit `1d4a707bf`
 
   `DomainEventDispatchMode.InlineOnly` deleted. `Hybrid` retained as the
   documented rollback path post-cutover. `OutboxOnly` is now the default in
@@ -806,7 +806,7 @@
   Hybrid-mode recursion guard introduced by F4 stays in place so the
   rollback path is also safe under handler chains.
 
-- [x] **Step 2: AtomicAuditAttribute doc update** ✅ commit `<T10-commit>`
+- [x] **Step 2: AtomicAuditAttribute doc update** ✅ commit `1d4a707bf`
 
   Diff:
   ```diff
@@ -826,7 +826,7 @@
   + /// (documented in docs/for-developers/architecture/domain-events-post-commit-contract.md).
   ```
 
-- [x] **Step 3: Restore `[AtomicAudit]` on `RotateProviderKeyCommand`** ✅ commit `<T10-commit>`
+- [x] **Step 3: Restore `[AtomicAudit]` on `RotateProviderKeyCommand`** ✅ commit `1d4a707bf`
 
   Command re-decorated with `[AtomicAudit]`. Doc-comment rewritten to
   reflect the post-#1535 semantics (events flow through outbox, rolled-back
@@ -840,7 +840,7 @@
   tests skipped under "2FA-gated test environment" trait remain skipped (not
   related to #1535).
 
-- [x] **Step 5: Consumer contract doc** ✅ commit `<T10-commit>`
+- [x] **Step 5: Consumer contract doc** ✅ commit `1d4a707bf`
 
   Doc landed at
   [`docs/for-developers/architecture/domain-events-post-commit-contract.md`](../../for-developers/architecture/domain-events-post-commit-contract.md).

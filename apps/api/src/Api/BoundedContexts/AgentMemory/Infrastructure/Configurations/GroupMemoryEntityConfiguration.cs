@@ -37,6 +37,10 @@ internal sealed class GroupMemoryEntityConfiguration : IEntityTypeConfiguration<
         builder.Property(e => e.UpdatedAt)
             .HasColumnName("updated_at");
 
+        // Issue #1939 / CF-3 — idempotency guard for OnSessionCompletedUpdateStatsHandler
+        builder.Property(e => e.LastProcessedEventId)
+            .HasColumnName("last_processed_event_id");
+
         // --- JSON Columns ---
 
         builder.Property(e => e.MembersJson)

@@ -131,7 +131,8 @@ internal class NotificationQueueRepository : RepositoryBase, INotificationQueueR
             CreatedAt = item.CreatedAt,
             ProcessedAt = item.ProcessedAt,
             CorrelationId = item.CorrelationId,
-            DeepLinkPath = item.DeepLinkPath
+            DeepLinkPath = item.DeepLinkPath,
+            SourceEventId = item.SourceEventId
         };
     }
 
@@ -153,6 +154,7 @@ internal class NotificationQueueRepository : RepositoryBase, INotificationQueueR
             createdAt: entity.CreatedAt,
             processedAt: entity.ProcessedAt,
             correlationId: entity.CorrelationId,
-            deepLinkPath: entity.DeepLinkPath);
+            deepLinkPath: entity.DeepLinkPath,
+            sourceEventId: entity.SourceEventId);
     }
 }

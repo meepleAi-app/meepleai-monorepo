@@ -43,7 +43,10 @@ internal sealed class NotifyAgentReadyHandler : INotificationHandler<AgentAutoCr
                 Payload = new GenericPayload(
                     $"Agente per {gameName} pronto!",
                     $"L'agente AI per {gameName} è stato creato automaticamente."),
-                DeepLinkPath = deepLink
+                DeepLinkPath = deepLink,
+                // Issue #1937 / CF-1: propagate the domain event id so the dispatcher
+                // dedupes on re-fire (rollback-after-publish in #1535, MediatR transient retry).
+                SourceEventId = notification.EventId
             }, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(

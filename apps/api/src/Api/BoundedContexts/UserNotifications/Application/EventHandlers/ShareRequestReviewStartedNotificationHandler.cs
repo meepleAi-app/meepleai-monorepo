@@ -84,7 +84,9 @@ internal sealed class ShareRequestReviewStartedNotificationHandler
                 user.DisplayName,
                 gameTitle,
                 sourceGame.ImageUrl),
-            DeepLinkPath = $"/contributions/requests/{domainEvent.ShareRequestId}"
+            DeepLinkPath = $"/contributions/requests/{domainEvent.ShareRequestId}",
+            // Issue #1937 / CF-1: propagate event id for dispatcher dedup
+            SourceEventId = domainEvent.EventId
         }, cancellationToken).ConfigureAwait(false);
 
         Logger.LogInformation(

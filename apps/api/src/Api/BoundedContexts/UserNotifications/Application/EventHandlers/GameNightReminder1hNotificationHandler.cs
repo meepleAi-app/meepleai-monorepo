@@ -61,7 +61,9 @@ internal sealed class GameNightReminder1hNotificationHandler : INotificationHand
                             notification.ScheduledAt.UtcDateTime,
                             string.Empty),
                         DeepLinkPath = $"/game-nights/{notification.GameNightEventId}",
-                        Metadata = new { hours_before = 1 }
+                        Metadata = new { hours_before = 1 },
+                        // Issue #1937 / CF-1: propagate event id for dispatcher dedup
+                        SourceEventId = notification.EventId
                     }, cancellationToken).ConfigureAwait(false);
                     notifiedCount++;
                 }

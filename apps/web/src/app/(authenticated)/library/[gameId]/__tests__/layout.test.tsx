@@ -88,4 +88,32 @@ describe('LibraryGameHeader — #1816 P2-2 h1 + document.title state machine', (
     expect(screen.queryByRole('heading', { level: 1, name: 'Gioco' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'Catan' })).toBeInTheDocument();
   });
+
+  it('renders the catalog-fallback game title when the entry is not in user library (F4.1 #1974)', () => {
+    // F4.1 regression guard (2026-06-07 audit): when a user opens
+    // /library/[gameId] for a SharedGame that is NOT in their personal
+    // library, `useLibraryGameDetail` falls back to the shared-catalog
+    // payload (libraryEntryId === ''). The header must still surface the
+    // catalog game name — NOT the legacy "Gioco" generic OR "Gioco non
+    // trovato" — because the page renders a catalog-only view with an
+    // "Aggiungi alla libreria" CTA. See useLibrary.ts:929-981 for the
+    // fallback contract.
+    mockUseLibraryGameDetail.mockReturnValue({
+      data: {
+        libraryEntryId: '', // catalog fallback sentinel
+        gameId: 'shared-catan-uuid',
+        gameTitle: 'Catan',
+        userId: '',
+      },
+      isLoading: false,
+    });
+
+    renderWithIntl(<LibraryGameHeader />);
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Catan' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { level: 1, name: /Gioco non trovato/i })
+    ).not.toBeInTheDocument();
+    expect(document.title).toBe('Catan · MeepleAI');
+  });
 });

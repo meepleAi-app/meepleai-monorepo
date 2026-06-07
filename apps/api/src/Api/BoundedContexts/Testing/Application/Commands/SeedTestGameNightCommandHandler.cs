@@ -94,7 +94,10 @@ internal sealed class SeedTestGameNightCommandHandler
             Sessions = []
         };
 
-        // Create sessions if InProgress or Completed requested
+        // Create sessions if InProgress or Completed requested.
+        // Issue #1929 Macro 4 (DEC-C-10 PIVOT): when request.GameId is provided (linked SharedGame),
+        // propagate it to the session's GameId so the child entity references a real catalog entry
+        // instead of a phantom Guid. Fall back to Guid.NewGuid() for legacy callers that omit GameId.
         if (request.Status is "InProgress" or "Completed")
         {
             var sessionId = Guid.NewGuid();
@@ -103,7 +106,7 @@ internal sealed class SeedTestGameNightCommandHandler
                 Id = sessionId,
                 GameNightEventId = gameNightId,
                 SessionId = sessionId,
-                GameId = Guid.NewGuid(),
+                GameId = request.GameId ?? Guid.NewGuid(),
                 GameTitle = "E2E Game Title",
                 PlayOrder = 1,
                 Status = request.Status is "Completed" ? "Completed" : "InProgress",

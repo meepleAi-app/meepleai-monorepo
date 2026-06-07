@@ -200,6 +200,17 @@ internal static class InfrastructureServiceExtensions
             // based on Mode (Hybrid default → OutboxOnly at Phase B cutover → InlineOnly rollback).
             services.AddOptions<DomainEventOutboxOptions>()
                 .Bind(configuration.GetSection(DomainEventOutboxOptions.SectionName));
+
+            // Issue #1535 T4 — post-commit event outbox processor + health tracker.
+            // Singleton health tracker: holds the latest aggregate-counter snapshot used by the
+            // /metrics ObservableGauges (registered later in T6) and the admin dashboard.
+            services.AddSingleton<IDomainEventOutboxHealthTracker, DomainEventOutboxHealthTracker>();
+            // Singleton processor (no per-request state); a thin hosted-service wrapper
+            // resolves it so integration tests can also drive RunOnceAsync explicitly without
+            // standing up the BackgroundService loop.
+            services.AddSingleton<Api.Infrastructure.BackgroundJobs.DomainEventOutboxProcessor>();
+            services.AddHostedService(sp =>
+                sp.GetRequiredService<Api.Infrastructure.BackgroundJobs.DomainEventOutboxProcessor>());
         }
 
         return services;

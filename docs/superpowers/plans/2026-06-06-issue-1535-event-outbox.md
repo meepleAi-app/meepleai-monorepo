@@ -420,7 +420,7 @@
 - Modify: `InfrastructureServiceExtensions.cs` (register HostedService)
 - Tests: `tests/Api.Tests/Integration/DomainEventOutbox/DomainEventOutboxProcessorIntegrationTests.cs`
 
-- [ ] **Step 1: Happy path test FIRST**
+- [x] **Step 1: Happy path test FIRST**
 
   ```csharp
   [Fact]
@@ -470,7 +470,7 @@
 
   RED.
 
-- [ ] **Step 2: Implement processor**
+- [x] **Step 2: Implement processor**
 
   Clone struttura `AuditOutboxProcessor`:
   - `ExecuteAsync` → loop con `Task.Delay(PollInterval)`
@@ -483,7 +483,7 @@
 
   RUN: 4/4 GREEN.
 
-- [ ] **Step 3: Register HostedService + Options**
+- [x] **Step 3: Register HostedService + Options**
 
   In `InfrastructureServiceExtensions.cs`:
 
@@ -504,9 +504,9 @@
   }
   ```
 
-- [ ] **Verifica:**
-  - 4/4 processor test PASS (Testcontainers Postgres)
-  - HostedService registered + visible in /health endpoint
+- [x] **Verifica:**
+  - 4/4 processor test PASS (Testcontainers Postgres) ✅ commit `<T4-commit>`
+  - HostedService registered + visible in /health endpoint ✅ via `InfrastructureServiceExtensions.AddInfrastructureServices`
 
 ---
 

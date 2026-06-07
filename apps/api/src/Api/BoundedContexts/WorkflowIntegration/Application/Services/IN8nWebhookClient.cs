@@ -14,6 +14,20 @@ public interface IN8nWebhookClient
 {
     /// <summary>
     /// Trigger an n8n workflow via webhook. Fire-and-forget with circuit breaker.
+    ///
+    /// <para><b>Issue #1942 / iso-3 — Idempotency contract for domain-event-driven callers:</b>
+    /// when invoked from an <see cref="Api.SharedKernel.Domain.Interfaces.IDomainEvent"/>
+    /// handler, the <paramref name="payload"/> object MUST carry a top-level
+    /// <c>domainEventId</c> property equal to the originating event's
+    /// <see cref="Api.SharedKernel.Domain.Interfaces.IDomainEvent.EventId"/>. The
+    /// receiving n8n workflow MUST dedup on this field (typically via a "Set" + "IF" node,
+    /// or a Postgres lookup) to avoid re-running on rolled-back / retried domain events.
+    /// See <c>docs/for-developers/integrations/n8n-idempotency-contract.md</c> for the
+    /// full contract + reference workflow snippet.</para>
+    ///
+    /// <para>This rule is documented, not enforced at compile time — admins owning n8n
+    /// workflows are responsible for wiring the dedup node. The BE side validates that
+    /// every domain-event-driven caller propagates the field via code review.</para>
     /// </summary>
     Task TriggerWorkflowAsync(string webhookPath, object payload, CancellationToken ct = default);
 }

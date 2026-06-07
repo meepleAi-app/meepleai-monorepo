@@ -505,7 +505,7 @@
   ```
 
 - [x] **Verifica:**
-  - 4/4 processor test PASS (Testcontainers Postgres) ✅ commit `<T4-commit>`
+  - 4/4 processor test PASS (Testcontainers Postgres) ✅ commit `bb614cec9`
   - HostedService registered + visible in /health endpoint ✅ via `InfrastructureServiceExtensions.AddInfrastructureServices`
 
 ---

@@ -87,6 +87,15 @@ public sealed class DomainEventOutboxEntity
     public string? CorrelationId { get; private set; }
 
     /// <summary>
+    /// Server timestamp when the row transitioned to <see cref="DomainEventOutboxStatus.Failed"/>
+    /// (terminal). Null while the row is Pending or Sent. Issue #1535 T6 follow-up: the
+    /// <c>GetFailedEventOutboxRowsQuery</c> handler orders by this field DESC so operators
+    /// triaging a poison-message spike see the most-recently-failed rows first — the
+    /// previous EnqueuedAt-based sort buried recent failures behind older retry timeouts.
+    /// </summary>
+    public DateTimeOffset? FailedAt { get; private set; }
+
+    /// <summary>
     /// F6 (Issue #1535 T6 code review): optimistic concurrency token. Every UPDATE on a
     /// row (MarkSent / MarkRetry / MarkFailed / RearmFromFailed) must match the
     /// xmin-derived RowVersion loaded by the caller, otherwise EF throws
@@ -186,6 +195,7 @@ public sealed class DomainEventOutboxEntity
         Attempts++;
         LastError = Truncate(error, 2048);
         NextAttemptAt = null;
+        FailedAt = now;
     }
 
     /// <summary>
@@ -210,6 +220,7 @@ public sealed class DomainEventOutboxEntity
         NextAttemptAt = null;
         DispatchedAt = null;
         EnqueuedAt = now;
+        FailedAt = null;
     }
 
     private static string Truncate(string s, int max)

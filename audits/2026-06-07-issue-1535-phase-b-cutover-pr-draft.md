@@ -39,6 +39,22 @@ Same 6 gates as Phase A (see
 [`Phase A runbook`](2026-06-07-issue-1535-phase-a-deploy-pr-draft.md))
 plus a Phase-B-specific cross-check:
 
+#### Gate B0 — DoD-9 latency p95 < 10s (canonical)
+
+```promql
+histogram_quantile(0.95,
+  rate(meepleai_domain_event_outbox_dispatch_latency_seconds_bucket[5m])) < 10
+```
+
+This is the canonical signal post-T8 follow-up. The histogram is recorded once
+per row that transitions Pending → Sent (sample = `now − EnqueuedAt`). Bucket
+boundaries are tight under 10s so a p95 regression is visible at sub-second
+resolution.
+
+The `pending_oldest_age_seconds < 10` proxy used by the original Phase B runbook
+is now redundant — both signals must agree, but the histogram is the source
+of truth.
+
 #### Gate B1 — Single-source dispatch verified
 
 ```promql

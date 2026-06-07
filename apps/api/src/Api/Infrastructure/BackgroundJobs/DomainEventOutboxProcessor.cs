@@ -149,12 +149,14 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
                 return new BatchOutcome(EmptyBatch: true, Pending: 0, Dispatched: 0, Retried: 0, FailedTerminal: 0,
                     DispatchedEventTypes: System.Array.Empty<string>(),
                     RetriedEventTypes: System.Array.Empty<string>(),
-                    FailedTerminalEventTypes: System.Array.Empty<string>());
+                    FailedTerminalEventTypes: System.Array.Empty<string>(),
+                    DispatchLatencies: System.Array.Empty<(string, double)>());
             }
 
             var dispatchedEventTypes = new List<string>(pending.Count);
             var retriedEventTypes = new List<string>(pending.Count);
             var failedTerminalEventTypes = new List<string>(pending.Count);
+            var dispatchLatencies = new List<(string EventType, double Seconds)>(pending.Count);
 
             var tx = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
             await using var _ = tx.ConfigureAwait(false);
@@ -192,6 +194,10 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
                     await mediator.Publish(evt, cancellationToken).ConfigureAwait(false);
                     row.MarkSent(now);
                     dispatchedEventTypes.Add(row.EventType);
+                    // F-B follow-up: record end-to-end dispatch latency (EnqueuedAt → MarkSent.now).
+                    // Captured inside the strategy delegate but emitted outside (same as the
+                    // counters) so a strategy retry doesn't double-record samples.
+                    dispatchLatencies.Add((row.EventType, (now - row.EnqueuedAt).TotalSeconds));
                 }
 #pragma warning disable CA1031 // Per-row resilience: poison-message must not stop the batch
                 catch (Exception ex)
@@ -232,7 +238,8 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
                 FailedTerminal: failedTerminalEventTypes.Count,
                 DispatchedEventTypes: dispatchedEventTypes,
                 RetriedEventTypes: retriedEventTypes,
-                FailedTerminalEventTypes: failedTerminalEventTypes);
+                FailedTerminalEventTypes: failedTerminalEventTypes,
+                DispatchLatencies: dispatchLatencies);
         }).ConfigureAwait(false);
 
         // Emit counters OUTSIDE the strategy delegate so a strategy retry (which already
@@ -254,6 +261,11 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
             MeepleAiMetrics.DomainEventOutboxFailedTerminal.Add(
                 1, new KeyValuePair<string, object?>("event_type", eventType));
         }
+        foreach (var (eventType, seconds) in batchResult.DispatchLatencies)
+        {
+            MeepleAiMetrics.DomainEventOutboxDispatchLatencySeconds.Record(
+                seconds, new KeyValuePair<string, object?>("event_type", eventType));
+        }
 
         await UpdateHealthSnapshotAsync(db, cancellationToken).ConfigureAwait(false);
 
@@ -273,7 +285,8 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
         int FailedTerminal,
         IReadOnlyList<string> DispatchedEventTypes,
         IReadOnlyList<string> RetriedEventTypes,
-        IReadOnlyList<string> FailedTerminalEventTypes);
+        IReadOnlyList<string> FailedTerminalEventTypes,
+        IReadOnlyList<(string EventType, double Seconds)> DispatchLatencies);
 
     /// <summary>
     /// T5 exponential backoff with jitter. The unjittered delay grows as

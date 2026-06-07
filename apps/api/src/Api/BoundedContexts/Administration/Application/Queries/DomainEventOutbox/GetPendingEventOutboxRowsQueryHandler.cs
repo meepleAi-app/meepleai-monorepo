@@ -47,6 +47,7 @@ internal sealed class GetPendingEventOutboxRowsQueryHandler
                 r.EnqueuedAt,
                 r.DispatchedAt,
                 r.NextAttemptAt,
+                r.FailedAt,
                 r.CorrelationId))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);

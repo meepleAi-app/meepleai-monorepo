@@ -63,6 +63,26 @@ internal static partial class MeepleAiMetrics
         description: "Total outbox rows transitioned to terminal Failed after retry budget exhaustion (#1535 T6).");
 
     /// <summary>
+    /// Distribution of end-to-end dispatch latency: <c>(MarkSent.now − EnqueuedAt)</c> in
+    /// seconds, recorded ONCE per row that transitions Pending → Sent. Tag: <c>event_type</c>.
+    /// Bucket bounds chosen for the DoD-9 SLO (p95 &lt; 10s): tight resolution under 10s,
+    /// coarser past the SLO so a regression spike still lands in a meaningful bucket.
+    ///
+    /// <para>Issue #1535 T8 follow-up: replaces the <c>pending_oldest_age_seconds</c> proxy
+    /// used by the Phase A/B runbook. The histogram is the canonical signal for the
+    /// DoD-9 latency gate:</para>
+    /// <code>histogram_quantile(0.95, rate(meepleai_domain_event_outbox_dispatch_latency_seconds_bucket[5m]))</code>
+    /// </summary>
+    public static readonly Histogram<double> DomainEventOutboxDispatchLatencySeconds = Meter.CreateHistogram<double>(
+        name: "meepleai.domain_event_outbox.dispatch_latency_seconds",
+        unit: "s",
+        description: "End-to-end dispatch latency from EnqueuedAt to MarkSent in seconds (#1535 T8 follow-up).",
+        advice: new InstrumentAdvice<double>
+        {
+            HistogramBucketBoundaries = new[] { 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 7.5, 10.0, 15.0, 30.0, 60.0, 120.0, 300.0 },
+        });
+
+    /// <summary>
     /// Registers the three <c>ObservableGauges</c> that report the latest health snapshot
     /// from the singleton <see cref="IDomainEventOutboxHealthTracker"/>. Idempotent — repeat
     /// calls are a no-op. Mirrors <see cref="RegisterAuditOutboxGauges"/>.

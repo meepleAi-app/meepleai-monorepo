@@ -79,6 +79,12 @@ internal sealed class DomainEventOutboxEntityConfiguration : IEntityTypeConfigur
             .HasColumnName("correlation_id")
             .HasMaxLength(128);
 
+        // Issue #1535 T6 follow-up: set on MarkFailed, cleared on RearmFromFailed.
+        // Powers the GetFailedEventOutboxRowsQuery DESC sort so operators see the
+        // most-recently-failed rows first.
+        builder.Property(e => e.FailedAt)
+            .HasColumnName("failed_at");
+
         // F6 (Issue #1535 T6 code review): optimistic concurrency token via Postgres-native
         // `xmin` (the row's transaction id, automatically updated on every UPDATE). Mapping
         // to `xmin` avoids a real RowVersion column and any associated migration — Npgsql
@@ -104,8 +110,10 @@ internal sealed class DomainEventOutboxEntityConfiguration : IEntityTypeConfigur
             .HasDatabaseName("ix_domain_event_outbox_pending")
             .HasFilter("status = 0::smallint");
 
-        // Ops dashboard: list recent terminal failures. Same smallint literal rationale.
-        builder.HasIndex(e => e.EnqueuedAt)
+        // Ops dashboard: list recent terminal failures. Index on failed_at (not enqueued_at)
+        // so the GetFailedEventOutboxRowsQuery DESC sort uses the partial index directly.
+        // Same smallint literal rationale as ix_domain_event_outbox_pending.
+        builder.HasIndex(e => e.FailedAt)
             .IsDescending()
             .HasDatabaseName("ix_domain_event_outbox_failed_recent")
             .HasFilter("status = 2::smallint");

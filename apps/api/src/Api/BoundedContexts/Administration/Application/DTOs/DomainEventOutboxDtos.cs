@@ -33,4 +33,5 @@ internal sealed record DomainEventOutboxRowDto(
     DateTimeOffset EnqueuedAt,
     DateTimeOffset? DispatchedAt,
     DateTimeOffset? NextAttemptAt,
+    DateTimeOffset? FailedAt,
     string? CorrelationId);

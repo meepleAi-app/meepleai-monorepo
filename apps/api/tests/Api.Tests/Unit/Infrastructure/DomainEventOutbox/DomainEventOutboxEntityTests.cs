@@ -102,6 +102,8 @@ public sealed class DomainEventOutboxEntityTests
         row.Attempts.Should().Be(1);
         row.LastError.Should().Be("deterministic error");
         row.NextAttemptAt.Should().BeNull();
+        row.FailedAt.Should().Be(Now,
+            because: "F-A follow-up: MarkFailed stamps FailedAt so the admin failure list can sort by terminal-transition time");
 
         // Cannot leave Failed
         var sentAct = () => row.MarkSent(Now);
@@ -144,6 +146,8 @@ public sealed class DomainEventOutboxEntityTests
         row.DispatchedAt.Should().BeNull();
         row.EnqueuedAt.Should().Be(rearmedAt,
             because: "EnqueuedAt drives FIFO ordering; re-armed rows enter at the tail of the queue");
+        row.FailedAt.Should().BeNull(
+            because: "F-A follow-up: re-armed rows clear FailedAt so a later MarkFailed records the new transition time");
     }
 
     [Fact]

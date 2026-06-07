@@ -282,3 +282,6 @@ claude-design-bundle/
 
 # Throwaway screenshot reciclato durante review interattive (drag&drop dall'utente)
 loc.png
+
+# Windows temp diff files accidentally created by harness tools
+C*UsersUtenteAppDataLocalTemp*-diff.txt

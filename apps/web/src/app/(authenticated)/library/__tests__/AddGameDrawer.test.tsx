@@ -18,6 +18,8 @@ import userEvent from '@testing-library/user-event';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 
+import { trackEvent } from '@/lib/analytics/track-event';
+
 import { renderWithIntl } from '../../../../__tests__/fixtures/common-fixtures';
 import { AddGameDrawer, AddGameDrawerController } from '../AddGameDrawer';
 
@@ -53,6 +55,12 @@ vi.mock('@/app/(authenticated)/library/private/add/client', () => ({
       </button>
     </div>
   ),
+}));
+
+// #2012 — telemetry instrumentation for AddGameDrawer conversion funnel.
+// Tests assert trackEvent is called with the expected event name + props.
+vi.mock('@/lib/analytics/track-event', () => ({
+  trackEvent: vi.fn(),
 }));
 
 // Mock CatalogSearchStep — contains React Query hooks
@@ -261,6 +269,70 @@ describe('AddGameDrawer', () => {
       await user.keyboard('{Escape}');
 
       expect(onClose).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Telemetry (#2012)', () => {
+    // T3 conversion funnel instrumentation: measure drawer-open → choice
+    // conversion rate, manual vs catalog ratio, abandonment without choice.
+    // Once 2 weeks of data are collected, T3 UX writing review can land
+    // with Adzic-style measurable thresholds (#2012 acceptance criteria).
+
+    it('tracks library_addgame_drawer_opened when drawer opens', () => {
+      renderDrawer({ open: true });
+
+      expect(trackEvent).toHaveBeenCalledWith('library_addgame_drawer_opened');
+    });
+
+    it('does not track drawer_opened when drawer stays closed', () => {
+      renderDrawer({ open: false });
+
+      expect(trackEvent).not.toHaveBeenCalled();
+    });
+
+    it('tracks choice_selected with choice=manual on manual click', async () => {
+      const user = userEvent.setup();
+      renderDrawer({ open: true });
+      (trackEvent as Mock).mockClear();
+
+      await user.click(screen.getByTestId('add-game-choice-manual'));
+
+      expect(trackEvent).toHaveBeenCalledWith('library_addgame_choice_selected', {
+        choice: 'manual',
+      });
+    });
+
+    it('tracks choice_selected with choice=catalog on catalog click', async () => {
+      const user = userEvent.setup();
+      renderDrawer({ open: true });
+      (trackEvent as Mock).mockClear();
+
+      await user.click(screen.getByTestId('add-game-choice-catalog'));
+
+      expect(trackEvent).toHaveBeenCalledWith('library_addgame_choice_selected', {
+        choice: 'catalog',
+      });
+    });
+
+    it('tracks closed_without_choice when drawer is closed from choice step (Escape)', async () => {
+      const user = userEvent.setup();
+      renderDrawer({ open: true });
+      (trackEvent as Mock).mockClear();
+
+      await user.keyboard('{Escape}');
+
+      expect(trackEvent).toHaveBeenCalledWith('library_addgame_drawer_closed_without_choice');
+    });
+
+    it('does NOT track closed_without_choice when drawer is closed after a choice was selected', async () => {
+      const user = userEvent.setup();
+      renderDrawer({ open: true });
+      await user.click(screen.getByTestId('add-game-choice-manual'));
+      (trackEvent as Mock).mockClear();
+
+      await user.keyboard('{Escape}');
+
+      expect(trackEvent).not.toHaveBeenCalledWith('library_addgame_drawer_closed_without_choice');
     });
   });
 });

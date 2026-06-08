@@ -82,6 +82,7 @@ export function PdfRow(props: PdfRowProps): ReactElement {
       {pdf.status ? (
         <span
           data-slot="kb-hub-pdf-status"
+          data-status={pdf.status}
           className={clsx(
             'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-display text-[10px] font-bold uppercase tracking-wider',
             STATUS_BG[pdf.status]

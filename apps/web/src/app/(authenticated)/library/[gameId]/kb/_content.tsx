@@ -32,6 +32,7 @@ import {
   type HubDefaultLabels,
   type KbPdf,
   type PdfAction,
+  type PdfStatus,
   type RaptorPanelLabels,
   type ReindexCostRow,
   type ReindexModalLabels,
@@ -81,13 +82,46 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
+/**
+ * F6 #1974 (audit 2026-06-07): map the BE `GamePdfDto.ProcessingState`
+ * (Pending|Uploading|Extracting|Chunking|Embedding|Indexing|Ready|Failed)
+ * to the FE `PdfStatus` union (ready|indexing|stale|failed) so PdfRow
+ * can render a colored status badge per the mockup.
+ *
+ * Mapping rationale: every transient pipeline phase collapses to
+ * "indexing" because the FE only renders one in-progress badge. "Ready"
+ * is the only success terminal; "Failed" surfaces explicitly so the
+ * user can retry. Unknown values fall back to "indexing" to avoid a
+ * confidently-wrong success state when the BE adds a new phase later.
+ * The "stale" badge has no BE source today — reserved for a future
+ * Issue when re-embedding gates land.
+ */
+function mapProcessingStateToPdfStatus(state: string): PdfStatus {
+  switch (state) {
+    case 'Ready':
+      return 'ready';
+    case 'Failed':
+      return 'failed';
+    case 'Pending':
+    case 'Uploading':
+    case 'Extracting':
+    case 'Chunking':
+    case 'Embedding':
+    case 'Indexing':
+    default:
+      return 'indexing';
+  }
+}
+
 function mapPdfs(pdfs: ReadonlyArray<GamePdfDto>): ReadonlyArray<KbPdf> {
   return pdfs.map(p => ({
     id: p.id,
     name: p.name,
     sizeFormatted: formatFileSize(p.fileSizeBytes),
     uploadedAtRelative: formatRelativeDate(p.uploadedAt),
-    // status + chunks deferred (P83 — BE schema doesn't expose them yet)
+    // F6 #1974: wire BE ProcessingState → PdfRow status badge.
+    status: mapProcessingStateToPdfStatus(p.processingState),
+    // chunks deferred (P83 — BE schema doesn't expose per-doc chunk counts yet)
   }));
 }
 

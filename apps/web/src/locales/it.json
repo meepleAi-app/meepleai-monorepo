@@ -1939,7 +1939,8 @@
           "header": {
             "titleSuffix": "Knowledge Base",
             "uploadCta": "+ Carica PDF",
-            "reindexAllCta": "⟳ Re-index all"
+            "reindexAllCta": "⟳ Re-index all",
+            "dropZoneCta": "Trascina un PDF qui o clicca per caricarlo"
           },
           "stats": {
             "docs": "{count, plural, =0 {Nessun documento} =1 {1 documento} other {# documenti}}",

@@ -329,7 +329,14 @@
     "send": "Send",
     "sources": "Sources",
     "thinking": "Thinking...",
-    "title": "AI Chat"
+    "title": "AI Chat",
+    "infoPanel": {
+      "linkedGameLabel": "Linked game",
+      "citationsHeading": "Citations ({count})",
+      "suggestedQuestionsHeading": "Suggested questions",
+      "agentSectionHeading": "Agent",
+      "agentTypeLabel": "Type"
+    }
   },
   "common": {
     "all": "All",

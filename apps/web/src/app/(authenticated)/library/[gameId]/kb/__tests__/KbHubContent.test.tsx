@@ -236,7 +236,7 @@ describe('KbHubContent orchestrator (Issue #1481)', () => {
 
   // #1816 P3-7 Phase 2 — indexing-pending state surface.
   describe('indexing-pending state (#1816 P3-7 Phase 2)', () => {
-    it('renders indexing badges on KbStatsCard + HubDefault when pdfs present and isIndexed=false', () => {
+    it('renders the indexing banner on HubDefault when pdfs present and isIndexed=false (F7 #1974: KbStatsCard no longer mounted on user surface)', () => {
       mockUseUserKbStatus.mockReturnValue({
         isLoading: false,
         isError: false,
@@ -257,13 +257,16 @@ describe('KbHubContent orchestrator (Issue #1481)', () => {
 
       const { container } = renderWithIntl(<KbHubContent gameId={GAME_ID} />);
 
+      // F7: KbStatsCard removed from `/library/[gameId]/kb` → its dedicated
+      // indexing badge no longer appears. The HubDefault banner remains the
+      // single source of truth on this surface.
       expect(
         container.querySelector('[data-slot="kb-hub-stats-indexing-badge"]')
-      ).toBeInTheDocument();
+      ).not.toBeInTheDocument();
       expect(
         container.querySelector('[data-slot="kb-hub-default-indexing-banner"]')
       ).toBeInTheDocument();
-      // Audit-quoted IT copy renders end-to-end (orchestrator → child).
+      // Audit-quoted IT copy still renders end-to-end (orchestrator → HubDefault).
       expect(screen.getAllByText('⏳ Indicizzazione in corso').length).toBeGreaterThanOrEqual(1);
     });
 
@@ -325,7 +328,7 @@ describe('KbHubContent orchestrator (Issue #1481)', () => {
     });
   });
 
-  it('renders HubDefault + KbStatsCard + RaptorPanel when PDFs present', () => {
+  it('renders HubDefault + RaptorPanel when PDFs present (F7 #1974: KbStatsCard removed)', () => {
     mockUseUserKbStatus.mockReturnValue({
       isLoading: false,
       isError: false,
@@ -345,7 +348,9 @@ describe('KbHubContent orchestrator (Issue #1481)', () => {
     });
     const { container } = renderWithIntl(<KbHubContent gameId={GAME_ID} />);
     expect(container.querySelector('[data-slot="kb-hub-hub-default"]')).toBeInTheDocument();
-    expect(container.querySelector('[data-slot="kb-hub-stats-card"]')).toBeInTheDocument();
+    // F7 #1974: KbStatsCard removed from `/library/[gameId]/kb` user surface
+    // — the same data lives inside HubDefault's stats strip.
+    expect(container.querySelector('[data-slot="kb-hub-stats-card"]')).not.toBeInTheDocument();
     expect(container.querySelector('[data-slot="kb-hub-raptor-panel"]')).toBeInTheDocument();
     expect(container.querySelectorAll('[data-slot="kb-hub-pdf-row"]')).toHaveLength(2);
   });

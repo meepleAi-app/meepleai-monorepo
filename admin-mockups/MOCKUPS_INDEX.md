@@ -159,15 +159,18 @@
 
 ## SP6 — Libro-game (Nanolith dogfood Iter 1+4)
 
+> **Note 2026-06-08 (#2025 cleanup)**: 3 JSX Sara obsoleti eliminati
+> (`sp6-libro-game-{play-session,translation-viewer,glossary-editor}.jsx`).
+> Canonici sostitutivi: `librogame-runthrough-{play-session,translate-viewer,glossary-editor}.html`
+> (persona Aaron, IA consolidata post #871). Vedi audit
+> `docs/for-developers/audits/2026-06-08-mockup-portfolio-review.md` Cluster B/C/E.
+
 | File | Type | Mapped routes |
 |------|------|---------------|
-| `sp6-libro-game-glossary-editor.jsx` | component-mock | Glossary editor overlay inside `/library/[gameId]/play/[campaignId]/translate` |
-| `sp6-libro-game-index.html` | page-mock | `/gamebook`, `/library/[gameId]/play/[campaignId]` (libro variant) |
-| `sp6-libro-game-photo-upload.html` | page-mock | `/library/[gameId]/play/[campaignId]/translate` (camera step) |
-| `sp6-libro-game-play-session.jsx` | component-mock | Play-session view embedded in libro-game runthrough |
-| `sp6-libro-game-quota-credits.jsx` | component-mock | Quota/credits widget (global modal, not page-level) |
-| `sp6-libro-game-resume-state.html` | page-mock | `/library/[gameId]/play` (resume picker variant) |
-| `sp6-libro-game-translation-viewer.jsx` | component-mock | Translation viewer inside `/library/[gameId]/play/[campaignId]/translate` |
+| `sp6-libro-game-index.html` | page-mock | `/gamebook` (lista manuali Sara) |
+| `sp6-libro-game-photo-upload.html` | page-mock | `/gamebook/upload` (wizard 3-step camera) |
+| `sp6-libro-game-quota-credits.jsx` | component-mock | `/gamebook/checkout` (full checkout flow Sara, 4-step modal — distinto dall'overlay Aaron `librogame-runthrough-quota-credits.html`) |
+| `sp6-libro-game-resume-state.html` | page-mock | `/library/[gameId]/play` (resume picker SP6 variant — duplicato di `librogame-runthrough-resume-picker.html`, cleanup pending Cluster A audit 2026-06-08) |
 
 ## SP7 — Game nights
 
@@ -189,7 +192,7 @@
 
 | File | Type | Mapped routes |
 |------|------|---------------|
-| `nanolith-game-night-storyboard.html` | page-mock | `/game-nights/[id]` (storyboard variant) |
+| `librogame-game-night-storyboard.html` | page-mock | `/game-nights/[id]` (storyboard variant — was `nanolith-game-night-storyboard.html` pre-rename post-IA consolidation #871, sync inline 2026-06-08 #2025) |
 | `nanolith-nav-bottom-mobile.html` | component-mock | Mobile bottom-nav primitive (global) |
 | `nanolith-nav-chat-panel.html` | component-mock | Chat slide-over panel (used globally via `useChatPanel`) |
 | `nanolith-nav-topbar.html` | component-mock | Top-bar primitive (global) |
@@ -197,7 +200,7 @@
 | `librogame-runthrough-error-states.html` | component-mock | Trasversale: chat (N1/N2) · translate (N3) · encounter — stream-timeout / OCR-fail / LLM-503 / segmentation-fail (PR #1056) |
 | `librogame-runthrough-game-detail.html` | page-mock | `/library/[gameId]` (libro variant, PR #1037) |
 | `librogame-runthrough-game-onboarding.html` | page-mock | `/library/[gameId]` (libro variant — prereq gate, gap-coverage 2026-05-12, PR #1056) |
-| `librogame-runthrough-glossary-editor.html` | component-mock | Glossary editor (mirror of sp6 jsx) |
+| `librogame-runthrough-glossary-editor.html` | component-mock | Glossary editor (canonical, SP6 jsx mirror eliminato in #2025) |
 | `librogame-runthrough-library-search.html` | component-mock | In-library search overlay (not page-level) |
 | `librogame-runthrough-play-session.html` | page-mock | `/library/[gameId]/play/[campaignId]` (4 stati v1 congelati + 3 stati SP8 companion: state-05 diary, state-06 paragrafi-drawer, state-07 end-campaign, brief 2026-05-30; jsx twin nuovo con 3 lab interattivi) |
 | `librogame-runthrough-quota-credits.html` | component-mock | Quota/credits overlay (global) |
@@ -212,9 +215,14 @@
 | Type | Count |
 |------|------:|
 | page-mock | 67 |
-| component-mock | 51 |
+| component-mock | 48 |
 | dev-fixture | 12 |
-| **Total** | **130** |
+| **Total** | **127** |
+
+> **Updated 2026-06-08** (#2025): 3 component-mock JSX Sara obsoleti eliminati
+> (`sp6-libro-game-{play-session,translation-viewer,glossary-editor}.jsx`).
+> Companion: file `nanolith-game-night-storyboard.html` rinominato in
+> `librogame-game-night-storyboard.html` (sync con filesystem post-IA #871).
 
 > The `*.jsx` twins of `*.html` files are not double-counted (the JSX is the
 > implementation companion of the HTML reference). Listing them separately

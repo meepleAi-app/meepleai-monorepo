@@ -13873,7 +13873,8 @@ namespace Api.Infrastructure.Migrations
                         .HasDefaultValue("en");
 
                     b.Property<Guid?>("LastLockoutEventId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("last_lockout_event_id");
 
                     b.Property<int>("Level")
                         .ValueGeneratedOnAdd()

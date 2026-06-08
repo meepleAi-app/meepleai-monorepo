@@ -9,7 +9,7 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -130,6 +130,8 @@ namespace Api.Infrastructure.Migrations
                     model = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     max_tokens = table.Column<int>(type: "integer", nullable: false),
                     temperature = table.Column<float>(type: "real", nullable: false),
+                    is_deleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    deleted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     chat_language = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false, defaultValue: "auto"),
                     status = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
                     is_active = table.Column<bool>(type: "boolean", nullable: false),
@@ -198,7 +200,9 @@ namespace Api.Infrastructure.Migrations
                     LlmConfidence = table.Column<double>(type: "double precision", nullable: true),
                     CitationQuality = table.Column<double>(type: "double precision", nullable: true),
                     OverallConfidence = table.Column<double>(type: "double precision", nullable: true),
-                    IsLowQuality = table.Column<bool>(type: "boolean", nullable: false)
+                    IsLowQuality = table.Column<bool>(type: "boolean", nullable: false),
+                    ChunksJson = table.Column<string>(type: "jsonb", nullable: true),
+                    BreakdownJson = table.Column<string>(type: "jsonb", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -229,6 +233,29 @@ namespace Api.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AiModelConfigurations", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "alert_channels",
+                columns: table => new
+                {
+                    type = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    config_json = table.Column<string>(type: "jsonb", nullable: false),
+                    is_enabled = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    last_tested_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    last_test_status = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: true),
+                    last_test_message = table.Column<string>(type: "text", nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
+                    created_by = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    updated_by = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    row_version = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: false),
+                    last_dispatched_event_id = table.Column<Guid>(type: "uuid", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_alert_channels", x => x.type);
+                    table.CheckConstraint("ck_alert_channels_type", "type IN ('email', 'slack')");
                 });
 
             migrationBuilder.CreateTable(
@@ -311,6 +338,29 @@ namespace Api.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "app_budgets",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    monthly_limit_amount = table.Column<decimal>(type: "numeric(12,4)", precision: 12, scale: 4, nullable: false),
+                    monthly_limit_currency = table.Column<string>(type: "character varying(3)", maxLength: 3, nullable: false),
+                    alert_threshold_pct = table.Column<int>(type: "integer", nullable: false, defaultValue: 80),
+                    critical_threshold_pct = table.Column<int>(type: "integer", nullable: false, defaultValue: 95),
+                    is_enabled = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
+                    created_by = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    updated_by = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    row_version = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_app_budgets", x => x.id);
+                    table.CheckConstraint("ck_app_budgets_alert_below_critical", "alert_threshold_pct < critical_threshold_pct");
+                    table.CheckConstraint("ck_app_budgets_monthly_limit_positive", "monthly_limit_amount > 0");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "audit_logs",
                 columns: table => new
                 {
@@ -323,11 +373,32 @@ namespace Api.Infrastructure.Migrations
                     Details = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),
                     IpAddress = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
                     UserAgent = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    before_json = table.Column<string>(type: "jsonb", nullable: true),
+                    after_json = table.Column<string>(type: "jsonb", nullable: true),
+                    impersonated_user_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    step_up_token_id = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_audit_logs", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "audit_outbox",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    payload_json = table.Column<string>(type: "jsonb", nullable: false),
+                    status = table.Column<int>(type: "integer", nullable: false),
+                    retry_count = table.Column<int>(type: "integer", nullable: false),
+                    last_error = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: true),
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    processed_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_audit_outbox", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -380,6 +451,22 @@ namespace Api.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "bgg_tos_hashes",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    current_hash = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    last_checked_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    last_changed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    change_count = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    row_version = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_bgg_tos_hashes", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "BggImportQueue",
                 columns: table => new
                 {
@@ -421,6 +508,54 @@ namespace Api.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_cache_stats", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "catalog_seed_drafts",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    bgg_id = table.Column<int>(type: "integer", nullable: true),
+                    wikidata_qid = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: true),
+                    search_term_input = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    status = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    provenance_json = table.Column<string>(type: "jsonb", nullable: true),
+                    raw_payload_json = table.Column<string>(type: "jsonb", nullable: true),
+                    error_message = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    resulting_shared_game_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    created_by_user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
+                    fetched_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    approved_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    approved_by_user_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    row_version = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: true),
+                    is_deleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    deleted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_catalog_seed_drafts", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "certification_thresholds_config",
+                columns: table => new
+                {
+                    id = table.Column<int>(type: "integer", nullable: false),
+                    min_coverage_pct = table.Column<decimal>(type: "numeric(5,2)", nullable: false),
+                    max_page_tolerance = table.Column<int>(type: "integer", nullable: false),
+                    min_bgg_match_pct = table.Column<decimal>(type: "numeric(5,2)", nullable: false),
+                    min_overall_score = table.Column<decimal>(type: "numeric(5,2)", nullable: false),
+                    updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    updated_by_user_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    xmin = table.Column<uint>(type: "xid", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_certification_thresholds_config", x => x.id);
+                    table.CheckConstraint("ck_certification_thresholds_config_max_page_tolerance_non_nega~", "max_page_tolerance >= 0");
+                    table.CheckConstraint("ck_certification_thresholds_config_pct_ranges", "min_coverage_pct BETWEEN 0 AND 100 AND min_bgg_match_pct BETWEEN 0 AND 100 AND min_overall_score BETWEEN 0 AND 100");
+                    table.CheckConstraint("ck_certification_thresholds_config_singleton", "id = 1");
                 });
 
             migrationBuilder.CreateTable(
@@ -481,6 +616,92 @@ namespace Api.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_database_metrics_snapshots", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "document_evaluation_runs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    PdfDocumentId = table.Column<Guid>(type: "uuid", nullable: false),
+                    StartedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CompletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    Status = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    GoldsetVersion = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    GoldsetGenerationSeed = table.Column<long>(type: "bigint", nullable: false),
+                    CostUsd = table.Column<decimal>(type: "numeric(10,4)", precision: 10, scale: 4, nullable: true),
+                    TriggeredByAdminId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ErrorMessage = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    Metrics = table.Column<string>(type: "jsonb", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_document_evaluation_runs", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "domain_event_logs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    EventId = table.Column<Guid>(type: "uuid", nullable: false),
+                    EventType = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: true),
+                    AggregateType = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
+                    AggregateId = table.Column<Guid>(type: "uuid", nullable: true),
+                    PayloadJson = table.Column<string>(type: "jsonb", nullable: false),
+                    PayloadVersion = table.Column<int>(type: "integer", nullable: false, defaultValue: 1),
+                    OccurredAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    LoggedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_domain_event_logs", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "domain_event_outbox",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    event_type = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    payload_json = table.Column<string>(type: "jsonb", nullable: false),
+                    payload_version = table.Column<int>(type: "integer", nullable: false, defaultValue: 1),
+                    status = table.Column<byte>(type: "smallint", nullable: false),
+                    attempts = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    last_error = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: true),
+                    occurred_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    enqueued_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    dispatched_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    next_attempt_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    correlation_id = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
+                    failed_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    xmin = table.Column<uint>(type: "xid", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_domain_event_outbox", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "email_outbox",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ToEmail = table.Column<string>(type: "character varying(320)", maxLength: 320, nullable: false),
+                    Subject = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    BodyHtml = table.Column<string>(type: "text", nullable: false),
+                    IdempotencyKey = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    ScheduledAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    SentAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    AttemptCount = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    LastError = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Status = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false, defaultValue: "Pending")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_email_outbox", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -591,13 +812,46 @@ namespace Api.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "game_books",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    game_ref_kind = table.Column<short>(type: "smallint", nullable: false),
+                    game_ref_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    owner_user_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    display_name = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
+                    roles = table.Column<int>(type: "integer", nullable: false),
+                    paragraph_scheme = table.Column<short>(type: "smallint", nullable: false),
+                    language = table.Column<string>(type: "character varying(2)", maxLength: 2, nullable: false),
+                    sequential_read = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    kb_source_doc_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    physical_only = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    created_by = table.Column<Guid>(type: "uuid", nullable: false),
+                    updated_by = table.Column<Guid>(type: "uuid", nullable: true),
+                    is_deleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    deleted_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    row_version = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_game_books", x => x.id);
+                    table.CheckConstraint("chk_game_books_physical_kb_coherence", "(physical_only = true AND kb_source_doc_id IS NULL) OR (physical_only = false)");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "game_categories",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     slug = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
+                    emoji = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: true),
+                    color = table.Column<string>(type: "character varying(7)", maxLength: 7, nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    updated_by = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -641,8 +895,10 @@ namespace Api.Infrastructure.Migrations
                     house_rules_json = table.Column<string>(type: "jsonb", nullable: true),
                     custom_setup_json = table.Column<string>(type: "jsonb", nullable: true),
                     notes_json = table.Column<string>(type: "jsonb", nullable: true),
+                    glossary_entries_json = table.Column<string>(type: "jsonb", nullable: true),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    last_processed_event_id = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -665,7 +921,8 @@ namespace Api.Infrastructure.Migrations
                     reminder_24h_sent_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     reminder_1h_sent_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
+                    updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    test_run_id = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -744,6 +1001,90 @@ namespace Api.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "gamebook_campaign_sessions",
+                schema: "session_tracking",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    game_ref_kind = table.Column<short>(type: "smallint", nullable: false),
+                    game_ref_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    owner_user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    title = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    created_by = table.Column<Guid>(type: "uuid", nullable: false),
+                    updated_by = table.Column<Guid>(type: "uuid", nullable: true),
+                    is_deleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    deleted_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_gamebook_campaign_sessions", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "gamebook_glossary_entries",
+                schema: "session_tracking",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    campaign_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    term_en = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    term_it = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    source = table.Column<int>(type: "integer", nullable: false),
+                    first_seen_book_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    created_by = table.Column<Guid>(type: "uuid", nullable: false),
+                    updated_by = table.Column<Guid>(type: "uuid", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_gamebook_glossary_entries", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "gamebook_photo_artifacts",
+                schema: "session_tracking",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    campaign_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    game_book_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    s3_key = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    status = table.Column<int>(type: "integer", nullable: false),
+                    ocr_full_text = table.Column<string>(type: "text", nullable: true),
+                    segments = table.Column<string>(type: "jsonb", nullable: false),
+                    failure_reason = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    expires_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    detected_source_lang = table.Column<string>(type: "character varying(2)", maxLength: 2, nullable: true),
+                    lang_detection_confidence = table.Column<double>(type: "double precision", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_gamebook_photo_artifacts", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "gamebook_session_book_progress",
+                schema: "session_tracking",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    campaign_session_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    game_book_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    last_location = table.Column<string>(type: "character varying(40)", maxLength: 40, nullable: false),
+                    history_json = table.Column<string>(type: "jsonb", nullable: false),
+                    last_visited_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    notes_json = table.Column<string>(type: "jsonb", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_gamebook_session_book_progress", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "group_memories",
                 columns: table => new
                 {
@@ -754,11 +1095,45 @@ namespace Api.Infrastructure.Migrations
                     preferences_json = table.Column<string>(type: "jsonb", nullable: true),
                     stats_json = table.Column<string>(type: "jsonb", nullable: true),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    last_processed_event_id = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_group_memories", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "health_status_alerts_sent",
+                columns: table => new
+                {
+                    service_name = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    last_event_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    last_sent_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_health_status_alerts_sent", x => x.service_name);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "IncidentBannerState",
+                schema: "SystemConfiguration",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Message = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false, defaultValue: ""),
+                    Severity = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    StartsAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    EndsAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    UpdatedBy = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_IncidentBannerState", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -777,6 +1152,40 @@ namespace Api.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_insight_feedback", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "kb_quality_budget_counters",
+                columns: table => new
+                {
+                    TenantId = table.Column<Guid>(type: "uuid", nullable: false),
+                    YearMonth = table.Column<string>(type: "character varying(7)", maxLength: 7, nullable: false),
+                    SpentUsd = table.Column<decimal>(type: "numeric(10,4)", precision: 10, scale: 4, nullable: false),
+                    RowVersion = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_kb_quality_budget_counters", x => new { x.TenantId, x.YearMonth });
+                });
+
+            migrationBuilder.CreateTable(
+                name: "kb_reindex_jobs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    GameId = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Status = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    TotalPdfs = table.Column<int>(type: "integer", nullable: false),
+                    ProcessedPdfs = table.Column<int>(type: "integer", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    StartedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    CompletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    FailureReason = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_kb_reindex_jobs", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -813,7 +1222,8 @@ namespace Api.Infrastructure.Migrations
                     Metadata = table.Column<string>(type: "jsonb", nullable: true),
                     CreatedByUserId = table.Column<Guid>(type: "uuid", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    source_event_id = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -970,7 +1380,8 @@ namespace Api.Infrastructure.Migrations
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     processed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     correlation_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    deep_link_path = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true)
+                    deep_link_path = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    source_event_id = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -992,7 +1403,8 @@ namespace Api.Infrastructure.Migrations
                     is_read = table.Column<bool>(type: "boolean", nullable: false),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     read_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    correlation_id = table.Column<Guid>(type: "uuid", nullable: true)
+                    correlation_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    source_event_id = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1014,7 +1426,8 @@ namespace Api.Infrastructure.Migrations
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     lang = table.Column<string>(type: "character varying(5)", maxLength: 5, nullable: false, defaultValue: "en"),
                     source_chunk_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    is_translation = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false)
+                    is_translation = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    role_tags = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -1032,7 +1445,8 @@ namespace Api.Infrastructure.Migrations
                     game_stats_json = table.Column<string>(type: "jsonb", nullable: true),
                     claimed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    last_processed_event_id = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1101,6 +1515,44 @@ namespace Api.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_prompt_evaluation_results", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "provider_credentials",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    provider_name = table.Column<string>(type: "text", nullable: false),
+                    encrypted_api_key = table.Column<string>(type: "text", nullable: false),
+                    key_fingerprint = table.Column<string>(type: "text", nullable: false),
+                    is_active = table.Column<bool>(type: "boolean", nullable: false),
+                    rotated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    rotated_by_user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    previous_credential_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    row_version = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_provider_credentials", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "provider_probe_audit_entries",
+                schema: "administration",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    provider_name = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    actor_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    token_fingerprint = table.Column<string>(type: "character varying(8)", maxLength: 8, nullable: true),
+                    outcome = table.Column<int>(type: "integer", nullable: false),
+                    error_code = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
+                    latency_ms = table.Column<int>(type: "integer", nullable: false),
+                    probed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_provider_probe_audit_entries", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -1251,6 +1703,25 @@ namespace Api.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "security_audit_logs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ActorUserId = table.Column<Guid>(type: "uuid", nullable: true),
+                    TargetUserId = table.Column<Guid>(type: "uuid", nullable: true),
+                    EventType = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    IpAddress = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
+                    UserAgent = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    Timestamp = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Metadata = table.Column<string>(type: "text", nullable: true),
+                    CorrelationId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_security_audit_logs", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "service_call_logs",
                 schema: "administration",
                 columns: table => new
@@ -1332,7 +1803,8 @@ namespace Api.Infrastructure.Migrations
                     turn_index = table.Column<int>(type: "integer", nullable: false),
                     phase_index = table.Column<int>(type: "integer", nullable: true),
                     timestamp = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    created_by_player_id = table.Column<Guid>(type: "uuid", nullable: true)
+                    created_by_player_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    source_event_id = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1412,6 +1884,46 @@ namespace Api.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "staging_allowlist",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    email = table.Column<string>(type: "character varying(320)", maxLength: 320, nullable: false),
+                    added_by_user_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    added_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    note = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    is_deleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    deleted_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    deleted_by_user_id = table.Column<Guid>(type: "uuid", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_staging_allowlist", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "storage_operation_outbox",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    MigrationId = table.Column<Guid>(type: "uuid", nullable: false),
+                    LegacyKey = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
+                    NewKey = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
+                    Category = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    ResourceKey = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    ScheduledAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    SentAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    AttemptCount = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    LastError = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Status = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false, defaultValue: "Pending")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_storage_operation_outbox", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "strategy_model_mapping",
                 columns: table => new
                 {
@@ -1467,6 +1979,7 @@ namespace Api.Infrastructure.Migrations
                     max_photos_per_session = table.Column<int>(type: "integer", nullable: false),
                     session_save_enabled = table.Column<bool>(type: "boolean", nullable: false),
                     max_catalog_proposals_per_week = table.Column<int>(type: "integer", nullable: false),
+                    Limits_RaptorRebuildEnabled = table.Column<bool>(type: "boolean", nullable: false),
                     llm_model_tier = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
                     is_default = table.Column<bool>(type: "boolean", nullable: false),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -1617,6 +2130,27 @@ namespace Api.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "translated_paragraphs",
+                schema: "session_tracking",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    campaign_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    game_book_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    photo_artifact_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    paragraph_number = table.Column<int>(type: "integer", nullable: false),
+                    source_text_en = table.Column<string>(type: "text", nullable: false),
+                    translated_text_it = table.Column<string>(type: "text", nullable: false),
+                    applied_glossary_terms = table.Column<string[]>(type: "text[]", nullable: false),
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    created_by = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_translated_paragraphs", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "turn_orders",
                 columns: table => new
                 {
@@ -1708,6 +2242,7 @@ namespace Api.Infrastructure.Migrations
                     ExperiencePoints = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
                     FailedLoginAttempts = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
                     LockedUntil = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    last_lockout_event_id = table.Column<Guid>(type: "uuid", nullable: true),
                     IsContributor = table.Column<bool>(type: "boolean", nullable: false),
                     Interests = table.Column<List<string>>(type: "jsonb", nullable: true),
                     AvatarUrl = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: true),
@@ -1718,7 +2253,8 @@ namespace Api.Infrastructure.Migrations
                     OnboardingSkipped = table.Column<bool>(type: "boolean", nullable: false),
                     OnboardingCompletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     InvitedByUserId = table.Column<Guid>(type: "uuid", nullable: true),
-                    InvitationExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    InvitationExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    test_run_id = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1755,6 +2291,45 @@ namespace Api.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_validation_accuracy_baselines", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "vision_snapshots",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    session_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    turn_number = table.Column<int>(type: "integer", nullable: false),
+                    caption = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    extracted_game_state = table.Column<string>(type: "jsonb", nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    is_deleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    deleted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_vision_snapshots", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "waitlist_entries",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    email = table.Column<string>(type: "character varying(254)", maxLength: 254, nullable: false),
+                    name = table.Column<string>(type: "character varying(80)", maxLength: 80, nullable: true),
+                    game_preference_id = table.Column<string>(type: "character varying(40)", maxLength: 40, nullable: false),
+                    game_preference_other = table.Column<string>(type: "character varying(80)", maxLength: 80, nullable: true),
+                    newsletter_opt_in = table.Column<bool>(type: "boolean", nullable: false),
+                    position = table.Column<int>(type: "integer", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    contacted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_waitlist_entries", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -1887,7 +2462,13 @@ namespace Api.Infrastructure.Migrations
                     is_deleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     is_rag_public = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     has_knowledge_base = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    row_version = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: true)
+                    row_version = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: true),
+                    wikidata_cover_r2_key = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    pdf_cover_r2_key = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    wikidata_cover_source_url = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: true),
+                    wikidata_cover_license = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
+                    wikidata_cover_attribution = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    test_run_id = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1932,6 +2513,35 @@ namespace Api.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "game_night_invitations",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    token = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    game_night_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    email = table.Column<string>(type: "character varying(320)", maxLength: 320, nullable: false),
+                    status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    expires_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    responded_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    responded_by_user_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    responded_by_name = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: true),
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    created_by = table.Column<Guid>(type: "uuid", nullable: false),
+                    test_run_id = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
+                    rsvp_confirmation_sent_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_game_night_invitations", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_game_night_invitations_game_night_events_game_night_id",
+                        column: x => x.game_night_id,
+                        principalTable: "game_night_events",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "game_night_rsvps",
                 columns: table => new
                 {
@@ -1940,7 +2550,8 @@ namespace Api.Infrastructure.Migrations
                     user_id = table.Column<Guid>(type: "uuid", nullable: false),
                     status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
                     responded_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
-                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    test_run_id = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1966,7 +2577,8 @@ namespace Api.Infrastructure.Migrations
                     status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
                     winner_id = table.Column<Guid>(type: "uuid", nullable: true),
                     started_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
-                    completed_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
+                    completed_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    test_run_id = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -2082,6 +2694,38 @@ namespace Api.Infrastructure.Migrations
                         principalTable: "users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "catalog_sync_runs",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    provider = table.Column<int>(type: "int", nullable: false),
+                    status = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
+                    title = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    triggered_by_user_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    items_added = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    items_updated = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    items_failed = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    error_code = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    error_detail = table.Column<string>(type: "text", nullable: true),
+                    log_tail_json_path = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    started_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    completed_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_catalog_sync_runs", x => x.id);
+                    table.CheckConstraint("ck_catalog_sync_runs_provider_range", "provider BETWEEN 0 AND 2");
+                    table.CheckConstraint("ck_catalog_sync_runs_status_range", "status BETWEEN 0 AND 4");
+                    table.ForeignKey(
+                        name: "FK_catalog_sync_runs_users_triggered_by_user_id",
+                        column: x => x.triggered_by_user_id,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -2287,6 +2931,38 @@ namespace Api.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "mechanic_recalc_jobs",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    status = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
+                    triggered_by_user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    total = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    processed = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    failed = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    skipped = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    consecutive_failures = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    last_error = table.Column<string>(type: "text", nullable: true),
+                    last_processed_analysis_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    cancellation_requested = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    started_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    completed_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    heartbeat_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_mechanic_recalc_jobs", x => x.id);
+                    table.CheckConstraint("ck_mechanic_recalc_jobs_status_range", "status BETWEEN 0 AND 4");
+                    table.ForeignKey(
+                        name: "FK_mechanic_recalc_jobs_users_triggered_by_user_id",
+                        column: x => x.triggered_by_user_id,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "n8n_configs",
                 columns: table => new
                 {
@@ -2359,6 +3035,36 @@ namespace Api.Infrastructure.Migrations
                         principalTable: "users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "photo_batch_uploads",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    game_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    source_language = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
+                    status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    total_pages = table.Column<int>(type: "integer", nullable: false),
+                    indexed_pages = table.Column<int>(type: "integer", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    completed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    is_deleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    deleted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    failure_reason = table.Column<string>(type: "text", nullable: true),
+                    row_version = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: true),
+                    low_confidence_page_count = table.Column<int>(type: "integer", nullable: false, defaultValue: 0)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_photo_batch_uploads", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_photo_batch_uploads_users_user_id",
+                        column: x => x.user_id,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -2471,7 +3177,9 @@ namespace Api.Infrastructure.Migrations
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CreatedByUserId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
                     UpdatedByUserId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: true),
-                    LastToggledAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    LastToggledAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    BootstrapAdminCreated = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    BootstrapAdminCreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -2501,7 +3209,8 @@ namespace Api.Infrastructure.Migrations
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     ExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     IsUsed = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    UsedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    UsedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    FailedAttemptCount = table.Column<int>(type: "integer", nullable: false, defaultValue: 0)
                 },
                 constraints: table =>
                 {
@@ -2683,13 +3392,174 @@ namespace Api.Infrastructure.Migrations
                     RevokedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     UserAgent = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     IpAddress = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
-                    DeviceFingerprint = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true)
+                    DeviceFingerprint = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
+                    impersonated_by_user_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    impersonated_until = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    last_totp_verified_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_user_sessions", x => x.Id);
                     table.ForeignKey(
                         name: "FK_user_sessions_users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "vision_snapshot_images",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    storage_key = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    media_type = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    width = table.Column<int>(type: "integer", nullable: false),
+                    height = table.Column<int>(type: "integer", nullable: false),
+                    order_index = table.Column<int>(type: "integer", nullable: false),
+                    vision_snapshot_id = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_vision_snapshot_images", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_vision_snapshot_images_vision_snapshots_vision_snapshot_id",
+                        column: x => x.vision_snapshot_id,
+                        principalTable: "vision_snapshots",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "chat_sessions",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    game_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    user_library_entry_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    agent_session_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    agent_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    agent_type = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    agent_name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    title = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    agent_config_json = table.Column<string>(type: "jsonb", nullable: false, defaultValue: "{}"),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    last_message_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    is_archived = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    messages_json = table.Column<string>(type: "jsonb", nullable: false, defaultValue: "[]")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_chat_sessions", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_chat_sessions_shared_games_game_id",
+                        column: x => x.game_id,
+                        principalTable: "shared_games",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_chat_sessions_users_user_id",
+                        column: x => x.user_id,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "chats",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
+                    GameId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
+                    AgentId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
+                    StartedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    LastMessageAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_chats", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_chats_shared_games_GameId",
+                        column: x => x.GameId,
+                        principalTable: "shared_games",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_chats_users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ChatThreads",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    GameId = table.Column<Guid>(type: "uuid", nullable: true),
+                    AgentId = table.Column<Guid>(type: "uuid", nullable: true),
+                    AgentType = table.Column<string>(type: "text", nullable: true),
+                    Title = table.Column<string>(type: "text", nullable: true),
+                    Status = table.Column<string>(type: "text", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    LastMessageAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    MessagesJson = table.Column<string>(type: "text", nullable: false),
+                    ConversationSummary = table.Column<string>(type: "text", nullable: true),
+                    LastSummarizedMessageCount = table.Column<int>(type: "integer", nullable: false),
+                    SelectedKnowledgeBaseIdsJson = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ChatThreads", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ChatThreads_shared_games_GameId",
+                        column: x => x.GameId,
+                        principalTable: "shared_games",
+                        principalColumn: "id");
+                    table.ForeignKey(
+                        name: "FK_ChatThreads_users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "chunked_upload_sessions",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    GameId = table.Column<Guid>(type: "uuid", nullable: true),
+                    PrivateGameId = table.Column<Guid>(type: "uuid", nullable: true),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    FileName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    TotalFileSize = table.Column<long>(type: "bigint", nullable: false),
+                    TotalChunks = table.Column<int>(type: "integer", nullable: false),
+                    ReceivedChunks = table.Column<int>(type: "integer", nullable: false),
+                    TempDirectory = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
+                    Status = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CompletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    ExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    ErrorMessage = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),
+                    ReceivedChunkIndices = table.Column<string>(type: "character varying(4096)", maxLength: 4096, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_chunked_upload_sessions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_chunked_upload_sessions_shared_games_GameId",
+                        column: x => x.GameId,
+                        principalTable: "shared_games",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_chunked_upload_sessions_users_UserId",
                         column: x => x.UserId,
                         principalTable: "users",
                         principalColumn: "Id",
@@ -2716,6 +3586,67 @@ namespace Api.Infrastructure.Migrations
                         principalTable: "shared_games",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "document_collections",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
+                    SharedGameId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
+                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Description = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    CreatedByUserId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    DocumentsJson = table.Column<string>(type: "text", nullable: false, defaultValue: "[]")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_document_collections", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_document_collections_shared_games_SharedGameId",
+                        column: x => x.SharedGameId,
+                        principalTable: "shared_games",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_document_collections_users_CreatedByUserId",
+                        column: x => x.CreatedByUserId,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "enrichment_queue_entries",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    shared_game_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    priority = table.Column<int>(type: "integer", nullable: false),
+                    queued_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    reason = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    queued_by_user_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    is_processed = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    processed_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_enrichment_queue_entries", x => x.id);
+                    table.CheckConstraint("ck_enrichment_queue_entries_priority_range", "priority BETWEEN 0 AND 2");
+                    table.ForeignKey(
+                        name: "FK_enrichment_queue_entries_shared_games_shared_game_id",
+                        column: x => x.shared_game_id,
+                        principalTable: "shared_games",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_enrichment_queue_entries_users_queued_by_user_id",
+                        column: x => x.queued_by_user_id,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -2765,6 +3696,30 @@ namespace Api.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "game_phase_templates",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    game_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    phase_name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    phase_order = table.Column<int>(type: "integer", nullable: false),
+                    description = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    created_by = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_game_phase_templates", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_game_phase_templates_shared_games_game_id",
+                        column: x => x.game_id,
+                        principalTable: "shared_games",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "game_state_templates",
                 columns: table => new
                 {
@@ -2791,39 +3746,157 @@ namespace Api.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "games",
+                name: "GameEntityRelations",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
-                    Name = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    Publisher = table.Column<string>(type: "text", nullable: true),
-                    YearPublished = table.Column<int>(type: "integer", nullable: true),
-                    MinPlayers = table.Column<int>(type: "integer", nullable: true),
-                    MaxPlayers = table.Column<int>(type: "integer", nullable: true),
-                    MinPlayTimeMinutes = table.Column<int>(type: "integer", nullable: true),
-                    MaxPlayTimeMinutes = table.Column<int>(type: "integer", nullable: true),
-                    BggId = table.Column<int>(type: "integer", nullable: true),
-                    BggMetadata = table.Column<string>(type: "text", nullable: true),
-                    icon_url = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
-                    image_url = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
-                    VersionType = table.Column<string>(type: "text", nullable: true),
-                    Language = table.Column<string>(type: "text", nullable: true),
-                    VersionNumber = table.Column<string>(type: "text", nullable: true),
-                    SharedGameId = table.Column<Guid>(type: "uuid", nullable: true),
-                    is_published = table.Column<bool>(type: "boolean", nullable: false, computedColumnSql: "(approval_status = 2 AND published_at IS NOT NULL)", stored: true),
-                    approval_status = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
-                    published_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    GameId = table.Column<Guid>(type: "uuid", nullable: false),
+                    SourceEntity = table.Column<string>(type: "text", nullable: false),
+                    SourceType = table.Column<string>(type: "text", nullable: false),
+                    Relation = table.Column<string>(type: "text", nullable: false),
+                    TargetEntity = table.Column<string>(type: "text", nullable: false),
+                    TargetType = table.Column<string>(type: "text", nullable: false),
+                    Confidence = table.Column<float>(type: "real", nullable: false),
+                    ExtractedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_games", x => x.Id);
+                    table.PrimaryKey("PK_GameEntityRelations", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_games_shared_games_SharedGameId",
-                        column: x => x.SharedGameId,
+                        name: "FK_GameEntityRelations_shared_games_GameId",
+                        column: x => x.GameId,
+                        principalTable: "shared_games",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "GameSessions",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    GameId = table.Column<Guid>(type: "uuid", nullable: false),
+                    CreatedByUserId = table.Column<Guid>(type: "uuid", nullable: true),
+                    Status = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    StartedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CompletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    WinnerName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    Notes = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    PlayersJson = table.Column<string>(type: "text", nullable: false, defaultValue: "[]")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_GameSessions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_GameSessions_shared_games_GameId",
+                        column: x => x.GameId,
+                        principalTable: "shared_games",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_GameSessions_users_CreatedByUserId",
+                        column: x => x.CreatedByUserId,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "live_game_sessions",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    session_code = table.Column<string>(type: "character varying(6)", maxLength: 6, nullable: false),
+                    game_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    game_name = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    toolkit_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    created_by_user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    visibility = table.Column<int>(type: "integer", nullable: false),
+                    group_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    status = table.Column<int>(type: "integer", nullable: false),
+                    current_turn_index = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    started_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    paused_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    completed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    last_saved_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    TotalPausedDurationMs = table.Column<long>(type: "bigint", nullable: false),
+                    scoring_config_json = table.Column<string>(type: "jsonb", nullable: false),
+                    game_state_json = table.Column<string>(type: "jsonb", nullable: true),
+                    turn_order_json = table.Column<string>(type: "jsonb", nullable: true),
+                    disputes_json = table.Column<string>(type: "jsonb", nullable: true),
+                    setup_checklist_json = table.Column<string>(type: "jsonb", nullable: true),
+                    notes = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    agent_mode = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    chat_session_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    row_version = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_live_game_sessions", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_live_game_sessions_shared_games_game_id",
+                        column: x => x.game_id,
                         principalTable: "shared_games",
                         principalColumn: "id",
                         onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_live_game_sessions_users_created_by_user_id",
+                        column: x => x.created_by_user_id,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "mechanic_analyses",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    shared_game_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    pdf_document_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    prompt_version = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    status = table.Column<int>(type: "integer", nullable: false),
+                    created_by = table.Column<Guid>(type: "uuid", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    reviewed_by = table.Column<Guid>(type: "uuid", nullable: true),
+                    reviewed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    rejection_reason = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    total_tokens_used = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    estimated_cost_usd = table.Column<decimal>(type: "numeric(12,6)", nullable: false, defaultValue: 0m),
+                    model_used = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    provider = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    cost_cap_usd = table.Column<decimal>(type: "numeric(12,6)", nullable: false),
+                    cost_cap_override_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    cost_cap_override_by = table.Column<Guid>(type: "uuid", nullable: true),
+                    cost_cap_override_reason = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    is_suppressed = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    suppressed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    suppressed_by = table.Column<Guid>(type: "uuid", nullable: true),
+                    suppression_reason = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    suppression_requested_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    suppression_request_source = table.Column<int>(type: "integer", nullable: true),
+                    certification_status = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    certified_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    certified_by_user_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    certification_override_reason = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    last_metrics_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    xmin = table.Column<uint>(type: "xid", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_mechanic_analyses", x => x.id);
+                    table.CheckConstraint("ck_mechanic_analyses_cost_cap_override_all_or_none", "(cost_cap_override_at IS NULL AND cost_cap_override_by IS NULL AND cost_cap_override_reason IS NULL) OR (cost_cap_override_at IS NOT NULL AND cost_cap_override_by IS NOT NULL AND cost_cap_override_reason IS NOT NULL)");
+                    table.CheckConstraint("ck_mechanic_analyses_cost_cap_positive", "cost_cap_usd > 0");
+                    table.CheckConstraint("ck_mechanic_analyses_status_range", "status BETWEEN 0 AND 4");
+                    table.CheckConstraint("ck_mechanic_analyses_suppression_completeness", "(is_suppressed = false AND suppressed_at IS NULL AND suppressed_by IS NULL AND suppression_reason IS NULL AND suppression_request_source IS NULL AND suppression_requested_at IS NULL) OR (is_suppressed = true AND suppressed_at IS NOT NULL AND suppressed_by IS NOT NULL AND suppression_reason IS NOT NULL)");
+                    table.ForeignKey(
+                        name: "FK_mechanic_analyses_shared_games_shared_game_id",
+                        column: x => x.shared_game_id,
+                        principalTable: "shared_games",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -2849,7 +3922,10 @@ namespace Api.Infrastructure.Migrations
                     questions_draft = table.Column<string>(type: "text", nullable: false, defaultValue: ""),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     last_modified = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    status = table.Column<int>(type: "integer", nullable: false, defaultValue: 0)
+                    status = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    total_tokens_used = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    estimated_cost_usd = table.Column<decimal>(type: "numeric(12,6)", nullable: false, defaultValue: 0m),
+                    row_version = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -2860,6 +3936,98 @@ namespace Api.Infrastructure.Migrations
                         principalTable: "shared_games",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "mechanic_golden_bgg_tags",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    shared_game_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    category = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    imported_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_mechanic_golden_bgg_tags", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_mechanic_golden_bgg_tags_shared_games_shared_game_id",
+                        column: x => x.shared_game_id,
+                        principalTable: "shared_games",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "mechanic_golden_claims",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    shared_game_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    section = table.Column<int>(type: "integer", nullable: false),
+                    statement = table.Column<string>(type: "text", nullable: false),
+                    expected_page = table.Column<int>(type: "integer", nullable: false),
+                    source_quote = table.Column<string>(type: "text", nullable: false),
+                    keywords_json = table.Column<string>(type: "jsonb", nullable: false, defaultValue: "[]"),
+                    embedding = table.Column<Vector>(type: "vector(768)", nullable: true),
+                    curator_user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    is_deleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    deleted_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    xmin = table.Column<uint>(type: "xid", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_mechanic_golden_claims", x => x.id);
+                    table.CheckConstraint("ck_mechanic_golden_claims_expected_page_positive", "expected_page > 0");
+                    table.CheckConstraint("ck_mechanic_golden_claims_section_range", "section BETWEEN 0 AND 5");
+                    table.ForeignKey(
+                        name: "FK_mechanic_golden_claims_shared_games_shared_game_id",
+                        column: x => x.shared_game_id,
+                        principalTable: "shared_games",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "play_records",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    GameId = table.Column<Guid>(type: "uuid", nullable: true),
+                    GameName = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    CreatedByUserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Visibility = table.Column<int>(type: "integer", nullable: false),
+                    GroupId = table.Column<Guid>(type: "uuid", nullable: true),
+                    SessionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    StartTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    EndTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    Duration = table.Column<TimeSpan>(type: "interval", nullable: true),
+                    Status = table.Column<int>(type: "integer", nullable: false),
+                    Notes = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    Location = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    ScoringConfigJson = table.Column<string>(type: "jsonb", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    source_event_id = table.Column<Guid>(type: "uuid", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_play_records", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_play_records_shared_games_GameId",
+                        column: x => x.GameId,
+                        principalTable: "shared_games",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_play_records_users_CreatedByUserId",
+                        column: x => x.CreatedByUserId,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -2885,6 +4053,67 @@ namespace Api.Infrastructure.Migrations
                         principalTable: "shared_games",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "rule_conflict_faqs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    GameId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ConflictType = table.Column<int>(type: "integer", nullable: false),
+                    Pattern = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Resolution = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
+                    Priority = table.Column<int>(type: "integer", nullable: false),
+                    UsageCount = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_rule_conflict_faqs", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_rule_conflict_faqs_shared_games_GameId",
+                        column: x => x.GameId,
+                        principalTable: "shared_games",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "rule_specs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
+                    GameId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
+                    Version = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CreatedByUserId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: true),
+                    ParentVersionId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: true),
+                    MergedFromVersionIds = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_rule_specs", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_rule_specs_rule_specs_ParentVersionId",
+                        column: x => x.ParentVersionId,
+                        principalTable: "rule_specs",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_rule_specs_shared_games_GameId",
+                        column: x => x.GameId,
+                        principalTable: "shared_games",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_rule_specs_users_CreatedByUserId",
+                        column: x => x.CreatedByUserId,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -2922,6 +4151,102 @@ namespace Api.Infrastructure.Migrations
                         principalTable: "shared_games",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "rulespec_comments",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    GameId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
+                    Version = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    AtomId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: true),
+                    UserId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
+                    CommentText = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    LineNumber = table.Column<int>(type: "integer", nullable: true),
+                    LineContext = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    ParentCommentId = table.Column<Guid>(type: "uuid", nullable: true),
+                    IsResolved = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    ResolvedByUserId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: true),
+                    ResolvedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    MentionedUserIds = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_rulespec_comments", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_rulespec_comments_rulespec_comments_ParentCommentId",
+                        column: x => x.ParentCommentId,
+                        principalTable: "rulespec_comments",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_rulespec_comments_shared_games_GameId",
+                        column: x => x.GameId,
+                        principalTable: "shared_games",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_rulespec_comments_users_ResolvedByUserId",
+                        column: x => x.ResolvedByUserId,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_rulespec_comments_users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "session_tracking_sessions",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    game_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    session_code = table.Column<string>(type: "character varying(6)", maxLength: 6, nullable: false),
+                    session_type = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    session_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    location = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    finalized_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    started_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    scoring_type = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false, defaultValue: "Points"),
+                    score_data = table.Column<string>(type: "jsonb", nullable: false, defaultValueSql: "'{}'::jsonb"),
+                    is_deleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    deleted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    created_by = table.Column<Guid>(type: "uuid", nullable: false),
+                    updated_by = table.Column<Guid>(type: "uuid", nullable: true),
+                    row_version = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: true),
+                    InviteToken = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
+                    InviteExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    turn_order_json = table.Column<string>(type: "jsonb", nullable: true),
+                    turn_order_method = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: true),
+                    turn_order_seed = table.Column<int>(type: "integer", nullable: true),
+                    current_turn_index = table.Column<int>(type: "integer", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_session_tracking_sessions", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_session_tracking_sessions_shared_games_game_id",
+                        column: x => x.game_id,
+                        principalTable: "shared_games",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_session_tracking_sessions_users_user_id",
+                        column: x => x.user_id,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -3077,6 +4402,36 @@ namespace Api.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "enrichment_attempts",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    shared_game_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    catalog_sync_run_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    attempted_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    success = table.Column<bool>(type: "boolean", nullable: false),
+                    error_code = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    error_detail = table.Column<string>(type: "text", nullable: true),
+                    retry_count = table.Column<int>(type: "integer", nullable: false, defaultValue: 0)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_enrichment_attempts", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_enrichment_attempts_catalog_sync_runs_catalog_sync_run_id",
+                        column: x => x.catalog_sync_run_id,
+                        principalTable: "catalog_sync_runs",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_enrichment_attempts_shared_games_shared_game_id",
+                        column: x => x.shared_game_id,
+                        principalTable: "shared_games",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "access_requests",
                 columns: table => new
                 {
@@ -3087,7 +4442,8 @@ namespace Api.Infrastructure.Migrations
                     reviewed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     reviewed_by = table.Column<Guid>(type: "uuid", nullable: true),
                     rejection_reason = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    invitation_id = table.Column<Guid>(type: "uuid", nullable: true)
+                    invitation_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    last_notified_event_id = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -3127,6 +4483,86 @@ namespace Api.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "photo_batch_pages",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    photo_batch_upload_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    page_number = table.Column<int>(type: "integer", nullable: false),
+                    blob_key = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    confidence = table.Column<double>(type: "double precision", nullable: false),
+                    confidence_level = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
+                    orientation = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    is_blank = table.Column<bool>(type: "boolean", nullable: false),
+                    warnings = table.Column<string[]>(type: "text[]", nullable: false),
+                    extracted_text = table.Column<string>(type: "text", nullable: true),
+                    paragraph_numbers = table.Column<int[]>(type: "integer[]", nullable: false, defaultValueSql: "'{}'::integer[]"),
+                    indexed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_photo_batch_pages", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_photo_batch_pages_photo_batch_uploads_photo_batch_upload_id",
+                        column: x => x.photo_batch_upload_id,
+                        principalTable: "photo_batch_uploads",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "GameToolkits",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    GameId = table.Column<Guid>(type: "uuid", nullable: true),
+                    PrivateGameId = table.Column<Guid>(type: "uuid", nullable: true),
+                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Version = table.Column<int>(type: "integer", nullable: false, defaultValue: 1),
+                    CreatedByUserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    IsPublished = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    OverridesTurnOrder = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    OverridesScoreboard = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    OverridesDiceSet = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    DiceToolsJson = table.Column<string>(type: "jsonb", nullable: true),
+                    CardToolsJson = table.Column<string>(type: "jsonb", nullable: true),
+                    TimerToolsJson = table.Column<string>(type: "jsonb", nullable: true),
+                    CounterToolsJson = table.Column<string>(type: "jsonb", nullable: true),
+                    UserDicePresetsJson = table.Column<string>(type: "jsonb", nullable: true),
+                    ScoringTemplateJson = table.Column<string>(type: "jsonb", nullable: true),
+                    TurnTemplateJson = table.Column<string>(type: "jsonb", nullable: true),
+                    StateTemplate = table.Column<string>(type: "jsonb", nullable: true),
+                    AgentConfig = table.Column<string>(type: "jsonb", nullable: true),
+                    TemplateStatus = table.Column<int>(type: "integer", nullable: false),
+                    IsTemplate = table.Column<bool>(type: "boolean", nullable: false),
+                    ReviewNotes = table.Column<string>(type: "text", nullable: true),
+                    ReviewedByUserId = table.Column<Guid>(type: "uuid", nullable: true),
+                    ReviewedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    Description = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    License = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    VersionSemver = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false, defaultValue: "0.1.0"),
+                    RowVersion = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_GameToolkits", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_GameToolkits_private_games_PrivateGameId",
+                        column: x => x.PrivateGameId,
+                        principalTable: "private_games",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_GameToolkits_shared_games_GameId",
+                        column: x => x.GameId,
+                        principalTable: "shared_games",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ProposalMigrations",
                 columns: table => new
                 {
@@ -3138,7 +4574,8 @@ namespace Api.Infrastructure.Migrations
                     Choice = table.Column<int>(type: "integer", nullable: false, comment: "0 = Pending, 1 = LinkToCatalog, 2 = KeepPrivate"),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "now()"),
                     ChoiceAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    RowVersion = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: true)
+                    RowVersion = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: true),
+                    source_event_id = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -3233,630 +4670,6 @@ namespace Api.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "contribution_records",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    contributor_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    type = table.Column<int>(type: "integer", nullable: false),
-                    description = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false),
-                    version = table.Column<int>(type: "integer", nullable: false),
-                    contributed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    share_request_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    document_ids = table.Column<string>(type: "jsonb", nullable: true),
-                    includes_game_data = table.Column<bool>(type: "boolean", nullable: false),
-                    includes_metadata = table.Column<bool>(type: "boolean", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_contribution_records", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_contribution_records_contributors_contributor_id",
-                        column: x => x.contributor_id,
-                        principalTable: "contributors",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "chat_sessions",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    game_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    user_library_entry_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    agent_session_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    agent_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    agent_type = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                    agent_name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    title = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    agent_config_json = table.Column<string>(type: "jsonb", nullable: false, defaultValue: "{}"),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    last_message_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    is_archived = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    messages_json = table.Column<string>(type: "jsonb", nullable: false, defaultValue: "[]")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_chat_sessions", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_chat_sessions_games_game_id",
-                        column: x => x.game_id,
-                        principalTable: "games",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_chat_sessions_users_user_id",
-                        column: x => x.user_id,
-                        principalTable: "users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "chats",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
-                    UserId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
-                    GameId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
-                    AgentId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
-                    StartedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    LastMessageAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_chats", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_chats_games_GameId",
-                        column: x => x.GameId,
-                        principalTable: "games",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_chats_users_UserId",
-                        column: x => x.UserId,
-                        principalTable: "users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "ChatThreads",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    GameId = table.Column<Guid>(type: "uuid", nullable: true),
-                    AgentId = table.Column<Guid>(type: "uuid", nullable: true),
-                    AgentType = table.Column<string>(type: "text", nullable: true),
-                    Title = table.Column<string>(type: "text", nullable: true),
-                    Status = table.Column<string>(type: "text", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    LastMessageAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    MessagesJson = table.Column<string>(type: "text", nullable: false),
-                    ConversationSummary = table.Column<string>(type: "text", nullable: true),
-                    LastSummarizedMessageCount = table.Column<int>(type: "integer", nullable: false),
-                    SelectedKnowledgeBaseIdsJson = table.Column<string>(type: "text", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ChatThreads", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_ChatThreads_games_GameId",
-                        column: x => x.GameId,
-                        principalTable: "games",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_ChatThreads_users_UserId",
-                        column: x => x.UserId,
-                        principalTable: "users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "chunked_upload_sessions",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    GameId = table.Column<Guid>(type: "uuid", nullable: true),
-                    PrivateGameId = table.Column<Guid>(type: "uuid", nullable: true),
-                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    FileName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
-                    TotalFileSize = table.Column<long>(type: "bigint", nullable: false),
-                    TotalChunks = table.Column<int>(type: "integer", nullable: false),
-                    ReceivedChunks = table.Column<int>(type: "integer", nullable: false),
-                    TempDirectory = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
-                    Status = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    CompletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    ExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    ErrorMessage = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),
-                    ReceivedChunkIndices = table.Column<string>(type: "character varying(4096)", maxLength: 4096, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_chunked_upload_sessions", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_chunked_upload_sessions_games_GameId",
-                        column: x => x.GameId,
-                        principalTable: "games",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_chunked_upload_sessions_users_UserId",
-                        column: x => x.UserId,
-                        principalTable: "users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "document_collections",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
-                    GameId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
-                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    Description = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
-                    CreatedByUserId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    DocumentsJson = table.Column<string>(type: "text", nullable: false, defaultValue: "[]")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_document_collections", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_document_collections_games_GameId",
-                        column: x => x.GameId,
-                        principalTable: "games",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_document_collections_users_CreatedByUserId",
-                        column: x => x.CreatedByUserId,
-                        principalTable: "users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "game_phase_templates",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    game_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    phase_name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    phase_order = table.Column<int>(type: "integer", nullable: false),
-                    description = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    created_by = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_game_phase_templates", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_game_phase_templates_games_game_id",
-                        column: x => x.game_id,
-                        principalTable: "games",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "GameEntityRelations",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    GameId = table.Column<Guid>(type: "uuid", nullable: false),
-                    SourceEntity = table.Column<string>(type: "text", nullable: false),
-                    SourceType = table.Column<string>(type: "text", nullable: false),
-                    Relation = table.Column<string>(type: "text", nullable: false),
-                    TargetEntity = table.Column<string>(type: "text", nullable: false),
-                    TargetType = table.Column<string>(type: "text", nullable: false),
-                    Confidence = table.Column<float>(type: "real", nullable: false),
-                    ExtractedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_GameEntityRelations", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_GameEntityRelations_games_GameId",
-                        column: x => x.GameId,
-                        principalTable: "games",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "GameSessions",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    GameId = table.Column<Guid>(type: "uuid", nullable: false),
-                    CreatedByUserId = table.Column<Guid>(type: "uuid", nullable: true),
-                    Status = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
-                    StartedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    CompletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    WinnerName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
-                    Notes = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
-                    PlayersJson = table.Column<string>(type: "text", nullable: false, defaultValue: "[]")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_GameSessions", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_GameSessions_games_GameId",
-                        column: x => x.GameId,
-                        principalTable: "games",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_GameSessions_users_CreatedByUserId",
-                        column: x => x.CreatedByUserId,
-                        principalTable: "users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "GameToolkits",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    GameId = table.Column<Guid>(type: "uuid", nullable: true),
-                    PrivateGameId = table.Column<Guid>(type: "uuid", nullable: true),
-                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    Version = table.Column<int>(type: "integer", nullable: false, defaultValue: 1),
-                    CreatedByUserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    IsPublished = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    OverridesTurnOrder = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    OverridesScoreboard = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    OverridesDiceSet = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    DiceToolsJson = table.Column<string>(type: "jsonb", nullable: true),
-                    CardToolsJson = table.Column<string>(type: "jsonb", nullable: true),
-                    TimerToolsJson = table.Column<string>(type: "jsonb", nullable: true),
-                    CounterToolsJson = table.Column<string>(type: "jsonb", nullable: true),
-                    UserDicePresetsJson = table.Column<string>(type: "jsonb", nullable: true),
-                    ScoringTemplateJson = table.Column<string>(type: "jsonb", nullable: true),
-                    TurnTemplateJson = table.Column<string>(type: "jsonb", nullable: true),
-                    StateTemplate = table.Column<string>(type: "jsonb", nullable: true),
-                    AgentConfig = table.Column<string>(type: "jsonb", nullable: true),
-                    TemplateStatus = table.Column<int>(type: "integer", nullable: false),
-                    IsTemplate = table.Column<bool>(type: "boolean", nullable: false),
-                    ReviewNotes = table.Column<string>(type: "text", nullable: true),
-                    ReviewedByUserId = table.Column<Guid>(type: "uuid", nullable: true),
-                    ReviewedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    RowVersion = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_GameToolkits", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_GameToolkits_games_GameId",
-                        column: x => x.GameId,
-                        principalTable: "games",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_GameToolkits_private_games_PrivateGameId",
-                        column: x => x.PrivateGameId,
-                        principalTable: "private_games",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "live_game_sessions",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    session_code = table.Column<string>(type: "character varying(6)", maxLength: 6, nullable: false),
-                    game_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    game_name = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
-                    toolkit_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    created_by_user_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    visibility = table.Column<int>(type: "integer", nullable: false),
-                    group_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    status = table.Column<int>(type: "integer", nullable: false),
-                    current_turn_index = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    started_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    paused_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    completed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    last_saved_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    TotalPausedDurationMs = table.Column<long>(type: "bigint", nullable: false),
-                    scoring_config_json = table.Column<string>(type: "jsonb", nullable: false),
-                    game_state_json = table.Column<string>(type: "jsonb", nullable: true),
-                    turn_order_json = table.Column<string>(type: "jsonb", nullable: true),
-                    disputes_json = table.Column<string>(type: "jsonb", nullable: true),
-                    setup_checklist_json = table.Column<string>(type: "jsonb", nullable: true),
-                    notes = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
-                    agent_mode = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
-                    chat_session_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    row_version = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_live_game_sessions", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_live_game_sessions_games_game_id",
-                        column: x => x.game_id,
-                        principalTable: "games",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_live_game_sessions_users_created_by_user_id",
-                        column: x => x.created_by_user_id,
-                        principalTable: "users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "play_records",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    GameId = table.Column<Guid>(type: "uuid", nullable: true),
-                    GameName = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
-                    CreatedByUserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    Visibility = table.Column<int>(type: "integer", nullable: false),
-                    GroupId = table.Column<Guid>(type: "uuid", nullable: true),
-                    SessionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    StartTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    EndTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    Duration = table.Column<TimeSpan>(type: "interval", nullable: true),
-                    Status = table.Column<int>(type: "integer", nullable: false),
-                    Notes = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
-                    Location = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                    ScoringConfigJson = table.Column<string>(type: "jsonb", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_play_records", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_play_records_games_GameId",
-                        column: x => x.GameId,
-                        principalTable: "games",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_play_records_users_CreatedByUserId",
-                        column: x => x.CreatedByUserId,
-                        principalTable: "users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "rule_conflict_faqs",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    GameId = table.Column<Guid>(type: "uuid", nullable: false),
-                    ConflictType = table.Column<int>(type: "integer", nullable: false),
-                    Pattern = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    Resolution = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
-                    Priority = table.Column<int>(type: "integer", nullable: false),
-                    UsageCount = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_rule_conflict_faqs", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_rule_conflict_faqs_games_GameId",
-                        column: x => x.GameId,
-                        principalTable: "games",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "rule_specs",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
-                    GameId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
-                    Version = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    CreatedByUserId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: true),
-                    ParentVersionId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: true),
-                    MergedFromVersionIds = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),
-                    RowVersion = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: true),
-                    GameEntityId = table.Column<Guid>(type: "uuid", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_rule_specs", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_rule_specs_games_GameEntityId",
-                        column: x => x.GameEntityId,
-                        principalTable: "games",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_rule_specs_games_GameId",
-                        column: x => x.GameId,
-                        principalTable: "games",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_rule_specs_rule_specs_ParentVersionId",
-                        column: x => x.ParentVersionId,
-                        principalTable: "rule_specs",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_rule_specs_users_CreatedByUserId",
-                        column: x => x.CreatedByUserId,
-                        principalTable: "users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "rulespec_comments",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    GameId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
-                    Version = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
-                    AtomId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: true),
-                    UserId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
-                    CommentText = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    LineNumber = table.Column<int>(type: "integer", nullable: true),
-                    LineContext = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    ParentCommentId = table.Column<Guid>(type: "uuid", nullable: true),
-                    IsResolved = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    ResolvedByUserId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: true),
-                    ResolvedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    MentionedUserIds = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_rulespec_comments", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_rulespec_comments_games_GameId",
-                        column: x => x.GameId,
-                        principalTable: "games",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_rulespec_comments_rulespec_comments_ParentCommentId",
-                        column: x => x.ParentCommentId,
-                        principalTable: "rulespec_comments",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_rulespec_comments_users_ResolvedByUserId",
-                        column: x => x.ResolvedByUserId,
-                        principalTable: "users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_rulespec_comments_users_UserId",
-                        column: x => x.UserId,
-                        principalTable: "users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "session_tracking_sessions",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    game_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    session_code = table.Column<string>(type: "character varying(6)", maxLength: 6, nullable: false),
-                    session_type = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    session_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    location = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
-                    finalized_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    is_deleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    deleted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    created_by = table.Column<Guid>(type: "uuid", nullable: false),
-                    updated_by = table.Column<Guid>(type: "uuid", nullable: true),
-                    row_version = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: true),
-                    InviteToken = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
-                    InviteExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    turn_order_json = table.Column<string>(type: "jsonb", nullable: true),
-                    turn_order_method = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: true),
-                    turn_order_seed = table.Column<int>(type: "integer", nullable: true),
-                    current_turn_index = table.Column<int>(type: "integer", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_session_tracking_sessions", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_session_tracking_sessions_games_game_id",
-                        column: x => x.game_id,
-                        principalTable: "games",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_session_tracking_sessions_users_user_id",
-                        column: x => x.user_id,
-                        principalTable: "users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "share_request_documents",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    share_request_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    document_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    file_name = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
-                    content_type = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    file_size = table.Column<long>(type: "bigint", nullable: false),
-                    attached_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_share_request_documents", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_share_request_documents_share_requests_share_request_id",
-                        column: x => x.share_request_id,
-                        principalTable: "share_requests",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "prompt_audit_logs",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
-                    TemplateId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
-                    VersionId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: true),
-                    Action = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
-                    ChangedByUserId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
-                    ChangedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    Details = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_prompt_audit_logs", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_prompt_audit_logs_prompt_templates_TemplateId",
-                        column: x => x.TemplateId,
-                        principalTable: "prompt_templates",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_prompt_audit_logs_prompt_versions_VersionId",
-                        column: x => x.VersionId,
-                        principalTable: "prompt_versions",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_prompt_audit_logs_users_ChangedByUserId",
-                        column: x => x.ChangedByUserId,
-                        principalTable: "users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "chat_logs",
                 columns: table => new
                 {
@@ -3930,6 +4743,32 @@ namespace Api.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "contribution_records",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    contributor_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    type = table.Column<int>(type: "integer", nullable: false),
+                    description = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false),
+                    version = table.Column<int>(type: "integer", nullable: false),
+                    contributed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    share_request_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    document_ids = table.Column<string>(type: "jsonb", nullable: true),
+                    includes_game_data = table.Column<bool>(type: "boolean", nullable: false),
+                    includes_metadata = table.Column<bool>(type: "boolean", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_contribution_records", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_contribution_records_contributors_contributor_id",
+                        column: x => x.contributor_id,
+                        principalTable: "contributors",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "chat_thread_collections",
                 columns: table => new
                 {
@@ -3960,7 +4799,6 @@ namespace Api.Infrastructure.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
-                    GameId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: true),
                     FileName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
                     FilePath = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: false),
                     FileSizeBytes = table.Column<long>(type: "bigint", nullable: false),
@@ -3991,7 +4829,7 @@ namespace Api.Infrastructure.Migrations
                     DocumentType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false, defaultValue: "base"),
                     SortOrder = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
                     IsPublic = table.Column<bool>(type: "boolean", nullable: false),
-                    SharedGameId = table.Column<Guid>(type: "uuid", nullable: true),
+                    shared_game_id = table.Column<Guid>(type: "uuid", nullable: true),
                     ContributorId = table.Column<Guid>(type: "uuid", nullable: true),
                     SourceDocumentId = table.Column<Guid>(type: "uuid", nullable: true),
                     PrivateGameId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: true),
@@ -4003,13 +4841,23 @@ namespace Api.Infrastructure.Migrations
                     is_active_for_rag = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
                     license_type = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
                     version_label = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    indexer_version = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: true),
+                    title = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    tags = table.Column<List<string>>(type: "text[]", nullable: false, defaultValueSql: "'{}'::text[]"),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    updated_by = table.Column<Guid>(type: "uuid", nullable: true),
                     processing_priority = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: false, defaultValue: "Normal"),
                     BatchId = table.Column<Guid>(type: "uuid", nullable: true),
                     uploading_started_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     extracting_started_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     chunking_started_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     embedding_started_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    indexing_started_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    indexing_started_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    cover_r2_key = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    cover_generation_status = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false, defaultValue: "Pending"),
+                    cover_page_index = table.Column<int>(type: "integer", nullable: true),
+                    cover_generation_error = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -4021,17 +4869,17 @@ namespace Api.Infrastructure.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
-                        name: "FK_pdf_documents_games_GameId",
-                        column: x => x.GameId,
-                        principalTable: "games",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
                         name: "FK_pdf_documents_pdf_documents_base_document_id",
                         column: x => x.base_document_id,
                         principalTable: "pdf_documents",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_pdf_documents_shared_games_shared_game_id",
+                        column: x => x.shared_game_id,
+                        principalTable: "shared_games",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_pdf_documents_users_UploadedByUserId",
                         column: x => x.UploadedByUserId,
@@ -4064,10 +4912,10 @@ namespace Api.Infrastructure.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_agent_sessions_games_GameId",
+                        name: "FK_agent_sessions_shared_games_GameId",
                         column: x => x.GameId,
-                        principalTable: "games",
-                        principalColumn: "Id",
+                        principalTable: "shared_games",
+                        principalColumn: "id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_agent_sessions_users_UserId",
@@ -4335,6 +5183,158 @@ namespace Api.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "mechanic_analysis_metrics",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    mechanic_analysis_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    shared_game_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    coverage_pct = table.Column<decimal>(type: "numeric(5,2)", nullable: false),
+                    page_accuracy_pct = table.Column<decimal>(type: "numeric(5,2)", nullable: false),
+                    bgg_match_pct = table.Column<decimal>(type: "numeric(5,2)", nullable: false),
+                    overall_score = table.Column<decimal>(type: "numeric(5,2)", nullable: false),
+                    certification_status = table.Column<int>(type: "int", nullable: false),
+                    golden_version_hash = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    thresholds_snapshot_json = table.Column<string>(type: "jsonb", nullable: false, defaultValue: "{}"),
+                    match_details_json = table.Column<string>(type: "jsonb", nullable: false, defaultValue: "[]"),
+                    computed_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_mechanic_analysis_metrics", x => x.id);
+                    table.CheckConstraint("ck_mechanic_analysis_metrics_certification_status_range", "certification_status BETWEEN 0 AND 2");
+                    table.CheckConstraint("ck_mechanic_analysis_metrics_pct_ranges", "coverage_pct BETWEEN 0 AND 100 AND page_accuracy_pct BETWEEN 0 AND 100 AND bgg_match_pct BETWEEN 0 AND 100 AND overall_score BETWEEN 0 AND 100");
+                    table.ForeignKey(
+                        name: "FK_mechanic_analysis_metrics_mechanic_analyses_mechanic_analys~",
+                        column: x => x.mechanic_analysis_id,
+                        principalTable: "mechanic_analyses",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_mechanic_analysis_metrics_shared_games_shared_game_id",
+                        column: x => x.shared_game_id,
+                        principalTable: "shared_games",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "mechanic_analysis_section_runs",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    analysis_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    section = table.Column<int>(type: "integer", nullable: false),
+                    run_order = table.Column<int>(type: "integer", nullable: false),
+                    provider = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    model_used = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    prompt_tokens = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    completion_tokens = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    total_tokens = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    estimated_cost_usd = table.Column<decimal>(type: "numeric(12,6)", nullable: false, defaultValue: 0m),
+                    latency_ms = table.Column<int>(type: "integer", nullable: false),
+                    status = table.Column<int>(type: "integer", nullable: false),
+                    error_message = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: true),
+                    started_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    completed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_mechanic_analysis_section_runs", x => x.id);
+                    table.CheckConstraint("ck_mechanic_section_runs_cost_non_negative", "estimated_cost_usd >= 0");
+                    table.CheckConstraint("ck_mechanic_section_runs_error_when_failed", "status <> 1 OR error_message IS NOT NULL");
+                    table.CheckConstraint("ck_mechanic_section_runs_latency_non_negative", "latency_ms >= 0");
+                    table.CheckConstraint("ck_mechanic_section_runs_section_range", "section BETWEEN 0 AND 5");
+                    table.CheckConstraint("ck_mechanic_section_runs_status_range", "status BETWEEN 0 AND 2");
+                    table.CheckConstraint("ck_mechanic_section_runs_tokens_non_negative", "prompt_tokens >= 0 AND completion_tokens >= 0 AND total_tokens >= 0");
+                    table.ForeignKey(
+                        name: "FK_mechanic_analysis_section_runs_mechanic_analyses_analysis_id",
+                        column: x => x.analysis_id,
+                        principalTable: "mechanic_analyses",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "mechanic_claims",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    analysis_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    section = table.Column<int>(type: "integer", nullable: false),
+                    text = table.Column<string>(type: "text", nullable: false),
+                    display_order = table.Column<int>(type: "integer", nullable: false),
+                    status = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    reviewed_by = table.Column<Guid>(type: "uuid", nullable: true),
+                    reviewed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    rejection_note = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_mechanic_claims", x => x.id);
+                    table.CheckConstraint("ck_mechanic_claims_display_order_non_negative", "display_order >= 0");
+                    table.CheckConstraint("ck_mechanic_claims_rejection_note_when_rejected", "status <> 2 OR rejection_note IS NOT NULL");
+                    table.CheckConstraint("ck_mechanic_claims_section_range", "section BETWEEN 0 AND 5");
+                    table.CheckConstraint("ck_mechanic_claims_status_range", "status BETWEEN 0 AND 2");
+                    table.ForeignKey(
+                        name: "FK_mechanic_claims_mechanic_analyses_analysis_id",
+                        column: x => x.analysis_id,
+                        principalTable: "mechanic_analyses",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "mechanic_status_audit",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    analysis_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    from_status = table.Column<int>(type: "integer", nullable: false),
+                    to_status = table.Column<int>(type: "integer", nullable: false),
+                    actor_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    note = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    occurred_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_mechanic_status_audit", x => x.id);
+                    table.CheckConstraint("ck_mechanic_status_audit_distinct_states", "from_status <> to_status");
+                    table.CheckConstraint("ck_mechanic_status_audit_status_range", "from_status BETWEEN 0 AND 4 AND to_status BETWEEN 0 AND 4");
+                    table.ForeignKey(
+                        name: "FK_mechanic_status_audit_mechanic_analyses_analysis_id",
+                        column: x => x.analysis_id,
+                        principalTable: "mechanic_analyses",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "mechanic_suppression_audit",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    analysis_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    is_suppressed = table.Column<bool>(type: "boolean", nullable: false),
+                    actor_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    reason = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
+                    request_source = table.Column<int>(type: "integer", nullable: true),
+                    requested_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    occurred_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_mechanic_suppression_audit", x => x.id);
+                    table.CheckConstraint("ck_mechanic_suppression_audit_request_source_range", "request_source IS NULL OR request_source BETWEEN 0 AND 3");
+                    table.ForeignKey(
+                        name: "FK_mechanic_suppression_audit_mechanic_analyses_analysis_id",
+                        column: x => x.analysis_id,
+                        principalTable: "mechanic_analyses",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "record_players",
                 columns: table => new
                 {
@@ -4496,6 +5496,90 @@ namespace Api.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ToolkitVersions",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ToolkitId = table.Column<Guid>(type: "uuid", nullable: false),
+                    VersionNumber = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Changelog = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: true),
+                    PublishedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    PublishedBy = table.Column<Guid>(type: "uuid", nullable: false),
+                    YankedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    YankReason = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    YankedBy = table.Column<Guid>(type: "uuid", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ToolkitVersions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ToolkitVersions_GameToolkits_ToolkitId",
+                        column: x => x.ToolkitId,
+                        principalTable: "GameToolkits",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "share_request_documents",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    share_request_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    document_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    file_name = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    content_type = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    file_size = table.Column<long>(type: "bigint", nullable: false),
+                    attached_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_share_request_documents", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_share_request_documents_share_requests_share_request_id",
+                        column: x => x.share_request_id,
+                        principalTable: "share_requests",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "prompt_audit_logs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
+                    TemplateId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
+                    VersionId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: true),
+                    Action = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    ChangedByUserId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
+                    ChangedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Details = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_prompt_audit_logs", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_prompt_audit_logs_prompt_templates_TemplateId",
+                        column: x => x.TemplateId,
+                        principalTable: "prompt_templates",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_prompt_audit_logs_prompt_versions_VersionId",
+                        column: x => x.VersionId,
+                        principalTable: "prompt_versions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_prompt_audit_logs_users_ChangedByUserId",
+                        column: x => x.ChangedByUserId,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "pdf_processing_metrics",
                 columns: table => new
                 {
@@ -4505,7 +5589,8 @@ namespace Api.Infrastructure.Migrations
                     duration_seconds = table.Column<decimal>(type: "numeric(10,2)", nullable: false),
                     pdf_size_bytes = table.Column<long>(type: "bigint", nullable: false),
                     page_count = table.Column<int>(type: "integer", nullable: false),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP")
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    source_event_id = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -4569,16 +5654,16 @@ namespace Api.Infrastructure.Migrations
                 {
                     table.PrimaryKey("PK_RaptorSummaries", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_RaptorSummaries_games_GameId",
-                        column: x => x.GameId,
-                        principalTable: "games",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
                         name: "FK_RaptorSummaries_pdf_documents_PdfDocumentId",
                         column: x => x.PdfDocumentId,
                         principalTable: "pdf_documents",
                         principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_RaptorSummaries_shared_games_GameId",
+                        column: x => x.GameId,
+                        principalTable: "shared_games",
+                        principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -4629,22 +5714,27 @@ namespace Api.Infrastructure.Migrations
                     ChunkIndex = table.Column<int>(type: "integer", nullable: false),
                     PageNumber = table.Column<int>(type: "integer", nullable: true),
                     CharacterCount = table.Column<int>(type: "integer", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Heading = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    ParentChunkId = table.Column<Guid>(type: "uuid", nullable: true),
+                    Level = table.Column<short>(type: "smallint", nullable: false, defaultValue: (short)1),
+                    ElementType = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false, defaultValue: "NarrativeText"),
+                    role_tags = table.Column<int>(type: "integer", nullable: false, defaultValue: 0)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_text_chunks", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_text_chunks_games_GameId",
-                        column: x => x.GameId,
-                        principalTable: "games",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
                         name: "FK_text_chunks_pdf_documents_PdfDocumentId",
                         column: x => x.PdfDocumentId,
                         principalTable: "pdf_documents",
                         principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_text_chunks_shared_games_GameId",
+                        column: x => x.GameId,
+                        principalTable: "shared_games",
+                        principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -4674,7 +5764,9 @@ namespace Api.Infrastructure.Migrations
                     WinRate = table.Column<decimal>(type: "numeric(5,2)", nullable: true),
                     AvgDuration = table.Column<int>(type: "integer", nullable: true),
                     CompetitiveSessions = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
-                    RowVersion = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: true)
+                    RowVersion = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: true),
+                    custom_cover_r2_key = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    test_run_id = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -4727,16 +5819,16 @@ namespace Api.Infrastructure.Migrations
                 {
                     table.PrimaryKey("PK_vector_documents", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_vector_documents_games_GameId",
-                        column: x => x.GameId,
-                        principalTable: "games",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
                         name: "FK_vector_documents_pdf_documents_PdfDocumentId",
                         column: x => x.PdfDocumentId,
                         principalTable: "pdf_documents",
                         principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_vector_documents_shared_games_GameId",
+                        column: x => x.GameId,
+                        principalTable: "shared_games",
+                        principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -5097,6 +6189,39 @@ namespace Api.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "mechanic_citations",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    claim_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    pdf_page = table.Column<int>(type: "integer", nullable: false),
+                    quote = table.Column<string>(type: "character varying(400)", maxLength: 400, nullable: false),
+                    chunk_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    display_order = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_mechanic_citations", x => x.id);
+                    table.CheckConstraint("ck_mechanic_citations_display_order_non_negative", "display_order >= 0");
+                    table.CheckConstraint("ck_mechanic_citations_page_positive", "pdf_page > 0");
+                    table.CheckConstraint("ck_mechanic_citations_quote_chars_cap", "char_length(quote) <= 400");
+                    table.CheckConstraint("ck_mechanic_citations_quote_not_empty", "char_length(btrim(quote)) > 0");
+                    table.CheckConstraint("ck_mechanic_citations_quote_word_cap", "array_length(regexp_split_to_array(btrim(quote), '\\s+'), 1) <= 25");
+                    table.ForeignKey(
+                        name: "FK_mechanic_citations_mechanic_claims_claim_id",
+                        column: x => x.claim_id,
+                        principalTable: "mechanic_claims",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_mechanic_citations_text_chunks_chunk_id",
+                        column: x => x.chunk_id,
+                        principalTable: "text_chunks",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "game_checklists",
                 columns: table => new
                 {
@@ -5133,7 +6258,8 @@ namespace Api.Infrastructure.Migrations
                     Players = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     Notes = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    test_run_id = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -5254,6 +6380,12 @@ namespace Api.Infrastructure.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.InsertData(
+                schema: "SystemConfiguration",
+                table: "IncidentBannerState",
+                columns: new[] { "Id", "CreatedAt", "EndsAt", "Message", "StartsAt", "UpdatedAt", "UpdatedBy" },
+                values: new object[] { new Guid("00000000-0000-0000-0000-000000000001"), new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "", null, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null });
+
             migrationBuilder.CreateIndex(
                 name: "IX_ab_test_sessions_created_at",
                 schema: "knowledge_base",
@@ -5338,6 +6470,13 @@ namespace Api.Infrastructure.Migrations
                 schema: "knowledge_base",
                 table: "agent_definitions",
                 column: "is_active");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_agent_definitions_kb_card_ids",
+                schema: "knowledge_base",
+                table: "agent_definitions",
+                column: "kb_card_ids")
+                .Annotation("Npgsql:IndexMethod", "gin");
 
             migrationBuilder.CreateIndex(
                 name: "IX_agent_definitions_name",
@@ -5603,9 +6742,20 @@ namespace Api.Infrastructure.Migrations
                 column: "CreatedAt");
 
             migrationBuilder.CreateIndex(
+                name: "ix_audit_logs_impersonated_user_id",
+                table: "audit_logs",
+                column: "impersonated_user_id",
+                filter: "\"impersonated_user_id\" IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_audit_logs_UserId",
                 table: "audit_logs",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_audit_outbox_status_created_at",
+                table: "audit_outbox",
+                columns: new[] { "status", "created_at" });
 
             migrationBuilder.CreateIndex(
                 name: "ix_badges_category",
@@ -5672,6 +6822,43 @@ namespace Api.Infrastructure.Migrations
                 schema: "session_tracking",
                 table: "Cards",
                 column: "SortOrder");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_catalog_seed_drafts_bgg_id",
+                table: "catalog_seed_drafts",
+                column: "bgg_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_catalog_seed_drafts_created_at",
+                table: "catalog_seed_drafts",
+                column: "created_at");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_catalog_seed_drafts_status",
+                table: "catalog_seed_drafts",
+                column: "status");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_catalog_seed_drafts_wikidata_qid",
+                table: "catalog_seed_drafts",
+                column: "wikidata_qid");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_catalog_sync_runs_started_at",
+                table: "catalog_sync_runs",
+                column: "started_at",
+                descending: new bool[0]);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_catalog_sync_runs_status",
+                table: "catalog_sync_runs",
+                column: "status",
+                filter: "status = 1");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_catalog_sync_runs_triggered_by_user_id",
+                table: "catalog_sync_runs",
+                column: "triggered_by_user_id");
 
             migrationBuilder.CreateIndex(
                 name: "idx_chat_logs_chat_id_sequence_role",
@@ -5942,9 +7129,65 @@ namespace Api.Infrastructure.Migrations
                 columns: new[] { "CreatedByUserId", "CreatedAt" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_document_collections_GameId",
+                name: "IX_document_collections_SharedGameId",
                 table: "document_collections",
-                column: "GameId");
+                column: "SharedGameId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_document_evaluation_runs_CompletedAt",
+                table: "document_evaluation_runs",
+                column: "CompletedAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_document_evaluation_runs_PdfDocumentId_StartedAt",
+                table: "document_evaluation_runs",
+                columns: new[] { "PdfDocumentId", "StartedAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_document_evaluation_runs_TriggeredByAdminId",
+                table: "document_evaluation_runs",
+                column: "TriggeredByAdminId");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_domain_event_logs_loggedat",
+                table: "domain_event_logs",
+                column: "LoggedAt");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_domain_event_logs_user_loggedat",
+                table: "domain_event_logs",
+                columns: new[] { "UserId", "LoggedAt" },
+                descending: new[] { false, true });
+
+            migrationBuilder.CreateIndex(
+                name: "ux_domain_event_logs_eventid",
+                table: "domain_event_logs",
+                column: "EventId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_domain_event_outbox_failed_recent",
+                table: "domain_event_outbox",
+                column: "failed_at",
+                descending: new bool[0],
+                filter: "status = 2::smallint");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_domain_event_outbox_pending",
+                table: "domain_event_outbox",
+                columns: new[] { "next_attempt_at", "enqueued_at" },
+                filter: "status = 0::smallint");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_email_outbox_idempotency_key",
+                table: "email_outbox",
+                column: "IdempotencyKey",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_email_outbox_status_scheduled_at",
+                table: "email_outbox",
+                columns: new[] { "Status", "ScheduledAt" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_email_queue_items_correlation_id",
@@ -5983,6 +7226,39 @@ namespace Api.Infrastructure.Migrations
                 name: "IX_email_verifications_UserId",
                 table: "email_verifications",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_enrichment_attempts_catalog_sync_run_id",
+                table: "enrichment_attempts",
+                column: "catalog_sync_run_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_enrichment_attempts_shared_game_attempted_at",
+                table: "enrichment_attempts",
+                columns: new[] { "shared_game_id", "attempted_at" },
+                descending: new[] { false, true });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_enrichment_attempts_success_attempted_at",
+                table: "enrichment_attempts",
+                columns: new[] { "success", "attempted_at" },
+                descending: new[] { false, true });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_enrichment_queue_entries_pending_listing",
+                table: "enrichment_queue_entries",
+                columns: new[] { "is_processed", "priority", "queued_at" },
+                filter: "is_processed = false");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_enrichment_queue_entries_queued_by_user_id",
+                table: "enrichment_queue_entries",
+                column: "queued_by_user_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_enrichment_queue_entries_shared_game_id",
+                table: "enrichment_queue_entries",
+                column: "shared_game_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_entity_links_owner",
@@ -6042,6 +7318,19 @@ namespace Api.Infrastructure.Migrations
                 name: "ix_game_analytics_events_timestamp",
                 table: "game_analytics_events",
                 column: "timestamp");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_game_books_owner_user_id",
+                table: "game_books",
+                columns: new[] { "owner_user_id", "deleted_at" },
+                filter: "owner_user_id IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "ux_game_books_kb_source_community",
+                table: "game_books",
+                column: "kb_source_doc_id",
+                unique: true,
+                filter: "kb_source_doc_id IS NOT NULL AND owner_user_id IS NULL AND deleted_at IS NULL");
 
             migrationBuilder.CreateIndex(
                 name: "ix_game_categories_name",
@@ -6145,6 +7434,22 @@ namespace Api.Infrastructure.Migrations
                 columns: new[] { "status", "scheduled_at" });
 
             migrationBuilder.CreateIndex(
+                name: "IX_game_night_invitations_event_email_status",
+                table: "game_night_invitations",
+                columns: new[] { "game_night_id", "email", "status" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_game_night_invitations_event_status",
+                table: "game_night_invitations",
+                columns: new[] { "game_night_id", "status" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_game_night_invitations_token",
+                table: "game_night_invitations",
+                column: "token",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "ix_game_night_playlists_creator_user_id",
                 table: "game_night_playlists",
                 column: "creator_user_id");
@@ -6233,6 +7538,12 @@ namespace Api.Infrastructure.Migrations
                 column: "PlayedAt");
 
             migrationBuilder.CreateIndex(
+                name: "ix_game_sessions_test_run_id",
+                table: "game_sessions",
+                column: "test_run_id",
+                filter: "\"test_run_id\" IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "ix_game_sessions_user_library_entry_id",
                 table: "game_sessions",
                 column: "UserLibraryEntryId");
@@ -6301,20 +7612,36 @@ namespace Api.Infrastructure.Migrations
                 columns: new[] { "user_id", "is_dismissed", "is_accepted" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_GameEntityRelations_GameId",
-                table: "GameEntityRelations",
-                column: "GameId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_games_Name",
-                table: "games",
-                column: "Name",
+                name: "uq_gamebook_glossary_entries_campaign_term_en",
+                schema: "session_tracking",
+                table: "gamebook_glossary_entries",
+                columns: new[] { "campaign_id", "term_en" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Games_SharedGameId",
-                table: "games",
-                column: "SharedGameId");
+                name: "ix_gamebook_photo_artifacts_campaign_id",
+                schema: "session_tracking",
+                table: "gamebook_photo_artifacts",
+                column: "campaign_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_gamebook_photo_artifacts_expires_at_active",
+                schema: "session_tracking",
+                table: "gamebook_photo_artifacts",
+                column: "expires_at",
+                filter: "status <> 99");
+
+            migrationBuilder.CreateIndex(
+                name: "ux_session_book_progress_campaign_book",
+                schema: "session_tracking",
+                table: "gamebook_session_book_progress",
+                columns: new[] { "campaign_session_id", "game_book_id" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GameEntityRelations_GameId",
+                table: "GameEntityRelations",
+                column: "GameId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_GameSessions_CreatedByUserId_Status",
@@ -6445,6 +7772,21 @@ namespace Api.Infrastructure.Migrations
                 filter: "pending_user_id IS NOT NULL");
 
             migrationBuilder.CreateIndex(
+                name: "IX_kb_quality_budget_counters_YearMonth",
+                table: "kb_quality_budget_counters",
+                column: "YearMonth");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_kb_reindex_jobs_CreatedAt",
+                table: "kb_reindex_jobs",
+                column: "CreatedAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_kb_reindex_jobs_GameId_UserId_Status",
+                table: "kb_reindex_jobs",
+                columns: new[] { "GameId", "UserId", "Status" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_kb_user_feedback_created_at",
                 schema: "knowledge_base",
                 table: "kb_user_feedback",
@@ -6499,6 +7841,13 @@ namespace Api.Infrastructure.Migrations
                 name: "IX_LedgerEntries_Type",
                 table: "ledger_entries",
                 column: "Type");
+
+            migrationBuilder.CreateIndex(
+                name: "UX_ledger_entries_source_event_id",
+                table: "ledger_entries",
+                column: "source_event_id",
+                unique: true,
+                filter: "source_event_id IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "ix_library_share_links_expires_at",
@@ -6641,6 +7990,109 @@ namespace Api.Infrastructure.Migrations
                 columns: new[] { "user_id", "requested_at" });
 
             migrationBuilder.CreateIndex(
+                name: "ix_mechanic_analyses_certification_status",
+                table: "mechanic_analyses",
+                column: "certification_status");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_mechanic_analyses_created_by",
+                table: "mechanic_analyses",
+                column: "created_by");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_mechanic_analyses_is_suppressed",
+                table: "mechanic_analyses",
+                column: "is_suppressed",
+                filter: "is_suppressed = true");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_mechanic_analyses_pdf_document_id",
+                table: "mechanic_analyses",
+                column: "pdf_document_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_mechanic_analyses_status",
+                table: "mechanic_analyses",
+                column: "status");
+
+            migrationBuilder.CreateIndex(
+                name: "ux_mechanic_analyses_published_per_game",
+                table: "mechanic_analyses",
+                column: "shared_game_id",
+                unique: true,
+                filter: "status = 2 AND is_suppressed = false");
+
+            migrationBuilder.CreateIndex(
+                name: "ux_mechanic_analyses_shared_game_pdf_prompt",
+                table: "mechanic_analyses",
+                columns: new[] { "shared_game_id", "pdf_document_id", "prompt_version" },
+                unique: true,
+                filter: "status <> 3");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_mechanic_analysis_metrics_analysis_id",
+                table: "mechanic_analysis_metrics",
+                column: "mechanic_analysis_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_mechanic_analysis_metrics_certification_status",
+                table: "mechanic_analysis_metrics",
+                column: "certification_status");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_mechanic_analysis_metrics_shared_game_computed_at_desc",
+                table: "mechanic_analysis_metrics",
+                columns: new[] { "shared_game_id", "computed_at" },
+                descending: new[] { false, true });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_mechanic_section_runs_analysis_id",
+                table: "mechanic_analysis_section_runs",
+                column: "analysis_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_mechanic_section_runs_provider",
+                table: "mechanic_analysis_section_runs",
+                column: "provider");
+
+            migrationBuilder.CreateIndex(
+                name: "ux_mechanic_section_runs_analysis_run_order",
+                table: "mechanic_analysis_section_runs",
+                columns: new[] { "analysis_id", "run_order" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_mechanic_citations_chunk_id",
+                table: "mechanic_citations",
+                column: "chunk_id",
+                filter: "chunk_id IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_mechanic_citations_claim_id",
+                table: "mechanic_citations",
+                column: "claim_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_mechanic_citations_claim_page",
+                table: "mechanic_citations",
+                columns: new[] { "claim_id", "pdf_page" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_mechanic_claims_analysis_id",
+                table: "mechanic_claims",
+                column: "analysis_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_mechanic_claims_analysis_section_order",
+                table: "mechanic_claims",
+                columns: new[] { "analysis_id", "section", "display_order" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_mechanic_claims_status",
+                table: "mechanic_claims",
+                column: "status");
+
+            migrationBuilder.CreateIndex(
                 name: "ix_mechanic_drafts_game_pdf_status",
                 table: "mechanic_drafts",
                 columns: new[] { "shared_game_id", "pdf_document_id", "status" });
@@ -6654,6 +8106,58 @@ namespace Api.Infrastructure.Migrations
                 name: "ix_mechanic_drafts_shared_game_id",
                 table: "mechanic_drafts",
                 column: "shared_game_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_mechanic_golden_bgg_tags_shared_game_id",
+                table: "mechanic_golden_bgg_tags",
+                column: "shared_game_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ux_mechanic_golden_bgg_tags_shared_game_name",
+                table: "mechanic_golden_bgg_tags",
+                columns: new[] { "shared_game_id", "name" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_mechanic_golden_claims_shared_game_id",
+                table: "mechanic_golden_claims",
+                column: "shared_game_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_mechanic_golden_claims_shared_game_section",
+                table: "mechanic_golden_claims",
+                columns: new[] { "shared_game_id", "section" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_mechanic_recalc_jobs_status_created",
+                table: "mechanic_recalc_jobs",
+                columns: new[] { "status", "created_at" },
+                filter: "status IN (0, 1)");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_mechanic_recalc_jobs_triggered_by_user_id",
+                table: "mechanic_recalc_jobs",
+                column: "triggered_by_user_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_mechanic_status_audit_analysis_id",
+                table: "mechanic_status_audit",
+                column: "analysis_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_mechanic_status_audit_analysis_time",
+                table: "mechanic_status_audit",
+                columns: new[] { "analysis_id", "occurred_at" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_mechanic_suppression_audit_analysis_id",
+                table: "mechanic_suppression_audit",
+                column: "analysis_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_mechanic_suppression_audit_analysis_time",
+                table: "mechanic_suppression_audit",
+                columns: new[] { "analysis_id", "occurred_at" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_model_change_logs_AffectedStrategy",
@@ -6735,6 +8239,13 @@ namespace Api.Infrastructure.Migrations
                 columns: new[] { "status", "next_retry_at" });
 
             migrationBuilder.CreateIndex(
+                name: "UX_notification_queue_items_channel_recipient_source_event",
+                table: "notification_queue_items",
+                columns: new[] { "channel_type", "recipient_user_id", "source_event_id" },
+                unique: true,
+                filter: "source_event_id IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_notifications_correlation_id",
                 table: "notifications",
                 column: "correlation_id",
@@ -6756,6 +8267,13 @@ namespace Api.Infrastructure.Migrations
                 table: "notifications",
                 columns: new[] { "user_id", "is_read", "created_at" },
                 filter: "is_read = false");
+
+            migrationBuilder.CreateIndex(
+                name: "UX_notifications_user_source_event_id",
+                table: "notifications",
+                columns: new[] { "user_id", "source_event_id" },
+                unique: true,
+                filter: "source_event_id IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_oauth_accounts_Provider",
@@ -6820,14 +8338,19 @@ namespace Api.Infrastructure.Migrations
                 columns: new[] { "CollectionId", "SortOrder" });
 
             migrationBuilder.CreateIndex(
-                name: "ix_pdf_documents_content_hash_game_id",
-                table: "pdf_documents",
-                columns: new[] { "content_hash", "GameId" });
-
-            migrationBuilder.CreateIndex(
                 name: "ix_pdf_documents_content_hash_private_game_id",
                 table: "pdf_documents",
                 columns: new[] { "content_hash", "PrivateGameId" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_pdf_documents_content_hash_shared_game_id",
+                table: "pdf_documents",
+                columns: new[] { "content_hash", "shared_game_id" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_pdf_documents_cover_generation_status",
+                table: "pdf_documents",
+                column: "cover_generation_status");
 
             migrationBuilder.CreateIndex(
                 name: "ix_pdf_documents_document_category",
@@ -6835,9 +8358,9 @@ namespace Api.Infrastructure.Migrations
                 column: "document_category");
 
             migrationBuilder.CreateIndex(
-                name: "IX_pdf_documents_GameId_UploadedAt",
+                name: "ix_pdf_documents_indexer_version",
                 table: "pdf_documents",
-                columns: new[] { "GameId", "UploadedAt" });
+                column: "indexer_version");
 
             migrationBuilder.CreateIndex(
                 name: "ix_pdf_documents_is_active_for_rag",
@@ -6850,9 +8373,21 @@ namespace Api.Infrastructure.Migrations
                 column: "PrivateGameId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_pdf_documents_UploadedByUserId",
+                name: "ix_pdf_documents_shared_game_id_uploaded_at",
                 table: "pdf_documents",
-                column: "UploadedByUserId");
+                columns: new[] { "shared_game_id", "UploadedAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_pdf_documents_tags_gin",
+                table: "pdf_documents",
+                column: "tags")
+                .Annotation("Npgsql:IndexMethod", "gin");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_pdf_documents_uploaded_by_user_id_processed_at_desc",
+                table: "pdf_documents",
+                columns: new[] { "UploadedByUserId", "ProcessedAt" },
+                descending: new[] { false, true });
 
             migrationBuilder.CreateIndex(
                 name: "IX_pdf_processing_metrics_pdf_document_id",
@@ -6864,6 +8399,13 @@ namespace Api.Infrastructure.Migrations
                 table: "pdf_processing_metrics",
                 columns: new[] { "step", "created_at" },
                 descending: new[] { false, true });
+
+            migrationBuilder.CreateIndex(
+                name: "UX_pdf_processing_metrics_source_event_id",
+                table: "pdf_processing_metrics",
+                column: "source_event_id",
+                unique: true,
+                filter: "source_event_id IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_pgvector_embeddings_game_id",
@@ -6890,6 +8432,33 @@ namespace Api.Infrastructure.Migrations
                 column: "vector_document_id");
 
             migrationBuilder.CreateIndex(
+                name: "ix_photo_batch_pages_batch_id",
+                table: "photo_batch_pages",
+                column: "photo_batch_upload_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_photo_batch_pages_paragraph_numbers_gin",
+                table: "photo_batch_pages",
+                column: "paragraph_numbers")
+                .Annotation("Npgsql:IndexMethod", "gin");
+
+            migrationBuilder.CreateIndex(
+                name: "uq_photo_batch_pages_batch_page",
+                table: "photo_batch_pages",
+                columns: new[] { "photo_batch_upload_id", "page_number" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_photo_batch_uploads_game_id_status",
+                table: "photo_batch_uploads",
+                columns: new[] { "game_id", "status" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_photo_batch_uploads_user_id",
+                table: "photo_batch_uploads",
+                column: "user_id");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_PlayRecords_CreatedByUserId",
                 table: "play_records",
                 column: "CreatedByUserId");
@@ -6910,6 +8479,13 @@ namespace Api.Infrastructure.Migrations
                 name: "IX_PlayRecords_Status",
                 table: "play_records",
                 column: "Status");
+
+            migrationBuilder.CreateIndex(
+                name: "UX_play_records_source_event_id",
+                table: "play_records",
+                column: "source_event_id",
+                unique: true,
+                filter: "source_event_id IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "ix_player_memories_group_id",
@@ -7124,6 +8700,40 @@ namespace Api.Infrastructure.Migrations
                 columns: new[] { "UserId", "Choice" });
 
             migrationBuilder.CreateIndex(
+                name: "UX_proposal_migrations_source_event_id",
+                table: "ProposalMigrations",
+                column: "source_event_id",
+                unique: true,
+                filter: "source_event_id IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_provider_credentials_rotated_at",
+                table: "provider_credentials",
+                columns: new[] { "provider_name", "rotated_at" },
+                descending: new[] { false, true });
+
+            migrationBuilder.CreateIndex(
+                name: "ux_provider_credentials_active_one",
+                table: "provider_credentials",
+                column: "provider_name",
+                unique: true,
+                filter: "is_active = true");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_provider_probe_audit_actor_probed_at",
+                schema: "administration",
+                table: "provider_probe_audit_entries",
+                columns: new[] { "actor_id", "probed_at" },
+                descending: new[] { false, true });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_provider_probe_audit_provider_probed_at",
+                schema: "administration",
+                table: "provider_probe_audit_entries",
+                columns: new[] { "provider_name", "probed_at" },
+                descending: new[] { false, true });
+
+            migrationBuilder.CreateIndex(
                 name: "ix_quick_questions_active",
                 table: "quick_questions",
                 columns: new[] { "shared_game_id", "is_active" });
@@ -7290,11 +8900,6 @@ namespace Api.Infrastructure.Migrations
                 column: "CreatedByUserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_rule_specs_GameEntityId",
-                table: "rule_specs",
-                column: "GameEntityId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_rule_specs_GameId_Version",
                 table: "rule_specs",
                 columns: new[] { "GameId", "Version" },
@@ -7360,6 +8965,21 @@ namespace Api.Infrastructure.Migrations
                 name: "IX_rulespec_comments_ResolvedByUserId",
                 table: "rulespec_comments",
                 column: "ResolvedByUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_security_audit_logs_actor_user_id_timestamp",
+                table: "security_audit_logs",
+                columns: new[] { "ActorUserId", "Timestamp" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_security_audit_logs_event_type_timestamp",
+                table: "security_audit_logs",
+                columns: new[] { "EventType", "Timestamp" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_security_audit_logs_target_user_id_timestamp",
+                table: "security_audit_logs",
+                columns: new[] { "TargetUserId", "Timestamp" });
 
             migrationBuilder.CreateIndex(
                 name: "ix_service_call_logs_correlation_id",
@@ -7533,6 +9153,13 @@ namespace Api.Infrastructure.Migrations
                 name: "ix_session_snapshots_timestamp",
                 table: "session_snapshots",
                 column: "timestamp");
+
+            migrationBuilder.CreateIndex(
+                name: "UX_session_snapshots_source_event_id",
+                table: "session_snapshots",
+                column: "source_event_id",
+                unique: true,
+                filter: "source_event_id IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "ix_session_teams_session_id",
@@ -7917,9 +9544,37 @@ namespace Api.Infrastructure.Migrations
                 filter: "is_enabled = true");
 
             migrationBuilder.CreateIndex(
+                name: "ix_staging_allowlist_email_active",
+                table: "staging_allowlist",
+                column: "email",
+                unique: true,
+                filter: "is_deleted = false");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_staging_allowlist_is_deleted",
+                table: "staging_allowlist",
+                column: "is_deleted");
+
+            migrationBuilder.CreateIndex(
                 name: "ix_step_log_entries_step_id",
                 table: "step_log_entries",
                 column: "processing_step_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_storage_operation_outbox_legacy_key",
+                table: "storage_operation_outbox",
+                column: "LegacyKey",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_storage_operation_outbox_migration_id",
+                table: "storage_operation_outbox",
+                column: "MigrationId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_storage_operation_outbox_status_scheduled_at",
+                table: "storage_operation_outbox",
+                columns: new[] { "Status", "ScheduledAt" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_strategy_model_mapping_AdminOnly",
@@ -8020,9 +9675,25 @@ namespace Api.Infrastructure.Migrations
                 column: "PageNumber");
 
             migrationBuilder.CreateIndex(
+                name: "IX_text_chunks_ParentChunkId",
+                table: "text_chunks",
+                column: "ParentChunkId");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_text_chunks_pdf_chunk_index",
+                table: "text_chunks",
+                columns: new[] { "PdfDocumentId", "ChunkIndex" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_text_chunks_PdfDocumentId",
                 table: "text_chunks",
                 column: "PdfDocumentId");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_text_chunks_role_tags",
+                table: "text_chunks",
+                column: "role_tags",
+                filter: "role_tags != 0");
 
             migrationBuilder.CreateIndex(
                 name: "IX_text_chunks_SharedGameId",
@@ -8144,6 +9815,24 @@ namespace Api.Infrastructure.Migrations
                 schema: "game_toolkit",
                 table: "toolkits",
                 columns: new[] { "game_id", "owner_user_id" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ToolkitVersions_ToolkitId_PublishedAt",
+                table: "ToolkitVersions",
+                columns: new[] { "ToolkitId", "PublishedAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ToolkitVersions_ToolkitId_VersionNumber",
+                table: "ToolkitVersions",
+                columns: new[] { "ToolkitId", "VersionNumber" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ux_translated_paragraphs_campaign_book_paragraph",
+                schema: "session_tracking",
+                table: "translated_paragraphs",
+                columns: new[] { "campaign_id", "game_book_id", "paragraph_number" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -8358,6 +10047,12 @@ namespace Api.Infrastructure.Migrations
                 filter: "expires_at IS NULL");
 
             migrationBuilder.CreateIndex(
+                name: "ix_user_sessions_impersonated_by_user_id",
+                table: "user_sessions",
+                column: "impersonated_by_user_id",
+                filter: "\"impersonated_by_user_id\" IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_user_sessions_TokenHash",
                 table: "user_sessions",
                 column: "TokenHash",
@@ -8452,6 +10147,42 @@ namespace Api.Infrastructure.Migrations
                 column: "shared_game_id");
 
             migrationBuilder.CreateIndex(
+                name: "ix_vision_snapshot_images_snapshot_id",
+                table: "vision_snapshot_images",
+                column: "vision_snapshot_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_vision_snapshots_is_deleted",
+                table: "vision_snapshots",
+                column: "is_deleted");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_vision_snapshots_session_id",
+                table: "vision_snapshots",
+                column: "session_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_vision_snapshots_session_turn",
+                table: "vision_snapshots",
+                columns: new[] { "session_id", "turn_number" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_waitlist_entries_created_at",
+                table: "waitlist_entries",
+                column: "created_at");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_waitlist_entries_email",
+                table: "waitlist_entries",
+                column: "email",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_waitlist_entries_position",
+                table: "waitlist_entries",
+                column: "position");
+
+            migrationBuilder.CreateIndex(
                 name: "ix_whiteboard_states_session_id",
                 table: "whiteboard_states",
                 column: "session_id",
@@ -8528,6 +10259,9 @@ namespace Api.Infrastructure.Migrations
                 schema: "SystemConfiguration");
 
             migrationBuilder.DropTable(
+                name: "alert_channels");
+
+            migrationBuilder.DropTable(
                 name: "alert_configurations");
 
             migrationBuilder.DropTable(
@@ -8540,6 +10274,9 @@ namespace Api.Infrastructure.Migrations
                 name: "analysis_feedback");
 
             migrationBuilder.DropTable(
+                name: "app_budgets");
+
+            migrationBuilder.DropTable(
                 name: "arbitro_validation_feedback",
                 schema: "knowledge_base");
 
@@ -8547,8 +10284,14 @@ namespace Api.Infrastructure.Migrations
                 name: "audit_logs");
 
             migrationBuilder.DropTable(
+                name: "audit_outbox");
+
+            migrationBuilder.DropTable(
                 name: "batch_jobs",
                 schema: "administration");
+
+            migrationBuilder.DropTable(
+                name: "bgg_tos_hashes");
 
             migrationBuilder.DropTable(
                 name: "BggImportQueue");
@@ -8559,6 +10302,12 @@ namespace Api.Infrastructure.Migrations
             migrationBuilder.DropTable(
                 name: "Cards",
                 schema: "session_tracking");
+
+            migrationBuilder.DropTable(
+                name: "catalog_seed_drafts");
+
+            migrationBuilder.DropTable(
+                name: "certification_thresholds_config");
 
             migrationBuilder.DropTable(
                 name: "chat_logs");
@@ -8592,6 +10341,18 @@ namespace Api.Infrastructure.Migrations
                 schema: "knowledge_base");
 
             migrationBuilder.DropTable(
+                name: "document_evaluation_runs");
+
+            migrationBuilder.DropTable(
+                name: "domain_event_logs");
+
+            migrationBuilder.DropTable(
+                name: "domain_event_outbox");
+
+            migrationBuilder.DropTable(
+                name: "email_outbox");
+
+            migrationBuilder.DropTable(
                 name: "email_queue_items");
 
             migrationBuilder.DropTable(
@@ -8599,6 +10360,12 @@ namespace Api.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "email_verifications");
+
+            migrationBuilder.DropTable(
+                name: "enrichment_attempts");
+
+            migrationBuilder.DropTable(
+                name: "enrichment_queue_entries");
 
             migrationBuilder.DropTable(
                 name: "entity_links",
@@ -8611,6 +10378,9 @@ namespace Api.Infrastructure.Migrations
                 name: "game_analytics_events");
 
             migrationBuilder.DropTable(
+                name: "game_books");
+
+            migrationBuilder.DropTable(
                 name: "game_checklists");
 
             migrationBuilder.DropTable(
@@ -8621,6 +10391,9 @@ namespace Api.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "game_memories");
+
+            migrationBuilder.DropTable(
+                name: "game_night_invitations");
 
             migrationBuilder.DropTable(
                 name: "game_night_playlists");
@@ -8653,13 +10426,33 @@ namespace Api.Infrastructure.Migrations
                 name: "game_suggestions");
 
             migrationBuilder.DropTable(
+                name: "gamebook_campaign_sessions",
+                schema: "session_tracking");
+
+            migrationBuilder.DropTable(
+                name: "gamebook_glossary_entries",
+                schema: "session_tracking");
+
+            migrationBuilder.DropTable(
+                name: "gamebook_photo_artifacts",
+                schema: "session_tracking");
+
+            migrationBuilder.DropTable(
+                name: "gamebook_session_book_progress",
+                schema: "session_tracking");
+
+            migrationBuilder.DropTable(
                 name: "GameEntityRelations");
 
             migrationBuilder.DropTable(
-                name: "GameToolkits");
+                name: "group_memories");
 
             migrationBuilder.DropTable(
-                name: "group_memories");
+                name: "health_status_alerts_sent");
+
+            migrationBuilder.DropTable(
+                name: "IncidentBannerState",
+                schema: "SystemConfiguration");
 
             migrationBuilder.DropTable(
                 name: "insight_feedback",
@@ -8667,6 +10460,12 @@ namespace Api.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "invitation_game_suggestions");
+
+            migrationBuilder.DropTable(
+                name: "kb_quality_budget_counters");
+
+            migrationBuilder.DropTable(
+                name: "kb_reindex_jobs");
 
             migrationBuilder.DropTable(
                 name: "kb_user_feedback",
@@ -8695,7 +10494,31 @@ namespace Api.Infrastructure.Migrations
                 schema: "SystemConfiguration");
 
             migrationBuilder.DropTable(
+                name: "mechanic_analysis_metrics");
+
+            migrationBuilder.DropTable(
+                name: "mechanic_analysis_section_runs");
+
+            migrationBuilder.DropTable(
+                name: "mechanic_citations");
+
+            migrationBuilder.DropTable(
                 name: "mechanic_drafts");
+
+            migrationBuilder.DropTable(
+                name: "mechanic_golden_bgg_tags");
+
+            migrationBuilder.DropTable(
+                name: "mechanic_golden_claims");
+
+            migrationBuilder.DropTable(
+                name: "mechanic_recalc_jobs");
+
+            migrationBuilder.DropTable(
+                name: "mechanic_status_audit");
+
+            migrationBuilder.DropTable(
+                name: "mechanic_suppression_audit");
 
             migrationBuilder.DropTable(
                 name: "model_change_logs");
@@ -8731,6 +10554,9 @@ namespace Api.Infrastructure.Migrations
                 name: "pgvector_embeddings");
 
             migrationBuilder.DropTable(
+                name: "photo_batch_pages");
+
+            migrationBuilder.DropTable(
                 name: "player_memories");
 
             migrationBuilder.DropTable(
@@ -8748,6 +10574,13 @@ namespace Api.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "ProposalMigrations");
+
+            migrationBuilder.DropTable(
+                name: "provider_credentials");
+
+            migrationBuilder.DropTable(
+                name: "provider_probe_audit_entries",
+                schema: "administration");
 
             migrationBuilder.DropTable(
                 name: "quick_questions");
@@ -8791,6 +10624,9 @@ namespace Api.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "rulespec_comments");
+
+            migrationBuilder.DropTable(
+                name: "security_audit_logs");
 
             migrationBuilder.DropTable(
                 name: "service_call_logs",
@@ -8875,7 +10711,13 @@ namespace Api.Infrastructure.Migrations
                 name: "slack_team_channel_configs");
 
             migrationBuilder.DropTable(
+                name: "staging_allowlist");
+
+            migrationBuilder.DropTable(
                 name: "step_log_entries");
+
+            migrationBuilder.DropTable(
+                name: "storage_operation_outbox");
 
             migrationBuilder.DropTable(
                 name: "strategy_model_mapping");
@@ -8888,9 +10730,6 @@ namespace Api.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "temp_sessions");
-
-            migrationBuilder.DropTable(
-                name: "text_chunks");
 
             migrationBuilder.DropTable(
                 name: "tier_definitions");
@@ -8923,6 +10762,13 @@ namespace Api.Infrastructure.Migrations
             migrationBuilder.DropTable(
                 name: "toolkit_widgets",
                 schema: "game_toolkit");
+
+            migrationBuilder.DropTable(
+                name: "ToolkitVersions");
+
+            migrationBuilder.DropTable(
+                name: "translated_paragraphs",
+                schema: "session_tracking");
 
             migrationBuilder.DropTable(
                 name: "turn_orders");
@@ -8967,6 +10813,12 @@ namespace Api.Infrastructure.Migrations
                 name: "vector_documents");
 
             migrationBuilder.DropTable(
+                name: "vision_snapshot_images");
+
+            migrationBuilder.DropTable(
+                name: "waitlist_entries");
+
+            migrationBuilder.DropTable(
                 name: "whiteboard_states");
 
             migrationBuilder.DropTable(
@@ -8996,6 +10848,9 @@ namespace Api.Infrastructure.Migrations
                 name: "contributors");
 
             migrationBuilder.DropTable(
+                name: "catalog_sync_runs");
+
+            migrationBuilder.DropTable(
                 name: "game_night_events");
 
             migrationBuilder.DropTable(
@@ -9006,6 +10861,15 @@ namespace Api.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "session_players");
+
+            migrationBuilder.DropTable(
+                name: "mechanic_claims");
+
+            migrationBuilder.DropTable(
+                name: "text_chunks");
+
+            migrationBuilder.DropTable(
+                name: "photo_batch_uploads");
 
             migrationBuilder.DropTable(
                 name: "prompt_versions");
@@ -9049,6 +10913,9 @@ namespace Api.Infrastructure.Migrations
                 schema: "game_toolkit");
 
             migrationBuilder.DropTable(
+                name: "GameToolkits");
+
+            migrationBuilder.DropTable(
                 name: "achievements");
 
             migrationBuilder.DropTable(
@@ -9061,10 +10928,16 @@ namespace Api.Infrastructure.Migrations
                 name: "user_library_entries");
 
             migrationBuilder.DropTable(
+                name: "vision_snapshots");
+
+            migrationBuilder.DropTable(
                 name: "GameSessions");
 
             migrationBuilder.DropTable(
                 name: "session_teams");
+
+            migrationBuilder.DropTable(
+                name: "mechanic_analyses");
 
             migrationBuilder.DropTable(
                 name: "prompt_templates");
@@ -9091,13 +10964,10 @@ namespace Api.Infrastructure.Migrations
                 name: "document_collections");
 
             migrationBuilder.DropTable(
-                name: "games");
+                name: "shared_games");
 
             migrationBuilder.DropTable(
                 name: "users");
-
-            migrationBuilder.DropTable(
-                name: "shared_games");
 
             migrationBuilder.DropTable(
                 name: "agent_definitions",

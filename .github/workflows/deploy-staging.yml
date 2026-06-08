@@ -57,7 +57,12 @@ on:
 #     migration wrapped in IF NOT EXISTS vs __EFMigrationsHistory. Re-running
 #     re-emits identical SQL — no DB side effects yet.
 #   - deploy.steps."Apply migrations on staging": uses that idempotent SQL,
-#     so re-applying is a no-op when no new migrations exist.
+#     so re-applying is a no-op when no new migrations exist. Includes a
+#     pre-flight check against __EFMigrationsHistory (fixes #2020) to skip
+#     psql apply when the script's target migration is already recorded —
+#     necessary because EF's idempotent generator hoists CREATE TABLE /
+#     CREATE EXTENSION outside the IF NOT EXISTS guard for squashed
+#     InitialCreate migrations, causing "relation already exists" otherwise.
 #   - deploy.steps."Deploy via SSH": `docker compose up --force-recreate`
 #     converges to the target image regardless of partial prior state.
 # A mid-flight cancel therefore can't corrupt staging; the next run re-converges.
@@ -802,17 +807,60 @@ jobs:
           echo "📦 Creating pre-migration backup: ${BACKUP_NAME}"
           $SSH_CMD "set -o pipefail; docker exec meepleai-postgres pg_dump -U meepleai -d meepleai_staging --no-owner --no-acl | gzip > /tmp/${BACKUP_NAME} && gzip -t /tmp/${BACKUP_NAME} && ls -lh /tmp/${BACKUP_NAME} || { echo '❌ backup failed — removing partial file'; rm -f /tmp/${BACKUP_NAME}; exit 1; }"
 
-          # Step 2 — upload idempotent SQL to server
-          echo "📤 Uploading migrations.sql to server..."
-          $SCP_CMD /tmp/migrations.sql "$SSH_USER@$SSH_HOST:/tmp/migrations.sql"
+          # Step 1.5 — pre-flight: detect whether the script's target migration
+          # is already in __EFMigrationsHistory. Fixes #2020: after the 81→1
+          # squash (PR fab0dc8eb), `dotnet ef migrations script --idempotent`
+          # hoists `CREATE EXTENSION` and `CREATE TABLE` statements outside the
+          # guarding `DO $EF$ IF NOT EXISTS …` block, so re-applying on a DB
+          # that already has the squashed InitialCreate row crashes with
+          # `ERROR: relation "..." already exists`.
+          #
+          # Strategy: parse the target MigrationId from the SQL — pick the
+          # lexicographically largest `'<14 digits>_<Name>'` literal across
+          # all INSERT INTO __EFMigrationsHistory statements. Lexicographic
+          # order matches temporal order because the 14-digit prefix is a
+          # zero-padded UTC timestamp (`yyyyMMddHHmmss`), so the largest
+          # string == the most recent migration the script will apply. Then
+          # query the DB: if the row is already present, skip Steps 2–3
+          # (upload + apply) but keep Step 4 verify to confirm schema state.
+          # Backup in Step 1 still runs — cheap insurance vs. zero cost saving.
+          LATEST_IN_SCRIPT=$(grep -oE "'[0-9]{14}_[A-Za-z][A-Za-z0-9_]*'" /tmp/migrations.sql | sort -u | tail -1 | tr -d "'")
+          SKIP_APPLY=0
+          if [ -z "$LATEST_IN_SCRIPT" ]; then
+            echo "⚠️  Could not extract target MigrationId from script — proceeding with apply"
+          else
+            echo "🔍 Script targets migration: ${LATEST_IN_SCRIPT}"
+            # `|| true` keeps the build green when psql exits nonzero because
+            # `__EFMigrationsHistory` doesn't exist yet (fresh DB / first
+            # deploy) — $APPLIED stays empty and we fall through to apply.
+            # It ALSO swallows SSH/docker transport errors (host unreachable,
+            # container missing), but that's safe: $APPLIED still ends up
+            # empty → SKIP_APPLY stays 0 → Step 2 attempts scp, which will
+            # fail loudly with a nonzero exit under `set -euo pipefail`. So
+            # transient infra failures surface at Step 2, never as a silent
+            # skip. tr -d strips psql's tA-mode trailing newline.
+            APPLIED_RAW=$($SSH_CMD "docker exec meepleai-postgres psql -tA -U meepleai -d meepleai_staging -c \"SELECT \\\"MigrationId\\\" FROM \\\"__EFMigrationsHistory\\\" WHERE \\\"MigrationId\\\" = '${LATEST_IN_SCRIPT}'\" 2>/dev/null" || true)
+            APPLIED=$(echo "$APPLIED_RAW" | tr -d '[:space:]')
+            if [ "$APPLIED" = "$LATEST_IN_SCRIPT" ]; then
+              echo "✅ Migration ${LATEST_IN_SCRIPT} already applied — skipping psql apply (fixes #2020)"
+              SKIP_APPLY=1
+            else
+              echo "📋 Target not yet applied (DB row: ${APPLIED:-<none>}); will apply"
+            fi
+          fi
 
-          # Step 3 — apply SQL inside postgres container with ON_ERROR_STOP=1.
-          # Heredoc captures psql's exit code into `rc` BEFORE the unconditional
-          # log tail + cleanup, so the final `exit $rc` propagates the real
-          # psql outcome back through SSH to the runner (without log/cleanup
-          # exit codes masking the result).
-          echo "🔧 Applying migrations via psql..."
-          ssh -i "$HOME/.ssh/deploy_key" -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" bash <<'REMOTE_APPLY'
+          if [ "$SKIP_APPLY" = "0" ]; then
+            # Step 2 — upload idempotent SQL to server
+            echo "📤 Uploading migrations.sql to server..."
+            $SCP_CMD /tmp/migrations.sql "$SSH_USER@$SSH_HOST:/tmp/migrations.sql"
+
+            # Step 3 — apply SQL inside postgres container with ON_ERROR_STOP=1.
+            # Heredoc captures psql's exit code into `rc` BEFORE the unconditional
+            # log tail + cleanup, so the final `exit $rc` propagates the real
+            # psql outcome back through SSH to the runner (without log/cleanup
+            # exit codes masking the result).
+            echo "🔧 Applying migrations via psql..."
+            ssh -i "$HOME/.ssh/deploy_key" -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" bash <<'REMOTE_APPLY'
           set -u
           docker cp /tmp/migrations.sql meepleai-postgres:/tmp/migrations.sql
           docker exec meepleai-postgres psql -U meepleai -d meepleai_staging -v ON_ERROR_STOP=1 -f /tmp/migrations.sql > /tmp/migrations.log 2>&1
@@ -824,6 +872,7 @@ jobs:
           rm -f /tmp/migrations.sql /tmp/migrations.log
           exit $rc
           REMOTE_APPLY
+          fi
 
           # Step 4 — verify migration history
           echo "🔍 Verifying applied migrations..."

@@ -12,6 +12,7 @@ import { MobileTopBar } from '@/components/layout/AppNav/MobileTopBar';
 import { SideDrawer } from '@/components/layout/SideDrawer/SideDrawer';
 import { cn } from '@/lib/utils';
 
+import { EmailVerificationBanner } from './EmailVerificationBanner';
 import { MiniNavSlot } from './MiniNavSlot';
 import { SessionBanner } from './SessionBanner';
 
@@ -55,6 +56,13 @@ export function DesktopShell({ children }: DesktopShellProps) {
         store was being updated but no consumer rendered it.
       */}
       <MiniNavSlot />
+
+      {/*
+        F1 #1974 (audit 2026-06-07): render the verify-email banner while the
+        BE-reported `emailVerified` flag is `false`. Hidden when the field is
+        true, undefined, or the user query is still loading.
+      */}
+      <EmailVerificationBanner />
 
       <SessionBanner />
 

@@ -35,6 +35,10 @@ vi.mock('@/components/layout/UserShell/MiniNavSlot', () => ({
   MiniNavSlot: () => <div data-testid="mini-nav-slot" />,
 }));
 
+vi.mock('@/components/layout/UserShell/EmailVerificationBanner', () => ({
+  EmailVerificationBanner: () => <div data-testid="email-verification-banner-stub" />,
+}));
+
 vi.mock('next/navigation', () => ({
   usePathname: () => '/dashboard',
 }));
@@ -92,5 +96,17 @@ describe('DesktopShell', () => {
       </DesktopShell>
     );
     expect(screen.getByTestId('mini-nav-slot')).toBeInTheDocument();
+  });
+
+  it('mounts the EmailVerificationBanner so unverified users see the prompt (F1 #1974)', () => {
+    // F1 regression guard: the banner is no-op when the BE flag is true or
+    // missing, so it's safe to keep mounted globally. This test asserts the
+    // shell wires the component; the banner's own suite covers behaviour.
+    render(
+      <DesktopShell>
+        <div>child</div>
+      </DesktopShell>
+    );
+    expect(screen.getByTestId('email-verification-banner-stub')).toBeInTheDocument();
   });
 });

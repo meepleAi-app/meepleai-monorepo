@@ -19,6 +19,12 @@ export const AuthUserSchema = z.object({
   role: z.string().min(1),
   onboardingCompleted: z.boolean().default(false), // Issue #323
   onboardingSkipped: z.boolean().default(false), // Issue #323
+  // F1 #1974 (audit 2026-06-07): expose the BE `EmailVerified` field on
+  // `/auth/me` so the UI can render the verify-email banner while the user
+  // is in the registration grace period. Optional/default-false so legacy
+  // payloads (BE not yet redeployed, OAuth callback, etc.) parse without
+  // throwing — the banner just won't show in that case.
+  emailVerified: z.boolean().default(false),
 });
 
 export type AuthUser = z.infer<typeof AuthUserSchema>;

@@ -48,10 +48,14 @@ export interface GameTabDescriptor {
   icon: string;
 }
 
+// Display labels — IDs are stable (Newman Strategy 1, #2010 spec-panel 2026-06-08):
+// renaming IDs would break `?tab=aiChat`/`?tab=toolbox` deep-links + legacy
+// redirects in `agent/page.tsx` + `toolbox/page.tsx`. Labels are presentation-only
+// and safe to update to match the sp4-game-detail.jsx mockup ("Agente" / "Toolkit").
 export const GAME_TABS: readonly GameTabDescriptor[] = [
   { id: 'info', label: 'Info', icon: '📖' },
-  { id: 'aiChat', label: 'AI Chat', icon: '🤖' },
-  { id: 'toolbox', label: 'Toolbox', icon: '🧰' },
+  { id: 'aiChat', label: 'Agente', icon: '🤖' },
+  { id: 'toolbox', label: 'Toolkit', icon: '🧰' },
   { id: 'houseRules', label: 'House Rules', icon: '🏠' },
   { id: 'partite', label: 'Partite', icon: '🎲' },
 ] as const;

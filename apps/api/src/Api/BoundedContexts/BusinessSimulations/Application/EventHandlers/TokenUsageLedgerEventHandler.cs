@@ -1,8 +1,6 @@
 using Api.BoundedContexts.BusinessSimulations.Application.Interfaces;
 using Api.BoundedContexts.BusinessSimulations.Domain.Events;
-using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.BusinessSimulations.Application.EventHandlers;
@@ -29,6 +27,10 @@ internal sealed class TokenUsageLedgerEventHandler : INotificationHandler<TokenU
     {
         try
         {
+            // 23505 dedup is now handled inside the service (AddAndCommitAsync). The
+            // catch (Exception) below stays as a safety net for any other failure
+            // (network glitch, EF model misconfiguration, …) that must not block the
+            // main token-tracking flow.
             await _ledgerTrackingService.TrackTokenUsageAsync(
                 userId: notification.UserId,
                 modelId: notification.ModelId,
@@ -37,18 +39,6 @@ internal sealed class TokenUsageLedgerEventHandler : INotificationHandler<TokenU
                 endpoint: notification.Endpoint,
                 sourceEventId: notification.EventId,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
-        }
-        catch (DbUpdateException ex) when (CounterTableIdempotency.IsUniqueViolation(ex))
-        {
-            // CF-2 / #1938: outbox replay (#1535 at-least-once delivery) for an event
-            // already persisted. The partial UNIQUE index on ledger_entries.source_event_id
-            // blocked the duplicate insert at the DB. Log at Information — a noisy
-            // LogError on legitimate replays would crowd out real failures in operator
-            // dashboards.
-            _logger.LogInformation(
-                ex,
-                "Skipping duplicate ledger entry for token usage: User={UserId}, Model={ModelId}, SourceEventId={SourceEventId} (already recorded)",
-                notification.UserId, notification.ModelId, notification.EventId);
         }
         catch (Exception ex)
         {

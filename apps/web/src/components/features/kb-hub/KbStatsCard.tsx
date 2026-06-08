@@ -140,8 +140,14 @@ export function KbStatsCard(props: KbStatsCardProps): ReactElement {
       : []),
   ];
 
-  const maxSparklineVal = costHistory && costHistory.length > 0 ? Math.max(...costHistory) : 1;
-  const showSparkline = !compact && costHistory && costHistory.length > 0;
+  // F9 #1974 (audit 2026-06-07): hide the sparkline when costHistory contains
+  // only zeros (BE seeds an empty 7-day window for KBs that have never been
+  // used). Pre-fix the empty bars rendered as a low strip of grey rectangles
+  // — pure UI noise. We require at least one non-zero datapoint so the chart
+  // only appears once there is real signal.
+  const hasSparklineSignal = !!costHistory && costHistory.some(v => v > 0);
+  const maxSparklineVal = hasSparklineSignal ? Math.max(...costHistory!) : 1;
+  const showSparkline = !compact && hasSparklineSignal;
   const showLifetimeCost = !compact && lifetimeCost !== undefined;
   const gridCols =
     metrics.length >= 4 ? 'grid-cols-4' : metrics.length === 3 ? 'grid-cols-3' : 'grid-cols-2';

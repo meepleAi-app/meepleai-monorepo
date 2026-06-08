@@ -59,6 +59,21 @@ export function GameInfoTab({ gameId, variant, isNotInLibrary }: GameTabProps) {
       </h3>
 
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm">
+        {/*
+          F3 #1974 (audit 2026-06-07, partial): expose Designer in the
+          spec list. The mockup ships designer as a first-class metadata
+          row, and `LibraryGameDetail` already carries it via the catalog
+          fallback in `useLibraryGameDetail`. Hidden when the BE doesn't
+          surface it (private games / non-catalog entries).
+        */}
+        {game.designers && game.designers.length > 0 && (
+          <>
+            <dt className="text-muted-foreground">Designer</dt>
+            <dd className="font-medium text-foreground">
+              {game.designers.map(d => d.name).join(', ')}
+            </dd>
+          </>
+        )}
         {game.gamePublisher && (
           <>
             <dt className="text-muted-foreground">Editore</dt>
@@ -89,6 +104,22 @@ export function GameInfoTab({ gameId, variant, isNotInLibrary }: GameTabProps) {
             <dd className="font-medium text-foreground">{game.complexityRating.toFixed(2)} / 5</dd>
           </>
         )}
+        {game.categories && game.categories.length > 0 && (
+          <>
+            <dt className="text-muted-foreground">Categorie</dt>
+            <dd className="font-medium text-foreground">
+              {game.categories.map(c => c.name).join(', ')}
+            </dd>
+          </>
+        )}
+        {game.mechanics && game.mechanics.length > 0 && (
+          <>
+            <dt className="text-muted-foreground">Meccaniche</dt>
+            <dd className="font-medium text-foreground">
+              {game.mechanics.map(m => m.name).join(', ')}
+            </dd>
+          </>
+        )}
         {game.addedAt && (
           <>
             <dt className="text-muted-foreground">In libreria dal</dt>
@@ -99,10 +130,30 @@ export function GameInfoTab({ gameId, variant, isNotInLibrary }: GameTabProps) {
         )}
       </dl>
 
+      {/*
+        F3 #1974 partial: the description block used to render naked
+        below the dl. Introduce it with a small heading so it reads as
+        a dedicated "Descrizione" section per the mockup; the heading
+        is omitted (along with the block) when the BE doesn't surface a
+        description, so games without one don't show an empty section.
+      */}
       {game.description && (
-        <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
-          {game.description}
-        </p>
+        <section
+          data-testid="game-info-description"
+          className={cn('flex flex-col gap-2', variant === 'desktop' ? 'mt-2' : 'mt-1')}
+        >
+          <h4
+            className={cn(
+              'font-heading font-semibold text-foreground',
+              variant === 'desktop' ? 'text-base' : 'text-sm'
+            )}
+          >
+            Descrizione
+          </h4>
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+            {game.description}
+          </p>
+        </section>
       )}
     </div>
   );

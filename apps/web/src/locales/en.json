@@ -2040,7 +2040,22 @@
         "manualLabel": "Add manually",
         "manualDescription": "Enter the game details. You can upload the rulebook and configure the AI agent later from the game detail page.",
         "catalogLabel": "From shared catalog",
-        "catalogDescription": "Search the community catalog and add a game in one click. Rulebook and AI agent setup come later."
+        "catalogDescription": "Search the community catalog and add a game in one click. Rulebook and AI agent setup come later.",
+        "catalog": {
+          "backAriaLabel": "Back to choice",
+          "searchPlaceholder": "Search games…",
+          "searchAriaLabel": "Search games",
+          "noImage": "No image",
+          "inLibraryBadge": "In library",
+          "alreadyInLibrary": "Already in library",
+          "selectCta": "Select",
+          "resultCount": "{count, plural, =0 {No games found} =1 {1 game found} other {# games found}}",
+          "emptyResults": "No games found for \"{search}\".",
+          "emptyResultsHeading": "No results",
+          "emptyResultsSubtitle": "Try a different title or check the spelling.",
+          "toastAdded": "\"{gameName}\" added to your library!",
+          "toastError": "Could not add \"{gameName}\". Please try again."
+        }
       },
       "catalogPagination": {
         "firstPage": "First page",

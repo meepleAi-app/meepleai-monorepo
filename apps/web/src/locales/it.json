@@ -2090,7 +2090,22 @@
         "manualLabel": "Aggiungi manualmente",
         "manualDescription": "Inserisci i dettagli del gioco. Potrai caricare il regolamento e configurare l'agente AI dalla pagina di dettaglio.",
         "catalogLabel": "Da catalogo condiviso",
-        "catalogDescription": "Cerca nel catalogo della community e aggiungi un gioco con un click. Regolamento e setup agente in seguito."
+        "catalogDescription": "Cerca nel catalogo della community e aggiungi un gioco con un click. Regolamento e setup agente in seguito.",
+        "catalog": {
+          "backAriaLabel": "Torna alla scelta",
+          "searchPlaceholder": "Cerca giochi…",
+          "searchAriaLabel": "Cerca giochi",
+          "noImage": "Nessuna immagine",
+          "inLibraryBadge": "In libreria",
+          "alreadyInLibrary": "Già in libreria",
+          "selectCta": "Seleziona",
+          "resultCount": "{count, plural, =0 {Nessun gioco trovato} =1 {1 gioco trovato} other {# giochi trovati}}",
+          "emptyResults": "Nessun gioco trovato per «{search}».",
+          "emptyResultsHeading": "Nessun risultato",
+          "emptyResultsSubtitle": "Prova con un titolo diverso o controlla l'ortografia.",
+          "toastAdded": "«{gameName}» aggiunto alla tua libreria!",
+          "toastError": "Impossibile aggiungere «{gameName}». Riprova."
+        }
       },
       "catalogPagination": {
         "firstPage": "Prima pagina",

@@ -5,24 +5,32 @@
 namespace Api.Infrastructure.Migrations
 {
     /// <summary>
-    /// Consolidates the TestRunId schema drift accumulated across 3 prior PRs:
-    /// - PR #1936 (Issue #1928 Task B, sess.39-40): DEC-B-8 explicit columns on
-    ///   Users + GameNightEvents + GameNightSessions + GameNightRsvps + GameNightInvitations.
-    /// - PR #1951 (Issue #1929 Macro 3a, sess.42): DEC-C-8 on UserLibraryEntries + SharedGames.
-    /// - PR #1954 (Issue #1929 Macro 4, sess.43): UserGameSessions (this PR — adds property).
+    /// Materializes the TestRunId column on the 3 entities NOT already covered by
+    /// `20260606074943_AddSourceEventIdToCounterTables_CF2` (which had silently picked
+    /// up 5 of the 8 drifted columns during its "drift recovery" pass):
+    /// - UserLibraryEntries (PR #1951 / Issue #1929 Macro 3a, sess.42)
+    /// - SharedGames (PR #1951 / Issue #1929 Macro 3a, sess.42)
+    /// - UserGameSessions/game_sessions (PR #1954 / Issue #1929 Macro 4, sess.43 — this PR)
     ///
-    /// In all 3 PRs the TestRunId property + EF configuration were added to the entity
-    /// model, but the column was materialized only via `EnsureCreatedAsync` inside the
-    /// `SharedTestcontainersFixture` integration test fixture. No EF Core migration was
-    /// generated, leaving `MeepleAiDbContextModelSnapshot` out-of-sync with the entity
-    /// classes. This migration adds the column physically to all 8 tables in a single
-    /// `Up()` to reconcile the snapshot with the model.
+    /// **2026-06-08 fix (Issue #2013, smoke failure):** the original Up() called
+    /// `AddColumn` on all 8 tables, but the prior CF2 migration had already added
+    /// `test_run_id` to 5 of them (users, game_night_events, game_night_invitations,
+    /// game_night_rsvps, game_night_sessions). On a fresh DB the CF2 migration runs
+    /// first (older timestamp) and the consolidation here then fails on the first
+    /// duplicate AddColumn with "column already exists". This crashed the API at
+    /// startup and turned the nightly E2E smoke red.
     ///
-    /// Acceptance criterion (verifiable): on `main-dev` HEAD prior to this PR,
-    /// <code>grep -l "test_run_id" apps/api/src/Api/Infrastructure/Migrations/*.cs</code>
-    /// (excluding *.Designer.cs + *Snapshot.cs) returns zero matches. After this PR,
-    /// only this file matches — confirming this is the first migration to materialize
-    /// the column and is NOT a duplicate of any prior schema change.
+    /// Background (pre-fix): in PRs #1936/#1951/#1954 the TestRunId property + EF
+    /// configuration were added to the entity model, but the column was materialized
+    /// only via `EnsureCreatedAsync` inside the `SharedTestcontainersFixture`
+    /// integration test fixture. PR-CF2 quietly captured the resulting snapshot
+    /// drift; the consolidation here was authored without knowing the CF2 file had
+    /// already taken 5 of the 8 columns. The fix scopes this migration down to the
+    /// remaining 3 tables.
+    ///
+    /// Verification: <code>grep -n 'test_run_id' apps/api/src/Api/Infrastructure/Migrations/*.cs</code>
+    /// (excluding *.Designer.cs + *Snapshot.cs) returns each `test_run_id` column
+    /// in exactly ONE migration file.
     /// </summary>
     /// <example>
     /// Future contributors adding TestRunId to a new entity for E2E seeding (DEC-B-8
@@ -44,13 +52,11 @@ namespace Api.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "test_run_id",
-                table: "users",
-                type: "character varying(64)",
-                maxLength: 64,
-                nullable: true);
-
+            // NOTE (Issue #2013, 2026-06-08): the 5 AddColumn calls for
+            // users / game_night_events / game_night_invitations / game_night_rsvps /
+            // game_night_sessions were removed because CF2 (timestamp 20260606074943)
+            // already adds those columns earlier in the migration sequence. Keeping
+            // them here caused "column already exists" on every fresh-DB migrate.
             migrationBuilder.AddColumn<string>(
                 name: "test_run_id",
                 table: "user_library_entries",
@@ -72,34 +78,6 @@ namespace Api.Infrastructure.Migrations
                 maxLength: 64,
                 nullable: true);
 
-            migrationBuilder.AddColumn<string>(
-                name: "test_run_id",
-                table: "game_night_sessions",
-                type: "character varying(64)",
-                maxLength: 64,
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "test_run_id",
-                table: "game_night_rsvps",
-                type: "character varying(64)",
-                maxLength: 64,
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "test_run_id",
-                table: "game_night_invitations",
-                type: "character varying(64)",
-                maxLength: 64,
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "test_run_id",
-                table: "game_night_events",
-                type: "character varying(64)",
-                maxLength: 64,
-                nullable: true);
-
             migrationBuilder.CreateIndex(
                 name: "ix_game_sessions_test_run_id",
                 table: "game_sessions",
@@ -110,13 +88,11 @@ namespace Api.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            // Symmetry with Up(): only drop the 3 columns this migration created.
+            // CF2 owns the Down() for the other 5 tables.
             migrationBuilder.DropIndex(
                 name: "ix_game_sessions_test_run_id",
                 table: "game_sessions");
-
-            migrationBuilder.DropColumn(
-                name: "test_run_id",
-                table: "users");
 
             migrationBuilder.DropColumn(
                 name: "test_run_id",
@@ -129,22 +105,6 @@ namespace Api.Infrastructure.Migrations
             migrationBuilder.DropColumn(
                 name: "test_run_id",
                 table: "game_sessions");
-
-            migrationBuilder.DropColumn(
-                name: "test_run_id",
-                table: "game_night_sessions");
-
-            migrationBuilder.DropColumn(
-                name: "test_run_id",
-                table: "game_night_rsvps");
-
-            migrationBuilder.DropColumn(
-                name: "test_run_id",
-                table: "game_night_invitations");
-
-            migrationBuilder.DropColumn(
-                name: "test_run_id",
-                table: "game_night_events");
         }
     }
 }

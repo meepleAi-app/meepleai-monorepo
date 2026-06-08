@@ -3,6 +3,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
@@ -52,7 +53,7 @@ internal sealed class UpdateSharedGameCommandHandler : ICommandHandler<UpdateSha
         var game = await _repository.GetByIdAsync(command.GameId, cancellationToken).ConfigureAwait(false);
         if (game is null)
         {
-            throw new InvalidOperationException($"Shared game {command.GameId} not found");
+            throw new NotFoundException("SharedGame", command.GameId.ToString());
         }
 
         GameRules? rules = null;
@@ -89,7 +90,7 @@ internal sealed class UpdateSharedGameCommandHandler : ICommandHandler<UpdateSha
 
             if (entity is null)
             {
-                throw new InvalidOperationException($"SharedGame entity {command.GameId} not found in DbContext");
+                throw new NotFoundException("SharedGame", command.GameId.ToString());
             }
 
             if (command.BggId.HasValue)
@@ -132,7 +133,9 @@ internal sealed class UpdateSharedGameCommandHandler : ICommandHandler<UpdateSha
         entity.Categories.Clear();
         foreach (var name in names.Where(n => !string.IsNullOrWhiteSpace(n)).Distinct(StringComparer.Ordinal))
         {
-            var category = await _dbContext.GameCategories.FirstOrDefaultAsync(c => c.Name == name, ct).ConfigureAwait(false);
+            var category = await _dbContext.GameCategories
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Name == name, ct).ConfigureAwait(false);
             if (category is null)
             {
                 category = new GameCategoryEntity
@@ -144,6 +147,19 @@ internal sealed class UpdateSharedGameCommandHandler : ICommandHandler<UpdateSha
                 };
                 await _dbContext.GameCategories.AddAsync(category, ct).ConfigureAwait(false);
             }
+            else
+            {
+                var tracked = _dbContext.ChangeTracker.Entries<GameCategoryEntity>()
+                    .FirstOrDefault(e => e.Entity.Id == category.Id);
+                if (tracked != null)
+                {
+                    category = tracked.Entity;
+                }
+                else
+                {
+                    _dbContext.Attach(category);
+                }
+            }
             entity.Categories.Add(category);
         }
     }
@@ -153,7 +169,9 @@ internal sealed class UpdateSharedGameCommandHandler : ICommandHandler<UpdateSha
         entity.Mechanics.Clear();
         foreach (var name in names.Where(n => !string.IsNullOrWhiteSpace(n)).Distinct(StringComparer.Ordinal))
         {
-            var mechanic = await _dbContext.GameMechanics.FirstOrDefaultAsync(m => m.Name == name, ct).ConfigureAwait(false);
+            var mechanic = await _dbContext.GameMechanics
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.Name == name, ct).ConfigureAwait(false);
             if (mechanic is null)
             {
                 mechanic = new GameMechanicEntity
@@ -165,6 +183,19 @@ internal sealed class UpdateSharedGameCommandHandler : ICommandHandler<UpdateSha
                 };
                 await _dbContext.GameMechanics.AddAsync(mechanic, ct).ConfigureAwait(false);
             }
+            else
+            {
+                var tracked = _dbContext.ChangeTracker.Entries<GameMechanicEntity>()
+                    .FirstOrDefault(e => e.Entity.Id == mechanic.Id);
+                if (tracked != null)
+                {
+                    mechanic = tracked.Entity;
+                }
+                else
+                {
+                    _dbContext.Attach(mechanic);
+                }
+            }
             entity.Mechanics.Add(mechanic);
         }
     }
@@ -174,7 +205,9 @@ internal sealed class UpdateSharedGameCommandHandler : ICommandHandler<UpdateSha
         entity.Designers.Clear();
         foreach (var name in names.Where(n => !string.IsNullOrWhiteSpace(n)).Distinct(StringComparer.Ordinal))
         {
-            var designer = await _dbContext.GameDesigners.FirstOrDefaultAsync(d => d.Name == name, ct).ConfigureAwait(false);
+            var designer = await _dbContext.GameDesigners
+                .AsNoTracking()
+                .FirstOrDefaultAsync(d => d.Name == name, ct).ConfigureAwait(false);
             if (designer is null)
             {
                 designer = new GameDesignerEntity
@@ -185,6 +218,19 @@ internal sealed class UpdateSharedGameCommandHandler : ICommandHandler<UpdateSha
                 };
                 await _dbContext.GameDesigners.AddAsync(designer, ct).ConfigureAwait(false);
             }
+            else
+            {
+                var tracked = _dbContext.ChangeTracker.Entries<GameDesignerEntity>()
+                    .FirstOrDefault(e => e.Entity.Id == designer.Id);
+                if (tracked != null)
+                {
+                    designer = tracked.Entity;
+                }
+                else
+                {
+                    _dbContext.Attach(designer);
+                }
+            }
             entity.Designers.Add(designer);
         }
     }
@@ -194,7 +240,9 @@ internal sealed class UpdateSharedGameCommandHandler : ICommandHandler<UpdateSha
         entity.Publishers.Clear();
         foreach (var name in names.Where(n => !string.IsNullOrWhiteSpace(n)).Distinct(StringComparer.Ordinal))
         {
-            var publisher = await _dbContext.GamePublishers.FirstOrDefaultAsync(p => p.Name == name, ct).ConfigureAwait(false);
+            var publisher = await _dbContext.GamePublishers
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Name == name, ct).ConfigureAwait(false);
             if (publisher is null)
             {
                 publisher = new GamePublisherEntity
@@ -204,6 +252,19 @@ internal sealed class UpdateSharedGameCommandHandler : ICommandHandler<UpdateSha
                     CreatedAt = DateTime.UtcNow
                 };
                 await _dbContext.GamePublishers.AddAsync(publisher, ct).ConfigureAwait(false);
+            }
+            else
+            {
+                var tracked = _dbContext.ChangeTracker.Entries<GamePublisherEntity>()
+                    .FirstOrDefault(e => e.Entity.Id == publisher.Id);
+                if (tracked != null)
+                {
+                    publisher = tracked.Entity;
+                }
+                else
+                {
+                    _dbContext.Attach(publisher);
+                }
             }
             entity.Publishers.Add(publisher);
         }

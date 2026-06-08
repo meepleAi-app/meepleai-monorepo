@@ -177,6 +177,57 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
         reloaded.BggId.Should().Be(13);
     }
 
+    [Fact]
+    public async Task Handle_WithNullCategories_PreservesExistingCategories()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var entity = SeedGameEntity(gameId, userId);
+        entity.Categories.Add(new GameCategoryEntity { Id = Guid.NewGuid(), Name = "Strategy", Slug = "strategy", CreatedAt = DateTime.UtcNow });
+        entity.Mechanics.Add(new GameMechanicEntity { Id = Guid.NewGuid(), Name = "Dice Rolling", Slug = "dice-rolling", CreatedAt = DateTime.UtcNow });
+        _dbContext.Set<SharedGameEntity>().Add(entity);
+        await _dbContext.SaveChangesAsync();
+
+        var domainAggregate = BuildAggregate(gameId, userId);
+        _repositoryMock.Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(domainAggregate);
+
+        // Pass BggId only, leave taxonomy collections as null
+        var command = new UpdateSharedGameCommand(
+            GameId: gameId,
+            Title: entity.Title,
+            YearPublished: entity.YearPublished,
+            Description: entity.Description,
+            MinPlayers: entity.MinPlayers,
+            MaxPlayers: entity.MaxPlayers,
+            PlayingTimeMinutes: entity.PlayingTimeMinutes,
+            MinAge: entity.MinAge,
+            ComplexityRating: entity.ComplexityRating,
+            AverageRating: entity.AverageRating,
+            ImageUrl: entity.ImageUrl,
+            ThumbnailUrl: entity.ThumbnailUrl,
+            Rules: null,
+            ModifiedBy: userId,
+            BggId: 42);
+
+        var handler = new UpdateSharedGameCommandHandler(
+            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext, _loggerMock.Object);
+
+        // Act
+        await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        var reloaded = await _dbContext.Set<SharedGameEntity>()
+            .Include(g => g.Categories)
+            .Include(g => g.Mechanics)
+            .FirstAsync(g => g.Id == gameId);
+
+        reloaded.Categories.Select(c => c.Name).Should().BeEquivalentTo(new[] { "Strategy" });
+        reloaded.Mechanics.Select(m => m.Name).Should().BeEquivalentTo(new[] { "Dice Rolling" });
+        reloaded.BggId.Should().Be(42);
+    }
+
     private static SharedGameEntity SeedGameEntity(Guid gameId, Guid createdBy)
     {
         return new SharedGameEntity

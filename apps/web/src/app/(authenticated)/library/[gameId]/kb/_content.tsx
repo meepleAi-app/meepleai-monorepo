@@ -24,14 +24,12 @@ import {
   DeleteDialog,
   EmptyState,
   HubDefault,
-  KbStatsCard,
   RaptorPanel,
   ReindexModal,
   type ActionsMenuLabels,
   type DeleteDialogLabels,
   type EmptyStateLabels,
   type HubDefaultLabels,
-  type KbStatsCardLabels,
   type KbPdf,
   type PdfAction,
   type RaptorPanelLabels,
@@ -199,28 +197,11 @@ export function KbHubContent({ gameId }: KbHubContentProps): ReactElement {
     },
   };
 
-  const statsCardLabels: KbStatsCardLabels = {
-    cardTitle: t('pages.library.gameDetail.kb.stats.cardTitle'),
-    cardSubtitle: t('pages.library.gameDetail.kb.stats.cardSubtitle'),
-    docsLabel: t('pages.library.gameDetail.kb.stats.docsLabel'),
-    chunksLabel: t('pages.library.gameDetail.kb.stats.chunksLabel'),
-    embeddingsLabel: t('pages.library.gameDetail.kb.stats.embeddingsLabel'),
-    lastReindexLabel: t('pages.library.gameDetail.kb.stats.lastReindexLabel'),
-    raptorLabel: t('pages.library.gameDetail.kb.stats.raptorLabel'),
-    coverageLabel: t('pages.library.gameDetail.kb.stats.coverageLabel'),
-    coverage: {
-      None: t('pages.library.gameDetail.kb.stats.coverage.None'),
-      Basic: t('pages.library.gameDetail.kb.stats.coverage.Basic'),
-      Standard: t('pages.library.gameDetail.kb.stats.coverage.Standard'),
-      Complete: t('pages.library.gameDetail.kb.stats.coverage.Complete'),
-    },
-    lifetimeCostLabel: t('pages.library.gameDetail.kb.stats.lifetimeCostLabel'),
-    sparklineLabel: t('pages.library.gameDetail.kb.stats.sparklineLabel'),
-    sparklineStart: t('pages.library.gameDetail.kb.stats.sparklineStart'),
-    sparklineEnd: t('pages.library.gameDetail.kb.stats.sparklineEnd'),
-    indexingBadge: t('pages.library.gameDetail.kb.stats.indexingBadge'),
-    indexingDescription: t('pages.library.gameDetail.kb.stats.indexingDescription'),
-  };
+  // F7 #1974: KbStatsCard labels removed from the user-facing kb page —
+  // the same data lives in the HubDefault stats strip. Translation keys
+  // under `pages.library.gameDetail.kb.stats.*` stay in the locale files
+  // because the KbStatsCard component is still consumed by admin / dev
+  // surfaces (see `@/components/features/kb-hub` barrel exports).
 
   const raptorLabels: RaptorPanelLabels = {
     title: t('pages.library.gameDetail.kb.raptor.title'),
@@ -368,13 +349,15 @@ export function KbHubContent({ gameId }: KbHubContentProps): ReactElement {
             indexingPending={indexingPending}
           />
 
-          <KbStatsCard
-            documentCount={status?.documentCount ?? 0}
-            coverageLevel={status?.coverageLevel ?? 'None'}
-            coverageScore={status?.coverageScore ?? 0}
-            labels={statsCardLabels}
-            indexingPending={indexingPending}
-          />
+          {/*
+            F7 #1974 (audit 2026-06-07): KbStatsCard removed from the
+            primary `/library/[gameId]/kb` layout. The mockup ships the
+            same `documentCount + coverage` info inside the HubDefault
+            stats strip; rendering a separate card below was pure UI
+            redundancy. The component itself stays in the
+            `@/components/features/kb-hub` barrel for the admin /
+            embedded surfaces that still want a dedicated card.
+          */}
 
           <RaptorPanel tier="free" labels={raptorLabels} />
         </>

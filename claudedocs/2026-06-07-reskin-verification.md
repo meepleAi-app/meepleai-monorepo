@@ -289,6 +289,42 @@ Screenshot: `screenshots-reskin/p16-kb-globale-live.png`
 
 **Total impact**: 7 sub-issues closed/resolved + 4 verified-no-action + 2 known-issue deferrals + 9 large-scope deferrals.
 
+---
+
+## ⏭️ Wave 7 + Wave 8 update — 2026-06-08 (sess 45 autonomous loop, follow-on)
+
+Continuation of the night session against the same plan — picked up the
+finder-grain polish items that the first pass deferred.
+
+**6 PR shipped + 7th already verified-no-action**:
+
+| Finding | PR | Scope |
+|---|---|---|
+| **F27** onboarding dup skip | #1991 | Collapsed duplicate skip — primary submit covers "no selection" path; gray text-link removed. |
+| **F9** sparkline 0-data | #1992 | Tightened guard to `costHistory.some(v => v > 0)` so empty-window KBs no longer render 7 flat bars. |
+| **F1** verify-email banner | #1995 | New `EmailVerificationBanner` mounted in `DesktopShell`; shows only when BE `emailVerified === false`. Schema + type extended. Per-session dismiss. |
+| **F5** stats strip tag-style | #1996 | Re-skinned `HubDefault` strip from dot-separated mono line to a row of bordered chips (`kb-hub-default-stats-chip`). |
+| **F10** drop-zone CTA | #1997 | Added dashed-border tappable drop-zone under PDF list wired to existing `onUpload`. Optional label → legacy consumers pay nothing. |
+| **F7** KbStatsCard dedup | #1998 | Removed `KbStatsCard` mount from `/library/[gameId]/kb` (data redundant with HubDefault strip). Component still in barrel for admin/embedded use. |
+
+**Verified — no code change**:
+- **F12** chat quick-starter — `QuickStartSuggestions` already mounted in `ChatEntryOrchestrator:307` with 4+ context-aware suggestion pills. Audit description "empty state generico" doesn't match current implementation. Possible audit-time race with hydration or pre-`?game=` URL. Skip + verify next live audit.
+
+**Known-issue defers (no code-path fix)**:
+- **F31** `/toolkits` console errors — needs live console inspection; out of scope for autonomous loop.
+- **F30 / F23c** — Turbopack stale-chunk pattern from the original night session.
+
+**Out of scope for autonomous loop (separate sub-issues recommended)**:
+- **F3** game-detail full rebuild (3-4 wk)
+- **F6** PDF row per-doc status — P83 BE-deferred (schema doesn't expose per-doc status yet)
+- **F11** chat 3-col layout (260px right sidebar) — multi-component restructure
+- **F20** dashboard "Recenti completati" — BE endpoint missing (Asse C P2 follow-up)
+- **F2.2** AddGameDrawer T1-T8 rebuild
+
+**Wave 7+8 net**: 6 sub-issues resolved + 1 verified-no-action + 3 known-issue defers + 5 large-scope defers.
+
+**Cumulative (night session + wave 7+8)**: 13 sub-findings shipped (7 + 6), 5 verified-no-action (4 + 1), 5 known-issue defers (2 + 3), 14 large-scope defers (9 + 5). Out of the original ~33 tracker findings + cross-cutting items, **18 closed/verified, 5 deferred to known-issue tracking, 10 carry as separate sub-issue work**.
+
 
 
 ## Pending pages (Round 1 sess 45)

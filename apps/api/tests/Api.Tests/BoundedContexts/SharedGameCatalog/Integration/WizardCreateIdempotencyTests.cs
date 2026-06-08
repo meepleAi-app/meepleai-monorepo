@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
@@ -50,7 +51,9 @@ public sealed class WizardCreateIdempotencyTests : IAsyncLifetime
             {
                 builder.ConfigureTestServices(services =>
                 {
-                    // Mock BGG API to avoid real calls
+                    // Mock BGG API to avoid real calls.
+                    // Returns full details so SharedGame.Create() gets non-empty
+                    // description/imageUrl/thumbnailUrl (domain validation requires them).
                     services.RemoveAll(typeof(Api.Services.IBggApiService));
                     var mockBggApi = new Mock<Api.Services.IBggApiService>();
                     mockBggApi
@@ -58,8 +61,37 @@ public sealed class WizardCreateIdempotencyTests : IAsyncLifetime
                         .Returns(Task.FromResult(new List<BggSearchResultDto>()));
                     mockBggApi
                         .Setup(x => x.GetGameDetailsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-                        .Returns(Task.FromResult<BggGameDetailsDto?>(null));
+                        .Returns(Task.FromResult<BggGameDetailsDto?>(new BggGameDetailsDto(
+                            174430,
+                            "Test Game BGG",
+                            "A test board game description for idempotency integration tests.",
+                            2020,
+                            2,
+                            4,
+                            60,
+                            30,
+                            120,
+                            10,
+                            7.5,
+                            7.0,
+                            10000,
+                            2.5,
+                            "https://example.com/thumbnail.jpg",
+                            "https://example.com/image.jpg",
+                            new List<string> { "Strategy" },
+                            new List<string> { "Worker Placement" },
+                            new List<string> { "Test Designer" },
+                            new List<string> { "Test Publisher" })));
                     services.AddScoped(_ => mockBggApi.Object);
+
+                    // Mock IBggCoverDownloader to return null (tolerated fallback — no R2 upload).
+                    // Without this mock the typed HttpClient tries to make a real HTTP call.
+                    services.RemoveAll(typeof(IBggCoverDownloader));
+                    var mockCoverDownloader = new Mock<IBggCoverDownloader>();
+                    mockCoverDownloader
+                        .Setup(x => x.DownloadAndUploadAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                        .Returns(Task.FromResult<string?>(null));
+                    services.AddScoped(_ => mockCoverDownloader.Object);
 
                     // Allow all auth for test purposes
                     services.AddAuthentication(TestAuthenticationHandler.SchemeName)
@@ -99,12 +131,40 @@ public sealed class WizardCreateIdempotencyTests : IAsyncLifetime
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Helper: seed a minimal PdfDocumentEntity so the handler can find the PDF
+    // Helper: seed a minimal UserEntity (once) + PdfDocumentEntity so the
+    // handler can resolve UploadedByUserId FK constraint.
     // ─────────────────────────────────────────────────────────────────────────
+    private bool _userSeeded;
+
+    private async Task EnsureUserSeededAsync(MeepleAiDbContext db)
+    {
+        if (_userSeeded) return;
+        var existing = await db.Users.AsNoTracking()
+            .AnyAsync(u => u.Id == _testUserId);
+        if (!existing)
+        {
+            db.Users.Add(new UserEntity
+            {
+                Id = _testUserId,
+                Email = $"idempotency-test-{_testUserId:N}@test.local",
+                DisplayName = "Idempotency Test Admin",
+                PasswordHash = "test-hash",
+                Role = "Admin",
+                Tier = "free",
+                CreatedAt = DateTime.UtcNow,
+                EmailVerified = true
+            });
+            await db.SaveChangesAsync();
+        }
+        _userSeeded = true;
+    }
+
     private async Task<Guid> SeedOrphanPdfAsync()
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        await EnsureUserSeededAsync(db);
 
         var pdfId = Guid.NewGuid();
         db.PdfDocuments.Add(new PdfDocumentEntity
@@ -169,7 +229,9 @@ public sealed class WizardCreateIdempotencyTests : IAsyncLifetime
             MaxPlayers = 4,
             PlayingTimeMinutes = 60,
             MinAge = 10,
-            SelectedBggId = null
+            // SelectedBggId triggers the BGG mock which supplies description/imageUrl/thumbnailUrl
+            // required by SharedGame.Create() domain validation.
+            SelectedBggId = 174430
         };
 
         // Act — first submit
@@ -213,7 +275,8 @@ public sealed class WizardCreateIdempotencyTests : IAsyncLifetime
             MinPlayers = 2,
             MaxPlayers = 4,
             PlayingTimeMinutes = 60,
-            MinAge = 10
+            MinAge = 10,
+            SelectedBggId = 174430
         };
         var requestB_differentBody = requestA with
         {
@@ -252,7 +315,8 @@ public sealed class WizardCreateIdempotencyTests : IAsyncLifetime
             MaxPlayers = 4,
             PlayingTimeMinutes = 60,
             MinAge = 10,
-            SelectedBggId = null
+            // Use distinct BggIds: shared_games has a unique-per-non-null index on bgg_id.
+            SelectedBggId = 174430
         };
         var requestB = new CreateGameFromPdfRequest
         {
@@ -262,7 +326,7 @@ public sealed class WizardCreateIdempotencyTests : IAsyncLifetime
             MaxPlayers = 4,
             PlayingTimeMinutes = 60,
             MinAge = 10,
-            SelectedBggId = null
+            SelectedBggId = 174431
         };
 
         // Act — two independent keys → two independent creates

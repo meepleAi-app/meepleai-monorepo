@@ -10,11 +10,8 @@ namespace Api.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.RenameColumn(
-                name: "LastLockoutEventId",
-                table: "users",
-                newName: "last_lockout_event_id");
-
+            // Note: last_lockout_event_id was already added as snake_case by migration
+            // 20260606200624_AddIdempotencyGuardsToAuthAndInvitations_Iso1. No rename needed.
             migrationBuilder.AddColumn<string>(
                 name: "bgg_cover_r2_key",
                 table: "shared_games",
@@ -29,11 +26,6 @@ namespace Api.Infrastructure.Migrations
             migrationBuilder.DropColumn(
                 name: "bgg_cover_r2_key",
                 table: "shared_games");
-
-            migrationBuilder.RenameColumn(
-                name: "last_lockout_event_id",
-                table: "users",
-                newName: "LastLockoutEventId");
         }
     }
 }

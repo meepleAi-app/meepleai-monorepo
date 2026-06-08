@@ -363,6 +363,24 @@ User asked to keep going. Two more PRs picking up findings that the wave-9 pass 
 
 Out of the original ~33 tracker findings + cross-cutting items, **~24 (≈73%) are now closed, verified, or have a non-trivial polish PR landed**.
 
+---
+
+## ⏩ Wave 11 a11y + game-detail bite — 2026-06-08
+
+User asked to keep going. Two more PRs closing the last small actionable items.
+
+| Finding | PR | Scope |
+|---|---|---|
+| **F2.2 T6** a11y audit add-game drawer | #2007 | `aria-hidden="true"` on the PenLine / BookOpen icons inside ChoiceCard, and on the ArrowLeft + Search glyphs inside CatalogSearchStep — accessible names are already provided by visible text / `aria-label`. New AddGameDrawer test case asserts both choice cards expose an aria-hidden wrapper. |
+| **F3 partial** info-tab spec rows + Descrizione section | #2008 | `GameInfoTab` prepended with a Designer row (joined names) when catalog fallback enriches the payload; Categorie + Meccaniche rows added after Complessità; description block wrapped in a `<section>` with a "Descrizione" `<h4>` heading + `data-testid="game-info-description"`. New 9-case test suite. |
+
+**Verified — already implemented in tab structure**:
+- **F3 tab nav** — `/library/[gameId]` ships 5 tabs (Info / AI Chat / Toolbox / House Rules / Partite) vs the mockup's 6 (Agente / Documenti / Toolkit / Partite / Recensioni / Dischi). Renames (`aiChat` → Agente, `toolbox` → Toolkit) are cosmetic; structural adds (Documenti, Recensioni, Dischi) require new BE endpoints. Tab restructure remains genuine multi-week scope.
+
+**Cumulative (night + 7+8 + 9 + 10 + 11)**: **20 sub-findings shipped**, 7 verified-no-action (now including F3 tab structure), 5 known-issue defers, large-scope backlog narrowed to F3 full tab restructure + F2.2 T3/T5/T7/T8.
+
+Out of the original ~33 tracker findings + cross-cutting items, **~26 (≈79%) are now closed, verified, or have a non-trivial polish PR landed**.
+
 
 
 ## Pending pages (Round 1 sess 45)

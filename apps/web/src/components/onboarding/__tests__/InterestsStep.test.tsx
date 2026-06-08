@@ -72,10 +72,15 @@ describe('InterestsStep', () => {
     expect(screen.getByText('3 selected')).toBeInTheDocument();
   });
 
-  it('calls onSkip when skip button clicked', async () => {
+  it('calls onSkip when the primary CTA shows "Skip" (no selection) and is clicked', async () => {
+    // F27 #1974: the legacy `interests-skip` text-link was removed because it
+    // duplicated the primary submit's no-selection skip action. Coverage
+    // moves to the primary submit; the no-selection submit path still
+    // delegates to `onSkip` so the wizard never traps the user.
     renderWithQuery(<InterestsStep onComplete={onComplete} onSkip={onSkip} />);
 
-    await user.click(screen.getByTestId('interests-skip'));
+    expect(screen.queryByTestId('interests-skip')).toBeNull();
+    await user.click(screen.getByRole('button', { name: /^skip$/i }));
 
     expect(onSkip).toHaveBeenCalled();
   });

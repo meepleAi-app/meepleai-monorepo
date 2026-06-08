@@ -133,6 +133,19 @@ export function InterestsStep({ onComplete, onSkip }: InterestsStepProps) {
           </p>
         )}
 
+        {/*
+          F27 #1974 (audit 2026-06-07): collapsed the duplicate skip surface.
+          Pre-fix there were two skip affordances on the same row — the
+          primary submit (relabeled "Skip" when nothing was selected) plus a
+          gray text link "Skip for now". The audit flagged this as decision
+          friction: both buttons did the exact same thing (`onSkip`) and the
+          gray link is the conventional secondary affordance, but the orange
+          primary already covers the "no selection → skip" path. We keep the
+          primary submit (it ramps to "Continue" once the user selects
+          anything) and drop the link. `interests-skip` testid is removed
+          along with it; tests should rely on the primary submit's "Skip"
+          label in the empty-selection path.
+        */}
         <div className="flex items-center gap-3">
           <AccessibleButton
             type="submit"
@@ -145,14 +158,6 @@ export function InterestsStep({ onComplete, onSkip }: InterestsStepProps) {
               ? t('pages.onboarding.interests.cta.continue')
               : t('pages.onboarding.interests.cta.skip')}
           </AccessibleButton>
-          <button
-            type="button"
-            onClick={onSkip}
-            className="text-sm text-muted-foreground hover:text-foreground"
-            data-testid="interests-skip"
-          >
-            {t('pages.onboarding.interests.cta.skipForNow')}
-          </button>
         </div>
       </form>
     </div>

@@ -89,7 +89,13 @@ vi.mock('../RagEnhancementsBadge', () => ({
   RagEnhancementsBadge: () => <div data-testid="rag-badge-mock" />,
 }));
 
-vi.mock('@/components/chat/ChatInfoPanel', () => ({
+// Path is `chat-unified/ChatInfoPanel` (matches the actual relative import in
+// ChatThreadView). The previous `@/components/chat/ChatInfoPanel` target did
+// not exist, so the mock never intercepted — the real `ChatInfoPanel` loaded,
+// invoked `useTranslation()` without an `<IntlProvider>` ancestor, and crashed
+// the render (`<body><div /></body>` with `[React Intl] Could not find
+// required `intl` object`). Found in #2010 PR CI 2026-06-08.
+vi.mock('@/components/chat-unified/ChatInfoPanel', () => ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ChatInfoPanel: ({ citations, suggestedQuestions }: any) => (
     <div data-testid="chat-info-panel">

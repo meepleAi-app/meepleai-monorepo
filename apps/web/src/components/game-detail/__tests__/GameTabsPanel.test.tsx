@@ -37,14 +37,16 @@ describe('GameTabsPanel', () => {
 
   it('respects the initialTab prop', () => {
     render(<GameTabsPanel gameId="00000000-0000-4000-8000-000000000001" initialTab="toolbox" />);
-    expect(screen.getByRole('tab', { name: /toolbox/i })).toHaveAttribute('aria-selected', 'true');
+    // Label is "Toolkit" (Newman Strategy 1 — #2010); the underlying tab id is `toolbox`.
+    expect(screen.getByRole('tab', { name: /toolkit/i })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('switches the selected tab on click', () => {
     render(<GameTabsPanel gameId="00000000-0000-4000-8000-000000000001" />);
-    const aiChatTab = screen.getByRole('tab', { name: /ai chat/i });
-    fireEvent.click(aiChatTab);
-    expect(aiChatTab).toHaveAttribute('aria-selected', 'true');
+    // Label is "Agente" (Newman Strategy 1 — #2010); the underlying tab id is `aiChat`.
+    const agentTab = screen.getByRole('tab', { name: /agente/i });
+    fireEvent.click(agentTab);
+    expect(agentTab).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: /info/i })).toHaveAttribute('aria-selected', 'false');
   });
 

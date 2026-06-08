@@ -27,6 +27,7 @@ import { CatalogSearchStep } from '@/app/(authenticated)/library/CatalogSearchSt
 import { UserWizardClient } from '@/app/(authenticated)/library/private/add/client';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/navigation/sheet';
 import { useTranslation } from '@/hooks/useTranslation';
+import { trackEvent } from '@/lib/analytics/track-event';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -93,17 +94,30 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
     };
   }, []);
 
+  // #2012 — Telemetry: drawer-open event drives the conversion-funnel
+  // denominator (open → choice rate, manual:catalog ratio, abandonment).
+  useEffect(() => {
+    if (open) {
+      trackEvent('library_addgame_drawer_opened');
+    }
+  }, [open]);
+
   // Reset to choice step after close animation finishes
   const handleOpenChange = useCallback(
     (isOpen: boolean) => {
       if (!isOpen) {
+        // #2012 — Telemetry: closing while still on the choice step counts
+        // as abandonment (user opened the drawer but selected neither option).
+        if (step === 'choice') {
+          trackEvent('library_addgame_drawer_closed_without_choice');
+        }
         onClose();
         closeTimerRef.current = setTimeout(() => {
           setStep('choice');
         }, 300);
       }
     },
-    [onClose]
+    [onClose, step]
   );
 
   // Called by CatalogSearchStep after game is successfully added to library.
@@ -146,7 +160,10 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
                 icon={<PenLine className="h-6 w-6" />}
                 title={t('pages.library.addGame.manualLabel')}
                 description={t('pages.library.addGame.manualDescription')}
-                onClick={() => setStep('manual')}
+                onClick={() => {
+                  trackEvent('library_addgame_choice_selected', { choice: 'manual' });
+                  setStep('manual');
+                }}
               />
 
               <ChoiceCard
@@ -154,7 +171,10 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
                 icon={<BookOpen className="h-6 w-6" />}
                 title={t('pages.library.addGame.catalogLabel')}
                 description={t('pages.library.addGame.catalogDescription')}
-                onClick={() => setStep('catalog')}
+                onClick={() => {
+                  trackEvent('library_addgame_choice_selected', { choice: 'catalog' });
+                  setStep('catalog');
+                }}
               />
             </div>
           )}

@@ -570,6 +570,11 @@ public sealed class CreateSharedGameFromPdfCommandHandlerTests : IDisposable
         savedEntity.Should().NotBeNull("downloader should have set BggCoverR2Key on the tracked entity");
         savedEntity!.BggCoverR2Key.Should().Be(expectedR2Key);
 
+        // Polish: also verify the value survives a full DbContext round-trip query
+        var persistedEntity = await _dbContext.Set<SharedGameEntity>()
+            .FirstAsync(e => e.Id == result.GameId);
+        persistedEntity.BggCoverR2Key.Should().Be(expectedR2Key);
+
         // ImageUrl remains BGG direct URL (convention F4 — CoverUrlResolver is authoritative display source)
         savedEntity.ImageUrl.Should().Be("https://cf.geekdo-images.com/abc.jpg");
     }

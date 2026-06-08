@@ -164,6 +164,8 @@ export function KbHubContent({ gameId }: KbHubContentProps): ReactElement {
     headerSubtitle: t('pages.library.gameDetail.kb.header.titleSuffix'),
     uploadCta: t('pages.library.gameDetail.kb.header.uploadCta'),
     reindexAllCta: t('pages.library.gameDetail.kb.header.reindexAllCta'),
+    // F10 #1974: bottom drop-zone CTA — discoverable upload affordance.
+    dropZoneCta: t('pages.library.gameDetail.kb.header.dropZoneCta'),
     indexingBadge: t('pages.library.gameDetail.kb.stats.indexingBadge'),
     indexingDescription: t('pages.library.gameDetail.kb.stats.indexingDescription'),
     statsStrip: {

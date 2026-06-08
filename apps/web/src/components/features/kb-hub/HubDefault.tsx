@@ -58,6 +58,10 @@ export interface HubDefaultLabels {
   // hub does not render the badge slot.
   readonly indexingBadge?: string;
   readonly indexingDescription?: string;
+  // F10 #1974 — bottom drop-zone CTA label (mockup: "Trascina un PDF o
+  // clicca per caricarlo"). Optional — when undefined the hub omits the
+  // drop zone (legacy consumers get no regression).
+  readonly dropZoneCta?: string;
 }
 
 export interface HubDefaultProps {
@@ -255,6 +259,32 @@ export function HubDefault(props: HubDefaultProps): ReactElement {
           <PdfRow key={pdf.id} pdf={pdf} labels={labels.pdfRow} onActionClick={onPdfAction} />
         ))}
       </div>
+
+      {/*
+        F10 #1974 (audit 2026-06-07): bottom drop-zone CTA. The mockup
+        ships a dashed-bordered tappable region under the PDF list that
+        invites the user to drop a PDF (or click). Pre-fix the only upload
+        affordance was the small "+ Carica PDF" button in the header —
+        easy to miss on a wide screen and discovery-unfriendly for new
+        users. We render the same `onUpload` handler so the click path
+        stays unchanged; drag-and-drop wiring is deferred to the upload
+        flow itself (Issue #1816 P3 / future PR). The CTA only renders
+        when the caller provides a label, so consumers that don't want
+        the affordance pay nothing.
+      */}
+      {labels.dropZoneCta && (
+        <button
+          type="button"
+          onClick={onUpload}
+          data-slot="kb-hub-default-drop-zone"
+          className="m-4 flex w-[calc(100%-2rem)] items-center justify-center gap-2 rounded-md border-2 border-dashed border-entity-kb/30 bg-entity-kb/4 px-4 py-5 text-sm font-bold text-entity-kb transition-colors hover:border-entity-kb/55 hover:bg-entity-kb/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-entity-kb focus-visible:ring-offset-2"
+        >
+          <span aria-hidden="true" className="text-base">
+            ⬆
+          </span>
+          <span>{labels.dropZoneCta}</span>
+        </button>
+      )}
     </section>
   );
 }

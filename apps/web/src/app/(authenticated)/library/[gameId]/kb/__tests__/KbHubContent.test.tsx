@@ -71,6 +71,7 @@ const MESSAGES: Record<string, string> = {
   'pages.library.gameDetail.kb.header.titleSuffix': 'Knowledge Base',
   'pages.library.gameDetail.kb.header.uploadCta': '+ Carica PDF',
   'pages.library.gameDetail.kb.header.reindexAllCta': 'Re-index all',
+  'pages.library.gameDetail.kb.header.dropZoneCta': 'Trascina un PDF qui o clicca per caricarlo',
   'pages.library.gameDetail.kb.stats.docs': '{count} documenti',
   'pages.library.gameDetail.kb.stats.docsLabel': 'Documenti',
   'pages.library.gameDetail.kb.stats.chunksLabel': 'Chunks',

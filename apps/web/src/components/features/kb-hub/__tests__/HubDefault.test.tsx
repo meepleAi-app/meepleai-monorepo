@@ -154,6 +154,45 @@ describe('HubDefault (Issue #1481)', () => {
     expect(screen.queryByText(/embeddings$/)).not.toBeInTheDocument();
   });
 
+  it('does NOT render the bottom drop-zone CTA when labels.dropZoneCta is missing (F10 #1974)', () => {
+    const { container } = render(
+      <HubDefault
+        game={baseGame}
+        documentCount={2}
+        coverageLevel="Basic"
+        pdfs={basePdfs}
+        labels={baseLabels}
+        onUpload={() => {}}
+        onReindexAll={() => {}}
+        onPdfAction={() => {}}
+      />
+    );
+    expect(
+      container.querySelector('[data-slot="kb-hub-default-drop-zone"]')
+    ).not.toBeInTheDocument();
+  });
+
+  it('renders the bottom drop-zone CTA and wires onUpload when label is provided (F10 #1974)', () => {
+    const onUpload = vi.fn();
+    const { container } = render(
+      <HubDefault
+        game={baseGame}
+        documentCount={2}
+        coverageLevel="Basic"
+        pdfs={basePdfs}
+        labels={{ ...baseLabels, dropZoneCta: 'Trascina un PDF qui o clicca per caricarlo' }}
+        onUpload={onUpload}
+        onReindexAll={() => {}}
+        onPdfAction={() => {}}
+      />
+    );
+    const dropZone = container.querySelector('[data-slot="kb-hub-default-drop-zone"]');
+    expect(dropZone).toBeInTheDocument();
+    expect(dropZone).toHaveTextContent('Trascina un PDF qui o clicca per caricarlo');
+    fireEvent.click(dropZone!);
+    expect(onUpload).toHaveBeenCalledTimes(1);
+  });
+
   it('renders each stat as a separate tag-style chip (F5 #1974)', () => {
     // F5 regression guard: the stats strip moved from a single dot-separated
     // mono line to a row of bordered chips so the metrics are scannable at

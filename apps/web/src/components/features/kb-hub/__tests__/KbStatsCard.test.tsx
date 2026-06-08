@@ -193,4 +193,40 @@ describe('KbStatsCard (Issue #1481)', () => {
     ).not.toBeInTheDocument();
     expect(container.querySelector('[data-slot="kb-hub-stats-sparkline"]')).not.toBeInTheDocument();
   });
+
+  it('hides the sparkline when costHistory contains only zeros (F9 #1974)', () => {
+    // F9 regression guard: the BE seeds an empty 7-day cost window for KBs
+    // that have never been used. Pre-fix the sparkline rendered 7 flat
+    // zero-height bars — pure UI noise. Now the chart is hidden unless at
+    // least one datapoint is non-zero.
+    const { container } = render(
+      <KbStatsCard
+        documentCount={12}
+        coverageLevel="Standard"
+        coverageScore={73}
+        lifetimeCost="$0.00"
+        costHistory={[0, 0, 0, 0, 0, 0, 0]}
+        labels={baseLabels}
+      />
+    );
+    expect(container.querySelector('[data-slot="kb-hub-stats-sparkline"]')).not.toBeInTheDocument();
+    // Lifetime cost row is independent of sparkline signal — it still renders
+    // (the card still wants to surface the explicit "$0.00 lifetime" state).
+    expect(container.querySelector('[data-slot="kb-hub-stats-lifetime-cost"]')).toBeInTheDocument();
+  });
+
+  it('renders the sparkline when at least one datapoint is non-zero (F9 #1974)', () => {
+    const { container } = render(
+      <KbStatsCard
+        documentCount={12}
+        coverageLevel="Standard"
+        coverageScore={73}
+        lifetimeCost="$0.04"
+        // 6 zeros + 1 spike — first real activity within the window.
+        costHistory={[0, 0, 0, 0, 0, 0, 0.04]}
+        labels={baseLabels}
+      />
+    );
+    expect(container.querySelector('[data-slot="kb-hub-stats-sparkline"]')).toBeInTheDocument();
+  });
 });

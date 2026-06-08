@@ -13,6 +13,13 @@ export interface AuthUser {
   role: string;
   onboardingCompleted?: boolean; // Issue #323
   onboardingSkipped?: boolean; // Issue #323
+  /**
+   * F1 #1974 (audit 2026-06-07): registration auto-login lands the user in
+   * a grace period — most actions still work but the email is unverified.
+   * Shell renders a verify-email banner when this is `false`. Optional so
+   * legacy mock fixtures and OAuth-only flows can omit it.
+   */
+  emailVerified?: boolean;
 }
 
 /**

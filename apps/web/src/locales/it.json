@@ -228,6 +228,12 @@
     "emailVerification": {
       "pageTitle": "Verifica email",
       "verifying": "Verifica email in corso...",
+      "banner": {
+        "title": "Verifica la tua email",
+        "description": "Conferma la tua email per sbloccare tutte le funzionalità di MeepleAI.",
+        "cta": "Verifica ora",
+        "dismissAriaLabel": "Chiudi banner"
+      },
       "pending": {
         "title": "Controlla la tua email",
         "description": "Ti abbiamo inviato un link di verifica al tuo indirizzo email.",

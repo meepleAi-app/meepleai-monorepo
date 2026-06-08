@@ -8431,6 +8431,24 @@ namespace Api.Infrastructure.Migrations
                 table: "pgvector_embeddings",
                 column: "vector_document_id");
 
+            // Issue #2022: search_vector tsvector + GIN index for hybrid full-text search.
+            // EF Core cannot model GENERATED ALWAYS AS (...) STORED for tsvector, so we use
+            // raw SQL here. The original 81 pre-squash migrations added these via raw SQL too;
+            // the column was lost during the migrations squash because PgVectorEmbeddingEntity
+            // does not declare it (it is server-managed). PgVectorStoreAdapter.EnsureCollectionExistsAsync
+            // also has a defensive ALTER TABLE IF NOT EXISTS fallback, but it runs AFTER the
+            // CREATE INDEX call and therefore cannot recover from a fresh-deploy on its own —
+            // the index creation fails with 42703: column "search_vector" does not exist.
+            migrationBuilder.Sql(@"
+                ALTER TABLE pgvector_embeddings
+                ADD COLUMN IF NOT EXISTS search_vector tsvector
+                GENERATED ALWAYS AS (to_tsvector('english', text_content)) STORED;");
+
+            migrationBuilder.Sql(@"
+                CREATE INDEX IF NOT EXISTS idx_pgvector_embeddings_search_vector
+                ON pgvector_embeddings
+                USING gin (search_vector);");
+
             migrationBuilder.CreateIndex(
                 name: "ix_photo_batch_pages_batch_id",
                 table: "photo_batch_pages",

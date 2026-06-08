@@ -5,7 +5,6 @@ using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.EventHandlers;
-using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.UserLibrary.Application.EventHandlers;
@@ -105,19 +104,14 @@ internal sealed class CreateProposalMigrationOnApprovalHandler : DomainEventHand
             userId: shareRequest.UserId,
             sourceEventId: domainEvent.EventId);
 
-        try
+        // CF-2 / #1938 deferred follow-up: AddAndCommitAsync wraps AddAsync + an
+        // inline SaveChangesAsync with a 23505 catch. Returns false when an outbox
+        // replay (#1535 at-least-once delivery) or concurrent pod already wrote the
+        // row keyed by this EventId — log and skip silently so the legitimate
+        // replay doesn't surface as an alarm.
+        if (!await _migrationRepo.AddAndCommitAsync(migration, cancellationToken).ConfigureAwait(false))
         {
-            await _migrationRepo.AddAsync(migration, cancellationToken).ConfigureAwait(false);
-        }
-        catch (DbUpdateException ex) when (CounterTableIdempotency.IsUniqueViolation(ex))
-        {
-            // CF-2 / #1938: outbox replay (#1535 at-least-once delivery) for a ShareRequest
-            // approval already processed. The partial UNIQUE index on
-            // proposal_migrations.source_event_id blocked the duplicate insert. Return
-            // without throwing so the base DomainEventHandlerBase doesn't log this as a
-            // failure — legitimate replays are not failures.
             Logger.LogInformation(
-                ex,
                 "Skipping duplicate ProposalMigration for ShareRequest {ShareRequestId}: SourceEventId={SourceEventId} (already recorded)",
                 shareRequest.Id, domainEvent.EventId);
             return;

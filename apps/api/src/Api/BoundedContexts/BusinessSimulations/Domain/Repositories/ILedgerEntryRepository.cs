@@ -60,4 +60,19 @@ internal interface ILedgerEntryRepository : IRepository<LedgerEntry, Guid>
         int page = 1,
         int pageSize = 20,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Inserts the LedgerEntry and commits the change immediately. Returns
+    /// <c>false</c> when the insert violates the <c>(source_event_id)</c> UNIQUE
+    /// partial index — an outbox replay or concurrent pod already wrote the
+    /// row for this <c>IDomainEvent.EventId</c> (CF-2 / #1938). On <c>false</c>
+    /// the tracked entity is detached so subsequent <c>SaveChanges</c> on the
+    /// same scoped context don't retry it.
+    /// </summary>
+    /// <remarks>
+    /// Inline-commit pattern. Used by <see cref="Api.BoundedContexts.BusinessSimulations.Application.Interfaces.ILedgerTrackingService.TrackTokenUsageAsync"/>
+    /// where the rest of the service relies on a downstream UoW pipeline that
+    /// would otherwise turn a 23505 into an unhandled exception.
+    /// </remarks>
+    Task<bool> AddAndCommitAsync(LedgerEntry entry, CancellationToken cancellationToken = default);
 }

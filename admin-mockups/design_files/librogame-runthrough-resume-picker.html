@@ -7,12 +7,25 @@
 <!--
   Mockup: librogame-runthrough-resume-picker
   Route:  /library/{gameId}/play  (gameId = librogame)
-  Scope:  Phase A runthrough — dispatcher 4 stati di campagna (issue #835/#838)
-  Stati:  state-01-first-time      (EmptyFirstTime,  data.length === 0)
-          state-02-single-resume   (ResumeHero,      data.length === 1 && !isStale)
-          state-03-multi-campaign  (MultiCampaignList, data.length >= 2)
-          state-04-stale-warning   (StaleWarningCard, data.length === 1 && isStale)
+  Scope:  Phase A runthrough — dispatcher 5 stati di campagna (issue #835/#838 + #2025 ext)
+  Stati:  state-01-first-time         (EmptyFirstTime,    data.length === 0)
+          state-02-single-resume      (ResumeHero,        data.length === 1 && !isStale)
+          state-03-multi-campaign     (MultiCampaignList, data.length >= 2)
+          state-04-stale-warning      (StaleWarningCard,  data.length === 1 && isStale)
+          state-05-with-tutorial      (ResumeHeroWithTutorial, data.length === 1 && !isStale
+                                       && tutorialAvailable) — extension #2025
   Persona: Aaron (badsworm@gmail.com), gioca con Marco/Giulia/Luca (gruppo A) e con la fidanzata (gruppo B).
+
+  ─── State 05 extension (issue #2025 audit 2026-06-08, B20 row 4) ───
+  Variante di state-02 quando il game ha un PDF di tipo "tutorial" caricato.
+  Schema backend: leverages DocumentCategory.QuickStart enum
+  (apps/api/src/Api/BoundedContexts/DocumentProcessing/Domain/Enums/DocumentCategory.cs:27)
+  come nearest semantic match. Future schema extension a DocumentCategory.Tutorial=7
+  considerata out-of-scope per questo mockup (richiederebbe DB migration).
+  Conditional rendering: si attiva quando games.pdfDocuments.any(p =>
+    p.DocumentCategory === DocumentCategory.QuickStart && p.IsActiveForRag).
+  UX: aggiunge pip "📚 Tutorial · N step" sopra glossary + CTA secondario
+  "📚 Tutorial" prima di Opzioni. CTA "Riprendi" resta primary.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -728,6 +741,117 @@
               <button class="btn-out">✨ Solo nuova (mantieni archivio)</button>
             </div>
           </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO 05 · SINGLE RESUME + TUTORIAL (ResumeHeroWithTutorial)
+       Variante di state-02 quando il game ha PDF DocumentCategory.QuickStart
+       (proxy semantico per "Tutorial" — vedi commento header).
+       Conditional rendering: data.length === 1 && !isStale && tutorialAvailable.
+       Extension audit 2026-06-08 #2025 / B20 row 4.
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" aria-labelledby="s5">
+    <span class="label">Stato 05 · Single Resume + Tutorial<span class="cmp">ResumeHeroWithTutorial</span></span>
+    <h2 id="s5">1 campagna attiva + Tutorial disponibile</h2>
+    <p class="desc">Aaron ha caricato un PDF tipo Quick Start (DocumentCategory.QuickStart) per Eldoria. Stessa identità di state-02 ma con badge "Tutorial 8 step" sopra glossario e CTA secondario "📚 Tutorial" prima di Opzioni. CTA primary resta Riprendi.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – single resume with tutorial">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>20:42</span><span class="ind">📶 🔋 91%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Eldoria</strong> · Libro game</span>
+        </div>
+        <div class="content" style="padding: 0;">
+          <article class="resume-hero" aria-labelledby="rh5">
+            <div class="header">
+              <span class="pulse" aria-hidden="true"></span>
+              <span class="label">In corso</span>
+              <span class="label" style="margin-left: var(--s-2); background: hsl(var(--c-kb) / 0.12); color: hsl(var(--c-kb));" aria-label="Tutorial disponibile">📚 Tutorial pronto</span>
+            </div>
+            <h2 id="rh5">Campagna con i ragazzi</h2>
+            <div class="meta">
+              <span class="meta-item">📅 Iniziata 23 giorni fa</span>
+              <span class="meta-item">⏱️ Ultima sessione 7 giorni fa</span>
+            </div>
+
+            <div class="progress">
+              <span class="num">§289</span>
+              <div class="lbl">
+                <div class="v">Ultimo paragrafo letto</div>
+                <div class="s">Capitolo 4 — La grotta dei Goblin</div>
+              </div>
+            </div>
+
+            <div class="pips">
+              <span class="pip player">👤 Marco · Giulia · Luca · Aaron</span>
+              <span class="pip kb">📚 Tutorial · 8 step</span>
+              <span class="pip kb">📄 12 termini glossario</span>
+              <span class="pip chat">💬 47 Q&amp;A</span>
+            </div>
+
+            <div class="resume-actions">
+              <button class="btn-fill" type="button" aria-describedby="rh5">▶ Riprendi</button>
+              <button class="btn-out" type="button" aria-label="Apri tutorial Quick Start" style="border-color: hsl(var(--c-kb) / 0.4); color: hsl(var(--c-kb));">📚 Tutorial</button>
+              <button class="btn-out" type="button" aria-label="Altre opzioni">⋯</button>
+            </div>
+          </article>
+
+          <div class="secondary-row">
+            <span class="ico" aria-hidden="true">+</span>
+            <span class="l">Vuoi giocare con un altro gruppo?</span>
+            <button class="link-btn">Nuova campagna</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – single resume with tutorial">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Eldoria</strong> · Libro game</span>
+        </div>
+        <div class="content" style="max-width: 720px; margin: 0 auto;">
+          <article class="resume-hero">
+            <div class="header">
+              <span class="pulse"></span>
+              <span class="label">In corso</span>
+              <span class="label" style="margin-left: var(--s-2); background: hsl(var(--c-kb) / 0.12); color: hsl(var(--c-kb));">📚 Tutorial pronto</span>
+            </div>
+            <h2>Campagna con i ragazzi</h2>
+            <div class="meta">
+              <span class="meta-item">📅 Iniziata 23 giorni fa</span>
+              <span class="meta-item">⏱️ Ultima sessione 7 giorni fa</span>
+            </div>
+            <div class="progress">
+              <span class="num">§289</span>
+              <div class="lbl">
+                <div class="v">Ultimo paragrafo letto</div>
+                <div class="s">Capitolo 4 — La grotta dei Goblin</div>
+              </div>
+            </div>
+            <div class="pips">
+              <span class="pip player">👤 Marco · Giulia · Luca · Aaron</span>
+              <span class="pip kb">📚 Tutorial · 8 step</span>
+              <span class="pip kb">📄 12 termini glossario</span>
+              <span class="pip chat">💬 47 Q&amp;A</span>
+            </div>
+            <div class="resume-actions">
+              <button class="btn-fill" type="button">▶ Riprendi</button>
+              <button class="btn-out" type="button" aria-label="Apri tutorial Quick Start" style="border-color: hsl(var(--c-kb) / 0.4); color: hsl(var(--c-kb));">📚 Tutorial</button>
+              <button class="btn-out" type="button" aria-label="Altre opzioni">⋯ Opzioni</button>
+            </div>
+          </article>
+          <div class="secondary-row">
+            <span class="ico">+</span>
+            <span class="l">Vuoi giocare con un altro gruppo?</span>
+            <button class="link-btn">Nuova campagna</button>
+          </div>
         </div>
       </div>
     </div>

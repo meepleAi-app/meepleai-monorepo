@@ -106,6 +106,21 @@ jobs:
       - name: Build Solution (Release)
         run: dotnet build MeepleAI.Api.sln --no-restore --configuration Release
 
+      # #1960 — Replicate the Docker production publish so warnings-as-errors
+      # surface BEFORE merge instead of at deploy time. PR #1892 introduced a
+      # CS8604 that compiled cleanly under `dotnet build` but failed under
+      # `dotnet publish -c Release` with `TreatWarningsAsErrors=true` (csproj
+      # line 10). The bug survived 4 days because no staging deploy ran in
+      # between. ~30-60s marginal cost on the runner; major safety win.
+      - name: Verify production-grade publish (catch warnings-as-errors)
+        run: |
+          dotnet publish src/Api/Api.csproj \
+            -c Release \
+            -p:SkipAnalyzers=true \
+            -p:GenerateDocumentationFile=false \
+            -o /tmp/publish-verify \
+            --no-restore
+
       - name: Package build artifacts
         # Tar+zstd preserves symlinks and timestamps; small overhead vs raw upload
         # but avoids the artifact-v4+ silent permission stripping on bin/ executables.

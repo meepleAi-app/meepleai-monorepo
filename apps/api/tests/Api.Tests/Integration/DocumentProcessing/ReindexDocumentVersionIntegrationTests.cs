@@ -1,7 +1,9 @@
 using System.Text.Json;
 using Api.BoundedContexts.Administration.Application.Behaviors;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
@@ -61,6 +63,12 @@ public sealed class ReindexDocumentVersionIntegrationTests : IAsyncLifetime
         services.AddSingleton<IHttpContextAccessor>(
             new Mock<IHttpContextAccessor>().Object); // returns null HttpContext — behavior handles this
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AuditLoggingBehavior<,>));
+
+        // Issue #2023: tests verifying the Pending → Extracting handoff need the production
+        // RelationalPdfClaimService (raw SQL atomic UPDATE) — IPdfClaimService is NOT in the
+        // IntegrationServiceCollectionBuilder base because most reindex tests don't exercise
+        // the claim step. Registering it here keeps the build minimal for all other tests.
+        services.AddScoped<IPdfClaimService, RelationalPdfClaimService>();
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -198,6 +206,67 @@ public sealed class ReindexDocumentVersionIntegrationTests : IAsyncLifetime
         rows.Should().Contain(
             r => HasMatchingAuditPayload(r.PayloadJson, "DocumentReindex", "Document"),
             "a successful reindex must write an audit outbox row with Action=DocumentReindex Resource=Document");
+    }
+
+    [Fact]
+    [Trait("Issue", "2023")]
+    public async Task Reindex_FromFailedState_PersistsPendingAndIsClaimableByPipeline()
+    {
+        // Issue #2023: ensure the documented Failed → Pending transition is committed to the
+        // database before the Quartz pipeline picks it up. The original bug report observed the
+        // pipeline log "PDF not in Pending state (already claimed or terminal), skipping" after a
+        // successful reindex; this test reproduces the exact end-to-end handoff (ReindexDocumentCommand
+        // → DB state Pending → RelationalPdfClaimService.TryClaimPendingAsync → state Extracting)
+        // against a real PostgreSQL instance, so any future regression on the SaveChanges/transaction
+        // boundary of the reindex handler fails here.
+        var pdf = await SeedPdfAsync(state: "Failed");
+
+        await _mediator!.Send(
+            new ReindexDocumentCommand(pdf.Id, IndexerVersionRegistry.Current.Version),
+            TestCancellationToken);
+
+        // Read with AsNoTracking + fresh scope to simulate what the Quartz pipeline sees
+        // when it runs in a different scope ~seconds later.
+        using (var verifyScope = _serviceProvider!.CreateScope())
+        {
+            var verifyDb = verifyScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var afterReindex = await verifyDb.PdfDocuments
+                .AsNoTracking()
+                .FirstAsync(p => p.Id == pdf.Id, TestCancellationToken);
+
+            afterReindex.ProcessingState.Should().Be(
+                "Pending",
+                "ReindexDocumentCommandHandler must commit ProcessingState = Pending in the same "
+                + "SaveChanges call as the rest of the reset fields (issue #2023). A fresh scope "
+                + "must observe the committed state without any L1-cache tricks.");
+            afterReindex.ProcessedAt.Should().BeNull();
+            afterReindex.ProcessingError.Should().BeNull();
+            afterReindex.RetryCount.Should().Be(0);
+        }
+
+        // Verify the production RelationalPdfClaimService (raw SQL UPDATE ... WHERE
+        // processing_state = 'Pending') can successfully claim the document — this is the
+        // operation that was logged as "skipping" in the bug report.
+        using (var claimScope = _serviceProvider!.CreateScope())
+        {
+            var claimService = claimScope.ServiceProvider.GetRequiredService<IPdfClaimService>();
+            var claimed = await claimService.TryClaimPendingAsync(pdf.Id, TestCancellationToken);
+
+            claimed.Should().BeTrue(
+                "the pipeline claim service must observe Pending and atomically transition to "
+                + "Extracting; if this fails the bug from #2023 has regressed.");
+        }
+
+        // Final state check: after the claim, the PDF is in Extracting.
+        using (var postClaimScope = _serviceProvider!.CreateScope())
+        {
+            var postClaimDb = postClaimScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var afterClaim = await postClaimDb.PdfDocuments
+                .AsNoTracking()
+                .FirstAsync(p => p.Id == pdf.Id, TestCancellationToken);
+
+            afterClaim.ProcessingState.Should().Be("Extracting");
+        }
     }
 
     [Fact]

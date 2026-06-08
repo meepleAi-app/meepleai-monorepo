@@ -139,6 +139,20 @@ describe('AddGameDrawer', () => {
       expect(screen.queryByTestId('user-wizard-client')).not.toBeInTheDocument();
       expect(screen.queryByTestId('catalog-search-step')).not.toBeInTheDocument();
     });
+
+    it('hides decorative choice-card icons from assistive tech (F2.2 T6 #1974)', () => {
+      // T6 a11y audit: the choice cards layer an icon next to the title +
+      // description. The icon is purely decorative — its wrapper must
+      // carry `aria-hidden="true"` so a screen reader announces "Add
+      // manually, Enter the game details…" instead of "image, Add
+      // manually, …". We assert at least one aria-hidden wrapper inside
+      // each choice card.
+      renderDrawer({ open: true });
+      const manualCard = screen.getByTestId('add-game-choice-manual');
+      const catalogCard = screen.getByTestId('add-game-choice-catalog');
+      expect(manualCard.querySelector('[aria-hidden="true"]')).not.toBeNull();
+      expect(catalogCard.querySelector('[aria-hidden="true"]')).not.toBeNull();
+    });
   });
 
   describe('Step 1a: Manual wizard', () => {

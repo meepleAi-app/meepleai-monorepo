@@ -325,6 +325,29 @@ finder-grain polish items that the first pass deferred.
 
 **Cumulative (night session + wave 7+8)**: 13 sub-findings shipped (7 + 6), 5 verified-no-action (4 + 1), 5 known-issue defers (2 + 3), 14 large-scope defers (9 + 5). Out of the original ~33 tracker findings + cross-cutting items, **18 closed/verified, 5 deferred to known-issue tracking, 10 carry as separate sub-issue work**.
 
+---
+
+## 🌙 Wave 9 BE-deferred + multi-PR clearance — 2026-06-08
+
+User asked the autonomous loop to keep going through the "BE-deferred and multi-PR scope" cluster. Four more PRs:
+
+| Finding | PR | Scope |
+|---|---|---|
+| **F6** PDF row processing-state badges | #2000 | Extend FE `GamePdfDtoSchema` with `processingState`; map BE state → FE `PdfStatus` (Pending/Uploading/…/Indexing → indexing, Ready → ready, Failed → failed, unknown → indexing fwd-compat); add `data-status` attr to PdfRow badge for test scoping. |
+| **F2.2 T1+T2** catalog search i18n + empty state | #2001 | Move all hardcoded EN ("No image", "Select", "Search games…", toasts, …) to `pages.library.addGame.catalog.*`. Upgrade empty-results from muted line to 🔎 block with heading + subtitle. Test suite migrated to `renderWithIntl` with self-contained EN dictionary. |
+| **F20** dashboard Recenti completati | #2002 | New BE endpoint `GET /api/v1/game-nights/completed?limit={n}` (query + handler + repository method capped at [1,50]; surfaces `Completed` events + past-Published treated as effectively completed). FE client `getCompleted()`, `useCompletedGameNights` hook, `DashboardClient` Slot #2 projection wired. |
+
+**Verified — already implemented (no change)**:
+- **F11** chat 3-col layout — `ChatInfoPanel` (340px right sidebar, lg+ only) already mounted in `ChatThreadView.tsx:898` with game info + citations + suggested questions. Differences from the mockup are marginal polish (260px vs 340px + agent meta) — out of scope.
+
+**Out of scope (genuine multi-week work)**:
+- **F3** `/library/[gameId]` full rebuild — 3-4 week multi-PR scope
+- **F2.2 T3-T8** AddGameDrawer — focus trap, toast variants, choice card copy, decomposition (5 follow-on tasks)
+
+**Wave 9 net**: 3 sub-findings shipped + 1 verified-no-action + 2 explicitly deferred (F3, F2.2 T3-T8).
+
+**Cumulative across all autonomous-loop passes (night + 7+8 + 9)**: **16 sub-findings shipped**, 6 verified-no-action, 5 known-issue defers, ~10 large-scope items still on the backlog. Of the original ~33 tracker items, **~22 are now closed/verified**.
+
 
 
 ## Pending pages (Round 1 sess 45)

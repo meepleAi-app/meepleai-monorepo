@@ -815,22 +815,30 @@ jobs:
           # that already has the squashed InitialCreate row crashes with
           # `ERROR: relation "..." already exists`.
           #
-          # Strategy: parse the target MigrationId from the SQL (the last
-          # `'<14 digits>_<Name>'` literal — EF emits each migration's
-          # INSERT INTO __EFMigrationsHistory at the bottom). Query the DB; if
-          # the row is already present, skip Steps 2–3 (upload + apply) but
-          # keep Step 4 verify to confirm schema state. Backup in Step 1 still
-          # runs — cheap insurance vs. zero cost saving.
+          # Strategy: parse the target MigrationId from the SQL — pick the
+          # lexicographically largest `'<14 digits>_<Name>'` literal across
+          # all INSERT INTO __EFMigrationsHistory statements. Lexicographic
+          # order matches temporal order because the 14-digit prefix is a
+          # zero-padded UTC timestamp (`yyyyMMddHHmmss`), so the largest
+          # string == the most recent migration the script will apply. Then
+          # query the DB: if the row is already present, skip Steps 2–3
+          # (upload + apply) but keep Step 4 verify to confirm schema state.
+          # Backup in Step 1 still runs — cheap insurance vs. zero cost saving.
           LATEST_IN_SCRIPT=$(grep -oE "'[0-9]{14}_[A-Za-z][A-Za-z0-9_]*'" /tmp/migrations.sql | sort -u | tail -1 | tr -d "'")
           SKIP_APPLY=0
           if [ -z "$LATEST_IN_SCRIPT" ]; then
             echo "⚠️  Could not extract target MigrationId from script — proceeding with apply"
           else
             echo "🔍 Script targets migration: ${LATEST_IN_SCRIPT}"
-            # `|| true` swallows psql's nonzero exit when the table doesn't
-            # exist yet (first deploy / fresh DB) so $APPLIED stays empty and
-            # we fall through to apply. tr -d strips whitespace so the equality
-            # check is exact even with psql's tA mode trailing newline.
+            # `|| true` keeps the build green when psql exits nonzero because
+            # `__EFMigrationsHistory` doesn't exist yet (fresh DB / first
+            # deploy) — $APPLIED stays empty and we fall through to apply.
+            # It ALSO swallows SSH/docker transport errors (host unreachable,
+            # container missing), but that's safe: $APPLIED still ends up
+            # empty → SKIP_APPLY stays 0 → Step 2 attempts scp, which will
+            # fail loudly with a nonzero exit under `set -euo pipefail`. So
+            # transient infra failures surface at Step 2, never as a silent
+            # skip. tr -d strips psql's tA-mode trailing newline.
             APPLIED_RAW=$($SSH_CMD "docker exec meepleai-postgres psql -tA -U meepleai -d meepleai_staging -c \"SELECT \\\"MigrationId\\\" FROM \\\"__EFMigrationsHistory\\\" WHERE \\\"MigrationId\\\" = '${LATEST_IN_SCRIPT}'\" 2>/dev/null" || true)
             APPLIED=$(echo "$APPLIED_RAW" | tr -d '[:space:]')
             if [ "$APPLIED" = "$LATEST_IN_SCRIPT" ]; then

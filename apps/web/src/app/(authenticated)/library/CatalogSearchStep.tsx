@@ -238,11 +238,19 @@ export function CatalogSearchStep({ onSelect, onBack }: CatalogSearchStepProps) 
           aria-label={t('pages.library.addGame.catalog.backAriaLabel')}
           data-testid="catalog-search-back"
         >
-          <ArrowLeft className="h-4 w-4" />
+          {/* F2.2 T6 #1974 a11y audit: decorative icon — the button already
+              carries its accessible name via aria-label. */}
+          <ArrowLeft aria-hidden="true" className="h-4 w-4" />
         </Button>
 
         <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          {/* F2.2 T6 #1974 a11y audit: decorative search glyph — the input
+              already carries its accessible name via aria-label + the
+              visible placeholder. */}
+          <Search
+            aria-hidden="true"
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
+          />
           <input
             type="search"
             placeholder={t('pages.library.addGame.catalog.searchPlaceholder')}

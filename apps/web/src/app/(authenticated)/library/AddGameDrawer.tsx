@@ -56,7 +56,15 @@ function ChoiceCard({ icon, title, description, onClick, 'data-testid': testId }
       ].join(' ')}
     >
       <div className="flex items-start gap-4">
-        <div className="flex-shrink-0 mt-0.5 text-orange-500">{icon}</div>
+        {/*
+          F2.2 T6 #1974 (audit 2026-06-07, a11y audit): icon is purely
+          decorative — the title + description below already convey the
+          choice. `aria-hidden` keeps screen readers from announcing
+          "image, image" before the meaningful label.
+        */}
+        <div aria-hidden="true" className="flex-shrink-0 mt-0.5 text-orange-500">
+          {icon}
+        </div>
         <div>
           <p className="font-semibold text-foreground">{title}</p>
           <p className="text-sm text-muted-foreground mt-1">{description}</p>

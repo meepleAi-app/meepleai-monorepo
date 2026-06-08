@@ -165,13 +165,16 @@ function renderWithIntl(node: ReactNode): ReturnType<typeof render> {
 
 const GAME_ID = '11111111-1111-1111-1111-111111111111';
 
-function pdfFixture(overrides: Partial<{ id: string; name: string; bytes: number }> = {}): {
+function pdfFixture(
+  overrides: Partial<{ id: string; name: string; bytes: number; processingState: string }> = {}
+): {
   id: string;
   name: string;
   pageCount: number;
   fileSizeBytes: number;
   uploadedAt: string;
   source: 'Custom';
+  processingState: string;
 } {
   return {
     id: overrides.id ?? 'p1',
@@ -180,6 +183,9 @@ function pdfFixture(overrides: Partial<{ id: string; name: string; bytes: number
     fileSizeBytes: overrides.bytes ?? 47185920,
     uploadedAt: '2026-05-20T00:00:00Z',
     source: 'Custom',
+    // F6 #1974: BE field — keeps the orchestrator default-mapping path
+    // exercised when tests don't care, and lets specific tests override.
+    processingState: overrides.processingState ?? 'Ready',
   };
 }
 
@@ -353,6 +359,79 @@ describe('KbHubContent orchestrator (Issue #1481)', () => {
     expect(container.querySelector('[data-slot="kb-hub-stats-card"]')).not.toBeInTheDocument();
     expect(container.querySelector('[data-slot="kb-hub-raptor-panel"]')).toBeInTheDocument();
     expect(container.querySelectorAll('[data-slot="kb-hub-pdf-row"]')).toHaveLength(2);
+  });
+
+  describe('F6 #1974 — per-doc processing-state badges', () => {
+    function withReadyStatus() {
+      mockUseUserKbStatus.mockReturnValue({
+        isLoading: false,
+        isError: false,
+        data: {
+          gameId: GAME_ID,
+          isIndexed: true,
+          documentCount: 1,
+          coverageScore: 70,
+          coverageLevel: 'Standard',
+          suggestedQuestions: [],
+        },
+      });
+    }
+
+    it('renders the "Ready" badge when BE ProcessingState=Ready', () => {
+      withReadyStatus();
+      mockUseGamePdfs.mockReturnValue({
+        isLoading: false,
+        isError: false,
+        data: [pdfFixture({ id: 'p1', processingState: 'Ready' })],
+      });
+      const { container } = renderWithIntl(<KbHubContent gameId={GAME_ID} />);
+      const badge = container.querySelector('[data-slot="kb-hub-pdf-status"]');
+      expect(badge).toBeInTheDocument();
+      expect(badge).toHaveAttribute('data-status', 'ready');
+    });
+
+    it('collapses BE transient phases (Pending|Uploading|Extracting|Chunking|Embedding|Indexing) to the "indexing" badge', () => {
+      const phases = ['Pending', 'Uploading', 'Extracting', 'Chunking', 'Embedding', 'Indexing'];
+      for (const phase of phases) {
+        withReadyStatus();
+        mockUseGamePdfs.mockReturnValue({
+          isLoading: false,
+          isError: false,
+          data: [pdfFixture({ id: 'p1', processingState: phase })],
+        });
+        const { container, unmount } = renderWithIntl(<KbHubContent gameId={GAME_ID} />);
+        const badge = container.querySelector('[data-slot="kb-hub-pdf-status"]');
+        expect(badge, `phase=${phase}`).toBeInTheDocument();
+        expect(badge, `phase=${phase}`).toHaveAttribute('data-status', 'indexing');
+        unmount();
+      }
+    });
+
+    it('renders the "Failed" badge when BE ProcessingState=Failed', () => {
+      withReadyStatus();
+      mockUseGamePdfs.mockReturnValue({
+        isLoading: false,
+        isError: false,
+        data: [pdfFixture({ id: 'p1', processingState: 'Failed' })],
+      });
+      const { container } = renderWithIntl(<KbHubContent gameId={GAME_ID} />);
+      const badge = container.querySelector('[data-slot="kb-hub-pdf-status"]');
+      expect(badge).toBeInTheDocument();
+      expect(badge).toHaveAttribute('data-status', 'failed');
+    });
+
+    it('defaults to the "indexing" badge for unknown BE states (forward-compat)', () => {
+      withReadyStatus();
+      mockUseGamePdfs.mockReturnValue({
+        isLoading: false,
+        isError: false,
+        data: [pdfFixture({ id: 'p1', processingState: 'SomeNewPhaseTheBeAddsLater' })],
+      });
+      const { container } = renderWithIntl(<KbHubContent gameId={GAME_ID} />);
+      const badge = container.querySelector('[data-slot="kb-hub-pdf-status"]');
+      expect(badge).toBeInTheDocument();
+      expect(badge).toHaveAttribute('data-status', 'indexing');
+    });
   });
 
   it('opens reindex modal when reindex-all CTA clicked', () => {

@@ -784,9 +784,18 @@ public sealed class PdfPipelineIntegrationTests : IAsyncLifetime
         pdf.TransitionTo(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Ready);
         pdf.ProcessingState.Should().Be(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Ready);
 
-        // Verify domain events were emitted (6 transitions)
-        pdf.DomainEvents.Should().HaveCount(6);
-        pdf.DomainEvents.Should().AllBeOfType<Api.BoundedContexts.DocumentProcessing.Domain.Events.PdfStateChangedEvent>();
+        // Verify domain events were emitted: 6 PdfStateChangedEvent (one per transition)
+        // PLUS 1 KbDocIndexedEvent raised on entering the Ready terminal state (BE-3 #1590 B2 —
+        // user-meaningful "doc indexed" milestone for the activity rail).
+        pdf.DomainEvents.Should().HaveCount(7);
+        pdf.DomainEvents
+            .OfType<Api.BoundedContexts.DocumentProcessing.Domain.Events.PdfStateChangedEvent>()
+            .Should()
+            .HaveCount(6);
+        pdf.DomainEvents
+            .OfType<Api.BoundedContexts.DocumentProcessing.Domain.Events.KbDocIndexedEvent>()
+            .Should()
+            .HaveCount(1);
 
         // Verify final state persists (must call UpdateAsync to sync domain changes to EF tracked entity)
         await _pdfRepository.UpdateAsync(pdf, TestCancellationToken);

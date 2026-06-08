@@ -2,22 +2,13 @@ import { test, expect } from '@playwright/test';
 
 import { smokeLogin, applySessionToPage } from './_helpers/auth';
 
-test.describe('SMOKE — /games redirect + /library games tab (real backend)', () => {
-  test('GET /games?tab=library redirects to /library and renders LibraryHub', async ({
-    page,
-    request,
-  }) => {
-    const { cookieHeader } = await smokeLogin(request);
-    await applySessionToPage(page, cookieHeader);
-    // PR #1567 (#1521) replaced /games with redirect('/library'); the ?tab=library
-    // query is dropped by the redirect.
-    await page.goto('/games?tab=library', { waitUntil: 'domcontentloaded' });
-    expect(new URL(page.url()).pathname).toBe('/library');
-    await page.waitForSelector('[data-slot="library-hub-v2"]', { timeout: 30_000 });
-    const errorState = await page.locator('[data-state="error"]').count();
-    expect(errorState).toBe(0);
-  });
-
+test.describe('SMOKE — /library games tab (real backend)', () => {
+  // The legacy `/games?tab=library` → `/library` redirect (PR #1567 / #1521) was
+  // removed in the Asse D P2 refactor (2026-06-05): `/games` is now a multi-tab
+  // hub orchestrator with Discover as the default tab. Unknown `?tab=` values
+  // fall back to Discover, so `/games?tab=library` no longer leaves `/games`.
+  // Hub coverage is owned by `apps/web/e2e/asse-d-p2-games-discover-hub.spec.ts`;
+  // `/library` direct entry is covered by the test below.
   test('/library games tab renders GamesResultsGrid (or empty state) — #1566', async ({
     page,
     request,

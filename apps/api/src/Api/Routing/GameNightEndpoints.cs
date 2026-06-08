@@ -45,6 +45,16 @@ internal static class GameNightEndpoints
             .WithSummary("Get my game nights")
             .WithDescription("Retrieves game nights where the user is organizer or invited.");
 
+        // F20 #1974 (audit 2026-06-07): dashboard "Recenti" slot — recently
+        // completed game nights for the Asse C P2 dashboard surface.
+        gameNights.MapGet("/completed", HandleGetCompletedGameNights)
+            .RequireAuthenticatedUser()
+            .Produces<IReadOnlyList<GameNightDto>>(200)
+            .Produces(401)
+            .WithName("GetCompletedGameNights")
+            .WithSummary("Get recently completed game nights")
+            .WithDescription("Retrieves recently completed (or scheduled-in-the-past published) game nights ordered DESC by ScheduledAt. Limit defaults to 5.");
+
         // Issue #950 (W1-PR2): regulars feed for Step 3 wizard suggestion list.
         gameNights.MapGet("/regulars", HandleGetRegulars)
             .RequireAuthenticatedUser()
@@ -459,6 +469,17 @@ internal static class GameNightEndpoints
         CancellationToken cancellationToken)
     {
         var result = await mediator.Send(new GetUpcomingGameNightsQuery(), cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    // F20 #1974 (audit 2026-06-07): dashboard "Recenti" slot.
+    private static async Task<IResult> HandleGetCompletedGameNights(
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken,
+        [FromQuery] int? limit = null)
+    {
+        var query = limit.HasValue ? new GetCompletedGameNightsQuery(limit.Value) : new GetCompletedGameNightsQuery();
+        var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
 

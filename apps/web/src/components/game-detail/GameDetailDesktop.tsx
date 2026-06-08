@@ -66,9 +66,24 @@ export function GameDetailDesktop({
 
   const isNotInLibrary = !game;
 
+  // F3 #1974 (audit 2026-06-07, partial): extend the hero meta strip with
+  // designer + complexity entries so the live page surfaces the same
+  // identifier strip the mockup ships (sp4-game-detail.jsx — "designer ·
+  // anno · durata · players · complessità · rating ★"). Each entry is
+  // additive and skipped when the BE doesn't surface the field (catalog
+  // fallback may omit designers; private games never expose complexity).
+  // Ordering follows the mockup so the strip reads left → right as a
+  // scannable identity row.
   const heroMetadata: MeepleCardMetadata[] = [];
+  if (game?.designers && game.designers.length > 0) {
+    const primary = game.designers[0]?.name;
+    if (primary) heroMetadata.push({ label: primary });
+  }
   if (game?.gameYearPublished) {
     heroMetadata.push({ label: String(game.gameYearPublished) });
+  }
+  if (game?.playingTimeMinutes) {
+    heroMetadata.push({ label: `${game.playingTimeMinutes} min` });
   }
   if (game?.minPlayers && game?.maxPlayers) {
     const players =
@@ -77,8 +92,9 @@ export function GameDetailDesktop({
         : `${game.minPlayers}-${game.maxPlayers} giocatori`;
     heroMetadata.push({ label: players });
   }
-  if (game?.playingTimeMinutes) {
-    heroMetadata.push({ label: `${game.playingTimeMinutes} min` });
+  if (game?.complexityRating != null) {
+    // BGG weight comes in [1, 5] — one decimal is enough for the strip.
+    heroMetadata.push({ label: `Complessità ${game.complexityRating.toFixed(1)}` });
   }
 
   const gameConnections = game

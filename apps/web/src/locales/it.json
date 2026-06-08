@@ -320,7 +320,14 @@
     "send": "Invia",
     "sources": "Fonti",
     "thinking": "Sto pensando...",
-    "title": "Chat AI"
+    "title": "Chat AI",
+    "infoPanel": {
+      "linkedGameLabel": "Gioco collegato",
+      "citationsHeading": "Citazioni ({count})",
+      "suggestedQuestionsHeading": "Domande suggerite",
+      "agentSectionHeading": "Agente",
+      "agentTypeLabel": "Tipo"
+    }
   },
   "common": {
     "all": "Tutti",

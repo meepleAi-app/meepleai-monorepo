@@ -2,7 +2,9 @@ using System.Text.Json;
 using Api.BoundedContexts.Administration.Application.Behaviors;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
+using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -69,6 +71,18 @@ public sealed class ReindexDocumentVersionIntegrationTests : IAsyncLifetime
         // IntegrationServiceCollectionBuilder base because most reindex tests don't exercise
         // the claim step. Registering it here keeps the build minimal for all other tests.
         services.AddScoped<IPdfClaimService, RelationalPdfClaimService>();
+
+        // Issue #2023 (code review CRITICAL): ReindexDocumentCommandHandler fans out to
+        // EnqueuePdfCommand, whose handler depends on IPdfDocumentRepository +
+        // IProcessingJobRepository. Without these the inner _mediator.Send(EnqueuePdfCommand)
+        // throws InvalidOperationException which the outer reindex handler swallows in its
+        // best-effort catch (CA1031). The SaveChanges-side assertion would still pass — but the
+        // test would not be exercising the EnqueuePdf path it claims to. Registering the
+        // production implementations here matches the production DI exactly (see
+        // DocumentProcessingServiceExtensions.cs lines 47, 49). Other reindex tests in this
+        // class can rely on the same enqueue path going through cleanly.
+        services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
+        services.AddScoped<IProcessingJobRepository, ProcessingJobRepository>();
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -216,9 +230,9 @@ public sealed class ReindexDocumentVersionIntegrationTests : IAsyncLifetime
         // database before the Quartz pipeline picks it up. The original bug report observed the
         // pipeline log "PDF not in Pending state (already claimed or terminal), skipping" after a
         // successful reindex; this test reproduces the exact end-to-end handoff (ReindexDocumentCommand
-        // → DB state Pending → RelationalPdfClaimService.TryClaimPendingAsync → state Extracting)
-        // against a real PostgreSQL instance, so any future regression on the SaveChanges/transaction
-        // boundary of the reindex handler fails here.
+        // → DB state Pending + ProcessingJob queued → RelationalPdfClaimService.TryClaimPendingAsync
+        // → state Extracting) against a real PostgreSQL instance, so any future regression on the
+        // SaveChanges or enqueue boundary of the reindex handler fails here.
         var pdf = await SeedPdfAsync(state: "Failed");
 
         await _mediator!.Send(
@@ -242,15 +256,41 @@ public sealed class ReindexDocumentVersionIntegrationTests : IAsyncLifetime
             afterReindex.ProcessedAt.Should().BeNull();
             afterReindex.ProcessingError.Should().BeNull();
             afterReindex.RetryCount.Should().Be(0);
+
+            // Issue #2023 (code review CRITICAL follow-up): also assert that EnqueuePdfCommand
+            // actually created a queued ProcessingJob. The reindex handler catches every
+            // exception from the enqueue mediator.Send (lines 113-128 in
+            // ReindexDocumentCommandHandler.cs, CA1031), so a missing IProcessingJobRepository
+            // / IPdfDocumentRepository registration would otherwise silently swallow the
+            // failure and this test would still see ProcessingState=Pending. The job-row check
+            // is what proves the enqueue path is also exercised.
+            var queuedJob = await verifyDb.ProcessingJobs
+                .AsNoTracking()
+                .Where(j => j.PdfDocumentId == pdf.Id)
+                .OrderByDescending(j => j.CreatedAt)
+                .FirstOrDefaultAsync(TestCancellationToken);
+
+            queuedJob.Should().NotBeNull(
+                "ReindexDocumentCommandHandler must enqueue a ProcessingJob via "
+                + "EnqueuePdfCommand. If this is null, the inner mediator.Send was likely "
+                + "swallowed by the handler's CA1031 catch — verify IProcessingJobRepository "
+                + "and IPdfDocumentRepository are both registered in InitializeAsync.");
         }
 
         // Verify the production RelationalPdfClaimService (raw SQL UPDATE ... WHERE
         // processing_state = 'Pending') can successfully claim the document — this is the
         // operation that was logged as "skipping" in the bug report.
+        //
+        // The claim service uses ExecuteSqlInterpolatedAsync. Because the test DbContext is
+        // configured with EnableRetryOnFailure (NpgsqlRetryingExecutionStrategy), raw SQL
+        // outside the strategy's ExecuteAsync wrapper is not safely retryable — wrap it.
         using (var claimScope = _serviceProvider!.CreateScope())
         {
+            var claimDb = claimScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             var claimService = claimScope.ServiceProvider.GetRequiredService<IPdfClaimService>();
-            var claimed = await claimService.TryClaimPendingAsync(pdf.Id, TestCancellationToken);
+            var strategy = claimDb.Database.CreateExecutionStrategy();
+            var claimed = await strategy.ExecuteAsync(
+                () => claimService.TryClaimPendingAsync(pdf.Id, TestCancellationToken));
 
             claimed.Should().BeTrue(
                 "the pipeline claim service must observe Pending and atomically transition to "

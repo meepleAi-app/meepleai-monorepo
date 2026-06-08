@@ -373,7 +373,19 @@ internal static class SharedGameCatalogWizardEndpoints
                 {
                     AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
                 };
-                await cache.SetAsync(cacheKey, envelopeBytes, cacheOptions, ct).ConfigureAwait(false);
+                // Final review F2: swallow transient cache failures so the 201 still reaches the client.
+                // If we propagated, the game would be persisted but the caller would see 500 + retry would
+                // create a duplicate (cache cold, no envelope). Standard IETF idempotency-key pattern.
+                try
+                {
+                    await cache.SetAsync(cacheKey, envelopeBytes, cacheOptions, ct).ConfigureAwait(false);
+                }
+                catch (Exception cacheEx) when (cacheEx is not OperationCanceledException)
+                {
+                    logger.LogError(cacheEx,
+                        "Idempotency cache write failed for key={Key}, gameId={GameId} — created 201 still returned, but future retries with same key will re-execute",
+                        idempotencyKey, result.GameId);
+                }
             }
 
             return Results.Created($"/api/v1/admin/shared-games/{result.GameId}", result);

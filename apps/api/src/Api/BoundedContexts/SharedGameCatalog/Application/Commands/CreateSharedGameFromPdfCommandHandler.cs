@@ -173,6 +173,15 @@ internal sealed class CreateSharedGameFromPdfCommandHandler : ICommandHandler<Cr
             {
                 entity.BggCoverR2Key = bggCoverR2Key;
             }
+            else
+            {
+                // Final review F1: surface the silent-no-op branch.
+                // Production repository.AddAsync tracks the entity; if this lookup ever returns null,
+                // the cover key is lost without trace. Log so a regression is visible in logs.
+                _logger.LogWarning(
+                    "BggCoverR2Key={Key} downloaded for game={GameId} but EF entity not found in DbContext — repository contract may have changed",
+                    bggCoverR2Key, sharedGame.Id);
+            }
         }
 
         // STEP 6: Link PDF → SharedGame

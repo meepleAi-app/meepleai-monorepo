@@ -348,6 +348,21 @@ User asked the autonomous loop to keep going through the "BE-deferred and multi-
 
 **Cumulative across all autonomous-loop passes (night + 7+8 + 9)**: **16 sub-findings shipped**, 6 verified-no-action, 5 known-issue defers, ~10 large-scope items still on the backlog. Of the original ~33 tracker items, **~22 are now closed/verified**.
 
+---
+
+## ⏩ Wave 10 polish + partial cuts — 2026-06-08
+
+User asked to keep going. Two more PRs picking up findings that the wave-9 pass had already verified-no-action but that still had room for polish, plus a bite-size cut of the F3 multi-week rebuild.
+
+| Finding | PR | Scope |
+|---|---|---|
+| **F11 polish** chat info panel i18n + agent meta | #2004 | `chat.infoPanel.*` IT+EN keys for the 3 hardcoded labels (Gioco collegato / Citazioni (N) / Domande suggerite). Optional `agent?: { name, typology? }` prop renders an Agent block at the top of the rail when the parent passes it. `data-slot` attributes for test scoping. 8-case test suite. |
+| **F3 partial** game-detail meta strip | #2005 | Extend the hero meta strip with **designer** + **complexity** entries so the live page surfaces the same identifier strip the mockup ships (designer · anno · durata · giocatori · complessità). Each entry is additive and degrades gracefully when the BE doesn't surface it. 2 new test cases on `GameDetailDesktop`. |
+
+**Cumulative (night + 7+8 + 9 + 10)**: **18 sub-findings shipped**, 6 verified-no-action (now with deeper polish on F11), 5 known-issue defers, large-scope backlog narrowed to F3 full rebuild + F2.2 T3-T8 hardening.
+
+Out of the original ~33 tracker findings + cross-cutting items, **~24 (≈73%) are now closed, verified, or have a non-trivial polish PR landed**.
+
 
 
 ## Pending pages (Round 1 sess 45)

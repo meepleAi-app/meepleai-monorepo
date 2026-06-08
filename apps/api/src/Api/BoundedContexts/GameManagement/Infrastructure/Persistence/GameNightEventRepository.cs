@@ -89,6 +89,31 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
         return entities.Select(MapToDomain).ToList();
     }
 
+    public async Task<IReadOnlyList<GameNightEvent>> GetCompletedAsync(int limit, CancellationToken cancellationToken = default)
+    {
+        // F20 #1974: dashboard "Recenti" slot. Sources events whose Status is
+        // "Completed" OR a published event whose scheduled date has already
+        // passed (the BE does not auto-mark Published → Completed on a
+        // scheduler, so we treat past Published events as effectively
+        // completed for the dashboard surface). Ordered DESC by ScheduledAt
+        // since the entity has no explicit CompletedAt column today. The
+        // 50-cap mirrors GetUpcomingAsync; the call-site requests fewer.
+        var cap = Math.Clamp(limit, 1, 50);
+        var now = DateTimeOffset.UtcNow;
+
+        var entities = await DbContext.GameNightEvents
+            .AsNoTracking()
+            .Include(e => e.Rsvps)
+            .Include(e => e.Sessions)
+            .Where(e => e.Status == nameof(GameNightStatus.Completed)
+                || (e.Status == nameof(GameNightStatus.Published) && e.ScheduledAt < now))
+            .OrderByDescending(e => e.ScheduledAt)
+            .Take(cap)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
     public async Task<IReadOnlyList<GameNightEvent>> GetByUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var entities = await DbContext.GameNightEvents

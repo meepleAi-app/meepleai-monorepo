@@ -30,7 +30,7 @@ import { useMemo, type ReactElement } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { CascadeDrawerHost } from '@/components/dashboard/CascadeDrawerHost';
 import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
-import { useUpcomingGameNights } from '@/hooks/queries/useGameNights';
+import { useCompletedGameNights, useUpcomingGameNights } from '@/hooks/queries/useGameNights';
 import { useGames } from '@/hooks/queries/useGames';
 import { useLibraryStats } from '@/hooks/queries/useLibrary';
 import { useFriendsActivity } from '@/hooks/use-friends-activity';
@@ -73,6 +73,8 @@ export function DashboardClient(): ReactElement {
 
   // ── Data hooks (re-used from Stage 3 + asse-C additions) ─────────────────
   const upcomingGNQuery = useUpcomingGameNights();
+  // F20 #1974: dashboard "Recenti" slot — recently completed game nights.
+  const completedGNQuery = useCompletedGameNights({ limit: 5 });
   const sessionsQuery = useActiveSessions(10);
   const gamesQuery = useGames(undefined, undefined, 1, 20);
   const statsQuery = useLibraryStats();
@@ -112,17 +114,27 @@ export function DashboardClient(): ReactElement {
   );
 
   // ── Slot #2: Recenti (completed GameNights) ──────────────────────────────
-  // BE endpoint for completed GameNights is not yet wired (out of scope T1).
-  // For now we surface an empty section, which RecentiSection renders as `null`
-  // per spec MAJ-6 (silent fallback). When the BE endpoint lands, swap the
-  // empty array for the query result and adapt the projection.
+  // F20 #1974 (audit 2026-06-07): wires the BE `/game-nights/completed`
+  // endpoint shipped alongside this PR. Projection mirrors `prossimiCards`:
+  // map the BE `GameNightDto` to the `RecentiGameNightCard` contract that
+  // `RecentiSection` expects. `sessionCount` defaults to 0 until the BE
+  // surfaces it on the DTO; mini cover thumbnails are not yet exposed
+  // server-side so we pass an empty array (the card primitive already
+  // hides the cover stack in that case).
   const recentiCards = useMemo<ReadonlyArray<RecentiGameNightCard>>(() => {
-    return [];
-  }, []);
+    const data = completedGNQuery.data ?? [];
+    return data.slice(0, 3).map<RecentiGameNightCard>(gn => ({
+      id: gn.id,
+      title: gn.title,
+      date: gn.scheduledAt,
+      sessionCount: 0,
+      gamePreviewThumbnails: [],
+    }));
+  }, [completedGNQuery.data]);
 
   const recentiState: RecentiSectionState = deriveSectionState(
-    /* isLoading */ false,
-    /* isError */ false,
+    completedGNQuery.isLoading,
+    completedGNQuery.isError,
     recentiCards.length
   );
 
@@ -216,9 +228,8 @@ export function DashboardClient(): ReactElement {
           state={recentiState}
           gameNights={recentiCards}
           onRetry={() => {
-            // Placeholder until BE completed-GN endpoint lands; we refetch the
-            // upcoming source so the user gets *some* fresh data on retry.
-            void upcomingGNQuery.refetch();
+            // F20 #1974: wired to the completed-GN endpoint.
+            void completedGNQuery.refetch();
           }}
         />
 

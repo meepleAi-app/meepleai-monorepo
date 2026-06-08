@@ -23,6 +23,8 @@ import type { HttpClient } from '../core/httpClient';
 
 export interface GameNightsClient {
   getUpcoming(): Promise<GameNightDto[]>;
+  // F20 #1974: dashboard "Recenti" slot — recently completed game nights.
+  getCompleted(limit?: number): Promise<GameNightDto[]>;
   getMine(): Promise<GameNightDto[]>;
   getById(id: string): Promise<GameNightDto>;
   getRsvps(id: string): Promise<GameNightRsvpDto[]>;
@@ -45,6 +47,18 @@ export function createGameNightsClient({
   return {
     async getUpcoming() {
       const data = await httpClient.get<GameNightDto[]>('/api/v1/game-nights');
+      return z.array(GameNightDtoSchema).parse(data ?? []);
+    },
+
+    async getCompleted(limit) {
+      // F20 #1974: dashboard "Recenti" slot. `limit` is forwarded as a
+      // query param; the BE clamps to [1, 50] and defaults to 5 when
+      // omitted.
+      const url =
+        limit != null
+          ? `/api/v1/game-nights/completed?limit=${limit}`
+          : '/api/v1/game-nights/completed';
+      const data = await httpClient.get<GameNightDto[]>(url);
       return z.array(GameNightDtoSchema).parse(data ?? []);
     },
 

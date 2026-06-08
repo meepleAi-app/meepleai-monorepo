@@ -14,6 +14,18 @@ internal interface IGameNightEventRepository : IRepository<GameNightEvent, Guid>
     Task<IReadOnlyList<GameNightEvent>> GetUpcomingAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the most recently completed game nights, DESC by ScheduledAt.
+    /// F20 #1974 (audit 2026-06-07): wires the dashboard "Recenti" slot
+    /// (Asse C P2 follow-up). Also surfaces published events whose
+    /// scheduled time has passed, since the BE does not auto-mark
+    /// Published → Completed on a scheduler.
+    /// </summary>
+    /// <param name="limit">Maximum rows to return (capped at 50 in the
+    /// implementation for safety).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<GameNightEvent>> GetCompletedAsync(int limit, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets game nights where the user is organizer or invited.
     /// </summary>
     Task<IReadOnlyList<GameNightEvent>> GetByUserAsync(Guid userId, CancellationToken cancellationToken = default);

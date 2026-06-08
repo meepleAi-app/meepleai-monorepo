@@ -40,6 +40,14 @@ public sealed class LedgerEntry : AggregateRoot<Guid>
     /// <summary>When this entry was last updated (null if never updated)</summary>
     public DateTime? UpdatedAt { get; private set; }
 
+    /// <summary>
+    /// Optional source domain event id used to dedupe at the DB level (issue #1938 / CF-2).
+    /// When set, the UNIQUE partial index <c>UX_ledger_entries_source_event_id</c> guards
+    /// against duplicate ledger entries when an event handler is re-dispatched
+    /// (rolled-back outer tx in #1535, MediatR transient retry, hand-replay).
+    /// </summary>
+    public Guid? SourceEventId { get; private set; }
+
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value
     private LedgerEntry() : base()
 #pragma warning restore CS8618
@@ -55,7 +63,8 @@ public sealed class LedgerEntry : AggregateRoot<Guid>
         LedgerEntrySource source,
         string? description,
         string? metadata,
-        Guid? createdByUserId) : base(id)
+        Guid? createdByUserId,
+        Guid? sourceEventId) : base(id)
     {
         Date = date;
         Type = type;
@@ -65,6 +74,7 @@ public sealed class LedgerEntry : AggregateRoot<Guid>
         Description = description;
         Metadata = metadata;
         CreatedByUserId = createdByUserId;
+        SourceEventId = sourceEventId;
         CreatedAt = DateTime.UtcNow;
     }
 
@@ -79,7 +89,8 @@ public sealed class LedgerEntry : AggregateRoot<Guid>
         LedgerEntrySource source,
         string? description = null,
         string? metadata = null,
-        Guid? createdByUserId = null)
+        Guid? createdByUserId = null,
+        Guid? sourceEventId = null)
     {
         ArgumentNullException.ThrowIfNull(amount);
 
@@ -110,7 +121,8 @@ public sealed class LedgerEntry : AggregateRoot<Guid>
             source,
             description?.Trim(),
             metadata,
-            createdByUserId);
+            createdByUserId,
+            sourceEventId);
     }
 
     /// <summary>
@@ -123,7 +135,8 @@ public sealed class LedgerEntry : AggregateRoot<Guid>
         decimal amount,
         string currency = "EUR",
         string? description = null,
-        string? metadata = null)
+        string? metadata = null,
+        Guid? sourceEventId = null)
     {
         return Create(
             date,
@@ -133,7 +146,8 @@ public sealed class LedgerEntry : AggregateRoot<Guid>
             LedgerEntrySource.Auto,
             description,
             metadata,
-            createdByUserId: null);
+            createdByUserId: null,
+            sourceEventId: sourceEventId);
     }
 
     /// <summary>
@@ -147,7 +161,8 @@ public sealed class LedgerEntry : AggregateRoot<Guid>
         Guid createdByUserId,
         string currency = "EUR",
         string? description = null,
-        string? metadata = null)
+        string? metadata = null,
+        Guid? sourceEventId = null)
     {
         return Create(
             date,
@@ -157,7 +172,8 @@ public sealed class LedgerEntry : AggregateRoot<Guid>
             LedgerEntrySource.Manual,
             description,
             metadata,
-            createdByUserId);
+            createdByUserId,
+            sourceEventId);
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Infrastructure;
@@ -23,6 +24,7 @@ internal sealed class CreateSharedGameFromPdfCommandHandler : ICommandHandler<Cr
     private readonly IPdfDocumentRepository _pdfRepository;
     private readonly ISharedGameRepository _gameRepository;
     private readonly IBggApiService _bggApiService;
+    private readonly IBggCoverDownloader _bggCoverDownloader;
     private readonly IUnitOfWork _unitOfWork;
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<CreateSharedGameFromPdfCommandHandler> _logger;
@@ -31,6 +33,7 @@ internal sealed class CreateSharedGameFromPdfCommandHandler : ICommandHandler<Cr
         IPdfDocumentRepository pdfRepository,
         ISharedGameRepository gameRepository,
         IBggApiService bggApiService,
+        IBggCoverDownloader bggCoverDownloader,
         IUnitOfWork unitOfWork,
         MeepleAiDbContext dbContext,
         ILogger<CreateSharedGameFromPdfCommandHandler> logger)
@@ -38,6 +41,7 @@ internal sealed class CreateSharedGameFromPdfCommandHandler : ICommandHandler<Cr
         _pdfRepository = pdfRepository ?? throw new ArgumentNullException(nameof(pdfRepository));
         _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
         _bggApiService = bggApiService ?? throw new ArgumentNullException(nameof(bggApiService));
+        _bggCoverDownloader = bggCoverDownloader ?? throw new ArgumentNullException(nameof(bggCoverDownloader));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -109,6 +113,23 @@ internal sealed class CreateSharedGameFromPdfCommandHandler : ICommandHandler<Cr
             }
         }
 
+        // STEP 4.5: Re-upload BGG cover image to our storage (Gap G2)
+        // On failure (null returned), fall back to BGG direct URL — no exception thrown.
+        string? bggCoverR2Key = null;
+        if (command.SelectedBggId.HasValue && bggDetails?.ImageUrl is { Length: > 0 } bggImageUrl)
+        {
+            bggCoverR2Key = await _bggCoverDownloader
+                .DownloadAndUploadAsync(command.SelectedBggId.Value, bggImageUrl, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (bggCoverR2Key is null)
+            {
+                _logger.LogWarning(
+                    "BGG cover re-upload skipped/failed for BggId={BggId}, falling back to direct URL",
+                    command.SelectedBggId.Value);
+            }
+        }
+
         // STEP 5: Create SharedGame aggregate
         var status = command.RequiresApproval ? "Draft" : "Published";
         var statusEquals = string.Equals(status, "Draft", StringComparison.Ordinal);
@@ -138,6 +159,30 @@ internal sealed class CreateSharedGameFromPdfCommandHandler : ICommandHandler<Cr
 
         // Add aggregate to repository
         await _gameRepository.AddAsync(sharedGame, cancellationToken).ConfigureAwait(false);
+
+        // STEP 5.1: Persist BggCoverR2Key on EF-tracked entity (Gap G2)
+        // entity.ImageUrl remains BGG CDN URL (convention F4): CoverUrlResolver is the
+        // authoritative display source; ImageUrl is legacy fallback for direct-projection consumers.
+        if (bggCoverR2Key is not null)
+        {
+            var entity = await _dbContext.Set<SharedGameEntity>()
+                .FirstOrDefaultAsync(e => e.Id == sharedGame.Id, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (entity is not null)
+            {
+                entity.BggCoverR2Key = bggCoverR2Key;
+            }
+            else
+            {
+                // Final review F1: surface the silent-no-op branch.
+                // Production repository.AddAsync tracks the entity; if this lookup ever returns null,
+                // the cover key is lost without trace. Log so a regression is visible in logs.
+                _logger.LogWarning(
+                    "BggCoverR2Key={Key} downloaded for game={GameId} but EF entity not found in DbContext — repository contract may have changed",
+                    bggCoverR2Key, sharedGame.Id);
+            }
+        }
 
         // STEP 6: Link PDF → SharedGame
         // Note: This requires a SharedGameDocument entity or association table

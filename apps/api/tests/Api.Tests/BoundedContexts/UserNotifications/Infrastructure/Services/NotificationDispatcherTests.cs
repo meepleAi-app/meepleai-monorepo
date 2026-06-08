@@ -388,4 +388,111 @@ public class NotificationDispatcherTests
         capturedItems?.Any(i => i.ChannelType == NotificationChannelType.SlackUser)
             .Should().BeFalse($"admin type '{typeValue}' should not be delivered via Slack DM");
     }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Issue #1937 / CF-1 — SourceEventId idempotency
+    // ─────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task DispatchAsync_WithSourceEventId_ShortCircuits_WhenAlreadyDispatched()
+    {
+        // Arrange — repo reports an existing notification for this source event id
+        var sourceEventId = Guid.NewGuid();
+        var message = CreateMessage() with { SourceEventId = sourceEventId };
+
+        _notificationRepoMock
+            .Setup(r => r.ExistsBySourceEventIdAsync(It.IsAny<Guid>(), sourceEventId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.DispatchAsync(message);
+
+        // Assert — no AddAsync, no AddRangeAsync (dispatcher short-circuited)
+        _notificationRepoMock.Verify(
+            r => r.AddAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _queueRepoMock.Verify(
+            r => r.AddRangeAsync(It.IsAny<IEnumerable<NotificationQueueItem>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_WithSourceEventId_PropagatesIdToNotification_WhenNotYetDispatched()
+    {
+        // Arrange — repo reports no prior notification for this source event id
+        var sourceEventId = Guid.NewGuid();
+        var message = CreateMessage() with { SourceEventId = sourceEventId };
+
+        _notificationRepoMock
+            .Setup(r => r.ExistsBySourceEventIdAsync(It.IsAny<Guid>(), sourceEventId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.DispatchAsync(message);
+
+        // Assert — Notification persisted with SourceEventId = the one from the message
+        _notificationRepoMock.Verify(
+            r => r.AddAsync(
+                It.Is<Notification>(n => n.SourceEventId == sourceEventId),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_WithSourceEventId_PropagatesIdToQueueItems_WhenNotYetDispatched()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var sourceEventId = Guid.NewGuid();
+        var message = CreateMessage(recipientUserId: userId) with { SourceEventId = sourceEventId };
+
+        _notificationRepoMock
+            .Setup(r => r.ExistsBySourceEventIdAsync(It.IsAny<Guid>(), sourceEventId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _prefsRepoMock
+            .Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NotificationPreferences(userId));
+
+        IEnumerable<NotificationQueueItem>? capturedItems = null;
+        _queueRepoMock
+            .Setup(r => r.AddRangeAsync(It.IsAny<IEnumerable<NotificationQueueItem>>(), It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<NotificationQueueItem>, CancellationToken>((items, _) => capturedItems = items)
+            .Returns(Task.CompletedTask);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.DispatchAsync(message);
+
+        // Assert — every persisted queue item carries the SourceEventId from the message
+        capturedItems.Should().NotBeNull();
+        capturedItems!.Should().NotBeEmpty();
+        capturedItems!.All(i => i.SourceEventId == sourceEventId).Should().BeTrue(
+            "every queue item must carry the source event id so the composite UNIQUE constraint can dedupe at the DB level");
+    }
+
+    [Fact]
+    public async Task DispatchAsync_WithoutSourceEventId_FallsBackToLegacyBehavior_NoDedupLookup()
+    {
+        // Arrange — message has no SourceEventId; repo should NOT be queried for ExistsBy
+        var message = CreateMessage();
+        var sut = CreateSut();
+
+        // Act
+        await sut.DispatchAsync(message);
+
+        // Assert — ExistsBySourceEventIdAsync never invoked; AddAsync fires once
+        _notificationRepoMock.Verify(
+            r => r.ExistsBySourceEventIdAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _notificationRepoMock.Verify(
+            r => r.AddAsync(
+                It.Is<Notification>(n => n.SourceEventId == null),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
 }

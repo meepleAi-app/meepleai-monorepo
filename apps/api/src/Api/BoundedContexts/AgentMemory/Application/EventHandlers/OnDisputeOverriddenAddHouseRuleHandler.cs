@@ -64,11 +64,22 @@ internal sealed class OnDisputeOverriddenAddHouseRuleHandler : INotificationHand
         {
             gameMemory = GameMemory.Create(gameId, ownerId);
             gameMemory.AddHouseRule(notification.OverrideRule, HouseRuleSource.DisputeOverride);
+            gameMemory.MarkProcessed(notification.EventId);  // CF-3 / #1939
             await _gameMemoryRepo.AddAsync(gameMemory, cancellationToken).ConfigureAwait(false);
+        }
+        else if (gameMemory.LastProcessedEventId == notification.EventId)
+        {
+            // CF-3 / #1939: handler re-dispatched on a rolled-back / retried event —
+            // house rule already appended, skip to avoid duplicate entry.
+            _logger.LogDebug(
+                "Skipping AddHouseRule for game {GameId}, owner {OwnerId}: event {EventId} already processed",
+                gameId, ownerId, notification.EventId);
+            return;
         }
         else
         {
             gameMemory.AddHouseRule(notification.OverrideRule, HouseRuleSource.DisputeOverride);
+            gameMemory.MarkProcessed(notification.EventId);  // CF-3 / #1939
             await _gameMemoryRepo.UpdateAsync(gameMemory, cancellationToken).ConfigureAwait(false);
         }
 

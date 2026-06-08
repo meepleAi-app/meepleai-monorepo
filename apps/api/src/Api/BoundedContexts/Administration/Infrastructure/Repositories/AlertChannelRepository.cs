@@ -66,6 +66,7 @@ internal sealed class AlertChannelRepository : RepositoryBase, IAlertChannelRepo
                 UpdatedAt = channel.UpdatedAt,
                 CreatedBy = channel.CreatedBy,
                 UpdatedBy = channel.UpdatedBy,
+                LastDispatchedEventId = channel.LastDispatchedEventId,
             };
             await DbContext.AlertChannels.AddAsync(entity, cancellationToken).ConfigureAwait(false);
         }
@@ -83,6 +84,7 @@ internal sealed class AlertChannelRepository : RepositoryBase, IAlertChannelRepo
             tracked.LastTestMessage = channel.LastTestMessage;
             tracked.UpdatedAt = channel.UpdatedAt;
             tracked.UpdatedBy = channel.UpdatedBy;
+            tracked.LastDispatchedEventId = channel.LastDispatchedEventId;
         }
 
         await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -100,5 +102,6 @@ internal sealed class AlertChannelRepository : RepositoryBase, IAlertChannelRepo
             e.UpdatedAt,
             e.CreatedBy,
             e.UpdatedBy,
-            e.RowVersion);
+            e.RowVersion,
+            e.LastDispatchedEventId);
 }

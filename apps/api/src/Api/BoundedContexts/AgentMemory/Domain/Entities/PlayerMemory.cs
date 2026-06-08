@@ -19,6 +19,13 @@ internal sealed class PlayerMemory : AggregateRoot<Guid>
     public DateTime? ClaimedAt { get; private set; }
     public DateTime CreatedAt { get; private set; }
 
+    /// <summary>
+    /// Last domain event id processed against this aggregate (issue #1939 / CF-3).
+    /// When set and equal to the incoming event id, handlers MUST early-exit to avoid
+    /// double-incrementing counters / stats on a retried/rolled-back event handler.
+    /// </summary>
+    public Guid? LastProcessedEventId { get; private set; }
+
     /// <summary>EF Core constructor.</summary>
     private PlayerMemory() { }
 
@@ -75,5 +82,14 @@ internal sealed class PlayerMemory : AggregateRoot<Guid>
         {
             _gameStats.Add(PlayerGameStats.Create(gameId, won, score));
         }
+    }
+
+    /// <summary>
+    /// Records which domain event has just been processed against this aggregate
+    /// (issue #1939 / CF-3). Used by handlers to short-circuit on re-dispatch.
+    /// </summary>
+    public void MarkProcessed(Guid eventId)
+    {
+        LastProcessedEventId = eventId;
     }
 }

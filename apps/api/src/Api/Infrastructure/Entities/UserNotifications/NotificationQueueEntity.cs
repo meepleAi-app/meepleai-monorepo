@@ -78,4 +78,13 @@ public class NotificationQueueEntity
     [MaxLength(500)]
     [Column("deep_link_path")]
     public string? DeepLinkPath { get; set; }
+
+    /// <summary>
+    /// Optional source domain event id used to dedupe at the dispatcher level (issue #1937 / CF-1).
+    /// Composite UNIQUE (channel_type, recipient_user_id, source_event_id) (partial — only when not null)
+    /// so that re-dispatch from a retried/rolled-back event handler does not enqueue duplicate
+    /// per-channel deliveries (email, Slack DM, Slack team).
+    /// </summary>
+    [Column("source_event_id")]
+    public Guid? SourceEventId { get; set; }
 }

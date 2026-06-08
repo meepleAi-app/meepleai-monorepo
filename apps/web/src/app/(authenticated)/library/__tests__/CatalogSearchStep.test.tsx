@@ -13,9 +13,11 @@
  * - Back button calls onBack
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
+
+import { renderWithIntl } from '@/__tests__/fixtures/common-fixtures';
 
 import { CatalogSearchStep } from '../CatalogSearchStep';
 
@@ -92,13 +94,40 @@ function makeGamesData(items = [GAME_1, GAME_2], total = 2) {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function renderStep(props: {
-  onSelect?: (id: string, name: string) => void;
-  onBack?: () => void;
-} = {}) {
+// F2.2 #1974 T1: CatalogSearchStep is now i18n-aware; provide the new
+// `pages.library.addGame.catalog.*` keys to the IntlProvider so the
+// EN-default assertion strings below (e.g. "2 games found") still match.
+const I18N_MESSAGES: Record<string, string> = {
+  'pages.library.addGame.catalog.backAriaLabel': 'Back to choice',
+  'pages.library.addGame.catalog.searchPlaceholder': 'Search games…',
+  'pages.library.addGame.catalog.searchAriaLabel': 'Search games',
+  'pages.library.addGame.catalog.noImage': 'No image',
+  'pages.library.addGame.catalog.inLibraryBadge': 'In library',
+  'pages.library.addGame.catalog.alreadyInLibrary': 'Already in library',
+  'pages.library.addGame.catalog.selectCta': 'Select',
+  'pages.library.addGame.catalog.resultCount':
+    '{count, plural, =0 {No games found} =1 {1 game found} other {# games found}}',
+  'pages.library.addGame.catalog.emptyResults': 'No games found for "{search}".',
+  'pages.library.addGame.catalog.emptyResultsHeading': 'No results',
+  'pages.library.addGame.catalog.emptyResultsSubtitle':
+    'Try a different title or check the spelling.',
+  'pages.library.addGame.catalog.toastAdded': '"{gameName}" added to your library!',
+  'pages.library.addGame.catalog.toastError': 'Could not add "{gameName}". Please try again.',
+};
+
+function renderStep(
+  props: {
+    onSelect?: (id: string, name: string) => void;
+    onBack?: () => void;
+  } = {}
+) {
   const onSelect = props.onSelect ?? vi.fn();
   const onBack = props.onBack ?? vi.fn();
-  const result = render(<CatalogSearchStep onSelect={onSelect} onBack={onBack} />);
+  const result = renderWithIntl(
+    <CatalogSearchStep onSelect={onSelect} onBack={onBack} />,
+    undefined,
+    I18N_MESSAGES
+  );
   return { onSelect, onBack, ...result };
 }
 
@@ -270,9 +299,7 @@ describe('CatalogSearchStep', () => {
       renderStep();
 
       expect(screen.getByTestId('catalog-card-g1-in-library-badge')).toBeInTheDocument();
-      expect(
-        screen.queryByTestId('catalog-card-g2-in-library-badge'),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByTestId('catalog-card-g2-in-library-badge')).not.toBeInTheDocument();
     });
   });
 

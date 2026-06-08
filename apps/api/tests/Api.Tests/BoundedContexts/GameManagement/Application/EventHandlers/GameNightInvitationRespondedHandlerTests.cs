@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Caching.Distributed;
@@ -37,6 +38,7 @@ public sealed class GameNightInvitationRespondedHandlerTests
     private readonly Mock<IGameNightInvitationRepository> _invitationRepoMock = new();
     private readonly Mock<IGameNightEventRepository> _gameNightRepoMock = new();
     private readonly Mock<IGameNightEmailService> _emailServiceMock = new();
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
     private readonly Mock<ILogger<GameNightInvitationRespondedHandler>> _loggerMock = new();
 
     private static HybridCache CreateHybridCache()
@@ -54,6 +56,7 @@ public sealed class GameNightInvitationRespondedHandlerTests
         _gameNightRepoMock.Object,
         _emailServiceMock.Object,
         cache,
+        _unitOfWorkMock.Object,
         _loggerMock.Object);
 
     private static GameNightInvitation Reconstitute(GameNightInvitationStatus status)

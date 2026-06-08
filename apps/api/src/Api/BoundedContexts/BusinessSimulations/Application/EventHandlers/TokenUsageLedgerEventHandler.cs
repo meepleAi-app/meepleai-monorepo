@@ -27,12 +27,17 @@ internal sealed class TokenUsageLedgerEventHandler : INotificationHandler<TokenU
     {
         try
         {
+            // 23505 dedup is now handled inside the service (AddAndCommitAsync). The
+            // catch (Exception) below stays as a safety net for any other failure
+            // (network glitch, EF model misconfiguration, …) that must not block the
+            // main token-tracking flow.
             await _ledgerTrackingService.TrackTokenUsageAsync(
                 userId: notification.UserId,
                 modelId: notification.ModelId,
                 tokensConsumed: notification.TokensConsumed,
                 costUsd: notification.CostUsd,
                 endpoint: notification.Endpoint,
+                sourceEventId: notification.EventId,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)

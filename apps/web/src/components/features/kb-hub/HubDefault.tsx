@@ -53,6 +53,15 @@ export interface HubDefaultLabels {
   readonly coverage: HubDefaultCoverageLabels;
   readonly columnHeaders: HubDefaultColumnHeaders;
   readonly pdfRow: PdfRowLabels;
+  // #1816 P3-7 — indexing-pending badge shown when caller flags the state
+  // (`pdfs.length > 0 && !status.isIndexed`). Optional — when undefined the
+  // hub does not render the badge slot.
+  readonly indexingBadge?: string;
+  readonly indexingDescription?: string;
+  // F10 #1974 — bottom drop-zone CTA label (mockup: "Trascina un PDF o
+  // clicca per caricarlo"). Optional — when undefined the hub omits the
+  // drop zone (legacy consumers get no regression).
+  readonly dropZoneCta?: string;
 }
 
 export interface HubDefaultProps {
@@ -69,6 +78,9 @@ export interface HubDefaultProps {
   readonly embeddings?: number;
   readonly lastReindexRelative?: string;
   readonly className?: string;
+  // #1816 P3-7 Phase 2 — surfaces a banner above the stats strip when a PDF
+  // is uploaded but BE indexing has not yet completed.
+  readonly indexingPending?: boolean;
 }
 
 export function HubDefault(props: HubDefaultProps): ReactElement {
@@ -85,6 +97,7 @@ export function HubDefault(props: HubDefaultProps): ReactElement {
     embeddings,
     lastReindexRelative,
     className,
+    indexingPending = false,
   } = props;
 
   // Locale resolved at runtime (caller's IntlProvider); avoids hardcoded it-IT divergence.
@@ -180,22 +193,46 @@ export function HubDefault(props: HubDefaultProps): ReactElement {
           </div>
         </div>
 
-        {/* Stats strip */}
-        <div
-          data-slot="kb-hub-default-stats-strip"
-          className="flex flex-wrap items-center gap-1 rounded-md border border-entity-kb/10 bg-entity-kb/6 px-3.5 py-2.5"
-        >
-          {statsStripItems.map((s, i, arr) => (
-            <span key={s.key} className="inline-flex items-center gap-1">
-              <span aria-hidden="true" className="text-xs">
+        {/* #1816 P3-7 Phase 2 — indexing-pending banner above the stats strip.
+            Rendered only when the caller flags the state AND provides at least
+            an `indexingBadge` label. Warning tint = transient state, not error. */}
+        {indexingPending && labels.indexingBadge && (
+          <div
+            data-slot="kb-hub-default-indexing-banner"
+            role="status"
+            aria-live="polite"
+            className="mb-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-xs"
+          >
+            <div className="font-display font-bold text-warning">{labels.indexingBadge}</div>
+            {labels.indexingDescription && (
+              <div className="mt-1 text-muted-foreground">{labels.indexingDescription}</div>
+            )}
+          </div>
+        )}
+
+        {/*
+          F5 #1974 (audit 2026-06-07): re-styled the stats strip from a
+          single dot-separated mono line to a row of compact tag-style
+          pills. The mockup ships "4 DOC · 1247 CHUNK · 4891 EMBED · ULTIMA
+          IDX 3 GG FA · COPERTURA: STANDARD" as scannable bordered chips —
+          much easier to track at a glance than a continuous text run.
+          Each chip carries the icon + uppercase mono value; the legacy
+          interstitial `·` separator is dropped (the chip border carries
+          the visual rhythm now).
+        */}
+        <div data-slot="kb-hub-default-stats-strip" className="flex flex-wrap items-center gap-1.5">
+          {statsStripItems.map(s => (
+            <span
+              key={s.key}
+              data-slot="kb-hub-default-stats-chip"
+              className="inline-flex items-center gap-1 rounded-md border border-entity-kb/22 bg-entity-kb/6 px-2 py-0.5"
+            >
+              <span aria-hidden="true" className="text-[11px]">
                 {s.icon}
               </span>
-              <span className="font-mono text-[11px] font-semibold text-foreground">{s.text}</span>
-              {i < arr.length - 1 && (
-                <span aria-hidden="true" className="mx-1.5 text-muted-foreground opacity-50">
-                  ·
-                </span>
-              )}
+              <span className="font-mono text-[10.5px] font-bold uppercase tracking-wide text-foreground">
+                {s.text}
+              </span>
             </span>
           ))}
         </div>
@@ -222,6 +259,32 @@ export function HubDefault(props: HubDefaultProps): ReactElement {
           <PdfRow key={pdf.id} pdf={pdf} labels={labels.pdfRow} onActionClick={onPdfAction} />
         ))}
       </div>
+
+      {/*
+        F10 #1974 (audit 2026-06-07): bottom drop-zone CTA. The mockup
+        ships a dashed-bordered tappable region under the PDF list that
+        invites the user to drop a PDF (or click). Pre-fix the only upload
+        affordance was the small "+ Carica PDF" button in the header —
+        easy to miss on a wide screen and discovery-unfriendly for new
+        users. We render the same `onUpload` handler so the click path
+        stays unchanged; drag-and-drop wiring is deferred to the upload
+        flow itself (Issue #1816 P3 / future PR). The CTA only renders
+        when the caller provides a label, so consumers that don't want
+        the affordance pay nothing.
+      */}
+      {labels.dropZoneCta && (
+        <button
+          type="button"
+          onClick={onUpload}
+          data-slot="kb-hub-default-drop-zone"
+          className="m-4 flex w-[calc(100%-2rem)] items-center justify-center gap-2 rounded-md border-2 border-dashed border-entity-kb/30 bg-entity-kb/4 px-4 py-5 text-sm font-bold text-entity-kb transition-colors hover:border-entity-kb/55 hover:bg-entity-kb/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-entity-kb focus-visible:ring-offset-2"
+        >
+          <span aria-hidden="true" className="text-base">
+            ⬆
+          </span>
+          <span>{labels.dropZoneCta}</span>
+        </button>
+      )}
     </section>
   );
 }

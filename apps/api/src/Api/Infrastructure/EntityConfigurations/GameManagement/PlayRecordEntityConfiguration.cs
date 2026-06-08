@@ -50,6 +50,10 @@ internal class PlayRecordEntityConfiguration : IEntityTypeConfiguration<PlayReco
         builder.Property(e => e.CreatedAt).IsRequired();
         builder.Property(e => e.UpdatedAt).IsRequired();
 
+        // Issue #1938 / CF-2: source domain event id (nullable, UNIQUE partial).
+        builder.Property(e => e.SourceEventId)
+            .HasColumnName("source_event_id");
+
         // Indexes
         builder.HasIndex(e => e.GameId)
             .HasDatabaseName("IX_PlayRecords_GameId")
@@ -61,6 +65,14 @@ internal class PlayRecordEntityConfiguration : IEntityTypeConfiguration<PlayReco
             .IsDescending();
         builder.HasIndex(e => e.Status)
             .HasDatabaseName("IX_PlayRecords_Status");
+
+        // Issue #1938 / CF-2: SourceEventId UNIQUE (partial — only when not null).
+        // Guards against duplicate play records when an event handler is re-dispatched
+        // (rolled-back outer tx in #1535, MediatR transient retry, hand-replay).
+        builder.HasIndex(e => e.SourceEventId)
+            .IsUnique()
+            .HasDatabaseName("UX_play_records_source_event_id")
+            .HasFilter("source_event_id IS NOT NULL");
 
         // Relationships
         builder.HasMany(e => e.Players)

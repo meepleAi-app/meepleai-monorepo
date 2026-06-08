@@ -1,8 +1,11 @@
-name: E2E Smoke Real Backend (nightly)
+name: E2E Smoke Real Backend (manual)
 
+# 2026-06-08: scheduled cron trigger removed by user request — smoke now runs
+# only on explicit `workflow_dispatch`. Re-enable the `schedule:` block below
+# if/when the nightly cadence is wanted back.
+#   schedule:
+#     - cron: '0 3 * * *'
 on:
-  schedule:
-    - cron: '0 3 * * *'
   workflow_dispatch:
 
 
@@ -245,7 +248,7 @@ jobs:
 
       - name: Upload report on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report-smoke
           path: apps/web/playwright-report
@@ -274,7 +277,7 @@ jobs:
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `[SMOKE FAILURE] Nightly E2E smoke real backend — ${today}`,
+              title: `[SMOKE FAILURE] E2E smoke real backend — ${today}`,
               labels: ['bug', 'P0', 'smoke-failure'],
-              body: `Nightly smoke run failed. See [run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).\n\nCheck attached \`playwright-report-smoke\` artifact + the new \`Pre-test diagnostics\` step output for container/HTTP probe data.`
+              body: `Smoke run failed. See [run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).\n\nCheck attached \`playwright-report-smoke\` artifact + the \`Pre-test diagnostics\` step output for container/HTTP probe data.`
             });

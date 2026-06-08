@@ -15,6 +15,11 @@ internal interface ILedgerTrackingService
     /// <param name="tokensConsumed">Number of tokens consumed</param>
     /// <param name="costUsd">Cost in USD from OpenRouter pricing</param>
     /// <param name="endpoint">The API endpoint that triggered usage (e.g., "chat", "qa")</param>
+    /// <param name="sourceEventId">
+    /// Optional source domain event id used to dedupe at the DB level (issue #1938 / CF-2).
+    /// Propagated to the created <c>LedgerEntry.SourceEventId</c>; UNIQUE partial index
+    /// guards against duplicate inserts on event re-dispatch.
+    /// </param>
     /// <param name="cancellationToken">Cancellation token</param>
     Task TrackTokenUsageAsync(
         Guid userId,
@@ -22,6 +27,7 @@ internal interface ILedgerTrackingService
         int tokensConsumed,
         decimal costUsd,
         string? endpoint = null,
+        Guid? sourceEventId = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

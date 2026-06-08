@@ -900,6 +900,14 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           citations={allCitations}
           suggestedQuestions={suggestedQuestions}
           onQuestionClick={handleQuestionClick}
+          agent={
+            thread?.agentTypology
+              ? {
+                  name: AGENT_NAMES[(thread.agentTypology as AgentType) ?? 'auto'],
+                  typology: thread.agentTypology,
+                }
+              : undefined
+          }
         />
       </div>
     </div>

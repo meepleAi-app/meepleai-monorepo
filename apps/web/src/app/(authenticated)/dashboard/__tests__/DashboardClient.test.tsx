@@ -56,6 +56,13 @@ vi.mock('@/hooks/queries/useGameNights', () => ({
     isError: false,
     refetch: refetchUpcoming,
   })),
+  // F20 #1974: dashboard "Recenti" slot.
+  useCompletedGameNights: vi.fn(() => ({
+    data: [],
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
+  })),
 }));
 
 vi.mock('@/hooks/queries/useLibrary', () => ({

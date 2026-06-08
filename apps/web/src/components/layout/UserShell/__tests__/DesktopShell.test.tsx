@@ -21,16 +21,22 @@ vi.mock('@/components/layout/SideDrawer/SideDrawer', () => ({
   SideDrawer: () => null,
 }));
 
-// Asse B (#1897) WP7 T7: MainSidebar is mounted in DesktopShell. It pulls
-// `useCurrentUser` (TanStack Query) and `usePathname`; stub it here so the
-// shell test stays focused on layout structure (the sidebar has its own
-// suite under `MainSidebar/__tests__/`).
-vi.mock('@/components/layout/MainSidebar/MainSidebar', () => ({
-  MainSidebar: () => <div data-testid="main-sidebar" />,
-}));
+// #1977 (audit follow-up of umbrella #1974, finding F18): MainSidebar mount
+// was removed from DesktopShell to dedupe primary navigation with the
+// AppTopBar. The component is no longer imported by the shell, so no stub
+// is needed here. `MAIN_NAV_ITEMS` + `MainNavList` are still consumed by the
+// mobile drawer; their own test suites cover that path.
 
 vi.mock('@/components/layout/UserShell/SessionBanner', () => ({
   SessionBanner: () => null,
+}));
+
+vi.mock('@/components/layout/UserShell/MiniNavSlot', () => ({
+  MiniNavSlot: () => <div data-testid="mini-nav-slot" />,
+}));
+
+vi.mock('@/components/layout/UserShell/EmailVerificationBanner', () => ({
+  EmailVerificationBanner: () => <div data-testid="email-verification-banner-stub" />,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -76,5 +82,31 @@ describe('DesktopShell', () => {
       </DesktopShell>
     );
     expect(screen.getByRole('main').className).toContain('pb-16');
+  });
+
+  it('mounts the MiniNavSlot so per-page useMiniNavConfig renders (F23a #1974)', () => {
+    // F23a regression guard: routes like /games + /library register a
+    // mini-nav config via `useMiniNavConfig`, but pre-fix the shell never
+    // mounted any consumer of that store, so the tab strip was silently
+    // dropped. MiniNavSlot is a no-op when no page has registered, so the
+    // shell can keep it mounted unconditionally.
+    render(
+      <DesktopShell>
+        <div>child</div>
+      </DesktopShell>
+    );
+    expect(screen.getByTestId('mini-nav-slot')).toBeInTheDocument();
+  });
+
+  it('mounts the EmailVerificationBanner so unverified users see the prompt (F1 #1974)', () => {
+    // F1 regression guard: the banner is no-op when the BE flag is true or
+    // missing, so it's safe to keep mounted globally. This test asserts the
+    // shell wires the component; the banner's own suite covers behaviour.
+    render(
+      <DesktopShell>
+        <div>child</div>
+      </DesktopShell>
+    );
+    expect(screen.getByTestId('email-verification-banner-stub')).toBeInTheDocument();
   });
 });

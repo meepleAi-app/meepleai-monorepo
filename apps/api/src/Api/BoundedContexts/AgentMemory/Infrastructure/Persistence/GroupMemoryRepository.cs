@@ -104,6 +104,7 @@ internal sealed class GroupMemoryRepository : RepositoryBase, IGroupMemoryReposi
         // Restore Id and CreatedAt via reflection (factory generates new ones)
         SetPrivateProperty(memory, nameof(GroupMemory.Id), entity.Id);
         SetPrivateProperty(memory, nameof(GroupMemory.CreatedAt), entity.CreatedAt);
+        SetPrivateProperty(memory, nameof(GroupMemory.LastProcessedEventId), entity.LastProcessedEventId);
 
         // Restore members from JSONB
         if (entity.MembersJson != null)
@@ -173,6 +174,7 @@ internal sealed class GroupMemoryRepository : RepositoryBase, IGroupMemoryReposi
             Name = memory.Name,
             CreatorId = memory.CreatorId,
             CreatedAt = memory.CreatedAt,
+            LastProcessedEventId = memory.LastProcessedEventId,
         };
 
         // Serialize members to JSONB

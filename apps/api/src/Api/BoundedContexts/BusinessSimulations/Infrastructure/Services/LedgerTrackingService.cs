@@ -31,6 +31,7 @@ internal sealed class LedgerTrackingService : ILedgerTrackingService
         int tokensConsumed,
         decimal costUsd,
         string? endpoint = null,
+        Guid? sourceEventId = null,
         CancellationToken cancellationToken = default)
     {
         if (userId == Guid.Empty)
@@ -70,9 +71,19 @@ internal sealed class LedgerTrackingService : ILedgerTrackingService
             amount: costUsd,
             currency: "USD",
             description: $"Token usage: {tokensConsumed} tokens via {modelId}",
-            metadata: metadata);
+            metadata: metadata,
+            sourceEventId: sourceEventId);
 
-        await _repository.AddAsync(entry, cancellationToken).ConfigureAwait(false);
+        // CF-2 / #1938 deferred follow-up: inline-commit so a 23505 violation on
+        // (source_event_id) is caught here and demoted to a no-op log line, rather
+        // than escaping the downstream UoW pipeline as an unhandled exception.
+        if (!await _repository.AddAndCommitAsync(entry, cancellationToken).ConfigureAwait(false))
+        {
+            _logger.LogInformation(
+                "Skipping duplicate ledger entry for token usage: User={UserId}, Model={ModelId}, SourceEventId={SourceEventId} (already recorded)",
+                userId, modelId, sourceEventId);
+            return;
+        }
 
         _logger.LogInformation(
             "Ledger entry created for token usage: User={UserId}, Model={ModelId}, Tokens={Tokens}, Cost=${Cost}",

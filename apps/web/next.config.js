@@ -583,8 +583,13 @@ const nextConfig = {
   },
 
   // SEC-09: Security headers for Next.js responses (static assets bypass API middleware)
+  // #1816 P2-3 — CSP `manifest-src` widened to include CF Access subdomain ONLY
+  // on staging (where `/manifest.json` is gated by Cloudflare Access). Prod
+  // builds keep `manifest-src 'self'`. Flag: `NEXT_PUBLIC_CSP_ALLOW_CF_ACCESS=true`.
   async headers() {
+    const { buildCspHeader, isCfAccessAllowed } = require('./lib/security/csp');
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+    const allowCfAccess = isCfAccessAllowed(process.env.NEXT_PUBLIC_CSP_ALLOW_CF_ACCESS);
     return [
       {
         source: '/(.*)',
@@ -598,23 +603,7 @@ const nextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-inline'",
-              "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: https:",
-              "font-src 'self' data:",
-              // PWA manifest declared in app/layout.tsx (rel="manifest" -> /manifest.json).
-              // Explicit manifest-src avoids falling back to default-src and reduces console
-              // noise when an upstream gateway (e.g. Cloudflare Access) intercepts the static
-              // /manifest.json request and serves a cross-origin login page. Root cause of the
-              // gateway-intercept must be fixed via infra (allowlist /manifest.json + /sw.js).
-              "manifest-src 'self'",
-              `connect-src 'self' ${apiBaseUrl}`,
-              "frame-ancestors 'none'",
-              "base-uri 'self'",
-              "form-action 'self'",
-            ].join('; '),
+            value: buildCspHeader({ apiBaseUrl, allowCfAccess }),
           },
         ],
       },

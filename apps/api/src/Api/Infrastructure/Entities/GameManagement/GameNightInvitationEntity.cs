@@ -68,4 +68,11 @@ public class GameNightInvitationEntity
     [Column("test_run_id")]
     [MaxLength(64)]
     public string? TestRunId { get; set; }
+
+    /// <summary>
+    /// Issue #1940 / iso-1 Fix 4: timestamp of the last RSVP confirmation email sent.
+    /// Non-null = handler MUST skip resending on a retried event.
+    /// </summary>
+    [Column("rsvp_confirmation_sent_at")]
+    public DateTimeOffset? RsvpConfirmationSentAt { get; set; }
 }

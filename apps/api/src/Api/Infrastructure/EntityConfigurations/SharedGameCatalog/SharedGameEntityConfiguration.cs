@@ -137,6 +137,12 @@ internal class SharedGameEntityConfiguration : IEntityTypeConfiguration<SharedGa
             .HasColumnName("pdf_cover_r2_key")
             .IsRequired(false);
 
+        // Gap G2 (BGG cover re-upload) — BGG-sourced cover image re-uploaded to our storage.
+        builder.Property(e => e.BggCoverR2Key)
+            .HasMaxLength(256)
+            .HasColumnName("bgg_cover_r2_key")
+            .IsRequired(false);
+
         builder.Property(e => e.WikidataCoverSourceUrl)
             .HasMaxLength(2048)
             .HasColumnName("wikidata_cover_source_url")

@@ -26,6 +26,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { CatalogSearchStep } from '@/app/(authenticated)/library/CatalogSearchStep';
 import { UserWizardClient } from '@/app/(authenticated)/library/private/add/client';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/navigation/sheet';
+import { useTranslation } from '@/hooks/useTranslation';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -55,7 +56,15 @@ function ChoiceCard({ icon, title, description, onClick, 'data-testid': testId }
       ].join(' ')}
     >
       <div className="flex items-start gap-4">
-        <div className="flex-shrink-0 mt-0.5 text-orange-500">{icon}</div>
+        {/*
+          F2.2 T6 #1974 (audit 2026-06-07, a11y audit): icon is purely
+          decorative — the title + description below already convey the
+          choice. `aria-hidden` keeps screen readers from announcing
+          "image, image" before the meaningful label.
+        */}
+        <div aria-hidden="true" className="flex-shrink-0 mt-0.5 text-orange-500">
+          {icon}
+        </div>
         <div>
           <p className="font-semibold text-foreground">{title}</p>
           <p className="text-sm text-muted-foreground mt-1">{description}</p>
@@ -74,6 +83,7 @@ interface AddGameDrawerProps {
 
 export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
   const router = useRouter();
+  const { t } = useTranslation();
   const [step, setStep] = useState<DrawerStep>('choice');
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -109,10 +119,10 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
 
   const drawerTitle =
     step === 'manual'
-      ? 'Add game manually'
+      ? t('pages.library.addGame.manualTitle')
       : step === 'catalog'
-        ? 'Add from catalog'
-        : 'Add a game';
+        ? t('pages.library.addGame.catalogTitle')
+        : t('pages.library.addGame.drawerTitle');
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
@@ -129,21 +139,21 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
           {/* Step 0: Choice */}
           {step === 'choice' && (
             <div className="px-6 py-6 space-y-4" data-testid="add-game-step-choice">
-              <p className="text-sm text-muted-foreground">How do you want to add your game?</p>
+              <p className="text-sm text-muted-foreground">{t('pages.library.addGame.question')}</p>
 
               <ChoiceCard
                 data-testid="add-game-choice-manual"
                 icon={<PenLine className="h-6 w-6" />}
-                title="Add manually"
-                description="Enter the game details. You can upload the rulebook and configure the AI agent later from the game detail page."
+                title={t('pages.library.addGame.manualLabel')}
+                description={t('pages.library.addGame.manualDescription')}
                 onClick={() => setStep('manual')}
               />
 
               <ChoiceCard
                 data-testid="add-game-choice-catalog"
                 icon={<BookOpen className="h-6 w-6" />}
-                title="From shared catalog"
-                description="Search the community catalog and add a game in one click. Rulebook and AI agent setup come later."
+                title={t('pages.library.addGame.catalogLabel')}
+                description={t('pages.library.addGame.catalogDescription')}
                 onClick={() => setStep('catalog')}
               />
             </div>

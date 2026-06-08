@@ -92,7 +92,8 @@ internal class CreateSnapshotCommandHandler
             isCheckpoint,
             session.CurrentTurnIndex,
             session.CurrentPhaseIndex,
-            command.CreatedByPlayerId);
+            command.CreatedByPlayerId,
+            sourceEventId: command.SourceEventId);
 
         await _snapshotRepository.AddAsync(snapshot, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

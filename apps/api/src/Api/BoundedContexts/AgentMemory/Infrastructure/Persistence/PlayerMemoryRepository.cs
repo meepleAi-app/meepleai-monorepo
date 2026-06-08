@@ -126,6 +126,7 @@ internal sealed class PlayerMemoryRepository : RepositoryBase, IPlayerMemoryRepo
         SetPrivateProperty(memory, nameof(PlayerMemory.Id), entity.Id);
         SetPrivateProperty(memory, nameof(PlayerMemory.CreatedAt), entity.CreatedAt);
         SetPrivateProperty(memory, nameof(PlayerMemory.ClaimedAt), entity.ClaimedAt);
+        SetPrivateProperty(memory, nameof(PlayerMemory.LastProcessedEventId), entity.LastProcessedEventId);
 
         // For guest records that were later claimed, restore UserId
         // (CreateForGuest doesn't set UserId, but the entity might have it from a claim)
@@ -169,6 +170,7 @@ internal sealed class PlayerMemoryRepository : RepositoryBase, IPlayerMemoryRepo
             GroupId = memory.GroupId,
             ClaimedAt = memory.ClaimedAt,
             CreatedAt = memory.CreatedAt,
+            LastProcessedEventId = memory.LastProcessedEventId,
         };
 
         // Serialize game stats to JSONB

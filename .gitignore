@@ -251,6 +251,9 @@ data/rulebook/manifest.json
 data/rulebook/rag-test-results.md
 data/pdfDocs/
 
+# Dev-local PDF processing artifacts (UUID-named directories per uploaded PDF)
+apps/api/src/Api/pdfs/
+
 # MeepleDev fast dev loop
 infra/.env.dev.local
 infra/.dev-fast.pids
@@ -282,3 +285,6 @@ claude-design-bundle/
 
 # Throwaway screenshot reciclato durante review interattive (drag&drop dall'utente)
 loc.png
+
+# Windows temp diff files accidentally created by harness tools
+C*UsersUtenteAppDataLocalTemp*-diff.txt

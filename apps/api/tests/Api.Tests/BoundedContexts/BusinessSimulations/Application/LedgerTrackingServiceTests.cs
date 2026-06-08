@@ -26,6 +26,14 @@ public sealed class LedgerTrackingServiceTests
         _repositoryMock = new Mock<ILedgerEntryRepository>();
         _loggerMock = new Mock<ILogger<LedgerTrackingService>>();
         _service = new LedgerTrackingService(_repositoryMock.Object, _loggerMock.Object);
+
+        // CF-2 deferred follow-up (#1938): TrackTokenUsageAsync now uses
+        // AddAndCommitAsync (inline-commit + 23505 catch). Default to "row
+        // inserted successfully" so the existing tests don't have to opt in;
+        // any test that needs to assert the lost-race path overrides this.
+        _repositoryMock
+            .Setup(r => r.AddAndCommitAsync(It.IsAny<LedgerEntry>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
     }
 
     #region TrackTokenUsageAsync
@@ -37,15 +45,15 @@ public sealed class LedgerTrackingServiceTests
         var userId = Guid.NewGuid();
         LedgerEntry? capturedEntry = null;
         _repositoryMock
-            .Setup(r => r.AddAsync(It.IsAny<LedgerEntry>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.AddAndCommitAsync(It.IsAny<LedgerEntry>(), It.IsAny<CancellationToken>()))
             .Callback<LedgerEntry, CancellationToken>((entry, _) => capturedEntry = entry)
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(true);
 
         // Act
         await _service.TrackTokenUsageAsync(userId, "openai/gpt-4o-mini", 1500, 0.005m, "chat");
 
         // Assert
-        _repositoryMock.Verify(r => r.AddAsync(It.IsAny<LedgerEntry>(), It.IsAny<CancellationToken>()), Times.Once);
+        _repositoryMock.Verify(r => r.AddAndCommitAsync(It.IsAny<LedgerEntry>(), It.IsAny<CancellationToken>()), Times.Once);
         capturedEntry.Should().NotBeNull();
         capturedEntry!.Type.Should().Be(LedgerEntryType.Expense);
         capturedEntry.Category.Should().Be(LedgerCategory.TokenUsage);
@@ -65,7 +73,7 @@ public sealed class LedgerTrackingServiceTests
         await _service.TrackTokenUsageAsync(Guid.NewGuid(), "free-model", 100, 0m, "chat");
 
         // Assert - no repository call should be made
-        _repositoryMock.Verify(r => r.AddAsync(It.IsAny<LedgerEntry>(), It.IsAny<CancellationToken>()), Times.Never);
+        _repositoryMock.Verify(r => r.AddAndCommitAsync(It.IsAny<LedgerEntry>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -134,9 +142,9 @@ public sealed class LedgerTrackingServiceTests
         // Arrange
         LedgerEntry? capturedEntry = null;
         _repositoryMock
-            .Setup(r => r.AddAsync(It.IsAny<LedgerEntry>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.AddAndCommitAsync(It.IsAny<LedgerEntry>(), It.IsAny<CancellationToken>()))
             .Callback<LedgerEntry, CancellationToken>((entry, _) => capturedEntry = entry)
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(true);
 
         // Act
         await _service.TrackTokenUsageAsync(Guid.NewGuid(), "model", 100, 0.01m, "qa");
@@ -147,18 +155,37 @@ public sealed class LedgerTrackingServiceTests
     }
 
     [Fact]
+    public async Task TrackTokenUsageAsync_WhenAddAndCommitLostRace_ShouldReturnWithoutThrowing()
+    {
+        // CF-2 deferred follow-up (#1938): when AddAndCommitAsync returns false an
+        // outbox replay or a concurrent pod won the insert race. The service must
+        // log and exit silently — no rethrow, no further repository calls.
+        _repositoryMock
+            .Setup(r => r.AddAndCommitAsync(It.IsAny<LedgerEntry>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        // Act
+        var act = () => _service.TrackTokenUsageAsync(
+            Guid.NewGuid(), "openai/gpt-4o-mini", 1500, 0.005m, "chat",
+            sourceEventId: Guid.NewGuid());
+
+        // Assert
+        await act.Should().NotThrowAsync();
+        _repositoryMock.Verify(
+            r => r.AddAndCommitAsync(It.IsAny<LedgerEntry>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task TrackTokenUsageAsync_WithNullEndpoint_ShouldSucceed()
     {
-        // Arrange
-        _repositoryMock
-            .Setup(r => r.AddAsync(It.IsAny<LedgerEntry>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+        // Arrange — default AddAndCommitAsync setup from the ctor returns true.
 
         // Act
         await _service.TrackTokenUsageAsync(Guid.NewGuid(), "model", 100, 0.01m, null);
 
         // Assert
-        _repositoryMock.Verify(r => r.AddAsync(It.IsAny<LedgerEntry>(), It.IsAny<CancellationToken>()), Times.Once);
+        _repositoryMock.Verify(r => r.AddAndCommitAsync(It.IsAny<LedgerEntry>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     #endregion

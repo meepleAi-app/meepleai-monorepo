@@ -4,6 +4,8 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.EventHandlers;
+using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.GameManagement.Application.EventHandlers;
@@ -83,6 +85,17 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
                 playRecord.Id,
                 domainEvent.SessionId);
         }
+        catch (DbUpdateException ex) when (CounterTableIdempotency.IsUniqueViolation(ex))
+        {
+            // CF-2 / #1938: outbox replay (#1535 at-least-once delivery) for a session
+            // already mapped to a PlayRecord. The partial UNIQUE index on
+            // play_records.source_event_id blocked the duplicate insert at the DB.
+            // Log at Information — legitimate replays are not failures.
+            Logger.LogInformation(
+                ex,
+                "Skipping duplicate PlayRecord for LiveSession {SessionId}: SourceEventId={SourceEventId} (already recorded)",
+                domainEvent.SessionId, domainEvent.EventId);
+        }
 #pragma warning disable CA1031 // Do not catch general exception types
         // SERVICE BOUNDARY: EVENT HANDLER PATTERN - Background event processing
         // PlayRecord generation failure must not block session completion.
@@ -97,6 +110,8 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
 
     private PlayRecord CreatePlayRecordFromEvent(LiveSessionCompletedEvent domainEvent)
     {
+        // Issue #1938 / CF-2: propagate EventId so the resulting PlayRecord row carries the
+        // source event id and the UNIQUE partial index blocks duplicate inserts on retry/replay.
         if (domainEvent.GameId.HasValue)
         {
             return PlayRecord.CreateWithGame(
@@ -107,7 +122,8 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
                 sessionDate: domainEvent.SessionDate,
                 visibility: domainEvent.Visibility,
                 timeProvider: _timeProvider,
-                groupId: domainEvent.GroupId);
+                groupId: domainEvent.GroupId,
+                sourceEventId: domainEvent.EventId);
         }
 
         return PlayRecord.CreateFreeForm(
@@ -118,7 +134,8 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
             visibility: domainEvent.Visibility,
             scoringConfig: SessionScoringConfig.CreateDefault(),
             timeProvider: _timeProvider,
-            groupId: domainEvent.GroupId);
+            groupId: domainEvent.GroupId,
+            sourceEventId: domainEvent.EventId);
     }
 
     protected override Dictionary<string, object?>? GetAuditMetadata(LiveSessionCompletedEvent domainEvent)

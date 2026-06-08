@@ -228,11 +228,21 @@
       "error": "Invalid code. Please try again.",
       "submit": "Verify",
       "title": "Two-Factor Authentication",
-      "verificationSubtitle": "Enter the code from your authenticator app to continue."
+      "verificationSubtitle": "Enter the code from your authenticator app to continue.",
+      "submitting": "Verifying...",
+      "codeRequired": "Please enter a 6-digit code",
+      "codeInvalid": "Invalid code format",
+      "rememberDevice": "Trust this device for 30 days"
     },
     "emailVerification": {
       "pageTitle": "Email verification",
       "verifying": "Verifying your email...",
+      "banner": {
+        "title": "Verify your email",
+        "description": "Confirm your email to unlock all MeepleAI features.",
+        "cta": "Verify now",
+        "dismissAriaLabel": "Dismiss banner"
+      },
       "pending": {
         "title": "Check your email",
         "description": "We've sent a verification link to your email address.",
@@ -319,7 +329,14 @@
     "send": "Send",
     "sources": "Sources",
     "thinking": "Thinking...",
-    "title": "AI Chat"
+    "title": "AI Chat",
+    "infoPanel": {
+      "linkedGameLabel": "Linked game",
+      "citationsHeading": "Citations ({count})",
+      "suggestedQuestionsHeading": "Suggested questions",
+      "agentSectionHeading": "Agent",
+      "agentTypeLabel": "Type"
+    }
   },
   "common": {
     "all": "All",
@@ -386,6 +403,16 @@
           "resolved": "Incident resolved"
         }
       }
+    },
+    "entity": {
+      "game": "Game",
+      "agent": "Agent",
+      "session": "Session",
+      "kb": "KB",
+      "player": "Players",
+      "chat": "Chat",
+      "event": "Events",
+      "toolkit": "Toolkit"
     }
   },
   "comments": {
@@ -1869,7 +1896,8 @@
           "header": {
             "titleSuffix": "Knowledge Base",
             "uploadCta": "+ Upload PDF",
-            "reindexAllCta": "⟳ Re-index all"
+            "reindexAllCta": "⟳ Re-index all",
+            "dropZoneCta": "Drop a PDF here or click to upload"
           },
           "stats": {
             "docs": "{count, plural, =0 {No documents} =1 {1 document} other {# documents}}",
@@ -1899,7 +1927,9 @@
               "document": "Document",
               "status": "Status",
               "uploaded": "Uploaded"
-            }
+            },
+            "indexingBadge": "⏳ Indexing in progress",
+            "indexingDescription": "The document is uploaded but not yet searchable from chat."
           },
           "empty": {
             "title": "No PDFs indexed yet",
@@ -1998,6 +2028,75 @@
             "raptorFailed": "RAPTOR rebuild failed.",
             "deleteFailed": "Unable to delete PDF."
           }
+        },
+        "h1": {
+          "loading": "Loading game…",
+          "notFound": "Game not found"
+        },
+        "documentTitle": {
+          "format": "{gameName} · MeepleAI",
+          "loading": "Loading game — MeepleAI",
+          "notFound": "Game not found — MeepleAI"
+        }
+      },
+      "addGame": {
+        "drawerTitle": "Add a game",
+        "manualTitle": "Add game manually",
+        "catalogTitle": "Add from catalog",
+        "question": "How do you want to add your game?",
+        "manualLabel": "Add manually",
+        "manualDescription": "Enter the game details. You can upload the rulebook and configure the AI agent later from the game detail page.",
+        "catalogLabel": "From shared catalog",
+        "catalogDescription": "Search the community catalog and add a game in one click. Rulebook and AI agent setup come later.",
+        "catalog": {
+          "backAriaLabel": "Back to choice",
+          "searchPlaceholder": "Search games…",
+          "searchAriaLabel": "Search games",
+          "noImage": "No image",
+          "inLibraryBadge": "In library",
+          "alreadyInLibrary": "Already in library",
+          "selectCta": "Select",
+          "resultCount": "{count, plural, =0 {No games found} =1 {1 game found} other {# games found}}",
+          "emptyResults": "No games found for \"{search}\".",
+          "emptyResultsHeading": "No results",
+          "emptyResultsSubtitle": "Try a different title or check the spelling.",
+          "toastAdded": "\"{gameName}\" added to your library!",
+          "toastError": "Could not add \"{gameName}\". Please try again."
+        }
+      },
+      "catalogPagination": {
+        "firstPage": "First page",
+        "previousPage": "Previous page",
+        "nextPage": "Next page",
+        "lastPage": "Last page",
+        "pageNumber": "Page {n}"
+      }
+    },
+    "onboarding": {
+      "interests": {
+        "heading": "What do you enjoy?",
+        "subtitle": "Select categories that interest you. We'll use them to personalize recommendations.",
+        "groupLabel": "Game category interests",
+        "categories": {
+          "strategy": "Strategy",
+          "party": "Party",
+          "cooperative": "Cooperative",
+          "family": "Family",
+          "thematic": "Thematic",
+          "abstract": "Abstract",
+          "card": "Card",
+          "dice": "Dice",
+          "miniatures": "Miniatures"
+        },
+        "selectedCount": "{count} selected",
+        "cta": {
+          "continue": "Continue",
+          "skip": "Skip",
+          "skipForNow": "Skip for now"
+        },
+        "loading": "Saving…",
+        "toast": {
+          "saved": "{count} interests saved!"
         }
       }
     },
@@ -2405,11 +2504,11 @@
     "players": {
       "metadata": {
         "title": "Players — MeepleAI",
-        "description": "Summary of your play history: games played, sessions and wins."
+        "description": "The gaming partners you've played with — shared sessions, results and head-to-head stats."
       },
       "hero": {
-        "title": "Your play history",
-        "subtitle": "Summary of the games you have played, with sessions and wins.",
+        "title": "Your gaming partners",
+        "subtitle": "See who you've played with the most, shared sessions and table results.",
         "totalPlays": "Total sessions",
         "distinctGames": "Distinct games"
       },
@@ -4095,10 +4194,27 @@
           "cta": "Go to library"
         },
         "error": {
-          "connection": { "title": "Connection lost", "body": "Auto-retry in progress…", "action": "Retry now" },
-          "timeout": { "title": "Slow response", "body": "Continue waiting?", "action": "Continue waiting", "alt": "Cancel" },
-          "partial": { "title": "Incomplete response", "body": "Stream was interrupted.", "action": "Repeat query" },
-          "server": { "title": "Server error", "body": "Try again in a moment.", "action": "Retry" }
+          "connection": {
+            "title": "Connection lost",
+            "body": "Auto-retry in progress…",
+            "action": "Retry now"
+          },
+          "timeout": {
+            "title": "Slow response",
+            "body": "Continue waiting?",
+            "action": "Continue waiting",
+            "alt": "Cancel"
+          },
+          "partial": {
+            "title": "Incomplete response",
+            "body": "Stream was interrupted.",
+            "action": "Repeat query"
+          },
+          "server": {
+            "title": "Server error",
+            "body": "Try again in a moment.",
+            "action": "Retry"
+          }
         }
       }
     }

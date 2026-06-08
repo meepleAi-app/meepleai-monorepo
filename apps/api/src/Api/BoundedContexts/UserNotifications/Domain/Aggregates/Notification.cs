@@ -21,6 +21,14 @@ internal sealed class Notification : AggregateRoot<Guid>
     public DateTime? ReadAt { get; private set; }
     public Guid? CorrelationId { get; private set; }
 
+    /// <summary>
+    /// Optional source domain event id used to dedupe at the dispatcher level (issue #1937 / CF-1).
+    /// When set, the dispatcher / repository can short-circuit if a Notification with the same
+    /// SourceEventId already exists. See <c>NotificationMessage.SourceEventId</c> for the full
+    /// rationale and propagation contract.
+    /// </summary>
+    public Guid? SourceEventId { get; private set; }
+
 #pragma warning disable CS8618
     private Notification() : base() { }
 #pragma warning restore CS8618
@@ -37,6 +45,7 @@ internal sealed class Notification : AggregateRoot<Guid>
     /// <param name="link">Optional deep-link target (e.g., /chat/thread-id)</param>
     /// <param name="metadata">Optional JSON metadata for additional context</param>
     /// <param name="correlationId">Optional correlation ID for cross-channel tracking</param>
+    /// <param name="sourceEventId">Optional source domain event id for dispatcher-level dedup (#1937 / CF-1)</param>
     public Notification(
         Guid id,
         Guid userId,
@@ -46,7 +55,8 @@ internal sealed class Notification : AggregateRoot<Guid>
         string message,
         string? link = null,
         string? metadata = null,
-        Guid? correlationId = null)
+        Guid? correlationId = null,
+        Guid? sourceEventId = null)
         : base(id)
     {
         UserId = userId;
@@ -59,6 +69,7 @@ internal sealed class Notification : AggregateRoot<Guid>
         Link = link;
         Metadata = metadata;
         CorrelationId = correlationId;
+        SourceEventId = sourceEventId;
         IsRead = false;
         CreatedAt = DateTime.UtcNow;
         ReadAt = null;

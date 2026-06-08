@@ -24,16 +24,15 @@ import {
   DeleteDialog,
   EmptyState,
   HubDefault,
-  KbStatsCard,
   RaptorPanel,
   ReindexModal,
   type ActionsMenuLabels,
   type DeleteDialogLabels,
   type EmptyStateLabels,
   type HubDefaultLabels,
-  type KbStatsCardLabels,
   type KbPdf,
   type PdfAction,
+  type PdfStatus,
   type RaptorPanelLabels,
   type ReindexCostRow,
   type ReindexModalLabels,
@@ -48,6 +47,7 @@ import {
   useRebuildRaptor,
   useUserKbStatus,
 } from '@/hooks/queries/useKbHub';
+import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { GamePdfDto } from '@/lib/api/schemas/pdf.schemas';
 
@@ -82,13 +82,46 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
+/**
+ * F6 #1974 (audit 2026-06-07): map the BE `GamePdfDto.ProcessingState`
+ * (Pending|Uploading|Extracting|Chunking|Embedding|Indexing|Ready|Failed)
+ * to the FE `PdfStatus` union (ready|indexing|stale|failed) so PdfRow
+ * can render a colored status badge per the mockup.
+ *
+ * Mapping rationale: every transient pipeline phase collapses to
+ * "indexing" because the FE only renders one in-progress badge. "Ready"
+ * is the only success terminal; "Failed" surfaces explicitly so the
+ * user can retry. Unknown values fall back to "indexing" to avoid a
+ * confidently-wrong success state when the BE adds a new phase later.
+ * The "stale" badge has no BE source today — reserved for a future
+ * Issue when re-embedding gates land.
+ */
+function mapProcessingStateToPdfStatus(state: string): PdfStatus {
+  switch (state) {
+    case 'Ready':
+      return 'ready';
+    case 'Failed':
+      return 'failed';
+    case 'Pending':
+    case 'Uploading':
+    case 'Extracting':
+    case 'Chunking':
+    case 'Embedding':
+    case 'Indexing':
+    default:
+      return 'indexing';
+  }
+}
+
 function mapPdfs(pdfs: ReadonlyArray<GamePdfDto>): ReadonlyArray<KbPdf> {
   return pdfs.map(p => ({
     id: p.id,
     name: p.name,
     sizeFormatted: formatFileSize(p.fileSizeBytes),
     uploadedAtRelative: formatRelativeDate(p.uploadedAt),
-    // status + chunks deferred (P83 — BE schema doesn't expose them yet)
+    // F6 #1974: wire BE ProcessingState → PdfRow status badge.
+    status: mapProcessingStateToPdfStatus(p.processingState),
+    // chunks deferred (P83 — BE schema doesn't expose per-doc chunk counts yet)
   }));
 }
 
@@ -99,6 +132,12 @@ export function KbHubContent({ gameId }: KbHubContentProps): ReactElement {
   const reindexMutation = useReindexKb(gameId);
   const _raptorMutation = useRebuildRaptor(gameId);
   const deleteMutation = useDeletePdf(gameId);
+  // F4 #1974 (audit 2026-06-07): pull the game title from the library detail
+  // hook (shared QueryKey with the layout — TanStack dedups) so the KB hub
+  // renders "Catan" instead of the cc1678e8… UUID when the BE status payload
+  // omits `gameTitle`. `useLibraryGameDetail` already falls back to the
+  // shared-catalog title for games not in the user's library.
+  const gameDetailQuery = useLibraryGameDetail(gameId);
 
   const [reindexOpen, setReindexOpen] = useState(false);
   const [reindexPhase, setReindexPhase] = useState<ReindexPhase>('confirm');
@@ -129,7 +168,21 @@ export function KbHubContent({ gameId }: KbHubContentProps): ReactElement {
 
   const status = statusQuery.data;
   const pdfs = pdfsQuery.data ?? [];
-  const gameTitle = status?.gameId ?? gameId; // BE schema has no title; consumer falls back to id MVP
+  // F4 #1974: title resolution order
+  //   1. library-detail (preferred — shared with the layout via TanStack dedup)
+  //   2. KB status.gameId (only ever the UUID — last resort, signals BE schema
+  //      gap rather than a real title; surfaced as the literal id when nothing
+  //      else is available so consumers see the bug instead of a silent blank).
+  //   3. route param (defensive — should never differ from gameId in BE)
+  const gameTitle = gameDetailQuery.data?.gameTitle ?? status?.gameId ?? gameId;
+
+  // #1816 P3-7 Phase 2 — derived from the two independent BE endpoints:
+  //   - useGamePdfs returns rows from `pdf_documents` (uploaded files)
+  //   - useUserKbStatus.isIndexed reflects pgvector chunk presence (indexed)
+  // When at least one file exists but pgvector indexing has not produced any
+  // chunk yet, surface the audit-flagged "0 Documenti / Copertura: Nessuna"
+  // state as an explicit "Indicizzazione in corso" badge.
+  const indexingPending = pdfs.length > 0 && status?.isIndexed === false;
 
   // ─── Labels (caller-side i18n resolution) ─────────────
   const emptyLabels: EmptyStateLabels = {
@@ -143,6 +196,10 @@ export function KbHubContent({ gameId }: KbHubContentProps): ReactElement {
     headerSubtitle: t('pages.library.gameDetail.kb.header.titleSuffix'),
     uploadCta: t('pages.library.gameDetail.kb.header.uploadCta'),
     reindexAllCta: t('pages.library.gameDetail.kb.header.reindexAllCta'),
+    // F10 #1974: bottom drop-zone CTA — discoverable upload affordance.
+    dropZoneCta: t('pages.library.gameDetail.kb.header.dropZoneCta'),
+    indexingBadge: t('pages.library.gameDetail.kb.stats.indexingBadge'),
+    indexingDescription: t('pages.library.gameDetail.kb.stats.indexingDescription'),
     statsStrip: {
       docs: t('pages.library.gameDetail.kb.stats.docs', { count: status?.documentCount ?? 0 }),
       chunks: t('pages.library.gameDetail.kb.stats.chunksTemplate'),
@@ -174,26 +231,11 @@ export function KbHubContent({ gameId }: KbHubContentProps): ReactElement {
     },
   };
 
-  const statsCardLabels: KbStatsCardLabels = {
-    cardTitle: t('pages.library.gameDetail.kb.stats.cardTitle'),
-    cardSubtitle: t('pages.library.gameDetail.kb.stats.cardSubtitle'),
-    docsLabel: t('pages.library.gameDetail.kb.stats.docsLabel'),
-    chunksLabel: t('pages.library.gameDetail.kb.stats.chunksLabel'),
-    embeddingsLabel: t('pages.library.gameDetail.kb.stats.embeddingsLabel'),
-    lastReindexLabel: t('pages.library.gameDetail.kb.stats.lastReindexLabel'),
-    raptorLabel: t('pages.library.gameDetail.kb.stats.raptorLabel'),
-    coverageLabel: t('pages.library.gameDetail.kb.stats.coverageLabel'),
-    coverage: {
-      None: t('pages.library.gameDetail.kb.stats.coverage.None'),
-      Basic: t('pages.library.gameDetail.kb.stats.coverage.Basic'),
-      Standard: t('pages.library.gameDetail.kb.stats.coverage.Standard'),
-      Complete: t('pages.library.gameDetail.kb.stats.coverage.Complete'),
-    },
-    lifetimeCostLabel: t('pages.library.gameDetail.kb.stats.lifetimeCostLabel'),
-    sparklineLabel: t('pages.library.gameDetail.kb.stats.sparklineLabel'),
-    sparklineStart: t('pages.library.gameDetail.kb.stats.sparklineStart'),
-    sparklineEnd: t('pages.library.gameDetail.kb.stats.sparklineEnd'),
-  };
+  // F7 #1974: KbStatsCard labels removed from the user-facing kb page —
+  // the same data lives in the HubDefault stats strip. Translation keys
+  // under `pages.library.gameDetail.kb.stats.*` stay in the locale files
+  // because the KbStatsCard component is still consumed by admin / dev
+  // surfaces (see `@/components/features/kb-hub` barrel exports).
 
   const raptorLabels: RaptorPanelLabels = {
     title: t('pages.library.gameDetail.kb.raptor.title'),
@@ -338,14 +380,18 @@ export function KbHubContent({ gameId }: KbHubContentProps): ReactElement {
               setReindexOpen(true);
             }}
             onPdfAction={handlePdfActionTrigger}
+            indexingPending={indexingPending}
           />
 
-          <KbStatsCard
-            documentCount={status?.documentCount ?? 0}
-            coverageLevel={status?.coverageLevel ?? 'None'}
-            coverageScore={status?.coverageScore ?? 0}
-            labels={statsCardLabels}
-          />
+          {/*
+            F7 #1974 (audit 2026-06-07): KbStatsCard removed from the
+            primary `/library/[gameId]/kb` layout. The mockup ships the
+            same `documentCount + coverage` info inside the HubDefault
+            stats strip; rendering a separate card below was pure UI
+            redundancy. The component itself stays in the
+            `@/components/features/kb-hub` barrel for the admin /
+            embedded surfaces that still want a dedicated card.
+          */}
 
           <RaptorPanel tier="free" labels={raptorLabels} />
         </>

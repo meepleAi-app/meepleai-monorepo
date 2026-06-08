@@ -30,6 +30,21 @@ internal sealed class AccessRequestApprovedEventHandler : DomainEventHandlerBase
     {
         try
         {
+            // Issue #1940 / iso-1 Fix 2: pre-flight idempotency check. If the AccessRequest
+            // already has an InvitationId, a prior dispatch already issued the SendInvitationCommand
+            // (DB row + invitation email). Re-dispatch on a rolled-back/retried event MUST skip to
+            // avoid duplicate InvitationToken row + duplicate invitation email.
+            var accessRequest = await _repository.GetByIdAsync(
+                domainEvent.AccessRequestId, cancellationToken).ConfigureAwait(false);
+
+            if (accessRequest?.InvitationId is not null)
+            {
+                Logger.LogDebug(
+                    "Skipping SendInvitationCommand for AccessRequest {AccessRequestId}: invitation {InvitationId} already issued (iso-1)",
+                    domainEvent.AccessRequestId, accessRequest.InvitationId.Value);
+                return;
+            }
+
             var invitationResult = await _mediator.Send(
                 new SendInvitationCommand(
                     domainEvent.Email,
@@ -38,8 +53,6 @@ internal sealed class AccessRequestApprovedEventHandler : DomainEventHandlerBase
                 cancellationToken).ConfigureAwait(false);
 
             // Set correlation ID linking access request to invitation
-            var accessRequest = await _repository.GetByIdAsync(
-                domainEvent.AccessRequestId, cancellationToken).ConfigureAwait(false);
             if (accessRequest is not null)
             {
                 accessRequest.SetInvitationId(invitationResult.Id);

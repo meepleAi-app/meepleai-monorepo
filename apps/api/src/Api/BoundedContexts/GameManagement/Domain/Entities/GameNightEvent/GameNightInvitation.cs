@@ -53,6 +53,14 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
     public DateTimeOffset CreatedAt { get; private set; }
     public Guid CreatedBy { get; private set; }
 
+    /// <summary>
+    /// Timestamp of the last RSVP confirmation email successfully sent for this invitation
+    /// (issue #1940 / iso-1). When non-null the
+    /// <c>GameNightInvitationRespondedHandler</c> MUST skip sending another confirmation
+    /// email — guards against duplicate confirmations on a retried/rolled-back event.
+    /// </summary>
+    public DateTimeOffset? RsvpConfirmationSentAt { get; private set; }
+
 #pragma warning disable CS8618
     private GameNightInvitation() : base() { } // EF Core
 #pragma warning restore CS8618
@@ -68,7 +76,8 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
         Guid? respondedByUserId,
         string? respondedByName,
         DateTimeOffset createdAt,
-        Guid createdBy) : base(id)
+        Guid createdBy,
+        DateTimeOffset? rsvpConfirmationSentAt = null) : base(id)
     {
         Token = token;
         GameNightId = gameNightId;
@@ -80,6 +89,7 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
         RespondedByName = respondedByName;
         CreatedAt = createdAt;
         CreatedBy = createdBy;
+        RsvpConfirmationSentAt = rsvpConfirmationSentAt;
     }
 
     /// <summary>
@@ -151,7 +161,8 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
         Guid? respondedByUserId,
         DateTimeOffset createdAt,
         Guid createdBy,
-        string? respondedByName = null)
+        string? respondedByName = null,
+        DateTimeOffset? rsvpConfirmationSentAt = null)
     {
         return new GameNightInvitation(
             id: id,
@@ -164,7 +175,17 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
             respondedByUserId: respondedByUserId,
             respondedByName: respondedByName,
             createdAt: createdAt,
-            createdBy: createdBy);
+            createdBy: createdBy,
+            rsvpConfirmationSentAt: rsvpConfirmationSentAt);
+    }
+
+    /// <summary>
+    /// Records that the RSVP confirmation email has been sent for this invitation
+    /// (issue #1940 / iso-1 Fix 4).
+    /// </summary>
+    public void MarkConfirmationSent(DateTimeOffset utcNow)
+    {
+        RsvpConfirmationSentAt = utcNow;
     }
 
     /// <summary>

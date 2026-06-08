@@ -42,12 +42,12 @@ namespace Api.BoundedContexts.Administration.Application.Behaviors;
 /// idempotent on rollback) this is acceptable — a rolled-back first attempt leaves no committed state,
 /// and EF retries only on transient connection errors, not on business-logic failures.
 ///
-/// Domain-events caveat (atomic path): MeepleAiDbContext.SaveChangesAsync dispatches collected
-/// events via MediatR.Publish INSIDE base.SaveChangesAsync (before our outer Commit). If the outer
-/// transaction subsequently rolls back, event side-effects already happened. To mitigate the retry
-/// case the behavior calls IDomainEventCollector.Clear() at the START of each strategy attempt so a
-/// retried handler does not see stale events from a failed attempt — but it cannot undo dispatches
-/// that already occurred. See [AtomicAudit] doc-comment for the formal constraint.
+/// Domain-events post-#1535: events raised via IDomainEventCollector are dispatched POST-COMMIT
+/// via the DomainEventOutboxProcessor (Phase B cutover). A rolled-back transaction never persists
+/// the outbox row, so no event side-effect leaves the system — the historical caveat is RESOLVED.
+/// The IDomainEventCollector.Clear() calls at the start of each strategy attempt remain in place
+/// as defence-in-depth: if a retried handler somehow re-raises the same event, the collector is
+/// pre-emptied so the retry is observed from a clean slate (no stale events from the failed attempt).
 /// </summary>
 internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TRequest : IBaseRequest

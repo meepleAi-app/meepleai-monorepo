@@ -81,8 +81,12 @@ vi.mock('../RagEnhancementsBadge', () => ({
   RagEnhancementsBadge: () => <div data-testid="rag-badge-mock" />,
 }));
 
-// Mock ChatInfoPanel
-vi.mock('@/components/chat/ChatInfoPanel', () => ({
+// Mock ChatInfoPanel — path is `chat-unified/ChatInfoPanel` (the actual relative
+// import in ChatThreadView). The previous `@/components/chat/ChatInfoPanel`
+// target did not exist, so the mock never intercepted — the real component
+// loaded, invoked `useTranslation()` without an `<IntlProvider>` ancestor, and
+// crashed the render. Found in #2010 PR CI 2026-06-08.
+vi.mock('@/components/chat-unified/ChatInfoPanel', () => ({
   ChatInfoPanel: ({ citations, suggestedQuestions }: any) => (
     <div data-testid="chat-info-panel">
       <span data-testid="citation-count">{citations?.length ?? 0}</span>

@@ -25,6 +25,81 @@ const baseLabels = {
 };
 
 describe('KbStatsCard (Issue #1481)', () => {
+  // #1816 P3-7 Phase 2 — indexing-pending badge.
+  describe('indexingPending badge (#1816 P3-7)', () => {
+    const labelsWithBadge = {
+      ...baseLabels,
+      indexingBadge: '⏳ Indexing in progress',
+      indexingDescription: 'The document is uploaded but not yet searchable from chat.',
+    };
+
+    it('does NOT render the indexing badge by default (prop omitted)', () => {
+      const { container } = render(
+        <KbStatsCard
+          documentCount={0}
+          coverageLevel="None"
+          coverageScore={0}
+          labels={labelsWithBadge}
+        />
+      );
+      expect(
+        container.querySelector('[data-slot="kb-hub-stats-indexing-badge"]')
+      ).not.toBeInTheDocument();
+    });
+
+    it('does NOT render the indexing badge when indexingPending=false', () => {
+      const { container } = render(
+        <KbStatsCard
+          documentCount={3}
+          coverageLevel="Standard"
+          coverageScore={70}
+          labels={labelsWithBadge}
+          indexingPending={false}
+        />
+      );
+      expect(
+        container.querySelector('[data-slot="kb-hub-stats-indexing-badge"]')
+      ).not.toBeInTheDocument();
+    });
+
+    it('renders the indexing badge + description when indexingPending=true and labels provided', () => {
+      const { container } = render(
+        <KbStatsCard
+          documentCount={0}
+          coverageLevel="None"
+          coverageScore={0}
+          labels={labelsWithBadge}
+          indexingPending={true}
+        />
+      );
+      const badge = container.querySelector('[data-slot="kb-hub-stats-indexing-badge"]');
+      expect(badge).toBeInTheDocument();
+      expect(badge).toHaveAttribute('role', 'status');
+      expect(badge).toHaveAttribute('aria-live', 'polite');
+      expect(screen.getByText('⏳ Indexing in progress')).toBeInTheDocument();
+      expect(
+        screen.getByText('The document is uploaded but not yet searchable from chat.')
+      ).toBeInTheDocument();
+    });
+
+    it('does NOT render the badge when indexingPending=true but labels.indexingBadge is missing', () => {
+      const { container } = render(
+        <KbStatsCard
+          documentCount={0}
+          coverageLevel="None"
+          coverageScore={0}
+          labels={baseLabels}
+          indexingPending={true}
+        />
+      );
+      // The component guards on BOTH the flag AND the presence of the label —
+      // an i18n-key resolution miss must not render an empty badge slot.
+      expect(
+        container.querySelector('[data-slot="kb-hub-stats-indexing-badge"]')
+      ).not.toBeInTheDocument();
+    });
+  });
+
   it('renders required fields: documentCount, coverageLevel, coverageScore', () => {
     render(
       <KbStatsCard
@@ -117,5 +192,41 @@ describe('KbStatsCard (Issue #1481)', () => {
       container.querySelector('[data-slot="kb-hub-stats-lifetime-cost"]')
     ).not.toBeInTheDocument();
     expect(container.querySelector('[data-slot="kb-hub-stats-sparkline"]')).not.toBeInTheDocument();
+  });
+
+  it('hides the sparkline when costHistory contains only zeros (F9 #1974)', () => {
+    // F9 regression guard: the BE seeds an empty 7-day cost window for KBs
+    // that have never been used. Pre-fix the sparkline rendered 7 flat
+    // zero-height bars — pure UI noise. Now the chart is hidden unless at
+    // least one datapoint is non-zero.
+    const { container } = render(
+      <KbStatsCard
+        documentCount={12}
+        coverageLevel="Standard"
+        coverageScore={73}
+        lifetimeCost="$0.00"
+        costHistory={[0, 0, 0, 0, 0, 0, 0]}
+        labels={baseLabels}
+      />
+    );
+    expect(container.querySelector('[data-slot="kb-hub-stats-sparkline"]')).not.toBeInTheDocument();
+    // Lifetime cost row is independent of sparkline signal — it still renders
+    // (the card still wants to surface the explicit "$0.00 lifetime" state).
+    expect(container.querySelector('[data-slot="kb-hub-stats-lifetime-cost"]')).toBeInTheDocument();
+  });
+
+  it('renders the sparkline when at least one datapoint is non-zero (F9 #1974)', () => {
+    const { container } = render(
+      <KbStatsCard
+        documentCount={12}
+        coverageLevel="Standard"
+        coverageScore={73}
+        lifetimeCost="$0.04"
+        // 6 zeros + 1 spike — first real activity within the window.
+        costHistory={[0, 0, 0, 0, 0, 0, 0.04]}
+        labels={baseLabels}
+      />
+    );
+    expect(container.querySelector('[data-slot="kb-hub-stats-sparkline"]')).toBeInTheDocument();
   });
 });

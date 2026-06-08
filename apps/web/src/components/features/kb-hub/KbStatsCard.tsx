@@ -30,6 +30,11 @@ export interface KbStatsCardLabels {
   readonly sparklineLabel: string; // "Consumo token · ultimi 7 gg"
   readonly sparklineStart: string; // "-7gg"
   readonly sparklineEnd: string; // "oggi"
+  // #1816 P3-7 — indexing-pending state surfaces a badge + short description
+  // when a PDF is uploaded but the BE has not yet completed indexing. Optional
+  // (component renders nothing for the badge slot when label is undefined).
+  readonly indexingBadge?: string; // "⏳ Indicizzazione in corso"
+  readonly indexingDescription?: string; // "Il documento è caricato ma non ancora ricercabile dalla chat."
 }
 
 export interface KbStatsCardProps {
@@ -46,6 +51,11 @@ export interface KbStatsCardProps {
   readonly raptorLastRebuildRelative?: string;
   readonly lifetimeCost?: string;
   readonly costHistory?: ReadonlyArray<number>;
+  // #1816 P3-7 Phase 2 — surfaces a badge when a PDF is uploaded but the BE
+  // has not yet completed indexing (PDF rows present + `status.isIndexed=false`).
+  // Disambiguates the audit-found "0 Documenti / Copertura: Nessuna" UX while
+  // the chunk count is still 0 because indexing has not run yet.
+  readonly indexingPending?: boolean;
 }
 
 export function KbStatsCard(props: KbStatsCardProps): ReactElement {
@@ -62,6 +72,7 @@ export function KbStatsCard(props: KbStatsCardProps): ReactElement {
     raptorLastRebuildRelative,
     lifetimeCost,
     costHistory,
+    indexingPending = false,
   } = props;
 
   // Locale resolved at runtime (caller decides via IntlProvider); avoids hardcoding it-IT
@@ -129,8 +140,14 @@ export function KbStatsCard(props: KbStatsCardProps): ReactElement {
       : []),
   ];
 
-  const maxSparklineVal = costHistory && costHistory.length > 0 ? Math.max(...costHistory) : 1;
-  const showSparkline = !compact && costHistory && costHistory.length > 0;
+  // F9 #1974 (audit 2026-06-07): hide the sparkline when costHistory contains
+  // only zeros (BE seeds an empty 7-day window for KBs that have never been
+  // used). Pre-fix the empty bars rendered as a low strip of grey rectangles
+  // — pure UI noise. We require at least one non-zero datapoint so the chart
+  // only appears once there is real signal.
+  const hasSparklineSignal = !!costHistory && costHistory.some(v => v > 0);
+  const maxSparklineVal = hasSparklineSignal ? Math.max(...costHistory!) : 1;
+  const showSparkline = !compact && hasSparklineSignal;
   const showLifetimeCost = !compact && lifetimeCost !== undefined;
   const gridCols =
     metrics.length >= 4 ? 'grid-cols-4' : metrics.length === 3 ? 'grid-cols-3' : 'grid-cols-2';
@@ -159,6 +176,27 @@ export function KbStatsCard(props: KbStatsCardProps): ReactElement {
             <p className="text-[11px] text-muted-foreground">{labels.cardSubtitle}</p>
           </div>
         </header>
+      )}
+
+      {/* #1816 P3-7 Phase 2 — indexing-pending badge. Rendered when caller
+          flags `indexingPending` AND provides at least an `indexingBadge`
+          label. Uses warning-tinted background so it reads as a transient
+          state, not an error. */}
+      {indexingPending && labels.indexingBadge && (
+        <div
+          data-slot="kb-hub-stats-indexing-badge"
+          role="status"
+          aria-live="polite"
+          className={clsx(
+            'mb-3 rounded-md border border-warning/30 bg-warning/10 px-3 py-2',
+            compact ? 'text-[11px]' : 'text-xs'
+          )}
+        >
+          <div className="font-display font-bold text-warning">{labels.indexingBadge}</div>
+          {labels.indexingDescription && (
+            <div className="mt-1 text-muted-foreground">{labels.indexingDescription}</div>
+          )}
+        </div>
       )}
 
       {/* Metric grid (adaptive cols) */}

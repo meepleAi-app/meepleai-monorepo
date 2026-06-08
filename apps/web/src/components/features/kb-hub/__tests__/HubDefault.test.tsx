@@ -47,6 +47,76 @@ const basePdfs: KbPdf[] = [
 const baseGame = { title: 'Gloomhaven', emoji: '⚔️' };
 
 describe('HubDefault (Issue #1481)', () => {
+  // #1816 P3-7 Phase 2 — indexing-pending banner.
+  describe('indexingPending banner (#1816 P3-7)', () => {
+    const labelsWithBadge = {
+      ...baseLabels,
+      indexingBadge: '⏳ Indexing in progress',
+      indexingDescription: 'The document is uploaded but not yet searchable from chat.',
+    };
+
+    it('does NOT render the indexing banner by default (prop omitted)', () => {
+      const { container } = render(
+        <HubDefault
+          game={baseGame}
+          documentCount={0}
+          coverageLevel="None"
+          pdfs={basePdfs}
+          labels={labelsWithBadge}
+          onUpload={() => {}}
+          onReindexAll={() => {}}
+          onPdfAction={() => {}}
+        />
+      );
+      expect(
+        container.querySelector('[data-slot="kb-hub-default-indexing-banner"]')
+      ).not.toBeInTheDocument();
+    });
+
+    it('renders the indexing banner + description when indexingPending=true', () => {
+      const { container } = render(
+        <HubDefault
+          game={baseGame}
+          documentCount={0}
+          coverageLevel="None"
+          pdfs={basePdfs}
+          labels={labelsWithBadge}
+          onUpload={() => {}}
+          onReindexAll={() => {}}
+          onPdfAction={() => {}}
+          indexingPending={true}
+        />
+      );
+      const banner = container.querySelector('[data-slot="kb-hub-default-indexing-banner"]');
+      expect(banner).toBeInTheDocument();
+      expect(banner).toHaveAttribute('role', 'status');
+      expect(banner).toHaveAttribute('aria-live', 'polite');
+      expect(screen.getByText('⏳ Indexing in progress')).toBeInTheDocument();
+      expect(
+        screen.getByText('The document is uploaded but not yet searchable from chat.')
+      ).toBeInTheDocument();
+    });
+
+    it('does NOT render the banner when indexingPending=true but labels.indexingBadge is missing', () => {
+      const { container } = render(
+        <HubDefault
+          game={baseGame}
+          documentCount={0}
+          coverageLevel="None"
+          pdfs={basePdfs}
+          labels={baseLabels}
+          onUpload={() => {}}
+          onReindexAll={() => {}}
+          onPdfAction={() => {}}
+          indexingPending={true}
+        />
+      );
+      expect(
+        container.querySelector('[data-slot="kb-hub-default-indexing-banner"]')
+      ).not.toBeInTheDocument();
+    });
+  });
+
   it('renders game title with " · KB" suffix and header subtitle', () => {
     render(
       <HubDefault
@@ -82,6 +152,70 @@ describe('HubDefault (Issue #1481)', () => {
     expect(screen.getByText('Copertura: Standard')).toBeInTheDocument();
     expect(screen.queryByText(/chunks$/)).not.toBeInTheDocument();
     expect(screen.queryByText(/embeddings$/)).not.toBeInTheDocument();
+  });
+
+  it('does NOT render the bottom drop-zone CTA when labels.dropZoneCta is missing (F10 #1974)', () => {
+    const { container } = render(
+      <HubDefault
+        game={baseGame}
+        documentCount={2}
+        coverageLevel="Basic"
+        pdfs={basePdfs}
+        labels={baseLabels}
+        onUpload={() => {}}
+        onReindexAll={() => {}}
+        onPdfAction={() => {}}
+      />
+    );
+    expect(
+      container.querySelector('[data-slot="kb-hub-default-drop-zone"]')
+    ).not.toBeInTheDocument();
+  });
+
+  it('renders the bottom drop-zone CTA and wires onUpload when label is provided (F10 #1974)', () => {
+    const onUpload = vi.fn();
+    const { container } = render(
+      <HubDefault
+        game={baseGame}
+        documentCount={2}
+        coverageLevel="Basic"
+        pdfs={basePdfs}
+        labels={{ ...baseLabels, dropZoneCta: 'Trascina un PDF qui o clicca per caricarlo' }}
+        onUpload={onUpload}
+        onReindexAll={() => {}}
+        onPdfAction={() => {}}
+      />
+    );
+    const dropZone = container.querySelector('[data-slot="kb-hub-default-drop-zone"]');
+    expect(dropZone).toBeInTheDocument();
+    expect(dropZone).toHaveTextContent('Trascina un PDF qui o clicca per caricarlo');
+    fireEvent.click(dropZone!);
+    expect(onUpload).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders each stat as a separate tag-style chip (F5 #1974)', () => {
+    // F5 regression guard: the stats strip moved from a single dot-separated
+    // mono line to a row of bordered chips so the metrics are scannable at
+    // a glance. Each visible stat must carry its own `kb-hub-default-stats-chip`
+    // slot so the chip styling cannot regress to a monolithic container.
+    const { container } = render(
+      <HubDefault
+        game={baseGame}
+        documentCount={4}
+        coverageLevel="Standard"
+        pdfs={basePdfs}
+        labels={baseLabels}
+        chunks={1247}
+        embeddings={4891}
+        lastReindexRelative="3 gg fa"
+        onUpload={() => {}}
+        onReindexAll={() => {}}
+        onPdfAction={() => {}}
+      />
+    );
+    const chips = container.querySelectorAll('[data-slot="kb-hub-default-stats-chip"]');
+    // docs + chunks + embeddings + lastReindex + coverage = 5 chips.
+    expect(chips).toHaveLength(5);
   });
 
   it('renders deferred stats strip metrics when chunks/embeddings/lastReindex provided', () => {

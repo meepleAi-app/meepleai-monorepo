@@ -62,6 +62,14 @@ public class UserEntity
     public int FailedLoginAttempts { get; set; }
     public DateTime? LockedUntil { get; set; }
 
+    /// <summary>
+    /// Issue #1940 / iso-1 Fix 3: dedup key for AccountLockedEvent email + audit-log emission.
+    /// Handler MUST early-exit when equal to the incoming AccountLockedEvent.EventId to avoid
+    /// double-firing the lockout email and writing duplicate audit rows on a retried event.
+    /// </summary>
+    [System.ComponentModel.DataAnnotations.Schema.Column("last_lockout_event_id")]
+    public Guid? LastLockoutEventId { get; set; }
+
     // D3: Contributor flag — contributors get premium tier access
     public bool IsContributor { get; set; }
 

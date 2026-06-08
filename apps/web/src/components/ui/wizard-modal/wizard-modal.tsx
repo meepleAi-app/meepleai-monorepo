@@ -64,11 +64,22 @@ export function WizardModal({
             data-testid="wizard-modal-overlay"
           />
           <RadixDialog.Content
-            className="fixed left-1/2 top-1/2 z-[61] flex w-full max-w-[720px] -translate-x-1/2 -translate-y-1/2 flex-col rounded-lg bg-background shadow-2xl"
+            className="fixed left-1/2 top-1/2 z-[61] flex max-h-[85vh] w-full max-w-[720px] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg bg-background shadow-2xl"
             data-slot="wizard-modal"
             aria-labelledby="wizard-title"
           >
-            <header className="sticky top-0 border-b border-border p-4">
+            {/*
+              F26 #1974 (audit 2026-06-07): rewrote the 3-region layout from
+              header/content/footer with sticky positioning to a single
+              flex column where the content area `flex-1 overflow-y-auto`.
+              The previous sticky bottom-0 footer overlapped the last
+              option card (e.g. Miniatures in onboarding) on viewports
+              taller than the natural Content height, because Radix Dialog
+              Content has no fixed height and sticky needs a constrained
+              ancestor with overflow. Now the modal caps at 85vh and the
+              footer participates in flex flow — no overlap.
+            */}
+            <header className="shrink-0 border-b border-border p-4">
               <RadixDialog.Title id="wizard-title" className="text-lg font-semibold">
                 {wizard.currentStep.title}
               </RadixDialog.Title>
@@ -77,7 +88,7 @@ export function WizardModal({
               </div>
             </header>
 
-            <div className="max-h-[60vh] overflow-y-auto p-6" data-testid="wizard-step-content">
+            <div className="min-h-0 flex-1 overflow-y-auto p-6" data-testid="wizard-step-content">
               {wizard.currentStep.content}
               {wizard.errors.length > 0 && (
                 <ul
@@ -92,7 +103,7 @@ export function WizardModal({
               )}
             </div>
 
-            <footer className="sticky bottom-0 flex justify-between border-t border-border p-4">
+            <footer className="flex shrink-0 justify-between border-t border-border bg-background p-4">
               {!wizard.isFirst ? (
                 <button
                   onClick={wizard.goBack}

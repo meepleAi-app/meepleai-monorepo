@@ -47,6 +47,16 @@ internal sealed class AlertChannel
     public string? CreatedBy { get; private set; }
     public string? UpdatedBy { get; private set; }
 
+    /// <summary>
+    /// Last <c>AlertFiredEvent</c> id dispatched through this channel (issue #1941 / iso-2 Fix 1).
+    /// When equal to the incoming event id, the ChannelDispatchHandler MUST skip the Slack
+    /// webhook / Email send for this channel to avoid double-alerting oncall on a retried
+    /// or rolled-back event. Per-channel scope: 1 fan-out event produces independent guards
+    /// for each channel (Slack and Email each have their own row, each tracks the last
+    /// successful dispatch separately).
+    /// </summary>
+    public Guid? LastDispatchedEventId { get; private set; }
+
     /// <summary>SQL Server / Postgres optimistic concurrency token.
     /// Repository populates this from <c>xmin</c> via EF's <c>[Timestamp]</c>
     /// equivalent (<see cref="Microsoft.EntityFrameworkCore.Metadata.Builders.PropertyBuilder.IsRowVersion"/>).</summary>
@@ -100,7 +110,8 @@ internal sealed class AlertChannel
         DateTime updatedAt,
         string? createdBy,
         string? updatedBy,
-        byte[] rowVersion)
+        byte[] rowVersion,
+        Guid? lastDispatchedEventId = null)
     {
         return new AlertChannel(type, configJson, isEnabled, createdAt, updatedAt, createdBy, updatedBy)
         {
@@ -108,6 +119,7 @@ internal sealed class AlertChannel
             LastTestStatus = lastTestStatus,
             LastTestMessage = lastTestMessage,
             RowVersion = rowVersion ?? Array.Empty<byte>(),
+            LastDispatchedEventId = lastDispatchedEventId,
         };
     }
 
@@ -131,6 +143,16 @@ internal sealed class AlertChannel
         LastTestMessage = string.IsNullOrWhiteSpace(message)
             ? (success ? "Connection OK" : "Unknown error")
             : message;
+    }
+
+    /// <summary>
+    /// Records that an <c>AlertFiredEvent</c> has been dispatched through this channel
+    /// (issue #1941 / iso-2 Fix 1). Used by <c>ChannelDispatchHandler</c> to short-circuit
+    /// duplicate dispatches when the event is retried/rolled back.
+    /// </summary>
+    public void MarkDispatched(Guid eventId)
+    {
+        LastDispatchedEventId = eventId;
     }
 
     private static void ValidateConfigJson(string configJson)

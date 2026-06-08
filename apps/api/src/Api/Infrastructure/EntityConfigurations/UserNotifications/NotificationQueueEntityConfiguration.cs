@@ -47,5 +47,16 @@ internal class NotificationQueueEntityConfiguration : IEntityTypeConfiguration<N
         builder.HasIndex(e => new { e.RecipientUserId, e.CreatedAt })
             .HasDatabaseName("IX_notification_queue_items_recipient_user_id_created_at")
             .IsDescending(false, true);
+
+        builder.Property(e => e.SourceEventId).HasColumnName("source_event_id");
+
+        // Issue #1937 / CF-1: composite UNIQUE (channel_type, recipient_user_id, source_event_id) — partial.
+        // Guards against duplicate per-channel queue items when an event handler is re-dispatched.
+        // Composite (vs single-column UNIQUE on source_event_id) because a single domain event can
+        // legitimately fan out to multiple channels (Email + Slack DM + Slack team) for the same recipient.
+        builder.HasIndex(e => new { e.ChannelType, e.RecipientUserId, e.SourceEventId })
+            .IsUnique()
+            .HasDatabaseName("UX_notification_queue_items_channel_recipient_source_event")
+            .HasFilter("source_event_id IS NOT NULL");
     }
 }

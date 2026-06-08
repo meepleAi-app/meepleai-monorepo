@@ -219,11 +219,21 @@
       "error": "Codice non valido. Riprova.",
       "submit": "Verifica",
       "title": "Autenticazione a due fattori",
-      "verificationSubtitle": "Inserisci il codice dell'app di autenticazione per continuare."
+      "verificationSubtitle": "Inserisci il codice dell'app di autenticazione per continuare.",
+      "submitting": "Verifica in corso...",
+      "codeRequired": "Inserisci un codice a 6 cifre",
+      "codeInvalid": "Codice non valido",
+      "rememberDevice": "Ricorda questo dispositivo per 30 giorni"
     },
     "emailVerification": {
       "pageTitle": "Verifica email",
       "verifying": "Verifica email in corso...",
+      "banner": {
+        "title": "Verifica la tua email",
+        "description": "Conferma la tua email per sbloccare tutte le funzionalità di MeepleAI.",
+        "cta": "Verifica ora",
+        "dismissAriaLabel": "Chiudi banner"
+      },
       "pending": {
         "title": "Controlla la tua email",
         "description": "Ti abbiamo inviato un link di verifica al tuo indirizzo email.",
@@ -310,7 +320,14 @@
     "send": "Invia",
     "sources": "Fonti",
     "thinking": "Sto pensando...",
-    "title": "Chat AI"
+    "title": "Chat AI",
+    "infoPanel": {
+      "linkedGameLabel": "Gioco collegato",
+      "citationsHeading": "Citazioni ({count})",
+      "suggestedQuestionsHeading": "Domande suggerite",
+      "agentSectionHeading": "Agente",
+      "agentTypeLabel": "Tipo"
+    }
   },
   "common": {
     "all": "Tutti",
@@ -377,6 +394,16 @@
           "resolved": "Incidente risolto"
         }
       }
+    },
+    "entity": {
+      "game": "Gioco",
+      "agent": "Agente",
+      "session": "Sessione",
+      "kb": "KB",
+      "player": "Giocatori",
+      "chat": "Chat",
+      "event": "Eventi",
+      "toolkit": "Toolkit"
     }
   },
   "comments": {
@@ -1919,7 +1946,8 @@
           "header": {
             "titleSuffix": "Knowledge Base",
             "uploadCta": "+ Carica PDF",
-            "reindexAllCta": "⟳ Re-index all"
+            "reindexAllCta": "⟳ Re-index all",
+            "dropZoneCta": "Trascina un PDF qui o clicca per caricarlo"
           },
           "stats": {
             "docs": "{count, plural, =0 {Nessun documento} =1 {1 documento} other {# documenti}}",
@@ -1949,7 +1977,9 @@
               "document": "Documento",
               "status": "Stato",
               "uploaded": "Caricato"
-            }
+            },
+            "indexingBadge": "⏳ Indicizzazione in corso",
+            "indexingDescription": "Il documento è caricato ma non ancora ricercabile dalla chat."
           },
           "empty": {
             "title": "Nessun PDF indicizzato",
@@ -2048,6 +2078,75 @@
             "raptorFailed": "Rebuild RAPTOR fallito.",
             "deleteFailed": "Impossibile eliminare il PDF."
           }
+        },
+        "h1": {
+          "loading": "Caricamento gioco…",
+          "notFound": "Gioco non trovato"
+        },
+        "documentTitle": {
+          "format": "{gameName} · MeepleAI",
+          "loading": "Caricamento gioco — MeepleAI",
+          "notFound": "Gioco non trovato — MeepleAI"
+        }
+      },
+      "addGame": {
+        "drawerTitle": "Aggiungi un gioco",
+        "manualTitle": "Aggiungi gioco manualmente",
+        "catalogTitle": "Aggiungi da catalogo",
+        "question": "Come vuoi aggiungere il tuo gioco?",
+        "manualLabel": "Aggiungi manualmente",
+        "manualDescription": "Inserisci i dettagli del gioco. Potrai caricare il regolamento e configurare l'agente AI dalla pagina di dettaglio.",
+        "catalogLabel": "Da catalogo condiviso",
+        "catalogDescription": "Cerca nel catalogo della community e aggiungi un gioco con un click. Regolamento e setup agente in seguito.",
+        "catalog": {
+          "backAriaLabel": "Torna alla scelta",
+          "searchPlaceholder": "Cerca giochi…",
+          "searchAriaLabel": "Cerca giochi",
+          "noImage": "Nessuna immagine",
+          "inLibraryBadge": "In libreria",
+          "alreadyInLibrary": "Già in libreria",
+          "selectCta": "Seleziona",
+          "resultCount": "{count, plural, =0 {Nessun gioco trovato} =1 {1 gioco trovato} other {# giochi trovati}}",
+          "emptyResults": "Nessun gioco trovato per «{search}».",
+          "emptyResultsHeading": "Nessun risultato",
+          "emptyResultsSubtitle": "Prova con un titolo diverso o controlla l'ortografia.",
+          "toastAdded": "«{gameName}» aggiunto alla tua libreria!",
+          "toastError": "Impossibile aggiungere «{gameName}». Riprova."
+        }
+      },
+      "catalogPagination": {
+        "firstPage": "Prima pagina",
+        "previousPage": "Pagina precedente",
+        "nextPage": "Pagina successiva",
+        "lastPage": "Ultima pagina",
+        "pageNumber": "Pagina {n}"
+      }
+    },
+    "onboarding": {
+      "interests": {
+        "heading": "Cosa ti piace giocare?",
+        "subtitle": "Seleziona le categorie che ti interessano. Useremo le tue scelte per personalizzare i suggerimenti.",
+        "groupLabel": "Categorie di giochi preferite",
+        "categories": {
+          "strategy": "Strategia",
+          "party": "Festa",
+          "cooperative": "Cooperativo",
+          "family": "Famiglia",
+          "thematic": "Tematico",
+          "abstract": "Astratto",
+          "card": "Carte",
+          "dice": "Dadi",
+          "miniatures": "Miniature"
+        },
+        "selectedCount": "{count} selezionate",
+        "cta": {
+          "continue": "Continua",
+          "skip": "Salta",
+          "skipForNow": "Salta per ora"
+        },
+        "loading": "Salvataggio in corso…",
+        "toast": {
+          "saved": "{count} interessi salvati!"
         }
       }
     },
@@ -2455,11 +2554,11 @@
     "players": {
       "metadata": {
         "title": "Giocatori — MeepleAI",
-        "description": "Riepilogo delle tue partite: giochi giocati, sessioni e vittorie."
+        "description": "I compagni di gioco con cui hai giocato, con sessioni e vittorie."
       },
       "hero": {
-        "title": "Le tue partite",
-        "subtitle": "Riepilogo dei giochi che hai giocato, con sessioni e vittorie.",
+        "title": "I tuoi compagni di gioco",
+        "subtitle": "Vedi con chi hai giocato di più, le sessioni condivise e i risultati al tavolo.",
         "totalPlays": "Sessioni totali",
         "distinctGames": "Giochi distinti"
       },
@@ -4148,10 +4247,27 @@
           "cta": "Vai alla libreria"
         },
         "error": {
-          "connection": { "title": "Connessione persa", "body": "Retry automatico in corso…", "action": "Riprova ora" },
-          "timeout": { "title": "Risposta lenta", "body": "Vuoi continuare ad aspettare?", "action": "Continua attesa", "alt": "Cancella" },
-          "partial": { "title": "Risposta incompleta", "body": "Lo stream si è interrotto.", "action": "Ripeti query" },
-          "server": { "title": "Errore del server", "body": "Riprova tra qualche istante.", "action": "Riprova" }
+          "connection": {
+            "title": "Connessione persa",
+            "body": "Retry automatico in corso…",
+            "action": "Riprova ora"
+          },
+          "timeout": {
+            "title": "Risposta lenta",
+            "body": "Vuoi continuare ad aspettare?",
+            "action": "Continua attesa",
+            "alt": "Cancella"
+          },
+          "partial": {
+            "title": "Risposta incompleta",
+            "body": "Lo stream si è interrotto.",
+            "action": "Ripeti query"
+          },
+          "server": {
+            "title": "Errore del server",
+            "body": "Riprova tra qualche istante.",
+            "action": "Riprova"
+          }
         }
       }
     }

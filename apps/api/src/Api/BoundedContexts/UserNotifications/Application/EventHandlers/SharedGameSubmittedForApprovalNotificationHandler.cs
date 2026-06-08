@@ -85,7 +85,9 @@ internal sealed class SharedGameSubmittedForApprovalNotificationHandler
                 Payload = new GenericPayload(
                     "New Game Submitted for Approval",
                     $"{submitter.DisplayName} submitted \"{game.Title}\" for approval."),
-                DeepLinkPath = $"/admin/approval-queue?gameId={domainEvent.GameId}"
+                DeepLinkPath = $"/admin/approval-queue?gameId={domainEvent.GameId}",
+                // Issue #1937 / CF-1: propagate event id for dispatcher dedup
+                SourceEventId = domainEvent.EventId
             }, cancellationToken).ConfigureAwait(false);
         }
 

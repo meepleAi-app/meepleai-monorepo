@@ -45,7 +45,9 @@ internal sealed class NotifyAgentCreationFailedHandler : INotificationHandler<Au
                 Type = NotificationType.AgentCreationFailed,
                 RecipientUserId = notification.UserId,
                 Payload = new GenericPayload(title, body),
-                DeepLinkPath = deepLink
+                DeepLinkPath = deepLink,
+                // Issue #1937 / CF-1: propagate event id for dispatcher dedup
+                SourceEventId = notification.EventId
             }, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(

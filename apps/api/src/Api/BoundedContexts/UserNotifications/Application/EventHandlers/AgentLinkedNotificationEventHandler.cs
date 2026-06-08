@@ -68,7 +68,9 @@ internal sealed class AgentLinkedNotificationEventHandler : INotificationHandler
                     Payload = new GenericPayload(
                         "Agent Linked",
                         $"Agent linked to '{gameTitle}'. Game is ready for AI chat."),
-                    DeepLinkPath = $"/admin/shared-games/{notification.GameId}"
+                    DeepLinkPath = $"/admin/shared-games/{notification.GameId}",
+                    // Issue #1937 / CF-1: propagate event id for dispatcher dedup
+                    SourceEventId = notification.EventId
                 }, cancellationToken).ConfigureAwait(false);
             }
 

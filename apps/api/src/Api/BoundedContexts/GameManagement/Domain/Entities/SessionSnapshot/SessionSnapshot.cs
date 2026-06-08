@@ -26,6 +26,14 @@ internal sealed class SessionSnapshot : Entity<Guid>
     public Guid? CreatedByPlayerId { get; private set; }
 
     /// <summary>
+    /// Optional source domain event id used to dedupe at the DB level (issue #1938 / CF-2).
+    /// When set, the UNIQUE partial index <c>UX_session_snapshots_source_event_id</c> guards
+    /// against duplicate snapshot rows when the originating event handler is re-dispatched
+    /// (rolled-back outer tx in #1535, MediatR transient retry, hand-replay).
+    /// </summary>
+    public Guid? SourceEventId { get; private set; }
+
+    /// <summary>
     /// Creates a new session snapshot.
     /// </summary>
     internal SessionSnapshot(
@@ -38,7 +46,8 @@ internal sealed class SessionSnapshot : Entity<Guid>
         bool isCheckpoint,
         int turnIndex,
         int? phaseIndex,
-        Guid? createdByPlayerId) : base(id)
+        Guid? createdByPlayerId,
+        Guid? sourceEventId = null) : base(id)
     {
         if (sessionId == Guid.Empty)
             throw new ArgumentException("SessionId cannot be empty", nameof(sessionId));
@@ -56,6 +65,7 @@ internal sealed class SessionSnapshot : Entity<Guid>
         TurnIndex = turnIndex;
         PhaseIndex = phaseIndex;
         CreatedByPlayerId = createdByPlayerId;
+        SourceEventId = sourceEventId;
         Timestamp = DateTime.UtcNow;
     }
 

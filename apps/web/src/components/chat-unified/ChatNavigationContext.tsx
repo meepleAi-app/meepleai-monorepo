@@ -13,14 +13,31 @@ import { useEffect, useState } from 'react';
 
 import Link from 'next/link';
 
+import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
 import { getNavigationLinks, type ResolvedNavigationLink } from '@/config/entity-navigation';
+import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
 
 interface ChatNavigationContextProps {
   threadId: string;
 }
 
+// Entity-type → i18n key map. Keeps the `entity-navigation` config translation-
+// free (labels stay as EN fallbacks) while the chat surface localizes labels
+// via the translation layer. New entries map to `common.entity.*` keys.
+const ENTITY_LABEL_KEY: Partial<Record<MeepleEntityType, string>> = {
+  game: 'common.entity.game',
+  agent: 'common.entity.agent',
+  session: 'common.entity.session',
+  kb: 'common.entity.kb',
+  player: 'common.entity.player',
+  chat: 'common.entity.chat',
+  event: 'common.entity.event',
+  toolkit: 'common.entity.toolkit',
+};
+
 export function ChatNavigationContext({ threadId }: ChatNavigationContextProps) {
+  const { t } = useTranslation();
   const [links, setLinks] = useState<ResolvedNavigationLink[]>([]);
 
   useEffect(() => {
@@ -51,17 +68,20 @@ export function ChatNavigationContext({ threadId }: ChatNavigationContextProps) 
 
   return (
     <div className="sticky top-0 z-10 flex items-center gap-2 border-b bg-card px-4 py-2">
-      {links.map(link =>
-        link.href ? (
+      {links.map(link => {
+        if (!link.href) return null;
+        const labelKey = ENTITY_LABEL_KEY[link.entity];
+        const label = labelKey ? t(labelKey) : link.label;
+        return (
           <Link
             key={link.entity}
             href={link.href}
             className="text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            {link.label}
+            {label}
           </Link>
-        ) : null
-      )}
+        );
+      })}
     </div>
   );
 }

@@ -80,6 +80,14 @@ public class SharedGameEntity
     public string? WikidataCoverAttribution { get; set; }
 
     /// <summary>
+    /// Gap G2 (issue: BGG cover re-upload).
+    /// R2 key for cover image downloaded from BGG and re-uploaded to our storage.
+    /// Resolved by CoverUrlResolver L2.5 layer (between L4 PDF and L2 Wikidata).
+    /// Null when no BGG enrichment was applied or download failed.
+    /// </summary>
+    public string? BggCoverR2Key { get; set; }
+
+    /// <summary>
     /// Issue #1929 Task C Macro 3a (DEC-B-8, DEC-C-8) — E2E test seeding scope marker.
     /// Explicit column (NOT shadow property) to avoid EF Core 9 + Npgsql null-after-save bug.
     /// Stamped on insert by SeedTestLibraryGameCommandHandler; consumed by

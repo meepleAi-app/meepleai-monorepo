@@ -167,6 +167,13 @@ internal static class SharedGameCatalogServiceExtensions
                 .WithDescription("Runs every 15 min to evict shared-game detail tags for top-N most-viewed games and the search-games list tag"));
         });
 
+        // Gap G2: BGG cover re-upload service (typed HttpClient pattern).
+        // 10s timeout — BGG CDN images are typically < 500 KB.
+        services.AddHttpClient<IBggCoverDownloader, BggCoverDownloader>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(10);
+        });
+
         // Issue #1903 M5.2: register HttpClients, keyed catalog providers,
         // aggregator, and Quartz CatalogSeedFetchJob.
         RegisterCatalogSeedProviders(services);

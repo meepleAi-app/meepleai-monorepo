@@ -60,6 +60,47 @@ internal sealed class UpdateSharedGameCommandValidator : AbstractValidator<Updat
         RuleFor(x => x.Rules)
             .SetValidator(new GameRulesDtoValidator()!)
             .When(x => x.Rules is not null);
+
+        RuleFor(x => x.BggId)
+            .GreaterThan(0)
+            .When(x => x.BggId.HasValue)
+            .WithMessage("BggId must be a positive integer when provided");
+
+        RuleFor(x => x.Categories)
+            .Must(c => c == null || c.Count <= 20)
+            .WithMessage("Categories cannot exceed 20 items");
+
+        RuleForEach(x => x.Categories)
+            .NotEmpty()
+            .MaximumLength(100)
+            .When(x => x.Categories != null);
+
+        RuleFor(x => x.Mechanics)
+            .Must(m => m == null || m.Count <= 30)
+            .WithMessage("Mechanics cannot exceed 30 items");
+
+        RuleForEach(x => x.Mechanics)
+            .NotEmpty()
+            .MaximumLength(100)
+            .When(x => x.Mechanics != null);
+
+        RuleFor(x => x.Designers)
+            .Must(d => d == null || d.Count <= 20)
+            .WithMessage("Designers cannot exceed 20 items");
+
+        RuleForEach(x => x.Designers)
+            .NotEmpty()
+            .MaximumLength(200)
+            .When(x => x.Designers != null);
+
+        RuleFor(x => x.Publishers)
+            .Must(p => p == null || p.Count <= 20)
+            .WithMessage("Publishers cannot exceed 20 items");
+
+        RuleForEach(x => x.Publishers)
+            .NotEmpty()
+            .MaximumLength(200)
+            .When(x => x.Publishers != null);
     }
 
     private static bool BeValidUrl(string url)

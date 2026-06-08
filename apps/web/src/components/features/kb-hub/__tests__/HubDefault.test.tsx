@@ -154,6 +154,31 @@ describe('HubDefault (Issue #1481)', () => {
     expect(screen.queryByText(/embeddings$/)).not.toBeInTheDocument();
   });
 
+  it('renders each stat as a separate tag-style chip (F5 #1974)', () => {
+    // F5 regression guard: the stats strip moved from a single dot-separated
+    // mono line to a row of bordered chips so the metrics are scannable at
+    // a glance. Each visible stat must carry its own `kb-hub-default-stats-chip`
+    // slot so the chip styling cannot regress to a monolithic container.
+    const { container } = render(
+      <HubDefault
+        game={baseGame}
+        documentCount={4}
+        coverageLevel="Standard"
+        pdfs={basePdfs}
+        labels={baseLabels}
+        chunks={1247}
+        embeddings={4891}
+        lastReindexRelative="3 gg fa"
+        onUpload={() => {}}
+        onReindexAll={() => {}}
+        onPdfAction={() => {}}
+      />
+    );
+    const chips = container.querySelectorAll('[data-slot="kb-hub-default-stats-chip"]');
+    // docs + chunks + embeddings + lastReindex + coverage = 5 chips.
+    expect(chips).toHaveLength(5);
+  });
+
   it('renders deferred stats strip metrics when chunks/embeddings/lastReindex provided', () => {
     render(
       <HubDefault

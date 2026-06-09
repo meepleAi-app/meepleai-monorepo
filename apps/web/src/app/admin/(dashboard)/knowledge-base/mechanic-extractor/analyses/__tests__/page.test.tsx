@@ -40,7 +40,7 @@ vi.mock('@/lib/api/clients/sharedGamesClient', () => ({
 }));
 
 vi.mock('@/lib/api/core/httpClient', () => ({
-  HttpClient: vi.fn(() => ({})),
+  HttpClient: class {},
 }));
 
 // next/navigation: minimal hoisted mocks for the deep-link query-param sync

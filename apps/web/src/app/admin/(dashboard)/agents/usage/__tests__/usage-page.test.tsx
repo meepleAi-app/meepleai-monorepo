@@ -59,7 +59,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@/lib/api/core/httpClient', () => ({
-  HttpClient: vi.fn(() => ({})),
+  HttpClient: class {},
 }));
 
 vi.mock('@/hooks/useSetNavConfig', () => ({

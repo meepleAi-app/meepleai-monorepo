@@ -23,7 +23,7 @@ vi.mock('@/lib/api/clients/adminClient', () => ({
 }));
 
 vi.mock('@/lib/api/core/httpClient', () => ({
-  HttpClient: vi.fn(() => ({})),
+  HttpClient: class {},
 }));
 
 import { MechanicAnalysesListCard } from '../MechanicAnalysesListCard';

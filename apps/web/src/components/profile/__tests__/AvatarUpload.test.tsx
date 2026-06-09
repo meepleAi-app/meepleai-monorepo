@@ -184,7 +184,7 @@ describe('AvatarUpload', () => {
 
   describe('Crop Dialog', () => {
     it('opens crop dialog when valid image is selected', async () => {
-      // Mock FileReader
+      // Mock FileReader (vitest v4: must be a real constructor)
       const mockFileReader = {
         readAsDataURL: vi.fn(),
         result: 'data:image/jpeg;base64,mockdata',
@@ -192,11 +192,15 @@ describe('AvatarUpload', () => {
         onerror: null as ((e: ProgressEvent<FileReader>) => void) | null,
       };
 
+      function MockFileReader(this: unknown) {
+        return mockFileReader;
+      }
+
       vi.spyOn(global, 'FileReader').mockImplementation(
-        () => mockFileReader as unknown as FileReader
+        MockFileReader as unknown as () => FileReader
       );
 
-      // Mock Image with proper event handling
+      // Mock Image with proper event handling (vitest v4: must be a real constructor)
       const mockImage = {
         width: 500,
         height: 500,
@@ -207,7 +211,11 @@ describe('AvatarUpload', () => {
         removeEventListener: vi.fn(),
       };
 
-      vi.spyOn(global, 'Image').mockImplementation(() => mockImage as unknown as HTMLImageElement);
+      function MockImage(this: typeof mockImage) {
+        return mockImage;
+      }
+
+      vi.spyOn(global, 'Image').mockImplementation(MockImage as unknown as () => HTMLImageElement);
 
       render(<AvatarUpload {...defaultProps} />);
 

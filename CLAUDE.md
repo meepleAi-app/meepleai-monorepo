@@ -314,6 +314,8 @@ Exemption: `text-white` / `border-white` / `ring-white` ARE allowed when the sam
 
 Run `pnpm lint:tokens` to regenerate the inventory in `audits/2026-05-12-token-violations.md`.
 
+**Mockup legacy token guard — DS-17-2 (#2070)** — `pnpm lint:tokens:mockups` scans `admin-mockups/**/*.{html,jsx,css}` for forbidden CSS literals (`var(--bg-base)`, `var(--gaming-*)`, `var(--nh-*)`, `var(--e-*)`) and writes `audits/2026-06-09-mockup-token-violations.{json,md}`. CI runs `--strict --max-baseline 1500` as a whitelist-incremental gate: existing literals are tolerated until DS-16 unwinds the bridge, but a NEW occurrence introduced by a mockup edit fails the build. Use canonical semantic tokens for new mockup CSS (`--background`, `--foreground`, `--card`, `--border`, `--primary`, …). Spec: [`docs/superpowers/specs/2026-06-09-mockup-to-app-drift-spec-panel-review.md`](./docs/superpowers/specs/2026-06-09-mockup-to-app-drift-spec-panel-review.md). Umbrella: [#2063](https://github.com/meepleAi-app/meepleai-monorepo/issues/2063).
+
 **Deferred decisions** (planned for DS-16):
 - `--admin-*` token family (admin inline gradients still file-level eslint-disable).
 - `--mc-*` MeepleCard palette consolidation.

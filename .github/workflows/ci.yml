@@ -296,6 +296,29 @@ jobs:
             audits/2026-05-12-token-violations.md
           retention-days: 14
 
+      # DS-17-2 (mockup-to-app fidelity, 2026-06-09):
+      # Blocking guard against NEW legacy CSS variable literals in admin-mockups
+      # (`var(--bg-base|--gaming-*|--nh-*|--e-*)`). Whitelist-incremental — the
+      # baseline ceiling is the current count snapshotted at PR #2077; if a new
+      # mockup introduces another reference the gate fails. Replace with
+      # canonical semantic tokens (--background, --foreground, --card, --border,
+      # --primary, …). Bridge unwind tracked in DS-16.
+      # Spec: docs/superpowers/specs/2026-06-09-mockup-to-app-drift-spec-panel-review.md
+      # Sub-issue: #2070 · Umbrella: #2063
+      - name: Mockup legacy token guard (DS-17-2)
+        run: pnpm lint:tokens:mockups --strict --max-baseline 1500
+        # Note: script resolves REPO_ROOT from __dirname; runs from apps/web (job default) but scans admin-mockups/**.
+
+      - name: Upload mockup token violations report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mockup-token-violations-${{ github.run_number }}
+          path: |
+            audits/2026-06-09-mockup-token-violations.json
+            audits/2026-06-09-mockup-token-violations.md
+          retention-days: 14
+
   # Frontend Typecheck — fast-fail check (~1 min). Independent job for
   # parallel execution with lint.
   frontend-typecheck:

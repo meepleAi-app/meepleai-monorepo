@@ -12,12 +12,19 @@ vi.mock('html2canvas', () => ({
   }),
 }));
 
+// #1972 M4 batch: vitest v4 rejects arrow-mock used with `new`. Regular function
+// (not arrow) preserves `toHaveBeenCalledWith` semantics for jsPDF constructor args
+// while still being `new`-compatible because `this` is bound.
 vi.mock('jspdf', () => ({
-  default: vi.fn().mockImplementation(() => ({
-    addImage: vi.fn(),
-    addPage: vi.fn(),
-    save: vi.fn(),
-  })),
+  default: vi.fn().mockImplementation(function (this: {
+    addImage: () => void;
+    addPage: () => void;
+    save: () => void;
+  }) {
+    this.addImage = vi.fn();
+    this.addPage = vi.fn();
+    this.save = vi.fn();
+  }),
 }));
 
 describe('export.ts', () => {

@@ -456,7 +456,9 @@ describe('useContextualHandStore', () => {
         currentSession: makeSession(),
       });
 
-      const returned = await useContextualHandStore.getState().upsertScore('p1', 42, 1, 'points', 'Round win');
+      const returned = await useContextualHandStore
+        .getState()
+        .upsertScore('p1', 42, 1, 'points', 'Round win');
 
       expect(returned).toEqual(result);
       expect(mockSessionFlow.upsertScore).toHaveBeenCalledWith('s1', {
@@ -695,9 +697,7 @@ describe('useContextualHandStore', () => {
     it('creates EventSource with correct URL and stores it in state', () => {
       useContextualHandStore.getState().subscribeToDiary('session-123');
 
-      expect(EventSource).toHaveBeenCalledWith(
-        '/api/v1/sessions/session-123/diary/stream'
-      );
+      expect(EventSource).toHaveBeenCalledWith('/api/v1/sessions/session-123/diary/stream');
       expect(useContextualHandStore.getState().eventSource).not.toBeNull();
     });
 
@@ -714,16 +714,24 @@ describe('useContextualHandStore', () => {
       useContextualHandStore.getState().subscribeToDiary('s1');
 
       // Wait for setTimeout in mock to capture onmessage
-      await new Promise((r) => setTimeout(r, 10));
+      await new Promise(r => setTimeout(r, 10));
 
       if (capturedOnMessage) {
         capturedOnMessage({
-          data: JSON.stringify({ id: 'e1', timestamp: '2026-04-10T12:00:00Z', eventType: 'dice_rolled' }),
+          data: JSON.stringify({
+            id: 'e1',
+            timestamp: '2026-04-10T12:00:00Z',
+            eventType: 'dice_rolled',
+          }),
         } as MessageEvent);
 
         // Send duplicate
         capturedOnMessage({
-          data: JSON.stringify({ id: 'e1', timestamp: '2026-04-10T12:00:00Z', eventType: 'dice_rolled' }),
+          data: JSON.stringify({
+            id: 'e1',
+            timestamp: '2026-04-10T12:00:00Z',
+            eventType: 'dice_rolled',
+          }),
         } as MessageEvent);
 
         expect(useContextualHandStore.getState().diaryEntries).toHaveLength(1);
@@ -733,13 +741,18 @@ describe('useContextualHandStore', () => {
 
   describe('unsubscribeFromDiary', () => {
     beforeEach(() => {
+      // #1972 M4 batch: vitest v4 rejects arrow-mock used with `new`. Regular function for `this`.
       vi.stubGlobal(
         'EventSource',
-        vi.fn().mockImplementation(() => ({
-          close: vi.fn(),
-          onmessage: null,
-          onerror: null,
-        }))
+        vi.fn().mockImplementation(function (this: {
+          close: () => void;
+          onmessage: null;
+          onerror: null;
+        }) {
+          this.close = vi.fn();
+          this.onmessage = null;
+          this.onerror = null;
+        })
       );
     });
 
@@ -767,13 +780,18 @@ describe('useContextualHandStore', () => {
 
   describe('reset', () => {
     beforeEach(() => {
+      // #1972 M4 batch: vitest v4 rejects arrow-mock used with `new`. Regular function for `this`.
       vi.stubGlobal(
         'EventSource',
-        vi.fn().mockImplementation(() => ({
-          close: vi.fn(),
-          onmessage: null,
-          onerror: null,
-        }))
+        vi.fn().mockImplementation(function (this: {
+          close: () => void;
+          onmessage: null;
+          onerror: null;
+        }) {
+          this.close = vi.fn();
+          this.onmessage = null;
+          this.onerror = null;
+        })
       );
     });
 

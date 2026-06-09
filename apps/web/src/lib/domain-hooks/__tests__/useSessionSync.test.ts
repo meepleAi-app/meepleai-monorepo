@@ -17,12 +17,19 @@ describe('useSessionSync', () => {
 
   beforeEach(() => {
     // Mock EventSource to prevent actual connections in tests
-    global.EventSource = vi.fn().mockImplementation(() => ({
-      close: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      readyState: EventSource.CONNECTING,
-    })) as unknown as typeof EventSource;
+    // #1972 M4 batch: vitest v4 rejects arrow-mock used with `new`. Use a regular
+    // function (not arrow) so `this` binding works under `new EventSource(...)`.
+    global.EventSource = vi.fn().mockImplementation(function (this: {
+      close: () => void;
+      addEventListener: () => void;
+      removeEventListener: () => void;
+      readyState: number;
+    }) {
+      this.close = vi.fn();
+      this.addEventListener = vi.fn();
+      this.removeEventListener = vi.fn();
+      this.readyState = EventSource.CONNECTING;
+    }) as unknown as typeof EventSource;
   });
 
   it('should initialize with default state', () => {
@@ -93,12 +100,18 @@ describe('useSessionSync', () => {
   it('should cleanup EventSource on unmount', () => {
     const mockClose = vi.fn();
 
-    global.EventSource = vi.fn().mockImplementation(() => ({
-      close: mockClose,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      readyState: EventSource.OPEN,
-    })) as unknown as typeof EventSource;
+    // #1972 M4 batch: regular function for `new` constructor compatibility.
+    global.EventSource = vi.fn().mockImplementation(function (this: {
+      close: () => void;
+      addEventListener: () => void;
+      removeEventListener: () => void;
+      readyState: number;
+    }) {
+      this.close = mockClose;
+      this.addEventListener = vi.fn();
+      this.removeEventListener = vi.fn();
+      this.readyState = EventSource.OPEN;
+    }) as unknown as typeof EventSource;
 
     const { unmount } = renderHook(() =>
       useSessionSync({

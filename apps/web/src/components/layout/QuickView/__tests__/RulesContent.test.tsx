@@ -43,8 +43,11 @@ vi.mock('@/lib/api/clients/sharedGamesClient', () => ({
 }));
 
 // Mock HttpClient dependency
+// #1972 M4 batch: vitest v4 rejects arrow-mock used with `new`. Anonymous class
+// expression inside the factory avoids the hoisted temporal-dead-zone issue that
+// top-level `class MockHttpClient {}` triggers when the file is consumed first.
 vi.mock('@/lib/api/core/httpClient', () => ({
-  HttpClient: vi.fn().mockImplementation(() => ({})),
+  HttpClient: class {},
 }));
 
 import { RulesContent } from '../RulesContent';

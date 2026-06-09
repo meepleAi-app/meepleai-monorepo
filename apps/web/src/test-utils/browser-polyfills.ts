@@ -103,8 +103,16 @@ function setupScrollIntoView() {
  * Used by downloadFile utility and components that create download links.
  *
  * Implementation:
- * - createObjectURL: Returns a fake blob URL
- * - revokeObjectURL: Mock function (no-op)
+ * - createObjectURL: Returns a fake blob URL via vi.fn() (spy-able)
+ * - revokeObjectURL: Mock function via vi.fn() (spy-able)
+ *
+ * Vitest v4 / jsdom v27+ note (Issue #1972 Pattern 3):
+ * Previous gating with `if (typeof URL.createObjectURL === 'undefined')` skips on newer
+ * jsdom versions where URL.createObjectURL is exposed as a native non-spy-able function.
+ * That made `vi.spyOn(URL, 'createObjectURL').mockReturnValue(...)` fail at runtime in
+ * helpers like `httpClient.test-helpers.ts:setupDownloadMocks`. Using Object.defineProperty
+ * with writable+configurable=true unconditionally guarantees vi.spyOn can replace the
+ * property at test-time, regardless of jsdom/vitest version.
  *
  * @example
  * // Component using createObjectURL
@@ -116,12 +124,16 @@ function setupScrollIntoView() {
  * expect(createSpy).toHaveBeenCalledWith(blob);
  */
 function setupURLMethods() {
-  if (typeof URL.createObjectURL === 'undefined') {
-    URL.createObjectURL = vi.fn(() => 'blob:http://localhost/mock-object-url');
-  }
-  if (typeof URL.revokeObjectURL === 'undefined') {
-    URL.revokeObjectURL = vi.fn();
-  }
+  Object.defineProperty(URL, 'createObjectURL', {
+    writable: true,
+    configurable: true,
+    value: vi.fn(() => 'blob:http://localhost/mock-object-url'),
+  });
+  Object.defineProperty(URL, 'revokeObjectURL', {
+    writable: true,
+    configurable: true,
+    value: vi.fn(),
+  });
 }
 
 /**

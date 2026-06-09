@@ -319,15 +319,18 @@ jobs:
             audits/2026-06-09-mockup-token-violations.md
           retention-days: 14
 
-      # DS-17-1 (mockup-to-app fidelity, 2026-06-09):
-      # Non-blocking @mockup annotation coverage report. Initial run = inventory
-      # only (Top-30 pilot = ~12% coverage). When DS-17-1 sweep restanti 45 routes
-      # ships and coverage stabilizes ≥80%, flip to `--threshold 80` to make this
-      # a blocking gate. The artifact is always uploaded for PR review.
+      # DS-17-1 sweep (mockup-to-app fidelity, 2026-06-09):
+      # Blocking @mockup annotation coverage gate. Coverage is computed against
+      # the `mappable` denominator (routes that have a MOCKUPS_INDEX.md mapping)
+      # so the threshold reflects "annotated / annotatable" rather than the
+      # full 229-page app tree (only ~75 routes have mockup mappings today; the
+      # remaining ~154 are admin/api/internal routes with no design surface).
+      # Current state: 100% (68/68) post-sweep; threshold 80% gives headroom
+      # for new mockups landing without immediate annotation churn.
       # Spec: docs/superpowers/specs/2026-06-09-mockup-to-app-drift-spec-panel-review.md
-      # Sub-issue: #2069 · Umbrella: #2063
-      - name: Mockup annotation coverage report (DS-17-1)
-        run: pnpm mockup-annotations:audit
+      # Sub-issues: #2069 (pilot) + #2084 (sweep) · Umbrella: #2063
+      - name: Mockup annotation coverage gate (DS-17-1)
+        run: pnpm mockup-annotations:audit --denominator mappable --threshold 80
         # Note: script resolves REPO_ROOT from __dirname; runs from apps/web (job default).
 
       - name: Upload mockup annotation coverage report

@@ -29,9 +29,12 @@ import { resolve, dirname, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { globSync } from 'glob';
 
+import { parseMockupsIndex, routeToFilePath } from './inject-annotations.mjs';
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..', '..', '..', '..');
 const WEB_ROOT = resolve(REPO_ROOT, 'apps', 'web');
+const MOCKUPS_INDEX = resolve(REPO_ROOT, 'admin-mockups', 'MOCKUPS_INDEX.md');
 const AUDIT_DIR = resolve(REPO_ROOT, 'audits');
 const JSON_OUT = resolve(AUDIT_DIR, '2026-06-09-mockup-annotation-coverage.json');
 const MD_OUT = resolve(AUDIT_DIR, '2026-06-09-mockup-annotation-coverage.md');
@@ -51,9 +54,40 @@ const DEFAULT_IGNORE = ['**/node_modules/**', '**/.next/**', '**/dist/**', '**/_
 // ---------------------------------------------------------------------------
 
 /**
+ * Compute the "mappable" set of route files: those that appear in
+ * `MOCKUPS_INDEX.md` as `page-mock` rows with at least one route that resolves
+ * to a real `page.tsx` under `apps/web/src/app/`. This is the denominator
+ * used when `--denominator mappable` is passed — it lets coverage measure
+ * "annotated / annotatable" rather than "annotated / all routes".
+ *
+ * Returns a `Set<string>` of relative paths (forward-slash normalized) that
+ * `collectCoverage` can use as a filter.
+ */
+export function mappableRouteSet(routeFiles, indexPath = MOCKUPS_INDEX) {
+  if (!existsSync(indexPath)) return new Set();
+  const md = readFileSync(indexPath, 'utf-8');
+  const entries = parseMockupsIndex(md);
+  const out = new Set();
+  for (const e of entries) {
+    for (const route of e.routes) {
+      const rel = routeToFilePath(route, routeFiles);
+      if (rel) out.add(rel);
+    }
+  }
+  return out;
+}
+
+/**
  * Glob `globPattern` under `cwd`, classify each file as annotated/unannotated
  * based on whether it contains ANNOTATION_MARKER, and return the totals plus
  * a sorted list of uncovered paths.
+ *
+ * Options:
+ *   - `ignore`: glob ignore patterns (default: node_modules + .next + dist + __tests__)
+ *   - `denominator`: 'all' (default — count every globbed file) or 'mappable'
+ *     (count only routes that have a `MOCKUPS_INDEX.md` mapping). The
+ *     `mappable` mode is used by CI to compute a realistic ≥80% target
+ *     against the annotatable-route subset rather than the full app tree.
  *
  * Result shape:
  *   {
@@ -61,25 +95,42 @@ const DEFAULT_IGNORE = ['**/node_modules/**', '**/.next/**', '**/dist/**', '**/_
  *     covered: number,
  *     uncovered: string[],   // relative to cwd, stable-sorted
  *     coverage: number,      // percentage 0..100 (0 when total is 0)
+ *     denominator: 'all' | 'mappable',
+ *     mappableTotal?: number, // total routes considered when denominator='mappable'
  *   }
  */
 export function collectCoverage(globPattern, cwd, opts = {}) {
   const ignore = opts.ignore ?? DEFAULT_IGNORE;
+  const denominator = opts.denominator ?? 'all';
   const files = globSync(globPattern, { cwd, ignore, absolute: true, nodir: true });
+
+  let mappable = null;
+  if (denominator === 'mappable') {
+    const relFiles = files.map((abs) => relative(cwd, abs).replace(/\\/g, '/'));
+    mappable = mappableRouteSet(relFiles);
+  }
 
   let covered = 0;
   const uncovered = [];
   for (const abs of files) {
-    const text = readFileSync(abs, 'utf-8');
     const rel = relative(cwd, abs).replace(/\\/g, '/');
+    if (denominator === 'mappable' && !mappable.has(rel)) continue;
+    const text = readFileSync(abs, 'utf-8');
     if (text.includes(ANNOTATION_MARKER)) covered += 1;
     else uncovered.push(rel);
   }
   uncovered.sort();
 
-  const total = files.length;
+  const total = denominator === 'mappable' ? mappable.size : files.length;
   const coverage = total === 0 ? 0 : (covered / total) * 100;
-  return { total, covered, uncovered, coverage };
+  return {
+    total,
+    covered,
+    uncovered,
+    coverage,
+    denominator,
+    ...(denominator === 'mappable' ? { mappableTotal: total } : {}),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -132,6 +183,7 @@ export function formatCoverageMarkdown(stats, opts = {}) {
     `| **Generator** | \`pnpm mockup-annotations:audit\` (DS-17-1) |`,
     `| **Spec** | [\`2026-06-09-mockup-to-app-drift-spec-panel-review.md\`](../docs/superpowers/specs/2026-06-09-mockup-to-app-drift-spec-panel-review.md) |`,
     `| **Marker** | \`${ANNOTATION_MARKER}\` |`,
+    `| **Denominator** | \`${stats.denominator ?? 'all'}\` |`,
     `| **Coverage** | ${formatPct(stats.coverage)}% — ${stats.covered} / ${stats.total} |`,
     `| **Status** | ${verdict} |`,
     '',
@@ -175,6 +227,7 @@ function writeReports(stats, opts) {
     generatedAt: new Date().toISOString(),
     marker: ANNOTATION_MARKER,
     threshold: opts.threshold ?? null,
+    denominator: stats.denominator ?? 'all',
     total: stats.total,
     covered: stats.covered,
     uncovered: stats.uncovered,
@@ -190,7 +243,14 @@ function writeReports(stats, opts) {
 // ---------------------------------------------------------------------------
 
 function parseArgs(argv) {
-  const args = { threshold: null, scope: DEFAULT_GLOB, json: false, help: false };
+  const args = {
+    threshold: null,
+    scope: DEFAULT_GLOB,
+    denominator: 'all',
+    json: false,
+    help: false,
+  };
+  const validDenominators = new Set(['all', 'mappable']);
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--json') args.json = true;
@@ -211,6 +271,18 @@ function parseArgs(argv) {
       args.scope = argv[++i];
     } else if (a.startsWith('--scope=')) {
       args.scope = a.slice('--scope='.length);
+    } else if (a === '--denominator') {
+      const v = argv[++i];
+      if (!validDenominators.has(v)) {
+        throw new Error(`--denominator must be 'all' or 'mappable', got: ${v}`);
+      }
+      args.denominator = v;
+    } else if (a.startsWith('--denominator=')) {
+      const v = a.slice('--denominator='.length);
+      if (!validDenominators.has(v)) {
+        throw new Error(`--denominator must be 'all' or 'mappable', got: ${v}`);
+      }
+      args.denominator = v;
     } else {
       throw new Error(`Unknown argument: ${a}`);
     }
@@ -253,7 +325,7 @@ async function main() {
     process.exit(0);
   }
 
-  const stats = collectCoverage(args.scope, WEB_ROOT);
+  const stats = collectCoverage(args.scope, WEB_ROOT, { denominator: args.denominator });
   const result = evaluateThreshold(stats, args.threshold ?? 0);
 
   if (args.json) {
@@ -273,7 +345,7 @@ async function main() {
   } else {
     const out = writeReports(stats, { threshold: args.threshold });
     process.stdout.write(
-      `[mockup-annotations:audit] coverage ${formatPct(stats.coverage)}% (${stats.covered}/${stats.total})\n` +
+      `[mockup-annotations:audit] coverage ${formatPct(stats.coverage)}% (${stats.covered}/${stats.total}) [denominator=${stats.denominator}]\n` +
         `  JSON: ${relative(REPO_ROOT, out.jsonOut)}\n` +
         `  MD:   ${relative(REPO_ROOT, out.mdOut)}\n`
     );

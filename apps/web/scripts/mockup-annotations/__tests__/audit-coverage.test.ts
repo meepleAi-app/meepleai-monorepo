@@ -20,6 +20,7 @@ import {
   collectCoverage,
   formatCoverageMarkdown,
   evaluateThreshold,
+  mappableRouteSet,
 } from '../audit-coverage.mjs';
 
 const TMP_DIR = resolve(tmpdir(), `audit-coverage-tests-${process.pid}`);
@@ -119,6 +120,42 @@ describe('formatCoverageMarkdown', () => {
     const stats = { total: 10, covered: 9, uncovered: [], coverage: 90 };
     const md = formatCoverageMarkdown(stats, { threshold: 80 });
     expect(md.toLowerCase()).toMatch(/threshold met|pass/i);
+  });
+});
+
+describe('collectCoverage with denominator=mappable', () => {
+  it('restricts the denominator to MOCKUPS_INDEX mappable routes', () => {
+    const subdir = resolve(TMP_DIR, 'mappable');
+    mkdirSync(subdir, { recursive: true });
+
+    const indexMd = [
+      '| File | Type | Mapped routes |',
+      '|------|------|---------------|',
+      '| `auth-flow.html` | page-mock | `/login` |',
+      '| `sp4-dashboard.html` | page-mock | `/dashboard` |',
+    ].join('\n');
+    writeFileSync(resolve(subdir, 'INDEX.md'), indexMd, 'utf-8');
+
+    writeRoute('mappable/app/(auth)/login/page.tsx', ANNOTATED);
+    writeRoute('mappable/app/(authenticated)/dashboard/page.tsx', UNANNOTATED);
+    writeRoute('mappable/app/(authenticated)/admin/page.tsx', UNANNOTATED);
+
+    const routeFiles = [
+      'mappable/app/(auth)/login/page.tsx',
+      'mappable/app/(authenticated)/dashboard/page.tsx',
+      'mappable/app/(authenticated)/admin/page.tsx',
+    ];
+    const mappable = mappableRouteSet(routeFiles, resolve(subdir, 'INDEX.md'));
+
+    expect(mappable.size).toBe(2);
+    expect(mappable.has('mappable/app/(auth)/login/page.tsx')).toBe(true);
+    expect(mappable.has('mappable/app/(authenticated)/dashboard/page.tsx')).toBe(true);
+    expect(mappable.has('mappable/app/(authenticated)/admin/page.tsx')).toBe(false);
+  });
+
+  it('returns empty set when MOCKUPS_INDEX is missing', () => {
+    const noIndex = resolve(TMP_DIR, 'NONEXISTENT.md');
+    expect(mappableRouteSet(['src/app/whatever/page.tsx'], noIndex).size).toBe(0);
   });
 });
 

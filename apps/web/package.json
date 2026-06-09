@@ -48,6 +48,8 @@
     "lint:fix": "eslint . --fix",
     "lint:tokens": "node scripts/lint-tokens.mjs",
     "lint:tokens:mockups": "node scripts/lint-tokens-mockups.mjs",
+    "mockup-annotations:inject": "node scripts/mockup-annotations/inject-annotations.mjs",
+    "mockup-annotations:audit": "node scripts/mockup-annotations/audit-coverage.mjs",
     "typecheck": "tsc --noEmit",
     "test:e2e:groups": "dotenv -e .env.test -- playwright test",
     "storybook": "storybook dev -p 6006",

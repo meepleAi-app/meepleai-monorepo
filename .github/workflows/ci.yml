@@ -319,6 +319,27 @@ jobs:
             audits/2026-06-09-mockup-token-violations.md
           retention-days: 14
 
+      # DS-17-1 (mockup-to-app fidelity, 2026-06-09):
+      # Non-blocking @mockup annotation coverage report. Initial run = inventory
+      # only (Top-30 pilot = ~12% coverage). When DS-17-1 sweep restanti 45 routes
+      # ships and coverage stabilizes ≥80%, flip to `--threshold 80` to make this
+      # a blocking gate. The artifact is always uploaded for PR review.
+      # Spec: docs/superpowers/specs/2026-06-09-mockup-to-app-drift-spec-panel-review.md
+      # Sub-issue: #2069 · Umbrella: #2063
+      - name: Mockup annotation coverage report (DS-17-1)
+        run: pnpm mockup-annotations:audit
+        # Note: script resolves REPO_ROOT from __dirname; runs from apps/web (job default).
+
+      - name: Upload mockup annotation coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mockup-annotation-coverage-${{ github.run_number }}
+          path: |
+            audits/2026-06-09-mockup-annotation-coverage.json
+            audits/2026-06-09-mockup-annotation-coverage.md
+          retention-days: 14
+
   # Frontend Typecheck — fast-fail check (~1 min). Independent job for
   # parallel execution with lint.
   frontend-typecheck:

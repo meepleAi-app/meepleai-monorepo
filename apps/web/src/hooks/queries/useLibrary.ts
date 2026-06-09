@@ -827,6 +827,12 @@ export interface LibraryGameDetail {
   }>;
   // Issue #1824 L3: user-custom cover R2 key (null if no custom cover)
   customCoverR2Key?: string | null;
+  // Issue #2034 — ConnectionBar pill counts surfaced from /library/{gameId}.
+  // `agentCount` is cross-user (AgentDefinitions linked to this SharedGame);
+  // `chatThreadCount` is the requesting user's threads for the game. Both
+  // optional + default 0 so legacy BE responses don't break callers.
+  agentCount?: number;
+  chatThreadCount?: number;
 }
 
 /**
@@ -1017,6 +1023,9 @@ export function useLibraryGameDetail(
         recentSessions: gameDetail.recentSessions ?? undefined,
         // Issue #1824 L3: user-custom cover R2 key
         customCoverR2Key: gameDetail.customCoverR2Key ?? null,
+        // Issue #2034 — ConnectionBar pill counts from BE (zod-defaulted to 0).
+        agentCount: gameDetail.agentCount,
+        chatThreadCount: gameDetail.chatThreadCount,
       };
 
       // Add extended info from SharedGame if available (categories, mechanics, designers)

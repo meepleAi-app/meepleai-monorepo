@@ -342,6 +342,14 @@ export const GameDetailDtoSchema = z.object({
   // by the mapper (a future fallback wire can consume it when sharedGame fetch
   // fails — see useLibrary.ts:1023-1029).
   designers: z.array(z.string()).nullable().optional(),
+
+  // Issue #2034 — ConnectionBar pill counts. Replaces FE-side hardcoded zeros
+  // in GameDetailDesktop.tsx (`agentCount: 0`, `chatCount: 0`). `agentCount` is
+  // cross-user (AgentDefinitions linked to this SharedGame); `chatThreadCount`
+  // is the requesting user's own thread count for the game. Defaults to 0 to
+  // tolerate legacy BE responses that don't surface the fields yet.
+  agentCount: z.number().int().nonnegative().optional().default(0),
+  chatThreadCount: z.number().int().nonnegative().optional().default(0),
 });
 
 export type GameDetailDto = z.infer<typeof GameDetailDtoSchema>;

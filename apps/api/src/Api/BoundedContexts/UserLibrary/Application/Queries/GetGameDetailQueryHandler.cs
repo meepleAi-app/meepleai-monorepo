@@ -182,7 +182,15 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
                     Labels: labelsDto,
 
                     // Issue #1824 L3: user-custom cover key (null if no custom cover uploaded)
-                    CustomCoverR2Key: entry.CustomCoverR2Key
+                    CustomCoverR2Key: entry.CustomCoverR2Key,
+
+                    // Issue #2035: Designer names from the SharedGame catalog M:N relation.
+                    // Always materialised to a list (possibly empty) so the FE consumer
+                    // (GameDetailDesktop.tsx) can safely read `game.designers?.[0]?.name`.
+                    Designers: sharedGame.Designers
+                        .Select(d => d.Name)
+                        .Where(name => !string.IsNullOrWhiteSpace(name))
+                        .ToList()
                 );
             },
             options: CacheOptions,

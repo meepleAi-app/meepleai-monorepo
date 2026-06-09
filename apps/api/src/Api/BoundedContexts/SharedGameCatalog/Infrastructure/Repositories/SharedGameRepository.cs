@@ -31,8 +31,12 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
 
     public async Task<SharedGame?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        // Issue #2035: Include Designers so MapToDomain can hydrate the aggregate's
+        // designer collection — required by GetGameDetailQueryHandler which surfaces
+        // designer names on the library detail DTO.
         var entity = await DbContext.Set<SharedGameEntity>()
             .AsNoTracking()
+            .Include(g => g.Designers)
             .FirstOrDefaultAsync(g => g.Id == id && !g.IsDeleted, cancellationToken)
             .ConfigureAwait(false);
 
@@ -117,7 +121,7 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
         }
 
         // Use internal reconstruction constructor (no events)
-        return new SharedGame(
+        var sharedGame = new SharedGame(
             entity.Id,
             entity.Title,
             entity.YearPublished,
@@ -142,6 +146,19 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             (GameDataStatus)entity.GameDataStatus,
             entity.HasUploadedPdf,
             pdfCoverR2Key: entity.PdfCoverR2Key);
+
+        // Issue #2035: Hydrate designers from the M:N join — only when the caller
+        // eager-loaded the navigation (GetByIdAsync), otherwise the EF Core
+        // collection is empty by default (lazy loading is not enabled).
+        foreach (var designer in entity.Designers)
+        {
+            if (!string.IsNullOrWhiteSpace(designer.Name))
+            {
+                sharedGame.AddDesigner(designer.Name);
+            }
+        }
+
+        return sharedGame;
     }
 
     private static SharedGameEntity MapToEntity(SharedGame game)

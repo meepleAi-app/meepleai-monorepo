@@ -505,3 +505,20 @@ export const PagedReviewsResultSchema = z.object({
 });
 
 export type PagedReviewsResult = z.infer<typeof PagedReviewsResultSchema>;
+
+// ========== Contributors (#2036) ==========
+
+/**
+ * Issue #2036 — Contributor strip avatar entry.
+ * BE handler: <c>GetGameContributorsQueryHandler</c>.
+ * The endpoint returns up to N registered users with at least one finalized
+ * session for the game, ordered by descending session count.
+ */
+export const SessionContributorDtoSchema = z.object({
+  userId: z.string().uuid(),
+  displayName: z.string(),
+  initials: z.string().min(1).max(2),
+  sessionCount: z.number().int().nonnegative(),
+});
+
+export type SessionContributorDto = z.infer<typeof SessionContributorDtoSchema>;

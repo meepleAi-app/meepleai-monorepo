@@ -4,10 +4,12 @@ import { useState } from 'react';
 
 import { CustomCoverDialog } from '@/components/features/library/custom-cover/CustomCoverDialog';
 import { EditCoverOverlay } from '@/components/features/library/custom-cover/EditCoverOverlay';
+import { SessionContributorsStrip } from '@/components/features/library/SessionContributorsStrip';
 import { SplitViewLayout } from '@/components/layout/SplitViewLayout/SplitViewLayout';
 import { ConnectionBar, buildGameConnections } from '@/components/ui/data-display/connection-bar';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card/MeepleCard';
 import type { MeepleCardMetadata } from '@/components/ui/data-display/meeple-card/types';
+import { useGameSessionContributors } from '@/hooks/queries/useGameSessionContributors';
 import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
 import { useConnectionBarNav } from '@/hooks/useConnectionBarNav';
 
@@ -43,6 +45,11 @@ export function GameDetailDesktop({
 }: GameDetailDesktopProps) {
   const { data: game, isLoading, isError } = useLibraryGameDetail(gameId);
   const { handlePipClick } = useConnectionBarNav(gameId);
+  // #2036: Top session contributors strip. Public endpoint — runs even when
+  // the user hasn't actually added the game to their library yet (the share
+  // surfaces social proof before deciding to play). `enabled` gates on gameId
+  // being present so the hook doesn't fire with the empty-string sentinel.
+  const { data: contributors = [] } = useGameSessionContributors(gameId, 8, !!gameId);
   const [coverDialogOpen, setCoverDialogOpen] = useState(false);
 
   if (isLoading) {
@@ -157,6 +164,11 @@ export function GameDetailDesktop({
         )}
       </div>
       <ConnectionBar connections={gameConnections} onPipClick={handlePipClick} />
+      {/* #2036: SP3 mockup parity — avatar strip of past players. Strip
+          renders nothing when the contributor list is empty (no recorded
+          finalized sessions for this game), so it never claims layout space
+          on freshly-added games. */}
+      <SessionContributorsStrip contributors={contributors} />
     </div>
   );
 

@@ -192,7 +192,7 @@ public sealed class RotateProviderKeyEndpointIntegrationTests : IAsyncLifetime
     /// are covered at the handler level in <c>RotateProviderKeyCommandHandlerTests</c> with
     /// the full mocking surface.
     /// </remarks>
-    [Fact(Timeout = 90_000, Skip = "#1859 follow-up — endpoint-level happy path needs stack-trace-exposing factory; handler tests cover the scenario")]
+    [Fact(Timeout = 90_000, Skip = "#1964 verified 2026-06-09 — factory STILL suppresses stack traces post-#1859 (Path A attempt returned 500 with stackTrace=null + response body 'An unexpected error occurred'). Behavioural coverage: handler-level RotateProviderKeyCommandHandlerTests (11 [Fact]) covers the 8 acceptance scenarios; end-to-end RollbackSafety semantic guarantee covered by Issue1535EventOutboxAcceptanceTests.Scenario2 (rollback + no outbox + no MediatR.Publish, transaction-level proof). Path B dedicated Scenario6 would need the full Auth + RequireTwoFactor + AtomicAudit pipeline mocked — open follow-up if endpoint-level RotateProviderKey E2E becomes a regression target.")]
     public async Task Post_RotateKey_HappyPath_Returns200_PersistsRow_DeactivatesOld()
     {
         // Arrange
@@ -245,7 +245,7 @@ public sealed class RotateProviderKeyEndpointIntegrationTests : IAsyncLifetime
     /// value that survives <c>UserRepository.MapToDomain</c>'s <c>Restore2FAState</c> filter
     /// AND keep <c>LastTotpVerifiedAt</c> stale enough to trigger the step-up branch.
     /// </remarks>
-    [Fact(Timeout = 90_000, Skip = "#1859 follow-up — same factory limitation as scenario 1")]
+    [Fact(Timeout = 90_000, Skip = "#1964 verified 2026-06-09 — same factory limitation as scenario 1 (factory suppresses stack traces). See scenario 1 Skip message for full rationale + handler-level coverage reference.")]
     public async Task Post_RotateKey_NoRecentTotp_Returns401_StepUpRequired()
     {
         // Arrange — expire the step-up.
@@ -325,7 +325,7 @@ public sealed class RotateProviderKeyEndpointIntegrationTests : IAsyncLifetime
     /// This is the authoritative DB cooldown gate; the edge rate-limit policy is defence-in-depth.
     /// </summary>
     /// <remarks>SKIPPED — same factory limitation as scenario 1; handler test covers.</remarks>
-    [Fact(Timeout = 90_000, Skip = "#1859 follow-up — same factory limitation as scenario 1")]
+    [Fact(Timeout = 90_000, Skip = "#1964 verified 2026-06-09 — same factory limitation as scenario 1 (factory suppresses stack traces). See scenario 1 Skip message for full rationale + handler-level coverage reference.")]
     public async Task Post_RotateKey_LastRotationWithin24h_Returns409()
     {
         // Arrange — seed a recent rotation for "deepseek" 1 hour ago.
@@ -368,7 +368,7 @@ public sealed class RotateProviderKeyEndpointIntegrationTests : IAsyncLifetime
     /// <see cref="Api.Middleware.Exceptions.ProviderProbeFailedException"/>; no row persisted.
     /// </summary>
     /// <remarks>SKIPPED — same factory limitation as scenario 1; handler test covers.</remarks>
-    [Fact(Timeout = 90_000, Skip = "#1859 follow-up — same factory limitation as scenario 1")]
+    [Fact(Timeout = 90_000, Skip = "#1964 verified 2026-06-09 — same factory limitation as scenario 1 (factory suppresses stack traces). See scenario 1 Skip message for full rationale + handler-level coverage reference.")]
     public async Task Post_RotateKey_ProbeFailure_Returns502_NoRowPersisted()
     {
         // Arrange — fake probe returns Unauthorized.
@@ -395,7 +395,7 @@ public sealed class RotateProviderKeyEndpointIntegrationTests : IAsyncLifetime
     /// Verifies the <c>[AtomicAudit]</c> + <c>[AuditableAction("ProviderKeyRotated", ...)]</c> pipeline.
     /// </summary>
     /// <remarks>SKIPPED — depends on a successful handler run; same factory limitation as scenario 1.</remarks>
-    [Fact(Timeout = 90_000, Skip = "#1859 follow-up — depends on scenario 1 happy path")]
+    [Fact(Timeout = 90_000, Skip = "#1964 verified 2026-06-09 — depends on scenario 1 happy path which factory cannot support. See scenario 1 Skip message for full rationale.")]
     public async Task Post_RotateKey_AuditOutbox_ContainsExpectedDetails()
     {
         // Arrange

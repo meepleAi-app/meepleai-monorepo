@@ -10,6 +10,7 @@ import { z } from 'zod';
 import {
   AcquireLockResultSchema,
   AgentDtoSchema,
+  SessionContributorDtoSchema,
   EditorLockSchema,
   GameFAQSchema,
   GameLeaderboardResponseSchema,
@@ -28,6 +29,7 @@ import {
   VersionTimelineSchema,
   type AcquireLockResult,
   type AgentDto,
+  type SessionContributorDto,
   type EditorLock,
   type Game,
   type GameFAQ,
@@ -286,6 +288,25 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
       const queryString = params.toString() ? `?${params.toString()}` : '';
       const url = `/api/v1/games/${encodeURIComponent(gameId)}/sessions${queryString}`;
       const response = await httpClient.get(url, z.array(GameSessionDtoSchema));
+      return response ?? [];
+    },
+
+    /**
+     * Get the top session contributors (registered users with finalized
+     * sessions) for a game (Issue #2036). Public endpoint — no auth required.
+     * The BE handler clamps `limit` to [1, 50]; the FE default and mockup
+     * show 8. The path uses the literal "session-contributors" to avoid
+     * ambiguity with the sharing-based contributors endpoint at
+     * `/shared-games/{id}/contributors` (Issue #2746).
+     */
+    async getSessionContributors(
+      gameId: string,
+      limit: number = 8
+    ): Promise<SessionContributorDto[]> {
+      const params = new URLSearchParams();
+      params.append('limit', limit.toString());
+      const url = `/api/v1/games/${encodeURIComponent(gameId)}/session-contributors?${params.toString()}`;
+      const response = await httpClient.get(url, z.array(SessionContributorDtoSchema));
       return response ?? [];
     },
 

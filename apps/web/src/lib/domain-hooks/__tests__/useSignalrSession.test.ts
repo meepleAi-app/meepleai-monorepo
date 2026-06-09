@@ -38,13 +38,21 @@ const mockWithAutomaticReconnect = vi.fn().mockReturnThis();
 const mockConfigureLogging = vi.fn().mockReturnThis();
 const mockBuild = vi.fn().mockReturnValue(mockConnection);
 
+// #1972 M4 batch: vitest v4 rejects arrow-mock used with `new`. Regular function
+// (not arrow) is `new`-compatible because `this` is bound. Class approach fails here
+// due to hoisted `vi.mock` factory referencing spy consts before initialization.
 vi.mock('@microsoft/signalr', () => ({
-  HubConnectionBuilder: vi.fn().mockImplementation(() => ({
-    withUrl: mockWithUrl,
-    withAutomaticReconnect: mockWithAutomaticReconnect,
-    configureLogging: mockConfigureLogging,
-    build: mockBuild,
-  })),
+  HubConnectionBuilder: vi.fn().mockImplementation(function (this: {
+    withUrl: () => unknown;
+    withAutomaticReconnect: () => unknown;
+    configureLogging: () => unknown;
+    build: () => unknown;
+  }) {
+    this.withUrl = mockWithUrl;
+    this.withAutomaticReconnect = mockWithAutomaticReconnect;
+    this.configureLogging = mockConfigureLogging;
+    this.build = mockBuild;
+  }),
   HubConnectionState: {
     Connected: 'Connected',
     Connecting: 'Connecting',

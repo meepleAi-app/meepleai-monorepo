@@ -108,8 +108,10 @@ vi.mock('@/lib/api/clients/adminClient', () => ({
   createAdminClient: vi.fn(() => mockAdminClient),
 }));
 
+// #1972 M4 batch: vitest v4 rejects arrow-mock used with `new`. Use empty class.
+class MockHttpClient {}
 vi.mock('@/lib/api/core/httpClient', () => ({
-  HttpClient: vi.fn().mockImplementation(() => ({})),
+  HttpClient: MockHttpClient,
 }));
 
 vi.mock('@/components/ui/primitives/button', () => ({

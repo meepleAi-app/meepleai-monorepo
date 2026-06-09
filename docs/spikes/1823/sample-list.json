@@ -1,0 +1,35 @@
+[
+  {"bucket": "bgg_top_100", "title": "Brass: Birmingham", "year": 2018},
+  {"bucket": "bgg_top_100", "title": "Pandemic Legacy: Season 1", "year": 2015},
+  {"bucket": "bgg_top_100", "title": "Ark Nova", "year": 2021},
+  {"bucket": "bgg_top_100", "title": "Gloomhaven", "year": 2017},
+  {"bucket": "bgg_top_100", "title": "Twilight Imperium: Fourth Edition", "year": 2017},
+  {"bucket": "bgg_top_100", "title": "Terraforming Mars", "year": 2016},
+  {"bucket": "bgg_top_100", "title": "Spirit Island", "year": 2017},
+  {"bucket": "bgg_top_100", "title": "Wingspan", "year": 2019},
+  {"bucket": "bgg_top_100", "title": "Scythe", "year": 2016},
+  {"bucket": "bgg_top_100", "title": "Through the Ages: A New Story of Civilization", "year": 2015},
+  {"bucket": "bgg_top_100", "title": "Catan", "year": 1995},
+  {"bucket": "bgg_top_100", "title": "Carcassonne", "year": 2000},
+  {"bucket": "bgg_top_100", "title": "Ticket to Ride", "year": 2004},
+  {"bucket": "bgg_top_100", "title": "7 Wonders", "year": 2010},
+  {"bucket": "bgg_top_100", "title": "Agricola", "year": 2007},
+
+  {"bucket": "bgg_mid_tier", "title": "Splendor", "year": 2014},
+  {"bucket": "bgg_mid_tier", "title": "Azul", "year": 2017},
+  {"bucket": "bgg_mid_tier", "title": "Dominion", "year": 2008},
+  {"bucket": "bgg_mid_tier", "title": "Codenames", "year": 2015},
+  {"bucket": "bgg_mid_tier", "title": "Dixit", "year": 2008},
+  {"bucket": "bgg_mid_tier", "title": "Pandemic", "year": 2008},
+  {"bucket": "bgg_mid_tier", "title": "Puerto Rico", "year": 2002},
+  {"bucket": "bgg_mid_tier", "title": "Power Grid", "year": 2004},
+
+  {"bucket": "italian_publisher", "title": "Barrage", "year": 2019},
+  {"bucket": "italian_publisher", "title": "Lorenzo il Magnifico", "year": 2016},
+  {"bucket": "italian_publisher", "title": "Coimbra", "year": 2018},
+  {"bucket": "italian_publisher", "title": "Grand Austria Hotel", "year": 2015},
+
+  {"bucket": "niche", "title": "Eclipse: Second Dawn for the Galaxy", "year": 2020},
+  {"bucket": "niche", "title": "John Company: Second Edition", "year": 2022},
+  {"bucket": "niche", "title": "Pax Pamir: Second Edition", "year": 2019}
+]

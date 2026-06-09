@@ -20,6 +20,8 @@ public class LicenseValidatorTests
     [InlineData("pd")]
     [InlineData("CC0")]
     [InlineData("cc0")]
+    [InlineData("CC BY")]              // DEC-3c "any version" includes bare unversioned form (rare on Commons but seen on legacy uploads)
+    [InlineData("CC-BY")]
     [InlineData("CC BY 2.0")]
     [InlineData("CC BY 3.0")]
     [InlineData("CC BY 4.0")]

@@ -62,19 +62,24 @@ Add the missing rows to `MOCKUPS_INDEX.md` and re-run the injector.
 | `pnpm mockup-annotations:inject --apply` | writes files | _local-only_ |
 | `pnpm mockup-annotations:inject --limit N` | process at most N mockups | _local-only_ |
 | `pnpm mockup-annotations:inject --schema` | print mockup→route→file plan as JSON | _local-only_ |
-| `pnpm mockup-annotations:audit` | inventory only, exit 0 | runs as **non-blocking** report (DS-17-1 phase 1) |
-| `pnpm mockup-annotations:audit --threshold 80` | CI gate, exit 1 below 80% | _flip to this when coverage ≥ 80%_ |
+| `pnpm mockup-annotations:audit` | inventory only, exit 0 (denominator=`all`) | _not run in CI_ |
+| `pnpm mockup-annotations:audit --denominator mappable` | counts only routes with INDEX mapping | _local discovery_ |
+| `pnpm mockup-annotations:audit --denominator mappable --threshold 80` | CI gate, exit 1 below 80% of mappable routes | **runs in CI as blocking gate** |
+
+### Denominator semantics
+
+- `--denominator all` (default): coverage = annotated / all `page.tsx`. Includes admin, api, internal routes with no design surface → ceiling ≈ 33% even with 100% of mockups annotated.
+- `--denominator mappable`: coverage = annotated / routes that appear in `MOCKUPS_INDEX.md`. This is what CI uses — the threshold reflects "annotated / annotatable" rather than the full app tree.
 
 ## CI gate trajectory
 
 | Phase | Coverage target | CI step |
 |---|---|---|
-| **DS-17-1 Wave 2** (now) | ~12% (Top-30 pilot) | `pnpm mockup-annotations:audit` non-blocking |
-| **DS-17-1 sweep** (follow-up issue) | ≥80% | `pnpm mockup-annotations:audit --threshold 80` blocking |
-| **DS-17 close** | 100% | `pnpm mockup-annotations:audit --threshold 100` blocking |
+| ✅ **DS-17-1 Wave 2** (pilot, PR #2083) | ~12% (Top-30 pilot, denominator=all) | `pnpm mockup-annotations:audit` non-blocking |
+| ✅ **DS-17-1 sweep** (PR #2084 family) | 100% / 68 mappable routes | `pnpm mockup-annotations:audit --denominator mappable --threshold 80` **blocking** |
+| **DS-17 close** | 100% mappable + all page-mocks migrated to Storybook stories | `--threshold 100` blocking |
 
-When the sweep PR lands, edit the `.github/workflows/ci.yml` step to add
-`--threshold 80` and document the flip in CLAUDE.md § "🔒 Active Freezes".
+To raise the threshold further (e.g. when DS-17-3 ships additional mockups and they're all annotated), edit `.github/workflows/ci.yml` and bump `--threshold N`. The audit JSON file also records `denominator` and current state for review.
 
 ## Anti-patterns
 

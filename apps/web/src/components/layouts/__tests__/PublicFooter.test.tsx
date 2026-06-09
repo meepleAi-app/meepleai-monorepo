@@ -22,9 +22,9 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-// Mock MeepleLogo to avoid styled-jsx issues in tests
-vi.mock('@/components/ui/meeple/meeple-logo', () => ({
-  MeepleLogo: () => <div data-testid="meeple-logo">MeepleAI</div>,
+// Mock BrandMark to keep the test focused on layout structure
+vi.mock('@/components/ui/brand', () => ({
+  BrandMark: () => <div data-testid="brand-mark">MeepleAI</div>,
 }));
 
 describe('PublicFooter', () => {
@@ -36,11 +36,11 @@ describe('PublicFooter', () => {
       expect(footer).toBeInTheDocument();
     });
 
-    it('renders MeepleAI logo', () => {
+    it('renders MeepleAI brand mark', () => {
       render(<PublicFooter />);
 
-      // Logo should be present (using testid from mock)
-      const logo = screen.getByTestId('meeple-logo');
+      // BrandMark should be present (using testid from mock)
+      const logo = screen.getByTestId('brand-mark');
       expect(logo).toBeInTheDocument();
     });
 

@@ -1757,14 +1757,15 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tags: ['avatar', 'meeple', 'brand'],
   },
   {
-    id: 'meeple-logo',
-    name: 'MeepleLogo',
-    importPath: '@/components/ui/meeple/meeple-logo',
+    id: 'brand-mark',
+    name: 'BrandMark',
+    importPath: '@/components/ui/brand',
     category: 'Meeple',
     areas: ['shared'],
-    tier: 'interactive',
-    description: 'MeepleAI brand logo with size and colour theme variants.',
-    tags: ['logo', 'brand', 'meeple'],
+    tier: 'static',
+    description:
+      'Canonical MeepleAI brand mark (icon + wordmark) with sm/md/lg sizing and optional Admin badge.',
+    tags: ['logo', 'brand'],
   },
   {
     id: 'motion-button',

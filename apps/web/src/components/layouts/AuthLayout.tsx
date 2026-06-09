@@ -31,7 +31,7 @@ import { ReactNode } from 'react';
 
 import Link from 'next/link';
 
-import { MeepleLogo } from '@/components/ui/meeple';
+import { BrandMark } from '@/components/ui/brand';
 import { cn } from '@/lib/utils';
 
 export interface AuthLayoutProps {
@@ -58,10 +58,7 @@ export function AuthLayout({
   'data-testid': testId,
 }: AuthLayoutProps) {
   return (
-    <div
-      className="min-h-screen flex flex-col bg-background"
-      data-testid={testId}
-    >
+    <div className="min-h-screen flex flex-col bg-background" data-testid={testId}>
       {/* Minimal Header */}
       <header className="w-full py-4 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
@@ -71,7 +68,7 @@ export function AuthLayout({
             className="flex items-center gap-3 hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-accent focus:ring-offset-2 rounded-lg"
             aria-label="MeepleAI Home"
           >
-            <MeepleLogo variant="full" size="md" />
+            <BrandMark variant="full" size="md" />
           </Link>
 
           {/* Optional back link */}
@@ -96,9 +93,7 @@ export function AuthLayout({
           {/* Optional Title Section */}
           {(title || subtitle) && (
             <div className="text-center mb-8 space-y-2">
-              {title && (
-                <h1 className="text-3xl font-bold text-foreground">{title}</h1>
-              )}
+              {title && <h1 className="text-3xl font-bold text-foreground">{title}</h1>}
               {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
             </div>
           )}

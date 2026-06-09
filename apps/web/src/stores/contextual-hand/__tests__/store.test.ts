@@ -672,20 +672,24 @@ describe('useContextualHandStore', () => {
       capturedOnMessage = null;
       capturedOnError = null;
 
+      // #1972 M6 vitest v4: arrow functions cannot be used as constructors with `new`.
+      // Use regular function so `this` is bound and `new EventSource(...)` works.
       vi.stubGlobal(
         'EventSource',
-        vi.fn().mockImplementation(() => {
-          const instance = {
-            close: mockClose,
-            onmessage: null as ((e: MessageEvent) => void) | null,
-            onerror: null as (() => void) | null,
-          };
+        vi.fn().mockImplementation(function (this: {
+          close: () => void;
+          onmessage: ((e: MessageEvent) => void) | null;
+          onerror: (() => void) | null;
+        }) {
+          this.close = mockClose;
+          this.onmessage = null;
+          this.onerror = null;
           // Capture callbacks after they're assigned in the next microtask
+          const self = this;
           setTimeout(() => {
-            capturedOnMessage = instance.onmessage;
-            capturedOnError = instance.onerror;
+            capturedOnMessage = self.onmessage;
+            capturedOnError = self.onerror;
           }, 0);
-          return instance;
         })
       );
     });

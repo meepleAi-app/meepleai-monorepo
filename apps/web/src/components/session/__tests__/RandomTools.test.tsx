@@ -19,22 +19,30 @@ vi.mock('framer-motion', async () => {
   return {
     ...actual,
     motion: {
-      div: ({ children, ...props }: { children?: React.ReactNode }) => <div {...props}>{children}</div>,
-      span: ({ children, ...props }: { children?: React.ReactNode }) => <span {...props}>{children}</span>,
-      svg: ({ children, ...props }: { children?: React.ReactNode }) => <svg {...props}>{children}</svg>,
+      div: ({ children, ...props }: { children?: React.ReactNode }) => (
+        <div {...props}>{children}</div>
+      ),
+      span: ({ children, ...props }: { children?: React.ReactNode }) => (
+        <span {...props}>{children}</span>
+      ),
+      svg: ({ children, ...props }: { children?: React.ReactNode }) => (
+        <svg {...props}>{children}</svg>
+      ),
     },
     AnimatePresence: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
   };
 });
 
-// Mock audio
+// Mock audio — class-based so vitest v4 can use it with `new`
+class MockAudio {
+  play = vi.fn().mockResolvedValue(undefined);
+  pause = vi.fn();
+  currentTime = 0;
+  volume = 1;
+}
+
 beforeEach(() => {
-  vi.spyOn(window, 'Audio').mockImplementation(() => ({
-    play: vi.fn().mockResolvedValue(undefined),
-    pause: vi.fn(),
-    currentTime: 0,
-    volume: 1,
-  } as unknown as HTMLAudioElement));
+  vi.spyOn(window, 'Audio').mockImplementation(MockAudio as unknown as typeof Audio);
 });
 
 describe('CountdownTimer', () => {
@@ -167,9 +175,30 @@ describe('CoinFlip', () => {
 
   it('shows flip history stats when history is provided', () => {
     const flipHistory: CoinFlipResult[] = [
-      { id: '1', sessionId: 's1', participantId: 'u1', participantName: 'P1', result: 'heads', timestamp: new Date() },
-      { id: '2', sessionId: 's1', participantId: 'u1', participantName: 'P1', result: 'tails', timestamp: new Date() },
-      { id: '3', sessionId: 's1', participantId: 'u1', participantName: 'P1', result: 'heads', timestamp: new Date() },
+      {
+        id: '1',
+        sessionId: 's1',
+        participantId: 'u1',
+        participantName: 'P1',
+        result: 'heads',
+        timestamp: new Date(),
+      },
+      {
+        id: '2',
+        sessionId: 's1',
+        participantId: 'u1',
+        participantName: 'P1',
+        result: 'tails',
+        timestamp: new Date(),
+      },
+      {
+        id: '3',
+        sessionId: 's1',
+        participantId: 'u1',
+        participantName: 'P1',
+        result: 'heads',
+        timestamp: new Date(),
+      },
     ];
 
     render(<CoinFlip {...defaultProps} flipHistory={flipHistory} />);
@@ -181,7 +210,14 @@ describe('CoinFlip', () => {
 
   it('displays heads and tails labels', () => {
     const flipHistory: CoinFlipResult[] = [
-      { id: '1', sessionId: 's1', participantId: 'u1', participantName: 'P1', result: 'heads', timestamp: new Date() },
+      {
+        id: '1',
+        sessionId: 's1',
+        participantId: 'u1',
+        participantName: 'P1',
+        result: 'heads',
+        timestamp: new Date(),
+      },
     ];
 
     render(<CoinFlip {...defaultProps} flipHistory={flipHistory} />);
@@ -253,9 +289,7 @@ describe('WheelSpinner', () => {
   });
 
   it('disables spin with less than 2 options', () => {
-    const options: WheelOption[] = [
-      { id: '1', label: 'Solo', color: '#ff0000', weight: 1 },
-    ];
+    const options: WheelOption[] = [{ id: '1', label: 'Solo', color: '#ff0000', weight: 1 }];
 
     render(<WheelSpinner {...defaultProps} options={options} />);
 

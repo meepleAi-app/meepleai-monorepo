@@ -3,15 +3,14 @@ import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 
 import { CropDialog } from '../CropDialog';
 
-// jsdom doesn't implement URL.createObjectURL / revokeObjectURL.
-if (typeof URL.createObjectURL === 'undefined') {
-  // @ts-expect-error — assign for jsdom
-  URL.createObjectURL = vi.fn(() => 'blob:mock');
-}
-if (typeof URL.revokeObjectURL === 'undefined') {
-  // @ts-expect-error — assign for jsdom
-  URL.revokeObjectURL = vi.fn();
-}
+// Stub URL.createObjectURL / revokeObjectURL unconditionally so they are
+// always vi.fn() spies. vitest v4 exposes the native Node.js implementation
+// which (a) strictly requires a real Blob and (b) is not a spy, causing
+// "is not a spy or a call to a spy!" errors on expect(URL.revokeObjectURL).
+// @ts-expect-error — override for vitest v4 / jsdom compat
+URL.createObjectURL = vi.fn(() => 'blob:mock');
+// @ts-expect-error — override for vitest v4 / jsdom compat
+URL.revokeObjectURL = vi.fn();
 
 // Reset mocks before each test.
 beforeEach(() => {

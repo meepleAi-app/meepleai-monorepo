@@ -161,11 +161,7 @@ function createTestQueryClient() {
 
 function renderWithProviders(component: React.ReactElement) {
   const queryClient = createTestQueryClient();
-  return render(
-    <QueryClientProvider client={queryClient}>
-      {component}
-    </QueryClientProvider>
-  );
+  return render(<QueryClientProvider client={queryClient}>{component}</QueryClientProvider>);
 }
 
 // ============================================================================
@@ -173,8 +169,31 @@ function renderWithProviders(component: React.ReactElement) {
 // ============================================================================
 
 describe('CollectionDashboard', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    // vi.clearAllMocks() only clears call history, NOT mockReturnValue implementations.
+    // Clear first, then re-establish defaults so tests that override hooks
+    // (Empty States, Loading States) don't bleed into subsequent tests
+    // (e.g. Accessibility, Pagination). #1972 M6 vitest v4: test isolation fix.
     vi.clearAllMocks();
+
+    const { useLibrary, useLibraryStats, useLibraryQuota } =
+      await import('@/hooks/queries/useLibrary');
+    vi.mocked(useLibrary).mockReturnValue({
+      data: mockLibraryResponse,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useLibrary>);
+    vi.mocked(useLibraryStats).mockReturnValue({
+      data: mockLibraryStats,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useLibraryStats>);
+    vi.mocked(useLibraryQuota).mockReturnValue({
+      data: mockQuota,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useLibraryQuota>);
+
     // Stub window.matchMedia required by MeepleCard in jsdom
     vi.stubGlobal('matchMedia', (query: string) => ({
       matches: false,

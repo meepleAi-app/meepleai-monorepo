@@ -61,11 +61,13 @@ beforeEach(() => {
     responseText: JSON.stringify({ documentId: 'doc-123', fileName: 'rules.pdf' }),
   };
   vi.clearAllMocks();
-  // Vitest 2+/Node 24 made global.XMLHttpRequest read-only — mirror fix #1031.
-  vi.stubGlobal(
-    'XMLHttpRequest',
-    vi.fn(() => mockXHR)
-  );
+  // Vitest v4 fix: arrow/plain function constructors don't bind `this` to the
+  // instance, so open/send etc. are set on a throwaway object and never tracked.
+  // Use a function-with-this constructor + Object.assign so the instance shares
+  // the same vi.fn() references as mockXHR (mirror of M2 canary fix).
+  vi.stubGlobal('XMLHttpRequest', function (this: any) {
+    Object.assign(this, mockXHR);
+  });
 });
 
 afterEach(() => {

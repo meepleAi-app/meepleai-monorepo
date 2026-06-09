@@ -114,10 +114,10 @@ describe('usePdfStatus', () => {
     vi.useFakeTimers();
     mockEventSourceInstances = [];
 
-    // Wrap in vi.fn() so we can assert calls
-    global.EventSource = vi.fn((url: string) => {
-      return new MockEventSource(url);
-    }) as unknown as typeof EventSource;
+    // Vitest v4: `vi.fn((url) => new X(url))` no longer invokes the arrow callback
+    // when called with `new`. Assign the class directly; constructor pushes into
+    // `mockEventSourceInstances` for assertions (see line 78).
+    global.EventSource = MockEventSource as unknown as typeof EventSource;
   });
 
   afterEach(() => {
@@ -138,7 +138,7 @@ describe('usePdfStatus', () => {
     it('creates EventSource with correct URL', () => {
       renderHook(() => usePdfStatus('test-doc-123', { enableSSE: true }));
 
-      expect(global.EventSource).toHaveBeenCalledWith('/api/v1/pdfs/test-doc-123/status/stream');
+      expect(mockEventSourceInstances[0]?.url).toBe('/api/v1/pdfs/test-doc-123/status/stream');
     });
 
     it('marks connection as connected on SSE open', async () => {

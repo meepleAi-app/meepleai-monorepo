@@ -191,6 +191,12 @@ internal static class SharedGameCatalogServiceExtensions
         // Scoped to match the lifetime of the underlying IConfigurationService.
         services.AddScoped<ICatalogSeedFeatureFlag, CatalogSeedFeatureFlag>();
 
+        // Issue #1823 Phase B (ADR DEC-3e): single shared Wikimedia rate-limiter
+        // coordinates the 5 RPS cap across Wikidata SPARQL + Commons API consumers.
+        // Singleton — token bucket state is process-scoped; DEC-3e locks single-pod
+        // batch (HPA=1), so an in-memory limiter is sufficient.
+        services.AddSingleton<IWikimediaRateLimiter, InMemoryWikimediaRateLimiter>();
+
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 
         return services;

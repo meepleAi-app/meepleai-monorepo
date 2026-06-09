@@ -110,6 +110,20 @@ export interface MeepleCardProps {
   rating?: number;
   ratingMax?: number;
   metadata?: MeepleCardMetadata[];
+  /**
+   * Render a small entity badge ABOVE the title (currently HeroCard only).
+   * Mockup parity: `sp3-shared-game-detail.jsx` GameHero block — pill like
+   * "🎲 GIOCO" / "🃏 SESSIONE" gives the reader a fast type signal before
+   * the title. Opt-in so existing consumers keep their current rendering.
+   */
+  showEntityLabel?: boolean;
+  /**
+   * Display text for the entity badge (e.g. "Gioco", "Sessione"). When
+   * omitted but `showEntityLabel` is true, the badge is hidden — callers
+   * must pass the user-facing localized label explicitly to keep the design
+   * system locale-agnostic.
+   */
+  entityLabel?: string;
   tags?: string[];
   status?: CardStatus;
   badge?: string;

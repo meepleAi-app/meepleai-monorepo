@@ -21,8 +21,11 @@ export function HeroCard(props: MeepleCardProps) {
     rating,
     ratingMax,
     badge,
+    metadata,
     manaPips,
     headingLevel,
+    showEntityLabel,
+    entityLabel,
     onClick,
     className = '',
   } = props;
@@ -79,6 +82,18 @@ export function HeroCard(props: MeepleCardProps) {
             {badge}
           </span>
         )}
+        {/* Entity label pill (mockup parity — sp3-shared-game-detail.jsx GameHero):
+            small uppercase chip rendered ABOVE the title so the reader scans
+            "what kind of thing am I looking at" before the title itself. */}
+        {showEntityLabel && entityLabel && (
+          <span
+            data-testid="hero-card-entity-label"
+            className="mb-2 inline-flex w-fit items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 font-[var(--font-jetbrains)] text-[10px] font-bold uppercase tracking-[0.08em] text-white backdrop-blur-sm"
+          >
+            <span aria-hidden="true">{entityIcon[entity]}</span>
+            <span>{entityLabel}</span>
+          </span>
+        )}
         {(() => {
           const HeadingTag = `h${headingLevel ?? 3}` as 'h2' | 'h3' | 'h4';
           return (
@@ -92,7 +107,20 @@ export function HeroCard(props: MeepleCardProps) {
           <div className="mt-2 flex items-center gap-1 text-amber-300">
             <span>★</span>
             <span className="text-sm font-bold text-white">{rating.toFixed(1)}</span>
-            {ratingMax && <span className="text-xs text-foreground/80">/ {ratingMax}</span>}
+            {ratingMax && <span className="text-xs text-white/70">/ {ratingMax}</span>}
+          </div>
+        )}
+        {metadata && metadata.length > 0 && (
+          <div
+            className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 font-[var(--font-jetbrains)] text-[11px] font-medium uppercase tracking-wider text-white/75"
+            data-testid="hero-card-metadata"
+          >
+            {metadata.map((entry, idx) => (
+              <span key={`${entry.label}-${idx}`} className="flex items-center gap-2">
+                {idx > 0 && <span aria-hidden="true" className="text-white/40">·</span>}
+                <span>{entry.label}</span>
+              </span>
+            ))}
           </div>
         )}
         {manaPips && (

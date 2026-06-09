@@ -82,6 +82,12 @@ export function GameDetailDesktop({
   if (game?.gameYearPublished) {
     heroMetadata.push({ label: String(game.gameYearPublished) });
   }
+  // `playingTimeMinutes` matches the TS `LibraryGameDetail` interface
+  // (apps/web/src/hooks/queries/useLibrary.ts:803). The raw API JSON uses
+  // `playTimeMinutes`, but the useLibraryGameDetail hook renames the field
+  // during DTO mapping — so the TS surface is `playingTimeMinutes`. A previous
+  // attempted "fix" to `playTimeMinutes` here matched the wire shape instead
+  // of the typed surface and silently dropped the entry.
   if (game?.playingTimeMinutes) {
     heroMetadata.push({ label: `${game.playingTimeMinutes} min` });
   }
@@ -115,9 +121,26 @@ export function GameDetailDesktop({
           entity="game"
           variant="hero"
           title={game?.gameTitle ?? 'Gioco non in libreria'}
-          subtitle={game?.gamePublisher ?? undefined}
+          // Mockup parity: SP3 GameHero shows a "🎲 Gioco" pill above the
+          // title so the reader scans entity type first.
+          showEntityLabel
+          entityLabel="Gioco"
+          // Required so HeroCard.shouldRenderRichPlaceholder evaluates true
+          // for catalog games whose BGG image is rejected by shouldUsePlaceholder
+          // (#1822 — runtime BGG URL allow-list). Without an id the fallback
+          // collapses to a generic entity-icon and the live hero looks empty.
+          id={game?.gameId ?? gameId}
+          subtitle={
+            game?.gamePublisher && game.gamePublisher.length > 0
+              ? game.gamePublisher
+              : undefined
+          }
           imageUrl={game?.gameImageUrl ?? undefined}
           rating={game?.averageRating ?? undefined}
+          // BGG averageRating is on a 0–10 scale (e.g. Catan 7.09).
+          // Without `ratingMax`, MeepleCard defaults to /5 and renders all 5
+          // stars filled for any rating ≥5 — visually wrong.
+          ratingMax={10}
           metadata={heroMetadata.length > 0 ? heroMetadata : undefined}
           data-testid="game-detail-hero-card"
         />

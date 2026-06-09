@@ -25,6 +25,21 @@ public interface IEnrichmentQueueRepository
         int limit,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Returns all pending (IsProcessed=false) entries for a specific shared game.
+    /// Used by <see cref="Api.Infrastructure.BackgroundServices.BggImportQueueBackgroundService"/>
+    /// (#1907) to cascade MarkProcessed when a BGG enrichment iteration reaches a terminal
+    /// outcome (success or max-retry failure).
+    /// </summary>
+    /// <remarks>
+    /// Multiple entries can exist for the same game (e.g. an admin manually enqueues a
+    /// Normal-priority entry while a Stale-priority entry from the skeleton sweep is
+    /// already pending). All of them collapse to Processed on the same terminal outcome.
+    /// </remarks>
+    Task<IReadOnlyList<EnrichmentQueueEntry>> GetPendingForGameAsync(
+        Guid sharedGameId,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Persists changes to a previously loaded entry (e.g. MarkProcessed).</summary>
     Task UpdateAsync(EnrichmentQueueEntry entry, CancellationToken cancellationToken = default);
 }

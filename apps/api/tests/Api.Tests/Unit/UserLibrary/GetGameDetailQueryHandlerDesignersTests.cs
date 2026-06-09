@@ -1,3 +1,5 @@
+using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
@@ -29,10 +31,24 @@ public sealed class GetGameDetailQueryHandlerDesignersTests
         // Issue #2790: HybridCache cannot be mocked (sealed). Use an in-memory L1 instance.
         HybridCache cache = TestDbContextFactory.CreateInMemoryHybridCache();
 
+        // Issue #2034: handler now also depends on agent + chat-thread repos for
+        // ConnectionBar pill counts. These tests don't exercise that surface, so
+        // we stub the queries to return empty (counts default to 0).
+        var agentRepo = new Mock<IAgentDefinitionRepository>();
+        agentRepo
+            .Setup(r => r.CountActiveByGameIdsAsync(It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
+        var chatThreadRepo = new Mock<IChatThreadRepository>();
+        chatThreadRepo
+            .Setup(r => r.FindByUserIdAndGameIdAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<ChatThread>());
+
         return new GetGameDetailQueryHandler(
             libraryRepo.Object,
             sharedGameRepo.Object,
             labelRepo.Object,
+            agentRepo.Object,
+            chatThreadRepo.Object,
             cache,
             NullLogger<GetGameDetailQueryHandler>.Instance);
     }

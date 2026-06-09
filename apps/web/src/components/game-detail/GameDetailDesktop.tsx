@@ -103,11 +103,16 @@ export function GameDetailDesktop({
     heroMetadata.push({ label: `Complessità ${game.complexityRating.toFixed(1)}` });
   }
 
+  // #2034: agentCount + chatCount now flow from /library/{gameId} instead of
+  // being hardcoded zeros. `agentCount` is cross-user (AgentDefinitions linked
+  // to this SharedGame); `chatThreadCount` is the requesting user's own
+  // threads for the game. Both default to 0 when the BE field is undefined
+  // (legacy response shapes).
   const gameConnections = game
     ? buildGameConnections({
-        agentCount: 0,
+        agentCount: game.agentCount ?? 0,
         kbCount: game.hasCustomPdf || game.hasRagAccess ? 1 : 0,
-        chatCount: 0,
+        chatCount: game.chatThreadCount ?? 0,
         sessionCount: game.timesPlayed ?? 0,
       })
     : [];

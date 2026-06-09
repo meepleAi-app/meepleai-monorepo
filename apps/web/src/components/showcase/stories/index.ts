@@ -10,6 +10,7 @@ import { actionGridStory } from './action-grid.story';
 import { agentStatusBadgeStory } from './agent-status-badge.story';
 import { alertStory } from './alert.story';
 import { badgeStory } from './badge.story';
+import { brandMarkStory } from './brand-mark.story';
 import { buttonStory } from './button.story';
 import { chatMessageStory } from './chat-message.story';
 import { checkboxStory } from './checkbox.story';
@@ -104,6 +105,7 @@ export const ALL_STORIES: ShowcaseStory<any>[] = [
 
   // Meeple
   meepleAvatarStory,
+  brandMarkStory,
   chatMessageStory,
 
   // Agent

@@ -186,6 +186,62 @@ public sealed class EnrichmentQueueRepositoryIntegrationTests : IAsyncLifetime
         total.Should().Be(2);
     }
 
+    // ===== #1907 GetPendingForGameAsync — cascade MarkProcessed support =====
+
+    [Fact]
+    public async Task GetPendingForGameAsync_EmptyGuid_Throws()
+    {
+        var act = () => _repository.GetPendingForGameAsync(Guid.Empty);
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task GetPendingForGameAsync_NoEntries_ReturnsEmpty()
+    {
+        var entries = await _repository.GetPendingForGameAsync(_gameAlphaId);
+        entries.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetPendingForGameAsync_ReturnsAllPendingForTargetGame()
+    {
+        // Two pending entries for gameAlpha (Normal + Stale priority — both valid).
+        await EnqueueAsync(_gameAlphaId, EnrichmentPriority.Normal, "admin retry", _testUserId);
+        await EnqueueAsync(_gameAlphaId, EnrichmentPriority.Stale, "skeleton sweep", null);
+        // Distractor entries for other games — must NOT appear in the result.
+        await EnqueueAsync(_gameBetaId, EnrichmentPriority.Normal, "beta unrelated", _testUserId);
+        await EnqueueAsync(_gameGammaId, EnrichmentPriority.High, "gamma errata", _testUserId);
+
+        var entries = await _repository.GetPendingForGameAsync(_gameAlphaId);
+
+        entries.Should().HaveCount(2);
+        entries.Should().OnlyContain(e => e.SharedGameId == _gameAlphaId);
+        entries.Select(e => e.Priority).Should().BeEquivalentTo(
+            new[] { EnrichmentPriority.Normal, EnrichmentPriority.Stale });
+    }
+
+    [Fact]
+    public async Task GetPendingForGameAsync_ExcludesProcessedEntries()
+    {
+        await EnqueueAsync(_gameAlphaId, EnrichmentPriority.Normal, "first", _testUserId);
+        await EnqueueAsync(_gameAlphaId, EnrichmentPriority.Stale, "second", null);
+
+        // Mark the first one as processed — simulates a previous terminal outcome that
+        // cascaded MarkProcessed before a new admin-initiated retry was enqueued.
+        var (loaded, _) = await _repository.GetPendingAsync(priority: null, limit: 25);
+        var first = loaded.First(x => x.Entry.Reason == "first").Entry;
+        first.MarkProcessed();
+        await _repository.UpdateAsync(first);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        var entries = await _repository.GetPendingForGameAsync(_gameAlphaId);
+
+        entries.Should().HaveCount(1);
+        entries[0].Reason.Should().Be("second");
+        entries[0].IsProcessed.Should().BeFalse();
+    }
+
     // ===== helpers =====
 
     private async Task<Guid> SeedSharedGameAsync(string title)

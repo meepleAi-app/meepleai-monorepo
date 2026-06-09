@@ -87,6 +87,24 @@ internal sealed class EnrichmentQueueRepository : RepositoryBase, IEnrichmentQue
         return (items, total);
     }
 
+    public async Task<IReadOnlyList<EnrichmentQueueEntry>> GetPendingForGameAsync(
+        Guid sharedGameId,
+        CancellationToken cancellationToken = default)
+    {
+        if (sharedGameId == Guid.Empty)
+        {
+            throw new ArgumentException("SharedGameId cannot be Guid.Empty.", nameof(sharedGameId));
+        }
+
+        var rows = await DbContext.EnrichmentQueueEntries
+            .AsNoTracking()
+            .Where(e => e.SharedGameId == sharedGameId && !e.IsProcessed)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return rows.Select(MapToDomain).ToList();
+    }
+
     public Task UpdateAsync(EnrichmentQueueEntry entry, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entry);

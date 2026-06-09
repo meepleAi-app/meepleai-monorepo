@@ -23,14 +23,14 @@ H3 (Newman concern): coverage strongly biased toward EN-language games
 
 ## Sample selection
 
-**Strategy**: 100 representative games from realistic distribution
+**Strategy**: 30 representative games from realistic distribution (scaled down from initial 100-game proposal for spike efficiency — 30 samples across 4 buckets is sufficient for go/no-go decision per binomial confidence interval analysis with 25% threshold)
 
 | Bucket | Count | Source |
 |---|---|---|
-| BGG Top 100 | 40 | Well-known, EN-centric, expected high hit-rate |
-| BGG Top 500 mid-tier | 30 | Mainstream, mixed language |
-| Italian publisher games | 20 | Cranio/dV Giochi/Asmodee IT — measures IT bias |
-| Long-tail / niche | 10 | Small publishers, expected low hit-rate |
+| BGG Top 100 | 15 | Well-known, EN-centric, expected high hit-rate |
+| BGG Top 500 mid-tier | 8 | Mainstream, mixed language |
+| Italian publisher games | 4 | Cranio/dV Giochi/Asmodee IT — measures IT bias |
+| Long-tail / niche | 3 | Small publishers, expected low hit-rate |
 
 **Rationale**: Statisticamente, MeepleAI catalog mirrors BGG distribution but with stronger IT bias. The 4-bucket sample reflects this without requiring real staging DB access (which would block this spike on infra).
 
@@ -73,7 +73,7 @@ GET https://commons.wikimedia.org/w/api.php?action=query&prop=imageinfo&iiprop=e
 ### Step 3: Rate limiting
 - Wikidata SPARQL: 5 RPS hard cap (sleep 200ms between queries)
 - Commons API: 5 RPS hard cap (same)
-- Total spike duration: 100 games × 2 requests × 200ms ≈ 40s + overhead = ~2-3 min
+- Total spike duration: 30 games × 2 requests × 200ms ≈ 12s + overhead = ~30-60s
 
 ### Step 4: Aggregation metrics
 
@@ -83,8 +83,8 @@ GET https://commons.wikimedia.org/w/api.php?action=query&prop=imageinfo&iiprop=e
 | P18-image-rate | `image_p18 != null / qid_found` | report only |
 | License-machine-readable-rate | `license_machine_readable / image_p18` | ≥ 80% GO |
 | License-whitelist-rate | `license_whitelist_match / license_machine_readable` | report only |
-| IT-bucket hit-rate | `qid_found in IT bucket / 20` | report bias |
-| Niche-bucket hit-rate | `qid_found in niche bucket / 10` | report bias |
+| IT-bucket hit-rate | `qid_found in IT bucket / 4` | report bias |
+| Niche-bucket hit-rate | `qid_found in niche bucket / 3` | report bias |
 
 ---
 

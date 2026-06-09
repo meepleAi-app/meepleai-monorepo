@@ -53,7 +53,7 @@ Both decision thresholds met. Implementation Phase B unblocked.
 
 ### Updated coverage forecast
 - **Catalog-wide expected coverage**: ~50-65% (sample weighted by realistic catalog distribution: 30% top + 40% mid + 25% IT + 5% niche)
-  - 30% × 73% + 40% × 63% + 25% × 50% + 5% × 0% = **49.7%**
+  - 0.30 × 0.73 + 0.40 × 0.63 + 0.25 × 0.50 + 0.05 × 0.00 = 0.219 + 0.252 + 0.125 + 0 = **0.596 ≈ 59.6%**
 - **Previous spec estimate**: 30-40%. Actual exceeds by ~10-20pp.
 
 ### Architecture simplifications enabled

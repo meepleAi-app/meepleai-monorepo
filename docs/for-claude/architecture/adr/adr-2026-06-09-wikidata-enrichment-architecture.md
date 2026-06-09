@@ -68,7 +68,7 @@ Regex (case-insensitive): `^(public domain|PD|CC0|CC[ -]BY([ -][0-9.]+)?|CC[ -]B
 - `meepleai_wikidata_sparql_latency_seconds` (histogram, buckets 0.1/0.5/1/5/10s)
 - `meepleai_wikidata_qid_hit_rate` (gauge, computed per batch)
 
-**Rationale**: Without these, the 49.7% catalog-wide coverage forecast cannot be validated post-deploy. Observability is gate-blocker per Hightower H-002.
+**Rationale**: Without these, the 59.6% catalog-wide coverage forecast cannot be validated post-deploy. Observability is gate-blocker per Hightower H-002.
 
 ### DEC-3h — CDN + cache policy (NEW post-spike, addresses H-001)
 **Decision**: R2 covers/* served via Cloudflare CDN with:
@@ -104,7 +104,7 @@ Spike methodology: 30 boardgames across 4 buckets (BGG top 100, mid-tier, Italia
 | QID hit-rate | ≥ 25% (GO) | **60%** | ✅ +35pp margin |
 | License machine-readable | ≥ 80% (GO) | **93%** | ✅ +13pp margin |
 
-Catalog-wide forecast (weighted): **~49.7%** (vs spec hopeful 30-40%).
+Catalog-wide forecast (weighted): **~59.6%** (vs spec hopeful 30-40%).
 
 Bucket bias: IT publishers 23pp behind EN top BGG. Documented as known limitation.
 
@@ -113,7 +113,7 @@ Bucket bias: IT publishers 23pp behind EN top BGG. Documented as known limitatio
 ## Consequences
 
 ### Positive
-- Empirical hit-rate forecast (49.7%) is HIGHER than spec claim — better ROI on 5-7gg effort
+- Empirical hit-rate forecast (59.6%) is HIGHER than spec claim — better ROI on 5-7gg effort
 - License validator complexity LOW (100% of machine-readable licenses pre-validated in spike sample)
 - Architecture compromises (DEC-3b refined, DEC-3e single-pod) reduce operational complexity
 - Observability + circuit breaker + dead-letter prevent production firefighting

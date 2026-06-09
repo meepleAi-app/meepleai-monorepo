@@ -137,6 +137,21 @@ Dependabot PR #1794 (BLOCKED, can re-open) ──────► #1972 (vitest v
 
 **Dependabot status**: PR #1794 BLOCKED (closed for refactor). Reopen + amend or new clean PR.
 
+**🔒 DEC-2 LOCKED 2026-06-09 (sess.46f spec-panel + user-locked)**:
+
+- **DEC-2a Codemod scope — Option B mid-ground**: Pattern 1 (`() => ({})` constructor mock, ~40 occurrences) codemod-able via jscodeshift transformer; Pattern 2 (Blob jsdom strictness), Pattern 3 (URL global spy), Pattern 4 (simulateOpen/simulateError lifecycle) require manual judgment case-by-case.
+- **DEC-2b CI gate SMART criteria**:
+  - Test count: **575 SAME** target (or `560 + 15 explicit skip` if test removal justified)
+  - Coverage % delta: **< 0.5pp drop** accettabile
+  - Runtime regression: **< +20% slower** vs main-dev baseline measurement
+  - Partial merge policy: **NO** — all shards (1/2/3 + Fast) must be green; flake retry max 1×
+- **DEC-2c Rollback strategy**:
+  - Pin: `vitest@4.1.0` **exact** (no minor/patch auto-upgrade)
+  - Rollback path: **single-commit revert PR** + Dependabot re-open on regression
+  - Coexistence: **hard cutover** (no v2+v4 side-by-side period)
+  - Monitoring: **7-day post-merge CI runtime alert** via existing Prometheus dashboard
+- **DEC-2d Exhaustive 15-file list**: M1 deliverable shipped as **separate audit PR ~1h** (grep `vi.fn\(\).mockImplementation\(\(\) => \(` on `apps/web/src` test files) → JSON list + pattern category per file + priority canary-first (`usePdfStatus.test.ts` first).
+
 **Breaking changes** (per issue body):
 1. `() => ({}) is not a constructor` (~40 occurrences in mock pattern)
 2. `Cannot read properties of undefined (reading 'simulateOpen'/'simulateError')` (downstream effect of #1)
@@ -175,11 +190,28 @@ Dependabot PR #1794 (BLOCKED, can re-open) ──────► #1972 (vitest v
 
 ---
 
-### #1823 — L2 Wikidata cover enrichment CRON (P4, ~5-7gg)
+### #1823 — L2 Wikidata cover enrichment CRON (P4, ~3-4gg post-discovery)
 
 **Goal**: BackgroundService nightly + ad-hoc trigger per arricchire `shared_game_catalog` con cover images legal-clean (Wikidata + Wikimedia Commons).
 
 **Branch**: `feature/issue-1823-wikidata-l2-enrichment` from main-dev.
+
+**🔍 P228 partial discovery 2026-06-09 (sess.46f)** — scope effectively halved:
+
+**✅ ALREADY SHIPPED via cluster #1903/#1821**:
+- DB schema 4 columns (`wikidata_cover_r2_key`, `wikidata_cover_source_url`, `wikidata_cover_license`, `wikidata_cover_attribution`) in `SharedGameEntity.cs:53-61, 85` + `SharedGameEntityConfiguration.cs:128-158` + migration `20260608133755_InitialCreate`
+- SPARQL HTTP client `WikidataCatalogProvider.cs` (HttpClient, rate-limit, retry) — shipped by #1903 catalog seed work
+- CoverUrlResolver L2 layer wired (`CoverUrlResolver.cs:72-79` L4→L3→L2→L1 cascade)
+- Query projections (`GetSharedGameByIdQueryHandler:385` + `GetUserLibraryQueryHandler:142`)
+
+**❌ Residual scope ~3-4gg (vs 5-7gg originally, 40% reduction)**.
+
+**🔒 DEC-3 LOCKED 2026-06-09 (sess.46f spec-panel + user-locked)**:
+
+- **DEC-3a SPARQL strategy — Option A extend**: extend existing `WikidataCatalogProvider` con `FetchCoverImageAsync(qid)` method + `wdt:P18` (image property) query helper. Reuse HttpClient + rate-limit + retry already shipped. Current provider usa `P1873`/`P1872` (players); add `P18` SPARQL builder.
+- **DEC-3b Commons fetcher — Option A separate client**: New `IWikimediaCommonsClient` with `HttpClientFactory` pattern uniform a Wikidata provider. Separate Bounded Context boundary (catalog seed ≠ image fetch). Testability + future reuse.
+- **DEC-3c License whitelist — Option A hardcoded**: Constants in `LicenseValidator.cs` (PD/CC0/CC-BY/CC-BY-SA strict). Industry standard stable, config adds zero flexibility, audit-friendly.
+- **DEC-3d Image variant pipeline — Option A ImageSharp**: Six Labors ImageSharp managed C# (no native deps). .NET 9 compatible, production-proven, deployment friction = 0. Reject SkiaSharp (native bindings burden), reject ImageMagick.NET (heavy + license).
 
 **Pre-impl spike required** (~1gg):
 - Spike Wikidata SPARQL → boardgame coverage rate (issue dichiara «30-40% expected»)

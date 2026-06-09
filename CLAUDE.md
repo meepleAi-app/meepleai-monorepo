@@ -262,11 +262,13 @@ tests/Api.Tests/          # Backend test suite
 ## Known Flaky Tests
 
 Tests confirmed failing on `main-dev` baseline independently of any specific PR.
-Triage history: #1349 (closed, Phase 2d carryover) → #1422 (2026-05-21, 12 SharedGameId/PDF cluster resolved) → 2026-05-22 (4 baseline failures cleared; S3Storage entry was stale).
+Triage history: #1349 (closed, Phase 2d carryover) → #1422 (2026-05-21, 12 SharedGameId/PDF cluster resolved) → 2026-05-22 (4 baseline failures cleared; S3Storage entry was stale) → 2026-06-09 (#1887 PdfDocument_SevenStateProgression cleared via PR #2038, baseline now empty).
 
 | Test | File | First observed | Reason | Action |
 |---|---|---|---|---|
-| `PdfDocument_SevenStateProgression_ShouldAdvanceThroughAllStates` | `apps/api/tests/Api.Tests/Integration/DocumentProcessing/PdfPipelineIntegrationTests.cs:788` | 2026-06-04 | Expects 6 `DomainEvents` but finds 7 — regression from PR #1873 (added `PdfDocumentDeleted` event but did not update the count). | Tracked in #1887. |
+| _(none — baseline currently clean)_ | | | | |
+
+**Resolved 2026-06-09 (#1887)**: `PdfDocument_SevenStateProgression_ShouldAdvanceThroughAllStates` (fix PR [#2038](https://github.com/meepleAi-app/meepleai-monorepo/pull/2038)) — assertion split into `HaveCount(7)` + typed `OfType<>()` (6 `PdfStateChangedEvent` + 1 `KbDocIndexedEvent` raised on the Ready transition for the activity rail, per BE-3 #1590 B2). The previous baseline entry misattributed the 7th event to PR #1873's `PdfDocumentDeleted` — actual extra event is `KbDocIndexedEvent` from `TransitionTo()` (`PdfDocument.cs:433-443`).
 
 **Resolved 2026-05-22**: 3 documented baseline failures fixed + 1 stale entry removed.
 - `Should_Fail_When_GameId_Is_Empty` — fixed by adding `Cascade(CascadeMode.Stop)` to `CreateRuleConflictFaqCommandValidator.RuleFor(x => x.GameId)` so the async `GameExists` check (which calls `GameRef.Shared(Guid.Empty)` → `ArgumentException`) is skipped when `NotEmpty()` already failed.

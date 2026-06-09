@@ -1447,6 +1447,26 @@ namespace Api.Infrastructure.Migrations
                     table.PrimaryKey("PK_pgvector_embeddings", x => x.id);
                 });
 
+            // #2022 — search_vector is a Postgres-side GENERATED column the production
+            // runtime expects (PgVectorStoreAdapter.cs CREATE INDEX USING gin uses it).
+            // EF can't model GENERATED ALWAYS AS STORED, so we add it via raw SQL right
+            // after the table is created and immediately back it with the GIN index the
+            // adapter would otherwise create itself.
+            //
+            // WARNING for future migration-squash work: if this migration is ever
+            // re-generated from the entity model, these two Sql() calls will be lost
+            // because EF cannot scaffold GENERATED columns. Preserve them manually.
+            migrationBuilder.Sql(@"
+                ALTER TABLE pgvector_embeddings
+                ADD COLUMN search_vector tsvector
+                GENERATED ALWAYS AS (to_tsvector('english', text_content)) STORED;
+            ");
+
+            migrationBuilder.Sql(@"
+                CREATE INDEX IF NOT EXISTS idx_pgvector_embeddings_search_vector
+                ON pgvector_embeddings USING gin (search_vector);
+            ");
+
             migrationBuilder.CreateTable(
                 name: "player_memories",
                 columns: table => new
@@ -10284,6 +10304,13 @@ namespace Api.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            // #2022 — Inverse of the raw-SQL search_vector additions in Up().
+            // Drop the GIN index first, then the GENERATED column; the surrounding
+            // DropTable("pgvector_embeddings") later in Down() would otherwise succeed
+            // but leave orphaned dependencies in tooling that snapshots schemas.
+            migrationBuilder.Sql("DROP INDEX IF EXISTS idx_pgvector_embeddings_search_vector;");
+            migrationBuilder.Sql("ALTER TABLE pgvector_embeddings DROP COLUMN IF EXISTS search_vector;");
+
             migrationBuilder.DropTable(
                 name: "ab_test_variants",
                 schema: "knowledge_base");

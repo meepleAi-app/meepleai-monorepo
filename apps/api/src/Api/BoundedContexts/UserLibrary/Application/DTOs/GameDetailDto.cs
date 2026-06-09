@@ -52,7 +52,14 @@ internal record GameDetailDto(
     LabelDto[]? Labels = null,
 
     // Issue #1824 L3: user-custom cover R2 key (null if no custom cover)
-    string? CustomCoverR2Key = null
+    string? CustomCoverR2Key = null,
+
+    // Issue #2035 — Designer names sourced from the SharedGame catalog M:N relation.
+    // The handler always emits a list (possibly empty) for consistency with the FE
+    // consumer (apps/web/src/components/.../GameDetailDesktop.tsx reads
+    // game?.designers?.[0]?.name). Null only if the DTO is constructed without the
+    // optional parameter (e.g. legacy paths) — current handler never produces null.
+    IReadOnlyList<string>? Designers = null
 );
 
 /// <summary>

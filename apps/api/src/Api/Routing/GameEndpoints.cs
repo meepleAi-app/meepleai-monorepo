@@ -9,7 +9,9 @@ using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Queries.Leaderboard;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
+using SessionTrackingQueries = Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.Extensions;
 using Api.Infrastructure.Entities;
 using Api.Models.Requests;
@@ -237,6 +239,19 @@ internal static class GameEndpoints
         .WithTags("Games", "Sessions")
         .WithSummary("Get active sessions for a game")
         .WithDescription("Returns all currently active game sessions for a specific board game. Requires authentication.");
+
+        // Issue #2036 — Top session contributors for a game (registered users
+        // with at least one finalized session). Public read; used by the
+        // SessionContributorsStrip avatar component on /library/[gameId]. Path
+        // intentionally uses the literal "session-contributors" to avoid
+        // ambiguity with the sharing-based GameContributor endpoint at
+        // /shared-games/{id}/contributors (Issue #2746).
+        group.MapGet("/games/{gameId:guid}/session-contributors", HandleGetGameSessionContributors)
+        .AllowAnonymous()
+        .Produces<IReadOnlyList<SessionContributorDto>>(200)
+        .WithTags("Games", "Sessions")
+        .WithSummary("Get top session contributors for a game")
+        .WithDescription("Returns the top N registered users who have participated in at least one finalized session for this game, sorted by descending session count. Limit is clamped to [1,50] (default 8). Public endpoint accessible without authentication.");
 
         // Get all active sessions (with pagination)
         group.MapGet("/sessions/active", HandleGetActiveSessions)
@@ -550,6 +565,20 @@ internal static class GameEndpoints
         var query = new GetActiveSessionsByGameQuery(gameId);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetGameSessionContributors(
+        Guid gameId,
+        [FromQuery] int? limit,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        // Issue #2036 — Limit ergonomics: omit → default 8 (mockup), explicit
+        // values outside [1,50] are clamped by the handler so the FE can pass
+        // any value safely.
+        var query = new SessionTrackingQueries.GetGameSessionContributorsQuery(gameId, limit ?? 8);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);
     }
 

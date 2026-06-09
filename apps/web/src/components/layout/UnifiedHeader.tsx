@@ -20,7 +20,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 import { NotificationBell } from '@/components/notifications';
-import { MeepleLogo } from '@/components/ui/meeple/meeple-logo';
+import { BrandMark } from '@/components/ui/brand';
 import { useNavigationItems } from '@/hooks/useNavigationItems';
 import { cn } from '@/lib/utils';
 
@@ -64,7 +64,7 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
         {/* Left: Logo (icon only) */}
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center" aria-label="MeepleAI Home">
-            <MeepleLogo variant="icon" size="sm" />
+            <BrandMark variant="icon" size="sm" />
           </Link>
         </div>
 

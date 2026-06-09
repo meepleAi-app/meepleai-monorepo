@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import { UserMenuDropdown } from '@/components/layout/UserMenuDropdown';
+import { BrandMark } from '@/components/ui/brand';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,19 +61,8 @@ export function AppTopBar({ adminMode, onMenuClick, className }: AppTopBarProps)
       )}
 
       {/* Logo */}
-      <Link href="/dashboard" aria-label="MeepleAI" className="flex shrink-0 items-center gap-2">
-        <span
-          aria-hidden="true"
-          className="flex h-7 w-7 items-center justify-center rounded-[10px] bg-[linear-gradient(135deg,hsl(var(--c-game)),hsl(var(--c-event)))] font-quicksand text-sm font-extrabold text-white"
-        >
-          M
-        </span>
-        <span className="font-quicksand text-sm font-bold text-foreground">MeepleAI</span>
-        {adminMode && (
-          <span className="ml-1 rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-destructive">
-            Admin
-          </span>
-        )}
+      <Link href="/dashboard" aria-label="MeepleAI" className="flex shrink-0 items-center">
+        <BrandMark variant="full" size="sm" adminBadge={adminMode} />
       </Link>
 
       {/* Primary links + overflow (user shell only) */}

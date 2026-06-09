@@ -282,14 +282,6 @@ export const STORY_METADATA: StoryMeta[] = [
     presetCount: 5,
   },
   {
-    id: 'meeple-logo',
-    title: 'MeepleLogo',
-    category: 'Meeple',
-    description: 'Brand logo with full, icon, and wordmark variants. Supports light/dark themes.',
-    controlCount: 3,
-    presetCount: 5,
-  },
-  {
     id: 'chat-message',
     title: 'ChatMessage',
     category: 'Meeple',

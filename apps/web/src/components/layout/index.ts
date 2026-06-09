@@ -12,7 +12,7 @@ export {
 } from './LayoutProvider';
 export { Layout, PageHeader, PageContent, EmptyState, LoadingState } from './Layout';
 
-// Logo — TopNavbar removed, use MeepleLogo directly from '@/components/ui/meeple/meeple-logo'
+// Logo — TopNavbar removed, use BrandMark directly from '@/components/ui/brand'
 
 // Phase 4-6: ActionBar + Breadcrumb removed — replaced by UserShell ContextualBottomNav
 

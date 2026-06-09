@@ -1,11 +1,68 @@
-# F3 Game Detail Full Rebuild — PRD Draft
+# F3 Game Detail Full Rebuild — PRD
 
 **Issue:** #2010 (follow-up of umbrella #1974)
-**Status:** **DRAFT** — questions open for product. NOT actionable until product + design responses.
-**Date:** 2026-06-09
-**Author:** Claude Code (draft synthesis)
+**Status:** **PARTIAL — 4 meta-decisioni risolte**, 5 Q residue di dettaglio (vedi §3a). F3 core implementabile.
+**Date:** 2026-06-09 (rev. 2 — decisioni product)
+**Author:** Claude Code (draft synthesis + product decisioni recorded)
 
-> This document captures the spec-panel synthesis from #1974 audit (2026-06-07, Wiegers + Fowler + Newman + Cockburn) as a set of explicit open questions. It does NOT prescribe answers. The F3 full-rebuild work stays parked until the questions in §3 are resolved.
+> Documento originale (rev. 1) capturava la spec-panel synthesis come 14 Q aperte. La rev. 2 incorpora le 4 meta-decisioni product prese il 2026-06-09 via socratic-mode review (§3a) e ridimensiona le Q residue + la roadmap (§4).
+
+---
+
+## 3a. Decisioni prese 2026-06-09 (Socratic review)
+
+Le 14 Q originali sono state collassate in **4 meta-decisioni** durante una sessione socratic-mode. Tutte risolte:
+
+### M1 — Identità prodotto: **Racconto + commentary (social/curated)**
+
+MeepleAI è il *racconto* del boardgame, NON il sostituto di BGG. Friend-first di default. Rating sono espressione personale (non analitica), niente roll-up su catalog. Moderation lightweight (report-based, no pre-publish manual approval).
+
+**Risolve direttamente:**
+- **Q1.1** Schema entity → `Review { id, gameId, authorUserId, ratingPersonal: 1-10, title, body, visibility: 'friends'|'public' (default friends), createdAt, editedAt, deletedAt, languageDetected }`. `ratingPersonal` è label-prefix "Il mio voto" (no claim oggettivo).
+- **Q1.2** Moderation → report-based, no pre-publish approval. Reports finiscono in admin queue (epic separato F3.4.x).
+- **Q1.4** Visibility → `friends` default. `public` opt-in esplicito al primo write con disclaimer "visibile a chiunque" + warning anti-spam.
+- **Q1.7** Rating rollup → **NO rollup** su `SharedGame.AverageRating`. BGG resta canonico. MeepleAI espone "I tuoi amici dicono N/10" come block separato accanto al BGG block.
+
+**Lascia aperto (Q residue):**
+- **Q1.3** Spam rate-limit (`rate-limit per user`): valore numerico (es. 3 review/24h per user) da product.
+- **Q1.5** Localization: detection accept, ma cosa fare a read-time se review in lingua altra? Defer Phase 2 oppure mostrare "[mostra originale / traduci]" toggle.
+- **Q1.6** Edit/delete history: visibilità storica edit ⇒ GDPR right-to-rectify implica audit log invisibile all'utente. Behaviour UX (mostrare "edited" badge?) decisione UX residua.
+
+### M2 — Tab Dischi: **Merge con Partite (b), enrich con stats/streaks/wins**
+
+Tab `Partite` esistente viene **rinominata in `Dischi`** e arricchita con stats (count totale, ultimo `playedAt`, win-rate %, streak corrente di consecutive wins, average duration). Mantiene il timeline storico esistente.
+
+**Risolve:**
+- **Q2.1** → meaning = (b) historical sessions + stats
+- **Q2.2** → N/A (no achievements entity needed; stats sono derived da Session aggregate esistente)
+- **Q2.3** → keep tab, rename Partite → Dischi (label change is breaking URL — vedi §3a M4 sotto)
+
+### M3 — Tab Documenti: **Option B (read-only summary, 2 surfaces)**
+
+Tab `Documenti` ⇒ thin read-only summary all'interno di `/library/[id]`. Surface: `{N PDF • Ultimo: TITLE indexato XdAY fa • [Manage in KB →]}`. `/library/[id]/kb` resta canonico per upload / delete / indexing state. No data-sync, no duplicazione UI.
+
+**Risolve:**
+- **Q3.1** → Option B (read-only summary)
+- **Q3.2** → surface esatto: count + most-recent title + last indexing timestamp + link "Manage in KB"
+- **Q3.3** → N/A (no route consolidation)
+
+### M4 — URL rename: **Evidence-first discovery (1-2h)**
+
+Decisione finale (label-only vs rename completo) **bloccata** su discovery quantitativa:
+
+1. Pull access logs ultimi 30gg per `/library/[id]?tab=aiChat|toolbox`
+2. Se < 100 req/mese su legacy IDs → rename completo + redirect server-side + 30gg deprecation banner
+3. Se ≥ 100 req/mese → label-only (URL IDs invariati)
+
+**Decision deadline**: prima dello start di F3.1 (tab nav skeleton).
+
+**Note**: la rename di `Partite → Dischi` (M2) eredita lo stesso evidence-gate. Se label-only è la scelta, l'URL resta `?tab=partite` con label visualizzata "Dischi".
+
+---
+
+## ⚠️ La sezione §3 sotto è preservata per traceability storica (rev. 1)
+
+Le Q originali enumerate sotto restano nel documento per **traceability** del processo decisionale, ma le decisioni prese in §3a sopra **prevalgono** sulla loro versione "open". Saltare alla §4 per la roadmap aggiornata.
 
 ---
 
@@ -160,20 +217,33 @@ Crispin flagged: this is a **breaking URL change disguised as a label tweak**. A
 
 ---
 
-## 4. Implementation phases (conditional on §3 answers)
+## 4. Implementation phases — rev. 2 (post-decisioni 2026-06-09)
 
-Each phase is gated on the relevant question being answered.
+Effort + gates aggiornati con le 4 meta-decisioni di §3a.
 
-| Phase | Deliverable | Effort | Gates on |
+| Phase | Deliverable | Effort | Status / Gates |
 |---|---|---|---|
-| **F3.1** | Tab nav skeleton — adopt 6 slots (current 4 + Recensioni placeholder + Dischi placeholder OR drop). URL stability or rename plan applied. | ~3-5h | Q4.* + Q2.* |
-| **F3.2** | House Rules section/tab promotion. Source-of-truth alignment with `AgentMemory` BC. | ~3h | (none blocking — already known) |
-| **F3.3** | Documenti section/tab — Option B (read-only summary linking to `/kb`) | ~3-4h | Q3.* (confirm Option B) |
-| **F3.4** | Recensioni tab — BE entity + moderation + FE list + write/edit/delete + spam controls | ~12-20h (own epic) | Q1.* all |
-| **F3.5** | Dischi tab — implementation depends entirely on §3.2 outcome | 0h (drop) — 12-20h (achievements epic) | Q2.* |
-| **F3.6** | Inline agent chat embedded in page | ~4-6h | (consider Q4 if route changes; otherwise unblocked) |
+| **F3.0** | **Discovery URL rename** (M4) — pull access logs `/library/[id]?tab=aiChat\|toolbox\|partite` ultimi 30gg; decidere label-only vs rename completo | 1-2h | 🔓 unblocked — prerequisite per F3.1 |
+| **F3.1** | Tab nav skeleton (5 tab finali: Info / Agente / Toolkit / FAQ / Dischi). URL strategy applicata da F3.0 | 3-5h | ⏳ blocked on F3.0 |
+| **F3.2** | House Rules promotion. Source-of-truth alignment con `AgentMemory` BC | 3h | 🔓 unblocked |
+| **F3.3** | Documenti section (Option B — read-only summary): `{N PDF • Ultimo: TITLE indexed XdAY • Manage in KB →}` | 3-4h | 🔓 unblocked (M3 chiuso) |
+| **F3.4** | Dischi (era Partite) enrich — stats: count totale, ultimo playedAt, win-rate %, streak corrente, average duration. Timeline storico preservato. | 4-6h | 🔓 unblocked (M2 chiuso) |
+| **F3.5** | Inline agent chat embedded | 4-6h | 🔓 unblocked (no URL change in chat scope) |
+| **F3.6** | **Recensioni** (separate epic) — BE entity + 5 Q residue closure + FE list + write/edit/delete + report-queue admin | 16-24h | ⏸ epic separato, parked finché Q1.3/Q1.5/Q1.6 risposte |
 
-**Approach**: ship F3.1 + F3.2 + F3.3 + F3.6 as the "F3 core rebuild" once Q4 is resolved. Carve out F3.4 (Recensioni) and F3.5 (Dischi if-(c)) as dedicated downstream epics. This unblocks the bulk of the visible re-skin without waiting on the high-cost product decisions.
+**F3 core rebuild** = F3.0 → F3.1 → F3.2 → F3.3 → F3.4 → F3.5 (~18-25h totali, da fare in sequenza dopo F3.0).
+
+**F3.6 (Recensioni)** sta in epic dedicato perché:
+- Tocca BE entity nuova + admin moderation queue + report flow
+- Q residue (Q1.3 rate-limit, Q1.5 localization, Q1.6 edit history UX) richiedono ulteriori scelte product prima della stesura.
+
+### Q residue da chiudere prima di F3.6
+
+| Q | Owner | Decision needed |
+|---|---|---|
+| **Q1.3** Spam rate-limit | Product | Numero (es. 3 review per user / 24h?) |
+| **Q1.5** Localization at read | Product + UX | "Show original / Translate" toggle? Detect + label? Defer? |
+| **Q1.6** Edit history UX | Product + UX + Legal | "edited at" badge sì/no? Conservare diff per audit GDPR? |
 
 ---
 
@@ -195,12 +265,17 @@ Per #2010 issue body, this PRD lands when:
 
 - [x] Open questions for product enumerated (§3) — **5 Q1 + 3 Q2 + 3 Q3 + 3 Q4 = 14 questions**
 - [x] Preliminary recommendations stated for each question so product can refute or ratify
-- [x] Implementation phases re-scoped based on the gating structure (§4)
+- [x] Implementation phases re-scoped based on the gating structure (§4 rev. 2)
 - [x] Risk register established (§5)
-- [ ] **Product responses recorded** — pending
-- [ ] **Multi-PR breakdown finalised** — depends on product responses
+- [x] **Product responses recorded** — 2026-06-09 (§3a). 4 meta-decisioni chiuse, 5 Q residue tracciate per F3.6 epic.
+- [x] **Multi-PR breakdown finalised** — §4 rev. 2 specifica 7 phase (F3.0-F3.6) con effort + gates.
 
-This PRD's deliverable is the structured set of questions + recommendations; the *answers* are explicitly out of scope until product weighs in.
+This PRD's deliverable è ora **completo**:
+- §3 = traceability storica delle 14 Q originali (rev. 1)
+- §3a = decisioni effettive prese (rev. 2)
+- §4 rev. 2 = roadmap implementabile
+
+Issue #2010 può chiudersi una volta che F3.0 (discovery URL) parte.
 
 ---
 

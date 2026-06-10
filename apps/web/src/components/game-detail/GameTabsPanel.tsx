@@ -28,17 +28,22 @@ interface GameTabsPanelProps {
 }
 
 /**
- * Desktop right-panel of the game detail page.
- * Vertical rail on the left (74px) + scrollable content area on the right.
- * Pattern: VSCode sidebar.
+ * Desktop tabs panel for the game detail page.
+ * Horizontal underline tabs (mockup sp3 parity) + scrollable content area.
+ *
+ * #2105 M7 (Epic #2096) — Layout restructure:
+ *   Pre-M7 layout was a SplitView 50/50 with vertical rail (74px) on the
+ *   right. Mockup actually ships hero full-width top + horizontal underline
+ *   tabs below + tab content full-width below. This panel now matches that:
+ *   horizontal tablist with an animated underline indicator that slides
+ *   between active tabs (same easing as M2, axis swapped).
  *
  * #2102 M2 (Epic #2096) — Tabs V2 mockup parity:
- *  - Active state: `--c-game` entity color (bg /0.08 + text-game-text + ring)
- *  - Count pill: top-right overlay badge with tabular-nums (mockup parity)
- *  - Animated selection indicator: 3px border-left absolute, transitions
- *    `top` (offsetTop of active tab) + `height` (offsetHeight) with
- *    `cubic-bezier(.4,0,.2,1) 300ms` to slide between active tabs (vertical
- *    rail orientation adaptation of the mockup's horizontal underline).
+ *  - Active state: `--c-game` entity color (bg /0.08 + text-game-text)
+ *  - Count pill: top-right overlay badge with tabular-nums
+ *  - Animated selection indicator: 3px border-bottom absolute, transitions
+ *    `left` (offsetLeft) + `width` (offsetWidth) with
+ *    `cubic-bezier(.4,0,.2,1) 300ms` to slide between active tabs.
  *
  * Reference: docs/superpowers/specs/2026-04-09-library-to-game-epic-design.md §4.4
  * Mockup: `admin-mockups/design_files/sp3-shared-game-detail.jsx:328 Tabs V2`
@@ -52,16 +57,16 @@ export function GameTabsPanel({
   tabCounts,
 }: GameTabsPanelProps) {
   const [activeTab, setActiveTab] = useState<GameTabId>(initialTab);
-  // #2102 M2: animated selection indicator (vertical rail). Tracks the
-  // offsetTop + offsetHeight of the active tab button so the indicator can
+  // #2105 M7: animated underline indicator (horizontal). Tracks offsetLeft
+  // + offsetWidth of the active tab button so the indicator can
   // CSS-transition between positions on tab change.
   const tabRefs = useRef<Partial<Record<GameTabId, HTMLButtonElement | null>>>({});
-  const [indicator, setIndicator] = useState({ top: 0, height: 0 });
+  const [indicator, setIndicator] = useState({ left: 0, width: 0 });
 
   useEffect(() => {
     const el = tabRefs.current[activeTab];
     if (el) {
-      setIndicator({ top: el.offsetTop, height: el.offsetHeight });
+      setIndicator({ left: el.offsetLeft, width: el.offsetWidth });
     }
   }, [activeTab]);
 
@@ -79,24 +84,24 @@ export function GameTabsPanel({
   };
 
   return (
-    <div className="flex h-full overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-      {/* Vertical rail */}
+    <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      {/* Horizontal tablist — mockup sp3 parity */}
       <div
         role="tablist"
-        aria-orientation="vertical"
+        aria-orientation="horizontal"
         aria-label="Dettagli gioco"
-        className="relative flex w-[74px] flex-col gap-1 border-r border-border bg-muted/30 p-2"
+        className="relative flex items-end gap-1 overflow-x-auto border-b border-border bg-muted/30 px-2 pt-2"
       >
-        {/* #2102 M2 animated selection indicator */}
+        {/* #2105 M7 animated underline indicator */}
         <span
           aria-hidden="true"
           data-slot="game-tabs-indicator"
-          className="pointer-events-none absolute left-0 w-[3px] rounded-r-md bg-[hsl(var(--c-game))]"
+          className="pointer-events-none absolute bottom-0 h-[3px] rounded-t-md bg-[hsl(var(--c-game))]"
           style={{
-            top: indicator.top,
-            height: indicator.height,
+            left: indicator.left,
+            width: indicator.width,
             transition:
-              'top 300ms cubic-bezier(0.4,0,0.2,1), height 300ms cubic-bezier(0.4,0,0.2,1)',
+              'left 300ms cubic-bezier(0.4,0,0.2,1), width 300ms cubic-bezier(0.4,0,0.2,1)',
           }}
         />
         {GAME_TABS.map(tab => {
@@ -116,7 +121,7 @@ export function GameTabsPanel({
               tabIndex={isActive ? 0 : -1}
               onClick={() => handleSelect(tab.id)}
               className={cn(
-                'relative flex flex-col items-center gap-1 rounded-lg px-2 py-3 transition-colors duration-200',
+                'relative flex shrink-0 items-center gap-2 rounded-t-lg px-4 py-2.5 transition-colors duration-200',
                 'focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--c-game)/0.4)]',
                 isActive
                   ? 'bg-[hsl(var(--c-game)/0.08)] text-[hsl(var(--c-game))]'
@@ -125,14 +130,18 @@ export function GameTabsPanel({
               data-testid={`game-tab-${tab.id}`}
               data-active={isActive}
             >
-              {/* #2102 M2 count pill overlay (top-right corner) */}
+              <span className="text-base" aria-hidden="true">
+                {tab.icon}
+              </span>
+              <span className="text-[11px] font-bold uppercase tracking-wide">{tab.label}</span>
+              {/* #2102 M2 count pill (inline after label in horizontal orientation) */}
               {count != null && (
                 <span
                   aria-hidden="true"
                   data-slot="game-tab-count-pill"
                   className={cn(
-                    'absolute right-1 top-1 inline-flex min-w-[16px] items-center justify-center rounded-full px-1 py-px',
-                    'font-[var(--font-jetbrains)] text-[9px] font-extrabold leading-none tabular-nums',
+                    'inline-flex min-w-[18px] items-center justify-center rounded-full px-1.5 py-px',
+                    'font-[var(--font-jetbrains)] text-[10px] font-extrabold leading-none tabular-nums',
                     isActive
                       ? 'bg-[hsl(var(--c-game))] text-white'
                       : 'bg-muted text-muted-foreground'
@@ -141,10 +150,6 @@ export function GameTabsPanel({
                   {count}
                 </span>
               )}
-              <span className="text-lg" aria-hidden="true">
-                {tab.icon}
-              </span>
-              <span className="text-[9px] font-bold uppercase tracking-wide">{tab.label}</span>
             </button>
           );
         })}

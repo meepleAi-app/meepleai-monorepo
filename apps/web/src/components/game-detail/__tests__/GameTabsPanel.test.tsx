@@ -17,11 +17,11 @@ function render(ui: React.ReactElement) {
 }
 
 describe('GameTabsPanel', () => {
-  it('renders a vertical tablist labelled "Dettagli gioco"', () => {
+  it('renders a horizontal tablist labelled "Dettagli gioco" (#2105 M7 layout restructure)', () => {
     render(<GameTabsPanel gameId="00000000-0000-4000-8000-000000000001" />);
     const tablist = screen.getByRole('tablist', { name: /dettagli gioco/i });
     expect(tablist).toBeInTheDocument();
-    expect(tablist).toHaveAttribute('aria-orientation', 'vertical');
+    expect(tablist).toHaveAttribute('aria-orientation', 'horizontal');
   });
 
   it('renders exactly 5 tabs', () => {

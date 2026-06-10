@@ -130,6 +130,15 @@ internal sealed class WikidataCatalogProvider : ICatalogProvider
         var sourceUrl = $"https://www.wikidata.org/wiki/{qid}";
         var stopwatch = Stopwatch.StartNew();
 
+        // ADR DEC-3g: record SPARQL latency on every COMPLETED round-trip
+        // (success + non-success status) so ops can detect endpoint degradation.
+        // The flag is flipped AFTER SendAsync returns a response — network setup
+        // failures (DNS error, connection refused) that throw before a response
+        // is received are NOT counted (no round-trip to measure).
+        // The finally block guarantees emission across success, 5xx, body-read
+        // failures, JSON parse errors, and cancellation rethrow.
+        var roundTripCompleted = false;
+
         try
         {
             using var req = new HttpRequestMessage(
@@ -138,12 +147,8 @@ internal sealed class WikidataCatalogProvider : ICatalogProvider
             req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/sparql-results+json"));
 
             using var resp = await _http.SendAsync(req, ct).ConfigureAwait(false);
+            roundTripCompleted = true;
             var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-
-            // ADR DEC-3g: record SPARQL latency on every completed round-trip
-            // (regardless of HTTP status) so ops can detect endpoint degradation.
-            stopwatch.Stop();
-            MeepleAiMetrics.WikidataSparqlLatency.Record(stopwatch.Elapsed.TotalSeconds);
 
             if (!resp.IsSuccessStatusCode)
             {
@@ -161,6 +166,14 @@ internal sealed class WikidataCatalogProvider : ICatalogProvider
         {
             _logger.LogWarning(ex, "Wikidata cover fetch failed for QID {Qid}", qid);
             return WikidataCoverImageResult.NotFound(qid);
+        }
+        finally
+        {
+            stopwatch.Stop();
+            if (roundTripCompleted)
+            {
+                MeepleAiMetrics.WikidataSparqlLatency.Record(stopwatch.Elapsed.TotalSeconds);
+            }
         }
     }
 

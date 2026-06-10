@@ -296,4 +296,85 @@ public sealed class WikidataCatalogProviderCoverImageTests
 
         result.SourceUrl.Should().Be("https://www.wikidata.org/wiki/Q98056728");
     }
+
+    /// <summary>
+    /// ADR DEC-3g — network setup failure (e.g. DNS error, connection refused)
+    /// raised BEFORE a response is received does NOT emit the SPARQL latency
+    /// metric: the metric measures completed round-trips only, not connection
+    /// attempts.
+    /// </summary>
+    [Fact]
+    public async Task FetchCoverImageAsync_NetworkError_DoesNotRecordSparqlLatencyMetric()
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ThrowsAsync(new HttpRequestException("simulated network error"));
+        var client = new HttpClient(handler.Object)
+        {
+            BaseAddress = new Uri("https://query.wikidata.org/"),
+        };
+        var provider = MakeProvider(client);
+
+        var recordedValues = new List<double>();
+        using var listener = new MeterListener();
+        listener.InstrumentPublished = (instrument, listener) =>
+        {
+            if (instrument.Name == "meepleai.wikidata.sparql.latency_seconds")
+            {
+                listener.EnableMeasurementEvents(instrument);
+            }
+        };
+        listener.SetMeasurementEventCallback<double>((instrument, value, tags, state) =>
+        {
+            recordedValues.Add(value);
+        });
+        listener.Start();
+
+        var result = await provider.FetchCoverImageAsync("Q17215001", CancellationToken.None);
+
+        result.HasImage.Should().BeFalse("network error caught by provider");
+        recordedValues.Should().BeEmpty(
+            "metric should NOT be emitted when network setup fails before a response is received");
+    }
+
+    /// <summary>
+    /// ADR DEC-3g — a non-success HTTP status (5xx) still completes the SPARQL
+    /// round-trip, so the latency metric MUST be emitted. This locks the
+    /// contract previously broken when the metric lived inside the try block
+    /// after a non-cancellation exception path (code review finding score 85
+    /// on PR #2104).
+    /// </summary>
+    [Fact]
+    public async Task FetchCoverImageAsync_5xxResponse_RecordsSparqlLatencyMetric()
+    {
+        var (client, _) = MakeClient(HttpStatusCode.InternalServerError, "boom");
+        var provider = MakeProvider(client);
+
+        var recordedValues = new List<double>();
+        using var listener = new MeterListener();
+        listener.InstrumentPublished = (instrument, listener) =>
+        {
+            if (instrument.Name == "meepleai.wikidata.sparql.latency_seconds")
+            {
+                listener.EnableMeasurementEvents(instrument);
+            }
+        };
+        listener.SetMeasurementEventCallback<double>((instrument, value, tags, state) =>
+        {
+            recordedValues.Add(value);
+        });
+        listener.Start();
+
+        var result = await provider.FetchCoverImageAsync("Q17215001", CancellationToken.None);
+
+        result.HasImage.Should().BeFalse("5xx response returns NotFound");
+        recordedValues.Should().HaveCount(
+            1,
+            "metric MUST be emitted on every completed round-trip, including non-success HTTP status");
+        recordedValues[0].Should().BeGreaterThanOrEqualTo(0.0);
+    }
 }

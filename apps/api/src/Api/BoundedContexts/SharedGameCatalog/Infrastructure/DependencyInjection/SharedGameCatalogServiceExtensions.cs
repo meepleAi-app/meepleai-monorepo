@@ -198,6 +198,13 @@ internal static class SharedGameCatalogServiceExtensions
         // batch (HPA=1), so an in-memory limiter is sufficient.
         services.AddSingleton<IWikimediaRateLimiter, InMemoryWikimediaRateLimiter>();
 
+        // Issue #1823 Phase B M6 (ADR DEC-3d): WebP variant generator backed by
+        // SixLabors.ImageSharp 3.1.12 — managed C#, no native deps. Produces
+        // 200x300 aspect-ratio-preserving center crops at WebP quality 85 for
+        // R2-hosted cover thumbnails. Singleton — the generator is stateless
+        // and ImageSharp's encoder/decoder pipeline is thread-safe.
+        services.AddSingleton<IWebpVariantGenerator, WebpVariantGenerator>();
+
         // Issue #1823 Phase B (ADR DEC-3h): R2 cover upload pipeline. Singleton
         // because the underlying AmazonS3Client is thread-safe and reuses
         // a connection pool — matching the BlobStorageServiceFactory lifetime.

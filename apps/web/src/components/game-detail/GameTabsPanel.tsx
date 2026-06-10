@@ -61,19 +61,57 @@ export function GameTabsPanel({
   // + offsetWidth of the active tab button so the indicator can
   // CSS-transition between positions on tab change.
   const tabRefs = useRef<Partial<Record<GameTabId, HTMLButtonElement | null>>>({});
+  const tablistRef = useRef<HTMLDivElement>(null);
   const [indicator, setIndicator] = useState({ left: 0, width: 0 });
 
+  // #2105 M7 review follow-up: ResizeObserver re-measures the indicator on
+  // viewport / container layout changes so the underline doesn't freeze in a
+  // stale position after browser resize or DevTools open. Re-runs every
+  // active-tab change too.
   useEffect(() => {
-    const el = tabRefs.current[activeTab];
-    if (el) {
-      setIndicator({ left: el.offsetLeft, width: el.offsetWidth });
-    }
+    const measure = () => {
+      const el = tabRefs.current[activeTab];
+      if (el) setIndicator({ left: el.offsetLeft, width: el.offsetWidth });
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined' || !tablistRef.current) return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(tablistRef.current);
+    return () => ro.disconnect();
   }, [activeTab]);
+
+  // #2105 M7 review follow-up: sync activeTab when the parent updates
+  // initialTab (e.g. URL searchParam change in App Router). Without this the
+  // initial value is frozen for the lifetime of the component.
+  useEffect(() => {
+    if (initialTab && initialTab !== activeTab) {
+      setActiveTab(initialTab);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialTab]);
 
   const handleSelect = (tab: GameTabId) => {
     if (tab === activeTab) return;
     setActiveTab(tab);
     onTabChange?.(tab);
+  };
+
+  // #2105 M7 review fix: WCAG 2.1 §4.1.2 / APG Tabs pattern — horizontal
+  // orientation must support ArrowLeft/Right + Home/End keyboard navigation
+  // with focus moving + the underline animating along.
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    const tabs = GAME_TABS.map(t => t.id);
+    const idx = tabs.indexOf(activeTab);
+    let nextIdx: number | null = null;
+    if (e.key === 'ArrowRight') nextIdx = (idx + 1) % tabs.length;
+    else if (e.key === 'ArrowLeft') nextIdx = (idx - 1 + tabs.length) % tabs.length;
+    else if (e.key === 'Home') nextIdx = 0;
+    else if (e.key === 'End') nextIdx = tabs.length - 1;
+    if (nextIdx === null) return;
+    e.preventDefault();
+    const nextId = tabs[nextIdx];
+    handleSelect(nextId);
+    tabRefs.current[nextId]?.focus();
   };
 
   const tabProps = {
@@ -87,6 +125,7 @@ export function GameTabsPanel({
     <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
       {/* Horizontal tablist — mockup sp3 parity */}
       <div
+        ref={tablistRef}
         role="tablist"
         aria-orientation="horizontal"
         aria-label="Dettagli gioco"
@@ -120,6 +159,7 @@ export function GameTabsPanel({
               aria-controls={`game-tabpanel-${tab.id}`}
               tabIndex={isActive ? 0 : -1}
               onClick={() => handleSelect(tab.id)}
+              onKeyDown={handleKeyDown}
               className={cn(
                 'relative flex shrink-0 items-center gap-2 rounded-t-lg px-4 py-2.5 transition-colors duration-200',
                 'focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--c-game)/0.4)]',

@@ -31,6 +31,14 @@ public static class HealthCheckTags
     /// </summary>
     public const string Storage = "storage";
 
+    /// <summary>
+    /// Seed-data / RAG indexing pipeline (#2126 D3). The
+    /// <c>SeedStateHealthCheck</c> reports whether the DB is
+    /// <c>empty</c>, <c>indexing</c>, <c>partial_failed</c>, or <c>ready</c>
+    /// for RAG queries — orthogonal to whether external services are up.
+    /// </summary>
+    public const string Seed = "seed";
+
     // Criticality levels
     /// <summary>
     /// Critical service - application cannot function without it.

@@ -35,12 +35,14 @@
 
 **Files:** none (workspace setup)
 
-- [ ] **Step 1: Verify clean main-dev + on correct branch**
+- [ ] **Step 1: Verify clean main-dev + on correct branch + anchor budget timestamp (Code-reviewer I5)**
 
 ```bash
 git checkout main-dev && git pull --ff-only && git status --short
+date -u +%Y-%m-%dT%H:%M:%SZ > /tmp/phase-4-prelude-start.txt
+echo "Phase 4 prelude started at: $(cat /tmp/phase-4-prelude-start.txt)"
 ```
-Expected: main-dev, working tree clean (eccetto `.claude/scheduled_tasks.lock` ignorable).
+Expected: main-dev, working tree clean (eccetto `.claude/scheduled_tasks.lock` ignorable). Timestamp anchored for budget tracking in Tasks 5/7.
 
 - [ ] **Step 2: Create sub-issue**
 
@@ -105,7 +107,7 @@ git config branch.feature/issue-TBD-ds-17-phase-4-prelude-intl.parent main-dev
 **Files:**
 - Modify (temporary): `apps/web/.storybook/preview.tsx`
 
-- [ ] **Step 1: Control test — verify if existing stories render OK**
+- [ ] **Step 1: Control test — verify if existing stories render OK (Playwright-based)**
 
 ```bash
 cd apps/web
@@ -113,16 +115,50 @@ pnpm build-storybook 2>&1 | tail -3
 ```
 Expected: build succeeds.
 
-```bash
-pnpm exec http-server storybook-static -p 6007 -s &
-SERVER_PID=$!
-sleep 3
-# Open existing story that uses useTranslation
-curl -sS "http://127.0.0.1:6007/iframe.html?id=components-auth-authmodal--default&viewMode=story" 2>&1 | head -200 | grep -iE "intl|error|cannot find required" || echo "OK: AuthModal renders without intl error"
-# Open pilot Library story
-curl -sS "http://127.0.0.1:6007/iframe.html?id=pages-sp4-library-mockup-matrix--frame-09-all-grid-rail&viewMode=story" 2>&1 | head -200 | grep -iE "cannot find required" && echo "FAIL: Library Frame09 has intl error"
-kill $SERVER_PID
+**Code-reviewer C2**: Storybook iframe.html serves a JS shell that hydrates client-side. `curl` cannot see React-rendered error wall. Use Playwright with `waitForLoadState('networkidle')` for ground-truth check.
+
+Create `apps/web/e2e/diagnostic.spec.ts` (reused by Tasks 3/4/5/7 verification):
+
+```ts
+import { test, expect } from '@playwright/test';
+
+const STORIES = [
+  { name: 'AuthModal (existing control)', slug: 'components-auth-authmodal--default' },
+  { name: 'Library Frame09 (pilot)', slug: 'pages-sp4-library-mockup-matrix--frame-09-all-grid-rail' },
+  { name: 'Library Frame13 (pilot empty)', slug: 'pages-sp4-library-mockup-matrix--frame-13-empty-first-run' },
+  { name: 'GameDetail Frame07 (pilot)', slug: 'pages-sp4-gamedetail-mockup-matrix--frame-07-desktop-own-info' },
+];
+
+for (const { name, slug } of STORIES) {
+  test(`Diagnostic: ${name} renders without intl error`, async ({ page }) => {
+    await page.goto(`/iframe.html?id=${slug}&viewMode=story`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(500);
+    const errorVisible = await page.locator('text=Could not find required').count();
+    if (errorVisible > 0) {
+      const text = await page.locator('body').innerText();
+      throw new Error(`${name}: intl error wall detected\n${text.slice(0, 500)}`);
+    }
+    // Sanity check: story-root should have rendered children
+    const rootChildren = await page.locator('#storybook-root > *').count();
+    expect(rootChildren).toBeGreaterThan(0);
+  });
+}
 ```
+
+Run diagnostic:
+
+```bash
+pnpm exec playwright test --config playwright.storybook.config.ts e2e/diagnostic.spec.ts 2>&1 | tail -20
+```
+
+Expected outcomes (decision gate):
+- **AuthModal PASS + Library/GameDetail PASS** → no intl error anywhere; revisit assumption; recapture baseline directly (skip Steps A-D, jump to Task 6)
+- **AuthModal PASS + Library/GameDetail FAIL** → issue is NEW-stories specific; investigate decorator order interaction with new stories (proceed Task 3)
+- **AuthModal FAIL + Library/GameDetail FAIL** → issue is iframe-wide; investigate global IntlProvider integration (proceed Task 3 con expectation Step A unlikely to work)
+- **AuthModal FAIL + Library/GameDetail PASS** → unexpected, investigate; do not proceed without understanding
+
+Document outcome in `.diagnostic-notes.md` later.
 
 Expected outcomes:
 - **If AuthModal OK + Library FAIL** → issue is NEW-stories specific; investigate decorator order interaction with new stories
@@ -238,24 +274,18 @@ Replace with (AllProviders FIRST, withThemeByClassName SECOND):
   ],
 ```
 
-- [ ] **Step 2: Rebuild + test**
+- [ ] **Step 2: Rebuild + diagnostic test (Code-reviewer C2: uses e2e/diagnostic.spec.ts)**
 
 ```bash
 rm -rf storybook-static
 pnpm build-storybook 2>&1 | tail -3
-pnpm exec http-server storybook-static -p 6007 -s &
-sleep 3
-# Test pilot story
-curl -sS "http://127.0.0.1:6007/iframe.html?id=pages-sp4-library-mockup-matrix--frame-09-all-grid-rail&viewMode=story" 2>&1 | head -200 | grep -iE "cannot find required" && echo "FAIL: still has intl error" || echo "OK: Library Frame09 renders without intl error"
-# Regression check AuthModal
-curl -sS "http://127.0.0.1:6007/iframe.html?id=components-auth-authmodal--default&viewMode=story" 2>&1 | head -200 | grep -iE "cannot find required" && echo "FAIL: AuthModal regression" || echo "OK: AuthModal unaffected"
-kill %1
+pnpm exec playwright test --config playwright.storybook.config.ts e2e/diagnostic.spec.ts 2>&1 | tail -20
 ```
 
 Expected decision gate:
-- **Library OK + AuthModal OK** → Step A worked. Proceed to Task 6 (Verification + baseline capture).
-- **Library FAIL** → Step A insufficient. Proceed to Task 4 (Step B).
-- **AuthModal regression** → revert Step 1 swap. Document. Proceed to Task 4 (Step B).
+- **All 4 stories PASS** → Step A worked. Proceed to Task 6.
+- **AuthModal regression (was PASS in Task 2, now FAIL)** → revert Step 1 swap. Document. Proceed to Task 4.
+- **Library/GameDetail FAIL** → Step A insufficient. Proceed to Task 4 (Step B).
 
 - [ ] **Step 3: If Step A worked, commit**
 
@@ -311,23 +341,26 @@ const AllProviders = ({ children }: { children: React.ReactNode }) => {
 };
 ```
 
-Remove now-unused `FLAT_IT_MESSAGES` + `flattenMessages` + `itMessages` import.
+**Code-reviewer I1**: explicit Edit blocks for cleanup (verify current preview.tsx state first):
 
-- [ ] **Step 2: Rebuild + test**
+- Edit A: delete line `import itMessages from '../src/locales/it.json';` (replace entire line with empty string)
+- Edit B: delete `flattenMessages` function block + `const FLAT_IT_MESSAGES = ...` declaration (full removal)
+- Edit C: replace `import { IntlProvider as ReactIntlProvider } from 'react-intl';` with new import added at Step 1 (`import { IntlProvider } from '@/components/providers/IntlProvider';`)
+
+Verify post-cleanup: `pnpm lint` reports zero unused-import warnings on preview.tsx.
+
+- [ ] **Step 2: Rebuild + diagnostic test (reuse e2e/diagnostic.spec.ts)**
 
 ```bash
 rm -rf storybook-static
 pnpm build-storybook 2>&1 | tail -3
-pnpm exec http-server storybook-static -p 6007 -s &
-sleep 3
-curl -sS "http://127.0.0.1:6007/iframe.html?id=pages-sp4-library-mockup-matrix--frame-09-all-grid-rail&viewMode=story" 2>&1 | head -200 | grep -iE "cannot find required" && echo "FAIL: still has intl error" || echo "OK: Library renders"
-curl -sS "http://127.0.0.1:6007/iframe.html?id=components-auth-authmodal--default&viewMode=story" 2>&1 | head -200 | grep -iE "cannot find required" && echo "FAIL: AuthModal regression" || echo "OK: AuthModal unaffected"
-kill %1
+pnpm exec playwright test --config playwright.storybook.config.ts e2e/diagnostic.spec.ts 2>&1 | tail -20
 ```
 
 Decision gate:
-- **Library OK + AuthModal OK** → Step B worked. Proceed to Task 6.
-- **Both FAIL** → Step B insufficient. Proceed to Task 5 (Step C).
+- **All 4 stories PASS** → Step B worked. Proceed to Task 6.
+- **AuthModal regression** → revert. Proceed to Task 5.
+- **Library/GameDetail FAIL** → Step B insufficient. Proceed to Task 5 (Step C).
 
 - [ ] **Step 3: If Step B worked, commit**
 
@@ -420,41 +453,62 @@ webpackFinal: async (config) => {
 },
 ```
 
-**Note**: `path` import needs to be available. If `main.ts` already imports it, reuse. If not, add at top:
+**Code-reviewer I2**: verified `.storybook/main.ts` does NOT currently import `path`. Add as second import line:
 
 ```ts
 import path from 'path';
 ```
 
-- [ ] **Step 5: Rebuild + test**
+- [ ] **Step 5: Rebuild + diagnostic test + budget check (Code-reviewer C2+I5)**
 
 ```bash
 rm -rf storybook-static
 pnpm build-storybook 2>&1 | tail -3
-pnpm exec http-server storybook-static -p 6007 -s &
-sleep 3
-curl -sS "http://127.0.0.1:6007/iframe.html?id=pages-sp4-library-mockup-matrix--frame-09-all-grid-rail&viewMode=story" 2>&1 | head -200 | grep -iE "cannot find required" && echo "FAIL: still has intl error" || echo "OK: Library renders"
-curl -sS "http://127.0.0.1:6007/iframe.html?id=components-auth-authmodal--default&viewMode=story" 2>&1 | head -200 | grep -iE "cannot find required" && echo "FAIL: AuthModal regression" || echo "OK: AuthModal unaffected"
-kill %1
+pnpm exec playwright test --config playwright.storybook.config.ts e2e/diagnostic.spec.ts 2>&1 | tail -20
+```
+
+**Budget gate (Code-reviewer I5)**:
+
+```bash
+START=$(cat /tmp/phase-4-prelude-start.txt)
+NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+ELAPSED_HOURS=$(python3 -c "from datetime import datetime; s=datetime.fromisoformat('$START'.replace('Z','')); n=datetime.fromisoformat('$NOW'.replace('Z','')); print(int((n-s).total_seconds()/3600))")
+echo "Elapsed: $ELAPSED_HOURS hours (budget 1.5gg = 12 work-hours)"
+[ "$ELAPSED_HOURS" -ge 12 ] && echo "ESCALATE: budget exceeded, proceed to Task 7" || echo "PROCEED: budget remaining"
 ```
 
 Decision gate:
-- **Library OK + AuthModal OK** → Step C worked. Proceed to Task 6.
-- **Both FAIL** → Step C insufficient. Proceed to Task 7 (Step D fallback).
-- **1.5gg total elapsed** → STOP. Document. Proceed to Task 7 (Step D fallback).
+- **All 4 PASS** → Step C worked. Proceed to Task 6.
+- **Library/GameDetail FAIL OR budget ≥12h** → Proceed to Task 7 (Step D fallback).
+- **AuthModal regression** → revert. Proceed to Task 7.
 
-- [ ] **Step 6: If Step C worked, commit**
+- [ ] **Step 6: If Step C worked, commit (Code-reviewer I7+I8)**
 
 ```bash
-git add apps/web/.storybook/main.ts apps/web/package.json apps/web/pnpm-lock.yaml ../../pnpm-lock.yaml
-git commit -m "fix(storybook): #TBD resolve.alias force single react-intl module (DS-17 Phase 4 prelude Step C)"
+# Discover modified lockfiles (monorepo may have root + per-app)
+MODIFIED_LOCKS=$(git status --porcelain | grep "pnpm-lock.yaml" | awk '{print $2}')
+echo "Modified lockfiles: $MODIFIED_LOCKS"
+
+git add apps/web/.storybook/main.ts apps/web/package.json $MODIFIED_LOCKS
+git commit -m "fix(storybook): #TBD resolve.alias force single react-intl module (DS-17 Phase 4 prelude C)"
+```
+
+**Code-reviewer I8 — Optional webpack-bundle-analyzer cleanup**:
+
+```bash
+# Decision: keep for future debugging vs remove for lean lockfile
+# Recommend: REMOVE post-success (alias fix doesn't need analyzer at runtime)
+pnpm remove -D webpack-bundle-analyzer
+git add apps/web/package.json $MODIFIED_LOCKS
+# Also remove BundleAnalyzerPlugin import + plugin push block from main.ts
+git commit -m "chore: #TBD remove webpack-bundle-analyzer after Step C investigation done"
 ```
 
 If Step C failed, revert + proceed to Task 7:
 
 ```bash
-git checkout -- apps/web/.storybook/main.ts apps/web/package.json apps/web/pnpm-lock.yaml
-pnpm install
+git checkout -- apps/web/.storybook/main.ts apps/web/package.json
+pnpm install  # restore lockfile to match package.json
 ```
 
 ---
@@ -480,24 +534,14 @@ Expected:
 - build-storybook succeeds
 - IntlProvider count > 0 in main bundle
 
-- [ ] **Step 2: Open Library + GameDetail stories in Storybook UI for visual review**
+- [ ] **Step 2: Run full diagnostic suite (Code-reviewer recommendation #5: automated, not visual)**
 
 ```bash
-pnpm exec http-server storybook-static -p 6007 -s &
-SERVER_PID=$!
-sleep 3
-# Document URLs to open in browser
-echo "Visual review URLs:"
-echo "  http://127.0.0.1:6007/iframe.html?id=pages-sp4-library-mockup-matrix--frame-09-all-grid-rail&viewMode=story"
-echo "  http://127.0.0.1:6007/iframe.html?id=pages-sp4-library-mockup-matrix--frame-13-empty-first-run&viewMode=story"
-echo "  http://127.0.0.1:6007/iframe.html?id=pages-sp4-library-mockup-matrix--frame-16-loading&viewMode=story"
-echo "  http://127.0.0.1:6007/iframe.html?id=pages-sp4-library-mockup-matrix--frame-17-error-state&viewMode=story"
-echo "  http://127.0.0.1:6007/iframe.html?id=pages-sp4-gamedetail-mockup-matrix--frame-07-desktop-own-info&viewMode=story"
-echo "  http://127.0.0.1:6007/iframe.html?id=pages-sp4-gamedetail-mockup-matrix--frame-09-desktop-loading&viewMode=story"
-kill $SERVER_PID
+rm -rf storybook-static && pnpm build-storybook 2>&1 | tail -3
+pnpm exec playwright test --config playwright.storybook.config.ts e2e/diagnostic.spec.ts 2>&1 | tail -20
 ```
 
-Visually verify each URL renders content (NO "intl object missing" error wall).
+Expected: all 4 diagnostic stories PASS. NO "intl object missing" error wall.
 
 - [ ] **Step 3: Capture baselines**
 
@@ -603,6 +647,14 @@ export interface UseTranslationReturn {
     values?: Record<string, string | number | boolean | Date | null | undefined>
   ) => string;
   locale: string;
+  formatNumber: (value: number, options?: Intl.NumberFormatOptions) => string;
+  formatDate: (value: Date | number | string, options?: Intl.DateTimeFormatOptions) => string;
+  formatTime: (value: Date | number | string, options?: Intl.DateTimeFormatOptions) => string;
+  formatRelativeTime: (
+    value: number,
+    unit?: Intl.RelativeTimeFormatUnit,
+    options?: Intl.RelativeTimeFormatOptions
+  ) => string;
 }
 
 export function useTranslation(): UseTranslationReturn {
@@ -615,6 +667,13 @@ export function useTranslation(): UseTranslationReturn {
     t,
     formatMessage: (descriptor) => String(descriptor.defaultMessage || descriptor.id || ''),
     locale: 'it',
+    // Code-reviewer C1: full production surface — Library/GameDetail use date/number formatting
+    formatNumber: (value, options) => new Intl.NumberFormat('it', options).format(value),
+    formatDate: (value, options) => new Intl.DateTimeFormat('it', options).format(new Date(value)),
+    formatTime: (value, options) =>
+      new Intl.DateTimeFormat('it', { hour: 'numeric', minute: 'numeric', ...options }).format(new Date(value)),
+    formatRelativeTime: (value, unit = 'second', options) =>
+      new Intl.RelativeTimeFormat('it', options).format(value, unit),
   };
 }
 
@@ -648,20 +707,17 @@ git checkout -- apps/web/.storybook/preview.tsx
 
 Verify preview.tsx is back to baseline (with IntlProvider wire from Phase 2.5 but without Step A/B mods).
 
-- [ ] **Step 4: Rebuild + test**
+- [ ] **Step 4: Rebuild + multi-frame diagnostic (Code-reviewer C2+I3)**
 
 ```bash
 rm -rf storybook-static test-results playwright-report
 pnpm build-storybook 2>&1 | tail -3
-pnpm exec http-server storybook-static -p 6007 -s &
-sleep 3
-curl -sS "http://127.0.0.1:6007/iframe.html?id=pages-sp4-library-mockup-matrix--frame-09-all-grid-rail&viewMode=story" 2>&1 | head -200 | grep -iE "cannot find required" && echo "FAIL: still has intl error" || echo "OK: Library renders"
-kill %1
+pnpm exec playwright test --config playwright.storybook.config.ts e2e/diagnostic.spec.ts 2>&1 | tail -20
 ```
 
-Expected: Library renders OK (mock bypasses IntlProvider context entirely).
+Expected: All 4 diagnostic stories PASS (mock bypasses IntlProvider context entirely; AuthModal continues to work via production wrapper bypass).
 
-If FAIL: stop, raise to user — investigation insufficient even with mock fallback.
+If any FAIL: stop, raise to user — investigation insufficient even with mock fallback. Possible: production code uses `useIntl()` directly (not via `useTranslation`), needs second mock alias.
 
 - [ ] **Step 5: Capture baselines**
 
@@ -790,16 +846,19 @@ git commit -m "docs: #TBD CLAUDE.md baseline captured note (DS-17 Phase 4 prelud
 
 ---
 
-### Task 10: CI workflow update (optional — flip to blocking IF stable)
+### Task 10: CI workflow update (DEFERRED to future PR — Code-reviewer I4)
 
-**Files:**
-- Modify: `.github/workflows/ci.yml`
+**Files:** (none modified in this PR)
 
-**Decision gate**: skip Task 10 if 14gg stable trajectory not yet observed. Phase 4 prelude can ship with CI step still `continue-on-error: true`. Future PR can flip to blocking after observation period.
+**Decision gate (Code-reviewer I4)**: Task 10 is DEFERRED in this PR per Phase 4 prelude spec. The 14gg stable trajectory is a FUTURE observation window; no prior PR runs exist yet (this PR is the FIRST to ship working baselines). Skip Task 10 unconditionally; mention in PR body 'CI gate flip deferred to follow-up PR pending 14gg observation' and proceed to Task 11.
 
-- [ ] **Step 1: Decide based on context**
+This task remains documented as a template for the FUTURE follow-up PR that will flip CI step to blocking after observation period.
 
-If 14gg stable trajectory observed (≥14 PR runs with passing snapshot gate post-fix), proceed to Step 2. Otherwise, skip Task 10 and document in PR body "CI gate flip deferred — trajectory observation pending".
+**Future PR template** (do NOT execute now):
+
+- [ ] **Step 1: After 14gg stable**
+
+If ≥14 PR runs observed with passing snapshot gate post-Phase 4 prelude merge, proceed to Step 2.
 
 - [ ] **Step 2: Flip CI step to blocking (if stable)**
 
@@ -857,19 +916,51 @@ rm -f .diagnostic-notes.md
 git push -u origin feature/issue-TBD-ds-17-phase-4-prelude-intl
 ```
 
-- [ ] **Step 4: Create PR**
+- [ ] **Step 4: Create PR with explicit body template (Code-reviewer I6)**
 
 ```bash
 gh pr create --base main-dev --head feature/issue-TBD-ds-17-phase-4-prelude-intl \
   --title "fix(storybook): #TBD DS-17 Phase 4 prelude IntlProvider hardening + 12 baseline PNGs" \
-  --body "<body referencing spec + plan + step taken + closes #TBD>"
+  --body "$(cat <<'EOF'
+## Goal
+
+Fix IntlProvider runtime context blocker in Storybook → 12 baseline PNGs captured (Library 9 + GameDetail 3) → unblock Phase 3 inizio.
+
+## Diagnostic findings (Task 2)
+
+- Control test AuthModal renders: [YES/NO]
+- Control test Library Frame09 renders: [YES/NO]
+- Control test Library Frame13 renders: [YES/NO]
+- Control test GameDetail Frame07 renders: [YES/NO]
+- Hypothesis: [from diagnostic-notes]
+
+## Step path taken
+
+- [x or empty] Step A: swap decorator order
+- [x or empty] Step B: production IntlProvider wrapper
+- [x or empty] Step C: webpack resolve.alias single react-intl module
+- [x or empty] Step D: custom useTranslation mock alias fallback
+
+## Root cause
+
+[Identified root cause OR fallback rationale]
+
+## Baselines
+
+12 PNG captured + committed (Library Frame09-17 + GameDetail Frame07-09). Smoke test gate verified.
+
+## CI
+
+Storybook snapshot gate `continue-on-error: true` unchanged — flip to blocking deferred pending 14gg stable trajectory observation (future PR per Code-reviewer I4).
+
+Closes #TBD
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"
 ```
 
-Body MUST include:
-- Diagnostic findings (control test outcomes)
-- Step path taken (A/B/C/D with [x] mark)
-- Root cause identified OR fallback rationale
-- 12 baseline PNGs captured confirmation
+**Pre-PR validation**: substitute placeholders [YES/NO], [x or empty], [from diagnostic-notes], [Identified root cause OR fallback rationale] with actual values from Tasks 2/3/4/5/7 outputs before invoking command.
 
 - [ ] **Step 5: Admin-squash merge**
 

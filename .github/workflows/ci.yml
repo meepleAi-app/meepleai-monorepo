@@ -796,6 +796,10 @@ jobs:
         run: python -m pytest scripts/tests/test_scrub_bgg_manifest.py -v
         working-directory: ${{ github.workspace }}
 
+      - name: Run Wikidata QID bootstrap tests (#2123)
+        run: python -m pytest scripts/tests/test_bootstrap_wikidata_qid.py -v
+        working-directory: ${{ github.workspace }}
+
       - name: Upload Python Coverage
         if: always()
         uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2  # v6.0.0

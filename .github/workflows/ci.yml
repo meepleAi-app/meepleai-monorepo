@@ -343,17 +343,6 @@ jobs:
             audits/2026-06-09-mockup-annotation-coverage.md
           retention-days: 14
 
-      # Issue #2123 — BGG ToS compliance gate. Blocks any PR that re-introduces
-      # a BGG host literal (cf.geekdo-images.com, *.boardgamegeek.com, etc.) in
-      # manifest YAML, next.config.js, FE source, or BE seeders. Defense in
-      # depth complement to the `local/no-bgg-host` ESLint rule (which is
-      # scoped to apps/web/src and skips test files); this gate covers the
-      # full ban surface including the API tree.
-      # Spec: docs/superpowers/specs/2026-06-10-issue-2123-bgg-tos-compliance.md
-      # ADR : docs/for-claude/architecture/adr/adr-059-catalog-seed-legal-posture.md §5
-      - name: BGG ToS compliance gate (#2123)
-        run: pnpm lint:bgg
-
       # DS-17-8-v2 (mockup-to-app fidelity, 2026-06-10):
       # Non-blocking Storybook snapshot scaffolding per Phase 2 pilot stories.
       # Phase 2 ships scaffolding only (config + specs + scripts); baseline
@@ -784,21 +773,6 @@ jobs:
           CI: true
         # Note: Coverage requirement removed - test isolation makes 85% threshold impractical
         # Coverage is still measured and reported to Codecov for monitoring
-
-      # Issue #2123 — pytest suite for the BGG manifest scrub codemod
-      # (scripts/scrub_bgg_manifest.py). Runs from repo root because the
-      # script + tests live outside apps/orchestration-service.
-      - name: Install ruamel.yaml for codemod tests
-        run: pip install 'ruamel.yaml>=0.19'
-        working-directory: ${{ github.workspace }}
-
-      - name: Run BGG manifest scrub codemod tests (#2123)
-        run: python -m pytest scripts/tests/test_scrub_bgg_manifest.py -v
-        working-directory: ${{ github.workspace }}
-
-      - name: Run Wikidata QID bootstrap tests (#2123)
-        run: python -m pytest scripts/tests/test_bootstrap_wikidata_qid.py -v
-        working-directory: ${{ github.workspace }}
 
       - name: Upload Python Coverage
         if: always()

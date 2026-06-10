@@ -132,6 +132,12 @@ const nextConfig = {
   // Adding `geekdo` or `boardgamegeek` is blocked by the `pnpm lint:bgg` CI gate
   // and by the ESLint custom rule `local/no-bgg-host`.
   images: {
+    // Issue #2123 — custom loader runtime guard. Redirects any BGG-host src to
+    // the static placeholder + fires a beacon to /api/metrics/bgg-attempt so
+    // ops can observe the (must-be-zero) `meepleai_bgg_url_attempted_render_total`
+    // counter. See src/lib/images/safe-loader.ts for the implementation rationale.
+    loader: 'custom',
+    loaderFile: './src/lib/images/safe-loader.ts',
     remotePatterns: [
       // Storybook + dev placeholder service
       { protocol: 'https', hostname: 'picsum.photos', pathname: '/**' },

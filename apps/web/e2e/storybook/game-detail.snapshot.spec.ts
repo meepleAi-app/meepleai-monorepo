@@ -1,24 +1,35 @@
 /**
  * @mockup admin-mockups/design_files/sp4-game-detail.html
  *
- * Playwright snapshot test for GameDetailView pilot story (DS-17-8-v2).
+ * GameDetail argTypes matrix snapshot suite — DS-17 Phase 2.5 (DEC-P3-3).
  *
- * States covered: Default, Empty, Error.
- * Threshold: 5% area diff, light theme, 1440x900 desktop.
+ * 3 frame canonical Desktop. Mobile frames m1-m6 DEFERRED a Phase 4 hardening.
  *
  * Refs: spec, umbrella #2063.
  */
 
 import { test, expect } from '@playwright/test';
 
-const STORY_BASE = '/iframe.html?id=pages-sp4-gamedetail-mockup-pilot--';
-const STATES = ['default', 'empty', 'error'] as const;
+const FRAMES = [
+  {
+    slug: 'pages-sp4-gamedetail-mockup-matrix--frame-07-desktop-own-info',
+    file: 'game-detail-07-desktop-own-info.png',
+  },
+  {
+    slug: 'pages-sp4-gamedetail-mockup-matrix--frame-08-desktop-community-locked',
+    file: 'game-detail-08-desktop-community-locked.png',
+  },
+  {
+    slug: 'pages-sp4-gamedetail-mockup-matrix--frame-09-desktop-loading',
+    file: 'game-detail-09-desktop-loading.png',
+  },
+];
 
-for (const state of STATES) {
-  test(`GameDetail ${state} matches snapshot`, async ({ page }) => {
-    await page.goto(`${STORY_BASE}${state}&viewMode=story`);
+for (const { slug, file } of FRAMES) {
+  test(`GameDetail ${file.replace(/\.png$/, '')} matches snapshot`, async ({ page }) => {
+    await page.goto(`/iframe.html?id=${slug}&viewMode=story`);
     await page.waitForSelector('#storybook-root > *', { timeout: 30_000 });
     await page.waitForTimeout(1000);
-    await expect(page).toHaveScreenshot(`game-detail-${state}.png`, { fullPage: true });
+    await expect(page).toHaveScreenshot(file, { fullPage: true });
   });
 }

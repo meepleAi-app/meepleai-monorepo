@@ -1,164 +1,142 @@
-# Page-mock story pattern (DS-17-6-v2)
+# Page-mock story pattern (DS-17 Phase 2.5+)
 
-This pattern documents how to migrate a page-mock HTML (`admin-mockups/design_files/sp4-*.html`)
-into a Storybook story that USES the real Client component. Adopted Phase 2 pilot; Phase 3
-sweep replicates it across the remaining 67 page-mock + 48 component-mock.
+This pattern documents how to migrate a page-mock HTML (`admin-mockups/design_files/sp4-*.html` +
+`.jsx` twin) into a Storybook story that USES the real Client component. Adopted Phase 2.5
+retroactive rewrite; Phase 3 sweep (67 page-mock + 48 component-mock) copies questo pattern.
 
-**Sub-issue**: [#2092](https://github.com/meepleAi-app/meepleai-monorepo/issues/2092) (DS-17-6-v2) · **Umbrella**: [#2063](https://github.com/meepleAi-app/meepleai-monorepo/issues/2063) · **Spec**: [`docs/superpowers/specs/2026-06-09-ds-17-phase-2-design.md`](../../superpowers/specs/2026-06-09-ds-17-phase-2-design.md)
+**Spec**: [`docs/superpowers/specs/2026-06-10-ds-17-phase-2.5-and-3-redesign.md`](../../superpowers/specs/2026-06-10-ds-17-phase-2.5-and-3-redesign.md)
+**Umbrella**: [#2063](https://github.com/meepleAi-app/meepleai-monorepo/issues/2063)
 
-## Quick start
+## argTypes matrix pattern (DEC-P3-3)
 
-1. Identify the Client component for the route (`page.tsx` typically delegates to a `Client.tsx` or `_content.tsx` sibling).
-2. Add a fixture file under `apps/web/src/__tests__/fixtures/mockup-pilots/<name>.ts` exporting `MOCK_<NAME>` + `MOCK_<NAME>_EMPTY`.
-3. Create `<ClientComponent>.stories.tsx` side-by-side col Client component.
-4. Add stories `Default`, `Empty` (min); optional `Loading`, `Error` per visible state matrix.
-5. JSDoc top with `@mockup admin-mockups/design_files/sp4-X.html` (mirrors DS-17-1 page.tsx annotations).
-6. Verify `pnpm build-storybook` succeeds, then commit.
+Each mockup migrated to a story uses **1 story file per mockup** con `argTypes` controls per
+axis. Storybook genera matrix interattiva via addon-controls toolbar; snapshot tests
+programmaticamente iterano i frame canonical del mockup HTML stage.
 
-## Pilot examples (Phase 2)
+### Axis discovery
 
-| Pilot | Story file | Fixture file | States shipped |
-|---|---|---|---|
-| sp4-dashboard | `apps/web/src/app/(authenticated)/dashboard/DashboardClient.stories.tsx` | `__tests__/fixtures/mockup-pilots/dashboard.ts` | Default + Empty + Loading + Error |
-| sp4-library-desktop | `apps/web/src/app/(authenticated)/library/_content.stories.tsx` | `__tests__/fixtures/mockup-pilots/library.ts` | Default + Empty + Loading |
-| sp4-game-detail | `apps/web/src/app/(authenticated)/games/[id]/_components/GameDetailView.stories.tsx` | `__tests__/fixtures/mockup-pilots/game-detail.ts` | Default + Empty + Error |
+Per ogni mockup, inspect il `.jsx` twin:
+1. Grep `stateOverride`, `variant`, `initialTab`, `initialView`, `drawerOpen`, `bulk` → identify axis
+2. Cross-ref `MOBILE_STATES` array, `DesktopFrame label="NN · ..."` → identify canonical frames
+3. Story `argTypes` mirror prop interface (use `description: 'Documentation only'` per axis non
+   propagated al component); `args` default = first frame del mockup
 
-Different state coverage per pilot is intentional — pilots ship the states that
-exercise component-specific behaviour. Phase 3 sweep can copy either pattern.
+### Stage frame export pattern
 
-## Decorators inherited from `.storybook/preview.tsx`
+Per ogni frame del mockup HTML stage (`PhoneShell key={s.id}` / `DesktopFrame label="..."`):
 
-These are global — no per-story setup required:
-
-- **MockAuthProvider** — fake user `storybook-user` with `role='user'`. Override per-story
-  via `parameters.auth = { user: { ...customUser } }` (TBD; not yet implemented).
-- **QueryClientProvider** — React Query with `retry: false, staleTime: Infinity`. Each story
-  gets a fresh client.
-- **ThemeProvider + withThemeByClassName** — light/dark toggle via Storybook toolbar.
-  Default `light` (cream `#f7f3ee`).
-- **TooltipProvider** — Radix tooltips work out-of-box.
-- **msw-storybook-addon** — global handlers from `src/__tests__/mocks/handlers/`; per-story
-  `parameters.msw.handlers` overrides.
-
-### Known limitation: Zustand stores without per-story reset
-
-Some Client components (e.g. `LibraryContent`) write to Zustand stores on mount. The
-preview.tsx does NOT provide a global Zustand reset decorator; stores accumulate state
-across Storybook navigations. **Benign for screenshot capture and the typical "open the
-story" review flow.** If state pollution causes visible issues, add a per-story decorator:
-
-```ts
-import { useRecentsStore } from '@/stores/use-recents';
-
-export const Empty: Story = {
-  decorators: [
-    (Story) => {
-      useRecentsStore.setState({ recents: [] });
-      return <Story />;
-    },
-  ],
-  // ...
+```tsx
+export const FrameNN_ShortName: Story = {
+  name: 'NN · Viewport · Description',  // mirror exact label dal mockup JSX
+  parameters: { msw: { handlers: mswForState(state) } },
 };
 ```
 
-## State conventions
+Story `name` mirror del mockup label numerico (es. `'09 · Desktop · All · Grid 4-col + Activity rail'`)
+permette pixel-faithful cross-ref nel review process.
 
-Every page-mock story should at minimum cover:
+Storybook slugify pattern: title `'Pages/SP4/Library / Mockup Matrix'` + story name
+`'09 · Desktop · All · Grid 4-col + Activity rail'` → URL `pages-sp4-library-mockup-matrix--frame-09-all-grid-rail`
+(verifica via `grep storybook-static/index.json` post-`build-storybook`).
 
-| State | How |
-|---|---|
-| **Default** | MSW returns populated `MOCK_<NAME>` fixture |
-| **Empty** | MSW returns `MOCK_<NAME>_EMPTY` (zero-length arrays / null) |
-| **Loading** | MSW handler returns `new Promise<Response>(() => {})` (never resolves) |
-| **Error** | MSW returns 500 with `{ error: 'server error' }` |
+## design_intent classification workflow (DEC-P3-1+2)
 
-**Minimum**: `Default + Empty`. Optional: Loading, Error, SSE, Offline, A11y-focused —
-chosen per-pilot based on the visible state matrix of the page.
+Pre-flight per ogni mockup migration:
 
-## Fixture conventions
+1. **Grep mockup JSX twin** per markers `Diverge|REFACTOR-FORWARD|design-forward`
+2. **Classify**:
+   - `current`: mockup riflette il design del componente OGGI → migrate normally
+   - `forward-refactor`: mockup è target di refactor pending, ma allineato a roadmap → migrate, story rende current component, fidelity.json documenta divergence
+   - `forward-refactor-obsolete`: mockup è target obsoleto (codebase ha evoluto in direction diversa) → **SKIP migration**, apri tracking issue, fidelity.json con `obsolete_tracking_issue` field
+3. **Tracking issue template per obsoleti**:
+   - Title: `[DS-17 mockup obsolete] {mockup_filename} — design_intent forward-refactor-obsolete`
+   - Body: divergenza vs codebase corrente + decision needed (mockup rewrite OR component rollback)
 
-- Path: `apps/web/src/__tests__/fixtures/mockup-pilots/<name>.ts`
-- Export shape: `MOCK_<NAME>: <Type>` + `MOCK_<NAME>_EMPTY: <Type>`
-- Re-export from `__tests__/fixtures/mockup-pilots/index.ts` barrel
-- TypeScript types derived from `apps/web/src/lib/api/schemas/*.schemas.ts` (Zod
-  schema `z.infer<>`) — never invent type shape
-- Per-fixture imports (no composite bundles) — keeps MSW handler granularity flexible
-- **Anti-pattern**: hardcoded `Date.now()` or current-date values (use ISO literal
-  `'2026-06-09T...'` and document in fixture comment)
-- **Anti-pattern**: dataset bloat (>1MB per fixture). Cap at ~10 entries per array.
+## Viewport opt-in (DEC-P3-4)
+
+Default solo Desktop 1440x900. Mobile opt-in via fidelity.json:
+
+```json
+"viewports": ["desktop", "mobile"]
+```
+
+**Phase 2.5 limitation**: `@storybook/addon-viewport` NOT installed. Mobile frames in stories
+defer a Phase 4 hardening (would render at Desktop viewport without addon-viewport). Per Phase 2.5,
+all pilot stories ship Desktop-only frames.
+
+## Pilot reference (Phase 2.5 shipped)
+
+| Pilot | Story file | Frames | design_intent | Baseline status |
+|---|---|---|---|---|
+| Library | `src/app/(authenticated)/library/_content.stories.tsx` | 9 Desktop (Frame09-17) | current | DEFERRED (Phase 4 — IntlProvider blocker) |
+| GameDetail | `src/app/(authenticated)/games/[id]/_components/GameDetailView.stories.tsx` | 3 Desktop (Frame07-09) | current | DEFERRED (Phase 4 — IntlProvider blocker) |
+| Dashboard | _(DELETED, forward-refactor-obsolete)_ | — | forward-refactor-obsolete (tracking #2114) | n/a |
 
 ## MSW handler URL pattern
 
-Stories use **wildcard prefix** `'*/api/v1/...'` in `http.get(...)`. Reason: the production
-client uses relative URLs `/api/v1/...` whereas the global handlers in
-`src/__tests__/mocks/handlers/` use `${API_BASE}/api/v1/...`. The wildcard matches both,
-keeping stories independent of how `NEXT_PUBLIC_API_BASE` is configured in Storybook env.
+Stories use **wildcard prefix** `'*/api/v1/...'` in `http.get(...)`. Reason: client uses relative
+URLs whereas global handlers use `${API_BASE}/api/v1/...`. Wildcard matches both.
 
 ## Anti-patterns
 
-- ❌ **Centralized `.storybook/stories/`**: pattern repo-consolidato is **side-by-side**
-  col component. 133 stories follow this convention.
-- ❌ **Hardcode dei mock dentro la story**: usa `parameters.msw.handlers` override delle
-  fixture importate, niente object literal in-line.
-- ❌ **Reimplementare primitives**: usa `apps/web/src/components/ui/v2/` esistenti
-  (umbrella DEC-6).
+- ❌ **Multiple story files per mockup**: DEC-P3-3 mandates 1 file con argTypes matrix.
+- ❌ **Skip design_intent audit**: silently migra mockup obsolete = drift garantito.
+- ❌ **Force Mobile viewport per ogni mockup**: requires `@storybook/addon-viewport` install (Phase 4).
+- ❌ **Hardcode args/state nelle story `args`**: usa `argTypes` controls, defaults centralizzati in `meta.args`.
+- ❌ **Story name divergence dal mockup label**: story name MUST mirror exact mockup frame label.
+- ❌ **Centralized `.storybook/stories/`**: pattern repo-consolidato is side-by-side col component.
+- ❌ **Reimplementare primitives**: usa `apps/web/src/components/ui/v2/` esistenti.
 - ❌ **Skip JSDoc `@mockup`**: serve per coverage tracking (DS-17-1 audit-coverage.mjs).
-- ❌ **Inventare type shape**: derive sempre da `z.infer<typeof XSchema>` o dichiara
-  `type` inline e documenta che è ad-hoc.
 
 ## Snapshot gate trajectory
 
-| Phase | Threshold | CI behaviour | Status |
-|---|---|---|---|
-| ✅ **Phase 2 v2 scaffolding (now)** | 5% area diff (light theme, 1440x900) | **non-blocking**, artifact uploaded, **baseline absent** | Config + specs + CI shipped DS-17-8-v2 (#2095) |
-| **Phase 4 — baseline capture + decorator fix** | 5% area diff | non-blocking → **blocking** after 14gg stable | TBD follow-up |
-| **DS-17 close** | 5% area diff + multi-viewport (375/768/1440) | blocking on 3 viewports | TBD |
+| Phase | Stato | Threshold | Viewports | CI behaviour | Baselines |
+|---|---|---|---|---|---|
+| ✅ Phase 2 v2 scaffolding | shipped non-blocking | 5% area | Desktop 1440x900 | continue-on-error | 0 (error wall) |
+| ✅ **Phase 2.5 hardening** | shipped (baselines DEFERRED) | 5% area | Desktop 1440x900 | continue-on-error | 0 (IntlProvider blocker, see below) |
+| ⏳ Phase 3 sweep (5 sub-issue) | post Phase 2.5 | 5% area | Desktop primary + Mobile opt-in | continue-on-error | ~470+ |
+| **Phase 4 hardening** | post Phase 3 | 5% area | Desktop + Mobile per opt-in | **blocking** after 14gg stable | Full matrix |
 
-### Known limitation: IntlProvider not yet wired
+## ⚠️ Known limitation Phase 2.5 — IntlProvider runtime context
 
-Pilot Client components (DashboardClient, LibraryContent, GameDetailView) call
-`useTranslation()` from `@/hooks/useTranslation` which underlies `react-intl`'s
-`useIntl`. The current global `.storybook/preview.tsx` decorator stack does NOT
-wrap children in an `IntlProvider`, so when the pilot stories render at snapshot
-time the components throw `[React Intl] Could not find required intl object`.
+Pilot stories rendono "intl object missing" error wall durante snapshot test execution
+nonostante `.storybook/preview.tsx` AllProviders decorator wrappa `<ReactIntlProvider>` con
+flattened `it.json` messages. Verifica:
 
-The fix path involves:
-1. Importing `it.json` messages + flatten them with the existing `flattenMessages`
-   helper from `@/locales`.
-2. Adding `IntlProvider` (or `ReactIntlProvider` directly) at the top of the
-   `AllProviders` chain in `.storybook/preview.tsx`.
-3. Investigating why a naive `import { IntlProvider } from '@/components/providers/IntlProvider'`
-   addition does not propagate context to the rendered Story tree (decorator
-   tree order, Storybook adapter `'use client'` boundary, or webpack runtime
-   chunk init order).
+1. `pnpm build-storybook` succeeds (no Webpack error)
+2. Bundle includes react-intl module + useIntl
+3. preview.tsx imports `IntlProvider as ReactIntlProvider` from 'react-intl' (verified)
+4. AllProviders decorator wraps Story (decorator order: withThemeByClassName → AllProviders → Story)
+5. Story renders → DashboardClient/LibraryContent/GameDetailView calls `useTranslation` →
+   `useIntl()` → returns undefined context → throws
 
-Phase 2 v2 ships the scaffolding without committed baseline PNGs. Phase 4
-hardening fixes the decorator integration and captures the real baselines.
+**Suspected root cause**: dual react-intl module instances (preview bundle vs iframe.bundle.js)
+→ Context API only works when both consumer + provider share the same module instance. Webpack
+chunk splitting may create 2 distinct module instances, each with its own React Context, so
+`useIntl()` reads from a context that was never populated by `<IntlProvider>`.
 
-Local commands (work today, but currently render the error wall):
-- `pnpm test:storybook:snapshots` — run snapshot tests
-- `pnpm test:storybook:snapshots:update` — capture new baseline (post-fix)
+**Phase 4 follow-up plan**:
+1. Investigate Webpack config in `.storybook/main.ts` + `@storybook/nextjs` framework adapter
+2. Try `resolve.alias` to force single react-intl module
+3. OR: switch to `IntlProvider` wrapper that uses `useState` for messages (avoid context inheritance)
+4. OR: implement custom `useTranslation` mock alias for Storybook env (similar to vitest config)
 
-When a snapshot fails on a PR (post Phase 4):
-1. Open Storybook locally: `pnpm storybook` → navigate to failing story
-2. Compare side-by-side with mockup HTML reference
-3. If UI is correct → update baseline: `pnpm test:storybook:snapshots:update <story>`
-4. If UI is wrong → fix the component / fixture
+Baseline PNG capture deferred until IntlProvider runtime fix lands.
 
-## Verification
+## Local commands
 
-```bash
-cd apps/web && pnpm build-storybook && pnpm storybook
-# open http://localhost:6006/?path=/story/pages-sp4-dashboard-mockup-pilot--default
-```
-
-Side-by-side col mockup HTML reference per pixel-faithfulness check (Phase 4 visual gate
-formalizes this via Playwright snapshot — Sub-issue 2 DS-17-8-v2).
+- `pnpm storybook` — dev server (port 6006)
+- `pnpm build-storybook` — static build
+- `pnpm test:storybook:snapshots` — run snapshot tests (gate verifications post Phase 4 fix)
+- `pnpm test:storybook:snapshots:update` — capture new baselines (post Phase 4 fix)
+- `pnpm lint:fidelity` — validate all `*.fidelity.{json,yml}` files
 
 ## Refs
 
-- Spec: `docs/superpowers/specs/2026-06-09-ds-17-phase-2-design.md`
-- Plan: `docs/superpowers/plans/2026-06-09-ds-17-phase-2-implementation-plan.md`
+- Spec: `docs/superpowers/specs/2026-06-10-ds-17-phase-2.5-and-3-redesign.md`
+- Plan: `docs/superpowers/plans/2026-06-10-ds-17-phase-2.5-and-3-redesign-plan.md`
 - Fixture pattern: `apps/web/src/__tests__/fixtures/mockup-pilots/README.md`
-- Sibling DS-17-1 annotation: `docs/for-developers/frontend/mockup-annotation-pattern.md`
-- Sibling DS-17-4 acceptance: `docs/for-developers/frontend/mockup-fidelity-acceptance.md`
+- Sibling DS-17-1: `docs/for-developers/frontend/mockup-annotation-pattern.md`
+- Sibling DS-17-4: `docs/for-developers/frontend/mockup-fidelity-acceptance.md`
+- Dashboard obsolete tracking: #2114
+- Phase 2.5 sub-issue: #2113

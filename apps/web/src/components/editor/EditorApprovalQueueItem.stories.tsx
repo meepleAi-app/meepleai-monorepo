@@ -47,7 +47,7 @@ const meta = {
     onReject: fn(),
   },
   decorators: [
-    (Story) => (
+    Story => (
       <div className="w-[600px]">
         <Story />
       </div>
@@ -72,8 +72,9 @@ const baseGame: SharedGame = {
   minAge: 10,
   complexityRating: 2.3,
   averageRating: 7.2,
-  imageUrl: 'https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__imagepage/img/M_3Vg1j2HlNgkv7PL2xl0-9_Sx0=/fit-in/900x600/filters:no_upscale():strip_icc()/pic2419375.jpg',
-  thumbnailUrl: 'https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__thumb/img/IWYLbX7cDaBMnGZBQsS_mbXgG5k=/fit-in/200x150/filters:strip_icc()/pic2419375.jpg',
+  imageUrl:
+    'https://placehold.co/600x400/4f46e5/ffffff?text=cover-62aa53):strip_icc()/pic2419375.jpg',
+  thumbnailUrl: 'https://placehold.co/600x400/4f46e5/ffffff?text=cover-44a2e4)/pic2419375.jpg',
   status: 'PendingApproval',
   createdAt: '2026-01-28T10:00:00Z', // Will be adjusted per story
   modifiedAt: null,
@@ -157,7 +158,8 @@ export const VeryOldSubmission: Story = {
   parameters: {
     docs: {
       description: {
-        story: 'Game submitted over a month ago. Displays high priority indicator for urgent review.',
+        story:
+          'Game submitted over a month ago. Displays high priority indicator for urgent review.',
       },
     },
   },
@@ -213,7 +215,7 @@ export const LongTitle: Story = {
  * Shows how items look stacked in a list view
  */
 export const InList: Story = {
-  render: (args) => (
+  render: args => (
     <div className="flex flex-col gap-3 w-[600px]">
       <EditorApprovalQueueItem
         {...args}
@@ -264,9 +266,9 @@ export const Interactive: Story = {
       ...baseGame,
       createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // Medium priority
     },
-    onReview: (gameId) => console.log('Review clicked:', gameId),
-    onApprove: (gameId) => console.log('Approve clicked:', gameId),
-    onReject: (gameId) => console.log('Reject clicked:', gameId),
+    onReview: gameId => console.log('Review clicked:', gameId),
+    onApprove: gameId => console.log('Approve clicked:', gameId),
+    onReject: gameId => console.log('Reject clicked:', gameId),
   },
   parameters: {
     docs: {

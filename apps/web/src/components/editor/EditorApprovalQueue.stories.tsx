@@ -70,8 +70,9 @@ const mockGames: SharedGame[] = [
     minAge: 10,
     complexityRating: 2.3,
     averageRating: 7.2,
-    imageUrl: 'https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__imagepage/img/M_3Vg1j2HlNgkv7PL2xl0-9_Sx0=/fit-in/900x600/filters:no_upscale():strip_icc()/pic2419375.jpg',
-    thumbnailUrl: 'https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__thumb/img/IWYLbX7cDaBMnGZBQsS_mbXgG5k=/fit-in/200x150/filters:strip_icc()/pic2419375.jpg',
+    imageUrl:
+      'https://placehold.co/600x400/4f46e5/ffffff?text=cover-62aa53):strip_icc()/pic2419375.jpg',
+    thumbnailUrl: 'https://placehold.co/600x400/4f46e5/ffffff?text=cover-44a2e4)/pic2419375.jpg',
     status: 'PendingApproval',
     createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), // 10 days ago (HIGH)
     modifiedAt: null,
@@ -88,8 +89,9 @@ const mockGames: SharedGame[] = [
     minAge: 7,
     complexityRating: 1.9,
     averageRating: 7.4,
-    imageUrl: 'https://cf.geekdo-images.com/Z3upN53-fsVPUDimN9SpOA__imagepage/img/sT0kjr-Klona2rygvD8kURJgqdU=/fit-in/900x600/filters:no_upscale():strip_icc()/pic2337577.jpg',
-    thumbnailUrl: 'https://cf.geekdo-images.com/Z3upN53-fsVPUDimN9SpOA__thumb/img/OEbb8W7T97EQV8WDxrOmyjQw7Tw=/fit-in/200x150/filters:strip_icc()/pic2337577.jpg',
+    imageUrl:
+      'https://placehold.co/600x400/4f46e5/ffffff?text=cover-23d024):strip_icc()/pic2337577.jpg',
+    thumbnailUrl: 'https://placehold.co/600x400/4f46e5/ffffff?text=cover-52eb57)/pic2337577.jpg',
     status: 'PendingApproval',
     createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago (MEDIUM)
     modifiedAt: null,
@@ -106,8 +108,9 @@ const mockGames: SharedGame[] = [
     minAge: 13,
     complexityRating: 2.3,
     averageRating: 7.6,
-    imageUrl: 'https://cf.geekdo-images.com/j6iQpZ4XkemZP07HNCODBA__imagepage/img/RuuCDC1L3eR6plJqE_Pl1rDCiQg=/fit-in/900x600/filters:no_upscale():strip_icc()/pic394356.jpg',
-    thumbnailUrl: 'https://cf.geekdo-images.com/j6iQpZ4XkemZP07HNCODBA__thumb/img/Dm0UO6fkjSiEMB8HMT_Ef8kTsv8=/fit-in/200x150/filters:strip_icc()/pic394356.jpg',
+    imageUrl:
+      'https://placehold.co/600x400/4f46e5/ffffff?text=cover-4b547f):strip_icc()/pic394356.jpg',
+    thumbnailUrl: 'https://placehold.co/600x400/4f46e5/ffffff?text=cover-8aac0b)/pic394356.jpg',
     status: 'PendingApproval',
     createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago (LOW)
     modifiedAt: null,
@@ -124,8 +127,9 @@ const mockGames: SharedGame[] = [
     minAge: 10,
     complexityRating: 2.4,
     averageRating: 8.0,
-    imageUrl: 'https://cf.geekdo-images.com/yLZJCVLlIx4c7eJEWUNJ7w__imagepage/img/uIjeoKgHMcRtzRSR4MoUYl3nXxs=/fit-in/900x600/filters:no_upscale():strip_icc()/pic4458123.jpg',
-    thumbnailUrl: 'https://cf.geekdo-images.com/yLZJCVLlIx4c7eJEWUNJ7w__thumb/img/3bp6Mn4QQ3cyYfHLBm7trA_-9xs=/fit-in/200x150/filters:strip_icc()/pic4458123.jpg',
+    imageUrl:
+      'https://placehold.co/600x400/4f46e5/ffffff?text=cover-765d11):strip_icc()/pic4458123.jpg',
+    thumbnailUrl: 'https://placehold.co/600x400/4f46e5/ffffff?text=cover-53cee7)/pic4458123.jpg',
     status: 'PendingApproval',
     createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), // 4 days ago (MEDIUM)
     modifiedAt: null,
@@ -142,8 +146,9 @@ const mockGames: SharedGame[] = [
     minAge: 12,
     complexityRating: 3.2,
     averageRating: 8.4,
-    imageUrl: 'https://cf.geekdo-images.com/wg9oOLcsKvDesSUdZQ4rxw__imagepage/img/FS1RE8Ue6nk1pNbPI3l-OSapQGc=/fit-in/900x600/filters:no_upscale():strip_icc()/pic3536616.jpg',
-    thumbnailUrl: 'https://cf.geekdo-images.com/wg9oOLcsKvDesSUdZQ4rxw__thumb/img/yMK-rRr9IS3Vv0T0rQwJwGLAETQ=/fit-in/200x150/filters:strip_icc()/pic3536616.jpg',
+    imageUrl:
+      'https://placehold.co/600x400/4f46e5/ffffff?text=cover-630fbf):strip_icc()/pic3536616.jpg',
+    thumbnailUrl: 'https://placehold.co/600x400/4f46e5/ffffff?text=cover-25e365)/pic3536616.jpg',
     status: 'PendingApproval',
     createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago (LOW)
     modifiedAt: null,
@@ -232,7 +237,7 @@ export const ManyItems: Story = {
  */
 export const AllHighPriority: Story = {
   args: {
-    games: mockGames.map((g) => ({
+    games: mockGames.map(g => ({
       ...g,
       createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), // 15 days ago
     })),
@@ -254,9 +259,9 @@ export const AllHighPriority: Story = {
 export const Interactive: Story = {
   args: {
     games: mockGames,
-    onReview: (gameId) => console.log('Review:', gameId),
-    onApprove: (gameId) => console.log('Approve:', gameId),
-    onReject: (gameId) => console.log('Reject:', gameId),
+    onReview: gameId => console.log('Review:', gameId),
+    onApprove: gameId => console.log('Approve:', gameId),
+    onReject: gameId => console.log('Reject:', gameId),
     onBulkComplete: () => console.log('Bulk operation completed'),
   },
   parameters: {

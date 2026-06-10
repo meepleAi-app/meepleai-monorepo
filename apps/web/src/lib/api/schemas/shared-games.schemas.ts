@@ -190,6 +190,12 @@ export const SharedGameSchema = z.object({
   contributorsCount: z.number().int().nonnegative().default(0),
   isTopRated: z.boolean().default(false),
   isNew: z.boolean().default(false),
+  // Issue #2123 — R2-resolved cover URL. Preferred over imageUrl/thumbnailUrl,
+  // which are kept as legacy tombstones (#2123 [Obsolete] on SharedGameDto).
+  // Null when the catalog enrichment pipeline (#1823 M3-M8) has not yet
+  // populated a cover for this game; consumers MUST fall back to a
+  // deterministic placeholder via `lib/games/cover-utils.ts`.
+  coverUrl: z.string().url().nullable().optional(),
 });
 
 export type SharedGame = z.infer<typeof SharedGameSchema>;

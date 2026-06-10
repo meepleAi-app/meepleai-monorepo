@@ -343,6 +343,34 @@ jobs:
             audits/2026-06-09-mockup-annotation-coverage.md
           retention-days: 14
 
+      # DS-17-8-v2 (mockup-to-app fidelity, 2026-06-10):
+      # Non-blocking Storybook snapshot scaffolding per Phase 2 pilot stories.
+      # Phase 2 ships scaffolding only (config + specs + scripts); baseline
+      # capture deferred to Phase 4 hardening — the pilot Client components
+      # call `useTranslation()` (react-intl) and the global `.storybook/preview.tsx`
+      # decorator stack does not yet wire IntlProvider, so the stories render
+      # an "intl object missing" error wall at snapshot time. Phase 4 fixes
+      # the preview decorator + captures real baselines. CI runs the suite
+      # with continue-on-error: true so the artifact + failure log are
+      # uploaded for debugging without blocking the build.
+      # Spec: docs/superpowers/specs/2026-06-09-ds-17-phase-2-design.md
+      # Sub-issue: #2095 · Umbrella: #2063
+      - name: Storybook snapshot scaffolding (DS-17-8-v2 non-blocking)
+        run: pnpm test:storybook:snapshots
+        continue-on-error: true
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
+
+      - name: Upload Storybook snapshot diff artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: storybook-snapshots-${{ github.run_number }}
+          path: |
+            apps/web/test-results/**
+            apps/web/playwright-report/**
+          retention-days: 14
+
   # Frontend Typecheck — fast-fail check (~1 min). Independent job for
   # parallel execution with lint.
   frontend-typecheck:

@@ -108,17 +108,38 @@ keeping stories independent of how `NEXT_PUBLIC_API_BASE` is configured in Story
 
 ## Snapshot gate trajectory
 
-| Phase | Threshold | CI behaviour |
-|---|---|---|
-| ✅ **Phase 2 Wave (now)** | 5% area diff (light theme, 1440x900) | **non-blocking**, artifact uploaded |
-| **Phase 4 (deferred)** | 5% area diff | flip a **blocking** after 14gg stable |
-| **DS-17 close** | 5% area diff + multi-viewport (375/768/1440) | blocking on 3 viewports |
+| Phase | Threshold | CI behaviour | Status |
+|---|---|---|---|
+| ✅ **Phase 2 v2 scaffolding (now)** | 5% area diff (light theme, 1440x900) | **non-blocking**, artifact uploaded, **baseline absent** | Config + specs + CI shipped DS-17-8-v2 (#2095) |
+| **Phase 4 — baseline capture + decorator fix** | 5% area diff | non-blocking → **blocking** after 14gg stable | TBD follow-up |
+| **DS-17 close** | 5% area diff + multi-viewport (375/768/1440) | blocking on 3 viewports | TBD |
 
-Local commands (after DS-17-8-v2 lands):
-- `pnpm test:storybook:snapshots` — run snapshot tests (verify gate green)
-- `pnpm test:storybook:snapshots:update` — capture new baseline (after intentional UI change)
+### Known limitation: IntlProvider not yet wired
 
-When a snapshot fails on a PR:
+Pilot Client components (DashboardClient, LibraryContent, GameDetailView) call
+`useTranslation()` from `@/hooks/useTranslation` which underlies `react-intl`'s
+`useIntl`. The current global `.storybook/preview.tsx` decorator stack does NOT
+wrap children in an `IntlProvider`, so when the pilot stories render at snapshot
+time the components throw `[React Intl] Could not find required intl object`.
+
+The fix path involves:
+1. Importing `it.json` messages + flatten them with the existing `flattenMessages`
+   helper from `@/locales`.
+2. Adding `IntlProvider` (or `ReactIntlProvider` directly) at the top of the
+   `AllProviders` chain in `.storybook/preview.tsx`.
+3. Investigating why a naive `import { IntlProvider } from '@/components/providers/IntlProvider'`
+   addition does not propagate context to the rendered Story tree (decorator
+   tree order, Storybook adapter `'use client'` boundary, or webpack runtime
+   chunk init order).
+
+Phase 2 v2 ships the scaffolding without committed baseline PNGs. Phase 4
+hardening fixes the decorator integration and captures the real baselines.
+
+Local commands (work today, but currently render the error wall):
+- `pnpm test:storybook:snapshots` — run snapshot tests
+- `pnpm test:storybook:snapshots:update` — capture new baseline (post-fix)
+
+When a snapshot fails on a PR (post Phase 4):
 1. Open Storybook locally: `pnpm storybook` → navigate to failing story
 2. Compare side-by-side with mockup HTML reference
 3. If UI is correct → update baseline: `pnpm test:storybook:snapshots:update <story>`

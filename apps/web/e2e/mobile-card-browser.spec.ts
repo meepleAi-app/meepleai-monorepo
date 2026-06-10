@@ -5,12 +5,15 @@
  * Test Coverage:
  * - 2-column card grid on mobile viewport
  * - MeepleCardBrowser overlay (open, carousel, ESC close)
- * - DomainHub page (/hub) with 8 domain tiles
- * - Responsive behavior across mobile breakpoints
  *
  * Note: global bottom-bar navigation is covered by bottom-nav.spec.ts
  * (MobileBottomBar, data-testid "mobile-bottom-bar"). This file focuses on the
- * card browser + DomainHub.
+ * card browser overlay only.
+ *
+ * Removed in #2118: a `DomainHub /hub with 8 tiles` block (this file head + the
+ * `Mobile Card Browser - Responsive Breakpoints` describe) used to assert a
+ * landing surface that `(authenticated)/hub/page.tsx` no longer renders — the
+ * route has been a 307 redirect to `/hub/games` since #2043.
  */
 
 import { test, expect } from '@playwright/test';
@@ -18,56 +21,6 @@ import { test, expect } from '@playwright/test';
 // iPhone 13 / 14 viewport
 test.use({
   viewport: { width: 390, height: 844 },
-});
-
-test.describe('Mobile Card Browser - DomainHub', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/hub');
-    await page.waitForLoadState('networkidle');
-  });
-
-  test('domain hub renders 8 domain tiles', async ({ page }) => {
-    const expectedDomains = [
-      'Games',
-      'Agents',
-      'Chat',
-      'Library',
-      'Leaderboards',
-      'Sessions',
-      'Notifications',
-      'Settings',
-    ];
-
-    for (const domain of expectedDomains) {
-      await expect(page.getByText(domain, { exact: true }).first()).toBeVisible({ timeout: 5000 });
-    }
-  });
-
-  test('domain hub uses 2-column grid layout', async ({ page }) => {
-    // The DomainHub uses grid-cols-2 for its tile layout
-    const grid = page.locator('.grid.grid-cols-2').first();
-    await expect(grid).toBeVisible({ timeout: 5000 });
-  });
-
-  test('Games tile links to /discover', async ({ page }) => {
-    const gamesLink = page.locator('a[href="/discover"]').first();
-    const gamesVisible = await gamesLink.isVisible().catch(() => false);
-    if (!gamesVisible) test.skip(true, 'Games tile not visible in this environment');
-
-    await gamesLink.click();
-    await page.waitForURL(/\/discover/, { timeout: 5000 });
-    expect(page.url()).toContain('/discover');
-  });
-
-  test('Agents tile links to /agents', async ({ page }) => {
-    const agentsLink = page.locator('a[href="/agents"]').first();
-    const agentsVisible = await agentsLink.isVisible().catch(() => false);
-    if (!agentsVisible) test.skip(true, 'Agents tile not visible in this environment');
-
-    await agentsLink.click();
-    await page.waitForURL(/\/agents/, { timeout: 5000 });
-    expect(page.url()).toContain('/agents');
-  });
 });
 
 test.describe('Mobile Card Browser - Card Grid', () => {
@@ -216,24 +169,4 @@ test.describe('Mobile Card Browser - Overlay', () => {
       await expect(deckDrawer.first()).toBeVisible();
     }
   });
-});
-
-test.describe('Mobile Card Browser - Responsive Breakpoints', () => {
-  const mobileViewports = [
-    { name: 'iPhone SE', width: 375, height: 667 },
-    { name: 'iPhone 13', width: 390, height: 844 },
-    { name: 'iPhone 14 Pro Max', width: 430, height: 932 },
-  ];
-
-  for (const viewport of mobileViewports) {
-    test(`domain hub grid renders on ${viewport.name}`, async ({ page }) => {
-      await page.setViewportSize({ width: viewport.width, height: viewport.height });
-      await page.goto('/hub');
-      await page.waitForLoadState('networkidle');
-
-      // Grid should be visible
-      const grid = page.locator('.grid.grid-cols-2').first();
-      await expect(grid).toBeVisible({ timeout: 5000 });
-    });
-  }
 });

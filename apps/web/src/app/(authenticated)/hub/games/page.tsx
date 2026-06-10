@@ -1,8 +1,11 @@
 /**
- * /hub/games — public catalog page (Stage 3 cluster #1166, mockup #1151).
+ * /hub/games — authenticated community catalog (Stage 3 cluster #1166, mockup #1151).
  *
- * Public route (no auth gate). Wraps `HubCatalogView` with games-specific
- * props + renders `StickyAccessCta` for visitor → sign-in flow.
+ * Moved from `(public)` to `(authenticated)` to align the chrome with the
+ * sibling `/hub/agents` and `/hub/toolkits` routes (both `authOnly`). The
+ * `StickyAccessCta` (visitor → sign-in) was removed because the auth gate is
+ * now upstream; visitor-facing showcase, if needed, must live under a separate
+ * route family.
  */
 
 'use client';
@@ -12,7 +15,6 @@ import { Suspense, useCallback, useMemo, type ReactElement } from 'react';
 import {
   HubCatalogView,
   HubGameCard,
-  StickyAccessCta,
   type HubFilter,
   type HubKpi,
 } from '@/components/features/hub';
@@ -76,12 +78,6 @@ function HubGamesContent(): ReactElement {
     resultsCountTemplate: t('pages.hub.common.resultsCountTemplate'),
   };
 
-  const stickyCtaLabels = {
-    title: t('pages.hub.games.stickyCta.title'),
-    description: t('pages.hub.games.stickyCta.description'),
-    buttonLabel: t('pages.hub.games.stickyCta.buttonLabel'),
-  };
-
   return (
     <HubCatalogView<SharedGame>
       entity="game"
@@ -98,7 +94,6 @@ function HubGamesContent(): ReactElement {
       onFilterChanged={(from, to) =>
         trackEvent('hub_filter_changed', { entity: 'games', from, to })
       }
-      bottomSlot={<StickyAccessCta redirectFrom="/hub/games" labels={stickyCtaLabels} />}
     />
   );
 }

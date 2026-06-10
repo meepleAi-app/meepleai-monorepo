@@ -41,19 +41,48 @@ import type { NextRequest } from 'next/server';
 /**
  * Protected routes that require authentication
  * Unauthenticated users will be redirected to /login
+ *
+ * Kept alphabetised so the diff is easy to read and additions are mechanical.
+ * Sources of truth for what belongs here:
+ *   - any top-level path under `src/app/(authenticated)/` whose Server Component
+ *     should not render for an anonymous visitor
+ *   - any path under `src/app/(chat)/`
+ *   - `/admin` (its own (dashboard) subtree)
+ *
+ * `#2118` sweep: added the remaining `(authenticated)` top-levels that were
+ * silently missing from this list. Before the sweep, anonymous users hitting
+ * `/hub/games`, `/dashboard`, `/profile`, etc. saw the authenticated chrome
+ * (`UserShell` / `AppTopBar`) with an empty session and relied on each page
+ * hook to surface a 401 — which produced a flash of broken UI.
  */
 const PROTECTED_ROUTES = [
-  '/library',
-  '/chat',
-  '/upload',
   '/admin',
-  '/editor',
-  '/settings',
-  '/games',
   '/agents',
-  '/sessions',
-  '/play-records',
+  '/chat',
+  '/dashboard',
+  '/discover',
+  '/editor',
   '/game-nights',
+  '/gamebook',
+  '/games',
+  '/hub',
+  '/knowledge-base',
+  '/library',
+  '/n8n',
+  '/notifications',
+  '/onboarding',
+  '/pipeline-builder',
+  '/play-records',
+  '/players',
+  '/private-games',
+  '/profile',
+  '/sessions',
+  '/settings',
+  '/setup',
+  '/toolkit',
+  '/toolkits',
+  '/upload',
+  '/versions',
 ];
 
 /**

@@ -428,6 +428,237 @@ public class WikimediaCommonsClientTests
     }
 
     // ──────────────────────────────────────────────────────────────────────
+    // FetchImageBytesAsync — Issue #1823 Phase B M8 (image bytes download)
+    // ──────────────────────────────────────────────────────────────────────
+
+    private static Mock<HttpMessageHandler> HandlerReturningBytes(HttpStatusCode statusCode, byte[] body)
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(() =>
+            {
+                var content = new ByteArrayContent(body);
+                content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
+                return new HttpResponseMessage(statusCode) { Content = content };
+            });
+        return handler;
+    }
+
+    private static Mock<HttpMessageHandler> HandlerCapturingBytes(
+        HttpStatusCode statusCode,
+        byte[] body,
+        List<HttpRequestMessage> captured)
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .Callback<HttpRequestMessage, CancellationToken>((req, _) => captured.Add(req))
+            .ReturnsAsync(() =>
+            {
+                var content = new ByteArrayContent(body);
+                content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
+                return new HttpResponseMessage(statusCode) { Content = content };
+            });
+        return handler;
+    }
+
+    [Fact]
+    public async Task FetchImageBytesAsync_ValidFilename_ReturnsImageBytes()
+    {
+        var expected = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0xAA, 0xBB, 0xCC };
+        var handler = HandlerReturningBytes(HttpStatusCode.OK, expected);
+        var client = CreateClient(handler.Object);
+
+        var result = await client.FetchImageBytesAsync("Cover.jpg", CancellationToken.None);
+
+        result.Should().NotBeNull();
+        result.Should().BeEquivalentTo(expected,
+            "Special:FilePath returns raw image bytes after following the 302 redirect to upload.wikimedia.org");
+    }
+
+    [Fact]
+    public async Task FetchImageBytesAsync_UrlEncodedFilename_DecodesBeforeApiCall()
+    {
+        var captured = new List<HttpRequestMessage>();
+        var handler = HandlerCapturingBytes(HttpStatusCode.OK,
+            new byte[] { 0xAA, 0xBB },
+            captured);
+        var client = CreateClient(handler.Object);
+
+        await client.FetchImageBytesAsync("Brass%20Birmingham%20cover.jpg", CancellationToken.None);
+
+        captured.Should().HaveCount(1);
+        var requestPath = captured[0].RequestUri!.AbsolutePath;
+        requestPath.Should().StartWith("/wiki/Special:FilePath/",
+            "the M8 contract uses the Special:FilePath endpoint for raw image download");
+
+        var fileSegment = requestPath["/wiki/Special:FilePath/".Length..];
+        var decodedSegment = Uri.UnescapeDataString(fileSegment);
+        decodedSegment.Should().Be("Brass Birmingham cover.jpg",
+            "the same DEC-3b URL-decoding pitfall as FetchLicenseAsync — caller passes the raw wdt:P18 IRI form, the client decodes once before re-encoding");
+    }
+
+    [Fact]
+    public async Task FetchImageBytesAsync_PlainFilename_PassesThroughUnchanged()
+    {
+        var captured = new List<HttpRequestMessage>();
+        var handler = HandlerCapturingBytes(HttpStatusCode.OK,
+            new byte[] { 0xAA }, captured);
+        var client = CreateClient(handler.Object);
+
+        await client.FetchImageBytesAsync("Cover.jpg", CancellationToken.None);
+
+        captured.Should().HaveCount(1);
+        captured[0].RequestUri!.AbsolutePath.Should().Be("/wiki/Special:FilePath/Cover.jpg",
+            "plain filenames without escape sequences pass through unchanged after the round-trip decode/encode");
+    }
+
+    [Fact]
+    public async Task FetchImageBytesAsync_AcquiresRateLimiterBeforeHttpCall()
+    {
+        var sequence = new List<string>();
+
+        var rateLimiter = new Mock<IWikimediaRateLimiter>();
+        rateLimiter.Setup(rl => rl.AcquireAsync(It.IsAny<CancellationToken>()))
+            .Callback(() => sequence.Add("acquire"))
+            .Returns(ValueTask.CompletedTask);
+
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .Callback(() => sequence.Add("http"))
+            .ReturnsAsync(() =>
+            {
+                var content = new ByteArrayContent(new byte[] { 0xAA });
+                content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = content };
+            });
+
+        var client = CreateClient(handler.Object, rateLimiter.Object);
+
+        await client.FetchImageBytesAsync("Cover.jpg", CancellationToken.None);
+
+        sequence.Should().Equal(new[] { "acquire", "http" },
+            because: "DEC-3e mandates the 5 RPS token bucket is consumed BEFORE the outbound HTTP request — shared cap across Wikidata SPARQL + Commons API consumers");
+        rateLimiter.Verify(rl => rl.AcquireAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task FetchImageBytesAsync_404_ReturnsNull()
+    {
+        var handler = HandlerReturningBytes(HttpStatusCode.NotFound, Array.Empty<byte>());
+        var client = CreateClient(handler.Object);
+
+        var result = await client.FetchImageBytesAsync("Missing.jpg", CancellationToken.None);
+
+        result.Should().BeNull("404 maps to skip-this-game per the M8 orchestrator policy — file was deleted/renamed");
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.InternalServerError)]
+    [InlineData(HttpStatusCode.BadGateway)]
+    [InlineData(HttpStatusCode.ServiceUnavailable)]
+    [InlineData(HttpStatusCode.GatewayTimeout)]
+    public async Task FetchImageBytesAsync_Http5xx_LogsWarningAndReturnsNull(HttpStatusCode status)
+    {
+        var logger = new Mock<ILogger<WikimediaCommonsClient>>();
+        var handler = HandlerReturningBytes(status, Array.Empty<byte>());
+
+        var http = new HttpClient(handler.Object)
+        {
+            BaseAddress = new Uri(CommonsBaseUrl)
+        };
+        var client = new WikimediaCommonsClient(
+            http,
+            new Mock<IWikimediaRateLimiter>().Object,
+            logger.Object);
+
+        var result = await client.FetchImageBytesAsync("Cover.jpg", CancellationToken.None);
+
+        result.Should().BeNull("5xx is a server-side outage — caller decides retry, client never throws upstream");
+        logger.Invocations
+            .Should().Contain(i => i.Method.Name == nameof(ILogger.Log)
+                && (LogLevel)i.Arguments[0] == LogLevel.Warning,
+                $"5xx ({(int)status}) must surface a warning log line for observability");
+    }
+
+    [Fact]
+    public async Task FetchImageBytesAsync_Cancellation_RethrowsOperationCanceledException()
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ThrowsAsync(new OperationCanceledException("caller cancelled"));
+
+        var client = CreateClient(handler.Object);
+
+        await client.Invoking(c => c.FetchImageBytesAsync("Cover.jpg", CancellationToken.None))
+            .Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task FetchImageBytesAsync_NullOrEmptyFilename_ReturnsNullWithoutHttpCall()
+    {
+        var captured = new List<HttpRequestMessage>();
+        var handler = HandlerCapturingBytes(HttpStatusCode.OK, new byte[] { 0xAA }, captured);
+        var client = CreateClient(handler.Object);
+
+        (await client.FetchImageBytesAsync(string.Empty, CancellationToken.None)).Should().BeNull();
+        (await client.FetchImageBytesAsync("   ", CancellationToken.None)).Should().BeNull();
+
+        captured.Should().BeEmpty("defensive guard short-circuits before consuming a rate-limiter token or issuing HTTP");
+    }
+
+    [Fact]
+    public async Task FetchImageBytesAsync_EmptyResponseBody_ReturnsNull()
+    {
+        var handler = HandlerReturningBytes(HttpStatusCode.OK, Array.Empty<byte>());
+        var client = CreateClient(handler.Object);
+
+        var result = await client.FetchImageBytesAsync("Cover.jpg", CancellationToken.None);
+
+        result.Should().BeNull("an empty body is not a usable image — skip enrichment for this game");
+    }
+
+    [Fact]
+    public async Task FetchImageBytesAsync_HttpRequestException_LogsWarningReturnsNull()
+    {
+        var logger = new Mock<ILogger<WikimediaCommonsClient>>();
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ThrowsAsync(new HttpRequestException("network error"));
+
+        var http = new HttpClient(handler.Object)
+        {
+            BaseAddress = new Uri(CommonsBaseUrl)
+        };
+        var client = new WikimediaCommonsClient(
+            http,
+            new Mock<IWikimediaRateLimiter>().Object,
+            logger.Object);
+
+        var result = await client.FetchImageBytesAsync("Cover.jpg", CancellationToken.None);
+
+        result.Should().BeNull();
+        logger.Invocations
+            .Should().Contain(i => i.Method.Name == nameof(ILogger.Log)
+                && (LogLevel)i.Arguments[0] == LogLevel.Warning,
+                "network errors surface a warning log line for observability");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
     // Helpers
     // ──────────────────────────────────────────────────────────────────────
 

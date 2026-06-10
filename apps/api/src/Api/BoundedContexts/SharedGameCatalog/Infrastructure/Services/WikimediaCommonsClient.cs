@@ -119,6 +119,67 @@ internal sealed class WikimediaCommonsClient : IWikimediaCommonsClient
         }
     }
 
+    /// <inheritdoc />
+    public async Task<byte[]?> FetchImageBytesAsync(string filename, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(filename))
+        {
+            return null;
+        }
+
+        // Same DEC-3b pitfall as FetchLicenseAsync: the filename arrives
+        // URL-encoded from the wdt:P18 Special:FilePath IRI. Decode internally
+        // before re-encoding for the request URL so callers do not have to
+        // worry about double-encoding.
+        var decoded = Uri.UnescapeDataString(filename);
+        var path = $"wiki/Special:FilePath/{Uri.EscapeDataString(decoded)}";
+
+        // DEC-3e: acquire BEFORE the HTTP call so the 5 RPS token bucket is
+        // consumed even when the upstream call ultimately fails.
+        await _rateLimiter.AcquireAsync(ct).ConfigureAwait(false);
+
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, path);
+            // Accept any image content; Commons serves PNG/JPEG/GIF/WebP/SVG/TIFF.
+            req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("image/*"));
+
+            using var resp = await _http.SendAsync(req, ct).ConfigureAwait(false);
+
+            if (!resp.IsSuccessStatusCode)
+            {
+                _logger.LogWarning(
+                    "Commons FilePath HTTP {Status} for file '{Filename}' (decoded='{Decoded}'). Caller decides retry.",
+                    (int)resp.StatusCode,
+                    filename,
+                    decoded);
+                return null;
+            }
+
+            var bytes = await resp.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
+            if (bytes.Length == 0)
+            {
+                _logger.LogWarning(
+                    "Commons FilePath returned empty body for file '{Filename}' (decoded='{Decoded}').",
+                    filename,
+                    decoded);
+                return null;
+            }
+
+            return bytes;
+        }
+        // OperationCanceledException intentionally NOT caught: propagates to
+        // honour caller cancellation (see XML doc on the interface).
+        catch (HttpRequestException ex)
+        {
+            _logger.LogWarning(ex,
+                "Commons FilePath network failure for file '{Filename}' (decoded='{Decoded}').",
+                filename,
+                decoded);
+            return null;
+        }
+    }
+
     /// <summary>
     /// Parses the imageinfo response body, returning <see cref="CommonsLicenseResult.NotAvailable"/>
     /// for any missing-data case (page id <c>-1</c>, no <c>imageinfo</c> array,

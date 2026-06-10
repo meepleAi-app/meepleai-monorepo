@@ -80,6 +80,23 @@ public class SharedGameEntity
     public string? WikidataCoverAttribution { get; set; }
 
     /// <summary>
+    /// Issue #1823 Phase B M8 — Wikidata QID (e.g. <c>"Q98056728"</c>) that identifies this
+    /// game on Wikidata. Set by the M9 scheduler (or admin trigger) BEFORE the M8
+    /// enrichment orchestrator runs; the orchestrator reads this column to resolve
+    /// the SPARQL <c>wdt:P18</c> claim. Pattern <c>^Q\d+$</c>; max 32 chars covers
+    /// Q-numbers well past the current Wikidata range (~Q120M as of 2026).
+    /// </summary>
+    public string? WikidataQid { get; set; }
+
+    /// <summary>
+    /// Issue #1823 Phase B M8 (ADR DEC-3i) — timestamp of the last successful
+    /// QID + license re-verification. Used by the M15 quarterly re-verification
+    /// cron to skip recently-verified games and by the M8 orchestrator to detect
+    /// stale entries (&gt;90gg) that need refresh.
+    /// </summary>
+    public DateTime? WikidataQidLastVerifiedAt { get; set; }
+
+    /// <summary>
     /// Gap G2 (issue: BGG cover re-upload).
     /// R2 key for cover image downloaded from BGG and re-uploaded to our storage.
     /// Resolved by CoverUrlResolver L2.5 layer (between L4 PDF and L2 Wikidata).

@@ -145,7 +145,13 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             entity.AgentDefinitionId,
             (GameDataStatus)entity.GameDataStatus,
             entity.HasUploadedPdf,
-            pdfCoverR2Key: entity.PdfCoverR2Key);
+            pdfCoverR2Key: entity.PdfCoverR2Key,
+            wikidataQid: entity.WikidataQid,
+            wikidataCoverR2Key: entity.WikidataCoverR2Key,
+            wikidataCoverLicense: entity.WikidataCoverLicense,
+            wikidataCoverAttribution: entity.WikidataCoverAttribution,
+            wikidataCoverSourceUrl: entity.WikidataCoverSourceUrl,
+            wikidataQidLastVerifiedAt: entity.WikidataQidLastVerifiedAt);
 
         // Issue #2035: Hydrate designers from the M:N join — only when the caller
         // eager-loaded the navigation (GetByIdAsync), otherwise the EF Core
@@ -185,6 +191,13 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             RulesExternalUrl = game.Rules?.ExternalUrl,
             HasUploadedPdf = game.HasUploadedPdf,
             PdfCoverR2Key = game.PdfCoverR2Key,
+            // Issue #1823 Phase B M8 — propagate Wikidata enrichment state.
+            WikidataQid = game.WikidataQid,
+            WikidataCoverR2Key = game.WikidataCoverR2Key,
+            WikidataCoverLicense = game.WikidataCoverLicense,
+            WikidataCoverAttribution = game.WikidataCoverAttribution,
+            WikidataCoverSourceUrl = game.WikidataCoverSourceUrl,
+            WikidataQidLastVerifiedAt = game.WikidataQidLastVerifiedAt,
             // SearchVector managed by PostgreSQL trigger
             CreatedBy = game.CreatedBy,
             ModifiedBy = game.ModifiedBy,

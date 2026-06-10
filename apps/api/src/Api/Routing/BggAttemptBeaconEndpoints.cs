@@ -1,3 +1,4 @@
+using Api.Helpers;
 using Api.Observability;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -50,17 +51,33 @@ internal static class BggAttemptBeaconEndpoints
     /// Process logic split out for unit-test access — increments the Prometheus
     /// counter with the truncated <c>path</c> tag and logs a structured warning.
     /// </summary>
+    /// <remarks>
+    /// The beacon body is anonymous user input. Both <c>Path</c> and <c>Src</c>
+    /// MUST be passed through <see cref="LogSanitizer.Sanitize(string?, int)"/>
+    /// before reaching the log sink to neutralize CRLF injection / log forging
+    /// (CodeQL <c>cs/log-forging</c>, ADR-058). The Prometheus tag is also
+    /// truncated to bound cardinality.
+    /// </remarks>
     internal static void ProcessBeacon(BggAttemptBeaconRequest? body, ILogger logger)
     {
-        var path = string.IsNullOrWhiteSpace(body?.Path) ? "unknown" : Truncate(body.Path!, 256);
+        var rawPath = body?.Path;
+        var path = string.IsNullOrWhiteSpace(rawPath) ? "unknown" : Truncate(rawPath!, 256);
         MeepleAiMetrics.BggUrlAttemptedRender.Add(
             1,
             new KeyValuePair<string, object?>("path", path));
+
+        // Sanitize before logging: user input (Path, Src) must NOT reach the
+        // log sink without LogSanitizer.Sanitize, which strips CR/LF and
+        // bounds length. The counter `path` tag is already safe — it is
+        // either the literal "unknown" or a Truncated string used as a
+        // Prometheus label (CodeQL sanitizers-extensions barrier registered).
+        var safePath = LogSanitizer.Sanitize(path, 256);
+        var safeSrc = LogSanitizer.Sanitize(body?.Src ?? "(missing)", 256);
         logger.LogWarning(
             "BGG ToS violation attempt observed at path '{Path}' (src='{Src}'). " +
             "FE custom Image loader rewrote to placeholder. Issue #2123.",
-            path,
-            Truncate(body?.Src ?? "(missing)", 256));
+            safePath,
+            safeSrc);
     }
 
     private static string Truncate(string value, int max) =>

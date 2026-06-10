@@ -56,6 +56,21 @@ internal sealed class WikidataCoverEnrichmentAttemptRepository
         return entity is null ? null : Map(entity);
     }
 
+    /// <summary>
+    /// Returns shared-game IDs that are ready to be enriched.
+    /// </summary>
+    /// <remarks>
+    /// Implementation note: uses a correlated EXISTS-style sub-query over each
+    /// game's latest <see cref="WikidataCoverEnrichmentAttemptEntity"/> rather
+    /// than the previous double-LEFT-JOIN-with-null-forgiving pattern, because
+    /// the null-forgiving operator in a join key produced a code-review HIGH
+    /// finding (score 82) about EF Core potentially falling back to client
+    /// evaluation under a future SDK upgrade. The MAX(AttemptedAt) sub-query
+    /// is a single SARGable scan against the
+    /// <c>ix_wikidata_cover_attempts_game_latest</c> composite index. Verified
+    /// translates cleanly on PostgreSQL — see follow-up Testcontainers
+    /// integration test in the M11/M13 admin-UI PR.
+    /// </remarks>
     public async Task<IReadOnlyList<Guid>> GetGameIdsDueForEnrichmentAsync(
         int limit,
         DateTime nowUtc,
@@ -74,27 +89,25 @@ internal sealed class WikidataCoverEnrichmentAttemptRepository
             limit = 500;
         }
 
-        // Sub-query: each game's latest attempt's AttemptedAt (NULL when never attempted).
-        var latestAttemptByGame =
-            from a in DbContext.WikidataCoverEnrichmentAttempts.AsNoTracking()
-            group a by a.SharedGameId into g
-            select new { SharedGameId = g.Key, LastAt = g.Max(a => a.AttemptedAt) };
+        const int FailedOutcome = (int)WikidataCoverEnrichmentOutcome.Failed;
 
-        // Join to fetch each latest-attempt row, then filter eligible games.
         var query =
             from sg in DbContext.SharedGames.AsNoTracking()
             where sg.WikidataQid != null
-            join lae in latestAttemptByGame on sg.Id equals lae.SharedGameId into latestGroup
-            from lae in latestGroup.DefaultIfEmpty()
-            join latest in DbContext.WikidataCoverEnrichmentAttempts.AsNoTracking()
-                on new { lae!.SharedGameId, AttemptedAt = lae.LastAt } equals new { latest.SharedGameId, latest.AttemptedAt }
-                into latestRowGroup
-            from latest in latestRowGroup.DefaultIfEmpty()
-            where lae == null  // never attempted
-                || (latest != null
-                    && latest.Outcome == (int)WikidataCoverEnrichmentOutcome.Failed
-                    && latest.NextRetryAt != null
-                    && latest.NextRetryAt <= nowUtc)
+            let latestAttemptedAt = DbContext.WikidataCoverEnrichmentAttempts
+                .AsNoTracking()
+                .Where(a => a.SharedGameId == sg.Id)
+                .Max(a => (DateTime?)a.AttemptedAt)
+            let dueLatest = DbContext.WikidataCoverEnrichmentAttempts
+                .AsNoTracking()
+                .Where(a => a.SharedGameId == sg.Id
+                    && a.AttemptedAt == latestAttemptedAt
+                    && a.Outcome == FailedOutcome
+                    && a.NextRetryAt != null
+                    && a.NextRetryAt <= nowUtc)
+                .Any()
+            where latestAttemptedAt == null   // never attempted
+                || dueLatest                  // latest is Failed and the backoff has elapsed
             orderby sg.CreatedAt ascending
             select sg.Id;
 

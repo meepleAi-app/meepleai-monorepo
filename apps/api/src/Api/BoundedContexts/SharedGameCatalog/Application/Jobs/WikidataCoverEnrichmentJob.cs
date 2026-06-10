@@ -107,8 +107,10 @@ public sealed class WikidataCoverEnrichmentJob : IJob
             dueGameIds.Count);
 
         var processed = 0;
-        foreach (var gameId in dueGameIds)
+        for (var i = 0; i < dueGameIds.Count; i++)
         {
+            var gameId = dueGameIds[i];
+
             if (ct.IsCancellationRequested)
             {
                 _logger.LogInformation("WikidataCoverEnrichmentJob: cancellation requested after {Processed} games.", processed);
@@ -130,12 +132,15 @@ public sealed class WikidataCoverEnrichmentJob : IJob
                     gameId);
             }
 
-            // Throttle. Skipped between game N and game N+1, NOT after the last
-            // game (the job's 1-minute trigger interval is already a natural
-            // break). Also skip the delay when the CT is already signalled so
-            // shutdown drains cleanly — the loop-top check on the next iteration
-            // catches the cancellation and breaks gracefully without throwing.
-            if (processed < dueGameIds.Count
+            // Throttle. Sleeps between game N and game N+1, NEVER after the
+            // last game (the job's 1-minute trigger interval is already a
+            // natural break). The guard uses the loop index, NOT the
+            // `processed` counter — otherwise an all-exception batch would
+            // skip the rate-limiting delay altogether and slam the next batch
+            // back-to-back. Also skipped when the CT is signalled so shutdown
+            // drains cleanly via the loop-top check on the next iteration.
+            var isLastGame = i == dueGameIds.Count - 1;
+            if (!isLastGame
                 && DelayBetweenItemsMs > 0
                 && !ct.IsCancellationRequested)
             {

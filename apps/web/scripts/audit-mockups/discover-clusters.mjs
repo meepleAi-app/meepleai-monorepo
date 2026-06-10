@@ -47,6 +47,7 @@ const DEV_FIXTURE_NAMES = new Set([
   'mobile-app.jsx',
   'tokens.css',
   'sp4-play-records-data.js',
+  'scaffold.css',
 ]);
 
 const AUTH_PREFIXES = [
@@ -100,9 +101,11 @@ export function classifyFile(filename, onWarn) {
   if (DEV_FIXTURE_STANDALONE.has(filename)) return 'dev-fixtures';
   if (NANOLITH_DEV_FIXTURE_PREFIXES.some((p) => filename.startsWith(p))) return 'dev-fixtures';
 
+  // Any sp4-* filename: sessions keywords → sp4-sessions; everything else → sp4-core
+  // (sp4 = scenario plan 4 = main app surface; default to core when not a session view)
   if (filename.startsWith('sp4-')) {
     if (SP4_SESSIONS_KEYWORDS.some((k) => filename.includes(k))) return 'sp4-sessions';
-    if (SP4_CORE_KEYWORDS.some((k) => filename.includes(k))) return 'sp4-core';
+    return 'sp4-core';
   }
 
   // Explicit routing for unrecognized families (Code-reviewer Finding 3)

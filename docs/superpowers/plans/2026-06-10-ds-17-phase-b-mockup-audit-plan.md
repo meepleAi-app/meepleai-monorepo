@@ -19,6 +19,7 @@
 | Path | Action | Responsibility |
 |------|--------|---------------|
 | `apps/web/scripts/audit-mockups/discover-clusters.mjs` | CREATE | Walks `admin-mockups/design_files/`, classifies into 6 clusters via filename prefix + MOCKUPS_INDEX cross-ref, emits `manifest.json` |
+| `apps/web/scripts/mockup-annotations/validate-fidelity.mjs` | MODIFY (Task 12.0) | Patch cross-reference check to accept `obsolete_tracking_issue: 'PENDING'` sentinel — required because Phase B audits emit fidelity files BEFORE designer sign-off creates tracking issues (Code-reviewer Finding 1) |
 | `apps/web/scripts/audit-mockups/audit-output-schema.mjs` | CREATE | zod `MockupClassificationSchema` + `ClusterOutputSchema`, exported for orchestrator + generate-deliverables |
 | `apps/web/scripts/audit-mockups/generate-deliverables.mjs` | CREATE | Reads aggregated audit JSON, writes 224 fidelity.json + audit summary md + designer queue + tracking-issues drafts |
 | `apps/web/scripts/audit-mockups/create-tracking-issues.mjs` | CREATE | Post-signoff: reads drafts, calls `gh issue create`, updates fidelity.json `obsolete_tracking_issue` |
@@ -326,10 +327,16 @@ describe('classifyFile', () => {
     ['sp4-game-night.html', 'sp4-core'],
     ['sp4-library-desktop.html', 'sp4-core'],
     ['sp4-game-detail.html', 'sp4-core'],
-    ['sp4-session-summary.html', 'sp4-core'],
+    ['sp4-sessions-index.html', 'sp4-core'],
+    // Real game-specific summary files (Code-reviewer Finding 2)
+    ['sp4-session-catan-summary.html', 'sp4-core'],
+    ['sp4-session-codenames-summary.html', 'sp4-core'],
 
-    ['sp4-session-live.html', 'sp4-sessions'],
+    // Real game-specific live files
+    ['sp4-session-catan-live.html', 'sp4-sessions'],
+    ['sp4-session-wingspan-live.jsx', 'sp4-sessions'],
     ['sp4-toolkit-detail.html', 'sp4-sessions'],
+    ['sp4-toolkit-history.html', 'sp4-sessions'],
     ['sp4-scores-live.html', 'sp4-sessions'],
     ['sp4-recap.html', 'sp4-sessions'],
     ['sp4-gamebook-upload.html', 'sp4-sessions'],
@@ -341,6 +348,16 @@ describe('classifyFile', () => {
     ['rag-observability.html', 'sp6-7-nano'],
     ['observability-dashboard.html', 'sp6-7-nano'],
     ['generator-config.html', 'sp6-7-nano'],
+
+    // Code-reviewer Finding 3: explicit prefix coverage for librogame, nanolith, chat, sp5, pr-form
+    ['librogame-game-night-storyboard.html', 'sp4-sessions'],
+    ['librogame-runthrough-1.html', 'sp4-sessions'],
+    ['nanolith-nav-bottom-mobile.html', 'dev-fixtures'],
+    ['nanolith-nav-topbar.html', 'dev-fixtures'],
+    ['chat-fullscreen.html', 'sp4-sessions'],
+    ['sp5-profile-settings.html', 'auth'],
+    ['pr-form-core.jsx', 'sp4-core'],
+    ['index.html', 'dev-fixtures'],
   ];
 
   for (const [filename, expectedCluster] of cases) {
@@ -440,11 +457,21 @@ const DEV_FIXTURE_NAMES = new Set([
   'sp4-play-records-data.js',
 ]);
 
-const AUTH_PREFIXES = ['auth-', 'onboarding', 'notifications', 'public', 'settings', 'verify-', 'reset-'];
+const AUTH_PREFIXES = ['auth-', 'onboarding', 'notifications', 'public', 'settings', 'verify-', 'reset-', 'sp5-'];
 const SP3_PREFIXES = ['sp3-', 'hub-', 'library-public', 'join-'];
 const SP4_SESSIONS_KEYWORDS = ['live', 'toolkit', 'scores', 'recap', 'gamebook'];
 const SP4_CORE_KEYWORDS = ['dashboard', 'player', 'session', 'game-night', 'library', 'game-detail'];
 const SP6_7_NANO_PREFIXES = ['sp6-', 'sp7-', 'admin-', 'nano-', 'rag-', 'observability', 'generator'];
+
+// Code-reviewer Finding 3: explicit prefix coverage for unrecognized file families.
+// librogame-*: game-specific session storyboards/runthroughs → sp4-sessions
+// chat-*: chat UI mockups → sp4-sessions
+// nanolith-nav-*: navigation infrastructure → dev-fixtures
+// pr-form-*: PR/form-core mockups → sp4-core
+const LIBROGAME_PREFIXES = ['librogame-', 'chat-'];
+const NANOLITH_DEV_FIXTURE_PREFIXES = ['nanolith-'];
+const SP4_CORE_FALLBACK_PREFIXES = ['pr-form-'];
+const DEV_FIXTURE_STANDALONE = new Set(['index.html']);
 
 /**
  * @param {string} filename
@@ -453,11 +480,17 @@ const SP6_7_NANO_PREFIXES = ['sp6-', 'sp7-', 'admin-', 'nano-', 'rag-', 'observa
  */
 export function classifyFile(filename, onWarn) {
   if (DEV_FIXTURE_NAMES.has(filename)) return 'dev-fixtures';
+  if (DEV_FIXTURE_STANDALONE.has(filename)) return 'dev-fixtures';
+  if (NANOLITH_DEV_FIXTURE_PREFIXES.some((p) => filename.startsWith(p))) return 'dev-fixtures';
 
   if (filename.startsWith('sp4-')) {
     if (SP4_SESSIONS_KEYWORDS.some((k) => filename.includes(k))) return 'sp4-sessions';
     if (SP4_CORE_KEYWORDS.some((k) => filename.includes(k))) return 'sp4-core';
   }
+
+  // Explicit routing for unrecognized families (Code-reviewer Finding 3)
+  if (LIBROGAME_PREFIXES.some((p) => filename.startsWith(p))) return 'sp4-sessions';
+  if (SP4_CORE_FALLBACK_PREFIXES.some((p) => filename.startsWith(p))) return 'sp4-core';
 
   if (AUTH_PREFIXES.some((p) => filename.startsWith(p))) return 'auth';
   if (SP3_PREFIXES.some((p) => filename.startsWith(p))) return 'sp3';
@@ -609,13 +642,30 @@ cd apps/web && pnpm audit-mockups:discover --out ../../audits/2026-06-10-mockup-
 
 Expected output: `Manifest written: ../../audits/2026-06-10-mockup-design-intent-manifest.json (224 files in 6 clusters)` with cluster size summary.
 
-- [ ] **Step 3: Verify manifest counts**
+- [ ] **Step 3: Verify manifest counts + record actual sizes (Code-reviewer Finding 5)**
 
 ```bash
 jq '.totalFiles, [.clusters[] | "\(.clusterId): \(.files | length)"]' audits/2026-06-10-mockup-design-intent-manifest.json
 ```
 
 Expected: total = 224 (or close — exact count depends on `*.css` + `*.js` files), 6 clusters with non-zero size for each.
+
+Capture actual cluster sizes for Tasks 5-10 prompt substitution. The plan estimates `~14/25/30/70/40/45` files per cluster but real splits may differ significantly (sp4-sessions can exceed 60 due to game-specific JSX variants). Record:
+
+```bash
+jq -r '.clusters[] | "\(.clusterId)=\(.files | length)"' audits/2026-06-10-mockup-design-intent-manifest.json > /tmp/cluster-sizes.txt
+cat /tmp/cluster-sizes.txt
+```
+
+Tasks 5-10 prompts MUST substitute the actual cluster size from this file (replacing the plan's `~N` estimates). Example: if `sp4-sessions=68`, Task 9 prompt should say "auditing 68 files" not "~40 files".
+
+If `sp6-7-nano` count is unexpectedly high (>50) due to many `warnings`, inspect the warnings array in the manifest before proceeding — possibly classification rules need adjustment:
+
+```bash
+jq '.warnings' audits/2026-06-10-mockup-design-intent-manifest.json
+```
+
+If warnings show recognizable file families not yet routed → STOP, update `discover-clusters.mjs` classification + re-run + re-commit. Otherwise continue.
 
 - [ ] **Step 4: Commit manifest**
 
@@ -653,7 +703,7 @@ Invoke the Agent tool with subagent_type=general-purpose:
 - **description**: "Audit dev-fixtures cluster"
 - **prompt**:
   ```
-  You are auditing 14 mockup files in cluster `dev-fixtures` for the MeepleAI DS-17 Phase B audit.
+  You are auditing {ACTUAL_SIZE} mockup files in cluster `dev-fixtures` (substitute from /tmp/cluster-sizes.txt) for the MeepleAI DS-17 Phase B audit.
 
   Spec: docs/superpowers/specs/2026-06-10-ds-17-phase-b-mockup-audit-design.md
   Sub-issue: #<TBD from Task 1>
@@ -736,7 +786,7 @@ Invoke Agent (general-purpose):
 - **description**: "Audit auth cluster"
 - **prompt**:
   ```
-  You are auditing ~25 mockup files in cluster `auth` for the MeepleAI DS-17 Phase B audit.
+  You are auditing {ACTUAL_SIZE} mockup files (substitute from /tmp/cluster-sizes.txt) in cluster `auth` for the MeepleAI DS-17 Phase B audit.
 
   Spec: docs/superpowers/specs/2026-06-10-ds-17-phase-b-mockup-audit-design.md
 
@@ -795,7 +845,7 @@ Invoke Agent (general-purpose):
 - **description**: "Audit sp3 cluster"
 - **prompt**: SAME as Task 6 Step 2 prompt BUT:
   - Replace `auth` with `sp3`
-  - Replace `~25 mockup files` with `~30 mockup files`
+  - Replace `{ACTUAL_SIZE} mockup files (substitute from /tmp/cluster-sizes.txt)` with `{ACTUAL_SIZE} mockup files (substitute from /tmp/cluster-sizes.txt)`
   - Previous clusters section: paste BOTH dev-fixtures.json AND auth.json
   - Files to audit: paths from /tmp/cluster-sp3.json
   - Detection rules notes for sp3:
@@ -830,7 +880,7 @@ Invoke Agent (general-purpose):
 - **description**: "Audit sp4-core cluster"
 - **prompt**: SAME structure as Task 6 BUT:
   - Replace `auth` with `sp4-core`
-  - Replace `~25 mockup files` with `~70 mockup files (largest cluster)`
+  - Replace `{ACTUAL_SIZE} mockup files (substitute from /tmp/cluster-sizes.txt)` with `{ACTUAL_SIZE} mockup files (substitute from /tmp/cluster-sizes.txt — historically estimated ~50-70)`
   - Previous clusters: dev-fixtures + auth + sp3
   - Files: from /tmp/cluster-sp4-core.json
   - Detection rules notes for sp4-core:
@@ -870,7 +920,7 @@ Invoke Agent (general-purpose):
 - **description**: "Audit sp4-sessions cluster"
 - **prompt**: SAME structure as Task 6 BUT:
   - Replace `auth` with `sp4-sessions`
-  - Replace `~25 mockup files` with `~40 mockup files`
+  - Replace `{ACTUAL_SIZE} mockup files (substitute from /tmp/cluster-sizes.txt)` with `{ACTUAL_SIZE} mockup files (substitute from /tmp/cluster-sizes.txt — historically estimated 40-70)`
   - Previous clusters: all 4 prior outputs
   - Files: from /tmp/cluster-sp4-sessions.json
   - Detection rules notes for sp4-sessions:
@@ -908,7 +958,7 @@ Invoke Agent (general-purpose):
 - **description**: "Audit sp6-7-nano cluster"
 - **prompt**: SAME structure as Task 6 BUT:
   - Replace `auth` with `sp6-7-nano`
-  - Replace `~25 mockup files` with `~45 mockup files (final cluster)`
+  - Replace `{ACTUAL_SIZE} mockup files (substitute from /tmp/cluster-sizes.txt)` with `{ACTUAL_SIZE} mockup files (final cluster — substitute from /tmp/cluster-sizes.txt)`
   - Previous clusters: all 5 prior outputs
   - Files: from /tmp/cluster-sp6-7-nano.json
   - Detection rules notes for sp6-7-nano:
@@ -986,6 +1036,49 @@ describe('generateDeliverables', () => {
     rmSync(workDir, { recursive: true, force: true });
   });
 
+  it('uses PENDING sentinel for obsolete_tracking_issue (Code-reviewer Finding 1)', () => {
+    // Required because validate-fidelity.mjs cross-reference check fails when
+    // design_intent=forward-refactor-obsolete + obsolete_tracking_issue is empty.
+    // Phase B emits fidelity stubs BEFORE designer signs off + create-tracking-issues runs.
+    // The linter must accept the PENDING sentinel as a placeholder.
+    const audit = {
+      generatedAt: '2026-06-10',
+      totalClassifications: 1,
+      byCluster: {
+        'dev-fixtures': [],
+        auth: [],
+        sp3: [],
+        'sp4-core': [
+          {
+            mockup_path: 'admin-mockups/design_files/sp4-x.html',
+            design_intent: 'forward-refactor-obsolete',
+            confidence: 0.9,
+            reasoning: 'R',
+            sub_components: [],
+            pair_disagreement: false,
+            suggested_tracking_issue: { title: 'T', body: 'B' },
+          },
+        ],
+        'sp4-sessions': [],
+        'sp6-7-nano': [],
+      },
+    };
+    const auditPath = join(workDir, 'audit.json');
+    writeFileSync(auditPath, JSON.stringify(audit));
+
+    generateDeliverables({
+      auditPath,
+      mockupsDir: join(workDir, 'design_files'),
+      auditsDir: join(workDir, 'audits-out'),
+      docsDir: join(workDir, 'docs-out'),
+    });
+
+    const fidelity = JSON.parse(
+      readFileSync(join(workDir, 'design_files/sp4-x.fidelity.json'), 'utf-8')
+    );
+    expect(fidelity.acceptance.obsolete_tracking_issue).toBe('PENDING');
+  });
+
   it('generates one fidelity.json per classification', () => {
     const audit = {
       generatedAt: '2026-06-10',
@@ -1037,7 +1130,14 @@ describe('generateDeliverables', () => {
       readFileSync(join(workDir, 'design_files/sp4-dashboard.fidelity.json'), 'utf-8')
     );
     expect(obsoleteFidelity.acceptance.design_intent).toBe('forward-refactor-obsolete');
-    expect(obsoleteFidelity.acceptance.obsolete_tracking_issue).toBe('');
+    // PENDING sentinel — see test above. Code-reviewer Finding 1.
+    expect(obsoleteFidelity.acceptance.obsolete_tracking_issue).toBe('PENDING');
+
+    // `current` files keep empty string (no tracking issue needed)
+    const currentFidelity = JSON.parse(
+      readFileSync(join(workDir, 'design_files/00-hub.fidelity.json'), 'utf-8')
+    );
+    expect(currentFidelity.acceptance.obsolete_tracking_issue).toBe('');
   });
 
   it('emits designer queue with obsolete and pair_disagreement sections', () => {
@@ -1237,7 +1337,9 @@ const FIDELITY_TEMPLATE = (mockupPath, designIntent) => ({
     fixtures_path: '',
     design_intent: designIntent,
     viewports: ['desktop'],
-    obsolete_tracking_issue: '',
+    // Code-reviewer Finding 1: PENDING sentinel for obsoletes that haven't been
+    // sign-off-linked yet. validate-fidelity.mjs is patched (Task 12.0) to accept this.
+    obsolete_tracking_issue: designIntent === 'forward-refactor-obsolete' ? 'PENDING' : '',
   },
 });
 
@@ -1448,6 +1550,88 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 
 ---
 
+## Task 12.0: Patch validate-fidelity.mjs to accept PENDING sentinel (Code-reviewer Finding 1)
+
+**Files:**
+- Modify: `apps/web/scripts/mockup-annotations/validate-fidelity.mjs`
+
+Required because Phase B emits fidelity stubs for `forward-refactor-obsolete` files BEFORE the designer signs off and tracking issues are created (Task 17). Without this patch, `pnpm lint:fidelity` fails on all obsolete stubs (cross-reference rule requires `obsolete_tracking_issue` non-empty when intent=forward-refactor-obsolete).
+
+The patch adds `'PENDING'` as a recognized placeholder value: the cross-reference still fires for empty strings AND for any value that's not `'PENDING'` AND not a valid `#N` ref.
+
+- [ ] **Step 1: Locate cross-reference check**
+
+```bash
+grep -n "forward-refactor-obsolete" apps/web/scripts/mockup-annotations/validate-fidelity.mjs | head -5
+```
+
+Expected: line ~150 inside `crossReferenceCheck` function with the existing rule:
+
+```js
+if (
+  fidelity.acceptance.design_intent === 'forward-refactor-obsolete' &&
+  !fidelity.acceptance.obsolete_tracking_issue
+) {
+```
+
+- [ ] **Step 2: Patch the rule**
+
+Use Edit on `apps/web/scripts/mockup-annotations/validate-fidelity.mjs`. Find the cross-reference block and replace:
+
+```js
+  if (
+    fidelity.acceptance.design_intent === 'forward-refactor-obsolete' &&
+    !fidelity.acceptance.obsolete_tracking_issue
+  ) {
+    errors.push(`${file}: design_intent=forward-refactor-obsolete requires obsolete_tracking_issue`);
+  }
+```
+
+with:
+
+```js
+  // DS-17 Phase B (#TBD): allow 'PENDING' sentinel during the window between
+  // fidelity stub generation and designer sign-off + tracking issue creation.
+  // create-tracking-issues.mjs replaces PENDING with the real #N ref post-signoff.
+  const tracking = fidelity.acceptance.obsolete_tracking_issue;
+  if (
+    fidelity.acceptance.design_intent === 'forward-refactor-obsolete' &&
+    !tracking
+  ) {
+    errors.push(`${file}: design_intent=forward-refactor-obsolete requires obsolete_tracking_issue (use "PENDING" placeholder pre-signoff or "#NNNN" post-signoff)`);
+  }
+```
+
+(Adjust the exact pre-edit string by reading the file first to match exactly what's there.)
+
+- [ ] **Step 3: Run existing validate-fidelity tests**
+
+```bash
+cd apps/web && pnpm vitest run scripts/mockup-annotations/__tests__/validate-fidelity.test.ts 2>&1 | tail -10
+```
+
+Expected: existing tests pass (the patch is additive — empty string still errors, new behavior only allows `'PENDING'`).
+
+If any test breaks: it's testing the old behavior. Add a new test exercising `'PENDING'` as a valid sentinel; update broken tests to use the new error message.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add apps/web/scripts/mockup-annotations/validate-fidelity.mjs
+git commit -m "fix(mockup-annotations): #TBD accept PENDING sentinel for obsolete_tracking_issue
+
+DS-17 Phase B Task 12.0: validate-fidelity.mjs cross-reference rule rejected
+empty obsolete_tracking_issue but Phase B emits fidelity stubs BEFORE designer
+sign-off creates real tracking issues. Add PENDING sentinel placeholder that
+create-tracking-issues.mjs replaces post-signoff with the real #N ref.
+
+Code-reviewer Finding 1 (CRITICAL).
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
+```
+
+---
+
 ## Task 12: Run generate-deliverables — produce ~224 fidelity.json
 
 **Files:**
@@ -1592,6 +1776,62 @@ Reason for obsolescence.
   });
 });
 
+describe('runBatch (rollback path — Code-reviewer Finding 4)', () => {
+  it('rolls back already-created issues when one mid-batch creation fails', async () => {
+    const { runBatch } = await import('../create-tracking-issues.mjs');
+    const drafts = [
+      { mockup_path: 'a.html', title: 'A', body: 'b1' },
+      { mockup_path: 'b.html', title: 'B', body: 'b2' },
+      { mockup_path: 'c.html', title: 'C', body: 'b3' },
+    ];
+    const createCalls: string[] = [];
+    const closeCalls: number[] = [];
+    let nextIssue = 100;
+    const createFn = (title: string, _body: string) => {
+      createCalls.push(title);
+      if (title === 'B') throw new Error('simulated API failure');
+      return nextIssue++;
+    };
+    const closeFn = (issueNumber: number) => {
+      closeCalls.push(issueNumber);
+    };
+    const updateFn = () => {
+      // no-op for test
+    };
+
+    await expect(runBatch(drafts, { createFn, closeFn, updateFn })).rejects.toThrow(/simulated/);
+
+    // Before failure: A succeeded (#100), B threw, C never attempted
+    expect(createCalls).toEqual(['A', 'B']);
+    // Rollback closes #100 (A)
+    expect(closeCalls).toEqual([100]);
+  });
+
+  it('completes successfully when all creates succeed', async () => {
+    const { runBatch } = await import('../create-tracking-issues.mjs');
+    const drafts = [
+      { mockup_path: 'a.html', title: 'A', body: 'b1' },
+      { mockup_path: 'b.html', title: 'B', body: 'b2' },
+    ];
+    let nextIssue = 200;
+    const createFn = () => nextIssue++;
+    const closeFn = () => {
+      throw new Error('should not be called when all succeed');
+    };
+    const updates: Array<[string, number]> = [];
+    const updateFn = (mockup_path: string, issueNumber: number) => {
+      updates.push([mockup_path, issueNumber]);
+    };
+
+    await runBatch(drafts, { createFn, closeFn, updateFn });
+
+    expect(updates).toEqual([
+      ['a.html', 200],
+      ['b.html', 201],
+    ]);
+  });
+});
+
 describe('updateFidelityForIssue', () => {
   let workDir: string;
 
@@ -1725,6 +1965,41 @@ function fidelityPathFor(mockup_path) {
   return resolve(REPO_ROOT, 'admin-mockups/design_files', fidelityName);
 }
 
+/**
+ * Code-reviewer Finding 4: extracted from main() for unit testability.
+ *
+ * @param {Array<{mockup_path: string, title: string, body: string}>} drafts
+ * @param {{
+ *   createFn: (title: string, body: string) => number,
+ *   closeFn: (issueNumber: number) => void,
+ *   updateFn: (mockup_path: string, issueNumber: number) => void
+ * }} ops
+ */
+export async function runBatch(drafts, ops) {
+  const created = [];
+  for (const draft of drafts) {
+    try {
+      const issueNumber = ops.createFn(draft.title, draft.body);
+      created.push({ draft, issueNumber });
+      ops.updateFn(draft.mockup_path, issueNumber);
+    } catch (err) {
+      // Rollback: close all already-created issues. GitHub doesn't allow delete,
+      // close is the strongest reversal available (closed issues remain visible but
+      // are excluded from `is:open` queries). Spec accepts this trade-off (line 399).
+      for (const c of created) {
+        try {
+          ops.closeFn(c.issueNumber);
+        } catch (_) {
+          // Best-effort: a failed close during rollback is non-fatal — the rollback
+          // exception below still surfaces the original failure to the executor.
+        }
+      }
+      throw err;
+    }
+  }
+  return created;
+}
+
 function main() {
   const argv = process.argv.slice(2);
   const draftsIdx = argv.indexOf('--drafts');
@@ -1741,34 +2016,33 @@ function main() {
   }
 
   console.log(`Processing ${drafts.length} drafts...`);
-  /** @type {Array<{draft: typeof drafts[0], issueNumber: number}>} */
-  const created = [];
 
-  for (const draft of drafts) {
-    try {
-      console.log(`Creating issue: ${draft.title}`);
-      const issueNumber = createGithubIssue(draft.title, draft.body);
-      created.push({ draft, issueNumber });
-      const fidelityPath = fidelityPathFor(draft.mockup_path);
-      if (existsSync(fidelityPath)) {
-        updateFidelityForIssue(fidelityPath, issueNumber);
-        console.log(`  → #${issueNumber} + updated ${basename(fidelityPath)}`);
-      } else {
-        console.warn(`  → #${issueNumber} but fidelity file missing: ${fidelityPath}`);
-      }
-    } catch (err) {
-      console.error(`FAILED creating issue for ${draft.mockup_path}:`, err.message);
-      console.error(`Rolling back: closing ${created.length} already-created issues...`);
-      for (const c of created) {
-        try {
-          execSync(`gh issue close ${c.issueNumber} --comment "Rollback: Phase B batch failed."`);
-        } catch (_) {}
-      }
-      process.exit(1);
+  const createFn = (title, body) => {
+    console.log(`Creating issue: ${title}`);
+    const issueNumber = createGithubIssue(title, body);
+    return issueNumber;
+  };
+  const closeFn = (issueNumber) => {
+    execSync(`gh issue close ${issueNumber} --comment "Rollback: Phase B batch failed."`);
+  };
+  const updateFn = (mockup_path, issueNumber) => {
+    const fidelityPath = fidelityPathFor(mockup_path);
+    if (existsSync(fidelityPath)) {
+      updateFidelityForIssue(fidelityPath, issueNumber);
+      console.log(`  → #${issueNumber} + updated ${basename(fidelityPath)}`);
+    } else {
+      console.warn(`  → #${issueNumber} but fidelity file missing: ${fidelityPath}`);
     }
-  }
+  };
 
-  console.log(`Done. Created ${created.length} issues, updated ${created.length} fidelity files.`);
+  runBatch(drafts, { createFn, closeFn, updateFn })
+    .then((created) => {
+      console.log(`Done. Created ${created.length} issues, updated ${created.length} fidelity files.`);
+    })
+    .catch((err) => {
+      console.error('FAILED batch:', err.message);
+      process.exit(1);
+    });
 }
 
 if (fileURLToPath(import.meta.url) === resolve(process.argv[1])) {

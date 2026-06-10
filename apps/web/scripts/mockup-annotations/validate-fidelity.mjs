@@ -146,12 +146,13 @@ function crossReferenceCheck(fidelity, fidelityFilePath) {
   }
 
   // DEC-P3-2: design_intent = 'forward-refactor-obsolete' requires obsolete_tracking_issue
-  if (
-    fidelity.acceptance.design_intent === 'forward-refactor-obsolete' &&
-    !fidelity.acceptance.obsolete_tracking_issue
-  ) {
+  // DS-17 Phase B (#2127): accept 'PENDING' sentinel during the window between fidelity
+  // stub generation and designer sign-off + tracking issue creation.
+  // create-tracking-issues.mjs replaces PENDING with the real #NNNN ref post-signoff.
+  const tracking = fidelity.acceptance.obsolete_tracking_issue;
+  if (fidelity.acceptance.design_intent === 'forward-refactor-obsolete' && !tracking) {
     errors.push(
-      `acceptance.design_intent='forward-refactor-obsolete' requires acceptance.obsolete_tracking_issue (#NNNN). ` +
+      `acceptance.design_intent='forward-refactor-obsolete' requires acceptance.obsolete_tracking_issue (use 'PENDING' placeholder pre-signoff or '#NNNN' post-signoff). ` +
         `Open a GitHub issue tracking mockup rewrite OR component rollback (DEC-P3-2).`
     );
   }

@@ -50,6 +50,7 @@
     "lint:fix": "eslint . --fix",
     "lint:tokens": "node scripts/lint-tokens.mjs",
     "lint:tokens:mockups": "node scripts/lint-tokens-mockups.mjs",
+    "lint:bgg": "node scripts/lint-bgg.mjs",
     "lint:fidelity": "node scripts/mockup-annotations/validate-fidelity.mjs --all",
     "mockup-annotations:inject": "node scripts/mockup-annotations/inject-annotations.mjs",
     "mockup-annotations:audit": "node scripts/mockup-annotations/audit-coverage.mjs",

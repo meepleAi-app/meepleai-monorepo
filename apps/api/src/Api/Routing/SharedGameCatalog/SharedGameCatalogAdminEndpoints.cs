@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SharedGameCatalog.Application;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.AddRagToSharedGame;
+using Api.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatalogCoverBatch;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.RemoveRagFromSharedGame;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
@@ -421,6 +422,20 @@ internal static class SharedGameCatalogAdminEndpoints
             .WithDescription("Runs SmolDocling + LLM pipeline on an orphaned PDF to extract game metadata for wizard step 2.")
             .Produces<GameMetadataDto>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status404NotFound);
+
+        // Issue #2123 Phase B — one-shot M8 batch enrichment for QID-populated games.
+        // Run after the QID bootstrap script (scripts/bootstrap_wikidata_qid.py) seeded
+        // SharedGame.WikidataQid for the catalog. Admin-only, rate-limited.
+        group.MapPost("/admin/catalog/covers/enrich-batch", HandleEnrichCoversBatch)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("EnrichCatalogCoversBatch")
+            .WithSummary("Run M8 Wikidata cover enrichment for a batch of games (Admin only)")
+            .WithDescription("Dispatches one EnrichCatalogCoverCommand per game id, sequentially honouring the Wikimedia 1 req/sec SPARQL rate limit. Cap: 200 ids per batch. Idempotent — re-running on an already-enriched game is a no-op via the ADR DEC-3i 90-day freshness window.")
+            .Produces<EnrichCatalogCoverBatchResult>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
     }
 #pragma warning restore MA0051
 
@@ -1438,7 +1453,30 @@ internal static class SharedGameCatalogAdminEndpoints
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             filename);
     }
+
+    /// <summary>
+    /// Issue #2123 Phase B — handler for the admin-only batch enrichment endpoint.
+    /// Validates input via the standard MediatR validation pipeline (FluentValidation
+    /// behaviour rejects empty / too-large / duplicate-id payloads with 400), then
+    /// dispatches the batch command.
+    /// </summary>
+    private static async Task<IResult> HandleEnrichCoversBatch(
+        [FromBody] EnrichCatalogCoverBatchRequest body,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(body);
+        var result = await mediator
+            .Send(new EnrichCatalogCoverBatchCommand(body.GameIds ?? Array.Empty<Guid>()), cancellationToken)
+            .ConfigureAwait(false);
+        return Results.Ok(result);
+    }
 }
+
+/// <summary>
+/// Request body for <c>POST /admin/catalog/covers/enrich-batch</c> (issue #2123).
+/// </summary>
+internal sealed record EnrichCatalogCoverBatchRequest(IReadOnlyList<Guid>? GameIds);
 
 /// <summary>
 /// Request body for POST /admin/shared-games/import-from-pdf

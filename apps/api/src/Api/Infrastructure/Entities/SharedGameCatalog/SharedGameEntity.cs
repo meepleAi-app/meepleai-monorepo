@@ -18,8 +18,15 @@ public class SharedGameEntity
     public int MinAge { get; set; }
     public decimal? ComplexityRating { get; set; }
     public decimal? AverageRating { get; set; }
-    public string ImageUrl { get; set; } = string.Empty;
-    public string ThumbnailUrl { get; set; } = string.Empty;
+    /// <summary>
+    /// Issue #2123 — BGG ToS compliance: nullable. Covers are resolved at runtime by
+    /// <see cref="Api.BoundedContexts.SharedGameCatalog.Application.Services.CoverUrlResolver"/>
+    /// from R2-hosted assets (PDF, BGG-reuploaded, Wikidata). This column is kept for
+    /// backward-compat with legacy admin tooling but seeders write <c>null</c> here.
+    /// FE consumers MUST prefer <c>SharedGameDto.CoverUrl</c>.
+    /// </summary>
+    public string? ImageUrl { get; set; }
+    public string? ThumbnailUrl { get; set; }
     public int Status { get; set; } // 0=Draft, 1=Published, 2=Archived
     public int GameDataStatus { get; set; } = 5; // Default Complete (5) for existing games
     public string? RulesContent { get; set; }

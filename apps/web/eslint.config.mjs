@@ -22,6 +22,7 @@ import noHardcodedColorUtility from "./eslint-rules/no-hardcoded-color-utility.j
 // API proxy guard — apiClient.{get,post,...} paths must start with /api/v1/
 // (post-#1229 regression preventer; rationale in rule docstring)
 import apiClientV1Prefix from "./eslint-rules/api-client-v1-prefix.js";
+import noBggHost from "./eslint-rules/no-bgg-host.js";
 
 export default [
   {
@@ -105,6 +106,8 @@ export default [
           "no-inline-hsl-v2": noInlineHslV2,
           "no-hardcoded-color-utility": noHardcodedColorUtility,
           "api-client-v1-prefix": apiClientV1Prefix,
+          // Issue #2123 — BGG ToS compliance hard ban on user-side BGG asset traffic.
+          "no-bgg-host": noBggHost,
         },
       },
     },
@@ -259,6 +262,13 @@ export default [
       // class of bug fixed in PR #1229 (refs #1160). Rationale in the rule's
       // docstring at eslint-rules/api-client-v1-prefix.js.
       "local/api-client-v1-prefix": "error",
+
+      // Issue #2123 — BGG ToS compliance: NO BGG hostname literals in user-side
+      // source. ADR-059 §5 forbids user-side asset traffic to BoardGameGeek.
+      // Admin server-to-server callers, Storybook fixtures, E2E tests, and the
+      // BGG host blocklist itself (cover-utils.ts) get path-based overrides
+      // further down in this config — see the `local/no-bgg-host: off` blocks.
+      "local/no-bgg-host": "error",
     },
     settings: {
       react: {
@@ -643,6 +653,43 @@ export default [
     files: ["src/**/*.{ts,tsx}"],
     rules: {
       "local/no-hardcoded-color-utility": "error",
+    },
+  },
+  // Issue #2123 — BGG ToS compliance path-based overrides for local/no-bgg-host.
+  //
+  // The rule is `error` everywhere by default. The following file globs are the
+  // ONLY legitimate places where a BGG host literal may appear:
+  //
+  //   1. Storybook fixtures (*.stories.tsx, *.story.tsx)
+  //      Design-review-only, not runtime. Tracked for cleanup in follow-up F2
+  //      (spec §9). Re-enabling the rule here would require regenerating ~10
+  //      storybook fixtures with new mock cover URLs — a separate concern.
+  //
+  //   2. Admin server-to-server BGG paths
+  //      `src/app/admin/(dashboard)/**` and `src/components/admin/**` host the
+  //      admin BGG XML API consumer (ADR-059 §2). The BGG fetcher legitimately
+  //      surfaces BGG URLs in admin-only UI (e.g. BggSearchPanel) for the admin
+  //      to manually pick a game to import. Never user-facing.
+  //
+  //   3. E2E test suite (`e2e/**`)
+  //      Tests assert the admin BGG-import flow and the user-side BGG ban; both
+  //      need to reference BGG hosts literally.
+  //
+  //   4. The BGG host blocklist itself (lib/games/cover-utils.ts)
+  //      The `BLOCKED_IMAGE_HOSTS` array contains the BGG hostnames as data,
+  //      not as URLs to render. Handled with per-line eslint-disable comments
+  //      inside the file rather than a path override, to keep the override
+  //      blast radius minimal.
+  {
+    files: [
+      "**/*.stories.{ts,tsx,js,jsx}",
+      "**/*.story.{ts,tsx,js,jsx}",
+      "src/app/admin/**/*.{ts,tsx}",
+      "src/components/admin/**/*.{ts,tsx}",
+      "e2e/**/*.{ts,tsx,js,jsx}",
+    ],
+    rules: {
+      "local/no-bgg-host": "off",
     },
   },
   // StatePreviewProvider tree-shake guarantee (Asse B WP5 T5, Issue #1897):

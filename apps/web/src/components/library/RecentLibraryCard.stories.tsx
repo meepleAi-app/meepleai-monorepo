@@ -31,7 +31,7 @@ const meta: Meta<typeof RecentLibraryCard> = {
   },
   tags: ['autodocs'],
   decorators: [
-    (Story) => (
+    Story => (
       <div className="max-w-sm">
         <Story />
       </div>
@@ -51,7 +51,7 @@ const mockGameBase: UserLibraryEntry = {
   gamePublisher: 'Plan B Games',
   gameYearPublished: 2017,
   gameImageUrl:
-    'https://cf.geekdo-images.com/aPSHJO0d0XOpQR5X-wJonw__imagepage/img/q4uWd2nXGeNcCMz_5sGW4Qsrw6c=/fit-in/900x600/filters:no_upscale():strip_icc()/pic6973671.png',
+    'https://placehold.co/600x400/4f46e5/ffffff?text=cover-f9535a):strip_icc()/pic6973671.png',
   addedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
   notes: null,
   isFavorite: false,

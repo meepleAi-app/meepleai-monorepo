@@ -10,7 +10,7 @@ const mockBggDetails: BggGameDetails = {
   id: 13,
   name: 'Catan',
   imageUrl:
-    'https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__imagepage/img/8a9HeqFydO7Uun_le9bXWPnidcA=/fit-in/900x600/filters:no_upscale():strip_icc()/pic2419375.jpg',
+    'https://placehold.co/600x400/4f46e5/ffffff?text=cover-5b57b8):strip_icc()/pic2419375.jpg',
   description:
     'In Catan, players try to be the dominant force on the island of Catan by building settlements, cities, and roads.',
   averageRating: 7.2,

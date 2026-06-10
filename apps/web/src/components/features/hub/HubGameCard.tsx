@@ -10,6 +10,7 @@
 import Link from 'next/link';
 
 import type { SharedGame } from '@/lib/api/schemas/shared-games.schemas';
+import { shouldUsePlaceholder } from '@/lib/games/cover-utils';
 
 export interface HubGameCardProps {
   readonly game: SharedGame;
@@ -22,6 +23,11 @@ function formatYear(y: number): string {
 
 export function HubGameCard({ game, onClick }: HubGameCardProps) {
   const rating = game.averageRating ?? null;
+  // Issue #2123: prefer R2-resolved coverUrl, fall back to thumbnail. The
+  // shouldUsePlaceholder() guard catches any legacy BGG URL drift and
+  // routes to the deterministic emoji fallback.
+  const coverSrc = game.coverUrl ?? game.thumbnailUrl ?? '';
+  const showImage = !shouldUsePlaceholder(coverSrc);
   return (
     <Link
       href={`/hub/games/${game.id}`}
@@ -33,9 +39,9 @@ export function HubGameCard({ game, onClick }: HubGameCardProps) {
         aria-hidden="true"
         className="relative flex aspect-[5/3] items-center justify-center bg-gradient-to-br from-[hsl(var(--c-game)/0.18)] to-[hsl(var(--c-game)/0.04)] text-4xl"
       >
-        {game.thumbnailUrl ? (
+        {showImage ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={game.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+          <img src={coverSrc} alt="" className="h-full w-full object-cover" />
         ) : (
           <span>🎲</span>
         )}

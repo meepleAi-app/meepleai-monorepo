@@ -82,6 +82,8 @@ Lo script `snapshot-verify.sh` blocca il restore con un exit code distinto per o
 | `2` | EF migration head del working tree ≠ snapshot | `git checkout` del commit compatibile, oppure `make seed-index` per rigenerare |
 | `3` | Embedding model del working tree ≠ snapshot | allinea `infra/secrets/embedding.secret` oppure rigenera |
 | `4` | Embedding dimension mismatch | idem come exit 3 |
+| `5` | `seed_table_schema_version` del sidecar ≠ `infra/seed-schema.version` (#2126 D9) | `make seed-index` — una tabella seedata è stata rinominata/ristrutturata dopo il bake |
+| `6` | Sidecar invariant: `chunk_count ≠ embedding_count` (#2126 D7) | `make seed-index` — bake parziale, investiga embedding-service logs |
 | `10` | DB non vuoto (guard di `snapshot-restore.sh`) | usa `make dev-from-snapshot-force` |
 | `124` | Timeout del bake (`seed-index-wait.sh`) | aumenta `SEED_INDEX_TIMEOUT` o investiga perché i job non progrediscono |
 
@@ -107,6 +109,7 @@ Esempio: `meepleai_seed_20260410T143022Z_sentence-transformers_all-MiniLM-L6-v2_
 {
   "schema_version": "20260401_AddSearchVector",
   "ef_migration_head": "20260401_AddSearchVector",
+  "seed_table_schema_version": 1,
   "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
   "embedding_dim": 384,
   "app_commit": "3a75a9a10",
@@ -118,6 +121,30 @@ Esempio: `meepleai_seed_20260410T143022Z_sentence-transformers_all-MiniLM-L6-v2_
   "failed_pdf_ids": []
 }
 ```
+
+### `seed_table_schema_version` — quando bumparlo (#2126 D9)
+
+Conta i rename/drop strutturali di tabelle che fanno parte del dump
+(`pdf_documents`, `text_chunks`, `pgvector_embeddings`, `vector_documents`,
+`shared_games`, e qualsiasi altra colpita da `EXCLUDE_TABLES` o
+`GENERATED_TABLES`). Una sola fonte di verità: il file
+`infra/seed-schema.version`, che `seed-index-dump.sh` legge al bake e
+`snapshot-verify.sh` confronta al consume.
+
+Bumpa il counter nella **stessa PR** che introduce uno di questi cambi:
+
+- Rename di una tabella seedata (es. `embeddings` → `vector_documents`,
+  storicamente 2026-05)
+- Drop di una colonna seedata
+- Cambio di tipo di una colonna seedata che invalida un dump esistente
+- Cambio della shape della query usata da `seed-index-dump.sh` (lista
+  tabelle dumpate, escluded, generated)
+
+Il bump rende immediatamente "stale" qualunque snapshot precedente:
+`snapshot-verify.sh` esce con `5` e suggerisce `make seed-index`, e il
+prossimo `make dev-from-snapshot` di un developer ricarica
+automaticamente il nuovo dump dal bucket. Nessuna confusione su «perché
+RAG ritorna 0 risultati».
 
 ### DB-only — vincolo esplicito
 

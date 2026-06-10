@@ -98,6 +98,13 @@ done
 [ -n "$MANIFEST_PATH" ] || fail "manifest dev.yml non trovato"
 MANIFEST_SHA=$(sha256sum "$MANIFEST_PATH" | awk '{print $1}')
 
+# Read seed-table schema version from working tree (#2126 D9). Default to "0"
+# when the file is missing so we behave sanely on older checkouts.
+SEED_SCHEMA_VERSION="0"
+for f in infra/seed-schema.version ../infra/seed-schema.version seed-schema.version; do
+    [ -f "$f" ] && { SEED_SCHEMA_VERSION=$(tr -d '[:space:]' <"$f"); break; }
+done
+
 jq -n \
     --argjson stats "$STATS_JSON" \
     --arg model "$EMBEDDING_MODEL" \
@@ -106,9 +113,11 @@ jq -n \
     --arg created "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     --arg manifest_sha "$MANIFEST_SHA" \
     --arg generated_tables "${GENERATED_TABLES:-none}" \
+    --argjson seed_schema "$SEED_SCHEMA_VERSION" \
     '{
        schema_version: $stats.ef_migration_head,
        ef_migration_head: $stats.ef_migration_head,
+       seed_table_schema_version: $seed_schema,
        embedding_model: $model,
        embedding_dim: $dim,
        app_commit: $commit,

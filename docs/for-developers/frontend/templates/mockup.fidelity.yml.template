@@ -68,3 +68,20 @@ acceptance:
   # Empty in Phase 1 is OK; validator skips cross-reference if empty.
   story_path: ""              # e.g. apps/web/src/components/features/dashboard/dashboard.stories.tsx
   fixtures_path: ""           # e.g. apps/web/src/components/features/dashboard/dashboard.fixtures.ts
+
+  # ===== DEC-P3-1+2 (2026-06-10): Design intent classification =====
+  # 'current' = mockup matches codebase TODAY → migrate normally
+  # 'forward-refactor' = mockup is target of pending refactor, aligned to roadmap
+  # 'forward-refactor-obsolete' = mockup is obsolete target, codebase diverged → SKIP migration
+  design_intent: current
+
+  # ===== DEC-P3-4 (2026-06-10): Viewport opt-in =====
+  # Default Desktop 1440x900. Mobile opt-in requires @storybook/addon-viewport
+  # + Playwright viewport project (Phase 4 hardening).
+  viewports:
+    - desktop
+    # - mobile  # opt-in quando mockup ha PhoneShell distinct
+
+  # Required when design_intent = 'forward-refactor-obsolete'
+  # Open a GitHub issue tracking mockup rewrite OR component rollback.
+  obsolete_tracking_issue: ""  # '#1234' format

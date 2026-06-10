@@ -1,12 +1,9 @@
 /**
- * Page-mock fixtures barrel — DS-17-6-v2.
+ * Page-mock fixtures barrel — DS-17-6-v2 → DS-17 Phase 2.5.
  *
- * Per-pilot fixture files re-exported here so stories can `import { MOCK_X } from
- * '@/__tests__/fixtures/mockup-pilots'` without knowing the file structure.
- *
- * Refs: spec docs/superpowers/specs/2026-06-09-ds-17-phase-2-design.md, umbrella #2063.
+ * Refs: spec docs/superpowers/specs/2026-06-10-ds-17-phase-2.5-and-3-redesign.md, umbrella #2063.
  */
 
-export * from './dashboard';
+// dashboard.ts removed Phase 2.5 (forward-refactor-obsolete, tracking issue #2114)
 export * from './library';
 export * from './game-detail';

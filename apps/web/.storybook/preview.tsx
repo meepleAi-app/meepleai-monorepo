@@ -4,14 +4,29 @@ import { withThemeByClassName } from '@storybook/addon-themes';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { initialize, mswLoader } from 'msw-storybook-addon';
 import { ThemeProvider } from 'next-themes';
+import { IntlProvider as ReactIntlProvider } from 'react-intl';
 
 import { handlers } from '../src/__tests__/mocks/handlers';
 import { AuthContext } from '../src/components/auth/AuthProvider';
 import { TooltipProvider } from '../src/components/ui/overlays/tooltip';
+import itMessages from '../src/locales/it.json';
 
 import type { Preview } from '@storybook/react';
 
 import '../src/styles/globals.css'; // Import Tailwind CSS
+
+// DS-17 Phase 2.5: flatten nested message catalogue for react-intl.
+function flattenMessages(obj: Record<string, unknown>, prefix = ''): Record<string, string> {
+  return Object.entries(obj).reduce<Record<string, string>>((acc, [key, val]) => {
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (typeof val === 'string') acc[path] = val;
+    else if (val && typeof val === 'object')
+      Object.assign(acc, flattenMessages(val as Record<string, unknown>, path));
+    return acc;
+  }, {});
+}
+
+const FLAT_IT_MESSAGES = flattenMessages(itMessages as Record<string, unknown>);
 
 // Initialize MSW for API mocking in stories
 initialize();
@@ -63,13 +78,22 @@ const MockAuthProvider = ({ children }: { children: React.ReactNode }) => {
 // Combined provider wrapper for all necessary context
 const AllProviders = ({ children }: { children: React.ReactNode }) => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-        <TooltipProvider>
-          <MockAuthProvider>{children}</MockAuthProvider>
-        </TooltipProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <ReactIntlProvider
+      messages={FLAT_IT_MESSAGES}
+      locale="it"
+      defaultLocale="it"
+      onError={() => {
+        // Suppress missing-translation noise in Storybook.
+      }}
+    >
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+          <TooltipProvider>
+            <MockAuthProvider>{children}</MockAuthProvider>
+          </TooltipProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </ReactIntlProvider>
   );
 };
 

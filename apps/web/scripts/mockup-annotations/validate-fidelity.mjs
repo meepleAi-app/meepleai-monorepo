@@ -59,6 +59,28 @@ export const FidelitySchema = z.object({
     designer_approved_on: z.string().regex(/^\d{4}-\d{2}-\d{2}$|^$/, 'ISO date YYYY-MM-DD or empty').default(''),
     story_path: z.string().default(''),
     fixtures_path: z.string().default(''),
+
+    // DEC-P3-1+2 (2026-06-10): design intent classification
+    design_intent: z
+      .enum(['current', 'forward-refactor', 'forward-refactor-obsolete'])
+      .default('current')
+      .describe(
+        'Mockup intent vs codebase corrente. forward-refactor-obsolete → skip story migration, tracking issue required.'
+      ),
+
+    // DEC-P3-4 (2026-06-10): viewport opt-in (default desktop)
+    viewports: z
+      .array(z.enum(['desktop', 'mobile']))
+      .min(1)
+      .default(['desktop'])
+      .describe('Snapshot viewports per story.'),
+
+    // Required when design_intent = forward-refactor-obsolete
+    obsolete_tracking_issue: z
+      .string()
+      .regex(/^#\d+$|^$/, 'Format: #1234 or empty')
+      .default('')
+      .describe('GitHub issue # tracking mockup rewrite OR component rollback.'),
   }),
 });
 
@@ -121,6 +143,17 @@ function crossReferenceCheck(fidelity, fidelityFilePath) {
     if (!existsSync(fixturesPath)) {
       errors.push(`acceptance.fixtures_path file does not exist: ${fidelity.acceptance.fixtures_path}`);
     }
+  }
+
+  // DEC-P3-2: design_intent = 'forward-refactor-obsolete' requires obsolete_tracking_issue
+  if (
+    fidelity.acceptance.design_intent === 'forward-refactor-obsolete' &&
+    !fidelity.acceptance.obsolete_tracking_issue
+  ) {
+    errors.push(
+      `acceptance.design_intent='forward-refactor-obsolete' requires acceptance.obsolete_tracking_issue (#NNNN). ` +
+        `Open a GitHub issue tracking mockup rewrite OR component rollback (DEC-P3-2).`
+    );
   }
 
   return errors;

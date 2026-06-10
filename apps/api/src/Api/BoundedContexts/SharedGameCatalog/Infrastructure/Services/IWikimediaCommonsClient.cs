@@ -49,4 +49,35 @@ internal interface IWikimediaCommonsClient
     /// </list>
     /// </returns>
     Task<CommonsLicenseResult> FetchLicenseAsync(string filename, CancellationToken ct);
+
+    /// <summary>
+    /// Issue #1823 Phase B M8 — downloads the raw image bytes for a Commons file
+    /// via the <c>Special:FilePath/{filename}</c> redirect endpoint. Consumed by
+    /// the cover enrichment orchestrator AFTER the M4 license check succeeds, so
+    /// only whitelisted images incur the (possibly large) image-download cost.
+    /// </summary>
+    /// <param name="filename">
+    /// Same URL-encoded contract as <see cref="FetchLicenseAsync"/>: filename
+    /// arrives in the raw form extracted from a Wikidata <c>wdt:P18</c> IRI.
+    /// The implementation decodes via <see cref="Uri.UnescapeDataString(string)"/>
+    /// then re-escapes when constructing the request URL — DO NOT pre-decode
+    /// upstream (same double-decoding pitfall documented on FetchLicenseAsync).
+    /// </param>
+    /// <param name="ct">Cancellation token. <see cref="OperationCanceledException"/> is rethrown.</param>
+    /// <returns>
+    /// The raw image bytes on success, or <see langword="null"/> when:
+    /// <list type="bullet">
+    ///   <item><paramref name="filename"/> is null/empty/whitespace;</item>
+    ///   <item>the Commons CDN returns 404 (file deleted);</item>
+    ///   <item>the Commons CDN returns 5xx (caller decides retry);</item>
+    ///   <item>the response body is empty.</item>
+    /// </list>
+    /// </returns>
+    /// <remarks>
+    /// Consumes the shared <see cref="IWikimediaRateLimiter"/> token bucket
+    /// BEFORE issuing the HTTP request (DEC-3e). HttpClient follows the
+    /// <c>Special:FilePath/{filename}</c> 302 redirect to
+    /// <c>upload.wikimedia.org/...</c> automatically (default redirect policy).
+    /// </remarks>
+    Task<byte[]?> FetchImageBytesAsync(string filename, CancellationToken ct);
 }

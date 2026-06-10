@@ -307,6 +307,15 @@ internal static class SharedGameCatalogServiceExtensions
         // combined SPARQL + Commons traffic stays under the cap. The S1075
         // suppression below covers the public Commons API endpoint just like
         // the other catalog providers.
+        //
+        // Issue #1823 M8 invariant: do NOT add a ConfigurePrimaryHttpMessageHandler
+        // that sets AllowAutoRedirect=false. FetchImageBytesAsync calls
+        // commons.wikimedia.org/wiki/Special:FilePath/{filename}, which returns
+        // a 302 redirect to upload.wikimedia.org/<cdn-url>. The default handler
+        // AllowAutoRedirect=true is what makes the image bytes accessible — a
+        // false setting would surface the 302 HTML body as bytes, which would
+        // then fail at WebP decoding (FailReasonImageProcessing) instead of the
+        // expected SkipReasonImageBytesNotAvailable on real 404s.
 #pragma warning disable S1075 // URIs should not be hardcoded
         const string CommonsBaseUrl = "https://commons.wikimedia.org/";
 #pragma warning restore S1075

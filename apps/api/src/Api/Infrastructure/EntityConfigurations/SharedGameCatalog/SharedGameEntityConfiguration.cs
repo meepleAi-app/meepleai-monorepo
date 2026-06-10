@@ -158,6 +158,20 @@ internal class SharedGameEntityConfiguration : IEntityTypeConfiguration<SharedGa
             .HasColumnName("wikidata_cover_attribution")
             .IsRequired(false);
 
+        // Issue #1823 Phase B M8 — Wikidata QID resolved against shared_games
+        // before the cover-enrichment orchestrator runs (ADR DEC-3a). Max 32
+        // chars covers Q-numbers well past the current Wikidata range.
+        builder.Property(e => e.WikidataQid)
+            .HasMaxLength(32)
+            .HasColumnName("wikidata_qid")
+            .IsRequired(false);
+
+        // Issue #1823 Phase B M8 (ADR DEC-3i) — quarterly re-verification
+        // timestamp. NULL until the M8 orchestrator first enriches successfully.
+        builder.Property(e => e.WikidataQidLastVerifiedAt)
+            .HasColumnName("wikidata_qid_last_verified_at")
+            .IsRequired(false);
+
         // Global query filter for soft deletes
         builder.HasQueryFilter(e => !e.IsDeleted);
 

@@ -48,3 +48,39 @@ _None._
 ## Low confidence (< 0.6, optional review)
 
 _None._
+
+## Coverage gaps — SPEC-PANEL addendum (2026-06-10)
+
+Spec-panel critique with 4 experts (Cockburn lead · Adzic · Wiegers · Fowler) analyzed 224 mockups vs 30 user stories vs 130 codebase routes. Full report: [`audits/2026-06-10-mockup-coverage-gap-report.md`](../../../audits/2026-06-10-mockup-coverage-gap-report.md).
+
+**Coverage**: 95 of 130 user-side routes have mockup coverage (73%); 35 routes uncovered.
+
+### 3 follow-up decisions (Drafts 11/12/13 — created post designer sign-off)
+
+- [ ] **Draft 11 (Wiegers + Cockburn — P1)**: Commission 5 game-detail sub-tab mockups for US-9 happy path:
+  - `sp4-game-detail-tab-rules.{html,jsx}`
+  - `sp4-game-detail-tab-reviews.{html,jsx}` (M1 friend-first commentary)
+  - `sp4-game-detail-tab-strategies.{html,jsx}`
+  - `sp4-game-detail-tab-chat.{html,jsx}` (standalone, not composite)
+  - `sp4-game-detail-tab-faqs.{html,jsx}` (game-detail variant of sp3-faq-enhanced)
+- [ ] **Draft 12 (Adzic — P1)**: Decide `/games?tab={catalogo,trending,community}` — document ComingSoon as intentional OR commission 3 mockups
+- [ ] **Draft 13 (Fowler — Architecture)**: Decide `/hub/*` route-vs-mockup contradiction — retire routes (Option A, Stage 3 #1026 intent) OR refresh 5 mockups (Option B)
+
+### Top routes-without-mockup gaps (full list in gap report)
+
+- 4 of 6 `/games/[id]/*` sub-tab routes (rules, reviews, strategies, chat) — PRD f3 #1929 shipped ahead of mockups
+- 3 of 4 `/games?tab=*` query variants (catalogo, trending, community)
+- 5 of 5 `/editor/agent-proposals/*` routes — entire domain uncovered
+- 5 of 5 `/hub/*` routes — contradiction (LIVE but obsolete)
+- 4 of 4 sessions sub-routes (`/sessions/[id]/{notes,scoreboard,players,join}`)
+- `/profile/achievements`, `/knowledge-base/global`, `/knowledge-base/[id]/pdf`
+
+### Overall quality scores
+
+| Score | Value |
+|---|---|
+| Mockup-to-route coverage | 7.3/10 (95/130) |
+| US sequence completeness | 6.5/10 (13/30 US have ≥1 missing mockup) |
+| Architecture consistency | 5.0/10 (/hub/* contradiction + 7 many-to-many mappings) |
+| Specification testability | 7.0/10 (5 obsoletes correctly flagged) |
+| **Overall** | **6.5/10** |

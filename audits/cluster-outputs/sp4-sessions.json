@@ -1,0 +1,635 @@
+[
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-toolkit-templates.html",
+    "design_intent": "current",
+    "confidence": 0.85,
+    "reasoning": "SP4 toolkit templates page (route /toolkits/templates) — active main app surface for toolkit template library/picker.",
+    "sub_components": [
+      "ToolkitTemplatesGrid",
+      "ToolkitTemplateCard"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-toolkit-stats.html",
+    "design_intent": "current",
+    "confidence": 0.85,
+    "reasoning": "SP4 toolkit stats page (route /toolkits/[id]/stats) — analytics/metrics view for shipped toolkit detail.",
+    "sub_components": [
+      "ToolkitStatsHeader",
+      "ToolkitStatsCharts"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-toolkit-play.html",
+    "design_intent": "current",
+    "confidence": 0.85,
+    "reasoning": "SP4 toolkit play page (route /toolkits/[id]/play) — runtime play view tied to live session surface.",
+    "sub_components": [
+      "ToolkitPlayHeader",
+      "ToolkitPlayTools",
+      "ToolkitPlayDice"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-toolkit-history.html",
+    "design_intent": "current",
+    "confidence": 0.85,
+    "reasoning": "SP4 toolkit history page (route /toolkits/[id]/history) — session history for shipped toolkit detail.",
+    "sub_components": [
+      "ToolkitHistoryList",
+      "ToolkitHistoryItem"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-toolkit-detail.html",
+    "design_intent": "current",
+    "confidence": 0.9,
+    "reasoning": "SP4 wave 3 toolkit detail (route /toolkits/[id]) — split-view summary + tabs (Overview/Agente/KB/Tools/Versioni/Recensioni). Active main surface.",
+    "sub_components": [
+      "ToolkitDetailHeader",
+      "ToolkitTabs",
+      "ToolkitSummarySidebar"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-session-zombicide-live.html",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "Game-specific session live view fixture for Zombicide — shipped session live view per Asse A/D #1895 session refactor.",
+    "sub_components": [
+      "SessionLiveHeader",
+      "ZombicideLiveBoard"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-session-wingspan-live.html",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "Game-specific session live view fixture for Wingspan — shipped session live view per Asse A/D #1895 session refactor.",
+    "sub_components": [
+      "SessionLiveHeader",
+      "WingspanLiveBoard"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-session-skeleton-live.html",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "Game-specific session live view skeleton fixture — shipped session live view per Asse A/D #1895 session refactor.",
+    "sub_components": [
+      "SessionLiveHeader",
+      "SessionLiveSkeleton"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-session-puerto-rico-live.html",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "Game-specific session live view fixture for Puerto Rico — shipped session live view per Asse A/D #1895 session refactor.",
+    "sub_components": [
+      "SessionLiveHeader",
+      "PuertoRicoLiveBoard"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-session-power-grid-live.html",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "Game-specific session live view fixture for Power Grid — shipped session live view per Asse A/D #1895 session refactor.",
+    "sub_components": [
+      "SessionLiveHeader",
+      "PowerGridLiveBoard"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-session-paleo-live.html",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "Game-specific session live view fixture for Paleo — shipped session live view per Asse A/D #1895 session refactor.",
+    "sub_components": [
+      "SessionLiveHeader",
+      "PaleoLiveBoard"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-session-codenames-live.html",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "Game-specific session live view fixture for Codenames — shipped session live view per Asse A/D #1895 session refactor.",
+    "sub_components": [
+      "SessionLiveHeader",
+      "CodenamesLiveBoard"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-session-catan-live.html",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "Game-specific session live view fixture for Catan — shipped session live view per Asse A/D #1895 session refactor.",
+    "sub_components": [
+      "SessionLiveHeader",
+      "CatanLiveBoard"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-hub-toolkits.html",
+    "design_intent": "forward-refactor-obsolete",
+    "confidence": 0.9,
+    "reasoning": "Title 'Pre-Stage-3 · Hub Toolkits (authenticated) — /hub/toolkits'. Same Pre-Stage-3 hub-* pattern as sp4-hub-games and sp4-hub-agents, which were retired by Stage 3 #1026 (design system de-versioning, umbrella #1023). Per CLAUDE.md, hub/<entity> 3-routes pattern was refactored. Mockup superseded by current hub layout — do not migrate.",
+    "sub_components": [],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": {
+      "title": "DS-17 Phase B: classify sp4-hub-toolkits as forward-refactor-obsolete (Pre-Stage-3 retired)",
+      "body": "## Context\n\nDuring DS-17 Phase B mockup audit (sub-issue #2127, cluster sp4-sessions), the file pair `admin-mockups/design_files/sp4-hub-toolkits.{html,jsx}` was classified as `forward-refactor-obsolete`.\n\n## Evidence\n\n- HTML title explicitly tags it: `Pre-Stage-3 · Hub Toolkits (authenticated) — /hub/toolkits`\n- Same `Pre-Stage-3 · Hub …` pattern as sp4-hub-games and sp4-hub-agents, both already classified `forward-refactor-obsolete` in sp4-core audit (precedent set in cluster sp4-core, 8 obsolete pairs incl. sp4-hub-games + sp4-hub-agents)\n- Stage 3 #1026 (under umbrella #1023, design system de-versioning, **COMPLETE 2026-05-18**) retired the legacy `hub/<entity>` pattern — see CLAUDE.md § Active Freezes:\n  > 'hub/<entity> 3-routes (REFACTOR-FORWARD)'\n- Current canonical hub layout supersedes the Pre-Stage-3 mockup; migrating this fixture would re-introduce a retired pattern.\n\n## Action\n\n- [ ] Mark `sp4-hub-toolkits.html` + `sp4-hub-toolkits.jsx` as `forward-refactor-obsolete` in `audits/2026-06-10-mockup-design-intent-manifest.json`.\n- [ ] Skip Storybook story migration for this pair (DS-17 Phase 2.5+ pattern).\n- [ ] Document in `MOCKUPS_INDEX.md` annotation that the route `/hub/toolkits` is no longer the canonical surface; the actual user-reachable route is `/toolkits` (sp4-toolkit-detail family) post Stage 3.\n- [ ] Verify no `@mockup` JSDoc annotations in `apps/web/src/app/**/page.tsx` reference this mockup (DS-17-1 sweep #2084 mappable=true gate).\n\n## References\n\n- Umbrella: #2063 (DS-17 mockup fidelity)\n- Phase B audit sub-issue: #2127\n- Stage 3 closure: #1026\n- Precedent: sp4-core cluster audit, 8 forward-refactor-obsolete files (sp4-dashboard, sp4-hub-games, sp4-hub-agents, sp4-add-game-bgg-step pairs)\n- CLAUDE.md § Design System De-versioning — COMPLETE 2026-05-18\n\n## Cluster\n\n`sp4-sessions` (52 files: 50 `current` + 2 `forward-refactor-obsolete` for sp4-hub-toolkits pair)"
+    }
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/librogame-runthrough-translate-viewer.html",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "Librogame runthrough translate viewer — Phase A current product vertical (mentioned in Asse A sub-spec, persona Aaron). Active surface for translate flow during play session.",
+    "sub_components": [
+      "TranslateViewerHeader",
+      "TranslatePhotoCapture"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/librogame-runthrough-setup-wizard.html",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "Librogame runthrough setup wizard — current product vertical, multi-step campaign setup flow.",
+    "sub_components": [
+      "SetupWizardSteps",
+      "SetupWizardActions"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/librogame-runthrough-setup-chat.html",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "Librogame runthrough setup chat — current product vertical, chat-driven onboarding for campaign setup.",
+    "sub_components": [
+      "SetupChatStream",
+      "SetupChatComposer"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/librogame-runthrough-session-end.html",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "Librogame runthrough session-end view — current product vertical, post-session summary/wrap-up.",
+    "sub_components": [
+      "SessionEndSummary",
+      "SessionEndActions"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/librogame-runthrough-resume-picker.html",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "Librogame runthrough resume picker — current product vertical, resume in-progress campaign.",
+    "sub_components": [
+      "ResumePickerList",
+      "ResumePickerItem"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/librogame-runthrough-quota-credits.html",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "Librogame runthrough quota/credits view — current product vertical, billing/usage display for runthrough feature.",
+    "sub_components": [
+      "QuotaCreditsHeader",
+      "QuotaCreditsMeter"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/librogame-runthrough-play-session.html",
+    "design_intent": "current",
+    "confidence": 0.85,
+    "reasoning": "Librogame Phase A runthrough play session shell (route /library/librogame/play/{campaignId}). Tabbed mobile / split-view desktop. Persona Aaron. Replaces deprecated sp6-libro-game-play-session. Active current main surface.",
+    "sub_components": [
+      "PlaySessionShell",
+      "StoryTab",
+      "EncounterTab",
+      "ChatOverlay",
+      "GlossaryInline"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/librogame-runthrough-library-search.html",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "Librogame runthrough library search — current product vertical, search/browse librogame campaigns.",
+    "sub_components": [
+      "LibrarySearchHeader",
+      "LibrarySearchResults"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/librogame-runthrough-glossary-editor.html",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "Librogame runthrough glossary editor — current product vertical, manage in-campaign glossary terms.",
+    "sub_components": [
+      "GlossaryEditorList",
+      "GlossaryEditorForm"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/librogame-runthrough-game-onboarding.html",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "Librogame runthrough game onboarding — current product vertical, first-time game intro flow.",
+    "sub_components": [
+      "GameOnboardingSteps",
+      "GameOnboardingHero"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/librogame-runthrough-game-detail.html",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "Librogame runthrough game detail — current product vertical, librogame book detail page.",
+    "sub_components": [
+      "GameDetailHeader",
+      "GameDetailTabs"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/librogame-runthrough-error-states.html",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "Librogame runthrough error states fixture — current product vertical, documents failure modes (Nygard) for runthrough feature.",
+    "sub_components": [
+      "ErrorStateBanner",
+      "ErrorStateRetry"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/librogame-runthrough-encounter-cheatsheet.html",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "Librogame runthrough encounter cheatsheet — current product vertical, quick-reference for encounter mechanics during play.",
+    "sub_components": [
+      "EncounterCheatsheetCard",
+      "EncounterStatsTable"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/librogame-game-night-storyboard.html",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "Librogame game night storyboard — current product vertical, multi-step storyboard for game night planning. Bridges librogame and game-night domains.",
+    "sub_components": [
+      "StoryboardSteps",
+      "StoryboardHero"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/chat-fullscreen.html",
+    "design_intent": "current",
+    "confidence": 0.85,
+    "reasoning": "Page-level full-screen chat (routes /chat/[threadId] + /chat/new). B11b follow-up to issue #491. 3 layouts (Desktop 3-col, Mobile single-pane, Empty new-thread) + 4 stream states (idle/streaming/error/abort). Active main app surface complementing nanolith-nav-chat-panel slide-over.",
+    "sub_components": [
+      "ChatThreadList",
+      "ChatStream",
+      "ChatAgentInfo",
+      "ChatComposer",
+      "ChatEmptyState"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-toolkit-templates.jsx",
+    "design_intent": "current",
+    "confidence": 0.85,
+    "reasoning": "JSX pair for SP4 toolkit templates page — current main app surface.",
+    "sub_components": [
+      "ToolkitTemplatesGrid",
+      "ToolkitTemplateCard"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-toolkit-templates-ui.jsx",
+    "design_intent": "current",
+    "confidence": 0.75,
+    "reasoning": "Modular JSX UI sub-file for SP4 toolkit templates — atomic UI primitives for the shipped templates view. Not a HTML pair twin.",
+    "sub_components": [
+      "ToolkitTemplatesUIBits"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-toolkit-stats.jsx",
+    "design_intent": "current",
+    "confidence": 0.85,
+    "reasoning": "JSX pair for SP4 toolkit stats page — current main app surface.",
+    "sub_components": [
+      "ToolkitStatsHeader",
+      "ToolkitStatsCharts"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-toolkit-play.jsx",
+    "design_intent": "current",
+    "confidence": 0.85,
+    "reasoning": "JSX pair for SP4 toolkit play page — current main app surface.",
+    "sub_components": [
+      "ToolkitPlayHeader",
+      "ToolkitPlayTools",
+      "ToolkitPlayDice"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-toolkit-play-ui.jsx",
+    "design_intent": "current",
+    "confidence": 0.75,
+    "reasoning": "Modular JSX UI sub-file for SP4 toolkit play — atomic UI primitives for the shipped play view. Not a HTML pair twin.",
+    "sub_components": [
+      "ToolkitPlayUIBits"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-toolkit-play-tools.jsx",
+    "design_intent": "current",
+    "confidence": 0.75,
+    "reasoning": "Modular JSX tools sub-file for SP4 toolkit play — atomic tool primitives for the shipped play view. Not a HTML pair twin.",
+    "sub_components": [
+      "ToolkitPlayTools"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-toolkit-play-dice.jsx",
+    "design_intent": "current",
+    "confidence": 0.75,
+    "reasoning": "Modular JSX dice sub-file for SP4 toolkit play — dice roller primitive for the shipped play view. Not a HTML pair twin.",
+    "sub_components": [
+      "ToolkitPlayDice"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-toolkit-history.jsx",
+    "design_intent": "current",
+    "confidence": 0.85,
+    "reasoning": "JSX pair for SP4 toolkit history page — current main app surface.",
+    "sub_components": [
+      "ToolkitHistoryList",
+      "ToolkitHistoryItem"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-toolkit-history-ui.jsx",
+    "design_intent": "current",
+    "confidence": 0.75,
+    "reasoning": "Modular JSX UI sub-file for SP4 toolkit history — atomic UI primitives for the shipped history view. Not a HTML pair twin.",
+    "sub_components": [
+      "ToolkitHistoryUIBits"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-toolkit-detail.jsx",
+    "design_intent": "current",
+    "confidence": 0.9,
+    "reasoning": "JSX pair for SP4 wave 3 toolkit detail (route /toolkits/[id]) — current main app surface.",
+    "sub_components": [
+      "ToolkitDetailHeader",
+      "ToolkitTabs",
+      "ToolkitSummarySidebar"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-session-zombicide-live.jsx",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "JSX pair for Zombicide session live view — shipped session live view per Asse A/D #1895 session refactor.",
+    "sub_components": [
+      "SessionLiveHeader",
+      "ZombicideLiveBoard"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-session-wingspan-live.jsx",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "JSX pair for Wingspan session live view — shipped session live view per Asse A/D #1895 session refactor.",
+    "sub_components": [
+      "SessionLiveHeader",
+      "WingspanLiveBoard"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-session-wingspan-live-tabs.jsx",
+    "design_intent": "current",
+    "confidence": 0.75,
+    "reasoning": "Modular JSX tabs sub-file for Wingspan session live view — atomic tab primitives. Not a HTML pair twin.",
+    "sub_components": [
+      "WingspanLiveTabs"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-session-wingspan-live-parts.jsx",
+    "design_intent": "current",
+    "confidence": 0.75,
+    "reasoning": "Modular JSX parts sub-file for Wingspan session live view — atomic component primitives. Not a HTML pair twin.",
+    "sub_components": [
+      "WingspanLiveParts"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-session-skeleton-live.jsx",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "JSX pair for skeleton session live view — shipped session live view per Asse A/D #1895 session refactor.",
+    "sub_components": [
+      "SessionLiveHeader",
+      "SessionLiveSkeleton"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-session-puerto-rico-live.jsx",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "JSX pair for Puerto Rico session live view — shipped session live view per Asse A/D #1895 session refactor.",
+    "sub_components": [
+      "SessionLiveHeader",
+      "PuertoRicoLiveBoard"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-session-power-grid-live.jsx",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "JSX pair for Power Grid session live view — shipped session live view per Asse A/D #1895 session refactor.",
+    "sub_components": [
+      "SessionLiveHeader",
+      "PowerGridLiveBoard"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-session-paleo-live.jsx",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "JSX pair for Paleo session live view — shipped session live view per Asse A/D #1895 session refactor.",
+    "sub_components": [
+      "SessionLiveHeader",
+      "PaleoLiveBoard"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-session-codenames-live.jsx",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "JSX pair for Codenames session live view — shipped session live view per Asse A/D #1895 session refactor.",
+    "sub_components": [
+      "SessionLiveHeader",
+      "CodenamesLiveBoard"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-session-catan-live.jsx",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "JSX pair for Catan session live view — shipped session live view per Asse A/D #1895 session refactor.",
+    "sub_components": [
+      "SessionLiveHeader",
+      "CatanLiveBoard"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-hub-toolkits.jsx",
+    "design_intent": "forward-refactor-obsolete",
+    "confidence": 0.9,
+    "reasoning": "JSX pair for Pre-Stage-3 Hub Toolkits mockup. Same Pre-Stage-3 hub-* pattern as sp4-hub-games and sp4-hub-agents (classified obsolete in sp4-core audit). Stage 3 #1026 (umbrella #1023, COMPLETE 2026-05-18) retired the legacy hub/<entity> pattern. Do not migrate.",
+    "sub_components": [],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": {
+      "title": "DS-17 Phase B: classify sp4-hub-toolkits as forward-refactor-obsolete (Pre-Stage-3 retired)",
+      "body": "## Context\n\nDuring DS-17 Phase B mockup audit (sub-issue #2127, cluster sp4-sessions), the file pair `admin-mockups/design_files/sp4-hub-toolkits.{html,jsx}` was classified as `forward-refactor-obsolete`.\n\n## Evidence\n\n- HTML title explicitly tags it: `Pre-Stage-3 · Hub Toolkits (authenticated) — /hub/toolkits`\n- Same `Pre-Stage-3 · Hub …` pattern as sp4-hub-games and sp4-hub-agents, both already classified `forward-refactor-obsolete` in sp4-core audit (precedent set in cluster sp4-core, 8 obsolete pairs incl. sp4-hub-games + sp4-hub-agents)\n- Stage 3 #1026 (under umbrella #1023, design system de-versioning, **COMPLETE 2026-05-18**) retired the legacy `hub/<entity>` pattern — see CLAUDE.md § Active Freezes:\n  > 'hub/<entity> 3-routes (REFACTOR-FORWARD)'\n- Current canonical hub layout supersedes the Pre-Stage-3 mockup; migrating this fixture would re-introduce a retired pattern.\n\n## Action\n\n- [ ] Mark `sp4-hub-toolkits.html` + `sp4-hub-toolkits.jsx` as `forward-refactor-obsolete` in `audits/2026-06-10-mockup-design-intent-manifest.json`.\n- [ ] Skip Storybook story migration for this pair (DS-17 Phase 2.5+ pattern).\n- [ ] Document in `MOCKUPS_INDEX.md` annotation that the route `/hub/toolkits` is no longer the canonical surface; the actual user-reachable route is `/toolkits` (sp4-toolkit-detail family) post Stage 3.\n- [ ] Verify no `@mockup` JSDoc annotations in `apps/web/src/app/**/page.tsx` reference this mockup (DS-17-1 sweep #2084 mappable=true gate).\n\n## References\n\n- Umbrella: #2063 (DS-17 mockup fidelity)\n- Phase B audit sub-issue: #2127\n- Stage 3 closure: #1026\n- Precedent: sp4-core cluster audit, 8 forward-refactor-obsolete files (sp4-dashboard, sp4-hub-games, sp4-hub-agents, sp4-add-game-bgg-step pairs)\n- CLAUDE.md § Design System De-versioning — COMPLETE 2026-05-18\n\n## Cluster\n\n`sp4-sessions` (52 files: 50 `current` + 2 `forward-refactor-obsolete` for sp4-hub-toolkits pair)"
+    }
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/librogame-runthrough-play-session.jsx",
+    "design_intent": "current",
+    "confidence": 0.85,
+    "reasoning": "JSX pair for Librogame Phase A runthrough play session shell — current main app surface. Persona Aaron. Replaces deprecated sp6-libro-game-play-session.",
+    "sub_components": [
+      "PlaySessionShell",
+      "StoryTab",
+      "EncounterTab",
+      "ChatOverlay",
+      "GlossaryInline"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/chat-fullscreen.jsx",
+    "design_intent": "current",
+    "confidence": 0.85,
+    "reasoning": "JSX pair for page-level full-screen chat (routes /chat/[threadId] + /chat/new) — current main app surface. B11b follow-up to issue #491.",
+    "sub_components": [
+      "ChatThreadList",
+      "ChatStream",
+      "ChatAgentInfo",
+      "ChatComposer",
+      "ChatEmptyState"
+    ],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  }
+]

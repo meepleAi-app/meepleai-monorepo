@@ -143,6 +143,45 @@ Il target `make seed-index-publish` mantiene gli ultimi **3 snapshot** sul bucke
 
 `snapshots/latest.txt` è un piccolo file testuale con il basename dello snapshot corrente, aggiornato ad ogni publish. `snapshot-fetch.sh` lo legge per scoprire cosa scaricare senza dover listare il bucket.
 
+## Automated bake — GitHub Actions (#2126 D4)
+
+Due workflow gestiscono il bake automatico:
+
+| Workflow | Manifest | Trigger | Budget | Publish |
+|---|---|---|---|---|
+| `.github/workflows/seed-snapshot-bake-ci.yml` | `ci.yml` (3 PDF) | push/PR su seeder, migrations, scripts, manifests, `seed-schema.version` + `workflow_dispatch` | 30 min | opt-in (dispatch input `publish=true`) |
+| `.github/workflows/seed-snapshot-bake-full.yml` | `dev.yml` (113+ PDF) | weekly cron (Sun 03:00 UTC) + `workflow_dispatch` | 360 min | default on (off-switch su dispatch) |
+
+Razionale dei trigger (R-SNAP-FRESH-02 amendment):
+
+- **CI smoke (push-trigger)** — cattura *regressions del pipeline di bake* a basso costo. Il `ci.yml` ha 3 PDF, lo bake è < 15 min sul runner Ubuntu standard. Se questo workflow rompe, una PR rompe il bake reale: blocca prima della merge.
+- **Full bake (weekly cron)** — *anti-drift heartbeat*. Anche se nessuno tocca `dev.yml` per un mese, ogni domenica notte lo snapshot pubblicato è ≤ 7 giorni vecchio. La SLO di freschezza nasce da qui.
+- **Workflow_dispatch** — escape hatch: «ho appena mergiato una migration che bumpa `seed-schema.version`, non aspetto domenica».
+
+### Secret richiesti
+
+I 2 workflow leggono `secrets.SEED_BLOB_*` solo quando *pubblicano*. Da configurare in **Settings → Secrets and variables → Actions** del repo:
+
+| Secret | Esempio | Note |
+|---|---|---|
+| `SEED_BLOB_S3_ENDPOINT` | `https://<accountid>.r2.cloudflarestorage.com` | per R2; AWS S3 = vuoto / regione |
+| `SEED_BLOB_S3_ACCESS_KEY` | `…` | access key con WRITE sul bucket |
+| `SEED_BLOB_S3_SECRET_KEY` | `…` | secret key gemella |
+| `SEED_BLOB_BUCKET` | `meepleai-seed-snapshots` | name del bucket |
+
+Senza i secret, il **bake smoke gira lo stesso** (non pubblica), ma il **full bake fail-fast** allo step `Publish to seed blob bucket` per evitare un cron silenzioso che non muove `latest.txt`.
+
+### Cosa succede se il bake fallisce
+
+`snapshot-verify.sh` exit codes (vedi sopra) si applicano *prima* del publish. Se il sidecar fallisce i gate (`5` = schema-version drift, `6` = invariant violation), il publish step è skippato dal workflow. `latest.txt` continua a puntare allo snapshot precedente — degradato, non broken. Il maintainer riceve un fail su GHA Actions, e l'artifact metadata è retained 90 giorni per debug.
+
+> Tip: per riprodurre localmente uno step del workflow, lancialo come al solito sul tuo host:
+> ```bash
+> cd infra
+> SEED_CATALOG_MANIFEST_OVERRIDE=ci SEED_INDEX_TIMEOUT=1500 make seed-index
+> bash scripts/snapshot-verify.sh
+> ```
+
 ## Testing
 
 ### Manual e2e con `ci.yml`

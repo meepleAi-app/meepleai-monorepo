@@ -114,6 +114,15 @@ const preview: Preview = {
       disable: true, // Use next-themes instead
     },
     layout: 'centered',
+    // DS-17 Phase 4 prelude (#2120): Next.js navigation router mocks for stories
+    // that use usePathname/useRouter/useSearchParams. Stories can override per-frame.
+    nextjs: {
+      appDirectory: true,
+      navigation: {
+        pathname: '/',
+        query: {},
+      },
+    },
     a11y: {
       config: {
         rules: [

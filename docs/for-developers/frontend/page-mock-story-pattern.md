@@ -68,8 +68,8 @@ all pilot stories ship Desktop-only frames.
 
 | Pilot | Story file | Frames | design_intent | Baseline status |
 |---|---|---|---|---|
-| Library | `src/app/(authenticated)/library/_content.stories.tsx` | 9 Desktop (Frame09-17) | current | DEFERRED (Phase 4 — IntlProvider blocker) |
-| GameDetail | `src/app/(authenticated)/games/[id]/_components/GameDetailView.stories.tsx` | 3 Desktop (Frame07-09) | current | DEFERRED (Phase 4 — IntlProvider blocker) |
+| Library | `src/app/(authenticated)/library/_content.stories.tsx` | 9 Desktop (Frame09-17) | current | CAPTURED Phase 4 prelude (#2120) |
+| GameDetail | `src/app/(authenticated)/games/[id]/_components/GameDetailView.stories.tsx` | 3 Desktop (Frame07-09) | current | CAPTURED Phase 4 prelude (#2120) |
 | Dashboard | _(DELETED, forward-refactor-obsolete)_ | — | forward-refactor-obsolete (tracking #2114) | n/a |
 
 ## MSW handler URL pattern
@@ -93,35 +93,56 @@ URLs whereas global handlers use `${API_BASE}/api/v1/...`. Wildcard matches both
 | Phase | Stato | Threshold | Viewports | CI behaviour | Baselines |
 |---|---|---|---|---|---|
 | ✅ Phase 2 v2 scaffolding | shipped non-blocking | 5% area | Desktop 1440x900 | continue-on-error | 0 (error wall) |
-| ✅ **Phase 2.5 hardening** | shipped (baselines DEFERRED) | 5% area | Desktop 1440x900 | continue-on-error | 0 (IntlProvider blocker, see below) |
+| ✅ **Phase 2.5 hardening** | shipped + baselines captured Phase 4 prelude | 5% area | Desktop 1440x900 | continue-on-error | 12 (Library 9 + GameDetail 3) |
+| ✅ **Phase 4 prelude** (#2120) | shipped — wiring fix + baselines | 5% area | Desktop 1440x900 | continue-on-error | 12 |
 | ⏳ Phase 3 sweep (5 sub-issue) | post Phase 2.5 | 5% area | Desktop primary + Mobile opt-in | continue-on-error | ~470+ |
 | **Phase 4 hardening** | post Phase 3 | 5% area | Desktop + Mobile per opt-in | **blocking** after 14gg stable | Full matrix |
 
-## ⚠️ Known limitation Phase 2.5 — IntlProvider runtime context
+## Fix log — Phase 4 prelude IntlProvider hardening (#2120)
 
-Pilot stories rendono "intl object missing" error wall durante snapshot test execution
-nonostante `.storybook/preview.tsx` AllProviders decorator wrappa `<ReactIntlProvider>` con
-flattened `it.json` messages. Verifica:
+Phase 2.5 shipped con baseline DEFERRED per "intl object missing" error wall. Phase 4 prelude
+investigation found the **real root cause was NOT dual react-intl module instances**, but a
+combination of three Storybook configuration issues that compounded into the same error symptom:
 
-1. `pnpm build-storybook` succeeds (no Webpack error)
-2. Bundle includes react-intl module + useIntl
-3. preview.tsx imports `IntlProvider as ReactIntlProvider` from 'react-intl' (verified)
-4. AllProviders decorator wraps Story (decorator order: withThemeByClassName → AllProviders → Story)
-5. Story renders → DashboardClient/LibraryContent/GameDetailView calls `useTranslation` →
-   `useIntl()` → returns undefined context → throws
+### Diagnostic findings
 
-**Suspected root cause**: dual react-intl module instances (preview bundle vs iframe.bundle.js)
-→ Context API only works when both consumer + provider share the same module instance. Webpack
-chunk splitting may create 2 distinct module instances, each with its own React Context, so
-`useIntl()` reads from a context that was never populated by `<IntlProvider>`.
+1. **Duplicate preview files**: `.storybook/preview.ts` (legacy) AND `.storybook/preview.tsx`
+   (Phase 2.5 ship) both existed. Storybook loaded `preview.ts` (alphabetical priority),
+   silently ignoring the Phase 2.5 `<ReactIntlProvider>` wiring in `preview.tsx`.
+2. **Missing `staticDirs` config**: `.storybook/main.ts` had `staticDirs: ['../public']` commented
+   out. `pnpm build-storybook` couldn't serve `mockServiceWorker.js` from public dir → MSW
+   `initialize()` threw, blocking decorator chain init.
+3. **Missing `mockServiceWorker.js`**: never generated (no `pnpm exec msw init public` ever run).
+4. **Missing `parameters.nextjs.navigation`**: Storybook 10 + `@storybook/nextjs` framework
+   requires explicit Next.js navigation router mocks (`usePathname`, `useRouter`, `useSearchParams`).
+   LibraryHub consumes all three → crash on render.
 
-**Phase 4 follow-up plan**:
-1. Investigate Webpack config in `.storybook/main.ts` + `@storybook/nextjs` framework adapter
-2. Try `resolve.alias` to force single react-intl module
-3. OR: switch to `IntlProvider` wrapper that uses `useState` for messages (avoid context inheritance)
-4. OR: implement custom `useTranslation` mock alias for Storybook env (similar to vitest config)
+The intl error was the FIRST visible symptom but not the root cause — once the decorator
+chain stopped loading entirely, every provider-dependent error chained up to "Could not find
+required intl object" as the first thrown context lookup.
 
-Baseline PNG capture deferred until IntlProvider runtime fix lands.
+### Fix applied
+
+- **Removed** `apps/web/.storybook/preview.ts` (legacy file)
+- **Enabled** `staticDirs: ['../public']` in `apps/web/.storybook/main.ts`
+- **Generated** `apps/web/public/mockServiceWorker.js` via `pnpm exec msw init public`
+- **Added** `parameters.nextjs = { appDirectory: true, navigation: { pathname: '/', query: {} } }`
+  globally in `apps/web/.storybook/preview.tsx`
+- **Replaced** Storybook-local flattened `it.json` import + `<ReactIntlProvider>` wire with the
+  production `<IntlProvider locale="it">` wrapper from `@/components/providers/IntlProvider`
+  (single source of truth for i18n setup)
+
+Plus snapshot spec hardening: `waitForLoadState('networkidle')` doesn't work for the loading-state
+fixtures (MSW handler intentionally never resolves the promise), so both `library.snapshot.spec.ts`
+and `game-detail.snapshot.spec.ts` were switched to `waitForLoadState('domcontentloaded')` +
+2s render delay.
+
+### Regression guard
+
+`apps/web/e2e/storybook/diagnostic.snapshot.spec.ts` checks for known provider-missing error
+substrings (`"Could not find required"`, `"No QueryClient set"`, `"router mocks"`, `"IntlProvider"`)
+on Button + Library Frame09/13 + GameDetail Frame07. If any of the four root causes regress,
+this gate fails before snapshot drift is mis-attributed to design changes.
 
 ## Local commands
 

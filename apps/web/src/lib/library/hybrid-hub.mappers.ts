@@ -61,6 +61,12 @@ export function libraryEntryToHubItem(entry: UserLibraryEntry): GameHubItem {
     gameId: entry.gameId,
     rating: entry.averageRating ?? undefined,
     state: entry.currentState,
+    // Issue #2123: prefer the R2-resolved coverUrl; legacy fallback chain is
+    // tolerated only because the custom Next.js image loader
+    // (lib/images/safe-loader.ts) catches any BGG host at the network plane.
+    // The fallback exists for Wikidata-imported legacy entries that never had
+    // a CoverUrl materialized; they rely on `gameImageUrl` being a legitimate
+    // non-BGG hostname (gated by next.config.js remotePatterns allowlist).
     imageUrl: entry.coverUrl ?? entry.gameImageUrl ?? entry.gameIconUrl ?? undefined,
     hasKb: isKbEntry(entry),
   };

@@ -2689,6 +2689,96 @@ erasure requests (designer name → `DELETE WHERE designer_name = 'X'`).
 
 ---
 
+## 20. Catalog Covers — BGG ToS Compliance (#2123)
+
+Issue [#2123](https://github.com/meepleAi-app/meepleai-monorepo/issues/2123) and
+ADR-059 §5 ban all browser-side asset traffic to BoardGameGeek hosts
+(`cf.geekdo-images.com`, `*.boardgamegeek.com`, `images.geekdo.com`,
+`geekdo-images.com`). Covers are served from R2 (PDF-derived, BGG re-uploaded
+server-side, or Wikidata/Wikimedia Commons), with a deterministic placeholder
+as the terminal fallback.
+
+### Alert: `meepleai_bgg_url_attempted_render_total > 0`
+
+**Severity**: P1 (legal exposure — possible ToS violation in flight).
+
+**Trigger**: any browser attempted to render an image whose hostname matches
+the BGG block list. The custom Next.js Image loader caught the attempt and
+redirected to the placeholder, but the attempt itself **must** be
+investigated: it means a code path is passing a BGG URL into `<Image>` instead
+of the runtime-resolved `SharedGameDto.CoverUrl`.
+
+**Investigation steps**:
+
+```bash
+# 1. Identify offending route
+# In Grafana:
+sum by (path) (rate(meepleai_bgg_url_attempted_render_total[5m]))
+
+# 2. Check whether DB rows regressed (seed manifests should be clean)
+psql "$PROD_DB_URL" -c "
+  SELECT COUNT(*) FROM shared_games
+  WHERE image_url ILIKE '%geekdo%' OR image_url ILIKE '%boardgamegeek%'
+     OR thumbnail_url ILIKE '%geekdo%' OR thumbnail_url ILIKE '%boardgamegeek%';"
+# Expected: 0. Nonzero ⇒ a seed import or admin tool rewrote a row;
+# run the nullify UPDATE from migration 20260610152201 manually.
+
+# 3. Check FE source for new raw <Image> consumer that bypassed <Cover>
+cd apps/web && pnpm lint:bgg
+```
+
+**Resolution**:
+
+- DB row pollution: `UPDATE shared_games SET image_url = NULL WHERE image_url ILIKE '%geekdo%' OR image_url ILIKE '%boardgamegeek%';` (same for `thumbnail_url`).
+- FE regression: revert raw `<Image>` consumer to `<Cover>` wrapper.
+- Manifest regression: `python scripts/scrub_bgg_manifest.py` + redeploy seeder.
+
+### Cover resolution health
+
+Metric: `meepleai_cover_resolution_total{source}` — label is one of
+`r2_user`, `r2_pdf`, `r2_bgg`, `r2_wikidata`, `placeholder`. Healthy
+distribution depends on the catalog enrichment progress; if `source="placeholder"`
+exceeds **80%** for more than 15 minutes, the QID bootstrap + M8 batch run
+needs to be performed (or the upstream Wikimedia is degraded).
+
+### Periodic Wikidata QID + M8 re-enrichment
+
+Wave 3 M9 BackgroundService scheduler (tracked separately under epic #1823)
+will automate quarterly re-verification. Until then, the manual procedure for
+newly added games is:
+
+```bash
+# 1. Bootstrap QIDs for games with a BggId but no WikidataQid yet
+python scripts/bootstrap_wikidata_qid.py --connection-string "$STAGING_DB_URL"
+
+# 2. Get the ids of QID-populated games still missing a Wikidata cover
+GAME_IDS=$(psql "$STAGING_DB_URL" -At -c "
+  SELECT id FROM shared_games
+  WHERE wikidata_qid IS NOT NULL
+    AND (wikidata_cover_r2_key IS NULL OR wikidata_qid_last_verified_at < NOW() - INTERVAL '90 days')")
+
+# 3. Trigger the M8 batch via admin endpoint (sequential 1 req/sec Wikimedia limit)
+curl -X POST "https://staging.meepleai.app/api/v1/admin/catalog/covers/enrich-batch" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"gameIds\":[$(echo $GAME_IDS | tr ' ' ',')]}"
+```
+
+Expected success rate ≥80% of QID-populated games; the rest will Skip with
+machine-readable reasons (license not whitelisted, image not available on
+Wikidata, etc.) and fall back to the placeholder.
+
+### CI gating
+
+- `Frontend - BGG Lint` runs `pnpm lint:bgg` per PR.
+- `Backend - BGG ToS IT` runs `BggToSComplianceIntegrationTests` (Testcontainers
+  Postgres) per PR.
+
+Either failure blocks merge. Bypassing requires an explicit lift comment from
+@DegrassiAaron AND a follow-up issue tracking the regression.
+
+---
+
 ## Appendix A: Complete Command Reference
 
 ### Service Management

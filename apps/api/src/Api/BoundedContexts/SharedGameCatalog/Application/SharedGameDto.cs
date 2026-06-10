@@ -18,6 +18,13 @@ internal sealed record DeleteRequestDto(
 /// Issue #593 (Wave A.3a): Extended with aggregate counts and flags for V2 /shared-games mockup.
 /// New fields are defaulted to preserve backwards compatibility with existing callers that
 /// don't need aggregates (e.g. internal admin queries, legacy API consumers).
+///
+/// Issue #2123 (BGG ToS compliance): <see cref="ImageUrl"/> and <see cref="ThumbnailUrl"/>
+/// are tombstone fields — always emitted as empty string post-Phase A; FE consumers
+/// MUST read <see cref="CoverUrl"/> instead (R2 presigned URL resolved server-side by
+/// <c>CoverUrlResolver</c>). The fields are kept on the DTO for binary-compat with
+/// external SDK consumers and will be removed in a follow-up PR after one release
+/// cycle of deprecation telemetry.
 /// </summary>
 public sealed record SharedGameDto(
     Guid Id,
@@ -31,8 +38,12 @@ public sealed record SharedGameDto(
     int MinAge,
     decimal? ComplexityRating,
     decimal? AverageRating,
+#pragma warning disable S1133 // Removal scheduled after a deprecation telemetry window — see #2123 follow-up.
+    [property: Obsolete("Issue #2123 — read CoverUrl instead. ImageUrl is now always empty post-Phase A nullify migration; the property is kept for binary backwards compat only.", error: false)]
     string ImageUrl,
+    [property: Obsolete("Issue #2123 — read CoverUrl instead. ThumbnailUrl is now always empty post-Phase A nullify migration; the property is kept for binary backwards compat only.", error: false)]
     string ThumbnailUrl,
+#pragma warning restore S1133
     GameStatus Status,
     DateTime CreatedAt,
     DateTime? ModifiedAt,
@@ -186,8 +197,12 @@ public sealed record SharedGameDetailDto(
     int MinAge,
     decimal? ComplexityRating,
     decimal? AverageRating,
+#pragma warning disable S1133 // Removal scheduled after a deprecation telemetry window — see #2123 follow-up.
+    [property: Obsolete("Issue #2123 — read CoverUrl instead. ImageUrl is now always empty post-Phase A nullify migration; the property is kept for binary backwards compat only.", error: false)]
     string ImageUrl,
+    [property: Obsolete("Issue #2123 — read CoverUrl instead. ThumbnailUrl is now always empty post-Phase A nullify migration; the property is kept for binary backwards compat only.", error: false)]
     string ThumbnailUrl,
+#pragma warning restore S1133
     GameRulesDto? Rules,
     GameStatus Status,
     Guid CreatedBy,

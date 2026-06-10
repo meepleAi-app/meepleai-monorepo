@@ -17,10 +17,18 @@
  *
  * BGG (Geekdo CDN) is excluded for both technical (503 rate-limit) and legal
  * reasons (Geekdo ToS prohibits asset use in subscription products).
+ *
+ * Issue #2123 — the strings below are the BGG host blocklist itself, not URLs
+ * to render. The `local/no-bgg-host` ESLint rule is per-line disabled here
+ * because removing the constant would break the runtime guard that the rest
+ * of the FE depends on.
  */
 const BLOCKED_IMAGE_HOSTS: readonly string[] = [
+  // eslint-disable-next-line local/no-bgg-host -- blocklist data, not a URL
   'cf.geekdo-images.com',
+  // eslint-disable-next-line local/no-bgg-host -- blocklist data, not a URL
   'geekdo-images.com',
+  // eslint-disable-next-line local/no-bgg-host -- blocklist data, not a URL
   'images.geekdo.com',
 ];
 

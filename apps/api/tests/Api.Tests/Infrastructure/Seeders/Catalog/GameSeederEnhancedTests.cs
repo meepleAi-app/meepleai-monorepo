@@ -10,14 +10,16 @@ namespace Api.Tests.Infrastructure.Seeders.Catalog;
 public sealed class GameSeederEnhancedTests
 {
     [Fact]
-    public void CreateFromEnhancedData_MapsAllFields()
+    public void CreateFromEnhancedData_MapsAllFieldsExceptCovers()
     {
+        // Issue #2123 — BGG ToS compliance: cover URLs are NEVER seeded inline.
+        // ImageUrl/ThumbnailUrl are always null on every create path. Covers
+        // are resolved at runtime via CoverUrlResolver from R2 assets.
         var entry = new SeedManifestGame
         {
             Title = "Catan",
             BggId = 13,
             Language = "en",
-            BggEnhanced = true,
             Description = "Trade and build on the island of Catan",
             YearPublished = 1995,
             MinPlayers = 3,
@@ -26,8 +28,6 @@ public sealed class GameSeederEnhancedTests
             MinAge = 10,
             AverageRating = 7.1,
             AverageWeight = 2.32,
-            ImageUrl = "https://cf.geekdo-images.com/catan.jpg",
-            ThumbnailUrl = "https://cf.geekdo-images.com/catan_thumb.jpg",
             RulesUrl = "https://www.catan.com/rules.pdf"
         };
         var systemUserId = Guid.NewGuid();
@@ -44,8 +44,8 @@ public sealed class GameSeederEnhancedTests
         result.MinAge.Should().Be(10);
         result.AverageRating.Should().Be(7.1m);
         result.ComplexityRating.Should().Be(2.32m);
-        result.ImageUrl.Should().Be("https://cf.geekdo-images.com/catan.jpg");
-        result.ThumbnailUrl.Should().Be("https://cf.geekdo-images.com/catan_thumb.jpg");
+        result.ImageUrl.Should().BeNull("issue #2123 — covers never seeded inline");
+        result.ThumbnailUrl.Should().BeNull("issue #2123 — covers never seeded inline");
         result.RulesExternalUrl.Should().Be("https://www.catan.com/rules.pdf");
         result.RulesLanguage.Should().Be("en");
         result.CreatedBy.Should().Be(systemUserId);
@@ -60,7 +60,6 @@ public sealed class GameSeederEnhancedTests
             Title = "Unknown Game",
             BggId = 99999,
             Language = "it",
-            BggEnhanced = true,
             Description = "A game"
         };
         var systemUserId = Guid.NewGuid();
@@ -73,5 +72,7 @@ public sealed class GameSeederEnhancedTests
         result.PlayingTimeMinutes.Should().Be(60);
         result.MinAge.Should().Be(10);
         result.RulesExternalUrl.Should().BeNull();
+        result.ImageUrl.Should().BeNull("issue #2123 — covers never seeded inline");
+        result.ThumbnailUrl.Should().BeNull("issue #2123 — covers never seeded inline");
     }
 }

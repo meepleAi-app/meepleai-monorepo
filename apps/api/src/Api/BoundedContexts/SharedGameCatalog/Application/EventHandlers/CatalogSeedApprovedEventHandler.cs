@@ -121,6 +121,23 @@ internal sealed class CatalogSeedApprovedEventHandler : INotificationHandler<Cat
             _logger.LogInformation(
                 "CatalogSeedApprovedEventHandler: SharedGame already exists for BggId={BggId} (Id={SharedGameId}); reusing for draft {DraftId}",
                 draft.BggId, existing.Id, notification.DraftId);
+
+            // Issue #1823 M8.5 — back-fill WikidataQid from the draft onto the
+            // existing aggregate if the draft has one and the aggregate does not.
+            // Idempotent: if both already share the same QID, AssignWikidataQid
+            // returns silently. We deliberately do NOT overwrite a QID already
+            // present on the existing aggregate (the catalog-seed pipeline is the
+            // primary source, but admin-assigned QIDs win to avoid clobbering
+            // human curation).
+            if (!string.IsNullOrWhiteSpace(draft.WikidataQid)
+                && string.IsNullOrWhiteSpace(existing.WikidataQid))
+            {
+                existing.AssignWikidataQid(draft.WikidataQid, notification.ApprovedByUserId);
+                _games.Update(existing);
+                _logger.LogInformation(
+                    "CatalogSeedApprovedEventHandler: assigned WikidataQid={Qid} to existing SharedGame {SharedGameId} from draft {DraftId}",
+                    draft.WikidataQid, existing.Id, notification.DraftId);
+            }
         }
         else
         {
@@ -130,12 +147,21 @@ internal sealed class CatalogSeedApprovedEventHandler : INotificationHandler<Cat
                 timeProvider: _timeProvider,
                 bggId: draft.BggId);
 
+            // Issue #1823 M8.5 — forward the WikidataQid from the catalog-seed
+            // draft onto the freshly-materialised skeleton BEFORE persisting it,
+            // so the WikidataCoverEnrichmentJob (M9) can pick the game up on its
+            // first scan instead of waiting for a separate admin trigger.
+            if (!string.IsNullOrWhiteSpace(draft.WikidataQid))
+            {
+                skeleton.AssignWikidataQid(draft.WikidataQid, notification.ApprovedByUserId);
+            }
+
             await _games.AddAsync(skeleton, cancellationToken).ConfigureAwait(false);
             materialisedId = skeleton.Id;
 
             _logger.LogInformation(
-                "CatalogSeedApprovedEventHandler: created SharedGame {SharedGameId} (Skeleton) for draft {DraftId} title='{Title}' BggId={BggId}",
-                skeleton.Id, notification.DraftId, title, draft.BggId);
+                "CatalogSeedApprovedEventHandler: created SharedGame {SharedGameId} (Skeleton) for draft {DraftId} title='{Title}' BggId={BggId} WikidataQid={Qid}",
+                skeleton.Id, notification.DraftId, title, draft.BggId, draft.WikidataQid);
         }
 
         // Overwrite the placeholder ResultingSharedGameId from M4.4 with the real Id.

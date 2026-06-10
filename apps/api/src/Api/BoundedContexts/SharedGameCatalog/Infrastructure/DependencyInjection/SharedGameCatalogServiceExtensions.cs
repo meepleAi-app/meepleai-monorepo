@@ -55,6 +55,7 @@ internal static class SharedGameCatalogServiceExtensions
         services.AddScoped<ICatalogSyncRunRepository, CatalogSyncRunRepository>(); // #1861: F4-A6 catalog sync run history
         services.AddScoped<IEnrichmentQueueRepository, EnrichmentQueueRepository>(); // #1874: queued BGG enrichment requests
         services.AddScoped<IEnrichmentAttemptRepository, EnrichmentAttemptRepository>(); // #1874: BGG enrichment outcome history
+        services.AddScoped<IWikidataCoverEnrichmentAttemptRepository, WikidataCoverEnrichmentAttemptRepository>(); // #1823 M9: Wikidata cover enrichment outcome history
         services.AddScoped<ICatalogSeedDraftRepository, CatalogSeedDraftRepository>(); // #1903 M1.5
         services.AddScoped<IShareRequestRepository, ShareRequestRepository>(); // Issue #2724: CreateShareRequest
         services.AddScoped<IBadgeRepository, BadgeRepository>(); // Issue #2731: Badge gamification system
@@ -215,6 +216,17 @@ internal static class SharedGameCatalogServiceExtensions
         // call (S3 misconfiguration surfaces synchronously instead of silently).
         RegisterCoverR2UploadPipeline(services);
 
+        // Issue #1823 Wave 3 M9 (ADR DEC-3j): retry/dead-letter classifier for
+        // the WikidataCoverEnrichmentJob scheduler. Stateless + thread-safe —
+        // singleton lifetime.
+        services.AddSingleton<IWikidataCoverEnrichmentRetryPolicy, WikidataCoverEnrichmentRetryPolicy>();
+
+        // Issue #1823 Wave 3 M9: Quartz scheduler for batch Wikidata cover
+        // enrichment. Runs every 1 minute (HPA=1 per DEC-3e). [DisallowConcurrentExecution]
+        // on the job class is the belt-and-braces guarantee that we never have
+        // two ticks executing simultaneously.
+        RegisterWikidataCoverEnrichmentJob(services);
+
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 
         return services;
@@ -346,6 +358,32 @@ internal static class SharedGameCatalogServiceExtensions
             var bgg = sp.GetRequiredKeyedService<ICatalogProvider>("bgg");
             var logger = sp.GetRequiredService<ILogger<CatalogSeedAggregator>>();
             return new CatalogSeedAggregator(wikidata, bgg, logger);
+        });
+    }
+
+    /// <summary>
+    /// Issue #1823 Wave 3 M9 — registers <see cref="WikidataCoverEnrichmentJob"/>
+    /// with the Quartz scheduler. Runs every 1 minute (single-pod batch, HPA=1
+    /// per DEC-3e). The job picks up to 30 games per tick that are due for
+    /// enrichment, throttling 1s between items.
+    /// </summary>
+    private static void RegisterWikidataCoverEnrichmentJob(IServiceCollection services)
+    {
+        services.AddQuartz(q =>
+        {
+            var jobKey = new JobKey("WikidataCoverEnrichmentJob", "SharedGameCatalog");
+
+            q.AddJob<WikidataCoverEnrichmentJob>(opts => opts
+                .WithIdentity(jobKey)
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob(jobKey)
+                .WithIdentity("WikidataCoverEnrichmentTrigger", "SharedGameCatalog")
+                .WithSimpleSchedule(x => x
+                    .WithIntervalInMinutes(1)
+                    .RepeatForever())
+                .WithDescription("Issue #1823 Wave 3 M9: drives the Wikidata cover enrichment pipeline every 1 minute. DEC-3j retry + dead-letter policy is applied per game."));
         });
     }
 

@@ -1,5 +1,6 @@
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.UserLibrary;
+using Api.Observability;
 using Api.Services.Pdf;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
@@ -9,9 +10,20 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
 /// with the priority L3 (user custom) -> L4 (PDF-derived) -> L2.5 (BGG re-uploaded)
 /// -> L2 (Wikidata) -> null. Each layer falls through to the next when its R2 key
 /// is missing or the blob storage cannot mint a presigned URL (returns null in dev / local).
+///
+/// Issue #2123 (BGG ToS compliance): every resolution outcome — including the
+/// terminal <c>null</c> path that triggers a placeholder render on the FE —
+/// emits a <see cref="MeepleAiMetrics.CoverResolution"/> measurement tagged
+/// with the winning source layer (<c>r2_user|r2_pdf|r2_bgg|r2_wikidata|placeholder</c>).
+/// Ops dashboards alert when <c>source="placeholder"</c> exceeds 80% of total
+/// resolutions, signalling that the QID+M8 batch needs to run or that the
+/// upstream Wikimedia pipeline is failing. See
+/// <c>docs/superpowers/specs/2026-06-10-issue-2123-bgg-tos-compliance.md</c> §6.3.
 /// </summary>
 internal static class CoverUrlResolver
 {
+    private const string SourceTag = "source";
+
     public static async Task<string?> ResolveForUserAsync(
         SharedGameEntity sharedGame,
         UserLibraryEntryEntity? userEntry,
@@ -28,7 +40,19 @@ internal static class CoverUrlResolver
                     BlobCategory.GameImage,
                     userEntry.CustomCoverR2Key)
                 .ConfigureAwait(false);
-            if (url is not null) return url;
+            if (url is not null)
+            {
+                EmitResolution("r2_user");
+                return url;
+            }
+            // L3 miss while the key was present (R2 unreachable in dev, blob
+            // expired, etc.). Intentionally NO metric emission here — the
+            // recursive call to ResolvePublicAsync below emits exactly one
+            // CoverResolution event for the winning fallback layer (or
+            // "placeholder" if all layers miss), preserving the invariant that
+            // every public-facing resolution call increments the counter
+            // exactly once. The L3 miss itself is observable via the storage
+            // service's own logs / metrics, not duplicated here.
         }
 
         return await ResolvePublicAsync(sharedGame, blobStorage).ConfigureAwait(false);
@@ -49,7 +73,11 @@ internal static class CoverUrlResolver
                     BlobCategory.GameImage,
                     sharedGame.PdfCoverR2Key)
                 .ConfigureAwait(false);
-            if (url is not null) return url;
+            if (url is not null)
+            {
+                EmitResolution("r2_pdf");
+                return url;
+            }
         }
 
         // L2.5 BGG re-uploaded cover (Gap G2)
@@ -66,7 +94,11 @@ internal static class CoverUrlResolver
                     BlobCategory.GameImage,
                     sharedGame.BggCoverR2Key)
                 .ConfigureAwait(false);
-            if (url is not null) return url;
+            if (url is not null)
+            {
+                EmitResolution("r2_bgg");
+                return url;
+            }
         }
 
         // L2 Wikidata cover
@@ -78,9 +110,19 @@ internal static class CoverUrlResolver
                     BlobCategory.GameImage,
                     sharedGame.WikidataCoverR2Key)
                 .ConfigureAwait(false);
-            if (url is not null) return url;
+            if (url is not null)
+            {
+                EmitResolution("r2_wikidata");
+                return url;
+            }
         }
 
+        EmitResolution("placeholder");
         return null;
+    }
+
+    private static void EmitResolution(string source)
+    {
+        MeepleAiMetrics.CoverResolution.Add(1, new KeyValuePair<string, object?>(SourceTag, source));
     }
 }

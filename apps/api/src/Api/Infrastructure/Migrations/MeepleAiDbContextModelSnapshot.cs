@@ -12998,7 +12998,6 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<string>("ImageUrl")
-                        .IsRequired()
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("image_url");
@@ -13074,7 +13073,6 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnName("test_run_id");
 
                     b.Property<string>("ThumbnailUrl")
-                        .IsRequired()
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("thumbnail_url");
@@ -13212,6 +13210,64 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("ix_user_badges_user_badge_unique");
 
                     b.ToTable("user_badges", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.WikidataCoverEnrichmentAttemptEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("AttemptedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("attempted_at");
+
+                    b.Property<DateTime?>("DeadLetteredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("dead_lettered_at");
+
+                    b.Property<string>("Details")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("details");
+
+                    b.Property<DateTime?>("NextRetryAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_retry_at");
+
+                    b.Property<int>("Outcome")
+                        .HasColumnType("integer")
+                        .HasColumnName("outcome");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("reason");
+
+                    b.Property<int>("RetryCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("retry_count");
+
+                    b.Property<Guid>("SharedGameId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("shared_game_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeadLetteredAt")
+                        .HasDatabaseName("ix_wikidata_cover_attempts_dead_letter")
+                        .HasFilter("dead_lettered_at IS NOT NULL");
+
+                    b.HasIndex("NextRetryAt")
+                        .HasDatabaseName("ix_wikidata_cover_attempts_next_retry")
+                        .HasFilter("next_retry_at IS NOT NULL");
+
+                    b.HasIndex("SharedGameId", "AttemptedAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_wikidata_cover_attempts_game_latest");
+
+                    b.ToTable("wikidata_cover_enrichment_attempts", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.SystemConfiguration.AiModelConfigurationEntity", b =>
@@ -17683,6 +17739,15 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Badge");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.WikidataCoverEnrichmentAttemptEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", null)
+                        .WithMany()
+                        .HasForeignKey("SharedGameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.SystemConfiguration.UserRateLimitOverrideEntity", b =>

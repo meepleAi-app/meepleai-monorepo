@@ -66,14 +66,16 @@ internal class SharedGameEntityConfiguration : IEntityTypeConfiguration<SharedGa
             .HasColumnName("average_rating")
             .HasColumnType("decimal(4,2)");
 
+        // Issue #2123 — BGG ToS compliance: image_url + thumbnail_url are now
+        // nullable. The seeder writes NULL on every create path; covers are
+        // resolved at runtime via CoverUrlResolver from R2 (PDF / Wikidata)
+        // and the frontend renders a deterministic placeholder when null.
         builder.Property(e => e.ImageUrl)
             .HasColumnName("image_url")
-            .IsRequired()
             .HasMaxLength(1000);
 
         builder.Property(e => e.ThumbnailUrl)
             .HasColumnName("thumbnail_url")
-            .IsRequired()
             .HasMaxLength(1000);
 
         builder.Property(e => e.Status)

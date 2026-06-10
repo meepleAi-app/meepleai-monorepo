@@ -118,7 +118,21 @@ const nextConfig = {
   output: 'standalone', // Enable Docker-optimized output
   compress: false, // Disable compression to prevent ERR_CONTENT_DECODING_FAILED in proxy
 
-  // Issue #2209: Next.js Image optimization - configure remote image domains
+  // Issue #2209: Next.js Image optimization - configure remote image domains.
+  // Issue #2123 (BGG ToS, ADR #1903): the previously-allowed explicit entries
+  // for `cf.geekdo-images.com` and `**.boardgamegeek.com` have been removed.
+  // user-side traffic to BGG-hosted assets is forbidden — when a stale row in
+  // the seed catalog still carries a `cf.geekdo-images.com` `imageUrl`,
+  // Next.js Image now refuses to optimise/serve it, the `<img>` onError fires
+  // and `MeepleCard`/`Cover` falls back to `GameCoverPlaceholder`. No GET ever
+  // reaches the BGG CDN.
+  //
+  // KNOWN LEAK — tracked separately in #2123: the trailing wildcard `**` would
+  // still let a literal `https://cf.geekdo-images.com/...` request pass
+  // through Next.js Image. The ESLint rule below (`local/no-bgg-hostname`) is
+  // the actual fail-closed gate; the wildcard pattern is kept until #2123 can
+  // replace it with an explicit allowlist of self-hosted (R2) and approved
+  // (Wikimedia) hostnames.
   images: {
     remotePatterns: [
       {
@@ -126,18 +140,9 @@ const nextConfig = {
         hostname: 'picsum.photos',
         pathname: '/**',
       },
-      {
-        protocol: 'https',
-        hostname: 'cf.geekdo-images.com',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: '**.boardgamegeek.com',
-        pathname: '/**',
-      },
       // Wildcard catch-all for user-provided / admin-provided image URLs
-      // (badge iconUrl, game cover images from arbitrary CDNs, etc.)
+      // (badge iconUrl, game cover images from arbitrary CDNs, etc.).
+      // FOLLOW-UP (#2123): replace with explicit allowlist.
       {
         protocol: 'https',
         hostname: '**',

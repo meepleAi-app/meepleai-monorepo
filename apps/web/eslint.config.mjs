@@ -22,6 +22,9 @@ import noHardcodedColorUtility from "./eslint-rules/no-hardcoded-color-utility.j
 // API proxy guard — apiClient.{get,post,...} paths must start with /api/v1/
 // (post-#1229 regression preventer; rationale in rule docstring)
 import apiClientV1Prefix from "./eslint-rules/api-client-v1-prefix.js";
+// BGG ToS fail-closed guard (ADR-1903, Issue #2123) — forbid BoardGameGeek
+// hostnames anywhere under apps/web/src/. Rationale in rule docstring.
+import noBggHostname from "./eslint-rules/no-bgg-hostname.js";
 
 export default [
   {
@@ -105,6 +108,7 @@ export default [
           "no-inline-hsl-v2": noInlineHslV2,
           "no-hardcoded-color-utility": noHardcodedColorUtility,
           "api-client-v1-prefix": apiClientV1Prefix,
+          "no-bgg-hostname": noBggHostname,
         },
       },
     },
@@ -259,6 +263,14 @@ export default [
       // class of bug fixed in PR #1229 (refs #1160). Rationale in the rule's
       // docstring at eslint-rules/api-client-v1-prefix.js.
       "local/api-client-v1-prefix": "error",
+
+      // BGG ToS fail-closed gate (ADR-1903, Issue #2123). Forbids any string
+      // literal under apps/web/src/ that mentions a BoardGameGeek-owned
+      // hostname (`cf.geekdo-images.com`, `**.boardgamegeek.com`). The
+      // images.remotePatterns wildcard in next.config.js would otherwise still
+      // let a literal BGG URL pass; this lint rule is the real fail-closed.
+      // Rationale in eslint-rules/no-bgg-hostname.js.
+      "local/no-bgg-hostname": "error",
     },
     settings: {
       react: {
@@ -675,6 +687,47 @@ export default [
           ],
         },
       ],
+    },
+  },
+
+  // BGG ToS fail-closed exemptions (ADR-1903, Issue #2123).
+  //
+  // The `local/no-bgg-hostname` rule is globally `error`, but a handful of
+  // legitimate consumers must be allowed:
+  //
+  //   - `src/lib/games/cover-utils.ts` — owns `BLOCKED_IMAGE_HOSTS`, the
+  //     authoritative deny-list that the rule itself enforces. The file is the
+  //     guard, not a violator.
+  //   - `src/lib/api/clients/bggClient.ts` + tests — admin-only server-to-server
+  //     BGG API client, allowed per ADR-1903 (admin flow is OK; user flow is not).
+  //   - `src/components/admin/shared-games/**` + `src/app/admin/(dashboard)/shared-games/**`
+  //     — admin UI for the BGG ingestion workflow (BggSearchPanel, GameForm,
+  //     external-link to boardgamegeek.com on detail page). Admin pages are
+  //     gated by `proxy.ts` `ADMIN_ONLY_ROUTES`; a regular user never reaches
+  //     them.
+  //   - `**/*.stories.tsx` / `**/*.story.tsx` — Storybook fixtures, not in the
+  //     production bundle (`storybook-static/**` already excluded above).
+  //   - `**/__tests__/**` + `**/*.test.{ts,tsx}` — unit tests that EXPECT the
+  //     deny-list to fire and therefore must reference BGG URLs.
+  {
+    files: [
+      "src/lib/games/cover-utils.ts",
+      "src/lib/api/clients/bggClient.ts",
+      "src/lib/api/clients/__tests__/bggClient.test.ts",
+      "src/components/admin/shared-games/**/*.{ts,tsx}",
+      "src/app/admin/(dashboard)/shared-games/**/*.{ts,tsx}",
+      "**/*.stories.tsx",
+      "**/*.story.tsx",
+      "**/__tests__/**/*.{ts,tsx}",
+      "**/*.test.{ts,tsx}",
+      // Playwright E2E specs: fixtures that simulate BGG payloads (catalog
+      // covers, admin import flows). The specs never reach a real production
+      // build and the fixtures are required so the test environment matches
+      // the historical seed shape.
+      "e2e/**/*.{ts,tsx}",
+    ],
+    rules: {
+      "local/no-bgg-hostname": "off",
     },
   },
 ];

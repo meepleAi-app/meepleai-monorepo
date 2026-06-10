@@ -300,6 +300,23 @@ internal static class SharedGameCatalogServiceExtensions
             client.Timeout = TimeSpan.FromSeconds(30);
         });
 
+        // Issue #1823 M4 (ADR DEC-3b/3c/3e): Wikimedia Commons license fetcher.
+        // Consumed by the M8 orchestrator AFTER the Wikidata SPARQL pass resolves
+        // a wdt:P18 IRI to a filename. Shares the 5 RPS IWikimediaRateLimiter
+        // (registered as Singleton above) with WikidataCatalogProvider so the
+        // combined SPARQL + Commons traffic stays under the cap. The S1075
+        // suppression below covers the public Commons API endpoint just like
+        // the other catalog providers.
+#pragma warning disable S1075 // URIs should not be hardcoded
+        const string CommonsBaseUrl = "https://commons.wikimedia.org/";
+#pragma warning restore S1075
+        services.AddHttpClient<IWikimediaCommonsClient, WikimediaCommonsClient>(client =>
+        {
+            client.BaseAddress = new Uri(CommonsBaseUrl);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(CatalogUserAgent);
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
         services.AddHttpClient<BggCatalogProvider>(client =>
         {
             client.BaseAddress = new Uri(BggBaseUrl);

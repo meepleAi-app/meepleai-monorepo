@@ -28,8 +28,8 @@ const FRAMES = [
 for (const { slug, file } of FRAMES) {
   test(`GameDetail ${file.replace(/\.png$/, '')} matches snapshot`, async ({ page }) => {
     await page.goto(`/iframe.html?id=${slug}&viewMode=story`);
-    await page.waitForSelector('#storybook-root > *', { timeout: 30_000 });
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(2000);
     await expect(page).toHaveScreenshot(file, { fullPage: true });
   });
 }

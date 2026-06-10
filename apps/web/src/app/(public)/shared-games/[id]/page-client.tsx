@@ -93,12 +93,19 @@ export interface SharedGameDetailPageClientProps {
   readonly id: string;
   readonly detail: SharedGameDetail;
   readonly contributors: readonly TopContributor[];
+  /**
+   * Suppress the bottom "Sign in" StickyCta. Default false (public route).
+   * `(authenticated)/hub/games/[id]` passes `true` since the visitor CTA
+   * has no meaning for a user who is already signed in (#2118).
+   */
+  readonly hideStickyCta?: boolean;
 }
 
 export function SharedGameDetailPageClient({
   id,
   detail,
   contributors,
+  hideStickyCta = false,
 }: SharedGameDetailPageClientProps): JSX.Element {
   const { t, formatMessage } = useTranslation();
 
@@ -495,7 +502,7 @@ export function SharedGameDetailPageClient({
         </section>
       </div>
 
-      <StickyCta signInHref="/login" labels={stickyCtaLabels} />
+      {!hideStickyCta && <StickyCta signInHref="/login" labels={stickyCtaLabels} />}
     </main>
   );
 }

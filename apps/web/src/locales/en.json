@@ -2184,16 +2184,16 @@
         "resultsCountTemplate": "{filtered} of {total} results"
       },
       "games": {
-        "badge": "Hub · /hub/games · Public",
+        "badge": "Hub · /hub/games · Community",
         "title": "Community games catalog",
-        "subtitle": "Browse community-indexed games. Sign in to add them to your library.",
+        "subtitle": "Browse community-indexed games.",
         "kpi": {
           "total": "Total games",
           "featured": "Featured",
           "recent": "Recent"
         },
         "emptyTitle": "Empty catalog",
-        "emptyBody": "No public games have been added to the community catalog yet."
+        "emptyBody": "No games have been added to the community catalog yet."
       },
       "agents": {
         "badge": "Hub · /hub/agents",

@@ -131,7 +131,12 @@ export default async function HubGameDetailPage({ params }: PageProps): Promise<
 
   return (
     <Suspense fallback={<HubGameDetailFallback />}>
-      <SharedGameDetailPageClient id={id} detail={detail} contributors={contributors} />
+      <SharedGameDetailPageClient
+        id={id}
+        detail={detail}
+        contributors={contributors}
+        hideStickyCta
+      />
     </Suspense>
   );
 }

@@ -285,6 +285,8 @@ Root cause: regression from PR #1345/#1347 (Phase 2d delete `GameEntity` + drop 
 
 ### 🔒 Active Freezes
 
+**BGG user-side asset ban — 2026-06-10** (issue [#2123](https://github.com/meepleAi-app/meepleai-monorepo/issues/2123)) — Hard ban on browser requests to `cf.geekdo-images.com`, `*.boardgamegeek.com`, `images.geekdo.com`, `geekdo-images.com`. Three-layer enforcement: (1) data plane (seed manifests + `SeedManifestGame` C# model stripped of image properties + DB columns nullable + nullify migration `20260610152201`); (2) resolution plane (`SharedGameDto.CoverUrl` is the single FE source, deterministic placeholder fallback via `cover-utils.ts`); (3) network plane (`next.config.js` explicit allowlist with no `**` catch-all + custom ESLint rule `local/no-bgg-host` + `pnpm lint:bgg` grep gate). Prometheus metric `meepleai_bgg_url_attempted_render_total` has SLO=0; any nonzero increment is P1. See [ADR-059 §5](./docs/for-claude/architecture/adr/adr-059-catalog-seed-legal-posture.md) and [operations manual § 20](./docs/for-developers/operations/operations-manual.md). Admin server-to-server BGG paths (`apps/web/src/app/admin/**`, `apps/web/src/components/admin/**`) remain legitimate per ADR-059 §2.
+
 **Design System De-versioning — COMPLETE 2026-05-18** (umbrella #1023 closed, Stage 3 #1026 closed)
 
 All 3 stages shipped (Stage 1 audit #1024 → Stage 2 path-migration #1025/PR #1032 → Stage 3 conformity fixes #1026). Canonical paths are active:

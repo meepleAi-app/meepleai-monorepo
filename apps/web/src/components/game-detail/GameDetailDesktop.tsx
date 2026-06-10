@@ -7,12 +7,12 @@ import { EditCoverOverlay } from '@/components/features/library/custom-cover/Edi
 import { SessionContributorsStrip } from '@/components/features/library/SessionContributorsStrip';
 import { SplitViewLayout } from '@/components/layout/SplitViewLayout/SplitViewLayout';
 import { ConnectionBar, buildGameConnections } from '@/components/ui/data-display/connection-bar';
-import { MeepleCard } from '@/components/ui/data-display/meeple-card/MeepleCard';
 import type { MeepleCardMetadata } from '@/components/ui/data-display/meeple-card/types';
 import { useGameSessionContributors } from '@/hooks/queries/useGameSessionContributors';
 import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
 import { useConnectionBarNav } from '@/hooks/useConnectionBarNav';
 
+import { GameHero, type GameHeroMetaItem } from './GameHero';
 import { GameTabsPanel } from './GameTabsPanel';
 
 import type { GameTabId } from './tabs';
@@ -126,35 +126,22 @@ export function GameDetailDesktop({
 
   const hasCustomCover = Boolean(game?.customCoverR2Key);
 
+  // #2100 M1: GameHero v2 — mockup parity con cover gradient overlay + title
+  // bottom-anchor. Sostituisce MeepleCard hero precedente (#2079 F1 closed).
+  // Append rating come ultimo entry meta (parity con mockup "★ 7.7" footer).
+  const heroMetaItems: GameHeroMetaItem[] = heroMetadata.map(m => ({ label: m.label }));
+  if (game?.averageRating != null) {
+    heroMetaItems.push({ label: `★ ${game.averageRating.toFixed(1)}` });
+  }
+
   const listContent = (
     <div className="flex flex-col gap-3">
       <div className="group relative">
-        <MeepleCard
-          entity="game"
-          variant="hero"
+        <GameHero
           title={game?.gameTitle ?? 'Gioco non in libreria'}
-          // Mockup parity: SP3 GameHero shows a "🎲 Gioco" pill above the
-          // title so the reader scans entity type first.
-          showEntityLabel
-          entityLabel="Gioco"
-          // Required so HeroCard.shouldRenderRichPlaceholder evaluates true
-          // for catalog games whose BGG image is rejected by shouldUsePlaceholder
-          // (#1822 — runtime BGG URL allow-list). Without an id the fallback
-          // collapses to a generic entity-icon and the live hero looks empty.
-          id={game?.gameId ?? gameId}
-          subtitle={
-            game?.gamePublisher && game.gamePublisher.length > 0
-              ? game.gamePublisher
-              : undefined
-          }
+          variant={isNotInLibrary ? 'community' : 'own'}
           imageUrl={game?.gameImageUrl ?? undefined}
-          rating={game?.averageRating ?? undefined}
-          // BGG averageRating is on a 0–10 scale (e.g. Catan 7.09).
-          // Without `ratingMax`, MeepleCard defaults to /5 and renders all 5
-          // stars filled for any rating ≥5 — visually wrong.
-          ratingMax={10}
-          metadata={heroMetadata.length > 0 ? heroMetadata : undefined}
-          data-testid="game-detail-hero-card"
+          metadata={heroMetaItems.length > 0 ? heroMetaItems : undefined}
         />
         {game && (
           <EditCoverOverlay

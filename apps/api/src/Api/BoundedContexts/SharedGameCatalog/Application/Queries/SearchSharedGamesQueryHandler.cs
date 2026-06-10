@@ -424,8 +424,9 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
                 p.Game.MinAge,
                 p.Game.ComplexityRating,
                 p.Game.AverageRating,
-                p.Game.ImageUrl,
-                p.Game.ThumbnailUrl,
+                // Issue #2123 — tombstone fields (entity columns now nullable post Phase A).
+                p.Game.ImageUrl ?? string.Empty,
+                p.Game.ThumbnailUrl ?? string.Empty,
                 (GameStatus)p.Game.Status,
                 p.Game.CreatedAt,
                 p.Game.ModifiedAt,

@@ -1,24 +1,23 @@
 /**
- * Game-detail page-mock fixtures (DS-17-6-v2).
+ * Game-detail page-mock fixtures (DS-17 Phase 2.5 — argTypes matrix pattern).
  *
- * Consumed by `GameDetailView.stories.tsx`. Shape derives from /library/games/{id}
- * response shape (extended Game with description + designer + rating).
- *
- * Refs: spec, umbrella #2063.
+ * Refs: spec docs/superpowers/specs/2026-06-10-ds-17-phase-2.5-and-3-redesign.md, umbrella #2063.
  */
 
 import type { Game } from '@/lib/api/schemas/games.schemas';
 
-import { MOCK_DASHBOARD_GAMES } from './dashboard';
-
-// Game detail returns the same Game shape with description + averageRating already populated.
 export const MOCK_GAME_DETAIL: Game = {
-  ...MOCK_DASHBOARD_GAMES[0],
+  id: '11111111-1111-1111-1111-111111111111',
+  title: 'Wingspan',
+  publisher: 'Stonemaier',
+  yearPublished: 2019,
+  minPlayers: 1,
+  maxPlayers: 5,
+  minPlayTimeMinutes: 40,
+  maxPlayTimeMinutes: 70,
+  bggId: 0,
+  createdAt: '2026-06-09T00:00:00.000Z',
   description:
     'A bird-collection game where players are bird enthusiasts seeking to discover and attract the best birds to their network of wildlife preserves.',
   averageRating: 4.2,
 };
-
-// Empty = "game not found" — the story uses MSW 404 to drive this state instead
-// of mutating gameId, so this export is mainly for documentation parity.
-export const MOCK_GAME_DETAIL_EMPTY: Game | null = null;

@@ -140,3 +140,40 @@ describe('validate() cross-reference checks', () => {
     expect(result.errors.some(e => e.includes('Unsupported file extension'))).toBe(true);
   });
 });
+
+describe('FidelitySchema design_intent + viewports (DEC-P3-1+2+4)', () => {
+  it('rejects unknown design_intent enum value', () => {
+    const result = FidelitySchema.safeParse({
+      mockup: { source: REAL_MOCKUP, states: ['default'] },
+      acceptance: {
+        states_covered: ['default'],
+        design_intent: 'unknown-intent',
+      },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('defaults design_intent to "current" when omitted', () => {
+    const result = FidelitySchema.safeParse({
+      mockup: { source: REAL_MOCKUP, states: ['default'] },
+      acceptance: { states_covered: ['default'] },
+    });
+    expect(result.success).toBe(true);
+    expect(result.data?.acceptance.design_intent).toBe('current');
+    expect(result.data?.acceptance.viewports).toEqual(['desktop']);
+  });
+
+  it('FAIL — design_intent="forward-refactor-obsolete" requires obsolete_tracking_issue', async () => {
+    const file = writeFixture('obsolete-no-tracking.fidelity.json', {
+      mockup: { source: REAL_MOCKUP, states: ['default'] },
+      acceptance: {
+        states_covered: ['default'],
+        design_intent: 'forward-refactor-obsolete',
+        // obsolete_tracking_issue intentionally missing
+      },
+    });
+    const result = await validate(file);
+    expect(result.ok).toBe(false);
+    expect(result.errors.some(e => e.includes('obsolete_tracking_issue'))).toBe(true);
+  });
+});

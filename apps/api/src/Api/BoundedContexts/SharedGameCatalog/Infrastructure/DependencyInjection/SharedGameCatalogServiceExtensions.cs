@@ -9,6 +9,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Services;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Providers;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
+using Api.Services.Pdf;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -197,9 +198,69 @@ internal static class SharedGameCatalogServiceExtensions
         // batch (HPA=1), so an in-memory limiter is sufficient.
         services.AddSingleton<IWikimediaRateLimiter, InMemoryWikimediaRateLimiter>();
 
+        // Issue #1823 Phase B (ADR DEC-3h): R2 cover upload pipeline. Singleton
+        // because the underlying AmazonS3Client is thread-safe and reuses
+        // a connection pool — matching the BlobStorageServiceFactory lifetime.
+        // CLAUDE.md pitfall #2565: register both the interface and the
+        // implementation. NOTE: this registration constructs the AmazonS3Client
+        // lazily inside the factory delegate; if STORAGE_PROVIDER is not "s3",
+        // the pipeline is still registered but UploadAsync will throw at first
+        // call (S3 misconfiguration surfaces synchronously instead of silently).
+        RegisterCoverR2UploadPipeline(services);
+
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 
         return services;
+    }
+
+    /// <summary>
+    /// Issue #1823 Phase B (ADR DEC-3h) — registers
+    /// <see cref="ICoverR2UploadPipeline"/> as a singleton backed by a
+    /// lazily-constructed <see cref="Amazon.S3.IAmazonS3"/> client. The S3
+    /// client is built from the same <c>S3_*</c> env vars used by
+    /// <see cref="BlobStorageServiceFactory"/> so we don't drift on
+    /// endpoint/credentials between the two consumers. Singleton lifetime
+    /// matches the long-lived AWS SDK client (thread-safe + connection pool).
+    /// </summary>
+    private static void RegisterCoverR2UploadPipeline(IServiceCollection services)
+    {
+        services.AddSingleton<ICoverR2UploadPipeline>(sp =>
+        {
+            var config = sp.GetRequiredService<IConfiguration>();
+            var logger = sp.GetRequiredService<ILogger<CoverR2UploadPipeline>>();
+
+            var options = new S3StorageOptions
+            {
+                Endpoint = config["S3_ENDPOINT"] ?? throw new InvalidOperationException("S3_ENDPOINT is required for CoverR2UploadPipeline"),
+                AccessKey = config["S3_ACCESS_KEY"] ?? throw new InvalidOperationException("S3_ACCESS_KEY is required for CoverR2UploadPipeline"),
+                SecretKey = config["S3_SECRET_KEY"] ?? throw new InvalidOperationException("S3_SECRET_KEY is required for CoverR2UploadPipeline"),
+                BucketName = config["S3_BUCKET_NAME"] ?? throw new InvalidOperationException("S3_BUCKET_NAME is required for CoverR2UploadPipeline"),
+                Region = config["S3_REGION"] ?? "auto",
+                ForcePathStyle = bool.TryParse(config["S3_FORCE_PATH_STYLE"], out var forcePathStyle) && forcePathStyle,
+            };
+
+            var s3Config = new Amazon.S3.AmazonS3Config
+            {
+                ServiceURL = options.Endpoint,
+                ForcePathStyle = options.ForcePathStyle,
+                AuthenticationRegion = options.Region,
+            };
+
+            if (!string.Equals(options.Region, "auto", StringComparison.Ordinal)
+                && Amazon.RegionEndpoint.GetBySystemName(options.Region) != null)
+            {
+                s3Config.RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(options.Region);
+            }
+
+            var credentials = new Amazon.Runtime.BasicAWSCredentials(options.AccessKey, options.SecretKey);
+            var s3Client = new Amazon.S3.AmazonS3Client(credentials, s3Config);
+
+            // Issue #1357: R2 rejects x-amz-tagging-directive; strip it
+            // defensively (same hook used by BlobStorageServiceFactory).
+            s3Client.BeforeRequestEvent += BlobStorageServiceFactory.StripUnsupportedR2Headers;
+
+            return new CoverR2UploadPipeline(s3Client, options, logger);
+        });
     }
 
     /// <summary>

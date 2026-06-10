@@ -83,10 +83,24 @@ export function generateDeliverables(opts) {
     }
   }
 
+  // Code-reviewer CRITICAL fix: collision guard for HTML+JSX twin pairs.
+  // When a pair is split across clusters (e.g., sp4-hub-games.html in sp4-core,
+  // .jsx in sp4-sessions), both produce the same stem.fidelity.json — without
+  // this guard the second write silently overwrites the first.
+  // Prefer .html as canonical (matches MOCKUPS_INDEX pairing rule); if no .html
+  // exists, use the first .jsx/.js/.css entry.
+  const fidelityWinnerByStem = new Map();
   for (const item of all) {
     const sourceName = basename(item.mockup_path);
-    const fidelityName = sourceName.replace(/\.(html|jsx|js|css)$/, '.fidelity.json');
-    const fidelityPath = join(mockupsDir, fidelityName);
+    const stem = sourceName.replace(/\.(html|jsx|js|css)$/, '');
+    const existing = fidelityWinnerByStem.get(stem);
+    const isHtml = sourceName.endsWith('.html');
+    if (!existing || (isHtml && !existing.mockup_path.endsWith('.html'))) {
+      fidelityWinnerByStem.set(stem, item);
+    }
+  }
+  for (const [stem, item] of fidelityWinnerByStem) {
+    const fidelityPath = join(mockupsDir, `${stem}.fidelity.json`);
     const content = FIDELITY_TEMPLATE(item.mockup_path, item.design_intent);
     writeFileSync(fidelityPath, JSON.stringify(content, null, 2) + '\n');
   }

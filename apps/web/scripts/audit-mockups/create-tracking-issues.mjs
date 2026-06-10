@@ -38,7 +38,12 @@ export function parseDrafts(draftsContent) {
     const lines = section.split('\n');
     const mockup_path = lines[0].trim();
     const titleMatch = section.match(/\*\*Title\*\*: `([^`]+)`/);
-    const bodyMatch = section.match(/\*\*Body\*\*:\s*\n\s*\n([\s\S]+?)\n---/);
+    // Code-reviewer HIGH fix: terminate body at the LAST `---` line in the section
+    // (greedy backtrack). Previous regex `\n---` (non-greedy) would silently truncate
+    // any body containing a Markdown horizontal rule. Since `split(/^## Draft N: /m)`
+    // strips draft headers, each section ends with one closing `---` separator —
+    // greedy match correctly finds it even if the body has embedded `---` lines.
+    const bodyMatch = section.match(/\*\*Body\*\*:\s*\n\s*\n([\s\S]+)\n---\s*\n*$/);
     if (titleMatch && bodyMatch) {
       result.push({
         mockup_path,

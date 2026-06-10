@@ -43,6 +43,51 @@ Reason for obsolescence.
     const drafts = `# Tracking Issues Drafts — DS-17 Phase B\n\n_No obsolete classifications._`;
     expect(parseDrafts(drafts)).toEqual([]);
   });
+
+  it('preserves embedded --- horizontal rules in body (Code-reviewer HIGH fix)', () => {
+    // Spec-panel drafts may contain Markdown horizontal rules `---` within the body
+    // as visual separators (e.g., between Option A and Option B in decision drafts).
+    // The previous non-greedy regex `\n---` would silently truncate at the first
+    // embedded rule. Greedy backtrack must capture the FULL body including embedded
+    // rules, terminating only at the LAST `---` (the draft separator).
+    const drafts = `# Tracking Issues Drafts — DS-17 Phase B
+
+## Draft 1: admin-mockups/design_files/sp4-decision.html
+
+**Title**: \`Architecture decision needed\`
+
+**Body**:
+
+## Context
+
+Some explanation here.
+
+## Options
+
+**Option A**: Do X.
+
+---
+
+**Option B**: Do Y.
+
+---
+
+**Option C**: Do Z.
+
+## Recommendation
+
+Pick A.
+
+---
+`;
+    const result = parseDrafts(drafts);
+    expect(result).toHaveLength(1);
+    // Body MUST include all 3 embedded options + Recommendation section, not be truncated at the first ---
+    expect(result[0].body).toMatch(/Option A/);
+    expect(result[0].body).toMatch(/Option B/);
+    expect(result[0].body).toMatch(/Option C/);
+    expect(result[0].body).toMatch(/Pick A/);
+  });
 });
 
 describe('runBatch (rollback path — Code-reviewer Finding 4)', () => {

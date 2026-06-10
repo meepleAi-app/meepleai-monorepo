@@ -76,11 +76,13 @@ export const FidelitySchema = z.object({
       .describe('Snapshot viewports per story.'),
 
     // Required when design_intent = forward-refactor-obsolete
+    // DS-17 Phase B (#2127): accept 'PENDING' sentinel for pre-signoff stubs;
+    // create-tracking-issues.mjs replaces with real #N ref post designer approval.
     obsolete_tracking_issue: z
       .string()
-      .regex(/^#\d+$|^$/, 'Format: #1234 or empty')
+      .regex(/^#\d+$|^$|^PENDING$/, 'Format: #1234, empty, or PENDING (pre-signoff sentinel)')
       .default('')
-      .describe('GitHub issue # tracking mockup rewrite OR component rollback.'),
+      .describe('GitHub issue # tracking mockup rewrite OR component rollback (or PENDING).'),
   }),
 });
 

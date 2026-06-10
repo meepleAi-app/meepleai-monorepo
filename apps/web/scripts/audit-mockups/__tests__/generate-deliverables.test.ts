@@ -15,6 +15,59 @@ describe('generateDeliverables', () => {
     rmSync(workDir, { recursive: true, force: true });
   });
 
+  it('prefers HTML over JSX when twin pair is split across clusters (Code-reviewer CRITICAL)', () => {
+    // When sp4-hub-games.html lives in sp4-core but sp4-hub-games.jsx lives in
+    // sp4-sessions, both produce the same fidelity stem and the second write would
+    // silently overwrite the first. Collision guard MUST prefer the .html source
+    // (canonical per MOCKUPS_INDEX pairing rule).
+    const audit = {
+      generatedAt: '2026-06-10',
+      totalClassifications: 2,
+      byCluster: {
+        'dev-fixtures': [],
+        auth: [],
+        sp3: [],
+        'sp4-core': [
+          {
+            mockup_path: 'admin-mockups/design_files/sp4-hub-games.html',
+            design_intent: 'forward-refactor-obsolete',
+            confidence: 0.9,
+            reasoning: 'HTML canonical',
+            sub_components: [],
+            pair_disagreement: false,
+            suggested_tracking_issue: { title: 'T', body: 'B' },
+          },
+        ],
+        'sp4-sessions': [
+          {
+            mockup_path: 'admin-mockups/design_files/sp4-hub-games.jsx',
+            design_intent: 'forward-refactor-obsolete',
+            confidence: 0.9,
+            reasoning: 'JSX twin (would silently overwrite without guard)',
+            sub_components: [],
+            pair_disagreement: false,
+            suggested_tracking_issue: { title: 'T', body: 'B' },
+          },
+        ],
+        'sp6-7-nano': [],
+      },
+    };
+    const auditPath = join(workDir, 'audit.json');
+    writeFileSync(auditPath, JSON.stringify(audit));
+
+    generateDeliverables({
+      auditPath,
+      mockupsDir: join(workDir, 'design_files'),
+      auditsDir: join(workDir, 'audits-out'),
+      docsDir: join(workDir, 'docs-out'),
+    });
+
+    const fidelity = JSON.parse(
+      readFileSync(join(workDir, 'design_files/sp4-hub-games.fidelity.json'), 'utf-8')
+    );
+    expect(fidelity.mockup.source).toBe('admin-mockups/design_files/sp4-hub-games.html');
+  });
+
   it('uses PENDING sentinel for obsolete_tracking_issue (Code-reviewer Finding 1)', () => {
     const audit = {
       generatedAt: '2026-06-10',

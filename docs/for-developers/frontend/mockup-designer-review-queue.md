@@ -1,0 +1,50 @@
+# Mockup Designer Review Queue — DS-17 Phase B
+
+**Source**: `audits/2026-06-10-mockup-design-intent-audit.md`
+**Generated**: 2026-06-10
+**Auditor**: AI subagent fan-out (Phase B sub-issue #2127)
+
+## How to approve
+
+Comment on this PR with the magic phrase:
+
+```
+DESIGNER APPROVED: 2026-06-10 <your-name>
+```
+
+Example: `DESIGNER APPROVED: 2026-06-15 alice-doe`
+
+Magic phrase regex: `^DESIGNER APPROVED: \d{4}-\d{2}-\d{2} [\w\s-]+$`
+
+After approval, tracking issues will be created for `forward-refactor-obsolete` entries via `pnpm audit-mockups:create-issues`.
+
+## Obsolete candidates (require review)
+
+- [ ] `admin-mockups/design_files/sp4-hub-games.html` — HTML title 'Pre-Stage-3 · Hub Games (public) — /hub/games'. Route /hub/games was retired by Asse D follow-up P2 #1899 which refactored /games as multi-tab hub (discover/catalogo/trending/community) with Discover default tab. Mockup represents pre-refactor target the codebase has already surpassed. Not in MOCKUPS_INDEX (non-mappable). Per CLAUDE.md Stage 3 #1026 (closed 2026-05-18) the legacy hub/<entity> directories were emptied post-codemod.
+  - Suggested tracking: [DS-17] Delete obsolete sp4-hub-games mockup — /hub/games route retired by Asse D P2 multi-tab refactor
+- [ ] `admin-mockups/design_files/sp4-hub-agents.html` — HTML title 'Pre-Stage-3 · Hub Agents (authenticated) — /hub/agents'. Route /hub/agents was retired by Stage 3 #1026 (closed 2026-05-18); current canonical agents route is /agents per MOCKUPS_INDEX (sp4-agents-index → /agents). Mockup represents pre-refactor target. Not in MOCKUPS_INDEX (non-mappable).
+  - Suggested tracking: [DS-17] Delete obsolete sp4-hub-agents mockup — /hub/agents route retired by Stage 3 deversioning
+- [ ] `admin-mockups/design_files/sp4-dashboard.html` — Pre-existing CLAUDE.md precedent: sp4-dashboard.{html,jsx} superseded by Asse C #1898 priority-driven dashboard refactor (shipped 2026-06-05 sess.34). 5 entity sections legacy → 4 priority sections (ProssimiSection/RecentiSection/SuggestedSection/FriendsActivitySection). Mockup represents pre-Asse-C design that codebase has surpassed. Existing tracking issue: #2114.
+  - Suggested tracking: Already tracked in #2114
+- [ ] `admin-mockups/design_files/sp4-add-game-bgg-step.html` — Mockup designs AddGameDrawer → tab 'From BGG' (user-side BGG search) per JSX comment. Per CLAUDE.md DP-5 feedback (sess.46h 2026-06-09) and #1903 ADR: user-side BGG access is BLOCKED for ToS compliance. Only admin-only via useSearchBggGames hook is allowed. Mockup specifies BGG rate-limit, HTTP 202 throttled, tier-quota — all USER-FACING BGG features that violate ToS. Pattern: catalog interno via api.games.getAll, NON useSearchBggGames user-side. MOCKUPS_INDEX listing as /library/proposals predates the ToS restriction.
+  - Suggested tracking: [DS-17] Delete obsolete sp4-add-game-bgg-step mockup — BGG ToS violation (user-side BGG access forbidden per #1903 ADR)
+- [ ] `admin-mockups/design_files/sp4-hub-games.jsx` — JSX twin of sp4-hub-games.html titled 'Pre-Stage-3 · Hub Games (public) — /hub/games'. Route /hub/games retired by Stage 3 #1026 + superseded by /games multi-tab hub (Asse D P2 #1899). Not in MOCKUPS_INDEX (non-mappable).
+  - Suggested tracking: [DS-17] Delete obsolete sp4-hub-games mockup — /hub/games route retired by Asse D P2 multi-tab refactor
+- [ ] `admin-mockups/design_files/sp4-hub-agents.jsx` — JSX twin of sp4-hub-agents.html titled 'Pre-Stage-3 · Hub Agents (authenticated) — /hub/agents'. Route /hub/agents retired by Stage 3 #1026 (closed 2026-05-18); current canonical is /agents.
+  - Suggested tracking: [DS-17] Delete obsolete sp4-hub-agents mockup — /hub/agents route retired by Stage 3 deversioning
+- [ ] `admin-mockups/design_files/sp4-dashboard.jsx` — JSX twin of sp4-dashboard.html. Pre-existing CLAUDE.md precedent: superseded by Asse C #1898 priority-driven dashboard refactor (shipped 2026-06-05 sess.34). Existing tracking issue: #2114.
+  - Suggested tracking: Already tracked in #2114
+- [ ] `admin-mockups/design_files/sp4-add-game-bgg-step.jsx` — JSX twin of sp4-add-game-bgg-step.html. Designs user-side BGG search step in AddGameDrawer (rate-limit banner, HTTP 202 throttled, tier-quota lock). Violates BGG ToS per #1903 ADR and CLAUDE.md DP-5 (user-side BGG access bloccato). Forbidden surface.
+  - Suggested tracking: [DS-17] Delete obsolete sp4-add-game-bgg-step mockup — BGG ToS violation (user-side BGG access forbidden per #1903 ADR)
+- [ ] `admin-mockups/design_files/sp4-hub-toolkits.html` — Title 'Pre-Stage-3 · Hub Toolkits (authenticated) — /hub/toolkits'. Same Pre-Stage-3 hub-* pattern as sp4-hub-games and sp4-hub-agents, which were retired by Stage 3 #1026 (design system de-versioning, umbrella #1023). Per CLAUDE.md, hub/<entity> 3-routes pattern was refactored. Mockup superseded by current hub layout — do not migrate.
+  - Suggested tracking: DS-17 Phase B: classify sp4-hub-toolkits as forward-refactor-obsolete (Pre-Stage-3 retired)
+- [ ] `admin-mockups/design_files/sp4-hub-toolkits.jsx` — JSX pair for Pre-Stage-3 Hub Toolkits mockup. Same Pre-Stage-3 hub-* pattern as sp4-hub-games and sp4-hub-agents (classified obsolete in sp4-core audit). Stage 3 #1026 (umbrella #1023, COMPLETE 2026-05-18) retired the legacy hub/<entity> pattern. Do not migrate.
+  - Suggested tracking: DS-17 Phase B: classify sp4-hub-toolkits as forward-refactor-obsolete (Pre-Stage-3 retired)
+
+## Pair disagreements (require designer arbitration)
+
+_None._
+
+## Low confidence (< 0.6, optional review)
+
+_None._

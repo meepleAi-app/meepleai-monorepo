@@ -436,6 +436,205 @@ Then they see [...???...]  ← no mockup contract (ships as ComingSoon stub)
 
 ---
 
+## Draft 14: SPEC-PANEL #2 — Nav-chrome 3-way drift (Fowler)
+
+**Title**: `[DS-17 architecture] Nav-chrome canonical primitives never consumed — pick deprecate-or-backfill`
+
+**Body**:
+
+## Context
+
+DS-17 Phase B spec-panel addendum #2 (`audits/2026-06-10-nav-chrome-bgg-naming-audit.md` Section A) identified 3-way drift in nav-chrome:
+
+| Layer | Pattern | State |
+|---|---|---|
+| Nav primitives `nanolith-nav-*.html` | search-pill ⌘K, LiveSessionPill (D5), dynamic-slot-3 (D6), chat slide-over (D7) | Self-documenting only |
+| Page-mocks `sp4/sp3/sp7-*.jsx` | Should reuse primitives | Each re-implements inline `DesktopAuthNav` / `PhoneTopNav` / `MobileBottomBar` |
+| Runtime `AppTopBar.tsx` | Should match primitives | Lacks search-pill, LiveSessionPill, dynamic-slot-3 |
+
+Symptom: each layer evolves independently. No layer is the "single source of truth". Page-mock-to-runtime divergence will silently regenerate during Phase C migration.
+
+## Additional violations
+
+- `sp4-players-index.jsx` + `sp4-sessions-index.jsx` — primary nav destinations (in `TOP_BAR_NAV_IDS`) but render NO nav-chrome
+- Detail mockups (sp4-game-detail, sp4-toolkit-detail, sp4-discover, sp4-game-nights-index, sp4-player-detail, sp4-agent-detail, sp4-kb-detail) drop 5-voice topbar — runtime always shows it
+- No mockup documents OPEN mobile SideDrawer state (8-voice MAIN_NAV_ITEMS only visible at runtime)
+
+## Two paths forward (pick one)
+
+**Option A — Deprecate canonical nav primitives**:
+- Mark `nanolith-nav-{topbar,bottom-mobile,chat-panel}.html` as `forward-refactor-obsolete`
+- Remove decisions D5/D6/D7 from architecture docs
+- Accept inline DesktopAuthNav / PhoneTopNav / MobileBottomBar re-implementation per page-mock as the convention
+- Estimate: ~2gg (docs cleanup)
+
+**Option B — Backfill + reference primitives uniformly**:
+- Update `AppTopBar.tsx` to include search-pill (⌘K), LiveSessionPill, dynamic-slot-3
+- Add `sp4-side-drawer-open.{html,jsx}` mockup documenting 8-voice open state
+- Regenerate `sp4-players-index.{html,jsx}` + `sp4-sessions-index.{html,jsx}` with canonical chrome
+- Update 7 detail mockups to render canonical 5-voice
+- Estimate: ~5-7gg (designer + dev)
+
+## Recommendation (Fowler)
+
+**Option B** preserves design system integrity. The primitives represent decisions (D5/D6/D7) that emerged from explicit design work; abandoning them loses that institutional memory.
+
+## Acceptance
+
+- [ ] Decision committed in PR with rationale (A or B)
+- [ ] If A: 3 primitives reclassified + fidelity.json `design_intent: forward-refactor-obsolete`
+- [ ] If B: 4 mockups regenerated + 1 new mockup (side-drawer-open) + AppTopBar.tsx feature-complete
+
+## Refs
+
+- Nav-chrome audit: `audits/2026-06-10-nav-chrome-bgg-naming-audit.md` § Section A
+- Asse B sidebar removal: #1977 (audit follow-up of #1974 F18)
+- Nav primitives source: `admin-mockups/design_files/nanolith-nav-*.html`
+- Umbrella: #2063
+- Phase B sub-issue: #2127
+
+---
+
+## Draft 15: SPEC-PANEL #2 — BGG lint gate + 9 new violations (Newman+Wiegers)
+
+**Title**: `[DS-17 ToS compliance] Add pnpm lint:bgg-mockups gate + flag 7 mockup violations + 2 codebase findings`
+
+**Body**:
+
+## Context
+
+DS-17 Phase B audit flagged ONLY `sp4-add-game-bgg-step.{html,jsx}` for BGG ToS violation per #1903 ADR. Spec-panel addendum #2 (Section B) audit found **9 additional forbidden user-side BGG surfaces** that escaped Phase B classification:
+
+### 7 mockup violations (NEW)
+
+| Mockup | Forbidden surface |
+|---|---|
+| `sp4-upload-wizard-extended.{html,jsx}` | Step 0 source picker offers "Da BoardGameGeek" card → links to forbidden mockup |
+| `sp4-library-desktop.jsx` | Hero "↓ Importa BGG" CTA + empty-state CTA links to forbidden mockup |
+| `sp4-game-chat-tab.html` | Low-confidence chat fallback: "BGG forum thread" citation + "🔗 BGG · ricerca esterna" chip |
+| `sp5-profile-settings.{html,jsx}` | "Connected services" panel exposes BGG as OAuth target |
+| `sp3-how-it-works.jsx` | Onboarding card: "Connetti BGG — Sincronizza la tua collezione BoardGameGeek — OAuth · 30s" |
+| `settings.jsx` | BggIcon SVG + Bio "BGG rank: 1.492" + Connected services BGG entry |
+| `sp7-game-night-live.jsx:561` | Add-game CTA navigates to forbidden mockup |
+
+### 2 codebase findings
+
+| File | Line | Issue |
+|---|---|---|
+| `apps/web/src/components/dashboard/QuickActionCards.tsx` | 63 | "Cerca nel catalogo BGG" displayed to ALL users (no admin gate). Component appears orphan but is in bundle. |
+| `apps/web/src/components/features/settings/settings-sections.ts` | 77 | User settings sidebar item subtitle still says "BGG, Discord" |
+
+## Scope
+
+1. **Reclassify 7 mockups** in fidelity.json as `forward-refactor-obsolete` (mirror sp4-add-game-bgg-step pattern, reference #1903)
+2. **Fix codebase**: delete or admin-gate `QuickActionCards.tsx:63` + remove BGG from `settings-sections.ts:77` subtitle
+3. **Add lint gate**: `pnpm lint:bgg-mockups` whitelist-incremental script
+   - Scan `admin-mockups/design_files/**/*.{html,jsx}` + `apps/web/src/**` (excluding `/admin/`, `/api/`)
+   - Match regex `/BGG|BoardGameGeek|boardgamegeek/i`
+   - PASS if `design_intent === 'forward-refactor-obsolete'` OR line-level `<!-- BGG-ALLOWED: <reason> -->` justification OR file path matches admin scope
+   - FAIL otherwise
+   - Baseline locked at current violations; growth = CI break
+   - Mirror pattern: `apps/web/scripts/mockup-annotations/lint-tokens-mockups.mjs` (DS-17-2 #2070)
+4. **CI integration**: add to PR-gate workflow with `--strict --max-baseline <N>` flag
+
+## Acceptance
+
+- [ ] 7 mockup fidelity.json files reclassified `forward-refactor-obsolete` with #1903 ref
+- [ ] `QuickActionCards.tsx:63` + `settings-sections.ts:77` fixed
+- [ ] `pnpm lint:bgg-mockups` script implemented + tests
+- [ ] CI workflow updated
+- [ ] Baseline committed (`audits/2026-06-11-bgg-baseline.json`)
+
+## Refs
+
+- BGG ADR: #1903 (user-side BGG access forbidden)
+- Nav-chrome+BGG+naming audit: `audits/2026-06-10-nav-chrome-bgg-naming-audit.md` § Section B
+- DP-5 feedback (sess.46h 2026-06-09): user-side BGG access blocked
+- Pattern reference: DS-17-2 #2070 (lint:tokens:mockups whitelist-incremental)
+- Phase 1 spec (BGG removal): `docs/superpowers/specs/2026-05-22-hide-bgg-user-facing-design.md`
+- Phase 2 spec (residual surfaces): `docs/superpowers/specs/2026-05-22-hide-bgg-user-facing-phase-2-design.md`
+- Umbrella: #2063
+- Phase B sub-issue: #2127
+
+---
+
+## Draft 16: SPEC-PANEL #2 — Naming + route architecture consistency (Adzic)
+
+**Title**: `[DS-17 architecture] Standardize CRUD verbs + dynamic params + finish #2025 cleanup + suffix vocabulary`
+
+**Body**:
+
+## Context
+
+DS-17 Phase B spec-panel addendum #2 (Section C) identified 8 systemic naming inconsistencies affecting mockup-to-route lookup reliability:
+
+### Critical issues
+
+1. **`sp4-*` prefix overloaded**: same prefix used for authenticated core (~30 files) AND session game-specific demos (~40 files for catan/codenames/paleo/power-grid/puerto-rico/wingspan/zombicide/skeleton variants)
+2. **Twin family confusion**: `librogame-runthrough-*` vs surviving `sp6-libro-game-*` (incomplete #2025 cleanup — 4 files still duplicated)
+3. **CRUD verb split**: mockups lean to `-create`, routes lean to `/new`
+4. **Dynamic param sprawl**: 10 variants (`[id]` ✓, `[gameId]`, `[sessionId]`, `[campaignId]`, `[privateGameId]`, `[token]`, `[code]`, `[inviteToken]`, `[threadId]`, `[name]`) — should be 2-3
+5. **Route namespace duplications**:
+   - `/sessions/[id]/*` (8) vs `/sessions/live/[sessionId]/*` (5)
+   - `/toolkit/*` (6 sing.) vs `/toolkits/[id]` (2 plur.)
+   - `/hub/{games,agents,toolkits}` vs `/{games,agents,toolkits}` (Draft 13 covers this)
+   - `/settings/*` vs `/profile?tab=settings&section=*` (Phase B implicit)
+6. **Language drift**: `sp4-kb-globale.html` (Italian) → `/knowledge-base/global` (English)
+7. **`nanolith-` prefix doesn't telegraph "primitive"**
+8. **Subcomponent suffix sprawl**: 13 distinct suffixes used uncoordinated (-parts, -flavor, -ui, -tabs, -sections, -bodies, -renderers, -dice, -data, -tools, -stats, -live, -summary)
+
+## Scope
+
+1. **Standardize CRUD verb**: rename `sp7-game-night-create.html` → `sp7-game-night-new.html`; rename `sp4-editor-proposals-create.html` → `sp4-editor-proposals-new.html`. Update MOCKUPS_INDEX.md + any internal references.
+2. **Collapse dynamic params**:
+   - Migrate `[inviteToken]` → `[token]` (`/join/[inviteToken]` → `/join/[token]`)
+   - Audit `[privateGameId]` → consider collapse to `[id]` (URL prefix disambiguates)
+   - Decide `[token]` vs `[code]` semantic (opaque secret vs human-readable)
+3. **Complete #2025 cleanup**: delete remaining 4 `sp6-libro-game-*` files OR rename to `.deprecated.html`
+4. **Fix language drift**: rename `sp4-kb-globale.html` → `sp4-kb-global.html`
+5. **Rename `nanolith-*`**: rename to `primitive-nav-{topbar,bottom-mobile,chat-panel}.html` OR move to `00-05` dev-fixture family
+6. **Publish suffix vocabulary**: add table to `admin-mockups/README.md`:
+   - `-live` Active/live play state
+   - `-summary` Post-game completed state
+   - `-parts` Shared sub-components for the family
+   - `-flavor` Game-specific UI variants
+   - `-data` Dataset fixture
+   - `-renderers` Polymorphic dispatcher
+   - `-tabs` Tab strip + content
+   - `-sections` Vertical layout sections
+   - `-ui` UI-only variant
+   - `-bodies` (define)
+   - `-tools` (define)
+   - `-dice` (define)
+   - `-stats` (define)
+
+### Route namespace consolidation (separate sub-issues)
+
+- 16a — Consolidate `/sessions/[id]/*` + `/sessions/live/[sessionId]/*` (sub-issue)
+- 16b — Decide `/toolkit` vs `/toolkits` (sub-issue)
+- 16c — `/hub/*` already tracked in Draft 13
+- 16d — `/settings/*` vs `/profile?tab=settings` already implicit in Phase B obsoletes
+
+## Acceptance
+
+- [ ] CRUD verb rename: 2 mockups renamed + MOCKUPS_INDEX.md updated
+- [ ] Dynamic params: `[inviteToken]` migrated; `[privateGameId]` decision committed
+- [ ] #2025 cleanup completed: 4 sp6 files deleted or .deprecated
+- [ ] `sp4-kb-globale.html` renamed
+- [ ] `nanolith-nav-*` renamed
+- [ ] Suffix vocabulary published in `admin-mockups/README.md`
+- [ ] 4 sub-issues opened for namespace consolidation
+
+## Refs
+
+- Naming audit: `audits/2026-06-10-nav-chrome-bgg-naming-audit.md` § Section C
+- #2025 cleanup precedent (sp6 deletions): closed
+- Stage 3 #1026 — design system de-versioning (closed 2026-05-18)
+- Umbrella: #2063
+- Phase B sub-issue: #2127
+
+---
+
 ## Draft 13: SPEC-PANEL — /hub/* route-vs-mockup contradiction (Fowler)
 
 **Title**: `[DS-17 architecture decision] /hub/* routes LIVE in codebase but mockups OBSOLETE — retire or refresh?`

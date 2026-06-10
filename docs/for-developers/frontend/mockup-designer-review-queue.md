@@ -84,3 +84,35 @@ Spec-panel critique with 4 experts (Cockburn lead · Adzic · Wiegers · Fowler)
 | Architecture consistency | 5.0/10 (/hub/* contradiction + 7 many-to-many mappings) |
 | Specification testability | 7.0/10 (5 obsoletes correctly flagged) |
 | **Overall** | **6.5/10** |
+
+## Structural consistency — SPEC-PANEL addendum #2 (2026-06-11)
+
+Second spec-panel critique on nav-chrome / BGG / naming consistency. Full report: [`audits/2026-06-10-nav-chrome-bgg-naming-audit.md`](../../../audits/2026-06-10-nav-chrome-bgg-naming-audit.md).
+
+### 3 follow-up decisions (Drafts 14/15/16 — created post designer sign-off)
+
+- [ ] **Draft 14 (Fowler, architecture)**: Nav-chrome 3-way drift — primitives never consumed by page-mocks or runtime. Decide deprecate-or-backfill.
+- [ ] **Draft 15 (Newman + Wiegers, ToS compliance)**: Add `pnpm lint:bgg-mockups` gate + 9 new violations (7 mockups + 2 codebase findings)
+- [ ] **Draft 16 (Adzic, naming)**: Standardize CRUD verbs (-create vs -new) + dynamic params (10→2-3) + complete #2025 cleanup + suffix vocabulary + nanolith rename
+
+### 7 NEW BGG forbidden mockups (require designer reclassification to `forward-refactor-obsolete`)
+
+These mockups carry user-side BGG surfaces forbidden per #1903 ADR. Phase B initial audit classified them `current`; designer review needed to confirm reclassification:
+
+- [ ] `admin-mockups/design_files/sp4-upload-wizard-extended.{html,jsx}` — Step 0 source picker offers BoardGameGeek card linking to forbidden mockup
+- [ ] `admin-mockups/design_files/sp4-library-desktop.jsx` — Hero "↓ Importa BGG" CTA + empty-state CTA links to forbidden mockup
+- [ ] `admin-mockups/design_files/sp4-game-chat-tab.html` — Low-confidence chat fallback: BGG forum thread citation
+- [ ] `admin-mockups/design_files/sp5-profile-settings.{html,jsx}` — Connected services panel exposes BGG OAuth
+- [ ] `admin-mockups/design_files/sp3-how-it-works.jsx` — Onboarding card "Connetti BGG — Sincronizza la tua collezione BoardGameGeek"
+- [ ] `admin-mockups/design_files/settings.jsx` — BggIcon + Bio "BGG rank" + Connected services BGG entry
+- [ ] `admin-mockups/design_files/sp7-game-night-live.jsx:561` — Add-game CTA navigates to forbidden mockup
+
+### Structural quality scores
+
+| Score | Value |
+|---|---|
+| Nav-chrome consistency | 3.5/10 |
+| BGG ToS compliance | 6.5/10 (7+ violations remain undetected pre-Draft 15) |
+| Naming consistency | 5.0/10 |
+| Route architecture | 6.0/10 |
+| **Overall structural** | **5.5/10** |

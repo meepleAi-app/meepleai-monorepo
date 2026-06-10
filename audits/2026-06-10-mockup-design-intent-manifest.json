@@ -1,0 +1,1137 @@
+{
+  "generatedAt": "2026-06-10",
+  "totalFiles": 229,
+  "warnings": [],
+  "clusters": [
+    {
+      "clusterId": "dev-fixtures",
+      "files": [
+        {
+          "path": "admin-mockups/design_files/state-matrix.html",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/nanolith-nav-topbar.html",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/nanolith-nav-chat-panel.html",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/nanolith-nav-bottom-mobile.html",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/index.html",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/05-dark-mode.html",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/04-design-system.html",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/03-drawer-variants.html",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/02-desktop-patterns.html",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/01-screens.html",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/00-hub.html",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/mobile-app.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/tokens.css",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/scaffold.css",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/components.css",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-play-records-data.js",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/data.js",
+          "type": "html"
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "clusterId": "auth",
+      "files": [
+        {
+          "path": "admin-mockups/design_files/sp5-profile-settings.html",
+          "type": "html",
+          "pairKey": "sp5-profile-settings"
+        },
+        {
+          "path": "admin-mockups/design_files/settings.html",
+          "type": "html",
+          "pairKey": "settings"
+        },
+        {
+          "path": "admin-mockups/design_files/public.html",
+          "type": "html",
+          "pairKey": "public"
+        },
+        {
+          "path": "admin-mockups/design_files/onboarding.html",
+          "type": "html",
+          "pairKey": "onboarding"
+        },
+        {
+          "path": "admin-mockups/design_files/notifications.html",
+          "type": "html",
+          "pairKey": "notifications"
+        },
+        {
+          "path": "admin-mockups/design_files/auth-flow.html",
+          "type": "html",
+          "pairKey": "auth-flow"
+        },
+        {
+          "path": "admin-mockups/design_files/sp5-profile-settings.jsx",
+          "type": "jsx",
+          "pairKey": "sp5-profile-settings"
+        },
+        {
+          "path": "admin-mockups/design_files/settings.jsx",
+          "type": "jsx",
+          "pairKey": "settings"
+        },
+        {
+          "path": "admin-mockups/design_files/public.jsx",
+          "type": "jsx",
+          "pairKey": "public"
+        },
+        {
+          "path": "admin-mockups/design_files/onboarding.jsx",
+          "type": "jsx",
+          "pairKey": "onboarding"
+        },
+        {
+          "path": "admin-mockups/design_files/notifications.jsx",
+          "type": "jsx",
+          "pairKey": "notifications"
+        },
+        {
+          "path": "admin-mockups/design_files/auth-flow.jsx",
+          "type": "jsx",
+          "pairKey": "auth-flow"
+        }
+      ],
+      "dependencies": [
+        "dev-fixtures"
+      ]
+    },
+    {
+      "clusterId": "sp3",
+      "files": [
+        {
+          "path": "admin-mockups/design_files/sp3-shared-games.html",
+          "type": "html",
+          "pairKey": "sp3-shared-games"
+        },
+        {
+          "path": "admin-mockups/design_files/sp3-shared-game-detail.html",
+          "type": "html",
+          "pairKey": "sp3-shared-game-detail"
+        },
+        {
+          "path": "admin-mockups/design_files/sp3-library-public.html",
+          "type": "html",
+          "pairKey": "sp3-library-public"
+        },
+        {
+          "path": "admin-mockups/design_files/sp3-legal.html",
+          "type": "html",
+          "pairKey": "sp3-legal"
+        },
+        {
+          "path": "admin-mockups/design_files/sp3-join.html",
+          "type": "html",
+          "pairKey": "sp3-join"
+        },
+        {
+          "path": "admin-mockups/design_files/sp3-how-it-works.html",
+          "type": "html",
+          "pairKey": "sp3-how-it-works"
+        },
+        {
+          "path": "admin-mockups/design_files/sp3-faq-enhanced.html",
+          "type": "html",
+          "pairKey": "sp3-faq-enhanced"
+        },
+        {
+          "path": "admin-mockups/design_files/sp3-accept-invite.html",
+          "type": "html",
+          "pairKey": "sp3-accept-invite"
+        },
+        {
+          "path": "admin-mockups/design_files/sp3-shared-games.jsx",
+          "type": "jsx",
+          "pairKey": "sp3-shared-games"
+        },
+        {
+          "path": "admin-mockups/design_files/sp3-shared-game-detail.jsx",
+          "type": "jsx",
+          "pairKey": "sp3-shared-game-detail"
+        },
+        {
+          "path": "admin-mockups/design_files/sp3-library-public.jsx",
+          "type": "jsx",
+          "pairKey": "sp3-library-public"
+        },
+        {
+          "path": "admin-mockups/design_files/sp3-legal.jsx",
+          "type": "jsx",
+          "pairKey": "sp3-legal"
+        },
+        {
+          "path": "admin-mockups/design_files/sp3-join.jsx",
+          "type": "jsx",
+          "pairKey": "sp3-join"
+        },
+        {
+          "path": "admin-mockups/design_files/sp3-how-it-works.jsx",
+          "type": "jsx",
+          "pairKey": "sp3-how-it-works"
+        },
+        {
+          "path": "admin-mockups/design_files/sp3-faq-enhanced.jsx",
+          "type": "jsx",
+          "pairKey": "sp3-faq-enhanced"
+        },
+        {
+          "path": "admin-mockups/design_files/sp3-accept-invite.jsx",
+          "type": "jsx",
+          "pairKey": "sp3-accept-invite"
+        }
+      ],
+      "dependencies": [
+        "dev-fixtures",
+        "auth"
+      ]
+    },
+    {
+      "clusterId": "sp4-core",
+      "files": [
+        {
+          "path": "admin-mockups/design_files/sp4-upload-wizard-extended.html",
+          "type": "html",
+          "pairKey": "sp4-upload-wizard-extended"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-sessions-index.html",
+          "type": "html",
+          "pairKey": "sp4-sessions-index"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-zombicide-summary.html",
+          "type": "html",
+          "pairKey": "sp4-session-zombicide-summary"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-wingspan-summary.html",
+          "type": "html",
+          "pairKey": "sp4-session-wingspan-summary"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-summary-skeleton.html",
+          "type": "html",
+          "pairKey": "sp4-session-summary-skeleton"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-puerto-rico-summary.html",
+          "type": "html",
+          "pairKey": "sp4-session-puerto-rico-summary"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-power-grid-summary.html",
+          "type": "html",
+          "pairKey": "sp4-session-power-grid-summary"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-play.html",
+          "type": "html",
+          "pairKey": "sp4-session-play"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-paleo-summary.html",
+          "type": "html",
+          "pairKey": "sp4-session-paleo-summary"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-codenames-summary.html",
+          "type": "html",
+          "pairKey": "sp4-session-codenames-summary"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-catan-summary.html",
+          "type": "html",
+          "pairKey": "sp4-session-catan-summary"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-players-index.html",
+          "type": "html",
+          "pairKey": "sp4-players-index"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-player-detail.html",
+          "type": "html",
+          "pairKey": "sp4-player-detail"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-play-records-stats.html",
+          "type": "html",
+          "pairKey": "sp4-play-records-stats"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-play-records-new.html",
+          "type": "html",
+          "pairKey": "sp4-play-records-new"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-play-records-index.html",
+          "type": "html",
+          "pairKey": "sp4-play-records-index"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-play-records-edit.html",
+          "type": "html",
+          "pairKey": "sp4-play-records-edit"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-play-records-detail.html",
+          "type": "html",
+          "pairKey": "sp4-play-records-detail"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-library-wishlist.html",
+          "type": "html",
+          "pairKey": "sp4-library-wishlist"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-library-mobile.html",
+          "type": "html",
+          "pairKey": "sp4-library-mobile"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-library-desktop.html",
+          "type": "html",
+          "pairKey": "sp4-library-desktop"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-kb-hub.html",
+          "type": "html",
+          "pairKey": "sp4-kb-hub"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-kb-globale.html",
+          "type": "html",
+          "pairKey": "sp4-kb-globale"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-kb-detail.html",
+          "type": "html",
+          "pairKey": "sp4-kb-detail"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-hub-games.html",
+          "type": "html",
+          "pairKey": "sp4-hub-games"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-hub-agents.html",
+          "type": "html",
+          "pairKey": "sp4-hub-agents"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-games-index.html",
+          "type": "html",
+          "pairKey": "sp4-games-index"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-game-nights-index.html",
+          "type": "html",
+          "pairKey": "sp4-game-nights-index"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-game-detail.html",
+          "type": "html",
+          "pairKey": "sp4-game-detail"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-game-chat-tab.html",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-editor-proposals-test.html",
+          "type": "html",
+          "pairKey": "sp4-editor-proposals-test"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-editor-proposals-index.html",
+          "type": "html",
+          "pairKey": "sp4-editor-proposals-index"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-editor-proposals-edit.html",
+          "type": "html",
+          "pairKey": "sp4-editor-proposals-edit"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-editor-proposals-create.html",
+          "type": "html",
+          "pairKey": "sp4-editor-proposals-create"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-editor-index.html",
+          "type": "html",
+          "pairKey": "sp4-editor-index"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-discover.html",
+          "type": "html",
+          "pairKey": "sp4-discover"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-dashboard.html",
+          "type": "html",
+          "pairKey": "sp4-dashboard"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-citation-pdf-viewer.html",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-agents-index.html",
+          "type": "html",
+          "pairKey": "sp4-agents-index"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-agent-detail.html",
+          "type": "html",
+          "pairKey": "sp4-agent-detail"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-add-game-pdf-dedup.html",
+          "type": "html",
+          "pairKey": "sp4-add-game-pdf-dedup"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-add-game-drawer.html",
+          "type": "html",
+          "pairKey": "sp4-add-game-drawer"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-add-game-bgg-step.html",
+          "type": "html",
+          "pairKey": "sp4-add-game-bgg-step"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-upload-wizard-extended.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-upload-wizard-extended"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-sessions-index.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-sessions-index"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-zombicide-summary.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-session-zombicide-summary"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-zombicide-parts.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-zombicide-flavor.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-zombicide-data.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-wingspan-summary.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-session-wingspan-summary"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-wingspan-summary-tabs.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-wingspan-summary-sections.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-wingspan-summary-parts.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-summary-skeleton.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-session-summary-skeleton"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-skeleton-renderers.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-skeleton-parts.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-skeleton-data.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-puerto-rico-summary.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-session-puerto-rico-summary"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-puerto-rico-parts.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-puerto-rico-flavor.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-puerto-rico-data.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-power-grid-summary.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-session-power-grid-summary"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-power-grid-parts.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-power-grid-flavor.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-power-grid-data.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-play.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-session-play"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-play-ui.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-play-parts.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-paleo-summary.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-session-paleo-summary"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-paleo-parts.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-paleo-flavor.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-paleo-data.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-codenames-summary.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-session-codenames-summary"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-codenames-parts.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-codenames-flavor.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-codenames-data.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-codenames-bodies.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-catan-summary.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-session-catan-summary"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-catan-parts.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-catan-flavor.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-catan-data.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-players-index.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-players-index"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-player-detail.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-player-detail"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-play-records-stats.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-play-records-stats"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-play-records-new.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-play-records-new"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-play-records-index.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-play-records-index"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-play-records-edit.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-play-records-edit"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-play-records-detail.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-play-records-detail"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-parts-common.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-library-wishlist.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-library-wishlist"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-library-wishlist-ui.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-library-mobile.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-library-mobile"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-library-desktop.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-library-desktop"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-kb-hub.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-kb-hub"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-kb-globale.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-kb-globale"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-kb-detail.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-kb-detail"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-hub-games.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-hub-games"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-hub-agents.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-hub-agents"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-games-index.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-games-index"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-game-nights-index.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-game-nights-index"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-game-detail.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-game-detail"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-editor-proposals-test.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-editor-proposals-test"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-editor-proposals-index.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-editor-proposals-index"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-editor-proposals-edit.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-editor-proposals-edit"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-editor-proposals-create.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-editor-proposals-create"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-editor-index.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-editor-index"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-discover.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-discover"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-dashboard.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-dashboard"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-agents-index.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-agents-index"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-agent-detail.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-agent-detail"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-add-game-pdf-dedup.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-add-game-pdf-dedup"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-add-game-drawer.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-add-game-drawer"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-add-game-bgg-step.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-add-game-bgg-step"
+        },
+        {
+          "path": "admin-mockups/design_files/pr-form-core.jsx",
+          "type": "jsx"
+        }
+      ],
+      "dependencies": [
+        "dev-fixtures",
+        "auth",
+        "sp3"
+      ]
+    },
+    {
+      "clusterId": "sp4-sessions",
+      "files": [
+        {
+          "path": "admin-mockups/design_files/sp4-toolkit-templates.html",
+          "type": "html",
+          "pairKey": "sp4-toolkit-templates"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-toolkit-stats.html",
+          "type": "html",
+          "pairKey": "sp4-toolkit-stats"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-toolkit-play.html",
+          "type": "html",
+          "pairKey": "sp4-toolkit-play"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-toolkit-history.html",
+          "type": "html",
+          "pairKey": "sp4-toolkit-history"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-toolkit-detail.html",
+          "type": "html",
+          "pairKey": "sp4-toolkit-detail"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-zombicide-live.html",
+          "type": "html",
+          "pairKey": "sp4-session-zombicide-live"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-wingspan-live.html",
+          "type": "html",
+          "pairKey": "sp4-session-wingspan-live"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-skeleton-live.html",
+          "type": "html",
+          "pairKey": "sp4-session-skeleton-live"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-puerto-rico-live.html",
+          "type": "html",
+          "pairKey": "sp4-session-puerto-rico-live"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-power-grid-live.html",
+          "type": "html",
+          "pairKey": "sp4-session-power-grid-live"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-paleo-live.html",
+          "type": "html",
+          "pairKey": "sp4-session-paleo-live"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-codenames-live.html",
+          "type": "html",
+          "pairKey": "sp4-session-codenames-live"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-catan-live.html",
+          "type": "html",
+          "pairKey": "sp4-session-catan-live"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-hub-toolkits.html",
+          "type": "html",
+          "pairKey": "sp4-hub-toolkits"
+        },
+        {
+          "path": "admin-mockups/design_files/librogame-runthrough-translate-viewer.html",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/librogame-runthrough-setup-wizard.html",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/librogame-runthrough-setup-chat.html",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/librogame-runthrough-session-end.html",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/librogame-runthrough-resume-picker.html",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/librogame-runthrough-quota-credits.html",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/librogame-runthrough-play-session.html",
+          "type": "html",
+          "pairKey": "librogame-runthrough-play-session"
+        },
+        {
+          "path": "admin-mockups/design_files/librogame-runthrough-library-search.html",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/librogame-runthrough-glossary-editor.html",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/librogame-runthrough-game-onboarding.html",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/librogame-runthrough-game-detail.html",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/librogame-runthrough-error-states.html",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/librogame-runthrough-encounter-cheatsheet.html",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/librogame-game-night-storyboard.html",
+          "type": "html"
+        },
+        {
+          "path": "admin-mockups/design_files/chat-fullscreen.html",
+          "type": "html",
+          "pairKey": "chat-fullscreen"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-toolkit-templates.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-toolkit-templates"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-toolkit-templates-ui.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-toolkit-stats.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-toolkit-stats"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-toolkit-play.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-toolkit-play"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-toolkit-play-ui.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-toolkit-play-tools.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-toolkit-play-dice.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-toolkit-history.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-toolkit-history"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-toolkit-history-ui.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-toolkit-detail.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-toolkit-detail"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-zombicide-live.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-session-zombicide-live"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-wingspan-live.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-session-wingspan-live"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-wingspan-live-tabs.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-wingspan-live-parts.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-skeleton-live.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-session-skeleton-live"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-puerto-rico-live.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-session-puerto-rico-live"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-power-grid-live.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-session-power-grid-live"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-paleo-live.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-session-paleo-live"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-codenames-live.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-session-codenames-live"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-session-catan-live.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-session-catan-live"
+        },
+        {
+          "path": "admin-mockups/design_files/sp4-hub-toolkits.jsx",
+          "type": "jsx",
+          "pairKey": "sp4-hub-toolkits"
+        },
+        {
+          "path": "admin-mockups/design_files/librogame-runthrough-play-session.jsx",
+          "type": "jsx",
+          "pairKey": "librogame-runthrough-play-session"
+        },
+        {
+          "path": "admin-mockups/design_files/chat-fullscreen.jsx",
+          "type": "jsx",
+          "pairKey": "chat-fullscreen"
+        }
+      ],
+      "dependencies": [
+        "dev-fixtures",
+        "auth",
+        "sp3",
+        "sp4-core"
+      ]
+    },
+    {
+      "clusterId": "sp6-7-nano",
+      "files": [
+        {
+          "path": "admin-mockups/design_files/sp7-game-night-transition.html",
+          "type": "html",
+          "pairKey": "sp7-game-night-transition"
+        },
+        {
+          "path": "admin-mockups/design_files/sp7-game-night-summary.html",
+          "type": "html",
+          "pairKey": "sp7-game-night-summary"
+        },
+        {
+          "path": "admin-mockups/design_files/sp7-game-night-live.html",
+          "type": "html",
+          "pairKey": "sp7-game-night-live"
+        },
+        {
+          "path": "admin-mockups/design_files/sp7-game-night-detail-rsvp.html",
+          "type": "html",
+          "pairKey": "sp7-game-night-detail-rsvp"
+        },
+        {
+          "path": "admin-mockups/design_files/sp7-game-night-create.html",
+          "type": "html",
+          "pairKey": "sp7-game-night-create"
+        },
+        {
+          "path": "admin-mockups/design_files/sp6-libro-game-resume-state.html",
+          "type": "html",
+          "pairKey": "sp6-libro-game-resume-state"
+        },
+        {
+          "path": "admin-mockups/design_files/sp6-libro-game-photo-upload.html",
+          "type": "html",
+          "pairKey": "sp6-libro-game-photo-upload"
+        },
+        {
+          "path": "admin-mockups/design_files/sp6-libro-game-index.html",
+          "type": "html",
+          "pairKey": "sp6-libro-game-index"
+        },
+        {
+          "path": "admin-mockups/design_files/sp7-game-night-transition.jsx",
+          "type": "jsx",
+          "pairKey": "sp7-game-night-transition"
+        },
+        {
+          "path": "admin-mockups/design_files/sp7-game-night-summary.jsx",
+          "type": "jsx",
+          "pairKey": "sp7-game-night-summary"
+        },
+        {
+          "path": "admin-mockups/design_files/sp7-game-night-live.jsx",
+          "type": "jsx",
+          "pairKey": "sp7-game-night-live"
+        },
+        {
+          "path": "admin-mockups/design_files/sp7-game-night-join-public.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp7-game-night-detail-rsvp.jsx",
+          "type": "jsx",
+          "pairKey": "sp7-game-night-detail-rsvp"
+        },
+        {
+          "path": "admin-mockups/design_files/sp7-game-night-create.jsx",
+          "type": "jsx",
+          "pairKey": "sp7-game-night-create"
+        },
+        {
+          "path": "admin-mockups/design_files/sp6-libro-game-resume-state.jsx",
+          "type": "jsx",
+          "pairKey": "sp6-libro-game-resume-state"
+        },
+        {
+          "path": "admin-mockups/design_files/sp6-libro-game-quota-credits.jsx",
+          "type": "jsx"
+        },
+        {
+          "path": "admin-mockups/design_files/sp6-libro-game-photo-upload.jsx",
+          "type": "jsx",
+          "pairKey": "sp6-libro-game-photo-upload"
+        },
+        {
+          "path": "admin-mockups/design_files/sp6-libro-game-index.jsx",
+          "type": "jsx",
+          "pairKey": "sp6-libro-game-index"
+        }
+      ],
+      "dependencies": [
+        "dev-fixtures",
+        "auth",
+        "sp3",
+        "sp4-core",
+        "sp4-sessions"
+      ]
+    }
+  ]
+}

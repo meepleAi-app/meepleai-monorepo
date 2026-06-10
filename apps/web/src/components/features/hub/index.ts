@@ -14,8 +14,3 @@ export {
   type HubToolkitCardProps,
   type HubToolkitCardLabels,
 } from './HubToolkitCard';
-export {
-  StickyAccessCta,
-  type StickyAccessCtaProps,
-  type StickyAccessCtaLabels,
-} from './StickyAccessCta';

@@ -2193,12 +2193,7 @@
           "recent": "Recent"
         },
         "emptyTitle": "Empty catalog",
-        "emptyBody": "No public games have been added to the community catalog yet.",
-        "stickyCta": {
-          "title": "Sign in to install",
-          "description": "Create a free account to add games to your personal library.",
-          "buttonLabel": "Sign in"
-        }
+        "emptyBody": "No public games have been added to the community catalog yet."
       },
       "agents": {
         "badge": "Hub · /hub/agents",

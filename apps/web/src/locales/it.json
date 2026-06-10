@@ -2243,12 +2243,7 @@
           "recent": "Recenti"
         },
         "emptyTitle": "Catalogo vuoto",
-        "emptyBody": "Nessun gioco pubblico è ancora stato aggiunto al catalogo della community.",
-        "stickyCta": {
-          "title": "Accedi per installare",
-          "description": "Crea un account gratuito per aggiungere giochi alla tua libreria personale.",
-          "buttonLabel": "Accedi"
-        }
+        "emptyBody": "Nessun gioco pubblico è ancora stato aggiunto al catalogo della community."
       },
       "agents": {
         "badge": "Hub · /hub/agents",

@@ -545,6 +545,24 @@ public class EnrichCatalogCoverCommandHandlerTests
         }
     }
 
+    /// <summary>
+    /// Test harness for the Commons HttpClient: dispatches by URL path to the
+    /// imageinfo API (license JSON) or to the Special:FilePath endpoint (raw
+    /// image bytes).
+    /// <para>
+    /// NOTE on redirect-following: in production, Commons returns a 302 redirect
+    /// from <c>commons.wikimedia.org/wiki/Special:FilePath/...</c> to
+    /// <c>upload.wikimedia.org/...</c>. <see cref="HttpClientHandler.AllowAutoRedirect"/>
+    /// defaults to <see langword="true"/> so the production
+    /// <see cref="WikimediaCommonsClient"/> transparently follows the redirect.
+    /// This in-memory handler short-circuits the redirect entirely (no 302 →
+    /// upload.wikimedia.org round-trip) and serves the bytes directly from the
+    /// Special:FilePath path. Any future change to the DI registration that
+    /// disables <c>AllowAutoRedirect</c> would NOT be caught by these tests —
+    /// such a change MUST be paired with an integration test or a documented
+    /// invariant on the typed HttpClient configuration.
+    /// </para>
+    /// </summary>
     private sealed class CommonsRoutingHandler : HttpMessageHandler
     {
         public string LicenseJson { get; set; } = string.Empty;

@@ -690,6 +690,16 @@ public sealed class SharedGame : AggregateRoot<Guid>
     /// Thrown when <paramref name="r2Key"/>, <paramref name="license"/>, or
     /// <paramref name="sourceUrl"/> are null/whitespace.
     /// </exception>
+    /// <remarks>
+    /// Treated as a non-audited background flag (consistent with
+    /// <see cref="SetPdfCoverR2Key"/>): does NOT update <c>_modifiedAt</c> /
+    /// <c>_modifiedBy</c>. The dedicated <c>WikidataQidLastVerifiedAt</c> column
+    /// already records the enrichment timestamp — more informative than the
+    /// generic modifiedAt and tied to the M15 quarterly re-verification cron.
+    /// Avoids the half-audit anti-pattern where <c>_modifiedAt</c> would be
+    /// fresh but <c>_modifiedBy</c> stale (no user actor on a system-automated
+    /// pipeline).
+    /// </remarks>
     public void SetWikidataCover(
         string r2Key,
         string license,
@@ -711,7 +721,6 @@ public sealed class SharedGame : AggregateRoot<Guid>
         _wikidataCoverAttribution = string.IsNullOrWhiteSpace(attribution) ? null : attribution;
         _wikidataCoverSourceUrl = sourceUrl;
         _wikidataQidLastVerifiedAt = verifiedAt;
-        _modifiedAt = DateTime.UtcNow;
     }
 
     /// <summary>

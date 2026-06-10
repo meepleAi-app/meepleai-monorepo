@@ -38,11 +38,19 @@ const PLACEHOLDER_PATH = '/placeholder.svg';
  * browsers; survives page unload), falls back to `fetch` with `keepalive` for
  * Safari/older browsers, and silently no-ops on SSR.
  */
+const MAX_BEACON_SRC_LEN = 512;
+
 function reportBggAttempt(src: string): void {
   if (typeof window === 'undefined') return;
 
+  // Truncate before serialization to bound the on-wire payload size. The
+  // backend route truncates again at 512 chars as defense-in-depth, but
+  // capping here avoids sending multi-KB src strings over a beacon channel
+  // (mitigates code-review followup #3 on PR #2125).
+  const truncatedSrc =
+    src.length > MAX_BEACON_SRC_LEN ? src.slice(0, MAX_BEACON_SRC_LEN) + '…' : src;
   const payload = JSON.stringify({
-    src,
+    src: truncatedSrc,
     path: window.location?.pathname ?? '',
     ts: Date.now(),
   });

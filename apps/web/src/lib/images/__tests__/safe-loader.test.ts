@@ -84,4 +84,25 @@ describe('safeImageLoader (#2123)', () => {
 
     expect(beacon).not.toHaveBeenCalled();
   });
+
+  it('truncates oversized src to 512 chars + ellipsis before fire-and-forget beacon', () => {
+    // Mitigates code-review followup #3: the beacon payload must not carry
+    // multi-KB src strings over the wire even before the backend truncates.
+    const beacon = vi.fn(() => true);
+    // @ts-expect-error — overriding for the test
+    navigator.sendBeacon = beacon;
+    const longTail = 'a'.repeat(2000);
+    const offendingSrc = `https://cf.geekdo-images.com/${longTail}.jpg`;
+
+    safeImageLoader({ src: offendingSrc, width: 100 });
+
+    expect(beacon).toHaveBeenCalledTimes(1);
+    // The Blob payload is the second argument; reconstruct text for assertion.
+    const blob = beacon.mock.calls[0][1] as Blob;
+    return blob.text().then(text => {
+      const parsed = JSON.parse(text) as { src: string };
+      expect(parsed.src.length).toBeLessThanOrEqual(513); // 512 + "…"
+      expect(parsed.src.endsWith('…')).toBe(true);
+    });
+  });
 });

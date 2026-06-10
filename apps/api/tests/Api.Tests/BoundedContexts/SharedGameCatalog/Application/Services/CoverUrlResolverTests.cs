@@ -232,4 +232,51 @@ public class CoverUrlResolverTests
             .Where(m => m.Name == "meepleai.cover.resolution.total")
             .Should().HaveCount(1, "a single resolution call must emit exactly one metric event");
     }
+
+    [Fact]
+    public async Task ResolveForUserAsync_L3KeyPresentButBlobReturnsNull_EmitsExactlyOneFallbackMetric()
+    {
+        // Code-review HIGH fix (PR #2125): when userEntry.CustomCoverR2Key is
+        // present but GetPresignedDownloadUrlAsync returns null (R2 outage,
+        // expired blob), the resolver MUST fall through to ResolvePublicAsync
+        // WITHOUT emitting an `r2_user` event. The downstream public call
+        // emits exactly one event for the winning layer; the L3 attempt is
+        // observable via the blob service's own logs, not duplicated here.
+        using var capture = new CoverMetricsCapture();
+        var sg = new SharedGameEntity { WikidataCoverR2Key = "wiki-key" };
+        var entry = new UserLibraryEntryEntity { CustomCoverR2Key = "custom-key" };
+
+        _blob.Setup(b => b.GetPresignedDownloadUrlAsync("custom-key.webp", BlobCategory.GameImage, "custom-key", null))
+             .ReturnsAsync((string?)null);
+        _blob.Setup(b => b.GetPresignedDownloadUrlAsync("wiki-key.webp", BlobCategory.GameImage, "wiki-key", null))
+             .ReturnsAsync("https://r2/wiki.webp");
+
+        await CoverUrlResolver.ResolveForUserAsync(sg, entry, _blob.Object);
+
+        var emissions = capture.LongMeasurements
+            .Where(m => m.Name == "meepleai.cover.resolution.total")
+            .ToList();
+
+        emissions.Should().HaveCount(1, "L3 miss must NOT double-count with the public fallback emission");
+        emissions[0].Tags["source"].Should().Be("r2_wikidata", "the fallback layer should win the single emission");
+    }
+
+    [Fact]
+    public async Task ResolveForUserAsync_L3MissAndAllPublicMiss_EmitsSinglePlaceholderEvent()
+    {
+        using var capture = new CoverMetricsCapture();
+        var sg = new SharedGameEntity(); // no R2 keys at all
+        var entry = new UserLibraryEntryEntity { CustomCoverR2Key = "custom-key" };
+
+        _blob.Setup(b => b.GetPresignedDownloadUrlAsync("custom-key.webp", BlobCategory.GameImage, "custom-key", null))
+             .ReturnsAsync((string?)null);
+
+        await CoverUrlResolver.ResolveForUserAsync(sg, entry, _blob.Object);
+
+        var emissions = capture.LongMeasurements
+            .Where(m => m.Name == "meepleai.cover.resolution.total")
+            .ToList();
+        emissions.Should().HaveCount(1);
+        emissions[0].Tags["source"].Should().Be("placeholder");
+    }
 }

@@ -45,6 +45,14 @@ internal static class CoverUrlResolver
                 EmitResolution("r2_user");
                 return url;
             }
+            // L3 miss while the key was present (R2 unreachable in dev, blob
+            // expired, etc.). Intentionally NO metric emission here — the
+            // recursive call to ResolvePublicAsync below emits exactly one
+            // CoverResolution event for the winning fallback layer (or
+            // "placeholder" if all layers miss), preserving the invariant that
+            // every public-facing resolution call increments the counter
+            // exactly once. The L3 miss itself is observable via the storage
+            // service's own logs / metrics, not duplicated here.
         }
 
         return await ResolvePublicAsync(sharedGame, blobStorage).ConfigureAwait(false);

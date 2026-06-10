@@ -5,7 +5,6 @@ import { useState } from 'react';
 import { CustomCoverDialog } from '@/components/features/library/custom-cover/CustomCoverDialog';
 import { EditCoverOverlay } from '@/components/features/library/custom-cover/EditCoverOverlay';
 import { SessionContributorsStrip } from '@/components/features/library/SessionContributorsStrip';
-import { SplitViewLayout } from '@/components/layout/SplitViewLayout/SplitViewLayout';
 import { ConnectionBar, buildGameConnections } from '@/components/ui/data-display/connection-bar';
 import type { MeepleCardMetadata } from '@/components/ui/data-display/meeple-card/types';
 import { useGameSessionContributors } from '@/hooks/queries/useGameSessionContributors';
@@ -27,15 +26,16 @@ interface GameDetailDesktopProps {
 /**
  * Desktop variant of the game detail page.
  *
- * Uses the existing SplitViewLayout with:
- *  - list  (left):  MeepleCard hero for the selected game
- *  - detail (right): GameTabsPanel with 5 tabs (Info / AI Chat / Toolbox / House Rules / Partite)
+ * #2105 M7 (Epic #2096) — Layout restructure. Switched from SplitView 50/50
+ * (hero left-column 50% + vertical-rail tabs right-column 50%) to a vertical
+ * full-width stack matching mockup `sp3-shared-game-detail`:
  *
- * Note: `SplitViewLayout` uses preset `listRatio` ('narrow' | 'balanced' | 'wide').
- * `listRatio="wide"` renders a ~50/50 split without adding drag-to-resize logic.
- * If resizable layout is required in the future, extend SplitViewLayout directly.
+ *   1. Hero          — full-width 100% (240px tall)
+ *   2. Strip         — connection-bar + session contributors (full-width)
+ *   3. Tabs panel    — horizontal underline tabs + scrollable content
  *
  * Reference: docs/superpowers/specs/2026-04-09-library-to-game-epic-design.md §4.4
+ * Mockup:    admin-mockups/design_files/sp3-shared-game-detail.jsx
  */
 export function GameDetailDesktop({
   gameId,
@@ -134,14 +134,16 @@ export function GameDetailDesktop({
     heroMetaItems.push({ label: `★ ${game.averageRating.toFixed(1)}` });
   }
 
-  const listContent = (
-    <div className="flex flex-col gap-3">
+  return (
+    <div data-testid="game-detail-desktop" className="flex h-full flex-col gap-4 px-4 py-4">
+      {/* 1. Hero — full-width 240px */}
       <div className="group relative">
         <GameHero
           title={game?.gameTitle ?? 'Gioco non in libreria'}
           variant={isNotInLibrary ? 'community' : 'own'}
           imageUrl={game?.gameImageUrl ?? undefined}
           metadata={heroMetaItems.length > 0 ? heroMetaItems : undefined}
+          className="rounded-2xl"
         />
         {game && (
           <EditCoverOverlay
@@ -150,34 +152,28 @@ export function GameDetailDesktop({
           />
         )}
       </div>
-      <ConnectionBar connections={gameConnections} onPipClick={handlePipClick} />
-      {/* #2036: SP3 mockup parity — avatar strip of past players. Strip
-          renders nothing when the contributor list is empty (no recorded
-          finalized sessions for this game), so it never claims layout space
-          on freshly-added games. */}
-      <SessionContributorsStrip contributors={contributors} />
-    </div>
-  );
 
-  const tabsPanel = (
-    <GameTabsPanel
-      gameId={gameId}
-      initialTab={initialTab}
-      onTabChange={onTabChange}
-      isPrivateGame={isPrivateGame}
-      isNotInLibrary={isNotInLibrary}
-    />
-  );
+      {/* 2. Strip — connection-bar + session contributors */}
+      <div className="flex flex-col gap-3">
+        <ConnectionBar connections={gameConnections} onPipClick={handlePipClick} />
+        {/* #2036: SP3 mockup parity — avatar strip of past players. Strip
+            renders nothing when the contributor list is empty (no recorded
+            finalized sessions for this game), so it never claims layout
+            space on freshly-added games. */}
+        <SessionContributorsStrip contributors={contributors} />
+      </div>
 
-  return (
-    <div data-testid="game-detail-desktop" className="h-full">
-      <SplitViewLayout
-        list={listContent}
-        detail={tabsPanel}
-        listRatio="wide"
-        listLabel="Carta del gioco"
-        detailLabel="Strumenti e informazioni"
-      />
+      {/* 3. Tabs panel — horizontal tabs + content */}
+      <div className="min-h-0 flex-1">
+        <GameTabsPanel
+          gameId={gameId}
+          initialTab={initialTab}
+          onTabChange={onTabChange}
+          isPrivateGame={isPrivateGame}
+          isNotInLibrary={isNotInLibrary}
+        />
+      </div>
+
       {game && (
         <CustomCoverDialog
           gameId={game.gameId}

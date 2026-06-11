@@ -45,7 +45,7 @@ export function WelcomeContent() {
       rawRedirectTo !== redirectTo
     ) {
       logger.warn('Rejected unsafe ?redirectTo= redirect target on welcome', {
-        metadata: { fromMasked: rawRedirectTo.slice(0, 32) },
+        metadata: { redirectToMasked: rawRedirectTo.slice(0, 32) },
       });
     }
   }, [rawRedirectTo, redirectTo]);

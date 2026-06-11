@@ -12,6 +12,15 @@ const mockHookState = {
   isError: false,
 };
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    replace: vi.fn(),
+    push: vi.fn(),
+    refresh: vi.fn(),
+  }),
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 vi.mock('@/hooks/queries/useLibrary', () => ({
   useLibraryGameDetail: () => mockHookState,
 }));

@@ -4,6 +4,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { GameDetailsDrawer } from '../GameDetailsDrawer';
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    replace: vi.fn(),
+    push: vi.fn(),
+    refresh: vi.fn(),
+  }),
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 vi.mock('@/hooks/queries/useLibrary', () => ({
   useLibraryGameDetail: () => ({ data: null, isLoading: false, isError: false }),
 }));

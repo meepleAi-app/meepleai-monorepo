@@ -27,6 +27,19 @@ _None._
 
 _None._
 
+## Forward-refactor — route missing (DEFERRED Phase D tracking)
+
+6 stems with mockup but NO existing app route. Story migration deferred to Phase D dedicated sub-issue.
+
+- `sp7-game-night-transition.html` + `.jsx` — Route `/game-nights/[id]/transition` MISSING
+- `sp7-game-night-join-public.jsx` (JSX-only, no HTML twin) — Route `/game-nights/join/[code]` (public) MISSING
+- `sp6-libro-game-index.html` + `.jsx` — Route `/libro-game/*` MISSING completely
+- `sp6-libro-game-resume-state.html` + `.jsx` — Route MISSING
+- `sp6-libro-game-photo-upload.html` + `.jsx` — Route MISSING + BGG ecosystem refactor (BGG cleanup completed Stage 0)
+- `sp6-libro-game-quota-credits.jsx` (JSX-only) — Route MISSING
+
+**Tracking issue raggruppato**: `[DS-17 Phase D] sp6-7-nano forward-refactor — libro-game ecosystem + game-night gap stems implementation` (opened during Task 20).
+
 ## How to approve
 
 Comment on PR with magic phrase:

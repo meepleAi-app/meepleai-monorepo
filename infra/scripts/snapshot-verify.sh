@@ -1,7 +1,20 @@
 #!/usr/bin/env bash
 # infra/scripts/snapshot-verify.sh
 # Compat gate: blocca il restore se snapshot incompatibile col working tree.
-# Exit codes: 0=ok, 2=migration drift, 3=model drift, 4=dim drift, 1=altro
+# Exit codes:
+#   0  ok
+#   1  altro (file mancanti, jq missing, ...)
+#   2  EF migration drift  — working tree avanti rispetto allo snapshot
+#   3  embedding model drift
+#   4  embedding dim drift
+#   5  seed-table schema-version drift (#2126 D9) — una tabella seedata e'
+#      stata rinominata o ristrutturata dopo il bake (e.g. embeddings →
+#      vector_documents) e lo snapshot non e' piu' ricostruibile a partire dal
+#      working tree corrente. Bump del file infra/seed-schema.version in PR
+#      che introducono il rename.
+#   6  sidecar invariant violation (#2126 D7) — chunk_count != embedding_count
+#      indica un bake parzialmente fallito che non e' stato intercettato dalla
+#      lista failed_pdf_ids. Lo snapshot e' inutilizzabile.
 set -euo pipefail
 
 OUT_DIR="${SEED_INDEX_OUT_DIR:-data/snapshots}"
@@ -98,6 +111,53 @@ fi
 failed_count=$(jq '.failed_pdf_ids | length' "$META")
 if [ "$failed_count" -gt 0 ]; then
     echo "::warning:: snapshot contiene $failed_count PDF falliti" >&2
+fi
+
+# 5. seed-table schema-version (#2126 D9)
+# Difende dal pattern «embeddings → vector_documents» del 2026-05: una
+# tabella seedata viene rinominata/dropata dopo il bake, lo snapshot
+# diventa irrecuperabile. La fonte di verita' e' infra/seed-schema.version
+# (contiene un counter). Va bumpato nella stessa PR che introduce il
+# rename. Sidecar senza il field viene trattato come version=0 — primo
+# bake dopo l'introduzione di questo gate fallisce con exit 5, costringendo
+# l'autore del rename a rigenerare lo snapshot.
+expected_seed_version=$(jq -r '.seed_table_schema_version // 0' "$META")
+current_seed_version=0
+for f in infra/seed-schema.version ../infra/seed-schema.version seed-schema.version; do
+    if [ -f "$f" ]; then
+        current_seed_version=$(tr -d '[:space:]' <"$f")
+        break
+    fi
+done
+
+if [ "$expected_seed_version" != "$current_seed_version" ]; then
+    cat >&2 <<EOF
+::error:: seed-table schema-version drift
+  snapshot      : $expected_seed_version
+  working tree  : $current_seed_version  (infra/seed-schema.version)
+Una tabella seedata e' cambiata struttura dopo il bake; lo snapshot non e'
+piu' ricostruibile dalla shape corrente.
+  ${C_BLU:-}make seed-index${C_RST:-}  rigenera lo snapshot sul commit corrente.
+EOF
+    exit 5
+fi
+
+# 6. sidecar invariant chunk_count == embedding_count (#2126 D7)
+# Un bake parzialmente fallito puo' lasciare chunks senza embedding (es. job
+# embedding-service in errore dopo chunking riuscito). failed_pdf_ids lo
+# intercetta solo se il pdf_documents row finisce in Failed state; bake
+# silent-partial scappa. Questo check rende esplicito l'invariante.
+chunk_count=$(jq -r '.chunk_count // 0' "$META")
+embedding_count=$(jq -r '.embedding_count // 0' "$META")
+if [ "$chunk_count" != "$embedding_count" ]; then
+    cat >&2 <<EOF
+::error:: sidecar invariant violated
+  chunk_count     : $chunk_count
+  embedding_count : $embedding_count
+Lo snapshot e' bake-partial. Investiga embedding-service logs e rigenera con
+make seed-index.
+EOF
+    exit 6
 fi
 
 log "OK — $BASENAME compatibile"

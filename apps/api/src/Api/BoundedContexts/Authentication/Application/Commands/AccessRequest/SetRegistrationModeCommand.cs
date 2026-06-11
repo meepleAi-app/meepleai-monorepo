@@ -2,6 +2,7 @@ using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using MediatR;
+using Microsoft.AspNetCore.Hosting;
 using MediatRUnit = MediatR.Unit;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands.AccessRequest;
@@ -12,18 +13,24 @@ internal class SetRegistrationModeCommandHandler : ICommandHandler<SetRegistrati
 {
     private readonly IMediator _mediator;
     private readonly IConfigurationService _configService;
+    private readonly IWebHostEnvironment _environment;
 
-    public SetRegistrationModeCommandHandler(IMediator mediator, IConfigurationService configService)
+    public SetRegistrationModeCommandHandler(
+        IMediator mediator,
+        IConfigurationService configService,
+        IWebHostEnvironment environment)
     {
         _mediator = mediator;
         _configService = configService;
+        _environment = environment;
     }
 
     public async Task<MediatRUnit> Handle(SetRegistrationModeCommand request, CancellationToken cancellationToken)
     {
         var value = request.Enabled.ToString().ToLowerInvariant();
+        var environmentName = _environment.EnvironmentName;
         var existing = await _configService.GetConfigurationByKeyAsync(
-            "Registration:PublicEnabled", null, cancellationToken).ConfigureAwait(false);
+            "Registration:PublicEnabled", environmentName, cancellationToken).ConfigureAwait(false);
 
         if (existing is not null)
         {
@@ -43,7 +50,7 @@ internal class SetRegistrationModeCommandHandler : ICommandHandler<SetRegistrati
                     "Boolean",
                     "Controls whether public registration is enabled",
                     "Authentication",
-                    "Production",
+                    environmentName,
                     false,
                     request.AdminId),
                 cancellationToken).ConfigureAwait(false);

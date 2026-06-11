@@ -21,9 +21,9 @@
 import { useEffect, useState } from 'react';
 
 import { ChevronDown, ChevronRight, HelpCircle, ThumbsUp } from 'lucide-react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
-import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
@@ -92,12 +92,20 @@ export default function GameFaqsPage() {
   return (
     <div className="min-h-screen bg-background py-8 px-4">
       <div className="container mx-auto max-w-4xl">
-        <PageHeader
-          title="FAQ"
-          parentHref={`/library/${gameId}`}
-          parentLabel="Gioco"
-          className="mb-8"
-        />
+        {/* #2158 (Fix #2 codemod): replaced legacy PageHeader with inline header.
+            Tabs/primaryAction were unused here, so MiniNavSlot is not registered. */}
+        <header className="mb-8">
+          <Link
+            href={`/library/${gameId}`}
+            className="inline-flex items-center gap-1 text-sm font-medium text-foreground/70 hover:text-foreground"
+          >
+            <span aria-hidden="true">←</span>
+            <span>Gioco</span>
+          </Link>
+          <h1 className="mt-1 font-quicksand text-2xl font-bold tracking-tight text-foreground">
+            FAQ
+          </h1>
+        </header>
 
         {/* Loading */}
         {isLoading && (

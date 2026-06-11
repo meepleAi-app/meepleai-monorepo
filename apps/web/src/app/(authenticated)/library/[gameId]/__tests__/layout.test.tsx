@@ -1,22 +1,20 @@
 /**
- * Library Game Detail Layout — #1816 P2-2 regression
+ * Library Game Detail Layout — #1816 P2-2 + #2158 regression
  *
- * Asserts the 3-state h1 + `document.title` resolution introduced by P2-2:
- *   - loading: "Loading game…" + document.title "Loading game — MeepleAI"
- *   - loaded:  "Catan" + document.title "Catan · MeepleAI"
- *   - 404:     "Game not found" + document.title "Game not found — MeepleAI"
+ * #1816 P2-2 introduced 3-state document.title resolution:
+ *   - loading: document.title "Loading game — MeepleAI"
+ *   - loaded:  document.title "Catan · MeepleAI"
+ *   - 404:     document.title "Game not found — MeepleAI"
  *
- * Pre-fix behavior was a hardcoded "Gioco" literal regardless of state, which
- * broke a11y (screen reader heading) + SEO (`<title>`) + breadcrumb
- * differentiation. Audit ref: 2026-06-02-mobile-golden-path-audit § P2 h1.
+ * #2158 (Fix #2 codemod) migrated the legacy `PageHeader` (h1 + tabs +
+ * primaryAction) to `useMiniNavConfig` (breadcrumb + tabs). The game title is
+ * now rendered as a big hero by `GameDetailDesktop`, so the layout no longer
+ * surfaces an h1 element — the breadcrumb crumb keeps the 3-state resolution.
  *
- * Test scope: the inner `LibraryGameHeader` component (exported from the
- * layout file for this purpose). The Suspense boundary in the default export
- * is not exercised here to avoid a jsdom timeout under react-intl + Suspense.
+ * Test scope: the inner `LibraryGameHeader` (exported for this purpose).
  */
 
-import { screen } from '@testing-library/react';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
 import { renderWithIntl } from '../../../../../__tests__/fixtures/common-fixtures';
@@ -27,7 +25,6 @@ import { LibraryGameHeader } from '../layout';
 
 vi.mock('next/navigation', () => ({
   useParams: vi.fn(),
-  useRouter: vi.fn(),
   useSearchParams: vi.fn(),
 }));
 
@@ -36,24 +33,33 @@ vi.mock('@/hooks/queries/useLibrary', () => ({
   useLibraryGameDetail: (...args: unknown[]) => mockUseLibraryGameDetail(...args),
 }));
 
+const useMiniNavConfigMock = vi.fn();
+vi.mock('@/hooks/useMiniNavConfig', () => ({
+  useMiniNavConfig: (cfg: unknown) => useMiniNavConfigMock(cfg),
+}));
+
 beforeEach(() => {
   vi.clearAllMocks();
   (useParams as Mock).mockReturnValue({ gameId: 'cc1678e8-f460-4b53-81f6-6d6539f82b65' });
-  (useRouter as Mock).mockReturnValue({ push: vi.fn() });
   (useSearchParams as Mock).mockReturnValue(new URLSearchParams(''));
 });
 
-describe('LibraryGameHeader — #1816 P2-2 h1 + document.title state machine', () => {
-  it('renders loading h1 + document.title while the query is pending', () => {
+describe('LibraryGameHeader — document.title + breadcrumb 3-state machine', () => {
+  it('renders null and sets the loading document.title while the query is pending', () => {
     mockUseLibraryGameDetail.mockReturnValue({ data: undefined, isLoading: true });
 
-    renderWithIntl(<LibraryGameHeader />);
+    const { container } = renderWithIntl(<LibraryGameHeader />);
 
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Loading game…');
+    expect(container.firstChild).toBeNull();
     expect(document.title).toBe('Loading game — MeepleAI');
+    expect(useMiniNavConfigMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        breadcrumb: 'Libreria · Loading game…',
+      })
+    );
   });
 
-  it('renders the game title as h1 + document.title once data resolves', () => {
+  it('uses the game title in breadcrumb + document.title once data resolves', () => {
     mockUseLibraryGameDetail.mockReturnValue({
       data: { gameTitle: 'Catan' },
       isLoading: false,
@@ -61,20 +67,28 @@ describe('LibraryGameHeader — #1816 P2-2 h1 + document.title state machine', (
 
     renderWithIntl(<LibraryGameHeader />);
 
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Catan');
     expect(document.title).toBe('Catan · MeepleAI');
+    expect(useMiniNavConfigMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        breadcrumb: 'Libreria · Catan',
+      })
+    );
   });
 
-  it('renders 404 h1 + document.title when the query resolves to null', () => {
+  it('falls back to the 404 label when the query resolves to null', () => {
     mockUseLibraryGameDetail.mockReturnValue({ data: null, isLoading: false });
 
     renderWithIntl(<LibraryGameHeader />);
 
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Game not found');
     expect(document.title).toBe('Game not found — MeepleAI');
+    expect(useMiniNavConfigMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        breadcrumb: 'Libreria · Game not found',
+      })
+    );
   });
 
-  it('does not render the legacy hardcoded "Gioco" literal as h1', () => {
+  it('registers the 4 contextual tabs (Dettagli · Agente · Toolkit · FAQ)', () => {
     mockUseLibraryGameDetail.mockReturnValue({
       data: { gameTitle: 'Catan' },
       isLoading: false,
@@ -82,22 +96,34 @@ describe('LibraryGameHeader — #1816 P2-2 h1 + document.title state machine', (
 
     renderWithIntl(<LibraryGameHeader />);
 
-    // Audit regression guard: the hardcoded "Gioco" generic must never appear
-    // as the page h1. Use heading-scoped queryByRole to avoid matching nav
-    // labels or other surrounding text.
-    expect(screen.queryByRole('heading', { level: 1, name: 'Gioco' })).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 1, name: 'Catan' })).toBeInTheDocument();
+    const cfg = useMiniNavConfigMock.mock.calls.at(-1)?.[0] as {
+      tabs: ReadonlyArray<{ id: string; href: string }>;
+      activeTabId: string;
+    };
+    expect(cfg.tabs).toHaveLength(4);
+    expect(cfg.tabs.map(t => t.id)).toEqual(['details', 'agent', 'toolkit', 'faq']);
+    expect(cfg.activeTabId).toBe('details');
   });
 
-  it('renders the catalog-fallback game title when the entry is not in user library (F4.1 #1974)', () => {
-    // F4.1 regression guard (2026-06-07 audit): when a user opens
-    // /library/[gameId] for a SharedGame that is NOT in their personal
-    // library, `useLibraryGameDetail` falls back to the shared-catalog
-    // payload (libraryEntryId === ''). The header must still surface the
-    // catalog game name — NOT the legacy "Gioco" generic OR "Gioco non
-    // trovato" — because the page renders a catalog-only view with an
-    // "Aggiungi alla libreria" CTA. See useLibrary.ts:929-981 for the
-    // fallback contract.
+  it('switches activeTabId from URL ?tab= search param', () => {
+    mockUseLibraryGameDetail.mockReturnValue({
+      data: { gameTitle: 'Catan' },
+      isLoading: false,
+    });
+    (useSearchParams as Mock).mockReturnValue(new URLSearchParams('tab=agent'));
+
+    renderWithIntl(<LibraryGameHeader />);
+
+    const cfg = useMiniNavConfigMock.mock.calls.at(-1)?.[0] as { activeTabId: string };
+    expect(cfg.activeTabId).toBe('agent');
+  });
+
+  it('renders the catalog-fallback game title (F4.1 #1974) into the breadcrumb', () => {
+    // F4.1 regression guard: when a user opens /library/[gameId] for a
+    // SharedGame that is NOT in their personal library, `useLibraryGameDetail`
+    // falls back to the shared-catalog payload (libraryEntryId === ''). The
+    // breadcrumb must still surface the catalog game name — NOT the legacy
+    // "Gioco" generic OR "Gioco non trovato".
     mockUseLibraryGameDetail.mockReturnValue({
       data: {
         libraryEntryId: '', // catalog fallback sentinel
@@ -110,10 +136,9 @@ describe('LibraryGameHeader — #1816 P2-2 h1 + document.title state machine', (
 
     renderWithIntl(<LibraryGameHeader />);
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Catan' })).toBeInTheDocument();
-    expect(
-      screen.queryByRole('heading', { level: 1, name: /Gioco non trovato/i })
-    ).not.toBeInTheDocument();
+    expect(useMiniNavConfigMock).toHaveBeenCalledWith(
+      expect.objectContaining({ breadcrumb: 'Libreria · Catan' })
+    );
     expect(document.title).toBe('Catan · MeepleAI');
   });
 });

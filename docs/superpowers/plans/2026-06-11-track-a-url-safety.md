@@ -549,7 +549,10 @@ git commit -m "feat(security): add Referrer-Policy: strict-origin header in midd
 // apps/web/e2e/auth-redirect-safety.spec.ts
 import { test, expect } from '@playwright/test';
 
-const TEST_USER = { email: 'test@meepleai.com', password: 'Meeple1280!!' };
+const TEST_USER = {
+  email: process.env.PLAYWRIGHT_TEST_USER_EMAIL ?? 'test@meepleai.com',
+  password: process.env.PLAYWRIGHT_TEST_USER_PASSWORD ?? '',
+};
 
 const UNSAFE_FROM_INPUTS = [
   'https://evil.com',
@@ -616,7 +619,7 @@ Prerequisite: dev server up on `localhost:3000`.
 Run: `cd apps/web && pnpm test:e2e -- auth-redirect-safety`
 Expected: 8 tests PASS (6 unsafe vectors + 1 valid + 1 header check).
 
-If `test@meepleai.com` is not seeded in dev, replace with an existing seed user verified during Gate 0 (vedi `infra/secrets/admin.secret` for credentials).
+Credentials must be passed via env vars `PLAYWRIGHT_TEST_USER_EMAIL` + `PLAYWRIGHT_TEST_USER_PASSWORD`. CI provides them via secrets store; local devs source from `infra/secrets/admin.secret`. Do NOT hardcode passwords in the spec — see commit `e333e6991` for the original violation and the env-var refactor.
 
 - [ ] **Step 7.3: Commit**
 

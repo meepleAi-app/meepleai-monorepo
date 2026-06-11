@@ -13,8 +13,11 @@
  *   – 1 × valid relative ?from=/sessions → preserved
  *   – 1 × Referrer-Policy header check on /login
  *
- * Credentials: test@meepleai.com / Meeple1280!! (verified dev-seed user).
- * If login fails, update TEST_USER to a known-good seed from admin.secret.
+ * Credentials: sourced from PLAYWRIGHT_TEST_USER_EMAIL +
+ * PLAYWRIGHT_TEST_USER_PASSWORD env vars (CI provides via secrets store;
+ * local devs source `infra/secrets/admin.secret` before running).
+ * Falls back to placeholder strings so the spec compiles without env
+ * configured — tests will fail-fast at login if credentials are missing.
  *
  * @see apps/web/src/lib/url-safety.ts — isSafeRelativeLink helper
  * @see apps/web/src/middleware.ts — Referrer-Policy injection
@@ -23,9 +26,12 @@
 import { test, expect, type Page } from '@playwright/test';
 
 // ---------------------------------------------------------------------------
-// Credentials — dev-seed user verified during Gate 0 (issue #2168)
+// Credentials — sourced from env (CI secrets / local infra/secrets/admin.secret)
 // ---------------------------------------------------------------------------
-const TEST_USER = { email: 'test@meepleai.com', password: 'Meeple1280!!' };
+const TEST_USER = {
+  email: process.env.PLAYWRIGHT_TEST_USER_EMAIL ?? 'test@meepleai.com',
+  password: process.env.PLAYWRIGHT_TEST_USER_PASSWORD ?? '',
+};
 
 // ---------------------------------------------------------------------------
 // Attack vectors — representative subset of isSafeRelativeLink coverage

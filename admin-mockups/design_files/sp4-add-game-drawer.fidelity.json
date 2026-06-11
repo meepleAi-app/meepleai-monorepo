@@ -24,7 +24,7 @@
     ],
     "designer_approved_by": "",
     "designer_approved_on": "",
-    "story_path": "",
+    "story_path": "apps/web/src/app/(authenticated)/library/AddGameDrawer.stories.tsx",
     "fixtures_path": "",
     "design_intent": "current",
     "viewports": [

@@ -158,10 +158,18 @@ internal static partial class MeepleAiMetrics
         unit: "attempts",
         description: "Cumulative count of dead-letter WikidataCoverEnrichmentAttempt rows (#1823 Wave 3 F1)");
 
-    /// <summary>Re-anchors the gauge to a freshly-counted ground-truth value.</summary>
+    /// <summary>
+    /// Re-anchors the gauge to a freshly-counted ground-truth value.
+    /// Uses <see cref="System.Threading.Interlocked.Exchange(ref int, int)"/>
+    /// so the re-anchor write is ordered atomically against concurrent
+    /// <see cref="IncrementWikidataDeadLetterCount"/> calls from the runner
+    /// (ARM64 memory model: a plain assignment could otherwise be reordered
+    /// past a subsequent Interlocked.Increment, producing a transient stale
+    /// gauge value).
+    /// </summary>
     public static void SetWikidataDeadLetterCount(int count)
     {
-        _wikidataDeadLetterCount = count < 0 ? 0 : count;
+        System.Threading.Interlocked.Exchange(ref _wikidataDeadLetterCount, count < 0 ? 0 : count);
     }
 
     /// <summary>Atomically increments the gauge by 1 — call after persisting a new dead-letter attempt.</summary>

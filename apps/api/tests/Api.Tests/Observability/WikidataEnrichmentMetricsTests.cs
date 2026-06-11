@@ -10,6 +10,7 @@ namespace Api.Tests.Observability;
 /// (<see cref="MeepleAiMetrics.WikidataQueueDepth"/> + <see cref="MeepleAiMetrics.WikidataBatchDuration"/>).
 /// Issue #1823 Wave 3 M11.
 /// </summary>
+[Collection("WikidataMetrics")]
 [Trait("Category", "Unit")]
 [Trait("BoundedContext", "Observability")]
 [Trait("Issue", "1823")]
@@ -63,7 +64,11 @@ public class WikidataEnrichmentMetricsTests
         MeepleAiMetrics.WikidataBatchDuration.Record(1.23);
         MeepleAiMetrics.WikidataBatchDuration.Record(4.56);
 
-        measurements.Should().BeEquivalentTo(new[] { 1.23, 4.56 });
+        // Tolerant assertion: any concurrent test or scheduler tick may have
+        // recorded additional values on the shared global histogram between
+        // listener.Start() and the assertion. We only care that OUR two
+        // measurements made it through the MeterListener wiring.
+        measurements.Should().Contain(1.23).And.Contain(4.56);
     }
 
     [Fact]

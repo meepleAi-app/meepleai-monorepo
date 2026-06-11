@@ -91,7 +91,7 @@ export default function SessionDetailLayout({ children, params }: SessionLayoutP
         <button
           type="button"
           onClick={() => setScoreSheetOpen(true)}
-          className="inline-flex shrink-0 items-center gap-2 rounded-md bg-[hsl(25,95%,38%)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+          className="inline-flex shrink-0 items-center gap-2 rounded-md bg-[hsl(25,95%,38%)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           Aggiungi Punteggio
         </button>

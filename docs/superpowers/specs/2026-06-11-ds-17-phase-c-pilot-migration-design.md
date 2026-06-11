@@ -13,47 +13,63 @@ Migrare 46 mockup pilot (auth 12 + sp3 16 + sp6-7-nano 18) → 46 Storybook stor
 
 Phase B audit fornisce numeric scope: 46 mockup migrabili (104 esclusi: 17 dev-fixtures + 5 obsoleti + sp4-core/sessions deferred to C-2).
 
-## User decisions (brainstorming 2026-06-11)
+## User decisions (brainstorming 2026-06-11, **revised sess.46o post DS-17-9 auth ship**)
 
 | # | Decisione | Scelta | Rationale |
 |---|-----------|--------|-----------|
 | 1 | Scope Phase C | **PILOT-FIRST** (46 mockup, ~1-2 settimane) | Valida pattern + Storybook scale + CI behavior prima di committarsi al volume sp4-core (106) |
 | 2 | PR/sub-issue granularity | **3 sub-issue separate** (1 per cluster) | Incrementale + designer review per cluster; admin-squash merge 3 volte |
-| 3 | Cluster order | **auth → sp3 → sp6-7-nano** | Dependency order (auth foundational), public-facing secondo, prototype-quality terzo |
+| 3 v1 | Cluster order **(ORIGINALE)** | ~~auth → sp3 → sp6-7-nano~~ | Dependency order (auth foundational), public-facing secondo, prototype-quality terzo |
+| 3 v2 | Cluster order **(REVISED sess.46o)** | **auth → sp6-7-nano → sp3 (post-#2096)** | DS-17-10 sp3 bloccata da EPIC #2096 `/library/[gameId] rebuild` WIP (12-16h, GameHero v2 + animated tabs + ConnectionBar). Snapshot baseline rischierebbe rebaseline forzata. DS-17-11 sp6-7-nano avanzata first per preservare momentum Phase C-1. DS-17-10 sp3 attende #2096 chiusura organicamente. |
 | 4 | Execution mode | **Hybrid AI scaffold + human verify** | AI pre-flight maximizes ROI su axis discovery + MSW gap analysis; human controlla quality finale + commit |
 | 5 | CI gate flip | **Post full Phase C completion** (~131 stories total) | Conservative: continue-on-error fino a Phase C-2 completion + 14gg stable trajectory |
 | 6 | Orchestration | **Opt A — Pre-flight AI batch per cluster** | 1 AI dispatch genera scaffolds per intero cluster; human itera + commit 1-by-1 |
+| 7 **NEW** sess.46o | BGG cleanup ownership | **Cleanup in sub-issue prep work (Task Stage 0)** | Cluster con BGG references (sp3 + sp6-7-nano) richiedono mockup edit pre-AI dispatch. Pattern: edit JSX/HTML twins removing BGG refs + commit `chore(mockups): #DS17-N BGG removal <cluster>` + extend #2151 con nuovi findings via comment. Stories shippate gi&agrave; clean. |
+| 8 **NEW** sess.46o | Forward-refactor (no-route) handling | **Skip + designer queue flag + tracking issue raggruppato** | Stems con route MANCANTE (es. sp6-libro-game ecosystem 4 stems, sp7-game-night-transition, sp7-game-night-join-public) skipped da sub-issue ship. Designer queue elenca sotto sezione "Forward-refactor &mdash; route missing". 1 tracking issue raggruppato per cluster apre Phase D follow-up. Eccezione sp3-library-public &mdash; user-locked route-create (vedi [[ds-17-10-sp3-deferred-decisions]] decisione 1). |
 
 ## Architecture
 
-### 3 sub-issue sequenziali
+### 3 sub-issue sequenziali (DEC-Pilot-3 v2 revised sess.46o)
 
 ```
-DS-17-9-auth (12 mockup)        →  PR + merge  →  DS-17-10-sp3 (16 mockup)        →  PR + merge  →  DS-17-11-sp6-7-nano (18 mockup)        →  PR + merge
+DS-17-9-auth (12 mockup → 6 stories) ✅ SHIPPED sess.46n PR #2164
+        →  PR + merge  →
+DS-17-11-sp6-7-nano (18 mockup → 4 ship + 6 skip stems) ← sess.46o brainstorming
+        →  PR + merge  →
+DS-17-10-sp3 (16 mockup → ~8 stories incl. library-public route-create) ⏳ DEFERRED post-#2096 closure
+        →  PR + merge
 ```
 
-Each sub-issue ha lifecycle 4-fase:
+Each sub-issue ha lifecycle 4-fase (DEC-Pilot-7 adds **Stage 0 BGG cleanup prep** quando cluster contains BGG references):
 
 ```
+Phase 0 — BGG cleanup prep (conditional, ~0.5gg) ← DEC-Pilot-7 NEW
+   └→ edit JSX/HTML twins with BGG refs
+   └→ commit "chore(mockups): #NNNN BGG removal <cluster>"
+   └→ comment on #2151 extending finding list
+
 Phase 1 — AI pre-flight batch (~30min compute)
    └→ scaffolds/<cluster>/<mockup-stem>/ dirs committed as "chore(stories): #NNNN <cluster> scaffolds (AI pre-flight)"
+   └→ skip stems flagged design_intent=forward-refactor-without-route (DEC-Pilot-8)
 
 Phase 2 — Human iteration (~1-2gg)
-   └→ N commits "feat(stories): #NNNN <mockup-name> story" (1 per mockup)
+   └→ N commits "feat(stories): #NNNN <mockup-name> story" (1 per ship stem)
 
 Phase 3 — Cluster integration (~0.5gg)
    └→ cluster.snapshot.spec.ts + designer queue + fidelity.json refs + scaffolds cleanup
+   └→ designer queue elenca forward-refactor skipped stems + tracking issue raggruppato
 
 Phase 4 — PR + admin-squash merge + umbrella update + next cluster trigger
 ```
 
-### Total Phase C-1 effort
+### Total Phase C-1 effort (revised sess.46o)
 
-- 12 auth + 16 sp3 + 18 sp6-7-nano = 46 stories
-- Per cluster: ~1.5-2gg AI + human + integration
-- 3 cluster sequential: ~5-6gg total
-- Plus 3 admin-squash merges + 3 umbrella updates: +0.5gg
-- **Total Phase C-1: ~6-7 working days** (~1-1.5 settimane realistic)
+- ✅ DS-17-9 auth: 6 stories shipped (~4h actual vs 8h cap, 50% under per [[ds-17-phase-c-1-auth-shipped]])
+- ⏳ DS-17-11 sp6-7-nano: 4 ship stems + 6 skip + 2 mockup BGG cleanup (~3.5-4.5gg revised vs ~7-9gg originale)
+- ⏳ DS-17-10 sp3 (deferred): ~8 ship stems incl. library-public route-create + 3 mockup BGG cleanup (~3-4gg post-#2096 closure unblock)
+- 3 admin-squash merges + 3 umbrella updates: +0.5gg
+- **Total Phase C-1 revised: ~7-9 working days** (50% reduction su DS-17-11 vs originale, +1gg su DS-17-10 route-create)
+- **Timeline contingent su #2096 closure**: DS-17-10 sblocco organico durante DS-17-11 execution (potenziale parallel close)
 
 ## Components
 

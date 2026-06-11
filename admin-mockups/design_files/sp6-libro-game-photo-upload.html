@@ -320,11 +320,6 @@ const SHARED_CATALOG = [
   { id: 'destinies', title: 'Destinies', publisher: 'Lucky Duck Games', emoji: '🌑', cover: ['hsl(262 60% 25%)', 'hsl(262 70% 45%)'], indexed: true, sharedBy: 512 },
 ];
 
-const BGG_RESULTS = [
-  { id: 'bgg-andor', title: 'Andor Chronicles', publisher: 'Kosmos', year: 2021, bggId: 318240 },
-  { id: 'bgg-zaa', title: 'Zaardam Adventures', publisher: 'Indie Press', year: 2024, bggId: 412556 },
-];
-
 /* ─── Step indicator (sticky top) ─── */
 function StepIndicator({ current, onBack }) {
   const steps = [
@@ -422,7 +417,6 @@ function Step1_Default() {
       </div>
       <div className="pu-search-tabs">
         <span className="pu-search-tab active" style={{ color: entityHsl('game'), borderColor: entityHsl('game') }}>📚 Catalogo</span>
-        <span className="pu-search-tab">🌐 BGG</span>
       </div>
       <div className="pu-game-grid">
         {SHARED_CATALOG.slice(0, 4).map((g, i) => (
@@ -452,11 +446,10 @@ function Step1_Searching() {
       </div>
       <div className="pu-search-tabs">
         <span className="pu-search-tab active" style={{ color: entityHsl('game'), borderColor: entityHsl('game') }}>📚 Catalogo (0)</span>
-        <span className="pu-search-tab">🌐 BGG (2)</span>
       </div>
       <div className="pu-search-info">
         <span aria-hidden="true">ℹ️</span>
-        <span>Nessun risultato nel catalogo condiviso. Cerca su BGG ↑</span>
+        <span>Nessun risultato nel catalogo condiviso. Suggerisci via /contact ↑</span>
       </div>
     </div>
   );
@@ -490,13 +483,6 @@ function Step1_NoResults() {
               <div className="pu-action-sub">Manuale che non esiste in nessun database</div>
             </div>
           </button>
-          <button type="button" className="pu-action-card" style={{ borderColor: entityHsl('kb', 0.3) }}>
-            <span className="pu-action-icon" style={{ background: entityHsl('kb', 0.15), color: entityHsl('kb') }}>🌐</span>
-            <div>
-              <div className="pu-action-title">Cerca su BoardGameGeek</div>
-              <div className="pu-action-sub">Fonte ufficiale con metadati completi</div>
-            </div>
-          </button>
           <button type="button" className="pu-action-card" style={{ borderColor: entityHsl('agent', 0.3) }}>
             <span className="pu-action-icon" style={{ background: entityHsl('agent', 0.15), color: entityHsl('agent') }}>🔒</span>
             <div>
@@ -505,42 +491,6 @@ function Step1_NoResults() {
             </div>
           </button>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function Step1_BGGLoading() {
-  return (
-    <div className="pu-step-content">
-      <div className="pu-step-header">
-        <h2 className="pu-step-h2">Quale gioco vuoi indicizzare?</h2>
-      </div>
-      <div className="pu-search-bar focused" style={{ borderColor: entityHsl('game') }}>
-        <span aria-hidden="true">🔍</span>
-        <input type="text" defaultValue="andor" readOnly/>
-      </div>
-      <div className="pu-search-tabs">
-        <span className="pu-search-tab">📚 Catalogo</span>
-        <span className="pu-search-tab active" style={{ color: entityHsl('kb'), borderColor: entityHsl('kb') }}>🌐 BGG</span>
-      </div>
-      <div className="pu-bgg-loading">
-        <div className="pu-bgg-spinner" style={{ borderColor: `${entityHsl('kb', 0.2)} ${entityHsl('kb', 0.2)} ${entityHsl('kb', 0.2)} ${entityHsl('kb')}` }}/>
-        <div>
-          <div className="pu-bgg-loading-title">Cerco su BoardGameGeek…</div>
-          <div className="pu-bgg-loading-sub">Può richiedere qualche secondo</div>
-        </div>
-      </div>
-      <div className="pu-bgg-skeleton">
-        {[0,1,2].map(i => (
-          <div key={i} className="pu-bgg-skel-row">
-            <div className="pu-bgg-skel-cover pu-shimmer"/>
-            <div style={{ flex: 1 }}>
-              <div className="pu-bgg-skel-line pu-shimmer" style={{ width: '70%', height: 14 }}/>
-              <div className="pu-bgg-skel-line pu-shimmer" style={{ width: '40%', height: 10, marginTop: 6 }}/>
-            </div>
-          </div>
-        ))}
       </div>
     </div>
   );
@@ -997,7 +947,6 @@ function Screen({ stateId, desktop }) {
   if (stateId === '1-default') content = <Step1_Default/>;
   else if (stateId === '1-searching') content = <Step1_Searching/>;
   else if (stateId === '1-no-results') content = <Step1_NoResults/>;
-  else if (stateId === '1-bgg-loading') content = <Step1_BGGLoading/>;
   else if (stateId === '2-ready') content = desktop ? <DesktopDropFallback step={2}/> : <Step2_Ready/>;
   else if (stateId === '2-capturing') content = desktop ? <DesktopDropFallback step={2}/> : <Step2_Capturing/>;
   else if (stateId === '2-low-light') content = desktop ? <DesktopDropFallback step={2}/> : <Step2_LowLight/>;
@@ -1070,7 +1019,6 @@ const STATES = [
   { id: '1-default',     label: 'Step 1 · Catalogo (default)',  step: 1 },
   { id: '1-searching',   label: 'Step 1 · Ricerca in corso',    step: 1 },
   { id: '1-no-results',  label: 'Step 1 · No results (3 azioni · G1.5)', step: 1, gherkin: 'G1.5' },
-  { id: '1-bgg-loading', label: 'Step 1 · BGG search loading',  step: 1, gherkin: 'G1.6' },
   // Step 2
   { id: '2-ready',       label: 'Step 2 · Camera ready',        step: 2 },
   { id: '2-capturing',   label: 'Step 2 · 8 pagine in strip',   step: 2, gherkin: 'G1.2' },

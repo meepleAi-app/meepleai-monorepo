@@ -1,0 +1,287 @@
+{
+  "clusterId": "sp6-7-nano",
+  "classifications": [
+    {
+      "mockup_path": "admin-mockups/design_files/sp7-game-night-transition.html",
+      "design_intent": "current",
+      "confidence": 0.75,
+      "reasoning": "SP7 Game Night transition state mockup — part of well-defined Game Night domain (Asse A #1895). Uses canonical tokens.css + components.css. Prototype quality acceptable as current baseline for Game Night transition states between phases.",
+      "sub_components": [
+        "TransitionScreen",
+        "PhaseIndicator",
+        "GameNightHeader"
+      ],
+      "pair_disagreement": false,
+      "suggested_tracking_issue": null
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp7-game-night-summary.html",
+      "design_intent": "current",
+      "confidence": 0.8,
+      "reasoning": "SP7 Game Night summary/recap mockup — aligns with Asse A domain model (Session completion flow per spec 2026-06-04). Canonical tokens. Summary view is core Game Night UX, current baseline appropriate.",
+      "sub_components": [
+        "GameNightSummary",
+        "SessionStats",
+        "PlayerScoreboard",
+        "MVPCallout"
+      ],
+      "pair_disagreement": false,
+      "suggested_tracking_issue": null
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp7-game-night-live.html",
+      "design_intent": "current",
+      "confidence": 0.8,
+      "reasoning": "SP7 Game Night live session mockup — core Asse A domain (Session.IsLive state per spec 2026-06-04). Canonical tokens. Live session UI is foundational Game Night feature, current baseline.",
+      "sub_components": [
+        "LiveSessionHeader",
+        "PlayerRoster",
+        "TurnIndicator",
+        "ScoreTracker",
+        "ActionBar"
+      ],
+      "pair_disagreement": false,
+      "suggested_tracking_issue": null
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp7-game-night-detail-rsvp.html",
+      "design_intent": "current",
+      "confidence": 0.8,
+      "reasoning": "SP7 Game Night detail with RSVP flow — aligns with Asse A 5-phase RSVP invariant (tag silente → 'Invia inviti' → pending → confermato). Canonical tokens. RSVP is core Game Night domain per spec.",
+      "sub_components": [
+        "GameNightDetail",
+        "RSVPPanel",
+        "GuestList",
+        "InviteCTA",
+        "AttendeeStatus"
+      ],
+      "pair_disagreement": false,
+      "suggested_tracking_issue": null
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp7-game-night-create.html",
+      "design_intent": "current",
+      "confidence": 0.8,
+      "reasoning": "SP7 Game Night create wizard mockup — entry point for GameNightEvent aggregate creation (Asse A spec). Uses canonical tokens.css + components.css, standard wizard pattern. Current baseline for Game Night creation flow.",
+      "sub_components": [
+        "CreateWizard",
+        "GameNightForm",
+        "DatePicker",
+        "PlayerInviter",
+        "GameSelector"
+      ],
+      "pair_disagreement": false,
+      "suggested_tracking_issue": null
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp6-libro-game-resume-state.html",
+      "design_intent": "current",
+      "confidence": 0.75,
+      "reasoning": "SP6 Librogame resume-state mockup — librogame product vertical per Asse-A spec sub-issues. Pattern librogame-* in sp4-sessions cluster classified as current; consistent treatment. Canonical tokens.",
+      "sub_components": [
+        "ResumeStateView",
+        "BookProgressIndicator",
+        "LastChapterCard",
+        "ContinueButton"
+      ],
+      "pair_disagreement": false,
+      "suggested_tracking_issue": null
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp6-libro-game-photo-upload.html",
+      "design_intent": "current",
+      "confidence": 0.75,
+      "reasoning": "SP6 Librogame photo-upload mockup — gamebook photo capture flow, librogame product vertical. Canonical tokens. Photo upload for OCR/scan is core librogame ingestion feature, current baseline.",
+      "sub_components": [
+        "PhotoUploadZone",
+        "CameraTrigger",
+        "PreviewGrid",
+        "UploadProgress"
+      ],
+      "pair_disagreement": false,
+      "suggested_tracking_issue": null
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp6-libro-game-index.html",
+      "design_intent": "current",
+      "confidence": 0.8,
+      "reasoning": "SP6 Librogame index/list mockup — route /gamebook, persona Sara casual GM. Hero + grid manuali fotografati + quota mensile widget. Header comment explicit design intent. Canonical tokens. Entry point for librogame vertical, current baseline.",
+      "sub_components": [
+        "GamebookHero",
+        "GamebookGrid",
+        "QuotaWidget",
+        "GamebookCard"
+      ],
+      "pair_disagreement": false,
+      "suggested_tracking_issue": null
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp7-game-night-transition.jsx",
+      "design_intent": "current",
+      "confidence": 0.75,
+      "reasoning": "JSX twin of sp7-game-night-transition.html. Same classification — Game Night transition state, Asse A domain, canonical tokens. Pair consistent.",
+      "sub_components": [
+        "TransitionScreen",
+        "PhaseIndicator",
+        "GameNightHeader"
+      ],
+      "pair_disagreement": false,
+      "suggested_tracking_issue": null
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp7-game-night-summary.jsx",
+      "design_intent": "current",
+      "confidence": 0.8,
+      "reasoning": "JSX twin of sp7-game-night-summary.html. Same classification — Game Night summary/recap, Asse A domain. Pair consistent.",
+      "sub_components": [
+        "GameNightSummary",
+        "SessionStats",
+        "PlayerScoreboard",
+        "MVPCallout"
+      ],
+      "pair_disagreement": false,
+      "suggested_tracking_issue": null
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp7-game-night-live.jsx",
+      "design_intent": "current",
+      "confidence": 0.8,
+      "reasoning": "JSX twin of sp7-game-night-live.html. Same classification — Game Night live session, Asse A domain (Session.IsLive). Pair consistent.",
+      "sub_components": [
+        "LiveSessionHeader",
+        "PlayerRoster",
+        "TurnIndicator",
+        "ScoreTracker",
+        "ActionBar"
+      ],
+      "pair_disagreement": false,
+      "suggested_tracking_issue": null
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp7-game-night-join-public.jsx",
+      "design_intent": "current",
+      "confidence": 0.7,
+      "reasoning": "JSX-only Game Night join-public flow (no HTML twin). Public RSVP/join endpoint for Game Night events — aligns with Asse A RSVP invariants. Current baseline for public join UX, standalone JSX file.",
+      "sub_components": [
+        "JoinPublicView",
+        "GameNightPreview",
+        "GuestJoinForm",
+        "RSVPConfirm"
+      ],
+      "pair_disagreement": false,
+      "suggested_tracking_issue": null
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp7-game-night-detail-rsvp.jsx",
+      "design_intent": "current",
+      "confidence": 0.8,
+      "reasoning": "JSX twin of sp7-game-night-detail-rsvp.html. Same classification — Game Night detail with RSVP, Asse A 5-phase RSVP. Pair consistent.",
+      "sub_components": [
+        "GameNightDetail",
+        "RSVPPanel",
+        "GuestList",
+        "InviteCTA",
+        "AttendeeStatus"
+      ],
+      "pair_disagreement": false,
+      "suggested_tracking_issue": null
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp7-game-night-create.jsx",
+      "design_intent": "current",
+      "confidence": 0.8,
+      "reasoning": "JSX twin of sp7-game-night-create.html. Same classification — Game Night create wizard, Asse A GameNightEvent aggregate entry. Pair consistent.",
+      "sub_components": [
+        "CreateWizard",
+        "GameNightForm",
+        "DatePicker",
+        "PlayerInviter",
+        "GameSelector"
+      ],
+      "pair_disagreement": false,
+      "suggested_tracking_issue": null
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp6-libro-game-resume-state.jsx",
+      "design_intent": "current",
+      "confidence": 0.75,
+      "reasoning": "JSX twin of sp6-libro-game-resume-state.html. Same classification — librogame resume-state, librogame product vertical. Pair consistent.",
+      "sub_components": [
+        "ResumeStateView",
+        "BookProgressIndicator",
+        "LastChapterCard",
+        "ContinueButton"
+      ],
+      "pair_disagreement": false,
+      "suggested_tracking_issue": null
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp6-libro-game-quota-credits.jsx",
+      "design_intent": "current",
+      "confidence": 0.7,
+      "reasoning": "JSX-only librogame quota/credits view (no HTML twin). Free-tier quota management UI per librogame vertical (monthly quota widget pattern matches sp6-libro-game-index hero widget). Current baseline for credits/quota UX.",
+      "sub_components": [
+        "QuotaCard",
+        "CreditsBalance",
+        "UpgradePrompt",
+        "UsageMeter"
+      ],
+      "pair_disagreement": false,
+      "suggested_tracking_issue": null
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp6-libro-game-photo-upload.jsx",
+      "design_intent": "current",
+      "confidence": 0.75,
+      "reasoning": "JSX twin of sp6-libro-game-photo-upload.html. Same classification — librogame photo upload, OCR/scan ingestion. Pair consistent.",
+      "sub_components": [
+        "PhotoUploadZone",
+        "CameraTrigger",
+        "PreviewGrid",
+        "UploadProgress"
+      ],
+      "pair_disagreement": false,
+      "suggested_tracking_issue": null
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp6-libro-game-index.jsx",
+      "design_intent": "current",
+      "confidence": 0.8,
+      "reasoning": "JSX twin of sp6-libro-game-index.html. Same classification — librogame index/list entry point, /gamebook route. Pair consistent.",
+      "sub_components": [
+        "GamebookHero",
+        "GamebookGrid",
+        "QuotaWidget",
+        "GamebookCard"
+      ],
+      "pair_disagreement": false,
+      "suggested_tracking_issue": null
+    }
+  ],
+  "stories": [
+    {
+      "mockup_stem": "sp7-game-night-create",
+      "story_path": "apps/web/src/app/(authenticated)/game-nights/new/game-night-create.stories.tsx",
+      "fixtures_path": "apps/web/src/__tests__/fixtures/mockup-pilots/sp6-7-nano/sp7-game-night-create.ts",
+      "frame_count": 12
+    },
+    {
+      "mockup_stem": "sp7-game-night-detail-rsvp",
+      "story_path": "apps/web/src/app/(authenticated)/game-nights/[id]/game-night-detail-rsvp.stories.tsx",
+      "fixtures_path": "apps/web/src/__tests__/fixtures/mockup-pilots/sp6-7-nano/sp7-game-night-detail-rsvp.ts",
+      "frame_count": 14
+    },
+    {
+      "mockup_stem": "sp7-game-night-live",
+      "story_path": "apps/web/src/app/(authenticated)/game-nights/[id]/live/game-night-live.stories.tsx",
+      "fixtures_path": "apps/web/src/__tests__/fixtures/mockup-pilots/sp6-7-nano/sp7-game-night-live.ts",
+      "frame_count": 10
+    },
+    {
+      "mockup_stem": "sp7-game-night-summary",
+      "story_path": "apps/web/src/app/(authenticated)/game-nights/[id]/summary/game-night-summary.stories.tsx",
+      "fixtures_path": "apps/web/src/__tests__/fixtures/mockup-pilots/sp6-7-nano/sp7-game-night-summary.ts",
+      "frame_count": 8
+    }
+  ]
+}

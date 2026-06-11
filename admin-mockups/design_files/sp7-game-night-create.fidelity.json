@@ -24,8 +24,8 @@
     ],
     "designer_approved_by": "",
     "designer_approved_on": "",
-    "story_path": "",
-    "fixtures_path": "",
+    "story_path": "apps/web/src/app/(authenticated)/game-nights/new/game-night-create.stories.tsx",
+    "fixtures_path": "apps/web/src/__tests__/fixtures/mockup-pilots/sp6-7-nano/sp7-game-night-create.ts",
     "design_intent": "current",
     "viewports": [
       "desktop"

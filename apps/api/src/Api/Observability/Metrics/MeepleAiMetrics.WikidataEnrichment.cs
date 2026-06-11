@@ -82,4 +82,52 @@ internal static partial class MeepleAiMetrics
             _ => rate
         };
     }
+
+    /// <summary>
+    /// Issue #1823 Wave 3 M11 — last-batch queue depth (#games due for
+    /// enrichment as picked up by the M9 scheduler tick). Updated via
+    /// <see cref="SetWikidataQueueDepth(int)"/> rather than a pull callback so
+    /// ops dashboards reflect the most recent batch sizing decision.
+    ///
+    /// Suggested alerting:
+    ///   - depth &gt; 5000 sustained for &gt; 1 hour → backlog building, scheduler
+    ///     under-provisioned relative to enrichment rate; consider tuning
+    ///     batch size or rate-limit.
+    ///   - depth = 0 for &gt; 4 hours during a known-active batch window →
+    ///     scheduler not picking up games; investigate Quartz health or DEC-3e
+    ///     rate-limiter starvation.
+    /// </summary>
+    private static int _wikidataQueueDepth;
+
+    public static readonly ObservableGauge<int> WikidataQueueDepth = Meter.CreateObservableGauge(
+        name: "meepleai.wikidata.queue_depth",
+        observeValue: () => _wikidataQueueDepth,
+        unit: "games",
+        description: "Last-batch queue depth: #SharedGames due for Wikidata cover enrichment, picked up by the M9 scheduler tick (#1823 Wave 3 M11)");
+
+    /// <summary>
+    /// Updates the value reported by <see cref="WikidataQueueDepth"/>. Clamps
+    /// negative inputs to 0 (a depth cannot be negative).
+    /// </summary>
+    public static void SetWikidataQueueDepth(int depth)
+    {
+        _wikidataQueueDepth = depth < 0 ? 0 : depth;
+    }
+
+    /// <summary>
+    /// Issue #1823 Wave 3 M11 — wall-clock duration of a single
+    /// <c>WikidataCoverEnrichmentJob.RunBatchAsync</c> tick, in seconds.
+    /// Recorded once per tick regardless of how many games were processed
+    /// (including zero-due ticks).
+    ///
+    /// Suggested alerting:
+    ///   - p95 &gt; 90s sustained → batch is overrunning the 60s trigger interval;
+    ///     missed ticks risk piling up. Reduce batch size or lower throttle.
+    ///   - p99 &gt; 600s → individual game stuck on a service call; investigate
+    ///     DEC-3e rate-limiter contention or circuit-breaker hot-loop.
+    /// </summary>
+    public static readonly Histogram<double> WikidataBatchDuration = Meter.CreateHistogram<double>(
+        name: "meepleai.wikidata.batch_duration_seconds",
+        unit: "s",
+        description: "WikidataCoverEnrichmentJob tick wall-clock duration (#1823 Wave 3 M11)");
 }

@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Observability;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Quartz;
@@ -82,11 +84,36 @@ public sealed class WikidataCoverEnrichmentJob : IJob
         IWikidataCoverEnrichmentRunner runner,
         CancellationToken ct)
     {
+        // Issue #1823 Wave 3 M11: record tick wall-clock duration regardless of
+        // outcome (incl. zero-due ticks) so the histogram reflects real
+        // scheduler cadence, not just busy periods.
+        var stopwatch = Stopwatch.StartNew();
+        try
+        {
+            await RunBatchInternalAsync(attempts, runner, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            stopwatch.Stop();
+            MeepleAiMetrics.WikidataBatchDuration.Record(stopwatch.Elapsed.TotalSeconds);
+        }
+    }
+
+    private async Task RunBatchInternalAsync(
+        IWikidataCoverEnrichmentAttemptRepository attempts,
+        IWikidataCoverEnrichmentRunner runner,
+        CancellationToken ct)
+    {
         var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         var dueGameIds = await attempts
             .GetGameIdsDueForEnrichmentAsync(BatchSize, nowUtc, ct)
             .ConfigureAwait(false);
+
+        // Issue #1823 Wave 3 M11: record queue depth for the observable gauge,
+        // BEFORE the early-return on empty so ops dashboards see the "no work"
+        // signal as 0 rather than the previous tick's stale value.
+        MeepleAiMetrics.SetWikidataQueueDepth(dueGameIds.Count);
 
         if (dueGameIds.Count == 0)
         {

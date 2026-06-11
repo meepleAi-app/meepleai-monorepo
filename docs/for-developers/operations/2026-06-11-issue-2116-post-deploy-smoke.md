@@ -33,8 +33,8 @@ If you see HTTP 500 or `23505 duplicate key`, **STOP** — the fix did not deplo
   ```
 
 - [ ] Expect **2 rows**:
-  - `Environment='Production'` → the original seed row (unchanged `version=1`, original value).
-  - `Environment='Staging'` (or whatever `ASPNETCORE_ENVIRONMENT` evaluates to on the staging deploy) → freshly created at the moment of step 1.
+  - `Environment='Production'` → the original seed row (unchanged value, `version=1` if untouched by prior deploys to this DB).
+  - `Environment='Staging'` (or whatever `ASPNETCORE_ENVIRONMENT` evaluates to on the staging deploy) → the env-specific row, **any `version >= 1`**. If this is the very first deploy of the fix to this DB it will be `version=1` and the row was created by step 1; on a re-deploy or if dev/staging shared a DB, it may be `version > 1` and pre-exist — that is OK as long as the row exists.
 
 ### 3. Restore the pre-deploy intent
 
@@ -56,7 +56,7 @@ If you see HTTP 500 or `23505 duplicate key`, **STOP** — the fix did not deplo
 | Failure | Likely cause | Action |
 |---|---|---|
 | Step 1: HTTP 500 + `23505` | Fix did not deploy / migration applied to wrong env | Verify commit on staging: `ssh meepleai@staging "docker ps --format '{{.Image}}'"`, check api image SHA. If old, redeploy. |
-| Step 2: only 1 row, missing env-specific | Lookup-side env override (env var, K8s pod) is overriding `ASPNETCORE_ENVIRONMENT` | `printenv ASPNETCORE_ENVIRONMENT` on the api container — must match expected staging value (`"Staging"` or `"Production"` depending on infra convention). |
+| Step 2: only 1 row, missing env-specific | Lookup-side env override (env var, K8s pod) is overriding `ASPNETCORE_ENVIRONMENT`, OR the toggle in step 1 silently no-op'd | First: `printenv ASPNETCORE_ENVIRONMENT` on the api container — must match the expected staging value (`"Staging"` or `"Production"` depending on infra convention). If env var is correct, capture the api container logs around the toggle time and look for a non-200 response that wasn't surfaced to the UI. |
 | Step 2: > 2 rows for same key | Another writer (FeatureFlagService, see #2162) created an extra row | Capture all rows and attach to a comment on #2162. Pick one row to be the active one. |
 | Step 4: GET returns wrong value | Cache stale (HybridCache 5 min TTL) | Wait 5 min OR restart the api container OR call `POST /admin/cache/invalidate` if exposed. |
 | Step 5: row count grows past 2 | Race condition between concurrent toggles or another asymmetric writer | Lock the admin UI from accepting toggles, file a P1 issue, attach DB dump of the table. |

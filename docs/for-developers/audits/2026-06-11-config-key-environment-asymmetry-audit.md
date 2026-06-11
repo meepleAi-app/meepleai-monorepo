@@ -31,7 +31,7 @@ grep -rn "new CreateConfigurationCommand" apps/api/src --include="*.cs"
 
 | Method | GET (line) | CREATE (line) | GET env | CREATE env |
 |---|---|---|---|---|
-| `EnableFeatureAsync` | 181 | 206–214 | null → `_environment.EnvironmentName` (via `ConfigurationService.cs:79`) | `"Production"` literal |
+| `EnableFeatureAsync` | 181 | 206–214 | omits `environment` argument (defaults to null → current env via `ConfigurationService.cs:79`) | `"Production"` literal |
 | `DisableFeatureAsync` | 231 | 256–264 | same | `"Production"` literal |
 | `EnableFeatureForTierAsync` | 282 | 307–315 | same | `"Production"` literal |
 | `DisableFeatureForTierAsync` | 333 | 358–366 | same | `"Production"` literal |

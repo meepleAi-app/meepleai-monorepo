@@ -175,6 +175,7 @@ public sealed class SetRegistrationModeIntegrationTests : IAsyncLifetime
 
         var devRow = rows.Should().ContainSingle(r => r.Environment == DevelopmentEnv).Subject;
         devRow.Value.Should().Be("true");
+        devRow.Version.Should().Be(1, "the Create path must produce a brand-new row at Version=1 — symmetric guard with Scenario 2's Version=2 assertion on the Update path");
         devRow.CreatedByUserId.Should().Be(AdminUserId);
 
         var prodRow = rows.Should().ContainSingle(r => r.Environment == ProductionEnv).Subject;

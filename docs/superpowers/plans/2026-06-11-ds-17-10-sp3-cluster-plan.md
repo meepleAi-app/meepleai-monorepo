@@ -333,6 +333,8 @@ Create `apps/web/src/components/features/library-public/FeaturedGamesCarousel.ts
 ```tsx
 'use client';
 
+import Link from 'next/link';
+
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { cn } from '@/lib/utils';
 
@@ -357,6 +359,9 @@ interface FeaturedGamesCarouselProps {
  * #2208 DS-17-10 sub-issue: NEW primitive for sp3-library-public route.
  * Mockup parity ref: `admin-mockups/design_files/sp3-library-public.jsx`.
  * Cards use entity=game variant grid (standard catalog presentation).
+ *
+ * NOTE: MeepleCard primitive has no `href` prop. Wrap each card in a
+ * <Link> (Next.js client navigation) to make it clickable.
  */
 export function FeaturedGamesCarousel({ games, className }: FeaturedGamesCarouselProps) {
   if (games.length === 0) {
@@ -377,16 +382,17 @@ export function FeaturedGamesCarousel({ games, className }: FeaturedGamesCarouse
     >
       {games.map(game => (
         <li key={game.gameId} className="w-[260px] shrink-0 sm:w-[280px]">
-          <MeepleCard
-            entity="game"
-            variant="grid"
-            title={game.title}
-            subtitle={game.publisher}
-            imageUrl={game.coverUrl}
-            rating={game.averageRating}
-            ratingMax={10}
-            href={`/shared-games/${game.gameId}`}
-          />
+          <Link href={`/shared-games/${game.gameId}`} className="block">
+            <MeepleCard
+              entity="game"
+              variant="grid"
+              title={game.title}
+              subtitle={game.publisher}
+              imageUrl={game.coverUrl}
+              rating={game.averageRating}
+              ratingMax={10}
+            />
+          </Link>
         </li>
       ))}
     </ul>
@@ -428,6 +434,8 @@ If a `HeroGradient` primitive exists, note its import path + props. If not, inli
 
 - [ ] **Step 3: Scaffold LibraryPublicHome component**
 
+**Hero primitive note (I-2 reviewer finding)**: existing `HeroGradient` primitive lives at `apps/web/src/components/ui/hero-gradient/hero-gradient.tsx` and uses `Btn` from `@/components/ui/btn` with `primaryCta`/`secondaryCta` API. IF its API matches the mockup needs (title + subtitle + 2 CTAs), prefer `HeroGradient` reuse over inline custom hero. Read the primitive first via `cat apps/web/src/components/ui/hero-gradient/hero-gradient.tsx` to confirm API. If shape diverges substantially (mockup has 3+ CTAs, custom badge, etc.) fall back to inline hero as scaffolded below.
+
 Create `apps/web/src/components/features/library-public/LibraryPublicHome.tsx`:
 
 ```tsx
@@ -467,7 +475,7 @@ export function LibraryPublicHome({ featured, stats }: LibraryPublicHomeProps) {
       <section
         className={cn(
           'relative flex flex-col gap-6 overflow-hidden rounded-3xl border border-border/50 px-6 py-12 sm:px-12 sm:py-16',
-          'bg-gradient-to-br from-entity-game/12 via-entity-toolkit/8 to-entity-session/12 backdrop-blur-md'
+          'bg-gradient-to-br from-entity-game/12 via-entity-toolkit/10 to-entity-session/12 backdrop-blur-md'
         )}
         aria-labelledby="library-public-hero-title"
       >
@@ -601,10 +609,11 @@ export const metadata: Metadata = {
     'Scopri il catalogo board game della community MeepleAI. Toolkit, AI agents, partite, contenuti collaborativi.',
 };
 
-/**
- * @mockup admin-mockups/design_files/sp3-library-public.html
- * MOCKUP-ANNOTATION (auto-injected by pnpm mockup-annotations:inject)
- */
+// NOTE: do NOT add @mockup JSDoc block manually here. The injector
+// (`pnpm mockup-annotations:inject --apply`) runs in Task 4.1 Step 4
+// after MOCKUPS_INDEX.md is updated in Task 1.7. The injector reads the
+// index mapping and writes the full MOCKUP-ANNOTATION marker block.
+// Manual injection would conflict with the idempotency check.
 export default async function LibraryPublicPage() {
   // Stage 1: mock fixtures inline. Future iteration: replace with real
   // server-side fetch from backend (e.g. /api/v1/library-public/featured + /api/v1/community/stats).
@@ -645,7 +654,7 @@ Expected: 0 errors.
 Create `apps/web/src/app/(public)/library-public/page.stories.tsx`:
 
 ```tsx
-import type { Meta, StoryObj } from '@storybook/nextjs';
+import type { Meta, StoryObj } from '@storybook/react';
 
 import { LibraryPublicHome } from '@/components/features/library-public/LibraryPublicHome';
 import type { CommunityStats } from '@/components/features/library-public/CommunityStatsRow';
@@ -1039,11 +1048,11 @@ Verify MSW fixture shape matches LibraryGameDetail interface + no fixture drift.
 ### Task 2.3: sp3-legal story migration
 
 **Files:**
-- Create: `apps/web/src/app/(public)/legal/page.stories.tsx`
+- Create: `apps/web/src/app/(public)/terms/page.stories.tsx`
 
 - [ ] **Step 1: Dispatch implementer subagent**
 
-`<STEM_NAME> = sp3-legal`, `<ROUTE_PATH> = apps/web/src/app/(public)/legal`. Static content stem, no MSW handlers.
+`<STEM_NAME> = sp3-legal`, `<ROUTE_PATH> = apps/web/src/app/(public)/terms`. **Multi-route note**: `sp3-legal.html` is mapped in `MOCKUPS_INDEX.md` to 4 routes (`/privacy` + `/terms` + `/cookies` + `/cookie-settings`). Canonical story target is `/terms` (most representative). Story title should note "covers shared sp3-legal.html mockup serving /privacy /terms /cookies /cookie-settings routes". Static content, no MSW handlers.
 
 - [ ] **Step 2: Dispatch spec reviewer**
 
@@ -1125,19 +1134,19 @@ ls -la apps/web/src/app/\(public\)/library-public/page.stories.tsx \
 
 Expected: all 8 files exist.
 
-- [ ] **Step 2: Run Storybook test runner with snapshot update**
+- [ ] **Step 2: Run Storybook snapshot update (Playwright-based)**
 
+Canonical command (verified against `apps/web/package.json`):
 ```bash
-pnpm --filter @meepleai/web exec test-storybook --update-snapshots --browsers chromium
+pnpm --filter @meepleai/web test:storybook:snapshots:update
 ```
 
-NOTE: command name may differ. Alternatives to try:
+This invokes Playwright with `playwright.storybook.config.ts`. Requires Storybook to be running on the configured `baseURL` (typically `localhost:6006`). Start in separate terminal first if needed:
 ```bash
-pnpm --filter @meepleai/web storybook:test-snapshots
-pnpm --filter @meepleai/web storybook:visual --update
+pnpm --filter @meepleai/web storybook
 ```
 
-Check `apps/web/package.json` scripts section for the canonical command name. If no Storybook test runner script exists, fall back to per-story manual capture via Chrome MCP (similar to EPIC #2096 P4.3 pattern).
+Fallback if Playwright config not present: per-story manual capture via Chrome MCP (EPIC #2096 P4.3 pattern).
 
 - [ ] **Step 3: Verify 8 PNG baselines generated**
 

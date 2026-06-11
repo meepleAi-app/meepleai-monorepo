@@ -1,8 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -38,6 +43,14 @@ public sealed class AdminWikidataCoverEnrichmentEndpointsTests : IAsyncLifetime
     private readonly string _testDbName;
     private WebApplicationFactory<Program> _factory = null!;
     private HttpClient _client = null!;
+    private string _adminSessionToken = null!;
+    private static readonly Guid TestAdminId = Guid.NewGuid();
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        Converters = { new JsonStringEnumConverter() },
+    };
 
     public AdminWikidataCoverEnrichmentEndpointsTests(SharedTestcontainersFixture fixture)
     {
@@ -54,6 +67,9 @@ public sealed class AdminWikidataCoverEnrichmentEndpointsTests : IAsyncLifetime
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             await dbContext.Database.MigrateAsync(TestContext.Current.CancellationToken);
+
+            var (_, token) = await TestSessionHelper.CreateAdminSessionAsync(dbContext, TestAdminId);
+            _adminSessionToken = token;
         }
 
         _client = _factory.CreateClient();
@@ -110,5 +126,121 @@ public sealed class AdminWikidataCoverEnrichmentEndpointsTests : IAsyncLifetime
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized,
             "the dead-letter admin page contains sensitive operational data and MUST require an admin session");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Wave 3 M16 — authenticated admin happy-path coverage.
+    //
+    // These tests close the deferred-integration gap flagged on PR #2165
+    // (M12) + #2206 (M13). They use TestSessionHelper.CreateAdminSessionAsync
+    // to fabricate a valid admin session token, then send requests via
+    // CreateAuthenticatedRequest (mirror of AdminDomainEventOutboxEndpoints
+    // test pattern from #1535 T6).
+    // ──────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ListDeadLetters_Admin_EmptyTable_Returns200WithZeroItems()
+    {
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            $"{EndpointBase}/dead-letters?skip=0&take=10",
+            _adminSessionToken);
+
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        var result = JsonSerializer.Deserialize<WikidataDeadLetterAttemptsResult>(body, JsonOptions);
+        result.Should().NotBeNull();
+        result!.Items.Should().BeEmpty();
+        result.TotalCount.Should().Be(0);
+        result.Skip.Should().Be(0);
+        result.Take.Should().Be(10);
+    }
+
+    [Fact]
+    public async Task ListDeadLetters_Admin_PopulatedTable_ReturnsRows()
+    {
+        var gameId = await SeedDeadLetterAsync();
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            $"{EndpointBase}/dead-letters?skip=0&take=10",
+            _adminSessionToken);
+
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        var result = JsonSerializer.Deserialize<WikidataDeadLetterAttemptsResult>(body, JsonOptions);
+
+        result!.TotalCount.Should().Be(1);
+        result.Items.Should().ContainSingle();
+        result.Items[0].SharedGameId.Should().Be(gameId);
+        result.Items[0].Reason.Should().Be("r2-upload-error");
+        result.Items[0].GameTitle.Should().Be("M16 Test Game");
+    }
+
+    [Fact]
+    public async Task ListDeadLetters_Admin_ReasonFilter_Applied()
+    {
+        await SeedDeadLetterAsync("M16 r2-upload Game", reason: "r2-upload-error");
+        await SeedDeadLetterAsync("M16 image-processing Game", reason: "image-processing-error");
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            $"{EndpointBase}/dead-letters?reason=image-processing-error",
+            _adminSessionToken);
+
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        var result = JsonSerializer.Deserialize<WikidataDeadLetterAttemptsResult>(body, JsonOptions);
+
+        result!.TotalCount.Should().Be(1);
+        result.Items[0].Reason.Should().Be("image-processing-error");
+    }
+
+    private async Task<Guid> SeedDeadLetterAsync(
+        string gameTitle = "M16 Test Game",
+        string reason = "r2-upload-error")
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var game = new SharedGameEntity
+        {
+            Id = Guid.NewGuid(),
+            Title = gameTitle,
+            YearPublished = 2020,
+            MinPlayers = 2,
+            MaxPlayers = 4,
+            PlayingTimeMinutes = 60,
+            MinAge = 10,
+            ImageUrl = string.Empty,
+            ThumbnailUrl = string.Empty,
+            Description = string.Empty,
+            CreatedBy = TestAdminId,
+            CreatedAt = DateTime.UtcNow,
+            WikidataQid = "Q1",
+        };
+        dbContext.SharedGames.Add(game);
+
+        var attempt = new WikidataCoverEnrichmentAttemptEntity
+        {
+            Id = Guid.NewGuid(),
+            SharedGameId = game.Id,
+            AttemptedAt = DateTime.UtcNow.AddHours(-1),
+            Outcome = 3, // DeadLetter
+            Reason = reason,
+            Details = "503 service unavailable",
+            RetryCount = 3,
+            DeadLetteredAt = DateTime.UtcNow.AddHours(-1),
+        };
+        dbContext.WikidataCoverEnrichmentAttempts.Add(attempt);
+        await dbContext.SaveChangesAsync();
+
+        return game.Id;
     }
 }

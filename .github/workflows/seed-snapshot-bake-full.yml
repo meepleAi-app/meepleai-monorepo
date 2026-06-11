@@ -1,0 +1,167 @@
+name: Seed Snapshot Bake (Full — dev.yml manifest)
+
+# Tier 2 D4 of #2126 — Seed snapshot freshness pipeline.
+#
+# Purpose: produce a fresh full snapshot from `dev.yml` (113+ PDFs) so the
+# bucket pointer `latest.txt` never gets older than ~7 days. This is the
+# heartbeat that defeats silent drift, and the artifact that
+# `make dev-from-snapshot` consumes on every developer machine.
+#
+# Trigger model (three layers, all converge on the same publish step):
+#
+#   1. weekly cron (Sundays 03:00 UTC) — anti-drift heartbeat. Survives even
+#      if nobody touches the manifests for a month.
+#   2. workflow_dispatch — manual escape hatch for "I broke the snapshot and
+#      need a fresh one NOW" or "I want to validate a runner change without
+#      waiting a week".
+#   3. NO automatic path-based push trigger here. The CI smoke
+#      (`seed-snapshot-bake-ci.yml`) catches manifest/migration breakage
+#      cheaply; the full bake is slow and expensive, so we only spend it on
+#      a schedule and on demand. The path-based "I changed dev.yml, give me
+#      a fresh snapshot before the next dev-from-snapshot" use-case is
+#      handled by the SLO: the cron runs at most 7 days behind, and the
+#      `snapshot-verify.sh` exit codes (D9 schema-version drift) flag the
+#      need to manually dispatch in the meantime.
+#
+# Tied SLO (R-SNAP-FRESH-02 amendment):
+#   - bake budget:     ≤ 6h  (GitHub-hosted ubuntu-latest, no GPU)
+#   - freshness:       ≤ 7 days from latest published snapshot
+#   - on bake failure: the previous snapshot keeps serving until the next
+#                      successful run; the run logs are the audit trail
+#                      until D6 lands the markdown trail.
+#
+# Companion: PR #2134 (D7+D9 verify gates) blocks the publish step if the
+# resulting sidecar fails the invariants — preventing a half-baked snapshot
+# from clobbering `latest.txt`.
+
+on:
+  schedule:
+    # Sunday 03:00 UTC. Picked so failures land before Monday morning EU
+    # working hours and a maintainer can react.
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Upload to the seed blob bucket on success (default: yes)'
+        required: false
+        default: 'true'
+        type: boolean
+      failure_pct:
+        description: 'Max % of PDFs allowed to fail before abort (default: 15)'
+        required: false
+        default: '15'
+        type: string
+
+# Hard-serialize. A second cron tick or manual dispatch must NOT race the
+# in-flight bake (they'd share the bake postgres). Cancel-in-progress is
+# false because the bake is too expensive to throw away mid-flight.
+concurrency:
+  group: seed-snapshot-bake-full
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  bake-full:
+    name: Bake dev.yml + verify gates + publish
+    runs-on: ubuntu-latest
+    # 6h is the GitHub-hosted job limit. The bake budget is sized to fit.
+    # If we ever overrun, the next dispatch can rerun, OR we move to a
+    # self-hosted runner with persistent SmolDocling model cache.
+    timeout-minutes: 360
+
+    env:
+      # Default manifest is `dev.yml` (no override).
+      SEED_INDEX_TIMEOUT: '20000' # ~5.5h, just under the job limit
+      SEED_INDEX_POLL: '30'
+      SEED_INDEX_FAILURE_PCT: ${{ github.event.inputs.failure_pct || '15' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install jq + AWS CLI (required by seed-index-publish.sh)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq awscli
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Bake (dev.yml manifest, ~3–6h on CPU)
+        working-directory: infra
+        env:
+          SEED_INDEX_OUT_DIR: ${{ github.workspace }}/data/snapshots
+        run: |
+          mkdir -p "$SEED_INDEX_OUT_DIR"
+          make seed-index
+
+      - name: Run verify gates (exit codes 2/3/4/5/6)
+        working-directory: infra
+        env:
+          SEED_INDEX_OUT_DIR: ${{ github.workspace }}/data/snapshots
+        run: |
+          # If this fails we DO NOT publish — `latest.txt` keeps pointing at
+          # the previous good snapshot.
+          bash scripts/snapshot-verify.sh
+
+      - name: Surface seed-status full report
+        working-directory: infra
+        env:
+          SEED_INDEX_OUT_DIR: ${{ github.workspace }}/data/snapshots
+        run: bash scripts/seed-status.sh || true
+
+      - name: Upload sidecar as workflow artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seed-snapshot-full-meta-${{ github.run_id }}
+          path: |
+            data/snapshots/*.meta.json
+            data/snapshots/.latest
+          retention-days: 90
+          if-no-files-found: warn
+
+      # ──────────────────────────────────────────────────────────────────
+      # Publish step — the WHOLE POINT of this workflow.
+      # The cron path always publishes (unattended); dispatch defaults to
+      # publish but can be turned off via `inputs.publish=false` for "I just
+      # want to validate the bake didn't break, please don't move latest.txt".
+      # ──────────────────────────────────────────────────────────────────
+      - name: Publish to seed blob bucket
+        if: |
+          github.event_name == 'schedule' ||
+          (github.event_name == 'workflow_dispatch' && inputs.publish == true)
+        working-directory: infra
+        env:
+          S3_ENDPOINT: ${{ secrets.SEED_BLOB_S3_ENDPOINT }}
+          S3_ACCESS_KEY: ${{ secrets.SEED_BLOB_S3_ACCESS_KEY }}
+          S3_SECRET_KEY: ${{ secrets.SEED_BLOB_S3_SECRET_KEY }}
+          SEED_BLOB_BUCKET: ${{ secrets.SEED_BLOB_BUCKET }}
+          SEED_INDEX_OUT_DIR: ${{ github.workspace }}/data/snapshots
+        run: |
+          set -euo pipefail
+          : "${S3_ENDPOINT:?SEED_BLOB_S3_ENDPOINT secret not configured}"
+          : "${S3_ACCESS_KEY:?SEED_BLOB_S3_ACCESS_KEY secret not configured}"
+          : "${S3_SECRET_KEY:?SEED_BLOB_S3_SECRET_KEY secret not configured}"
+          : "${SEED_BLOB_BUCKET:?SEED_BLOB_BUCKET secret not configured}"
+          # `seed-index-publish.sh` reads storage.secret on disk; synthesize
+          # one from the GH Actions secrets for this job.
+          mkdir -p secrets
+          cat > secrets/storage.secret <<EOF
+          S3_ENDPOINT=${S3_ENDPOINT}
+          S3_ACCESS_KEY=${S3_ACCESS_KEY}
+          S3_SECRET_KEY=${S3_SECRET_KEY}
+          SEED_BLOB_BUCKET=${SEED_BLOB_BUCKET}
+          EOF
+          chmod 600 secrets/storage.secret
+          bash scripts/seed-index-publish.sh
+
+      - name: Notify on failure (placeholder for D6 audit trail)
+        if: failure()
+        run: |
+          echo "::warning::Bake failed at $(date -u +%FT%TZ). The previous snapshot remains the published one (latest.txt unchanged)."
+          echo "::warning::Manual dispatch can be retried via the workflow_dispatch UI on this workflow."
+          # When D6 lands, this step will append a Failed entry to
+          # data/snapshots/AUDIT.md and open a PR. For now we just log.

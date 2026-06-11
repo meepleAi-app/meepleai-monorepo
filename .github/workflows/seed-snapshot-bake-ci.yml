@@ -1,0 +1,182 @@
+name: Seed Snapshot Bake (CI smoke — ci.yml manifest)
+
+# Tier 2 D4 of #2126 — Seed snapshot freshness pipeline.
+#
+# Purpose: catch regressions in the bake pipeline *before* they reach the
+# slow weekly full bake. Runs against `ci.yml` (3 PDFs, bake in ~10 min) on
+# every push that touches anything that could break the seed pipeline:
+#
+#   - any of the seeder manifests (dev/staging/prod/ci)
+#   - any EF migration .cs file
+#   - any of the seed-* / snapshot-* / wait-for-healthy shell scripts
+#   - the bake docker compose files
+#   - the seed-schema.version sentinel (#2126 D9)
+#
+# This workflow is a *gate*: failure means a developer has broken the bake
+# pipeline. The full bake (`seed-snapshot-bake-full.yml`) trusts that this
+# smoke ran first.
+#
+# Companion: PR #2134 (D7+D9 verify gates) — those exit codes 5/6 fire here
+# if the bake produces a sidecar that violates the invariants.
+
+on:
+  push:
+    branches:
+      - main-dev
+      - main-staging
+    paths:
+      - 'apps/api/src/Api/Infrastructure/Seeders/Catalog/Manifests/*.yml'
+      - 'apps/api/src/Api/Migrations/**'
+      - 'infra/scripts/seed-index-*.sh'
+      - 'infra/scripts/snapshot-*.sh'
+      - 'infra/scripts/wait-for-healthy.sh'
+      - 'infra/docker-compose.yml'
+      - 'infra/compose.dev.yml'
+      - 'infra/seed-schema.version'
+      - '.github/workflows/seed-snapshot-bake-ci.yml'
+  pull_request:
+    paths:
+      - 'apps/api/src/Api/Infrastructure/Seeders/Catalog/Manifests/*.yml'
+      - 'apps/api/src/Api/Migrations/**'
+      - 'infra/scripts/seed-index-*.sh'
+      - 'infra/scripts/snapshot-*.sh'
+      - 'infra/seed-schema.version'
+      - '.github/workflows/seed-snapshot-bake-ci.yml'
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Upload the smoke dump to the seed blob bucket (default: no, smoke only)'
+        required: false
+        default: 'false'
+        type: boolean
+
+# Only one CI bake at a time per ref — bake jobs share a postgres container
+# instance, so two parallel runs on the same SHA would clobber each other.
+# A newer push cancels older runs.
+concurrency:
+  group: seed-snapshot-bake-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  bake-ci-smoke:
+    name: Bake ci.yml (3 PDFs) + verify gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      SEED_CATALOG_MANIFEST_OVERRIDE: ci
+      # Even the 3-PDF bake can occasionally hit the "embedding service is
+      # warming" path; give it 25 min instead of the default 3h.
+      SEED_INDEX_TIMEOUT: '1500'
+      SEED_INDEX_POLL: '10'
+      SEED_INDEX_FAILURE_PCT: '0' # ci.yml MUST not have failures
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify ci.yml manifest is present and small
+        run: |
+          set -euo pipefail
+          MANIFEST=apps/api/src/Api/Infrastructure/Seeders/Catalog/Manifests/ci.yml
+          test -f "$MANIFEST" || { echo "::error::missing $MANIFEST"; exit 1; }
+          PDF_COUNT=$(grep -cE '^\s*- pdfPath:' "$MANIFEST" || true)
+          echo "ci.yml declares $PDF_COUNT PDFs"
+          # ci.yml is supposed to stay small. If it grew past a sane bound,
+          # the smoke is no longer a smoke — fail loudly so somebody splits
+          # it back out or moves the test to the full bake.
+          if [ "$PDF_COUNT" -gt 10 ]; then
+            echo "::error::ci.yml has grown to $PDF_COUNT PDFs — exceeds CI smoke budget (cap 10)"
+            exit 1
+          fi
+
+      - name: Install jq (required by seed scripts)
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Run bake
+        working-directory: infra
+        env:
+          # Seed secrets are NOT injected for the smoke bake — the local
+          # postgres + embedding service are sufficient. If the user passes
+          # `--publish=true`, the secrets-gate step below provides them.
+          SEED_INDEX_OUT_DIR: ${{ github.workspace }}/data/snapshots
+        run: |
+          mkdir -p "$SEED_INDEX_OUT_DIR"
+          # `make seed-index` brings up the bake stack, runs the seeder, polls
+          # processing_jobs, and dumps. CI runner is ephemeral, so we don't
+          # bother with `make dev-down`.
+          make seed-index
+
+      - name: Run verify gates (exit codes 2/3/4/5/6)
+        working-directory: infra
+        env:
+          SEED_INDEX_OUT_DIR: ${{ github.workspace }}/data/snapshots
+        run: |
+          # The verify script exits 0 on success and a distinct code per gate;
+          # `set -e` plus an explicit invocation gives us the GHA-visible error.
+          bash scripts/snapshot-verify.sh
+
+      - name: Surface seed-status
+        working-directory: infra
+        env:
+          SEED_INDEX_OUT_DIR: ${{ github.workspace }}/data/snapshots
+        run: bash scripts/seed-status.sh || true
+
+      - name: Upload sidecar as workflow artifact (90-day retention)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seed-snapshot-ci-meta-${{ github.run_id }}
+          path: |
+            data/snapshots/*.meta.json
+            data/snapshots/.latest
+          retention-days: 14
+          if-no-files-found: warn
+
+      # ──────────────────────────────────────────────────────────────────
+      # Optional publish path (off by default). The dispatch input exists so
+      # a maintainer can produce a real, signed dump from the CI manifest
+      # without spinning up `make seed-index-publish` locally — useful when
+      # the e2e snapshot needs refreshing.
+      #
+      # SECRETS REQUIRED (configure in the repo Settings → Secrets and
+      # variables → Actions):
+      #   SEED_BLOB_S3_ENDPOINT     e.g. https://<accountid>.r2.cloudflarestorage.com
+      #   SEED_BLOB_S3_ACCESS_KEY
+      #   SEED_BLOB_S3_SECRET_KEY
+      #   SEED_BLOB_BUCKET          e.g. meepleai-seed-snapshots
+      #
+      # The job falls back gracefully when any of them is missing.
+      # ──────────────────────────────────────────────────────────────────
+      - name: Optional — publish smoke dump
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish == true }}
+        working-directory: infra
+        env:
+          S3_ENDPOINT: ${{ secrets.SEED_BLOB_S3_ENDPOINT }}
+          S3_ACCESS_KEY: ${{ secrets.SEED_BLOB_S3_ACCESS_KEY }}
+          S3_SECRET_KEY: ${{ secrets.SEED_BLOB_S3_SECRET_KEY }}
+          SEED_BLOB_BUCKET: ${{ secrets.SEED_BLOB_BUCKET }}
+          SEED_INDEX_OUT_DIR: ${{ github.workspace }}/data/snapshots
+        run: |
+          set -euo pipefail
+          : "${S3_ENDPOINT:?SEED_BLOB_S3_ENDPOINT secret not configured}"
+          : "${S3_ACCESS_KEY:?SEED_BLOB_S3_ACCESS_KEY secret not configured}"
+          : "${S3_SECRET_KEY:?SEED_BLOB_S3_SECRET_KEY secret not configured}"
+          : "${SEED_BLOB_BUCKET:?SEED_BLOB_BUCKET secret not configured}"
+          # `seed-index-publish.sh` reads storage.secret on disk; synthesize one
+          # from the GH Actions secrets for the duration of the job.
+          mkdir -p secrets
+          cat > secrets/storage.secret <<EOF
+          S3_ENDPOINT=${S3_ENDPOINT}
+          S3_ACCESS_KEY=${S3_ACCESS_KEY}
+          S3_SECRET_KEY=${S3_SECRET_KEY}
+          SEED_BLOB_BUCKET=${SEED_BLOB_BUCKET}
+          EOF
+          chmod 600 secrets/storage.secret
+          bash scripts/seed-index-publish.sh

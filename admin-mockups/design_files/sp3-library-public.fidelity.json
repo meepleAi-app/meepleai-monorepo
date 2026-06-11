@@ -30,6 +30,6 @@
     "viewports": [
       "desktop"
     ],
-    "obsolete_tracking_issue": "2209"
+    "obsolete_tracking_issue": "#2209"
   }
 }

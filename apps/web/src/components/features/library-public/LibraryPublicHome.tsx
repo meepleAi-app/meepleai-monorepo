@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { HeroGradient } from '@/components/ui/hero-gradient/hero-gradient';
 import { cn } from '@/lib/utils';
 
@@ -103,12 +105,12 @@ export function LibraryPublicHome({ featured, stats }: LibraryPublicHomeProps) {
           <p className="max-w-2xl text-base text-muted-foreground">
             Crea il tuo account e accedi al catalogo, agli agenti AI, ai toolkit della community.
           </p>
-          <a
+          <Link
             href="/join"
             className="inline-flex items-center justify-center rounded-md bg-primary px-6 py-3 text-base font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Crea account gratis
-          </a>
+          </Link>
         </section>
       </div>
     </main>

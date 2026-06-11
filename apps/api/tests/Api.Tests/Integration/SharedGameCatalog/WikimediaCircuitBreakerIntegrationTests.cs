@@ -66,7 +66,10 @@ public class WikimediaCircuitBreakerIntegrationTests
         public FixedResponseHandler(Func<HttpResponseMessage> factory)
         {
             _factory = factory;
-            InnerHandler = new HttpClientHandler();
+            // No InnerHandler assignment — when this handler sits in the
+            // ConfigurePrimaryHttpMessageHandler slot, the HttpClientFactory
+            // pipeline builder injects the chain end for us. Assigning a
+            // dummy HttpClientHandler here would only be a dead-code leak.
         }
 
         protected override Task<HttpResponseMessage> SendAsync(

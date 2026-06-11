@@ -239,7 +239,7 @@ public sealed class AdminWikidataCoverEnrichmentEndpointsTests : IAsyncLifetime
             DeadLetteredAt = DateTime.UtcNow.AddHours(-1),
         };
         dbContext.WikidataCoverEnrichmentAttempts.Add(attempt);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         return game.Id;
     }

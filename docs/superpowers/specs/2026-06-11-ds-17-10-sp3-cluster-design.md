@@ -102,16 +102,16 @@ export default async function LibraryPublicPage() {
 - `featured`: 4-6 game objects con `gameId/title/coverUrl/playerCount/rating`
 - `stats`: `{ totalGames: number, totalPlayers: number, totalSessions: number, totalCommunityContent: number }`
 
-**fidelity.json update**:
+**fidelity.json update** (runtime: `obsolete_tracking_issue` filled with NEW tracking issue number opened in Stage 1):
 ```json
 {
   "design_intent": "forward-refactor",
-  "obsolete_tracking_issue": "<NEW_TRACKING_ISSUE_NUM>",
+  "obsolete_tracking_issue": "<TRACKING_ISSUE_NUM opened during Stage 1>",
   "viewports": ["desktop"]
 }
 ```
 
-**Tracking issue OPENED**: "Designer review sp3-library-public forward-refactor (DS-17-10 sub-issue #2208)" — future iteration audit, no blocker su merge corrente.
+**Tracking issue OPENED in Stage 1**: title "Designer review sp3-library-public forward-refactor (DS-17-10 sub-issue #2208)" — future iteration audit, no blocker su merge corrente. Issue number filled into fidelity.json in same Stage 1 commit.
 
 ### 4.3 Stage 2 — AI dispatch 7 standard stems story migration
 

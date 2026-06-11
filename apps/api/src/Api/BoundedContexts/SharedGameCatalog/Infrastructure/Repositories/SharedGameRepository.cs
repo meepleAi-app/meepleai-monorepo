@@ -132,8 +132,13 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             entity.MinAge,
             entity.ComplexityRating,
             entity.AverageRating,
-            entity.ImageUrl,
-            entity.ThumbnailUrl,
+            // Issue #2123 — entity.ImageUrl/ThumbnailUrl are now nullable post-Phase A
+            // nullify migration. SharedGame aggregate still types them as non-nullable
+            // (legacy contract; deprecation tombstone). Coerce to empty string here so
+            // null entity values don't blow up the aggregate constructor — FE consumers
+            // MUST prefer SharedGameDto.CoverUrl which is the R2-resolved replacement.
+            entity.ImageUrl ?? string.Empty,
+            entity.ThumbnailUrl ?? string.Empty,
             rules,
             (GameStatus)entity.Status,
             entity.CreatedBy,

@@ -109,8 +109,9 @@ internal sealed class GetFilteredSharedGamesQueryHandler : IRequestHandler<GetFi
                 g.MinAge,
                 g.ComplexityRating,
                 g.AverageRating,
-                g.ImageUrl,
-                g.ThumbnailUrl,
+                // Issue #2123 — tombstone fields (entity columns now nullable post Phase A).
+                g.ImageUrl ?? string.Empty,
+                g.ThumbnailUrl ?? string.Empty,
                 (GameStatus)g.Status,
                 g.CreatedAt,
                 g.ModifiedAt,

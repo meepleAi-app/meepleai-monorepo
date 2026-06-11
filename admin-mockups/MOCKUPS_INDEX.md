@@ -58,7 +58,7 @@
 | `sp3-how-it-works.html` | page-mock | `/how-it-works` |
 | `sp3-join.html` | page-mock | `/join`, `/sessions/join` (reuse) |
 | `sp3-legal.html` | page-mock | `/privacy`, `/terms`, `/cookies`, `/cookie-settings` |
-| `sp3-library-public.html` | page-mock | `/shared-games` (variant), `/library/shared/[token]` |
+| `sp3-library-public.html` | page-mock | `/library-public`, `/shared-games` (variant), `/library/shared/[token]` |
 | `sp3-shared-game-detail.html` | page-mock | `/shared-games/[id]` (Wave A.3, PR #600/605/612/630) |
 | `sp3-shared-games.html` | page-mock | `/shared-games` |
 

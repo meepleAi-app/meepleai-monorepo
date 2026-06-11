@@ -11,7 +11,18 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatal
 /// </summary>
 /// <param name="GameId">Target shared-game id.</param>
 /// <param name="ForceRefresh">When <see langword="true"/>, the M8 90-day freshness window is bypassed.</param>
-/// <param name="TriggeredByUserId">Admin user id captured for audit logging.</param>
+/// <param name="TriggeredByUserId">
+/// Admin user id captured ONLY in the structured log line emitted by the handler
+/// (<c>AdminEnrichWikidataCover: triggered by user {UserId} for game {GameId}</c>) —
+/// NOT persisted to the <c>WikidataCoverEnrichmentAttempt</c> row. This is by
+/// design for M12 scope: attempt rows are record-of-fact about the enrichment
+/// pipeline outcome (success / skipped / failed / dead-letter) and remain
+/// indistinguishable between scheduler-triggered and admin-triggered runs so
+/// the audit trail stays uniform. If the M13 admin dead-letter page needs to
+/// show "triggered by admin X", it must source that information from the
+/// structured log stream or a separate trigger-audit table introduced in M13,
+/// not from <c>WikidataCoverEnrichmentAttempt</c>.
+/// </param>
 internal sealed record AdminEnrichWikidataCoverCommand(
     Guid GameId,
     bool ForceRefresh,

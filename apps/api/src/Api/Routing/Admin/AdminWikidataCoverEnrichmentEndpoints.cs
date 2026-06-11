@@ -41,7 +41,7 @@ internal static class AdminWikidataCoverEnrichmentEndpoints
     /// Request body for the trigger endpoint. <see cref="ForceRefresh"/> is
     /// optional — null is treated as <see langword="false"/>.
     /// </summary>
-    public sealed record AdminTriggerWikidataEnrichmentRequest(bool? ForceRefresh);
+    internal sealed record AdminTriggerWikidataEnrichmentRequest(bool? ForceRefresh);
 
     private static async Task<IResult> HandleTrigger(
         Guid gameId,

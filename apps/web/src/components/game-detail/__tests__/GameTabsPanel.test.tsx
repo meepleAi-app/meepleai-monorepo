@@ -6,6 +6,15 @@ import { GameTabsPanel } from '../GameTabsPanel';
 import type { GameTabId } from '../tabs';
 import { useEffect, useState } from 'react';
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    replace: vi.fn(),
+    push: vi.fn(),
+    refresh: vi.fn(),
+  }),
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 // Mock the data-fetching hook so the tab panels render their placeholder states
 vi.mock('@/hooks/queries/useLibrary', () => ({
   useLibraryGameDetail: () => ({ data: null, isLoading: false, isError: false }),

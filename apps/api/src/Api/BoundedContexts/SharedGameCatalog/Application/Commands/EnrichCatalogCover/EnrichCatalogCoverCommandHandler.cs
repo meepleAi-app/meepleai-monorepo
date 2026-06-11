@@ -1,6 +1,7 @@
 using Amazon.S3;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Providers;
+using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Resilience;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Middleware.Exceptions;
 using Api.Observability;
@@ -58,6 +59,8 @@ internal sealed class EnrichCatalogCoverCommandHandler
     public const string SkipReasonImageBytesNotAvailable = "image-bytes-not-available";
     public const string FailReasonImageProcessing = "image-processing-error";
     public const string FailReasonR2Upload = "r2-upload-error";
+    /// <summary>Issue #1823 Wave 3 M13 (M10 follow-up): Polly circuit OPEN — short-circuit retry until breaker recovers.</summary>
+    public const string FailReasonCircuitOpen = "circuit-open";
 
     private const int WebpTargetWidth = 200;
     private const int WebpTargetHeight = 300;
@@ -132,38 +135,59 @@ internal sealed class EnrichCatalogCoverCommandHandler
             return new EnrichCatalogCoverResult.Skipped(SkipReasonQidMissing);
         }
 
-        // 4. M3 — Wikidata SPARQL wdt:P18 lookup.
-        var coverImage = await _wikidataProvider
-            .FetchCoverImageAsync(game.WikidataQid, cancellationToken)
-            .ConfigureAwait(false);
-
-        if (!coverImage.HasImage || string.IsNullOrWhiteSpace(coverImage.Filename))
+        // Steps 4-6 hit the Wikidata SPARQL + Commons API endpoints, both of
+        // which sit behind the M10 WikimediaCircuitBreakerHandler. A single
+        // try/catch at this network boundary maps BrokenCircuitException to a
+        // dedicated Failed("circuit-open") outcome so the M9 scheduler can
+        // schedule a delayed retry (6m, slightly past the 5m DEC-3f break) and
+        // the M13 admin dead-letter page can distinguish breaker trips from
+        // genuine upstream failures.
+        WikidataCoverImageResult coverImage;
+        CommonsLicenseResult licenseResult;
+        byte[]? originalBytes;
+        try
         {
-            EmitOutcomeMetric(OutcomeSkipped, SkipReasonImageNotAvailable);
-            _logger.LogInformation(
-                "SharedGame {GameId} QID {Qid} has no wdt:P18 claim; skipping enrichment.",
+            // 4. M3 — Wikidata SPARQL wdt:P18 lookup.
+            coverImage = await _wikidataProvider
+                .FetchCoverImageAsync(game.WikidataQid, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (!coverImage.HasImage || string.IsNullOrWhiteSpace(coverImage.Filename))
+            {
+                EmitOutcomeMetric(OutcomeSkipped, SkipReasonImageNotAvailable);
+                _logger.LogInformation(
+                    "SharedGame {GameId} QID {Qid} has no wdt:P18 claim; skipping enrichment.",
+                    game.Id, game.WikidataQid);
+                return new EnrichCatalogCoverResult.Skipped(SkipReasonImageNotAvailable);
+            }
+
+            // 5. M4 — Commons imageinfo license fetch + DEC-3c whitelist gate.
+            licenseResult = await _commonsClient
+                .FetchLicenseAsync(coverImage.Filename, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (!licenseResult.IsWhitelisted || string.IsNullOrWhiteSpace(licenseResult.RawLicense))
+            {
+                EmitOutcomeMetric(OutcomeSkipped, SkipReasonLicenseNotWhitelisted);
+                _logger.LogInformation(
+                    "SharedGame {GameId} QID {Qid} Commons file '{Filename}' license '{License}' not whitelisted; skipping.",
+                    game.Id, game.WikidataQid, coverImage.Filename, licenseResult.RawLicense);
+                return new EnrichCatalogCoverResult.Skipped(SkipReasonLicenseNotWhitelisted);
+            }
+
+            // 6. M4 extension — Commons Special:FilePath image bytes download.
+            originalBytes = await _commonsClient
+                .FetchImageBytesAsync(coverImage.Filename, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex) when (CircuitBreakerExceptionDetector.IsBrokenCircuit(ex))
+        {
+            EmitOutcomeMetric(OutcomeFailed, FailReasonCircuitOpen);
+            _logger.LogWarning(ex,
+                "SharedGame {GameId} QID {Qid} circuit breaker OPEN — short-circuiting enrichment.",
                 game.Id, game.WikidataQid);
-            return new EnrichCatalogCoverResult.Skipped(SkipReasonImageNotAvailable);
+            return new EnrichCatalogCoverResult.Failed(FailReasonCircuitOpen, ex.Message);
         }
-
-        // 5. M4 — Commons imageinfo license fetch + DEC-3c whitelist gate.
-        var licenseResult = await _commonsClient
-            .FetchLicenseAsync(coverImage.Filename, cancellationToken)
-            .ConfigureAwait(false);
-
-        if (!licenseResult.IsWhitelisted || string.IsNullOrWhiteSpace(licenseResult.RawLicense))
-        {
-            EmitOutcomeMetric(OutcomeSkipped, SkipReasonLicenseNotWhitelisted);
-            _logger.LogInformation(
-                "SharedGame {GameId} QID {Qid} Commons file '{Filename}' license '{License}' not whitelisted; skipping.",
-                game.Id, game.WikidataQid, coverImage.Filename, licenseResult.RawLicense);
-            return new EnrichCatalogCoverResult.Skipped(SkipReasonLicenseNotWhitelisted);
-        }
-
-        // 6. M4 extension — Commons Special:FilePath image bytes download.
-        var originalBytes = await _commonsClient
-            .FetchImageBytesAsync(coverImage.Filename, cancellationToken)
-            .ConfigureAwait(false);
 
         if (originalBytes is null || originalBytes.Length == 0)
         {

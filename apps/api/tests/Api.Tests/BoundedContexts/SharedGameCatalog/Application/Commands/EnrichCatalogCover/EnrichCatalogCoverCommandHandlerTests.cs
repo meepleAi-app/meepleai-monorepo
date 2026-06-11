@@ -329,6 +329,57 @@ public class EnrichCatalogCoverCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WikidataCircuitBreakerOpen_ReturnsFailedCircuitOpen()
+    {
+        var harness = BuildHarness();
+        var game = BuildGame(qid: TestQid);
+
+        harness.RepoMock
+            .Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+
+        // Simulate the M10 circuit breaker tripping for the Wikidata client.
+        // BrokenCircuitException propagates through the SUT pipeline; the M8
+        // handler MUST catch it via the reflection-based detector and return
+        // Failed("circuit-open") rather than letting it crash the runner.
+        harness.WikidataHandler.OverrideThrow = new Polly.CircuitBreaker.BrokenCircuitException("circuit OPEN");
+
+        var result = await harness.Sut.Handle(
+            new EnrichCatalogCoverCommand(game.Id),
+            CancellationToken.None);
+
+        result.Should().BeOfType<EnrichCatalogCoverResult.Failed>();
+        var failed = (EnrichCatalogCoverResult.Failed)result;
+        failed.Reason.Should().Be(EnrichCatalogCoverCommandHandler.FailReasonCircuitOpen);
+        failed.Details.Should().Contain("circuit OPEN");
+        harness.UowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_CommonsCircuitBreakerOpen_ReturnsFailedCircuitOpen()
+    {
+        var harness = BuildHarness();
+        var game = BuildGame(qid: TestQid);
+
+        harness.RepoMock
+            .Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+
+        // Wikidata SPARQL still responds; Commons API circuit OPEN — exception
+        // surfaces on the license fetch hop.
+        harness.WikidataHandler.SparqlJson = BuildSparqlImageResponse(TestFilename);
+        harness.CommonsHandler.OverrideThrow = new Polly.CircuitBreaker.BrokenCircuitException("commons circuit OPEN");
+
+        var result = await harness.Sut.Handle(
+            new EnrichCatalogCoverCommand(game.Id),
+            CancellationToken.None);
+
+        result.Should().BeOfType<EnrichCatalogCoverResult.Failed>();
+        ((EnrichCatalogCoverResult.Failed)result).Reason
+            .Should().Be(EnrichCatalogCoverCommandHandler.FailReasonCircuitOpen);
+    }
+
+    [Fact]
     public async Task Handle_R2UploadError_ReturnsFailedR2UploadError()
     {
         var harness = BuildHarness();
@@ -533,6 +584,11 @@ public class EnrichCatalogCoverCommandHandlerTests
     {
         public string SparqlJson { get; set; } = string.Empty;
         public HttpStatusCode Status { get; set; } = HttpStatusCode.OK;
+        /// <summary>
+        /// When non-null, the handler throws this exception instead of returning
+        /// a response. Used to simulate the M10 circuit-breaker tripping.
+        /// </summary>
+        public Exception? OverrideThrow { get; set; }
         public List<HttpRequestMessage> Requests { get; } = new();
 
         protected override Task<HttpResponseMessage> SendAsync(
@@ -540,6 +596,10 @@ public class EnrichCatalogCoverCommandHandlerTests
             CancellationToken cancellationToken)
         {
             Requests.Add(request);
+            if (OverrideThrow is not null)
+            {
+                return Task.FromException<HttpResponseMessage>(OverrideThrow);
+            }
             var content = new StringContent(SparqlJson, Encoding.UTF8, "application/sparql-results+json");
             return Task.FromResult(new HttpResponseMessage(Status) { Content = content });
         }
@@ -569,6 +629,11 @@ public class EnrichCatalogCoverCommandHandlerTests
         public byte[] ImageBytes { get; set; } = Array.Empty<byte>();
         public HttpStatusCode LicenseStatus { get; set; } = HttpStatusCode.OK;
         public HttpStatusCode ImageStatus { get; set; } = HttpStatusCode.OK;
+        /// <summary>
+        /// When non-null, the handler throws this exception instead of dispatching.
+        /// Used to simulate the M10 circuit-breaker tripping on the Commons client.
+        /// </summary>
+        public Exception? OverrideThrow { get; set; }
         public List<HttpRequestMessage> Requests { get; } = new();
 
         protected override Task<HttpResponseMessage> SendAsync(
@@ -576,6 +641,10 @@ public class EnrichCatalogCoverCommandHandlerTests
             CancellationToken cancellationToken)
         {
             Requests.Add(request);
+            if (OverrideThrow is not null)
+            {
+                return Task.FromException<HttpResponseMessage>(OverrideThrow);
+            }
             var path = request.RequestUri!.AbsolutePath;
 
             if (path.Contains("api.php", StringComparison.Ordinal))

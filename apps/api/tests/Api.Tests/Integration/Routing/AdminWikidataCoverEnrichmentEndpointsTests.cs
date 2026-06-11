@@ -98,4 +98,17 @@ public sealed class AdminWikidataCoverEnrichmentEndpointsTests : IAsyncLifetime
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
+
+    [Fact]
+    public async Task ListDeadLetters_AnonymousRequest_Returns401()
+    {
+        // Wave 3 M13 GET endpoint must also be gated by the group-level
+        // RequireAdminSessionFilter, no different from POST.
+        var url = $"{EndpointBase}/dead-letters?skip=0&take=10";
+
+        var response = await _client.GetAsync(url, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized,
+            "the dead-letter admin page contains sensitive operational data and MUST require an admin session");
+    }
 }

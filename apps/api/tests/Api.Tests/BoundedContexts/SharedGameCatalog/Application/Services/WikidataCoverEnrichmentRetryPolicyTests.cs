@@ -108,4 +108,39 @@ public class WikidataCoverEnrichmentRetryPolicyTests
 
         act.Should().Throw<ArgumentNullException>();
     }
+
+    [Fact]
+    public void Classify_CircuitOpen_SchedulesRetryAt6mPastNow()
+    {
+        var result = new EnrichCatalogCoverResult.Failed(
+            EnrichCatalogCoverCommandHandler.FailReasonCircuitOpen,
+            "circuit OPEN");
+
+        var decision = _sut.Classify(result, currentRetryCount: 0, FixedNow);
+
+        decision.Should().BeOfType<WikidataCoverEnrichmentRetryDecision.ScheduleRetry>(
+            "circuit-open is an upstream-infra signal — schedule a single retry past the 5min DEC-3f BreakDuration");
+        ((WikidataCoverEnrichmentRetryDecision.ScheduleRetry)decision).NextRetryAt
+            .Should().Be(FixedNow.Add(WikidataCoverEnrichmentRetryPolicy.CircuitOpenBackoff));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(99)]
+    public void Classify_CircuitOpen_DoesNotEscalateToDeadLetterRegardlessOfRetryCount(int currentRetryCount)
+    {
+        // Unlike r2-upload-error which dead-letters after 3 retries, circuit-open
+        // is NOT counted against the DEC-3j budget — it's an upstream signal so
+        // the breaker MUST recover before we give up on the game.
+        var result = new EnrichCatalogCoverResult.Failed(
+            EnrichCatalogCoverCommandHandler.FailReasonCircuitOpen,
+            "circuit OPEN");
+
+        var decision = _sut.Classify(result, currentRetryCount, FixedNow);
+
+        decision.Should().BeOfType<WikidataCoverEnrichmentRetryDecision.ScheduleRetry>(
+            "circuit-open never escalates to dead-letter — the breaker decides when upstream is up again");
+    }
 }

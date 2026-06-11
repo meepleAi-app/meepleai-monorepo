@@ -162,6 +162,18 @@ internal sealed class WikidataCatalogProvider : ICatalogProvider
             return ParseCoverResponse(body, qid, sourceUrl);
         }
         catch (OperationCanceledException) { throw; }
+        // Issue #1823 Wave 3 M13 (M10 follow-up): the WikimediaCircuitBreakerHandler
+        // (DEC-3f) throws BrokenCircuitException when its circuit is OPEN. Letting
+        // the generic catch swallow it would silently map "upstream temporarily
+        // unavailable" to "no P18 claim" (Skipped("image-not-available-p18")),
+        // poisoning the audit trail. Rethrow so the M8 handler can record a
+        // dedicated Failed("circuit-open") attempt that the M9 scheduler retries
+        // after the breaker recovers. Detected reflection-side because Polly v7
+        // + v8 export the same FQN — see CircuitBreakerExceptionDetector.
+        catch (Exception ex) when (Api.BoundedContexts.SharedGameCatalog.Infrastructure.Resilience.CircuitBreakerExceptionDetector.IsBrokenCircuit(ex))
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Wikidata cover fetch failed for QID {Qid}", qid);

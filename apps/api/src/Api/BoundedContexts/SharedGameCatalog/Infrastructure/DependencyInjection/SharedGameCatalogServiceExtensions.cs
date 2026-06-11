@@ -8,6 +8,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Services;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Providers;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Resilience;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -232,6 +233,10 @@ internal static class SharedGameCatalogServiceExtensions
         // two ticks executing simultaneously.
         RegisterWikidataCoverEnrichmentJob(services);
 
+        // Issue #1823 Wave 3 retention sweep (ADR DEC-3j): Quartz job that
+        // deletes dead-letter rows older than 7 days. Runs daily at 03:00 UTC.
+        RegisterWikidataCoverDeadLetterRetentionJob(services);
+
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 
         return services;
@@ -315,7 +320,13 @@ internal static class SharedGameCatalogServiceExtensions
             client.BaseAddress = new Uri(WikidataBaseUrl);
             client.DefaultRequestHeaders.UserAgent.ParseAdd(CatalogUserAgent);
             client.Timeout = TimeSpan.FromSeconds(30);
-        });
+        })
+        // Issue #1823 Wave 3 M10 (ADR DEC-3f): circuit breaker per-client.
+        // Wikidata SPARQL outage MUST NOT collapse Commons traffic and vice
+        // versa — separate handler instances per typed client.
+        .AddHttpMessageHandler(sp => new WikimediaCircuitBreakerHandler(
+            sp.GetRequiredService<ILogger<WikimediaCircuitBreakerHandler>>(),
+            clientName: "wikidata-sparql"));
 
         // Issue #1823 M4 (ADR DEC-3b/3c/3e): Wikimedia Commons license fetcher.
         // Consumed by the M8 orchestrator AFTER the Wikidata SPARQL pass resolves
@@ -341,7 +352,13 @@ internal static class SharedGameCatalogServiceExtensions
             client.BaseAddress = new Uri(CommonsBaseUrl);
             client.DefaultRequestHeaders.UserAgent.ParseAdd(CatalogUserAgent);
             client.Timeout = TimeSpan.FromSeconds(30);
-        });
+        })
+        // Issue #1823 Wave 3 M10 (ADR DEC-3f): separate circuit breaker instance
+        // from the Wikidata SPARQL client so a Commons CDN outage opens this
+        // breaker independently.
+        .AddHttpMessageHandler(sp => new WikimediaCircuitBreakerHandler(
+            sp.GetRequiredService<ILogger<WikimediaCircuitBreakerHandler>>(),
+            clientName: "commons-api"));
 
         services.AddHttpClient<BggCatalogProvider>(client =>
         {
@@ -363,6 +380,30 @@ internal static class SharedGameCatalogServiceExtensions
             var bgg = sp.GetRequiredKeyedService<ICatalogProvider>("bgg");
             var logger = sp.GetRequiredService<ILogger<CatalogSeedAggregator>>();
             return new CatalogSeedAggregator(wikidata, bgg, logger);
+        });
+    }
+
+    /// <summary>
+    /// Issue #1823 Wave 3 retention sweep (ADR DEC-3j) — registers
+    /// <see cref="WikidataCoverDeadLetterRetentionJob"/> with the Quartz
+    /// scheduler. Runs daily at 03:00 UTC. Idempotent: sweeping twice the same
+    /// day yields zero additional deletions.
+    /// </summary>
+    private static void RegisterWikidataCoverDeadLetterRetentionJob(IServiceCollection services)
+    {
+        services.AddQuartz(q =>
+        {
+            var jobKey = new JobKey("WikidataCoverDeadLetterRetentionJob", "SharedGameCatalog");
+
+            q.AddJob<WikidataCoverDeadLetterRetentionJob>(opts => opts
+                .WithIdentity(jobKey)
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob(jobKey)
+                .WithIdentity("WikidataCoverDeadLetterRetentionTrigger", "SharedGameCatalog")
+                .WithCronSchedule("0 0 3 * * ?")
+                .WithDescription("Issue #1823 Wave 3 ADR DEC-3j: deletes wikidata_cover_enrichment_attempts rows whose dead_lettered_at is older than 7 days. Runs daily at 03:00 UTC."));
         });
     }
 

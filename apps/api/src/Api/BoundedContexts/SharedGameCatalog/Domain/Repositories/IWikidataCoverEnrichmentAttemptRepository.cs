@@ -30,4 +30,17 @@ public interface IWikidataCoverEnrichmentAttemptRepository
         int limit,
         DateTime nowUtc,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Issue #1823 Wave 3 retention sweep (ADR DEC-3j: dead-letter retention 7
+    /// days). Deletes every attempt row whose <c>DeadLetteredAt</c> is non-null
+    /// AND strictly less than <paramref name="cutoffUtc"/>. Live attempt rows
+    /// (Success / Skipped / pending retries) are untouched.
+    /// </summary>
+    /// <param name="cutoffUtc">UTC threshold; rows older than this are deleted.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The number of rows physically removed from the table.</returns>
+    Task<int> DeleteDeadLetteredOlderThanAsync(
+        DateTime cutoffUtc,
+        CancellationToken cancellationToken = default);
 }

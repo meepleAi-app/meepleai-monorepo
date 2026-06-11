@@ -2,7 +2,7 @@
 
 **Status**: design approved 2026-06-11 sess.46p brainstorming
 **Owner**: badsworm@gmail.com
-**Sub-issue**: TBD (to create as combined `M6 + M4 EPIC #2096 final closure`)
+**Sub-issue**: [#2188](https://github.com/meepleAi-app/meepleai-monorepo/issues/2188) `M6 + M4 EPIC #2096 final closure (Info card + Toolbox coming-soon)`
 **Parent EPIC**: [#2096 — /library/[gameId] sp3 mockup rebuild — 6 milestone](https://github.com/meepleAi-app/meepleai-monorepo/issues/2096)
 **Blocks**: DS-17-10 sp3 sub-issue reactivation (deferred per memory note `ds-17-10-sp3-deferred-decisions.md`)
 
@@ -53,7 +53,7 @@ main-dev tip: `e320b2de0` post DS-17-11 sp6-7-nano cluster.
 
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import {
   Card,
   CardContent,
@@ -158,7 +158,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 
 import type { GameTabProps } from './types';
@@ -182,7 +182,7 @@ export function GameToolboxTab({ variant, isNotInLibrary }: GameTabProps) {
         <CardHeader className="flex flex-row items-start gap-3 space-y-0">
           <div
             aria-hidden="true"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-entity-toolkit/12 text-2xl text-entity-toolkit"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-entity-toolkit/12 text-2xl text-entity-toolkit-text"
           >
             🧰
           </div>
@@ -211,7 +211,7 @@ export function GameToolboxTab({ variant, isNotInLibrary }: GameTabProps) {
 }
 ```
 
-**Mockup parity**: 44x44 icon riusa pattern `ToolkitPublicListItem` (mockup line 411-417, `width: 44, height: 44, borderRadius: var(--r-md), background: hsl(toolkit / .12), color: hsl(toolkit), fontSize: 22`). `bg-entity-toolkit/12 + text-entity-toolkit` = entity utility consolidata (token canonicalization Tier 4 shipped 2026-05-12).
+**Mockup parity**: 44x44 icon riusa pattern `ToolkitPublicListItem` (mockup line 411-417, `width: 44, height: 44, borderRadius: var(--r-md), background: hsl(toolkit / .12), color: hsl(toolkit), fontSize: 22`). `bg-entity-toolkit/12 + text-entity-toolkit-text` = entity utility consolidata (token canonicalization Tier 4 shipped 2026-05-12). **AA-compliant variant**: il mockup originale usa base `text-entity-toolkit` ma fail axe AA (4.16:1 vs `bg-entity-toolkit/12`). Il darker variant `text-entity-toolkit-text` (~5.6:1 ✅, hsl(142 70% 24%)) è canonical per AA compliance (#1094 Real-C-E gamebook). A11y E2E gate è **blocking** post #1094 Phase D.
 
 ## 4. Data flow
 
@@ -282,11 +282,11 @@ Verifica `admin-mockups/design_files/sp3-shared-game-detail.fidelity.json` post-
 
 | Task | Effort |
 |---|---|
-| 1. Branch + sub-issue #TBD creation | 15 min |
+| 1. Branch + sub-issue #2188 creation | ✅ done |
 | 2. M6 Card 1 Descrizione refactor | 30 min |
 | 3. M6 Card 2 Informazioni (dl wrap) | 20 min |
 | 4. M6 Card 3 House Rules CTA + URL nav wiring | 40 min |
-| 5. M6 Cypress integration check (URL sync con animated underline) | 20 min |
+| 5. M6 manual smoke (URL nav `?tab=houseRules` + animated underline sync) | 20 min |
 | 6. M4 Toolbox Card placeholder | 1h |
 | 7. M4 manual check `isNotInLibrary` fallback | 10 min |
 | 8. Lint + typecheck + test run | 15 min |
@@ -328,7 +328,7 @@ Sotto cap originale EPIC #2096 (M6 ~2h + M4 ~4h = ~6h). Riduzione ~40% via DEC-3
                    --milestone "<existing or none>"
 
 3. Branch:
-   git checkout -b feature/issue-<NUM>-m6-m4-closure
+   git checkout -b feature/issue-2188-m6-m4-closure  # ✅ done sess.46p
 
 4. Commit spec + plan (this doc + writing-plans output):
    - docs/superpowers/specs/2026-06-11-epic-2096-m6-m4-final-closure-design.md (this file)
@@ -355,10 +355,10 @@ Sotto cap originale EPIC #2096 (M6 ~2h + M4 ~4h = ~6h). Riduzione ~40% via DEC-3
 
 9. Designer review gate (async wait).
 
-10. On 👍: gh pr merge <NUM> --admin --squash --delete-branch  # P145 37a volta
+10. On 👍: gh pr merge <PR_NUM> --admin --squash --delete-branch  # P145 37a volta
 
 11. Issue + EPIC closure:
-    gh issue close <sub-issue-NUM> --comment "<PR ref + AC evidence>"
+    gh issue close 2188 --comment "<PR ref + AC evidence>"
     # Edit EPIC #2096 body: mark M6 ✓ + M4 ✓ rows
     gh issue edit 2096 --body-file <updated-body>
     # If 7/7 milestone shipped:
@@ -412,7 +412,7 @@ Sotto cap originale EPIC #2096 (M6 ~2h + M4 ~4h = ~6h). Riduzione ~40% via DEC-3
 ### M4 Toolbox coming-soon
 
 - [ ] `GameToolboxTab.tsx` usa `Card` primitive shadcn
-- [ ] 1 Card con: icon 44x44 `bg-entity-toolkit/12 text-entity-toolkit` + Title "Toolbox" + Description "Strumenti rapidi…" + CardContent "Integrazione completa…" + CardFooter Button "In arrivo" disabled
+- [ ] 1 Card con: icon 44x44 `bg-entity-toolkit/12 text-entity-toolkit-text` (AA-compliant darker variant) + Title "Toolbox" + Description "Strumenti rapidi…" + CardContent "Integrazione completa…" + CardFooter Button "In arrivo" disabled
 - [ ] `isNotInLibrary` fallback copy invariato
 - [ ] `hover:translate-y-0 hover:shadow-sm` override (static placeholder, no lift)
 - [ ] `disabled` Button con `cursor-not-allowed`

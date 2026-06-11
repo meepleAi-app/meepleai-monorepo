@@ -16,6 +16,15 @@ import { GameInfoTab } from '../GameInfoTab';
 
 const mockState = { data: null as unknown, isLoading: false, isError: false };
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    replace: vi.fn(),
+    push: vi.fn(),
+    refresh: vi.fn(),
+  }),
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 vi.mock('@/hooks/queries/useLibrary', () => ({
   useLibraryGameDetail: () => mockState,
 }));

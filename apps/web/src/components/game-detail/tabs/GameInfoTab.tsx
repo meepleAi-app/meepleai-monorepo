@@ -64,7 +64,7 @@ export function GameInfoTab({ gameId, variant, isNotInLibrary }: GameTabProps) {
   // shadcn Card default `hover:-translate-y-0.5 hover:shadow-md` so they
   // don't lift on hover. Card 3 (House Rules CTA) keeps default lift since
   // it's clickable.
-  const staticCardClass = 'hover:translate-y-0 hover:shadow-sm';
+  const staticCardClass = 'hover:translate-y-0 hover:shadow-sm dark:hover:shadow-sm';
 
   const titleSizeClass = variant === 'desktop' ? 'text-base' : 'text-sm';
 

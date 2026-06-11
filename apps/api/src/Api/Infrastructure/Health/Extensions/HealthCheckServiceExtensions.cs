@@ -171,6 +171,16 @@ public static class HealthCheckServiceExtensions
             tags: new[] { HealthCheckTags.External, HealthCheckTags.NonCritical },
             timeout: TimeSpan.FromSeconds(5));
 
+        // Seed / RAG state (#2126 D3). NonCritical so it never breaks
+        // /health/ready (which is the Critical predicate); the field lives on
+        // /health/seed and is also surfaced via the Data dictionary so the
+        // top-level /health endpoint readers can inspect it without extra calls.
+        builder.AddCheck<SeedStateHealthCheck>(
+            "seed_state",
+            HealthStatus.Degraded,
+            tags: new[] { HealthCheckTags.Seed, HealthCheckTags.NonCritical },
+            timeout: TimeSpan.FromSeconds(5));
+
         return builder;
     }
 }

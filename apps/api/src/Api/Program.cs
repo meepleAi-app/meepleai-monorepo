@@ -744,6 +744,35 @@ app.MapHealthChecks("/health/config", new Microsoft.AspNetCore.Diagnostics.Healt
     }
 });
 
+// Seed / RAG state probe (#2126 D3). Surfaces the SeedStateHealthCheck Data
+// (seed_state, pdf_total, pdf_ready, pdf_failed, chunk_count, embedding_count)
+// at a stable JSON path so a dev (or a monitoring scrape) can see whether the
+// stack is `empty`, `indexing`, `partial_failed`, or `ready` without parsing
+// the noisier global /health response.
+app.MapHealthChecks("/health/seed", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains(Api.Infrastructure.Health.Models.HealthCheckTags.Seed),
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var seedCheck = report.Entries.FirstOrDefault(e => string.Equals(e.Key, "seed_state", StringComparison.Ordinal));
+        var data = seedCheck.Value.Data ?? new Dictionary<string, object>(StringComparer.Ordinal);
+        var result = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            seed_state = data.TryGetValue("seed_state", out var s) ? s : "unknown",
+            pdf_total = data.TryGetValue("pdf_total", out var pt) ? pt : 0,
+            pdf_ready = data.TryGetValue("pdf_ready", out var pr) ? pr : 0,
+            pdf_failed = data.TryGetValue("pdf_failed", out var pf) ? pf : 0,
+            chunk_count = data.TryGetValue("chunk_count", out var cc) ? cc : 0,
+            embedding_count = data.TryGetValue("embedding_count", out var ec) ? ec : 0,
+            description = seedCheck.Value.Description,
+            duration = seedCheck.Value.Duration.TotalMilliseconds,
+        }, healthCheckJsonOptions);
+        await context.Response.WriteAsync(result).ConfigureAwait(false);
+    }
+});
+
 // API-01: Create v1 API route group and map routing files
 var v1Api = app.MapGroup("/api/v1");
 

@@ -387,7 +387,7 @@ const SpecsCard = ({ game }) => {
     { label:'Anno', value: game.year },
     { label:'Designer', value: game.author },
     { label:'Editore', value: game.publisher },
-    { label:'Rating BGG', value: game.rating },
+    { label:'Voto community', value: game.rating },
   ];
   return (
     <div style={{

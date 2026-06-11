@@ -18,6 +18,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
 import { logger } from '@/lib/logger';
+import { assertSafeRelativeOrFallback } from '@/lib/url-safety';
 
 // ============================================================================
 // Fallback (Suspense boundary)
@@ -42,8 +43,18 @@ export function LoginPageContent() {
   const { t } = useTranslation();
   const { loadCurrentUser } = useAuth();
 
-  const from = searchParams?.get('from') ?? '/library';
+  // Issue #2168: validate ?from= against open-redirect attack vectors.
+  // `assertSafeRelativeOrFallback` rejects 8 attack vectors and falls back to /library.
+  const rawFrom = searchParams?.get('from');
+  const from = assertSafeRelativeOrFallback(rawFrom, '/library');
   const isSessionExpired = searchParams?.get('reason') === 'session_expired';
+
+  // Log when the input was unsafe so we can detect attack attempts.
+  if (typeof rawFrom === 'string' && rawFrom.length > 0 && rawFrom !== from) {
+    logger.warn('Rejected unsafe ?from= redirect target on login', {
+      metadata: { fromMasked: rawFrom.slice(0, 32) },
+    });
+  }
 
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [error, setError] = useState<string>('');

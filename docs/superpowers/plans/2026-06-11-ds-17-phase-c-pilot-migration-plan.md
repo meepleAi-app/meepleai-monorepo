@@ -268,6 +268,23 @@ describe('generateClusterReviewQueue', () => {
     expect(queue).toMatch(/sp4-old\.html/);
   });
 
+  it('throws on malformed input (missing clusterId, Code-reviewer Finding 6)', () => {
+    // Validate input contract — converts silent failures into loud build failures.
+    // Phase B audit shape is { byCluster: { auth: [...] } } — NOT { clusterId, classifications }.
+    // A future executor running the generator on the Phase B JSON directly (skipping
+    // Task 16 Step 1 jq construction) would silently emit c1-null-review-queue.md.
+    const malformed = { byCluster: { auth: [] } };
+    const auditPath = join(workDir, 'audit.json');
+    writeFileSync(auditPath, JSON.stringify(malformed));
+
+    expect(() =>
+      generateClusterReviewQueue({
+        auditPath,
+        outDir: join(workDir, 'docs-out'),
+      })
+    ).toThrow(/Invalid cluster audit JSON.*clusterId|classifications/);
+  });
+
   it('calls out pair_disagreement explicitly', () => {
     const audit = {
       clusterId: 'auth',
@@ -349,6 +366,15 @@ const REPO_ROOT = resolve(__dirname, '..', '..', '..', '..');
 export function generateClusterReviewQueue(opts) {
   const { auditPath, outDir } = opts;
   const data = JSON.parse(readFileSync(auditPath, 'utf-8'));
+
+  // Code-reviewer Finding 6: validate input contract to convert silent
+  // malformed-output failures into loud build failures.
+  if (!data.clusterId || !Array.isArray(data.classifications)) {
+    throw new Error(
+      `Invalid cluster audit JSON at ${auditPath}: missing clusterId or classifications array. ` +
+        `Expected shape: { clusterId, classifications[], stories[] }. Got keys: ${Object.keys(data).join(', ')}`
+    );
+  }
   const clusterId = data.clusterId;
 
   mkdirSync(outDir, { recursive: true });
@@ -534,16 +560,28 @@ Invoke `Agent(general-purpose)`:
   Working directory: D:/Repositories/meepleai-monorepo-frontend
   ```
 
-- [ ] **Step 3: Verify scaffolds emitted**
+- [ ] **Step 3: Verify scaffolds emitted (per-directory check, Code-reviewer Finding 3)**
 
 ```bash
-find apps/web/scripts/audit-mockups/scaffolds/auth -type f | wc -l
 ls apps/web/scripts/audit-mockups/scaffolds/auth/
 ```
 
-Expected: 24 files (6 mockup × 4 files each); 6 subdirs.
+Expected: 6 subdirs (auth-flow, onboarding, notifications, public, settings, sp5-profile-settings).
 
-If <6 mockup dirs created: re-dispatch with missing ones explicitly listed; if <4 files per mockup: dispatch corrective for the missing artifacts.
+Per-directory file integrity check:
+
+```bash
+for d in apps/web/scripts/audit-mockups/scaffolds/auth/*/; do
+  count=$(find "$d" -maxdepth 1 -type f | wc -l)
+  echo "$(basename $d): $count files (expected 4)"
+  if [ "$count" -lt 4 ]; then
+    echo "  ⚠ MISSING FILES — re-dispatch required for $(basename $d)"
+    ls "$d"
+  fi
+done
+```
+
+Expected: each dir = 4 files (story.draft.tsx + fixture.draft.ts + axis-discovery.md + msw-gap-analysis.md). If any dir <4: re-dispatch ONLY for the missing dir with explicit instruction to fill the missing artifacts. Total file count `find ... -type f | wc -l` is NOT sufficient (could be 24 with uneven distribution); ONLY the per-dir check above gates progress.
 
 - [ ] **Step 4: Commit scaffolds (pre-flight stage)**
 
@@ -609,7 +647,11 @@ cp apps/web/scripts/audit-mockups/scaffolds/auth/auth-flow/story.draft.tsx apps/
 Use Edit on the new file to:
 - Verify `import { LoginForm } from '@/components/auth/LoginForm';` or similar (cross-ref with `apps/web/src/components/auth/` actual exports)
 - Fix any `// TODO`, `// XXX` markers from scaffold
-- Set `meta.title = 'Pages/Auth / Auth Flow'`
+- **CRITICAL — Code-reviewer Finding 1 — title prefix convention**: derive title prefix from Phase 2.5 pilot reference:
+  ```bash
+  grep "title:" apps/web/src/app/\(authenticated\)/library/_content.stories.tsx
+  ```
+  Expected: `title: 'Pages/SP4/Library Mockup Matrix'` → slug prefix `pages-sp4-library-mockup-matrix`. Adopt the SAME `Pages/<SP>/<Cluster> <Mockup>` convention. For auth: `meta.title = 'Pages/Auth/Auth Flow'` → slug `pages-auth-auth-flow`. Do NOT add spaces around `/` separators (Phase 2.5 used single-slash). Verify the title BEFORE adding Frame exports — wrong prefix breaks every snapshot test in Task 13.
 - Verify Frame exports match axis-discovery.md frame list
 - Add JSDoc `@mockup admin-mockups/design_files/auth-flow.html` at top
 - Verify argTypes mirror axis (states + screen variant)
@@ -832,13 +874,41 @@ for (const { slug, file } of FRAMES) {
 
 NOTE: actual frame slugs WILL DIFFER based on real story file output. Adjust FRAMES array after stories are committed (Tasks 6-11) by reading actual exports.
 
-- [ ] **Step 2: Verify slugs match story exports**
+- [ ] **Step 1a (NEW — Code-reviewer Finding 1): Derive FRAMES array from actual committed story exports**
+
+Hardcoded FRAMES below is a STARTING TEMPLATE. The actual story file paths and `meta.title` values may differ. BEFORE writing the spec, derive ground-truth from committed stories:
 
 ```bash
-grep -rE "^export const Frame" apps/web/src/app/\(public\)/\(auth\)/ apps/web/src/app/\(authenticated\)/{onboarding,notifications,profile}/ 2>&1 | head -40
+# Find all new story files (committed after Phase B merge 66e924233)
+git diff --name-only main-dev..HEAD -- 'apps/web/src/**/*.stories.tsx' > /tmp/auth-stories.txt
+cat /tmp/auth-stories.txt
+# Expected: 6 story files
+
+# For each story file, extract title + Frame exports
+while read story_file; do
+  echo "=== $story_file ==="
+  grep -E "title:|^export const Frame" "$story_file" | head -20
+done < /tmp/auth-stories.txt
 ```
 
-Cross-check exported Frame names match expected slugs. Adjust FRAMES array if mismatch.
+Use the output to build the FRAMES array: each Frame export becomes one entry with slug derived from `title.toLowerCase().replace(/[\s/]/g, '-').replace(/-+/g, '-')` + `--` + Frame export name converted (camelCase → kebab-case).
+
+Example derivation:
+- title: `'Pages/Auth/Auth Flow'` → slug prefix: `pages-auth-auth-flow`
+- export: `Frame01_Login` → slug suffix: `--frame-01-login`
+- Combined slug: `pages-auth-auth-flow--frame-01-login`
+- PNG filename: `auth-flow-01-login.png` (mockup-stem + frame number + label)
+
+The FRAMES TEMPLATE below should be UPDATED inline to match. Do NOT write the spec until all 6 stories are committed (Tasks 6-11) and FRAMES is verified against actual exports.
+
+- [ ] **Step 2: Verify slugs match story exports (broader grep, Code-reviewer Finding 1)**
+
+```bash
+# Broader grep covers all paths where new stories may have landed
+git diff --name-only main-dev..HEAD -- 'apps/web/src/**/*.stories.tsx' | xargs grep -E "title:|^export const Frame" 2>&1 | head -80
+```
+
+Cross-check: for every Frame export found, the FRAMES array MUST contain a matching slug entry. If any export is missing from FRAMES, the snapshot test for that frame fails with "story not found" (navigation timeout, no baseline). Adjust FRAMES array inline.
 
 - [ ] **Step 3: Commit cluster spec (without baselines yet)**
 
@@ -981,6 +1051,28 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 - Create: `audits/c1-auth-cluster.json` (input to generator)
 - Create: `docs/for-developers/frontend/c1-auth-review-queue.md`
 
+- [ ] **Step 0a (NEW — Code-reviewer Finding 4): Verify story paths exist BEFORE constructing cluster JSON**
+
+```bash
+# Derive actual committed story paths from git
+git diff --name-only main-dev..HEAD -- 'apps/web/src/**/*.stories.tsx' > /tmp/auth-story-paths.txt
+cat /tmp/auth-story-paths.txt
+```
+
+Expected: 6 paths listed. Use these EXACT paths to construct the `stories` array in Step 1 below. Do NOT hardcode guessed paths.
+
+For each committed story, also verify its fixture pair exists:
+
+```bash
+while read story_path; do
+  stem=$(basename "$story_path" .stories.tsx)
+  fixture_path="apps/web/src/__tests__/fixtures/mockup-pilots/auth/${stem}.ts"
+  [ -f "$fixture_path" ] || echo "MISSING fixture for $stem: expected $fixture_path"
+done < /tmp/auth-story-paths.txt
+```
+
+Expected: no MISSING warnings. If any → return to Tasks 6-11.
+
 - [ ] **Step 1: Build cluster annotated audit JSON**
 
 ```bash
@@ -1105,7 +1197,7 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 **Files:**
 - Delete: `apps/web/scripts/audit-mockups/scaffolds/auth/` (entire dir)
 
-- [ ] **Step 1: Verify all scaffolds consumed**
+- [ ] **Step 1: Verify all scaffolds consumed (BOTH story + fixture, Code-reviewer Finding 2)**
 
 ```bash
 find apps/web/scripts/audit-mockups/scaffolds/auth -type f | wc -l
@@ -1113,17 +1205,29 @@ find apps/web/scripts/audit-mockups/scaffolds/auth -type f | wc -l
 
 Expected: 24 files (6 × 4 from Task 5).
 
-Cross-check that each mockup-stem dir has a corresponding committed `.stories.tsx` + fixture:
+Cross-check that each mockup-stem dir has BOTH a committed `.stories.tsx` AND fixture. **CRITICAL**: if any story is missing, DO NOT delete scaffolds — the AI's axis discovery + MSW gap analysis work is permanently destroyed.
 
 ```bash
+missing=0
 for d in apps/web/scripts/audit-mockups/scaffolds/auth/*/; do
   stem=$(basename "$d")
   echo "=== $stem ==="
-  ls apps/web/src/__tests__/fixtures/mockup-pilots/auth/${stem}.ts 2>&1 | head -1
+  story_count=$(find apps/web/src -name "${stem}.stories.tsx" -type f 2>&1 | wc -l)
+  fixture_count=$(find apps/web/src/__tests__/fixtures/mockup-pilots/auth -name "${stem}.ts" -type f 2>&1 | wc -l)
+  echo "  story: $story_count, fixture: $fixture_count (expected 1 each)"
+  if [ "$story_count" -lt 1 ] || [ "$fixture_count" -lt 1 ]; then
+    echo "  ⚠ MISSING — re-run Task 6-11 for stem '$stem' before cleanup"
+    missing=1
+  fi
 done
+if [ "$missing" -eq 1 ]; then
+  echo "ABORT: at least one stem is missing story or fixture. Do NOT delete scaffolds."
+  exit 1
+fi
+echo "✓ All 6 stems have both story + fixture committed. Safe to delete scaffolds."
 ```
 
-Expected: 6 fixture files exist.
+Expected: ✓ message; no MISSING warnings. If ABORT triggered, return to Tasks 6-11 for the missing stems.
 
 - [ ] **Step 2: Delete scaffolds dir**
 
@@ -1302,6 +1406,14 @@ Expected: new row visible.
 
 ## Sub-issue 2: DS-17-10 sp3 (16 mockup → ~14 stories, 2 forward-refactor)
 
+**Code-reviewer Finding 5 — CRITICAL note on Task 13 (snapshot spec)**: for sp3 the FRAMES array MUST be derived from actually-committed stories (per Task 13 Step 1a slug-derivation pattern). DO NOT pre-write the FRAMES array; build it inline AFTER all sp3 stories are committed (after Tasks 6-11 sp3 equivalents). Run:
+
+```bash
+git diff --name-only main-dev..HEAD -- 'apps/web/src/**/*.stories.tsx' | xargs grep -E "title:|^export const Frame" | head -80
+```
+
+Then construct FRAMES with one entry per Frame export. Estimated ~45-50 entries (8 unique stems × ~6 frames avg).
+
 Apply Tasks 1-21 with these substitutions:
 - Cluster: `sp3`
 - Sub-issue title: `[DS-17 Phase C-1] DS-17-10 sp3 cluster migration — 14 mockup to Storybook stories (2 forward-refactor)`
@@ -1325,6 +1437,8 @@ Branch + budget timestamp + sub-issue creation as Task 1. Then Tasks 2-21 with s
 ---
 
 ## Sub-issue 3: DS-17-11 sp6-7-nano (18 mockup → 18 stories)
+
+**Code-reviewer Finding 5 — same note as sub-issue 2**: FRAMES array MUST be derived from actual committed stories (Task 13 Step 1a slug-derivation). DO NOT pre-write. Estimated ~50-55 entries (10 unique stems × ~5 frames avg).
 
 Apply Tasks 1-21 with these substitutions:
 - Cluster: `sp6-7-nano`

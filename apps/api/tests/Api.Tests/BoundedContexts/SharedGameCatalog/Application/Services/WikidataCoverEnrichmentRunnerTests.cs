@@ -1,0 +1,204 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatalogCover;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.SharedKernel.Infrastructure.Persistence;
+using FluentAssertions;
+using MediatR;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
+using Moq;
+using Xunit;
+
+namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Services;
+
+/// <summary>
+/// Unit tests for <see cref="WikidataCoverEnrichmentRunner"/> — Issue #1823 Wave 3 M12.
+/// Single source of truth for the enrich+record workflow used by both the M9
+/// scheduler and the M12 admin trigger endpoint. Uses the real
+/// <see cref="WikidataCoverEnrichmentRetryPolicy"/> (no mock policy) per the
+/// <c>acceptance_tests_must_exercise_real_pipeline</c> feedback memory.
+/// </summary>
+[Trait("Category", "Unit")]
+[Trait("BoundedContext", "SharedGameCatalog")]
+[Trait("Issue", "1823")]
+public class WikidataCoverEnrichmentRunnerTests
+{
+    private static readonly DateTime FixedNow = new(2026, 6, 11, 12, 0, 0, DateTimeKind.Utc);
+
+    private readonly Mock<IMediator> _mediator = new();
+    private readonly Mock<IWikidataCoverEnrichmentAttemptRepository> _attempts = new();
+    private readonly Mock<IUnitOfWork> _uow = new();
+    private readonly WikidataCoverEnrichmentRetryPolicy _policy = new();
+    private readonly FakeTimeProvider _time = new(new DateTimeOffset(FixedNow, TimeSpan.Zero));
+
+    private WikidataCoverEnrichmentRunner Sut() => new(
+        _mediator.Object, _attempts.Object, _uow.Object, _policy,
+        _time, NullLogger<WikidataCoverEnrichmentRunner>.Instance);
+
+    [Fact]
+    public async Task EnrichAndRecordAsync_SuccessOutcome_RecordsSuccessAttempt()
+    {
+        var gameId = Guid.NewGuid();
+
+        _attempts.Setup(r => r.GetLatestBySharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((WikidataCoverEnrichmentAttempt?)null);
+
+        _mediator.Setup(m => m.Send(It.IsAny<EnrichCatalogCoverCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EnrichCatalogCoverResult.Success("key", "CC0", null, "url"));
+
+        WikidataCoverEnrichmentAttempt? recorded = null;
+        _attempts.Setup(r => r.AddAsync(It.IsAny<WikidataCoverEnrichmentAttempt>(), It.IsAny<CancellationToken>()))
+            .Callback<WikidataCoverEnrichmentAttempt, CancellationToken>((a, _) => recorded = a)
+            .Returns(Task.CompletedTask);
+
+        var result = await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, default);
+
+        result.Should().BeOfType<EnrichCatalogCoverResult.Success>();
+        recorded.Should().NotBeNull();
+        recorded!.Outcome.Should().Be(WikidataCoverEnrichmentOutcome.Success);
+        recorded.RetryCount.Should().Be(0);
+        recorded.NextRetryAt.Should().BeNull();
+        _uow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task EnrichAndRecordAsync_SkippedOutcome_RecordsSkippedAttempt()
+    {
+        var gameId = Guid.NewGuid();
+
+        _attempts.Setup(r => r.GetLatestBySharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((WikidataCoverEnrichmentAttempt?)null);
+
+        _mediator.Setup(m => m.Send(It.IsAny<EnrichCatalogCoverCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EnrichCatalogCoverResult.Skipped(EnrichCatalogCoverCommandHandler.SkipReasonQidMissing));
+
+        WikidataCoverEnrichmentAttempt? recorded = null;
+        _attempts.Setup(r => r.AddAsync(It.IsAny<WikidataCoverEnrichmentAttempt>(), It.IsAny<CancellationToken>()))
+            .Callback<WikidataCoverEnrichmentAttempt, CancellationToken>((a, _) => recorded = a)
+            .Returns(Task.CompletedTask);
+
+        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, default);
+
+        recorded!.Outcome.Should().Be(WikidataCoverEnrichmentOutcome.Skipped);
+        recorded.Reason.Should().Be(EnrichCatalogCoverCommandHandler.SkipReasonQidMissing);
+    }
+
+    [Fact]
+    public async Task EnrichAndRecordAsync_FailedR2Upload_FirstAttempt_SchedulesRetryAt1m()
+    {
+        var gameId = Guid.NewGuid();
+
+        _attempts.Setup(r => r.GetLatestBySharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((WikidataCoverEnrichmentAttempt?)null);
+
+        _mediator.Setup(m => m.Send(It.IsAny<EnrichCatalogCoverCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EnrichCatalogCoverResult.Failed(
+                EnrichCatalogCoverCommandHandler.FailReasonR2Upload, "503"));
+
+        WikidataCoverEnrichmentAttempt? recorded = null;
+        _attempts.Setup(r => r.AddAsync(It.IsAny<WikidataCoverEnrichmentAttempt>(), It.IsAny<CancellationToken>()))
+            .Callback<WikidataCoverEnrichmentAttempt, CancellationToken>((a, _) => recorded = a)
+            .Returns(Task.CompletedTask);
+
+        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, default);
+
+        recorded!.Outcome.Should().Be(WikidataCoverEnrichmentOutcome.Failed);
+        recorded.RetryCount.Should().Be(1);
+        recorded.NextRetryAt.Should().Be(FixedNow.AddMinutes(1));
+    }
+
+    [Fact]
+    public async Task EnrichAndRecordAsync_AfterMaxRetries_DeadLetters()
+    {
+        var gameId = Guid.NewGuid();
+        var previous = WikidataCoverEnrichmentAttempt.RecordFailedWithRetry(
+            gameId, EnrichCatalogCoverCommandHandler.FailReasonR2Upload, "503",
+            retryCount: 3, attemptedAt: FixedNow.AddMinutes(-20), nextRetryAt: FixedNow.AddMinutes(-5));
+
+        _attempts.Setup(r => r.GetLatestBySharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(previous);
+
+        _mediator.Setup(m => m.Send(It.IsAny<EnrichCatalogCoverCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EnrichCatalogCoverResult.Failed(
+                EnrichCatalogCoverCommandHandler.FailReasonR2Upload, "503"));
+
+        WikidataCoverEnrichmentAttempt? recorded = null;
+        _attempts.Setup(r => r.AddAsync(It.IsAny<WikidataCoverEnrichmentAttempt>(), It.IsAny<CancellationToken>()))
+            .Callback<WikidataCoverEnrichmentAttempt, CancellationToken>((a, _) => recorded = a)
+            .Returns(Task.CompletedTask);
+
+        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, default);
+
+        recorded!.Outcome.Should().Be(WikidataCoverEnrichmentOutcome.DeadLetter);
+        recorded.DeadLetteredAt.Should().Be(FixedNow);
+        recorded.NextRetryAt.Should().BeNull();
+        recorded.RetryCount.Should().Be(3, "preserve previous retry count on terminal");
+    }
+
+    [Fact]
+    public async Task EnrichAndRecordAsync_ImageProcessingError_DeadLettersImmediately()
+    {
+        var gameId = Guid.NewGuid();
+
+        _attempts.Setup(r => r.GetLatestBySharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((WikidataCoverEnrichmentAttempt?)null);
+
+        _mediator.Setup(m => m.Send(It.IsAny<EnrichCatalogCoverCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EnrichCatalogCoverResult.Failed(
+                EnrichCatalogCoverCommandHandler.FailReasonImageProcessing, "corrupted"));
+
+        WikidataCoverEnrichmentAttempt? recorded = null;
+        _attempts.Setup(r => r.AddAsync(It.IsAny<WikidataCoverEnrichmentAttempt>(), It.IsAny<CancellationToken>()))
+            .Callback<WikidataCoverEnrichmentAttempt, CancellationToken>((a, _) => recorded = a)
+            .Returns(Task.CompletedTask);
+
+        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, default);
+
+        recorded!.Outcome.Should().Be(WikidataCoverEnrichmentOutcome.DeadLetter);
+        recorded.RetryCount.Should().Be(0, "no retries attempted for corrupted-image failure");
+    }
+
+    [Fact]
+    public async Task EnrichAndRecordAsync_ForceRefreshTrue_ForwardsToCommand()
+    {
+        var gameId = Guid.NewGuid();
+        EnrichCatalogCoverCommand? sent = null;
+
+        _attempts.Setup(r => r.GetLatestBySharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((WikidataCoverEnrichmentAttempt?)null);
+
+        _mediator.Setup(m => m.Send(It.IsAny<EnrichCatalogCoverCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<EnrichCatalogCoverResult>, CancellationToken>((c, _) => sent = (EnrichCatalogCoverCommand)c)
+            .ReturnsAsync(new EnrichCatalogCoverResult.Success("k", "CC0", null, "u"));
+
+        _attempts.Setup(r => r.AddAsync(It.IsAny<WikidataCoverEnrichmentAttempt>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: true, default);
+
+        sent.Should().NotBeNull();
+        sent!.GameId.Should().Be(gameId);
+        sent.ForceRefresh.Should().BeTrue(
+            "the admin trigger MUST be able to bypass the M8 freshness window via ForceRefresh");
+    }
+
+    [Fact]
+    public async Task EnrichAndRecordAsync_ReturnsCommandResultDirectly()
+    {
+        var gameId = Guid.NewGuid();
+        var expected = new EnrichCatalogCoverResult.Success("custom-key", "CC BY 4.0", "Jane", "src");
+
+        _attempts.Setup(r => r.GetLatestBySharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((WikidataCoverEnrichmentAttempt?)null);
+        _mediator.Setup(m => m.Send(It.IsAny<EnrichCatalogCoverCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expected);
+        _attempts.Setup(r => r.AddAsync(It.IsAny<WikidataCoverEnrichmentAttempt>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var result = await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, default);
+
+        result.Should().BeSameAs(expected,
+            "the runner returns the M8 result verbatim so admin callers can map it to a DTO");
+    }
+}

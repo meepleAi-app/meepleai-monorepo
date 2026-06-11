@@ -1,9 +1,5 @@
-using Api.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatalogCover;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
-using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
-using Api.SharedKernel.Infrastructure.Persistence;
-using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Quartz;
@@ -16,10 +12,10 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Jobs;
 /// <list type="number">
 ///   <item>Queries up to <see cref="BatchSize"/> <c>SharedGame</c> IDs ready for
 ///   enrichment (never-attempted OR retry-eligible per
-///   <see cref="WikidataCoverEnrichmentAttempt.NextRetryAt"/>).</item>
-///   <item>Dispatches <see cref="EnrichCatalogCoverCommand"/> per game via MediatR.</item>
-///   <item>Records a <see cref="WikidataCoverEnrichmentAttempt"/> classified by
-///   <see cref="IWikidataCoverEnrichmentRetryPolicy"/> (DEC-3j semantics).</item>
+///   <see cref="Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates.WikidataCoverEnrichmentAttempt.NextRetryAt"/>).</item>
+///   <item>Delegates the per-game enrich+record workflow to
+///   <see cref="IWikidataCoverEnrichmentRunner"/> — the single source of truth
+///   shared with the M12 admin trigger endpoint.</item>
 ///   <item>Throttles 1s between games to respect the shared Wikimedia 5 RPS cap
 ///   (DEC-3e) alongside the in-process token bucket.</item>
 /// </list>
@@ -72,11 +68,9 @@ public sealed class WikidataCoverEnrichmentJob : IJob
         using var scope = _serviceProvider.CreateScope();
 
         var attempts = scope.ServiceProvider.GetRequiredService<IWikidataCoverEnrichmentAttemptRepository>();
-        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-        var policy = scope.ServiceProvider.GetRequiredService<IWikidataCoverEnrichmentRetryPolicy>();
+        var runner = scope.ServiceProvider.GetRequiredService<IWikidataCoverEnrichmentRunner>();
 
-        await RunBatchAsync(attempts, uow, mediator, policy, ct).ConfigureAwait(false);
+        await RunBatchAsync(attempts, runner, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -85,9 +79,7 @@ public sealed class WikidataCoverEnrichmentJob : IJob
     /// </summary>
     internal async Task RunBatchAsync(
         IWikidataCoverEnrichmentAttemptRepository attempts,
-        IUnitOfWork uow,
-        IMediator mediator,
-        IWikidataCoverEnrichmentRetryPolicy policy,
+        IWikidataCoverEnrichmentRunner runner,
         CancellationToken ct)
     {
         var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
@@ -119,7 +111,10 @@ public sealed class WikidataCoverEnrichmentJob : IJob
 
             try
             {
-                await ProcessGameAsync(attempts, uow, mediator, policy, gameId, ct).ConfigureAwait(false);
+                // Scheduler always uses forceRefresh=false — freshness window
+                // honoured. The admin trigger endpoint uses forceRefresh=true
+                // for dogfood re-runs.
+                await runner.EnrichAndRecordAsync(gameId, forceRefresh: false, ct).ConfigureAwait(false);
                 processed++;
             }
             // OperationCanceledException is intentionally allowed to propagate
@@ -151,67 +146,5 @@ public sealed class WikidataCoverEnrichmentJob : IJob
         _logger.LogInformation(
             "WikidataCoverEnrichmentJob: tick complete — processed {Processed}/{Total} games.",
             processed, dueGameIds.Count);
-    }
-
-    private async Task ProcessGameAsync(
-        IWikidataCoverEnrichmentAttemptRepository attempts,
-        IUnitOfWork uow,
-        IMediator mediator,
-        IWikidataCoverEnrichmentRetryPolicy policy,
-        Guid gameId,
-        CancellationToken ct)
-    {
-        var previous = await attempts
-            .GetLatestBySharedGameIdAsync(gameId, ct)
-            .ConfigureAwait(false);
-
-        var previousRetryCount = previous?.RetryCount ?? 0;
-
-        var result = await mediator
-            .Send(new EnrichCatalogCoverCommand(gameId), ct)
-            .ConfigureAwait(false);
-
-        var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
-        var decision = policy.Classify(result, previousRetryCount, nowUtc);
-
-        // RetryCount for the NEW attempt row:
-        // - Terminal/DeadLetter: preserve previous count (this attempt is the
-        //   nth retry that produced the terminal outcome).
-        // - ScheduleRetry: increment by 1 (this attempt counts towards the budget).
-        var nextRetryCount = decision switch
-        {
-            WikidataCoverEnrichmentRetryDecision.ScheduleRetry => previousRetryCount + 1,
-            _ => previousRetryCount,
-        };
-
-        WikidataCoverEnrichmentAttempt newAttempt = (decision, result) switch
-        {
-            (WikidataCoverEnrichmentRetryDecision.Terminal, EnrichCatalogCoverResult.Success) =>
-                WikidataCoverEnrichmentAttempt.RecordSuccess(gameId, nextRetryCount, nowUtc),
-
-            (WikidataCoverEnrichmentRetryDecision.Terminal, EnrichCatalogCoverResult.Skipped skipped) =>
-                WikidataCoverEnrichmentAttempt.RecordSkipped(gameId, skipped.Reason, nextRetryCount, nowUtc),
-
-            (WikidataCoverEnrichmentRetryDecision.ScheduleRetry retry, EnrichCatalogCoverResult.Failed failed) =>
-                WikidataCoverEnrichmentAttempt.RecordFailedWithRetry(
-                    gameId, failed.Reason, failed.Details, nextRetryCount, nowUtc, retry.NextRetryAt),
-
-            (WikidataCoverEnrichmentRetryDecision.DeadLetter, EnrichCatalogCoverResult.Failed failed) =>
-                WikidataCoverEnrichmentAttempt.RecordDeadLetter(
-                    gameId, failed.Reason, failed.Details, nextRetryCount, nowUtc),
-
-            // Defensive: a mismatched (decision, result) pair shouldn't happen since
-            // the policy only emits ScheduleRetry/DeadLetter for Failed results, but
-            // record a DeadLetter rather than crash the batch.
-            _ => WikidataCoverEnrichmentAttempt.RecordDeadLetter(
-                gameId, "unexpected-decision", $"{decision.GetType().Name} for {result.GetType().Name}", nextRetryCount, nowUtc),
-        };
-
-        await attempts.AddAsync(newAttempt, ct).ConfigureAwait(false);
-        await uow.SaveChangesAsync(ct).ConfigureAwait(false);
-
-        _logger.LogDebug(
-            "WikidataCoverEnrichmentJob: game {GameId} outcome={Outcome} reason={Reason} retry={RetryCount} nextRetryAt={NextRetryAt}",
-            gameId, newAttempt.Outcome, newAttempt.Reason, newAttempt.RetryCount, newAttempt.NextRetryAt);
     }
 }

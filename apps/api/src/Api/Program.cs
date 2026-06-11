@@ -888,6 +888,7 @@ app.MapAdminBulkImportEndpoints();       // Issue #4354: Bulk import endpoint ro
 app.MapAdminProviderEndpoints();         // Issue #936: Provider token probe observability
 v1Api.MapGroup("/admin/catalog-ingestion").MapAdminCatalogIngestionEndpoints(); // Admin bulk Excel import + enrichment
 v1Api.MapGroup("/admin/catalog/seeds").MapAdminCatalogSeedEndpoints();          // Issue #1903 M6.2: admin catalog seed pipeline
+v1Api.MapGroup("/admin/wikidata/enrichment").MapAdminWikidataCoverEnrichmentEndpoints(); // Issue #1823 Wave 3 M12: admin Wikidata cover trigger
 v1Api.MapGroup("/admin/event-outbox").MapAdminDomainEventOutboxEndpoints();    // Issue #1535 T6: domain_event_outbox health surface
 
 // Issue #1928 Task B (DEC-B-1 + DEC-B-4) — E2E test seeding endpoints, triple-gated:

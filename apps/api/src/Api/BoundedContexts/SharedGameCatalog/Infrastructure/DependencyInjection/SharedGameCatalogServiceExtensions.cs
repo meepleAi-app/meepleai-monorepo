@@ -221,6 +221,11 @@ internal static class SharedGameCatalogServiceExtensions
         // singleton lifetime.
         services.AddSingleton<IWikidataCoverEnrichmentRetryPolicy, WikidataCoverEnrichmentRetryPolicy>();
 
+        // Issue #1823 Wave 3 M12: single source of truth for the enrich+record
+        // workflow (M9 scheduler + M12 admin trigger endpoint). Scoped — uses
+        // the request UoW + repository.
+        services.AddScoped<IWikidataCoverEnrichmentRunner, WikidataCoverEnrichmentRunner>();
+
         // Issue #1823 Wave 3 M9: Quartz scheduler for batch Wikidata cover
         // enrichment. Runs every 1 minute (HPA=1 per DEC-3e). [DisallowConcurrentExecution]
         // on the job class is the belt-and-braces guarantee that we never have

@@ -27,6 +27,13 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatal
 /// Game-not-found surfaces as <see cref="Api.Middleware.Exceptions.NotFoundException"/>
 /// (HTTP 404 via the exception middleware).
 /// </para>
+/// <para>
+/// <see cref="ForceRefresh"/> (Wave 3 M12): when <see langword="true"/> the
+/// handler skips the 90-day freshness window check (ADR DEC-3i preparation) and
+/// always runs the full pipeline. Used by the admin trigger endpoint to force
+/// a re-enrichment for dogfood / edge-case testing. The default (<see langword="false"/>)
+/// preserves the scheduler's freshness skip semantics.
+/// </para>
 /// </remarks>
-internal sealed record EnrichCatalogCoverCommand(Guid GameId)
+internal sealed record EnrichCatalogCoverCommand(Guid GameId, bool ForceRefresh = false)
     : ICommand<EnrichCatalogCoverResult>;

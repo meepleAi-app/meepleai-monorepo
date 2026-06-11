@@ -111,8 +111,11 @@ internal sealed class EnrichCatalogCoverCommandHandler
 
         // 2. Freshness window (DEC-3i preparation). Both the column AND a non-null
         //    R2 key are required to short-circuit — a verified-but-cleared entry
-        //    must still re-enrich.
-        if (game.WikidataQidLastVerifiedAt is { } lastVerifiedAt
+        //    must still re-enrich. Wave 3 M12: callers (admin trigger) can pass
+        //    ForceRefresh=true to bypass the window for dogfood / edge-case
+        //    re-runs; the scheduler still passes the default false.
+        if (!request.ForceRefresh
+            && game.WikidataQidLastVerifiedAt is { } lastVerifiedAt
             && !string.IsNullOrWhiteSpace(game.WikidataCoverR2Key)
             && (nowUtc - lastVerifiedAt) < FreshnessWindow)
         {

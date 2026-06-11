@@ -35,10 +35,30 @@ FROM nvidia/cuda:12.6.3-cudnn-runtime-ubuntu22.04
 
 WORKDIR /app
 
-# Install only runtime system dependencies (NO build-essential)
+# Install runtime system dependencies. Python comes from the deadsnakes PPA so
+# we get a *current* Python 3.11.x — the Ubuntu 22.04 default `python3.11`
+# package on this CUDA base is the fossil **3.11.0rc1** (Aug 2022 release
+# candidate), which is missing `sys.get_int_max_str_digits` (added only in the
+# 3.11.0 final). torch >= 2.12 `polyfills/sys.py:31` decorates
+# `@substitute_in_graph(sys.get_int_max_str_digits, ...)` unconditionally for
+# Python 3.11+, so on rc1 the module raises AttributeError mid-init. The
+# partially-loaded module leaves `sys.intern` already registered in
+# `VariableBuilder._id_dispatch`, so any subsequent `import torch._dynamo`
+# attempt (transformers does several via lazy loaders) then crashes with the
+# user-visible "Duplicate dispatch rule for sys.intern" instead of the real
+# AttributeError. Pinning a *current* 3.11.x via deadsnakes resolves both.
+#
+# DEBIAN_FRONTEND=noninteractive prevents `python3.11-distutils` (pulled via
+# deadsnakes) from blocking on the `tzdata` geographic-area prompt. Verified
+# locally 2026-06-10: without it the build hung at `Geographic area:`.
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # Python
+    software-properties-common \
+    && add-apt-repository -y ppa:deadsnakes/ppa \
+    && apt-get update && apt-get install -y --no-install-recommends \
+    # Python 3.11 (deadsnakes — current 3.11.x, not Ubuntu's stale rc1)
     python3.11 \
+    python3.11-distutils \
     python3-pip \
     # HTTP client for health checks
     curl \

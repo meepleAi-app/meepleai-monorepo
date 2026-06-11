@@ -312,10 +312,27 @@ describe('LoginPageContent — open redirect protection (#2168)', () => {
     });
 
     // Safe input must NOT trigger a warn log
-    expect(logger.warn).not.toHaveBeenCalledWith(
-      'Rejected unsafe ?from= redirect target on login',
-      expect.anything()
-    );
+    expect(logger.warn).not.toHaveBeenCalled();
+  });
+
+  it('logs unsafe ?from= attempt on initial render (before any user action)', async () => {
+    setSearchParams({ from: 'https://evil.com' });
+
+    render(<LoginPageContent />);
+
+    // useEffect fires after render commit — wait for it
+    await waitFor(() => {
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Rejected unsafe ?from= redirect target on login',
+        expect.objectContaining({
+          metadata: expect.objectContaining({ fromMasked: expect.any(String) }),
+        })
+      );
+    });
+
+    // No form submission — warn fires on mount only, not tied to login action
+    expect(loginMock).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
   });
 });
 

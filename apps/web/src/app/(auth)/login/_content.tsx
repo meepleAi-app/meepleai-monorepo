@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -50,11 +50,16 @@ export function LoginPageContent() {
   const isSessionExpired = searchParams?.get('reason') === 'session_expired';
 
   // Log when the input was unsafe so we can detect attack attempts.
-  if (typeof rawFrom === 'string' && rawFrom.length > 0 && rawFrom !== from) {
-    logger.warn('Rejected unsafe ?from= redirect target on login', {
-      metadata: { fromMasked: rawFrom.slice(0, 32) },
-    });
-  }
+  // Wrapped in useEffect to fire once on mount (not on every re-render).
+  // State cycles during login (setIsAuthenticating) would otherwise emit
+  // 3+ warns per login attempt, polluting the remote log queue.
+  useEffect(() => {
+    if (typeof rawFrom === 'string' && rawFrom.length > 0 && rawFrom !== from) {
+      logger.warn('Rejected unsafe ?from= redirect target on login', {
+        metadata: { fromMasked: rawFrom.slice(0, 32) },
+      });
+    }
+  }, [rawFrom, from]);
 
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [error, setError] = useState<string>('');

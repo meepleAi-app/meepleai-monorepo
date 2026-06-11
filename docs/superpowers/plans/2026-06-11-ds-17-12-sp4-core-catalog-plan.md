@@ -47,7 +47,7 @@
 |---|---|---|
 | sp4-library-desktop | `(authenticated)/library/page.stories.tsx` | Includes mobile Frame if combined per sp4-library-mobile |
 | sp4-library-wishlist | `(authenticated)/library/wishlist/page.stories.tsx` | Static catalog wishlist |
-| sp4-add-game-drawer | `apps/web/src/components/features/add-game/AddGameDrawer.stories.tsx` (component-mock OR if exists) | TBD path — verify component exists in Stage 3 |
+| sp4-add-game-drawer | `apps/web/src/app/(authenticated)/library/AddGameDrawer.stories.tsx` (next to component, NAMED export) | Confirmed path post review — `import { AddGameDrawer } from './AddGameDrawer'` |
 | sp4-add-game-pdf-dedup | `(authenticated)/library/private/add/page.stories.tsx` | Wizard variant |
 | sp4-games-index | `(authenticated)/games/page.stories.tsx` | Catalog list |
 | sp4-game-detail | `(authenticated)/games/[id]/page.stories.tsx` | **Agent dispatch** — POST-#2096 wire verify (M1-M7 deliverables from PR #2207) |
@@ -56,7 +56,7 @@
 | sp4-game-chat-tab | `apps/web/src/components/features/game-chat/GameChatTab.stories.tsx` | Component-mock — path verified `apps/web/src/components/features/game-chat/GameChatTab.tsx` |
 | sp4-citation-pdf-viewer | Component-mock path TBD via grep (likely `apps/web/src/components/chat/panel/ChatCitationCard.stories.tsx` or `chat-unified/CitationBlock.stories.tsx`) | Verify in Stage 3 |
 | sp4-discover | `(authenticated)/discover/page.stories.tsx` | Discover surface |
-| sp4-upload-wizard-extended | `(authenticated)/library/private/add/page.stories.tsx` (variant Frame) OR separate `upload-wizard-extended.stories.tsx` | Verify upload wizard route in Stage 3 |
+| sp4-upload-wizard-extended | `apps/web/src/app/(authenticated)/gamebook/upload/page.stories.tsx` | **DIFFERENT ROUTE** from pdf-dedup (review fix). MOCKUPS_INDEX line 151 maps to `/upload` + `/gamebook/upload`. Canonical = `/gamebook/upload`. |
 
 ### Files modified (Stage 1 + Stage 2 fidelity updates)
 
@@ -320,48 +320,31 @@ Verify story file follows @storybook/react pattern + no hand-written @mockup + l
 - Modify: `admin-mockups/design_files/sp4-add-game-bgg-step.fidelity.json` (closure note)
 - NO story file created
 
-- [ ] **Step 1: Verify sp4-add-game-bgg-step is `forward-refactor-obsolete`**
+- [ ] **Step 1: Verify state**
 
 ```bash
-jq -r '.acceptance.design_intent' admin-mockups/design_files/sp4-add-game-bgg-step.fidelity.json
+jq -r '.acceptance.design_intent, .acceptance.obsolete_tracking_issue' admin-mockups/design_files/sp4-add-game-bgg-step.fidelity.json
 ```
 
-Expected: `forward-refactor-obsolete`. If different, STOP and re-check spec § 4.1.
+Expected pre-existing state (confirmed by review):
+- `design_intent`: `forward-refactor-obsolete`
+- `obsolete_tracking_issue`: `#2145` (pre-existing tracker)
 
-- [ ] **Step 2: Update fidelity.json closure note**
+If different from above, STOP and re-check.
 
-Read current file:
-```bash
-cat admin-mockups/design_files/sp4-add-game-bgg-step.fidelity.json
-```
+- [ ] **Step 2: NO FIDELITY EDIT NEEDED — skip is documented**
 
-Edit to add closure note in `obsolete_tracking_issue` field (likely already populated from Phase B audit). If `obsolete_tracking_issue` is empty (""), set to `"#2214"` to reference DS-17-12 closure note:
+The existing `obsolete_tracking_issue: "#2145"` is the canonical tracker for this obsolete mockup. DS-17-12 does NOT overwrite this — instead, the PR body and sub-issue closure comment will document that this stem is skipped per pre-existing closure tracker. No commit for fidelity update.
 
-```json
-"obsolete_tracking_issue": "#2214"
-```
-
-This signals to lint:fidelity that the obsolete status is documented + tracked.
-
-- [ ] **Step 3: Commit skip closure note**
+- [ ] **Step 3: Verify route MISSING (pre-flight confirmation)**
 
 ```bash
-git add admin-mockups/design_files/sp4-add-game-bgg-step.fidelity.json
-git commit -m "$(cat <<'EOF'
-chore(mockups): #2214 sp4-add-game-bgg-step skip closure note
-
-DEC-inherited spec § 4.2: forward-refactor-obsolete stems → SKIP, no story file created. Update fidelity.json obsolete_tracking_issue to reference DS-17-12 closure.
-
-Rationale: sp4-add-game-bgg-step mockup designs the BGG import wizard step which violates #1903 #2123 BGG ToS user-side ban. Mockup retired Pre-Stage-3 (DS-17 Phase B audit) but not yet documented in tracking. DS-17-12 closure note serves as documented decision.
-
-Route `apps/web/src/app/(authenticated)/library/proposals/page.tsx` does NOT exist (verified pre-execution). No story needed.
-
-Refs: #2214, #1903 BGG ToS, DS-17 Phase B audit #2127.
-
-Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
-EOF
-)"
+[ -f apps/web/src/app/\(authenticated\)/library/proposals/page.tsx ] && echo "EXISTS — escalate" || echo "MISSING — skip confirmed"
 ```
+
+Expected: `MISSING — skip confirmed`. Route `(authenticated)/library/proposals/page.tsx` does NOT exist. Documents the skip rationale.
+
+NO COMMIT in Stage 2 — skip is implicit (no story file, no fidelity edit). Documented in PR body Stage 5.
 
 ---
 
@@ -386,8 +369,9 @@ Context:
 Steps:
 1. Read existing route page.tsx + page-client.tsx (if exists) to identify component
 2. Verify M1-M7 deliverables wire correctly:
-   - Read apps/web/src/components/game-detail/GameDetailDesktop.tsx (POST-PR #2207)
-   - Check imports and props
+   - Primary component: apps/web/src/app/(authenticated)/games/[id]/_components/GameDetailView.tsx (orchestrator with FSM + useLibraryGameDetail + tabs config)
+   - Sub-component: apps/web/src/components/game-detail/GameDetailDesktop.tsx (POST-PR #2207, layout wired internally by GameDetailView)
+   - Check imports and props on both
 3. Scaffold page.stories.tsx with MSW handlers:
    - /api/v1/library/[gameId] returns LibraryGameDetail fixture
    - Story variants: Default + EmptyContent + LoadingState + ErrorState (if applicable)
@@ -770,9 +754,125 @@ Path discovered in Step 1. Likely `apps/web/src/components/chat-unified/Citation
 
 Scaffold pattern similar to GameChatTab.stories.tsx (above) with title `'Component-mocks / sp4-citation-pdf-viewer'`.
 
-- [ ] **Step 11: Scaffold sp4-add-game-drawer component-mock story**
+- [ ] **Step 11: Scaffold sp4-add-game-drawer component-mock story (path confirmed post review)**
 
-Path discovered in Step 1. Scaffold pattern similar with title `'Component-mocks / sp4-add-game-drawer'`.
+Path: `apps/web/src/app/(authenticated)/library/AddGameDrawer.stories.tsx` (next to component, NOT in `components/features/`).
+
+Create file:
+
+```tsx
+/**
+ * sp4-add-game-drawer — DS-17-12 #2214 sub-issue.
+ *
+ * Component-mock embedded in /library route (Add game drawer flow).
+ * Mockup parity: `admin-mockups/design_files/sp4-add-game-drawer.{html,jsx}`.
+ * Post Stage 0 BGG cleanup (sp4-add-game-drawer.jsx ADR-059 docstring preserved per legal constraint).
+ */
+
+import type { Meta, StoryObj } from '@storybook/react';
+
+import { AddGameDrawer } from './AddGameDrawer';
+
+const meta: Meta<typeof AddGameDrawer> = {
+  title: 'Component-mocks / sp4-add-game-drawer',
+  component: AddGameDrawer,
+  parameters: {
+    layout: 'padded',
+    viewport: { defaultViewport: 'desktop' },
+    docs: {
+      description: {
+        component:
+          '#2214 DS-17-12. Add game drawer embedded in /library route. Component-mock (no standalone route).',
+      },
+    },
+  },
+};
+
+export default meta;
+
+type Story = StoryObj<typeof AddGameDrawer>;
+
+export const Default: Story = {
+  args: {
+    open: true,
+    onClose: () => undefined,
+  },
+};
+
+export const Closed: Story = {
+  args: {
+    open: false,
+    onClose: () => undefined,
+  },
+};
+```
+
+Verify `AddGameDrawer` named export signature pre-scaffold. Adapt args if interface differs.
+
+- [ ] **Step 11.5: Scaffold sp4-upload-wizard-extended story (separate route per review fix)**
+
+Create `apps/web/src/app/(authenticated)/gamebook/upload/page.stories.tsx`:
+
+```tsx
+/**
+ * sp4-upload-wizard-extended — DS-17-12 #2214 sub-issue.
+ *
+ * Mockup parity: `admin-mockups/design_files/sp4-upload-wizard-extended.{html,jsx}`.
+ * Post Stage 0 BGG cleanup (BGG upload option block removed).
+ *
+ * MOCKUPS_INDEX line 151: `sp4-upload-wizard-extended.html` → `/upload`, `/gamebook/upload (partial)`.
+ * Canonical story target = `/gamebook/upload`.
+ */
+
+import type { Meta, StoryObj } from '@storybook/react';
+
+import GamebookUploadPage from './page';
+
+const meta: Meta<typeof GamebookUploadPage> = {
+  title: 'Authenticated / sp4-upload-wizard-extended',
+  component: GamebookUploadPage,
+  parameters: {
+    layout: 'fullscreen',
+    nextjs: { appDirectory: true },
+    viewport: { defaultViewport: 'desktop' },
+    docs: {
+      description: {
+        component:
+          '#2214 DS-17-12. Upload wizard extended flow (gamebook upload). BGG upload option removed in Stage 0 cleanup.',
+      },
+    },
+  },
+};
+
+export default meta;
+
+type Story = StoryObj<typeof GamebookUploadPage>;
+
+export const Default: Story = {};
+```
+
+- [ ] **Step 11.6: Update 3 fidelity.json story_path fields (review fixes IMPORTANT-1 + IMPORTANT-4)**
+
+3 stems whose fidelity.json `story_path` field needs updating post-story-creation:
+
+```bash
+# sp4-add-game-drawer
+jq '.acceptance.story_path = "apps/web/src/app/(authenticated)/library/AddGameDrawer.stories.tsx"' \
+  admin-mockups/design_files/sp4-add-game-drawer.fidelity.json > /tmp/sp4-add-game-drawer-tmp.json
+mv /tmp/sp4-add-game-drawer-tmp.json admin-mockups/design_files/sp4-add-game-drawer.fidelity.json
+
+# sp4-library-wishlist
+jq '.acceptance.story_path = "apps/web/src/app/(authenticated)/library/wishlist/page.stories.tsx"' \
+  admin-mockups/design_files/sp4-library-wishlist.fidelity.json > /tmp/sp4-library-wishlist-tmp.json
+mv /tmp/sp4-library-wishlist-tmp.json admin-mockups/design_files/sp4-library-wishlist.fidelity.json
+
+# sp4-upload-wizard-extended
+jq '.acceptance.story_path = "apps/web/src/app/(authenticated)/gamebook/upload/page.stories.tsx"' \
+  admin-mockups/design_files/sp4-upload-wizard-extended.fidelity.json > /tmp/sp4-upload-wizard-tmp.json
+mv /tmp/sp4-upload-wizard-tmp.json admin-mockups/design_files/sp4-upload-wizard-extended.fidelity.json
+```
+
+Verify with `pnpm --filter @meepleai/web lint:fidelity` — all should PASS.
 
 - [ ] **Step 12: Verify typecheck**
 

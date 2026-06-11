@@ -692,20 +692,38 @@ export default [
       "local/no-bgg-host": "off",
     },
   },
-  // StatePreviewProvider tree-shake guarantee (Asse B WP5 T5, Issue #1897):
-  // Direct import of state-preview-provider bypasses the dynamic({ssr:false})
-  // loader, which is the mechanism that guarantees the provider implementation
-  // tree-shakes out of production chunks (DEC-4 + CRIT-5). Consumers MUST use
-  // the barrel `@/components/ui/state-preview`, which re-exports the loader.
+  // Composite no-restricted-imports block for src/**.
   //
-  // Scope excludes the state-preview folder itself: (a) the loader is the only
-  // sanctioned import site of the provider impl, (b) unit tests must wrap the
-  // SUT in the provider tree directly without dynamic indirection.
+  // 1. StatePreviewProvider tree-shake guarantee (Asse B WP5 T5, Issue #1897):
+  //    Direct import of state-preview-provider bypasses the
+  //    dynamic({ssr:false}) loader, which is the mechanism that guarantees the
+  //    provider implementation tree-shakes out of production chunks
+  //    (DEC-4 + CRIT-5). Consumers MUST use the barrel
+  //    `@/components/ui/state-preview`, which re-exports the loader.
   //
-  // Spec: docs/superpowers/plans/2026-06-04-asse-b-ui-shell-pattern.md WP5 T5
+  //    Scope excludes the state-preview folder itself: (a) the loader is the
+  //    only sanctioned import site of the provider impl, (b) unit tests must
+  //    wrap the SUT in the provider tree directly without dynamic indirection.
+  //
+  //    Spec: docs/superpowers/plans/2026-06-04-asse-b-ui-shell-pattern.md WP5 T5
+  //
+  // 2. Legacy PageHeader deprecation (Issue #2158 Fix #2 bis):
+  //    `components/layout/PageHeader.tsx` was the pre-Asse-B header
+  //    (h1 + tabs + primaryAction). It is superseded by `useMiniNavConfig`
+  //    (MiniNavSlot) for breadcrumb+tabs and by inline page-specific headers
+  //    for CTAs. The component is kept around as `@deprecated` so the type
+  //    surface does not vanish before any in-flight branch can rebase, but
+  //    new imports are forbidden so the migration cannot regress.
+  //
+  //    Scope excludes the PageHeader folder itself (the component still
+  //    exports its types) and its own test file.
   {
     files: ["src/**/*.{ts,tsx}"],
-    ignores: ["src/components/ui/state-preview/**"],
+    ignores: [
+      "src/components/ui/state-preview/**",
+      "src/components/layout/PageHeader.tsx",
+      "src/__tests__/components/layout/PageHeader.test.tsx",
+    ],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -718,6 +736,14 @@ export default [
               ],
               message:
                 "Use '@/components/ui/state-preview' barrel (which uses dynamic({ssr:false}) for tree-shake guarantee). Direct import of state-preview-provider bypasses dev-only isolation.",
+            },
+            {
+              group: [
+                "**/components/layout/PageHeader",
+                "@/components/layout/PageHeader",
+              ],
+              message:
+                "PageHeader is deprecated (#2158). Use `useMiniNavConfig` for breadcrumb+tabs and an inline page-specific header for the CTA. See docs/for-developers/frontend or the Fix #2 codemod in #2158 for examples.",
             },
           ],
         },

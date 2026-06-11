@@ -35,6 +35,18 @@ export interface PageHeaderProps {
   className?: string;
 }
 
+/**
+ * @deprecated Issue #2158 (Fix #2 bis). PageHeader is the pre-Asse-B header
+ * (h1 + tabs + primaryAction). It was superseded by `useMiniNavConfig` for
+ * the breadcrumb+tabs strip on `MiniNavSlot` and by inline page-specific
+ * headers for CTAs. The 8 in-tree consumers were migrated in #2158; new
+ * imports are blocked by `no-restricted-imports` in `eslint.config.mjs`.
+ *
+ * The component is retained (rather than deleted) only to preserve the
+ * public type surface (`PageHeaderProps`, `PageHeaderTab`, `PageHeaderAction`)
+ * for any in-flight branch that still references it. Delete-on-sight once
+ * all branches have rebased on top of #2158.
+ */
 export function PageHeader({
   title,
   subtitle,
@@ -104,10 +116,7 @@ export function PageHeader({
 
       {/* Tabs */}
       {tabs && tabs.length > 0 && (
-        <nav
-          className="relative mt-4 flex gap-0 border-b border-border"
-          aria-label="Page tabs"
-        >
+        <nav className="relative mt-4 flex gap-0 border-b border-border" aria-label="Page tabs">
           {tabs.map(tab => {
             const isActive = tab.id === activeTabId;
             return (

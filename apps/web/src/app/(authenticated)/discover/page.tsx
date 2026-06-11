@@ -12,8 +12,6 @@
 import { Suspense } from 'react';
 
 import { DiscoverHub } from '@/components/features/discover/DiscoverHub';
-import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
-import { useTranslation } from '@/hooks/useTranslation';
 
 /**
  * `/discover` — standalone Discover route. Preserved for backward compat
@@ -21,32 +19,21 @@ import { useTranslation } from '@/hooks/useTranslation';
  * the canonical Discover surface to `/games?tab=discover`.
  *
  * The Discover content itself lives in `DiscoverHub`
- * (`components/features/discover/DiscoverHub.tsx`); this route only wires the
- * route-level mini-nav (breadcrumb + single tab) and the Suspense boundary
- * required by `useSearchParams()` in App Router.
- */
-function DiscoverPageInner() {
-  const { t } = useTranslation();
-
-  useMiniNavConfig({
-    breadcrumb: t('pages.discover.miniNav.breadcrumb'),
-    tabs: [{ id: 'all', label: t('pages.discover.miniNav.tabAll'), href: '/discover' }],
-    activeTabId: 'all',
-  });
-
-  return <DiscoverHub />;
-}
-
-/**
- * Default export wraps the discover content in a Suspense boundary.
- * Required by Next.js App Router because `useSearchParams()` opts the page
- * out of SSR static prerendering; without Suspense, the build emits a
- * "should be wrapped in a suspense boundary" CSR bailout error.
+ * (`components/features/discover/DiscoverHub.tsx`), which calls
+ * `useSearchParams()` — the Suspense wrapper is required by App Router to
+ * avoid the CSR-bailout error.
+ *
+ * #2158 (visual-smoke follow-up): the original MiniNavSlot config registered
+ * a single tab that duplicated the breadcrumb. Convention: MiniNavSlot only
+ * carries genuine multi-tab navigation (≥2 alternatives) — single-tab configs
+ * are pure noise. The canonical multi-tab Discover surface lives at
+ * `/games?tab=discover` (see `app/(authenticated)/games/page.tsx`), which is
+ * where the MiniNavSlot strip belongs.
  */
 export default function DiscoverPage() {
   return (
     <Suspense fallback={null}>
-      <DiscoverPageInner />
+      <DiscoverHub />
     </Suspense>
   );
 }

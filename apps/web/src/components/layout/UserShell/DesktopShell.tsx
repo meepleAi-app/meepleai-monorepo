@@ -31,9 +31,13 @@ interface DesktopShellProps {
  * mirroring `AdminSidebar`, but it duplicated the AppTopBar nav items already
  * present at the top of the page. Design owner directive: topbar is the single
  * source-of-truth for primary navigation on desktop. The mobile hamburger
- * drawer (`SideDrawer` below) continues to expose secondary destinations on
- * `<lg` viewports; `MainNavList` + `MAIN_NAV_ITEMS` remain in place for that
- * drawer and any future consumer.
+ * drawer (`SideDrawer` below) uses `SideDrawerItems` (sourced from
+ * `useNavigationItems` → UNIFIED_NAV_ITEMS) for the secondary destinations on
+ * `<lg` viewports.
+ *
+ * #2158 (Fix #4): the orphaned `MainSidebar/` + `main-nav/` modules were
+ * deleted; no remaining consumer existed outside of the dead `MainSidebar`
+ * itself.
  *
  * The bottom-bar clearance padding is dropped on immersive routes, where the
  * bottom bar hides itself (kept in sync via {@link isImmersiveRoute}).

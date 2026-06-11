@@ -12,9 +12,9 @@
 import { useEffect, useState } from 'react';
 
 import { ChevronDown, ChevronRight, FileText } from 'lucide-react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
-import { PageHeader } from '@/components/layout/PageHeader';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
@@ -91,12 +91,19 @@ export default function GameRulesPage() {
   return (
     <div className="min-h-screen bg-background py-8 px-4">
       <div className="container mx-auto max-w-4xl">
-        <PageHeader
-          title="Regolamento"
-          parentHref={`/library/${gameId}`}
-          parentLabel="Gioco"
-          className="mb-8"
-        />
+        {/* #2158 (Fix #2 codemod): replaced legacy PageHeader with inline header. */}
+        <header className="mb-8">
+          <Link
+            href={`/library/${gameId}`}
+            className="inline-flex items-center gap-1 text-sm font-medium text-foreground/70 hover:text-foreground"
+          >
+            <span aria-hidden="true">←</span>
+            <span>Gioco</span>
+          </Link>
+          <h1 className="mt-1 font-quicksand text-2xl font-bold tracking-tight text-foreground">
+            Regolamento
+          </h1>
+        </header>
 
         {/* Loading */}
         {isLoading && (

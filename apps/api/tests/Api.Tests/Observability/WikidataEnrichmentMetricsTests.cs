@@ -89,6 +89,48 @@ public class WikidataEnrichmentMetricsTests
     }
 
     // ──────────────────────────────────────────────────────────────────────
+    // F1 — dead_letter_count gauge (#1823 Wave 3 F1)
+    // ──────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void SetWikidataDeadLetterCount_PositiveValue_GaugeReportsSameValue()
+    {
+        MeepleAiMetrics.SetWikidataDeadLetterCount(17);
+
+        ReadObservableGaugeValue(MeepleAiMetrics.WikidataDeadLetterCount).Should().Be(17);
+    }
+
+    [Fact]
+    public void SetWikidataDeadLetterCount_Negative_ClampedToZero()
+    {
+        MeepleAiMetrics.SetWikidataDeadLetterCount(-3);
+
+        ReadObservableGaugeValue(MeepleAiMetrics.WikidataDeadLetterCount)
+            .Should().Be(0, "negative dead-letter counts are non-sensical — the setter MUST clamp");
+    }
+
+    [Fact]
+    public void IncrementWikidataDeadLetterCount_FromAnchor_IncreasesByOnePerCall()
+    {
+        // Anchor to a known value, then increment twice; the gauge MUST report
+        // anchor+2 (atomic Interlocked.Increment, no Read-Modify-Write race).
+        MeepleAiMetrics.SetWikidataDeadLetterCount(10);
+        MeepleAiMetrics.IncrementWikidataDeadLetterCount();
+        MeepleAiMetrics.IncrementWikidataDeadLetterCount();
+
+        ReadObservableGaugeValue(MeepleAiMetrics.WikidataDeadLetterCount).Should().Be(12);
+    }
+
+    [Fact]
+    public void WikidataDeadLetterCount_Name_MatchesAdrConvention()
+    {
+        // ADR DEC-3g + F1 follow-up: dashboard query string lives downstream.
+        MeepleAiMetrics.WikidataDeadLetterCount.Name
+            .Should().Be("meepleai.wikidata.dead_letter_count");
+        MeepleAiMetrics.WikidataDeadLetterCount.Unit.Should().Be("attempts");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
     // Helpers
     // ──────────────────────────────────────────────────────────────────────
 

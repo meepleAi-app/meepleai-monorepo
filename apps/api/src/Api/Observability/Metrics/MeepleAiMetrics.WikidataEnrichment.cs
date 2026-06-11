@@ -130,4 +130,43 @@ internal static partial class MeepleAiMetrics
         name: "meepleai.wikidata.batch_duration_seconds",
         unit: "s",
         description: "WikidataCoverEnrichmentJob tick wall-clock duration (#1823 Wave 3 M11)");
+
+    /// <summary>
+    /// Issue #1823 Wave 3 F1 (M11 follow-up) — cumulative count of
+    /// <c>WikidataCoverEnrichmentAttempt</c> rows in <c>DeadLetter</c> state
+    /// currently present in the table (i.e. NOT yet swept by the
+    /// <c>WikidataCoverDeadLetterRetentionJob</c>). Hybrid update strategy:
+    /// the retention job calls <see cref="SetWikidataDeadLetterCount(int)"/>
+    /// with a fresh repo COUNT after each sweep; the
+    /// <c>WikidataCoverEnrichmentRunner</c> calls
+    /// <see cref="IncrementWikidataDeadLetterCount"/> whenever it persists a
+    /// new dead-letter attempt. Drift between sweeps is bounded by the
+    /// 1-minute scheduler tick rate; the daily 03:00 UTC sweep re-anchors
+    /// the value to ground truth.
+    ///
+    /// Suggested alerting:
+    ///   - count &gt; 100 sustained &gt; 1 hour → operator triage backlog
+    ///     building; investigate via M13 admin dead-letter page.
+    ///   - sudden jump &gt; 50 in &lt; 5 min → systemic upstream failure or
+    ///     license-whitelist drift; cross-check WikidataSparqlLatency p95.
+    /// </summary>
+    private static int _wikidataDeadLetterCount;
+
+    public static readonly ObservableGauge<int> WikidataDeadLetterCount = Meter.CreateObservableGauge(
+        name: "meepleai.wikidata.dead_letter_count",
+        observeValue: () => _wikidataDeadLetterCount,
+        unit: "attempts",
+        description: "Cumulative count of dead-letter WikidataCoverEnrichmentAttempt rows (#1823 Wave 3 F1)");
+
+    /// <summary>Re-anchors the gauge to a freshly-counted ground-truth value.</summary>
+    public static void SetWikidataDeadLetterCount(int count)
+    {
+        _wikidataDeadLetterCount = count < 0 ? 0 : count;
+    }
+
+    /// <summary>Atomically increments the gauge by 1 — call after persisting a new dead-letter attempt.</summary>
+    public static void IncrementWikidataDeadLetterCount()
+    {
+        System.Threading.Interlocked.Increment(ref _wikidataDeadLetterCount);
+    }
 }

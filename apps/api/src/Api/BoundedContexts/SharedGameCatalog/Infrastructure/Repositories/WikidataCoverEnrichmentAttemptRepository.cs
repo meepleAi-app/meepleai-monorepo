@@ -117,6 +117,14 @@ internal sealed class WikidataCoverEnrichmentAttemptRepository
             .ConfigureAwait(false);
     }
 
+    public async Task<int> CountDeadLettersAsync(CancellationToken cancellationToken = default)
+    {
+        return await DbContext.WikidataCoverEnrichmentAttempts
+            .AsNoTracking()
+            .CountAsync(a => a.DeadLetteredAt != null, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task<int> DeleteDeadLetteredOlderThanAsync(
         DateTime cutoffUtc,
         CancellationToken cancellationToken = default)

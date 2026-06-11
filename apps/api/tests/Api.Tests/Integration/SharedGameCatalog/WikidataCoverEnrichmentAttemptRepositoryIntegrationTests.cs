@@ -340,6 +340,50 @@ public class WikidataCoverEnrichmentAttemptRepositoryIntegrationTests : IAsyncLi
     }
 
     // ──────────────────────────────────────────────────────────────────────
+    // CountDeadLettersAsync — F1 (#1823 Wave 3) re-anchor signal
+    // ──────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CountDeadLettersAsync_EmptyTable_ReturnsZero()
+    {
+        var count = await _sut.CountDeadLettersAsync(TestContext.Current.CancellationToken);
+        count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task CountDeadLettersAsync_CountsOnlyDeadLetteredRows()
+    {
+        var g1 = SeedGame(qid: "Q1");
+        var g2 = SeedGame(qid: "Q2");
+        var g3 = SeedGame(qid: "Q3");
+
+        // 2 actual dead-letters across two games
+        SeedAttempt(g1.Id, WikidataCoverEnrichmentOutcome.DeadLetter,
+            reason: "r2-upload-error",
+            attemptedAt: FixedNow.AddDays(-1), deadLetteredAt: FixedNow.AddDays(-1));
+        SeedAttempt(g2.Id, WikidataCoverEnrichmentOutcome.DeadLetter,
+            reason: "image-processing-error",
+            attemptedAt: FixedNow.AddDays(-2), deadLetteredAt: FixedNow.AddDays(-2));
+
+        // Failed-with-retry MUST NOT be counted
+        SeedAttempt(g3.Id, WikidataCoverEnrichmentOutcome.Failed,
+            reason: "r2-upload-error",
+            attemptedAt: FixedNow.AddMinutes(-5), nextRetryAt: FixedNow.AddMinutes(5));
+
+        // Success MUST NOT be counted
+        SeedAttempt(g1.Id, WikidataCoverEnrichmentOutcome.Success,
+            reason: "success",
+            attemptedAt: FixedNow.AddDays(-30));
+
+        await _dbContext!.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var count = await _sut.CountDeadLettersAsync(TestContext.Current.CancellationToken);
+
+        count.Should().Be(2,
+            "F1 re-anchor MUST count only rows with DeadLetteredAt != NULL");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
     // Helpers
     // ──────────────────────────────────────────────────────────────────────
 

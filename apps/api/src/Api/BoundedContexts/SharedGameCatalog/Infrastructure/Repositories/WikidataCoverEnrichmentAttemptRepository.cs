@@ -123,8 +123,8 @@ internal sealed class WikidataCoverEnrichmentAttemptRepository
     {
         // EF Core ExecuteDeleteAsync translates to a single DELETE FROM ...
         // WHERE ... on PostgreSQL — no SELECT round-trip, no entity tracking
-        // overhead. Safe on the partial index ix_wikidata_cover_attempts_dead_letter
-        // (next_retry_at IS NOT NULL filter) which keeps the scan small.
+        // overhead. Covered by the partial index ix_wikidata_cover_attempts_dead_letter
+        // (dead_lettered_at IS NOT NULL filter) which keeps the scan small.
         return await DbContext.WikidataCoverEnrichmentAttempts
             .Where(a => a.DeadLetteredAt != null && a.DeadLetteredAt < cutoffUtc)
             .ExecuteDeleteAsync(cancellationToken)

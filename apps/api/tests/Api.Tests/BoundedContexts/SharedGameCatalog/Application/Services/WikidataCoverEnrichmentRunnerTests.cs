@@ -2,6 +2,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatalogCo
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Observability;
 using Api.SharedKernel.Infrastructure.Persistence;
 using FluentAssertions;
 using MediatR;
@@ -229,5 +230,70 @@ public class WikidataCoverEnrichmentRunnerTests
 
         result.Should().BeSameAs(expected,
             "the runner returns the M8 result verbatim so admin callers can map it to a DTO");
+    }
+
+    [Fact]
+    public async Task EnrichAndRecordAsync_DeadLetterOutcome_IncrementsDeadLetterGauge()
+    {
+        // F1 #1823 Wave 3: persisting a DeadLetter attempt MUST bump the
+        // dead_letter_count gauge so ops dashboards reflect the new triage
+        // backlog before the daily retention-sweep re-anchor.
+        var gameId = Guid.NewGuid();
+
+        _attempts.Setup(r => r.GetLatestBySharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((WikidataCoverEnrichmentAttempt?)null);
+        _mediator.Setup(m => m.Send(It.IsAny<EnrichCatalogCoverCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EnrichCatalogCoverResult.Failed(
+                EnrichCatalogCoverCommandHandler.FailReasonImageProcessing, "corrupted"));
+        _attempts.Setup(r => r.AddAsync(It.IsAny<WikidataCoverEnrichmentAttempt>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // Anchor the gauge so the assertion is independent of cross-test leakage.
+        MeepleAiMetrics.SetWikidataDeadLetterCount(5);
+
+        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, default);
+
+        ReadGauge(MeepleAiMetrics.WikidataDeadLetterCount).Should().Be(6,
+            "F1 hybrid update: runner increments by 1 per persisted DeadLetter attempt");
+    }
+
+    [Fact]
+    public async Task EnrichAndRecordAsync_FailedRetryOutcome_DoesNotIncrementDeadLetterGauge()
+    {
+        // F1 #1823 Wave 3: only DeadLetter terminal counts towards the gauge —
+        // a transient Failed-with-retry MUST NOT inflate the operator backlog
+        // signal.
+        var gameId = Guid.NewGuid();
+
+        _attempts.Setup(r => r.GetLatestBySharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((WikidataCoverEnrichmentAttempt?)null);
+        _mediator.Setup(m => m.Send(It.IsAny<EnrichCatalogCoverCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EnrichCatalogCoverResult.Failed(
+                EnrichCatalogCoverCommandHandler.FailReasonR2Upload, "503"));
+        _attempts.Setup(r => r.AddAsync(It.IsAny<WikidataCoverEnrichmentAttempt>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        MeepleAiMetrics.SetWikidataDeadLetterCount(7);
+
+        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, default);
+
+        ReadGauge(MeepleAiMetrics.WikidataDeadLetterCount).Should().Be(7,
+            "F1: Failed-with-retry is not a terminal — gauge MUST stay anchored at the previous value");
+    }
+
+    private static int ReadGauge(System.Diagnostics.Metrics.ObservableGauge<int> gauge)
+    {
+        var collected = new List<int>();
+        using var listener = new System.Diagnostics.Metrics.MeterListener
+        {
+            InstrumentPublished = (instr, l) =>
+            {
+                if (instr == gauge) l.EnableMeasurementEvents(instr);
+            },
+        };
+        listener.SetMeasurementEventCallback<int>((_, value, _, _) => collected.Add(value));
+        listener.Start();
+        listener.RecordObservableInstruments();
+        return collected[^1];
     }
 }

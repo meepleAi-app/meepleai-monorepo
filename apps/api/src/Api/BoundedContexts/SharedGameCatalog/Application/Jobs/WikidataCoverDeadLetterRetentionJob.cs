@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Observability;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Quartz;
@@ -84,6 +85,12 @@ public sealed class WikidataCoverDeadLetterRetentionJob : IJob
                 "WikidataCoverDeadLetterRetentionJob: no dead-letter rows older than {Cutoff} — sweep idle.",
                 cutoff);
         }
+
+        // Issue #1823 Wave 3 F1: re-anchor the dead_letter_count gauge to the
+        // ground-truth post-sweep count. Bounds the drift produced by the
+        // runner's optimistic increments between sweeps.
+        var remaining = await attempts.CountDeadLettersAsync(ct).ConfigureAwait(false);
+        MeepleAiMetrics.SetWikidataDeadLetterCount(remaining);
 
         return deleted;
     }

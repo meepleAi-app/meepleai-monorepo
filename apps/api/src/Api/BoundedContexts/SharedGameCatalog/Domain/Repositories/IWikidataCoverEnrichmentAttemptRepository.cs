@@ -45,6 +45,14 @@ public interface IWikidataCoverEnrichmentAttemptRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Issue #1823 Wave 3 F1 (M11 follow-up) — returns the current count of
+    /// dead-letter rows present in the table. Used by the retention job to
+    /// re-anchor the <c>meepleai.wikidata.dead_letter_count</c> ObservableGauge
+    /// after each daily sweep.
+    /// </summary>
+    Task<int> CountDeadLettersAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Issue #1823 Wave 3 M13 — returns a page of dead-letter attempt rows
     /// joined with the parent <c>SharedGame.Title</c> for the admin
     /// dead-letter visibility page. Filtered by optional reason; ordered by

@@ -5,6 +5,7 @@ import { AccentBorder } from '../parts/AccentBorder';
 import { CardFooter } from '../parts/CardFooter';
 import { ConnectionChipStrip } from '../parts/ConnectionChipStrip';
 import { Cover } from '../parts/Cover';
+import { CoverAttributionChip } from '../parts/CoverAttributionChip';
 import { EntityBadge } from '../parts/EntityBadge';
 import { ManaPips } from '../parts/ManaPips';
 import { MenuPlaceholder } from '../parts/MenuPlaceholder';
@@ -36,6 +37,7 @@ export function GridCard(props: MeepleCardProps) {
     showQuickActions,
     onClick,
     className = '',
+    attribution,
   } = props;
   const testId = props['data-testid'];
 
@@ -89,6 +91,7 @@ export function GridCard(props: MeepleCardProps) {
         )}
         {rating !== undefined && <Rating value={rating} max={ratingMax} />}
         {metadata.length > 0 && <MetaChips metadata={metadata} />}
+        <CoverAttributionChip attribution={attribution} />
       </div>
       {manaPips && manaPips.length > 0 && <ManaPips pips={manaPips} size="md" />}
       {source === 'connections' && csItems.length > 0 && (

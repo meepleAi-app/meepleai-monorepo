@@ -237,6 +237,12 @@ internal static class SharedGameCatalogServiceExtensions
         // deletes dead-letter rows older than 7 days. Runs daily at 03:00 UTC.
         RegisterWikidataCoverDeadLetterRetentionJob(services);
 
+        // Issue #1823 Wave 3 M15 (ADR DEC-3i): Quartz quarterly cron that
+        // resets WikidataQidLastVerifiedAt on stale games (>90gg) so the M9
+        // scheduler picks them up for re-enrichment. Runs every 3 months at
+        // 04:00 UTC.
+        RegisterWikidataQuarterlyReVerificationJob(services);
+
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 
         return services;
@@ -380,6 +386,34 @@ internal static class SharedGameCatalogServiceExtensions
             var bgg = sp.GetRequiredKeyedService<ICatalogProvider>("bgg");
             var logger = sp.GetRequiredService<ILogger<CatalogSeedAggregator>>();
             return new CatalogSeedAggregator(wikidata, bgg, logger);
+        });
+    }
+
+    /// <summary>
+    /// Issue #1823 Wave 3 M15 (ADR DEC-3i) — registers
+    /// <see cref="WikidataQuarterlyReVerificationJob"/> with the Quartz
+    /// scheduler. Runs at 04:00 UTC on the 1st day of every 3rd month
+    /// (Jan / Apr / Jul / Oct). Idempotent re-runs on the same day touch
+    /// zero rows.
+    /// </summary>
+    private static void RegisterWikidataQuarterlyReVerificationJob(IServiceCollection services)
+    {
+        services.AddQuartz(q =>
+        {
+            var jobKey = new JobKey("WikidataQuarterlyReVerificationJob", "SharedGameCatalog");
+
+            q.AddJob<WikidataQuarterlyReVerificationJob>(opts => opts
+                .WithIdentity(jobKey)
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob(jobKey)
+                .WithIdentity("WikidataQuarterlyReVerificationTrigger", "SharedGameCatalog")
+                // 04:00 UTC on the 1st day of every 3rd month (Jan / Apr / Jul / Oct).
+                // 1 hour later than the 03:00 retention sweep so the two jobs do
+                // not contend over the same connection pool.
+                .WithCronSchedule("0 0 4 1 */3 ?")
+                .WithDescription("Issue #1823 Wave 3 ADR DEC-3i: resets WikidataQidLastVerifiedAt for SharedGames whose last verification is older than 90 days. Runs quarterly at 04:00 UTC."));
         });
     }
 

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatalogCover;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Observability;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -101,6 +102,15 @@ internal sealed class WikidataCoverEnrichmentRunner : IWikidataCoverEnrichmentRu
 
         await _attempts.AddAsync(newAttempt, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Issue #1823 Wave 3 F1: increment the dead-letter gauge AFTER the
+        // SaveChanges commits — incrementing pre-save would leak the metric
+        // forward on a DB write failure. The retention job re-anchors the
+        // gauge daily so any drift between sweeps stays bounded.
+        if (newAttempt.Outcome == WikidataCoverEnrichmentOutcome.DeadLetter)
+        {
+            MeepleAiMetrics.IncrementWikidataDeadLetterCount();
+        }
 
         _logger.LogDebug(
             "WikidataCoverEnrichmentRunner: game {GameId} outcome={Outcome} reason={Reason} retry={RetryCount} nextRetryAt={NextRetryAt} forceRefresh={ForceRefresh}",

@@ -147,6 +147,32 @@ export interface MeepleCardProps {
   customColor?: string;
   /** Optional test id forwarded to the root wrapper element. */
   'data-testid'?: string;
+  /**
+   * Issue #1823 Wave 3 M14 — license + attribution metadata for the cover
+   * image. Renders a small footer chip under the title when present
+   * (typically Wikidata-sourced covers per ADR DEC-3c whitelist).
+   *
+   * Surface depends on variant: GridCard/ListCard/CompactCard render an
+   * inline `<small>` line; HeroCard/FeaturedCard get a more prominent
+   * footer-row treatment. Variants that explicitly opt-out are responsible
+   * for omitting the prop on their consumers.
+   */
+  attribution?: CoverAttribution;
+}
+
+/**
+ * Issue #1823 Wave 3 M14 — minimal license/attribution payload for cover
+ * imagery sourced from external providers (Wikidata Commons, BGG, etc.).
+ * All three fields are optional so the chip degrades gracefully when only
+ * a subset is known.
+ */
+export interface CoverAttribution {
+  /** Plain-text author / artist credit (e.g. "John Doe"). */
+  author?: string | null;
+  /** Whitelisted license identifier (e.g. "CC BY-SA 4.0"). */
+  license?: string | null;
+  /** Canonical source URL — rendered as a `target="_blank"` link on the license tag. */
+  sourceUrl?: string | null;
 }
 
 export interface Carousel3DProps {

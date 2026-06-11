@@ -558,7 +558,7 @@ const PlannedGamesPane = ({ compact, games = GAMES }) => (
           border:'1px dashed var(--border-strong)',
           fontFamily:'var(--f-display)', fontSize: 11.5, fontWeight: 700,
           cursor:'not-allowed', opacity: 0.7,
-        }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-add-game-bgg-step.html'; }, 0); /* DEMO-NAV */ }}>+ Aggiungi gioco</button>
+        }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-upload-wizard-extended.html#step-0-catalog'; }, 0); /* DEMO-NAV */ }}>+ Aggiungi gioco</button>
     </div>
   </aside>
 );

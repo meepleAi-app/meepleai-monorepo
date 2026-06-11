@@ -162,15 +162,23 @@ internal sealed class WikidataCoverEnrichmentAttemptRepository
             return new DeadLetterPage(Array.Empty<DeadLetterRow>(), 0);
         }
 
-        // Join to shared_games for the denormalized title. Use AsNoTracking
-        // throughout — read-only admin page.
+        // Join to shared_games for the denormalized title.
+        // IgnoreQueryFilters() defeats the SharedGameEntity soft-delete query
+        // filter — without this, INNER JOIN would silently drop dead-letter
+        // rows whose parent game has been soft-deleted within the 7-day
+        // retention window, producing a count/items mismatch that breaks the
+        // FE paginator (totalCount > items.Count). LEFT-join idiom with a
+        // fallback string also defends against an orphaned FK on a
+        // hard-deleted game (cascade should prevent it, but defensive).
         var pageQuery =
             from a in query.OrderByDescending(x => x.DeadLetteredAt).Skip(skip).Take(take)
-            join sg in DbContext.SharedGames.AsNoTracking() on a.SharedGameId equals sg.Id
+            join sg in DbContext.SharedGames.AsNoTracking().IgnoreQueryFilters()
+                on a.SharedGameId equals sg.Id into sgs
+            from sg in sgs.DefaultIfEmpty()
             select new DeadLetterRow(
                 a.Id,
                 a.SharedGameId,
-                sg.Title,
+                sg != null ? sg.Title : "(deleted game)",
                 a.AttemptedAt,
                 a.DeadLetteredAt!.Value,
                 a.Reason,

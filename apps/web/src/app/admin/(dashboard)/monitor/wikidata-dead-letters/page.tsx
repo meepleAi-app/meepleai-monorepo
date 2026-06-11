@@ -26,6 +26,11 @@ import {
 
 const PAGE_SIZE = 50;
 
+// Note: 'circuit-open' (FailReasonCircuitOpen on the BE) is intentionally
+// omitted — the retry policy always schedules a retry for breaker trips,
+// it never produces a DeadLetter row, so filtering by it would always
+// return zero results. Surfaced via the meepleai.wikidata.* metric tags
+// instead.
 const REASON_FILTERS: { value: string; label: string }[] = [
   { value: '', label: 'Any reason' },
   { value: 'r2-upload-error', label: 'R2 upload error' },

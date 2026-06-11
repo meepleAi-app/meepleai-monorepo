@@ -7,6 +7,8 @@ import { PartyPopper, ArrowRight, Sparkles } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { Btn } from '@/components/ui/btn';
+import { logger } from '@/lib/logger';
+import { assertSafeRelativeOrFallback } from '@/lib/url-safety';
 
 const REDIRECT_DELAY_MS = 2000;
 const PROGRESS_INTERVAL_MS = 50;
@@ -27,10 +29,26 @@ export function WelcomeFallback() {
 export function WelcomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams?.get('redirectTo') ?? '/library';
+  const rawRedirectTo = searchParams?.get('redirectTo');
+  // Audit (#2168): ?redirectTo= is user-controlled; guard against open-redirect
+  // via assertSafeRelativeOrFallback before passing to router.push().
+  const redirectTo = assertSafeRelativeOrFallback(rawRedirectTo, '/library');
 
   const [progress, setProgress] = useState(0);
   const [mounted, setMounted] = useState(false);
+
+  // Fire-once-per-mount: warn if the raw param was rejected by the helper
+  useEffect(() => {
+    if (
+      typeof rawRedirectTo === 'string' &&
+      rawRedirectTo.length > 0 &&
+      rawRedirectTo !== redirectTo
+    ) {
+      logger.warn('Rejected unsafe ?redirectTo= redirect target on welcome', {
+        metadata: { fromMasked: rawRedirectTo.slice(0, 32) },
+      });
+    }
+  }, [rawRedirectTo, redirectTo]);
 
   const handleRedirect = useCallback(() => {
     router.push(redirectTo);
@@ -139,9 +157,7 @@ export function WelcomeContent() {
 
         {/* Features Preview */}
         <div className="pt-4 border-t border-border">
-          <p className="text-sm text-muted-foreground mb-3">
-            Cosa puoi fare con MeepleAI:
-          </p>
+          <p className="text-sm text-muted-foreground mb-3">Cosa puoi fare con MeepleAI:</p>
           <div className="flex flex-wrap justify-center gap-2 text-xs">
             <span className="px-3 py-1 bg-card rounded-full text-muted-foreground shadow-sm">
               📚 Regole dei giochi

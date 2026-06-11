@@ -53,6 +53,10 @@ export function RegisterPageContent() {
   const [error, setError] = useState<string>('');
 
   const oauthDisabled = searchParams?.get('oauth_disabled') === 'true';
+  // Audit (#2168): register does NOT read ?from=. Post-registration redirect is
+  // hardcoded to /verification-pending (line below in handleRegister). If a
+  // ?from= param is ever introduced here, use assertSafeRelativeOrFallback from
+  // @/lib/url-safety before passing it to router.push().
 
   // Fetch registration mode on mount
   useEffect(() => {

@@ -24,7 +24,27 @@ describe('isSafeRelativeLink', () => {
       ['data:text/html,<script>', 'data URI'],
       ['%2F%2Fevil.com', 'encoded protocol-relative'],
       ['  //evil.com', 'whitespace bypass'],
-    ])('rejects %s (%s)', input => {
+    ])('rejects %s (%s)', (input, _label) => {
+      expect(isSafeRelativeLink(input)).toBe(false);
+    });
+  });
+
+  describe('UNSAFE inputs — control character bypass (CVE-class)', () => {
+    it.each([
+      ['/\t//evil.com', 'tab-before-protocol-relative bypass'],
+      ['/\n//evil.com', 'newline-before-protocol-relative bypass'],
+      ['/\r//evil.com', 'CR-before-protocol-relative bypass'],
+      ['/library\x00//evil.com', 'NUL byte injection'],
+    ])('rejects %s (%s)', (input, _label) => {
+      expect(isSafeRelativeLink(input)).toBe(false);
+    });
+  });
+
+  describe('UNSAFE inputs — double-encoding bypass', () => {
+    it.each([
+      ['/%252F%252Fevil.com', 'double-encoded protocol-relative'],
+      ['/%252F%255Cevil.com', 'double-encoded slash-backslash'],
+    ])('rejects %s (%s)', (input, _label) => {
       expect(isSafeRelativeLink(input)).toBe(false);
     });
   });
@@ -39,6 +59,10 @@ describe('isSafeRelativeLink', () => {
 describe('assertSafeRelativeOrFallback', () => {
   it('returns input when safe', () => {
     expect(assertSafeRelativeOrFallback('/library', '/dashboard')).toBe('/library');
+  });
+
+  it('preserves root / path', () => {
+    expect(assertSafeRelativeOrFallback('/', '/dashboard')).toBe('/');
   });
 
   it('returns fallback when unsafe', () => {

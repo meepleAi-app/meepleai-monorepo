@@ -209,6 +209,23 @@ Senza i secret, il **bake smoke gira lo stesso** (non pubblica), ma il **full ba
 > bash scripts/snapshot-verify.sh
 > ```
 
+## Audit trail (#2126 D6)
+
+Ogni publish riuscito appende una riga a `data/snapshots/AUDIT.md` (committable markdown). La riga viene scritta **dopo** l'upload di dump+sha+sidecar+`latest.txt` e dopo la rotation — un fail su qualsiasi step precedente esce con `set -e` senza scrivere, garantendo che il trail combaci con il bucket.
+
+Schema della tabella:
+
+```markdown
+| Published at | Basename | App commit | EF migration | seed_schema | PDFs | Chunks | Embeddings | Model | Published by |
+```
+
+`Published by` è auto-risolto: `GITHUB_ACTOR` se siamo in GHA, `git config user.email` localmente, `whoami` come fallback. Niente token.
+
+Query rapide:
+- *«Chi ha pubblicato lo snapshot del 15 aprile?»* → `git blame data/snapshots/AUDIT.md` sulla riga del 2026-04-15.
+- *«Cronologia ultimi 30 giorni»* → `git log --since='30 days ago' -- data/snapshots/AUDIT.md`.
+- *«Quale snapshot serviva il dev X durante l'incident del 2026-06-11 alle 14:00?»* → cerca la riga il cui `Published at` precede 14:00 (era il `latest.txt` puntato).
+
 ## Testing
 
 ### Manual e2e con `ci.yml`

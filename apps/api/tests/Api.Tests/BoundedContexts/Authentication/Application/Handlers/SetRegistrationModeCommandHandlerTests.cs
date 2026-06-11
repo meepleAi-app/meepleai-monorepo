@@ -48,7 +48,7 @@ public class SetRegistrationModeCommandHandlerTests
         _mockConfigService
             .Setup(c => c.GetConfigurationByKeyAsync(
                 "Registration:PublicEnabled",
-                It.IsAny<string?>(),
+                "Development",
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((SystemConfigurationDto?)null);
         _mockMediator
@@ -60,6 +60,12 @@ public class SetRegistrationModeCommandHandlerTests
 
         await _handler.Handle(cmd, TestContext.Current.CancellationToken);
 
+        _mockConfigService.Verify(
+            c => c.GetConfigurationByKeyAsync(
+                "Registration:PublicEnabled",
+                "Development",
+                It.IsAny<CancellationToken>()),
+            Times.Once);
         _mockMediator.Verify(
             m => m.Send(
                 It.Is<CreateConfigurationCommand>(c =>
@@ -80,7 +86,7 @@ public class SetRegistrationModeCommandHandlerTests
         _mockConfigService
             .Setup(c => c.GetConfigurationByKeyAsync(
                 "Registration:PublicEnabled",
-                It.IsAny<string?>(),
+                "Production",
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((SystemConfigurationDto?)null);
         _mockMediator
@@ -92,6 +98,12 @@ public class SetRegistrationModeCommandHandlerTests
 
         await _handler.Handle(cmd, TestContext.Current.CancellationToken);
 
+        _mockConfigService.Verify(
+            c => c.GetConfigurationByKeyAsync(
+                "Registration:PublicEnabled",
+                "Production",
+                It.IsAny<CancellationToken>()),
+            Times.Once);
         _mockMediator.Verify(
             m => m.Send(
                 It.Is<CreateConfigurationCommand>(c =>
@@ -130,7 +142,7 @@ public class SetRegistrationModeCommandHandlerTests
         _mockConfigService
             .Setup(c => c.GetConfigurationByKeyAsync(
                 "Registration:PublicEnabled",
-                It.IsAny<string?>(),
+                "Development",
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingDto);
         _mockMediator
@@ -142,6 +154,12 @@ public class SetRegistrationModeCommandHandlerTests
 
         await _handler.Handle(cmd, TestContext.Current.CancellationToken);
 
+        _mockConfigService.Verify(
+            c => c.GetConfigurationByKeyAsync(
+                "Registration:PublicEnabled",
+                "Development",
+                It.IsAny<CancellationToken>()),
+            Times.Once);
         _mockMediator.Verify(
             m => m.Send(
                 It.Is<UpdateConfigValueCommand>(c =>

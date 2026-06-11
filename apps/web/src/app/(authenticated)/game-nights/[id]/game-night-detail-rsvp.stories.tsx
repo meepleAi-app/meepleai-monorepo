@@ -40,7 +40,7 @@ import { GameNightDetailView } from '@/app/(authenticated)/game-nights/[id]/_com
 import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof GameNightDetailView> = {
-  title: 'Pages/SP7/Game Night Detail + RSVP',
+  title: 'Pages/SP7/Game Night Detail RSVP',
   component: GameNightDetailView,
   parameters: {
     layout: 'fullscreen',

@@ -184,6 +184,35 @@ public class WikidataCoverEnrichmentRunnerTests
     }
 
     [Fact]
+    public async Task EnrichAndRecordAsync_CircuitOpen_PreservesRetryCount()
+    {
+        var gameId = Guid.NewGuid();
+
+        // Previous attempt: 2 retries already burned on r2-upload errors.
+        var previous = WikidataCoverEnrichmentAttempt.RecordFailedWithRetry(
+            gameId, EnrichCatalogCoverCommandHandler.FailReasonR2Upload, "503",
+            retryCount: 2, attemptedAt: FixedNow.AddMinutes(-30), nextRetryAt: FixedNow.AddMinutes(-10));
+
+        _attempts.Setup(r => r.GetLatestBySharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(previous);
+
+        _mediator.Setup(m => m.Send(It.IsAny<EnrichCatalogCoverCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EnrichCatalogCoverResult.Failed(
+                EnrichCatalogCoverCommandHandler.FailReasonCircuitOpen, "circuit OPEN"));
+
+        WikidataCoverEnrichmentAttempt? recorded = null;
+        _attempts.Setup(r => r.AddAsync(It.IsAny<WikidataCoverEnrichmentAttempt>(), It.IsAny<CancellationToken>()))
+            .Callback<WikidataCoverEnrichmentAttempt, CancellationToken>((a, _) => recorded = a)
+            .Returns(Task.CompletedTask);
+
+        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, default);
+
+        recorded!.RetryCount.Should().Be(2,
+            "circuit-open is an upstream-infra trip — the runner MUST NOT burn another DEC-3j retry budget slot");
+        recorded.NextRetryAt.Should().NotBeNull("circuit-open schedules a retry past the breaker window");
+    }
+
+    [Fact]
     public async Task EnrichAndRecordAsync_ReturnsCommandResultDirectly()
     {
         var gameId = Guid.NewGuid();

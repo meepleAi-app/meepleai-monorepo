@@ -59,9 +59,17 @@ internal sealed class WikidataCoverEnrichmentRunner : IWikidataCoverEnrichmentRu
         // RetryCount for the NEW attempt row:
         // - Terminal / DeadLetter: preserve previous count (this attempt is the
         //   nth retry that produced the terminal outcome).
-        // - ScheduleRetry: increment by 1 (this attempt counts towards the budget).
+        // - ScheduleRetry with reason=circuit-open (Wave 3 M13 / M10 follow-up):
+        //   preserve previous count. A breaker trip is upstream infrastructure,
+        //   not a per-game failure, so we don't want to burn the DEC-3j 3-retry
+        //   budget on it.
+        // - ScheduleRetry with any other reason: increment by 1 (this attempt
+        //   counts towards the budget).
         var nextRetryCount = decision switch
         {
+            WikidataCoverEnrichmentRetryDecision.ScheduleRetry
+                when result is EnrichCatalogCoverResult.Failed { Reason: EnrichCatalogCoverCommandHandler.FailReasonCircuitOpen }
+                => previousRetryCount,
             WikidataCoverEnrichmentRetryDecision.ScheduleRetry => previousRetryCount + 1,
             _ => previousRetryCount,
         };

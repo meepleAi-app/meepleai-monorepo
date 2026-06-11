@@ -50,6 +50,7 @@ internal interface IWikidataCoverEnrichmentRetryPolicy
 ///   <item>Any <see cref="EnrichCatalogCoverResult.Skipped"/> → <see cref="WikidataCoverEnrichmentRetryDecision.Terminal"/> (business condition, retry won't change it within the freshness window).</item>
 ///   <item><see cref="EnrichCatalogCoverResult.Failed"/> with reason <c>image-processing-error</c> → <see cref="WikidataCoverEnrichmentRetryDecision.DeadLetter"/> (corrupted image bytes, retry won't help).</item>
 ///   <item><see cref="EnrichCatalogCoverResult.Failed"/> with reason <c>r2-upload-error</c> → <see cref="WikidataCoverEnrichmentRetryDecision.ScheduleRetry"/> with exponential backoff (1m / 5m / 15m) for attempts 0/1/2; <see cref="WikidataCoverEnrichmentRetryDecision.DeadLetter"/> on attempt 3+.</item>
+///   <item><see cref="EnrichCatalogCoverResult.Failed"/> with reason <c>circuit-open</c> (Wave 3 M13 / M10 follow-up) → <see cref="WikidataCoverEnrichmentRetryDecision.ScheduleRetry"/> at <see cref="CircuitOpenBackoff"/> (slightly past the DEC-3f 5min break duration). NOT counted against the DEC-3j retry budget — a breaker trip is upstream infrastructure rather than a per-game failure.</item>
 ///   <item>Unknown <see cref="EnrichCatalogCoverResult.Failed"/> reason → <see cref="WikidataCoverEnrichmentRetryDecision.DeadLetter"/> (fail-fast on unexpected outcomes).</item>
 /// </list>
 /// </summary>
@@ -57,6 +58,13 @@ internal sealed class WikidataCoverEnrichmentRetryPolicy : IWikidataCoverEnrichm
 {
     /// <summary>Max retry budget per DEC-3j (3 retries → attempt 4 dead-letters).</summary>
     internal const int MaxRetryCount = 3;
+
+    /// <summary>
+    /// Backoff for Polly circuit-open trips. 6 minutes is intentionally a touch
+    /// longer than the DEC-3f BreakDuration (5 min) so the next attempt lands
+    /// AFTER the breaker has had a chance to half-open and probe the upstream.
+    /// </summary>
+    internal static readonly TimeSpan CircuitOpenBackoff = TimeSpan.FromMinutes(6);
 
     /// <summary>
     /// Backoff windows in minutes, indexed by previous retry count. Index 0 is the
@@ -108,6 +116,17 @@ internal sealed class WikidataCoverEnrichmentRetryPolicy : IWikidataCoverEnrichm
             // currentRetryCount = 0 → schedule the first retry (BackoffSchedule[0] = 1m)
             var backoff = BackoffSchedule[Math.Min(currentRetryCount, BackoffSchedule.Length - 1)];
             return new WikidataCoverEnrichmentRetryDecision.ScheduleRetry(nowUtc.Add(backoff));
+        }
+
+        // Issue #1823 Wave 3 M13 / M10 follow-up: Polly circuit OPEN. The
+        // breaker stays OPEN for ~5 min (DEC-3f BreakDuration); schedule a
+        // single retry slightly past that window so the next attempt finds
+        // the breaker in HALF-OPEN and can probe the upstream. NOT counted
+        // against the DEC-3j retry budget — this is an upstream-infra signal,
+        // not a per-game failure.
+        if (string.Equals(failed.Reason, EnrichCatalogCoverCommandHandler.FailReasonCircuitOpen, StringComparison.Ordinal))
+        {
+            return new WikidataCoverEnrichmentRetryDecision.ScheduleRetry(nowUtc.Add(CircuitOpenBackoff));
         }
 
         // Unknown failure reason — fail-fast to surface it on the admin dead-letter page

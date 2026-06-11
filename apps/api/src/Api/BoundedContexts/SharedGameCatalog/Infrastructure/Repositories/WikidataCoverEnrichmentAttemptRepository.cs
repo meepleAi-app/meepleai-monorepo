@@ -131,6 +131,67 @@ internal sealed class WikidataCoverEnrichmentAttemptRepository
             .ConfigureAwait(false);
     }
 
+    public async Task<DeadLetterPage> GetDeadLettersAsync(
+        int skip,
+        int take,
+        string? reasonFilter,
+        CancellationToken cancellationToken = default)
+    {
+        if (skip < 0) skip = 0;
+        if (take < 1) take = 1;
+        if (take > 200) take = 200;
+
+        const int DeadLetterOutcome = (int)WikidataCoverEnrichmentOutcome.DeadLetter;
+
+        var query =
+            from a in DbContext.WikidataCoverEnrichmentAttempts.AsNoTracking()
+            where a.DeadLetteredAt != null && a.Outcome == DeadLetterOutcome
+            select a;
+
+        if (!string.IsNullOrWhiteSpace(reasonFilter))
+        {
+            query = query.Where(a => a.Reason == reasonFilter);
+        }
+
+        var totalCount = await query
+            .CountAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (totalCount == 0)
+        {
+            return new DeadLetterPage(Array.Empty<DeadLetterRow>(), 0);
+        }
+
+        // Join to shared_games for the denormalized title.
+        // IgnoreQueryFilters() defeats the SharedGameEntity soft-delete query
+        // filter — without this, INNER JOIN would silently drop dead-letter
+        // rows whose parent game has been soft-deleted within the 7-day
+        // retention window, producing a count/items mismatch that breaks the
+        // FE paginator (totalCount > items.Count). LEFT-join idiom with a
+        // fallback string also defends against an orphaned FK on a
+        // hard-deleted game (cascade should prevent it, but defensive).
+        var pageQuery =
+            from a in query.OrderByDescending(x => x.DeadLetteredAt).Skip(skip).Take(take)
+            join sg in DbContext.SharedGames.AsNoTracking().IgnoreQueryFilters()
+                on a.SharedGameId equals sg.Id into sgs
+            from sg in sgs.DefaultIfEmpty()
+            select new DeadLetterRow(
+                a.Id,
+                a.SharedGameId,
+                sg != null ? sg.Title : "(deleted game)",
+                a.AttemptedAt,
+                a.DeadLetteredAt!.Value,
+                a.Reason,
+                a.Details,
+                a.RetryCount);
+
+        var items = await pageQuery
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return new DeadLetterPage(items, totalCount);
+    }
+
     private static WikidataCoverEnrichmentAttempt Map(WikidataCoverEnrichmentAttemptEntity entity) =>
         WikidataCoverEnrichmentAttempt.Reconstitute(
             id: entity.Id,

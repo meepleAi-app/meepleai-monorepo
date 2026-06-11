@@ -1,8 +1,10 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatalogCover;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.Extensions;
 using Api.Filters;
 using MediatR;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Routing.Admin;
 
@@ -34,6 +36,10 @@ internal static class AdminWikidataCoverEnrichmentEndpoints
             .WithName("AdminWikidataCoverEnrichment_Trigger")
             .WithTags("Admin", "WikidataCoverEnrichment");
 
+        group.MapGet("/dead-letters", HandleListDeadLetters)
+            .WithName("AdminWikidataCoverEnrichment_ListDeadLetters")
+            .WithTags("Admin", "WikidataCoverEnrichment");
+
         return group;
     }
 
@@ -60,6 +66,26 @@ internal static class AdminWikidataCoverEnrichmentEndpoints
             TriggeredByUserId: context.User.GetUserId());
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    /// <summary>
+    /// Issue #1823 Wave 3 M13 — paginated dead-letter visibility for the admin
+    /// page. Query string: <c>?skip=0&amp;take=50&amp;reason=r2-upload-error</c>.
+    /// </summary>
+    private static async Task<IResult> HandleListDeadLetters(
+        [FromQuery] int? skip,
+        [FromQuery] int? take,
+        [FromQuery] string? reason,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var query = new GetWikidataDeadLetterAttemptsQuery(
+            Skip: skip ?? 0,
+            Take: take ?? 50,
+            ReasonFilter: string.IsNullOrWhiteSpace(reason) ? null : reason);
+
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);
     }
 }

@@ -228,7 +228,7 @@ const IllusStep1 = () => (
       fontFamily: 'var(--f-body)',
     }}>
       <span aria-hidden="true">🔍</span>
-      <span>cerca su BGG…</span>
+      <span>cerca nel catalogo…</span>
       <span style={{ marginLeft: 'auto', fontFamily: 'var(--f-mono)', fontSize: 10,
         padding: '2px 6px', border: '1px solid var(--border)', borderRadius: 4,
         color: 'var(--text-muted)', background: 'var(--bg-muted)' }}>⌘K</span>
@@ -458,7 +458,7 @@ const HowItWorksBody = ({ isMobile = false }) => {
       entity: 'game',
       title: 'Costruisci la tua library',
       bullets: [
-        'Cerca giochi direttamente da BoardGameGeek o aggiungili manualmente',
+        'Aggiungi giochi dal catalogo interno o manualmente',
         'Importa il regolamento PDF — l\'OCR parte automaticamente',
         'Organizza per stato: posseduti, wishlist, già giocati',
       ],

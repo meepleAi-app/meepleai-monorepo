@@ -31,6 +31,15 @@ const STORIES = [
     name: 'GameDetail Frame07 (pilot)',
     slug: 'pages-sp4-gamedetail-mockup-matrix--frame-07-desktop-own-info',
   },
+  // DS-17 Phase C-1 auth cluster samples (#2160)
+  {
+    name: 'Auth Flow Frame01 Login (Phase C-1)',
+    slug: 'pages-auth-auth-flow--frame-01-login',
+  },
+  {
+    name: 'Auth Onboarding Frame02 Games (Phase C-1)',
+    slug: 'pages-auth-onboarding--frame-02-step-games',
+  },
 ];
 
 const ERROR_SUBSTRINGS = [

@@ -24,8 +24,8 @@
     ],
     "designer_approved_by": "",
     "designer_approved_on": "",
-    "story_path": "",
-    "fixtures_path": "",
+    "story_path": "apps/web/src/components/auth/auth-flow.stories.tsx",
+    "fixtures_path": "apps/web/src/__tests__/fixtures/mockup-pilots/auth/auth-flow.ts",
     "design_intent": "current",
     "viewports": [
       "desktop"

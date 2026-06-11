@@ -80,6 +80,7 @@ describe('WelcomeContent — auto redirect', () => {
     await advancePastRedirect();
 
     expect(pushMock).toHaveBeenCalledWith('/library');
+    expect(logger.warn).not.toHaveBeenCalled();
   });
 
   it('redirects immediately when the "Vai alla Dashboard" button is clicked', async () => {
@@ -95,6 +96,7 @@ describe('WelcomeContent — auto redirect', () => {
     fireEvent.click(btn);
 
     expect(pushMock).toHaveBeenCalledWith('/library');
+    expect(logger.warn).not.toHaveBeenCalled();
   });
 });
 

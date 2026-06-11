@@ -98,6 +98,7 @@ export function RegisterPageContent() {
         // (matches AuthModal.handleRegister behavior)
         await new Promise(resolve => setTimeout(resolve, 100));
 
+        // #2168 audit: hardcoded redirect target — see header comment.
         await router.push(`/verification-pending?email=${encodeURIComponent(data.email)}`);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : t('auth.register.genericError');

@@ -137,13 +137,6 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
     [onClose, router]
   );
 
-  const handleCatalogSelect = useCallback(
-    (gameId: string, _gameName: string) => {
-      handleNavigateToGame(gameId);
-    },
-    [handleNavigateToGame]
-  );
-
   const drawerTitle =
     step === 'manual'
       ? t('pages.library.addGame.manualTitle')
@@ -211,7 +204,7 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
           {step === 'catalog' && (
             <div data-testid="add-game-step-catalog">
               <CatalogSearchStep
-                onSelect={handleCatalogSelect}
+                onSelect={handleNavigateToGame}
                 onBack={() => setStep('choice')}
                 // #2269 P0-1 (M1) — bridge for empty-state CTA so users searching
                 // a game that does not exist in the catalog can switch to manual

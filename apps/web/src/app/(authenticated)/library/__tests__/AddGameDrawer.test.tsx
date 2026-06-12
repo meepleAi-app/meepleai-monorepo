@@ -69,13 +69,15 @@ vi.mock('@/app/(authenticated)/library/CatalogSearchStep', () => ({
     onSelect,
     onBack,
     onGoToManual,
+    onNavigateToGame,
   }: {
-    onSelect: (gameId: string, gameName: string) => void;
+    onSelect: (gameId: string) => void;
     onBack: () => void;
     onGoToManual?: () => void;
+    onNavigateToGame?: (gameId: string) => void;
   }) => (
     <div data-testid="catalog-search-step">
-      <button data-testid="catalog-select-game" onClick={() => onSelect('game-123', 'Catan')}>
+      <button data-testid="catalog-select-game" onClick={() => onSelect('game-123')}>
         Select Catan
       </button>
       <button data-testid="catalog-back" onClick={onBack}>
@@ -84,6 +86,11 @@ vi.mock('@/app/(authenticated)/library/CatalogSearchStep', () => ({
       {onGoToManual && (
         <button data-testid="catalog-go-to-manual" onClick={onGoToManual}>
           Go to manual
+        </button>
+      )}
+      {onNavigateToGame && (
+        <button data-testid="catalog-navigate-to-game" onClick={() => onNavigateToGame('game-456')}>
+          Vai alla scheda
         </button>
       )}
     </div>

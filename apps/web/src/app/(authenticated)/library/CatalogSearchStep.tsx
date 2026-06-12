@@ -171,16 +171,14 @@ function CardSkeleton() {
 // ─── Empty state (F2.2 T2) ────────────────────────────────────────────────────
 
 interface CatalogSearchEmptyStateProps {
-  search: string;
   heading: string;
   subtitle: string;
   emptyTemplate: string;
-  manualCtaLabel?: string;
+  manualCtaLabel: string;
   onGoToManual?: () => void;
 }
 
 function CatalogSearchEmptyState({
-  search,
   heading,
   subtitle,
   emptyTemplate,
@@ -197,9 +195,9 @@ function CatalogSearchEmptyState({
         🔎
       </span>
       <h3 className="text-base font-semibold text-foreground">{heading}</h3>
-      <p className="text-sm text-muted-foreground">{emptyTemplate.replace('{search}', search)}</p>
+      <p className="text-sm text-muted-foreground">{emptyTemplate}</p>
       <p className="text-xs text-muted-foreground">{subtitle}</p>
-      {onGoToManual && manualCtaLabel && (
+      {onGoToManual && (
         <Button
           variant="default"
           size="sm"
@@ -219,9 +217,9 @@ function CatalogSearchEmptyState({
 interface CatalogSearchStepProps {
   /**
    * Called when user selects a game and it is successfully added to library.
-   * Advance the wizard to the PDF step with gameId + gameName.
+   * Advance the wizard with gameId — name is internal (used here for toasts).
    */
-  onSelect: (gameId: string, gameName: string) => void;
+  onSelect: (gameId: string) => void;
   /** Go back to Step 0 (choice) */
   onBack: () => void;
   /**
@@ -311,7 +309,7 @@ export function CatalogSearchStep({
       try {
         await addMutation.mutateAsync({ gameId });
         toast.success(t('pages.library.addGame.catalog.toastAdded', { gameName }));
-        onSelect(gameId, gameName);
+        onSelect(gameId);
       } catch {
         toast.error(t('pages.library.addGame.catalog.toastError', { gameName }));
       } finally {
@@ -427,15 +425,12 @@ export function CatalogSearchStep({
 
         {!isLoading && data?.items.length === 0 && (
           <CatalogSearchEmptyState
-            search={debouncedSearch}
             heading={t('pages.library.addGame.catalog.emptyResultsHeading')}
             subtitle={t('pages.library.addGame.catalog.emptyResultsSubtitle')}
             emptyTemplate={t('pages.library.addGame.catalog.emptyResults', {
               search: debouncedSearch,
             })}
-            manualCtaLabel={
-              onGoToManual ? t('pages.library.addGame.catalog.emptyManualCta') : undefined
-            }
+            manualCtaLabel={t('pages.library.addGame.catalog.emptyManualCta')}
             onGoToManual={onGoToManual}
           />
         )}

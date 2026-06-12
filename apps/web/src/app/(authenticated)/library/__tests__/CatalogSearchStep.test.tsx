@@ -123,7 +123,7 @@ const I18N_MESSAGES: Record<string, string> = {
 
 function renderStep(
   props: {
-    onSelect?: (id: string, name: string) => void;
+    onSelect?: (id: string) => void;
     onBack?: () => void;
     onGoToManual?: () => void;
     onNavigateToGame?: (gameId: string) => void;
@@ -298,7 +298,7 @@ describe('CatalogSearchStep', () => {
 
       await waitFor(() => {
         expect(mutateAsync).toHaveBeenCalledWith({ gameId: 'g1' });
-        expect(onSelect).toHaveBeenCalledWith('g1', 'Catan');
+        expect(onSelect).toHaveBeenCalledWith('g1');
       });
     });
 

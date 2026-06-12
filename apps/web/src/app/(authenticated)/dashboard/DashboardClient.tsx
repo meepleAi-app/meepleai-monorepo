@@ -25,14 +25,13 @@
 
 'use client';
 
-import { useMemo, type ReactElement } from 'react';
+import { useEffect, useMemo, type ReactElement } from 'react';
 
 import { useAuth } from '@/components/auth/AuthProvider';
 import { CascadeDrawerHost } from '@/components/dashboard/CascadeDrawerHost';
 import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
 import { useCompletedGameNights, useUpcomingGameNights } from '@/hooks/queries/useGameNights';
-import { useGames } from '@/hooks/queries/useGames';
-import { useLibraryStats } from '@/hooks/queries/useLibrary';
+import { useLibrary, useLibraryStats } from '@/hooks/queries/useLibrary';
 import { useFriendsActivity } from '@/hooks/use-friends-activity';
 import { useTranslation } from '@/hooks/useTranslation';
 
@@ -76,7 +75,15 @@ export function DashboardClient(): ReactElement {
   // F20 #1974: dashboard "Recenti" slot — recently completed game nights.
   const completedGNQuery = useCompletedGameNights({ limit: 5 });
   const sessionsQuery = useActiveSessions(10);
-  const gamesQuery = useGames(undefined, undefined, 1, 20);
+  // Issue #2176: SuggestedSection renders "Potresti giocare" cards from the
+  // user's OWN library (UserLibrary), NOT from the shared catalog (SharedGames).
+  // The previous useGames(undefined,…,20) call read SharedGames system-wide,
+  // which created a silent inconsistency: KPI "GIOCHI N" (useLibraryStats →
+  // UserLibrary) and the suggested cards (useGames → SharedGames) drew from
+  // different sources, so the section could render community catalog items
+  // even when the user owned 0 games, or hide when the user owned N games
+  // but the catalog query was throttled.
+  const libraryQuery = useLibrary({ page: 1, pageSize: 20 });
   const statsQuery = useLibraryStats();
   const friendsActivityQuery = useFriendsActivity();
 
@@ -139,38 +146,67 @@ export function DashboardClient(): ReactElement {
   );
 
   // ── Slot #3: Suggested ("Potresti giocare") ──────────────────────────────
-  // MVP algorithm: surface up to 6 owned games. Future BE endpoint
-  // `GET /dashboard/suggestions` will refine to "owned NOT played last 30d
-  // sorted by play count DESC" + collaborative filtering (plan §"MIN-2").
+  // MVP algorithm: surface up to 6 OWNED games from the user's UserLibrary.
+  // Future BE endpoint `GET /dashboard/suggestions` will refine to
+  // "owned NOT played last 30d sorted by play count DESC" + collaborative
+  // filtering (plan §"MIN-2"). Source is UserLibrary (not SharedGames) —
+  // see #2176 for why this matters.
   const suggestedCards = useMemo<ReadonlyArray<SuggestedGameCard>>(() => {
-    const games = gamesQuery.data?.games ?? [];
-    return games.slice(0, 6).map<SuggestedGameCard>(g => {
-      const min = g.minPlayers ?? 0;
-      const max = g.maxPlayers ?? 0;
-      const playerCount =
-        min > 0 && max > 0 && min !== max
-          ? `${min}-${max}`
-          : min > 0
-            ? `${min}`
-            : max > 0
-              ? `${max}`
-              : '—';
-      const durationMin = g.maxPlayTimeMinutes ?? g.minPlayTimeMinutes ?? 60;
-      return {
-        id: g.id,
-        title: g.title,
-        coverImageUrl: g.imageUrl ?? undefined,
-        playerCount,
-        durationMin,
-      };
-    });
-  }, [gamesQuery.data]);
+    const entries = libraryQuery.data?.items ?? [];
+    return entries
+      .filter(entry => entry.currentState === 'Owned' || entry.currentState === 'Nuovo')
+      .slice(0, 6)
+      .map<SuggestedGameCard>(entry => {
+        const min = entry.minPlayers ?? 0;
+        const max = entry.maxPlayers ?? 0;
+        const playerCount =
+          min > 0 && max > 0 && min !== max
+            ? `${min}-${max}`
+            : min > 0
+              ? `${min}`
+              : max > 0
+                ? `${max}`
+                : '—';
+        const durationMin = entry.playingTimeMinutes ?? 60;
+        return {
+          id: entry.gameId,
+          title: entry.gameTitle,
+          coverImageUrl: entry.coverUrl ?? entry.gameImageUrl ?? undefined,
+          playerCount,
+          durationMin,
+        };
+      });
+  }, [libraryQuery.data]);
 
   const suggestedState: SuggestedSectionState = deriveSectionState(
-    gamesQuery.isLoading,
-    gamesQuery.isError,
+    libraryQuery.isLoading,
+    libraryQuery.isError,
     suggestedCards.length
   );
+
+  // Issue #2176 observability: detect cross-endpoint drift when stats reports
+  // owned games but the library list returned 0 mappable entries. Fires once
+  // per state transition (React StrictMode double-mount produces 2 warns in
+  // dev, expected). Logged via console.warn in non-production builds —
+  // production emits this as a Prometheus counter from the backend audit
+  // layer instead.
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
+    if (!statsQuery.data || libraryQuery.isLoading || libraryQuery.isError) return;
+    if (statsQuery.data.totalGames > 0 && suggestedCards.length === 0) {
+      console.warn(
+        '[Dashboard] cross-endpoint drift: useLibraryStats.totalGames > 0 but SuggestedSection rendered 0 cards. ' +
+          `stats=${statsQuery.data.totalGames}, libraryItems=${libraryQuery.data?.items.length ?? 0}, ` +
+          'check filter (Owned/Nuovo) or useLibrary pagination.'
+      );
+    }
+  }, [
+    statsQuery.data,
+    libraryQuery.isLoading,
+    libraryQuery.isError,
+    libraryQuery.data,
+    suggestedCards.length,
+  ]);
 
   // ── Slot #4: Friends Activity ────────────────────────────────────────────
   const friendsActivities = friendsActivityQuery.data ?? [];
@@ -237,7 +273,7 @@ export function DashboardClient(): ReactElement {
           state={suggestedState}
           games={suggestedCards}
           onRetry={() => {
-            void gamesQuery.refetch();
+            void libraryQuery.refetch();
           }}
         />
 

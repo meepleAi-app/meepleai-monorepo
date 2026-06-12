@@ -176,10 +176,11 @@ describe('ProfilePage', () => {
     renderWithQuery(<ProfilePage />);
 
     await waitFor(() => {
-      expect(screen.getByRole('tab', { name: /Overview/i })).toBeInTheDocument();
+      // Issue #2201: tab labels translated to IT (Achievement kept as anglicism)
+      expect(screen.getByRole('tab', { name: /Panoramica/i })).toBeInTheDocument();
     });
 
-    ['Overview', 'Achievements', 'Activity', 'Settings'].forEach(name =>
+    ['Panoramica', 'Achievement', 'Attività', 'Impostazioni'].forEach(name =>
       expect(screen.getByRole('tab', { name })).toBeInTheDocument()
     );
   });
@@ -211,7 +212,7 @@ describe('ProfilePage', () => {
     renderWithQuery(<ProfilePage />);
 
     await waitFor(() => {
-      expect(screen.getByRole('tab', { name: /Achievements/i })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /Achievement/i })).toBeInTheDocument();
     });
 
     expect(screen.getByTestId('achievements-grid')).toBeInTheDocument();
@@ -222,7 +223,7 @@ describe('ProfilePage', () => {
     renderWithQuery(<ProfilePage />);
 
     await waitFor(() => {
-      expect(screen.getByRole('tab', { name: /Activity/i })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /Attività/i })).toBeInTheDocument();
     });
 
     expect(screen.getByTestId('activity-feed')).toBeInTheDocument();
@@ -256,10 +257,10 @@ describe('ProfilePage', () => {
       renderWithQuery(<ProfilePage />);
 
       await waitFor(() => {
-        expect(screen.getByRole('tab', { name: 'Settings' })).toBeInTheDocument();
+        expect(screen.getByRole('tab', { name: 'Impostazioni' })).toBeInTheDocument();
       });
 
-      expect(screen.getByRole('tab', { name: 'Settings' })).toHaveAttribute(
+      expect(screen.getByRole('tab', { name: 'Impostazioni' })).toHaveAttribute(
         'aria-selected',
         'true'
       );

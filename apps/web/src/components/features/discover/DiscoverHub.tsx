@@ -214,6 +214,7 @@ export function DiscoverHub({ pathnameOverride }: DiscoverHubProps = {}) {
       <DiscoverHero
         title={t('pages.discover.hero.title')}
         subtitle={t('pages.discover.hero.subtitle')}
+        pathLabel={effectivePathname}
         searchSlot={
           <DiscoverSearchBox
             value={q}

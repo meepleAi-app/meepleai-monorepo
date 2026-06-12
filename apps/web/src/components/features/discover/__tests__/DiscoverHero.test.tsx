@@ -71,6 +71,21 @@ describe('DiscoverHero', () => {
     expect(container.querySelector('[data-slot="discover-hero-filters"]')).toBeNull();
   });
 
+  describe('Hub badge pathLabel (#2193)', () => {
+    it('defaults the eyebrow badge to "Hub · /discover" when no pathLabel is provided', () => {
+      const { container } = render(<DiscoverHero title="Scopri" />);
+      const badge = container.querySelector('[data-slot="discover-hero"] span[aria-hidden="true"]');
+      expect(badge?.textContent).toContain('Hub · /discover');
+    });
+
+    it('overrides the badge pathname when pathLabel="/games" is provided', () => {
+      const { container } = render(<DiscoverHero title="Scopri" pathLabel="/games" />);
+      const badge = container.querySelector('[data-slot="discover-hero"] span[aria-hidden="true"]');
+      expect(badge?.textContent).toContain('Hub · /games');
+      expect(badge?.textContent).not.toContain('/discover');
+    });
+  });
+
   it('renders both slots when both are provided', () => {
     const { container } = render(
       <DiscoverHero

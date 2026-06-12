@@ -30,16 +30,11 @@ vi.mock('@/hooks/useTranslation', () => ({
 }));
 
 const refetchUpcoming = vi.fn();
-const refetchGames = vi.fn();
+const refetchLibrary = vi.fn();
 
-vi.mock('@/hooks/queries/useGames', () => ({
-  useGames: vi.fn(() => ({
-    data: { games: [], total: 0, page: 1, pageSize: 20, totalPages: 0 },
-    isLoading: false,
-    isError: false,
-    refetch: refetchGames,
-  })),
-}));
+// Issue #2176: SuggestedSection now reads from useLibrary (UserLibrary entries)
+// instead of useGames (SharedGames catalog). Mock useLibrary in the useLibrary
+// block below instead of mocking useGames here.
 
 vi.mock('@/hooks/queries/useActiveSessions', () => ({
   useActiveSessions: vi.fn(() => ({
@@ -66,6 +61,20 @@ vi.mock('@/hooks/queries/useGameNights', () => ({
 }));
 
 vi.mock('@/hooks/queries/useLibrary', () => ({
+  useLibrary: vi.fn(() => ({
+    data: {
+      items: [],
+      page: 1,
+      pageSize: 20,
+      totalCount: 0,
+      totalPages: 0,
+      hasNextPage: false,
+      hasPreviousPage: false,
+    },
+    isLoading: false,
+    isError: false,
+    refetch: refetchLibrary,
+  })),
   useLibraryStats: vi.fn(() => ({
     data: { totalGames: 0, favoriteGames: 0, privatePdfs: 0 },
     isLoading: false,
@@ -147,7 +156,8 @@ describe('DashboardClient (Asse C priority cluster)', () => {
 
   it('renders 4 priority sections in fixed order (when all have data)', async () => {
     // Override mocks to provide data so all 4 sections render.
-    const useGamesMock = vi.mocked(await import('@/hooks/queries/useGames')).useGames;
+    // Issue #2176: SuggestedSection reads UserLibrary entries (not SharedGames).
+    const useLibraryMock = vi.mocked(await import('@/hooks/queries/useLibrary')).useLibrary;
     const useGameNightsMock = vi.mocked(
       await import('@/hooks/queries/useGameNights')
     ).useUpcomingGameNights;
@@ -155,35 +165,57 @@ describe('DashboardClient (Asse C priority cluster)', () => {
       await import('@/hooks/use-friends-activity')
     ).useFriendsActivity;
 
-    useGamesMock.mockReturnValueOnce({
+    useLibraryMock.mockReturnValueOnce({
       data: {
-        games: [
+        items: [
           {
-            id: '00000000-0000-0000-0000-000000000001',
-            title: 'Catan',
-            publisher: 'Kosmos',
-            yearPublished: 1995,
+            id: '00000000-0000-0000-0000-000000000099',
+            userId: 'u1',
+            gameId: '00000000-0000-0000-0000-000000000001',
+            gameTitle: 'Catan',
+            gamePublisher: 'Kosmos',
+            gameYearPublished: 1995,
+            gameIconUrl: null,
+            gameImageUrl: null,
+            coverUrl: null,
+            addedAt: '2024-01-01T00:00:00Z',
+            notes: null,
+            isFavorite: false,
+            currentState: 'Owned' as const,
+            stateChangedAt: null,
+            stateNotes: null,
+            hasKb: false,
+            kbCardCount: 0,
+            kbIndexedCount: 0,
+            kbProcessingCount: 0,
+            ownershipDeclaredAt: null,
+            hasRagAccess: false,
+            agentIsOwned: true,
             minPlayers: 3,
             maxPlayers: 4,
-            minPlayTimeMinutes: 60,
-            maxPlayTimeMinutes: 120,
-            bggId: 13,
-            createdAt: '2024-01-01T00:00:00Z',
-            imageUrl: null,
-            iconUrl: null,
+            playingTimeMinutes: 90,
+            complexityRating: null,
+            averageRating: null,
+            timesPlayed: 0,
+            lastPlayed: null,
+            privateGameId: null,
+            isPrivateGame: false,
+            canProposeToCatalog: false,
           },
         ],
-        total: 1,
         page: 1,
         pageSize: 20,
+        totalCount: 1,
         totalPages: 1,
+        hasNextPage: false,
+        hasPreviousPage: false,
       },
       isLoading: false,
       isError: false,
-      refetch: refetchGames,
+      refetch: refetchLibrary,
       // The cast is intentional — TanStack returns a much wider type;
       // we only assert the fields the component actually reads.
-    } as unknown as ReturnType<typeof useGamesMock>);
+    } as unknown as ReturnType<typeof useLibraryMock>);
 
     useGameNightsMock.mockReturnValueOnce({
       data: [
@@ -275,5 +307,46 @@ describe('DashboardClient (Asse C priority cluster)', () => {
 
     const { container } = render(<DashboardClient />);
     expect(container.querySelector('[data-testid="prossimi-error"]')).not.toBeNull();
+  });
+
+  // Issue #2176 contract: cross-endpoint drift detection.
+  it('emits dev console.warn when stats reports owned games but library returns 0 items', async () => {
+    const useLibraryModule = await import('@/hooks/queries/useLibrary');
+    const useLibraryMock = vi.mocked(useLibraryModule.useLibrary);
+    const useLibraryStatsMock = vi.mocked(useLibraryModule.useLibraryStats);
+
+    // Stats reports 3 owned games (UserLibrary aggregated count)
+    useLibraryStatsMock.mockReturnValueOnce({
+      data: { totalGames: 3, favoriteGames: 0, privatePdfs: 0 },
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useLibraryStatsMock>);
+
+    // But useLibrary list returns 0 items — simulates a drift scenario
+    // (e.g. backend pagination throttle, soft-delete filter mismatch).
+    useLibraryMock.mockReturnValueOnce({
+      data: {
+        items: [],
+        page: 1,
+        pageSize: 20,
+        totalCount: 0,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPreviousPage: false,
+      },
+      isLoading: false,
+      isError: false,
+      refetch: refetchLibrary,
+    } as unknown as ReturnType<typeof useLibraryMock>);
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      render(<DashboardClient />);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[Dashboard] cross-endpoint drift')
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 });

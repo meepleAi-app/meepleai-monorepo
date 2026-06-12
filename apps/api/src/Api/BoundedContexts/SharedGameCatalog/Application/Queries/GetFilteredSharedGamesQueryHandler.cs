@@ -91,6 +91,20 @@ internal sealed class GetFilteredSharedGamesQueryHandler : IRequestHandler<GetFi
 
         // Issue #1852 (Gap A): resolve cover URL (L4 → L2 priority) per entity sequentially.
         var games = new List<SharedGameDto>(entities.Count);
+
+        // Issue #2243 (epic #2242) Block B: pre-compute KbsCount per page (real chunk count from
+        // VectorDocuments) instead of hardcoding 0. Single batched query avoids N+1.
+        var pageGameIds = entities.Select(e => e.Id).ToList();
+        var kbsCountByGame = await _context.VectorDocuments
+            .AsNoTracking()
+            .Where(v => v.SharedGameId != null
+                && pageGameIds.Contains(v.SharedGameId.Value)
+                && v.IndexingStatus == "completed")
+            .GroupBy(v => v.SharedGameId!.Value)
+            .Select(grp => new { GameId = grp.Key, Count = grp.Count() })
+            .ToDictionaryAsync(x => x.GameId, x => x.Count, cancellationToken)
+            .ConfigureAwait(false);
+
         foreach (var g in entities)
         {
             var coverUrl = await CoverUrlResolver
@@ -122,7 +136,7 @@ internal sealed class GetFilteredSharedGamesQueryHandler : IRequestHandler<GetFi
                 // default-argument elision (CS0854).
                 0,      // ToolkitsCount
                 0,      // AgentsCount
-                0,      // KbsCount
+                kbsCountByGame.GetValueOrDefault(g.Id, 0),  // KbsCount — issue #2243 Block B
                 0,      // NewThisWeekCount
                 0,      // ContributorsCount
                 false,  // IsTopRated

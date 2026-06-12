@@ -5,6 +5,7 @@ using Moq;
 using Xunit;
 using FluentAssertions;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using Api.Infrastructure;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -35,9 +36,11 @@ public class GetGameByIdQueryHandlerTests
     {
         _gameCoreDataMock = new Mock<IGameCoreDataProvider>();
 
-        // Inject a stub MeepleAiDbContext — not needed by the handler but satisfies DI if constructor requires it.
-        // GetGameByIdQueryHandler only uses IGameCoreDataProvider.
-        _handler = new GetGameByIdQueryHandler(_gameCoreDataMock.Object);
+        // Issue #2243 Block C: handler now also reads SharedGames.HasKnowledgeBase
+        // via an extra projection-only query. Pass an InMemory context — the SharedGames
+        // set is empty so HasKnowledgeBase defaults to false for unrelated unit tests.
+        var db = TestDbContextFactory.CreateInMemoryDbContext();
+        _handler = new GetGameByIdQueryHandler(_gameCoreDataMock.Object, db);
     }
 
     [Fact]

@@ -31,9 +31,13 @@ interface AttemptTimelineDrawerProps {
   readonly onClose: () => void;
 }
 
+// Neutral outcome (Skipped) uses semantic tokens to honor the
+// DS-15 no-hardcoded-color-utility ESLint rule (`slate-*` etc. are banned).
+// Hue-based palettes (emerald/amber) remain whitelisted by that rule because
+// they convey terminal-state signal that has no canonical semantic token yet.
 const OUTCOME_TONE: Record<AttemptTimelineOutcome, string> = {
   Success: 'border-emerald-500 bg-emerald-500/10',
-  Skipped: 'border-slate-500 bg-slate-500/10',
+  Skipped: 'border-border bg-muted',
   Failed: 'border-amber-500 bg-amber-500/10',
   DeadLetter: 'border-destructive bg-destructive/10',
 };
@@ -67,7 +71,10 @@ export function AttemptTimelineDrawer({
         setError(err instanceof Error ? err.message : 'Unknown error');
       })
       .finally(() => {
-        if (cancelled) return;
+        // Always flip loading off even if the unmount/re-open cancellation
+        // flag is set — otherwise a future persistent-portal wrapper could
+        // leave the component stuck on the loading spinner indefinitely
+        // (latent bug noted in the F3 code review).
         setLoading(false);
       });
     return () => {

@@ -32,10 +32,12 @@ public class WikidataCoverEnrichmentRunnerTests
     private readonly Mock<IUnitOfWork> _uow = new();
     private readonly WikidataCoverEnrichmentRetryPolicy _policy = new();
     private readonly FakeTimeProvider _time = new(new DateTimeOffset(FixedNow, TimeSpan.Zero));
+    private readonly Mock<IWikidataEnrichmentEventBroadcaster> _broadcaster = new();
 
     private WikidataCoverEnrichmentRunner Sut() => new(
         _mediator.Object, _attempts.Object, _uow.Object, _policy,
-        _time, NullLogger<WikidataCoverEnrichmentRunner>.Instance);
+        _time, _broadcaster.Object,
+        NullLogger<WikidataCoverEnrichmentRunner>.Instance);
 
     [Fact]
     public async Task EnrichAndRecordAsync_SuccessOutcome_RecordsSuccessAttempt()
@@ -255,6 +257,33 @@ public class WikidataCoverEnrichmentRunnerTests
 
         ReadGauge(MeepleAiMetrics.WikidataDeadLetterCount).Should().Be(6,
             "F1 hybrid update: runner increments by 1 per persisted DeadLetter attempt");
+    }
+
+    [Fact]
+    public async Task EnrichAndRecordAsync_PostSaveChanges_PublishesBroadcastEvent()
+    {
+        // F4 #1823 Phase E: every persisted attempt MUST be broadcast on the
+        // SSE pub/sub so the admin dead-letter page updates inline. The
+        // publish call MUST happen AFTER SaveChangesAsync — same placement as
+        // the F1 dead-letter gauge increment — so a DB write failure cannot
+        // leak phantom rows to subscribers.
+        var gameId = Guid.NewGuid();
+
+        _attempts.Setup(r => r.GetLatestBySharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((WikidataCoverEnrichmentAttempt?)null);
+        _mediator.Setup(m => m.Send(It.IsAny<EnrichCatalogCoverCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EnrichCatalogCoverResult.Failed(
+                EnrichCatalogCoverCommandHandler.FailReasonImageProcessing, "corrupted"));
+        _attempts.Setup(r => r.AddAsync(It.IsAny<WikidataCoverEnrichmentAttempt>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, default);
+
+        _broadcaster.Verify(b => b.Publish(It.Is<WikidataEnrichmentEvent>(
+                e => e.SharedGameId == gameId
+                    && e.Outcome == nameof(WikidataCoverEnrichmentOutcome.DeadLetter)
+                    && e.Reason == EnrichCatalogCoverCommandHandler.FailReasonImageProcessing)),
+            Times.Once);
     }
 
     [Fact]

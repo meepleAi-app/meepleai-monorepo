@@ -27,6 +27,7 @@ import {
 } from '@/lib/api/admin-wikidata-dead-letters';
 
 import { AttemptTimelineDrawer } from './AttemptTimelineDrawer';
+import { useWikidataEnrichmentEvents } from './useWikidataEnrichmentEvents';
 
 const PAGE_SIZE = 50;
 
@@ -73,6 +74,10 @@ export default function WikidataDeadLettersPage() {
   >({ state: 'idle' });
   const [drawer, setDrawer] = useState<DrawerState | null>(null);
 
+  // Phase E F4 — live attempt-recorded SSE feed. Each new event triggers a
+  // page reload (cheap: same paginated endpoint already used by Refresh).
+  const sse = useWikidataEnrichmentEvents();
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -98,6 +103,16 @@ export default function WikidataDeadLettersPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // F4: refresh the list when the BE broadcasts a new attempt event.
+  // load() is stable across renders thanks to useCallback, so the deps array
+  // intentionally pins to lastEvent.attemptId — replaying the same event
+  // never re-loads, but a new event always does.
+  const lastEventAttemptId = sse.lastEvent?.attemptId ?? null;
+  useEffect(() => {
+    if (!lastEventAttemptId) return;
+    void load();
+  }, [lastEventAttemptId, load]);
 
   const handleRetry = async (row: WikidataDeadLetterAttemptDto) => {
     setRetryStatus(prev => ({ ...prev, [row.id]: { state: 'running' } }));
@@ -203,8 +218,27 @@ export default function WikidataDeadLettersPage() {
           Refresh
         </button>
 
-        <div className="ml-auto text-sm text-muted-foreground">
-          {totalCount} dead-letter{totalCount === 1 ? '' : 's'} matching filter
+        <div className="ml-auto flex items-center gap-3 text-sm text-muted-foreground">
+          <span
+            className="flex items-center gap-1"
+            aria-live="polite"
+            title={`Live event stream: ${sse.state}`}
+          >
+            <span
+              className={`inline-block size-2 rounded-full ${
+                sse.state === 'open'
+                  ? 'bg-emerald-500'
+                  : sse.state === 'connecting'
+                    ? 'bg-amber-500 motion-safe:animate-pulse'
+                    : 'bg-destructive'
+              }`}
+              aria-hidden="true"
+            />
+            <span className="text-xs">{sse.state}</span>
+          </span>
+          <span>
+            {totalCount} dead-letter{totalCount === 1 ? '' : 's'} matching filter
+          </span>
         </div>
       </section>
 

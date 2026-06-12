@@ -80,7 +80,12 @@ public sealed class SetRegistrationModeIntegrationTests : IAsyncLifetime
 
         _timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
 
-        var services = IntegrationServiceCollectionBuilder.CreateBase(enforcedBuilder.ConnectionString);
+        // useHybridCachePassthrough: true — needed because this test exercises the
+        // ConfigurationService read→write→read cycle of the same key; the default
+        // Mock.Of<IHybridCacheService>() returns null without invoking the factory.
+        var services = IntegrationServiceCollectionBuilder.CreateBase(
+            enforcedBuilder.ConnectionString,
+            useHybridCachePassthrough: true);
 
         services.RemoveAll<TimeProvider>();
         services.AddSingleton<TimeProvider>(_timeProvider);
@@ -98,17 +103,10 @@ public sealed class SetRegistrationModeIntegrationTests : IAsyncLifetime
         environmentMock.Setup(e => e.EnvironmentName).Returns(DevelopmentEnv);
         services.AddSingleton(environmentMock.Object);
 
-        // Override the default Mock.Of<IHybridCacheService>() from CreateBase: it returns
-        // null without invoking the factory, so ConfigurationService.GetConfigurationByKeyAsync
-        // can never observe the row written by a previous call → the second toggle re-enters
-        // the Create branch and triggers a real 23505 inside the test. Use a passthrough impl.
-        services.RemoveAll<IHybridCacheService>();
-        services.AddScoped<IHybridCacheService, PassthroughHybridCache>();
-
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        await MigrateWithRetry(_dbContext);
+        await TestMigrationHelper.MigrateWithRetryAsync(_dbContext, TestCancellationToken, onRetry: _output);
 
         // Seed admin user (FK target).
         var userRepo = _serviceProvider.GetRequiredService<IUserRepository>();
@@ -251,45 +249,4 @@ public sealed class SetRegistrationModeIntegrationTests : IAsyncLifetime
         await _dbContext.SaveChangesAsync(TestCancellationToken);
     }
 
-    private async Task MigrateWithRetry(MeepleAiDbContext context, int maxRetries = 3)
-    {
-        for (int i = 0; i < maxRetries; i++)
-        {
-            try
-            {
-                await context.Database.MigrateAsync(TestCancellationToken);
-                return;
-            }
-            catch (Exception ex) when (i < maxRetries - 1)
-            {
-                _output($"Migration attempt {i + 1} failed: {ex.Message}. Retrying...");
-                await Task.Delay(TimeSpan.FromSeconds(2), TestCancellationToken);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Always invoke the factory — needed for end-to-end tests where the same DbContext
-    /// must see writes performed by earlier MediatR sends. The default
-    /// Mock.Of&lt;IHybridCacheService&gt;() returns null without calling the factory and
-    /// the lookup is permanently stuck on a cache miss.
-    /// </summary>
-    private sealed class PassthroughHybridCache : IHybridCacheService
-    {
-        public Task<T> GetOrCreateAsync<T>(
-            string cacheKey,
-            Func<CancellationToken, Task<T>> factory,
-            string[]? tags = null,
-            TimeSpan? expiration = null,
-            CancellationToken ct = default) where T : class
-            => factory(ct);
-
-        public Task RemoveAsync(string cacheKey, CancellationToken ct = default) => Task.CompletedTask;
-
-        public Task<int> RemoveByTagAsync(string tag, CancellationToken ct = default) => Task.FromResult(0);
-
-        public Task<int> RemoveByTagsAsync(string[] tags, CancellationToken ct = default) => Task.FromResult(0);
-
-        public Task<HybridCacheStats> GetStatsAsync(CancellationToken ct = default) => Task.FromResult(new HybridCacheStats());
-    }
 }

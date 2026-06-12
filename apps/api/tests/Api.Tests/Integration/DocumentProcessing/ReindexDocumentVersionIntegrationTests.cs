@@ -88,7 +88,7 @@ public sealed class ReindexDocumentVersionIntegrationTests : IAsyncLifetime
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
         _mediator = _serviceProvider.GetRequiredService<IMediator>();
 
-        await MigrateWithRetryAsync(_dbContext);
+        await TestMigrationHelper.MigrateWithRetryAsync(_dbContext, TestCancellationToken);
         await SeedBaseAsync();
     }
 
@@ -389,20 +389,4 @@ public sealed class ReindexDocumentVersionIntegrationTests : IAsyncLifetime
         }
     }
 
-    private static async Task MigrateWithRetryAsync(MeepleAiDbContext context)
-    {
-        const int maxAttempts = 3;
-        for (var attempt = 1; attempt <= maxAttempts; attempt++)
-        {
-            try
-            {
-                await context.Database.MigrateAsync(TestCancellationToken);
-                return;
-            }
-            catch (NpgsqlException) when (attempt < maxAttempts)
-            {
-                await Task.Delay(TestConstants.Timing.RetryDelay, TestCancellationToken);
-            }
-        }
-    }
 }

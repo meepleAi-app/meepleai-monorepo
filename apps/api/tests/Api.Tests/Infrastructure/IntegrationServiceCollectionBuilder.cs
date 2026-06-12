@@ -31,8 +31,14 @@ internal static class IntegrationServiceCollectionBuilder
     /// that aren't registered in the minimal test DI container.
     /// </summary>
     /// <param name="connectionString">PostgreSQL connection string for the isolated test database.</param>
+    /// <param name="useHybridCachePassthrough">
+    /// When true, registers <see cref="PassthroughHybridCache"/> instead of <c>Mock.Of&lt;IHybridCacheService&gt;()</c>.
+    /// Required for tests that exercise read→write→read of the same cached key in a single run,
+    /// because the default Moq mock returns null without invoking the factory and the read
+    /// would miss the write. See issue #2162 follow-up.
+    /// </param>
     /// <returns>A ServiceCollection ready for test-specific repository registrations.</returns>
-    public static ServiceCollection CreateBase(string connectionString)
+    public static ServiceCollection CreateBase(string connectionString, bool useHybridCachePassthrough = false)
     {
         var services = new ServiceCollection();
 
@@ -82,8 +88,15 @@ internal static class IntegrationServiceCollectionBuilder
             Mock.Of<Api.BoundedContexts.UserNotifications.Application.Services.INotificationDispatcher>());
         services.AddScoped(_ =>
             Mock.Of<Api.BoundedContexts.GameManagement.Domain.Repositories.IGameSessionRepository>());
-        services.AddScoped(_ =>
-            Mock.Of<Api.Services.IHybridCacheService>());
+        if (useHybridCachePassthrough)
+        {
+            services.AddScoped<Api.Services.IHybridCacheService, PassthroughHybridCache>();
+        }
+        else
+        {
+            services.AddScoped(_ =>
+                Mock.Of<Api.Services.IHybridCacheService>());
+        }
         services.AddScoped(_ =>
             Mock.Of<Api.Services.IEmbeddingService>());
         services.AddScoped(_ =>

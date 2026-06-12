@@ -549,7 +549,8 @@ internal partial class UploadPdfCommandHandler
         var indexingStopwatch = Stopwatch.StartNew();
 
         // Create/update VectorDocument row FIRST so SaveEmbeddingsToPgVectorAsync can find it by PdfDocumentId
-        await UpdateVectorDocumentAsync(pdfId, pdfDoc, allDocumentChunks.Count, db, cancellationToken).ConfigureAwait(false);
+        var pipeline = scope.ServiceProvider.GetRequiredService<IPdfIndexingPipeline>();
+        await UpdateVectorDocumentAsync(pdfId, pdfDoc, allDocumentChunks.Count, db, pipeline, cancellationToken).ConfigureAwait(false);
 
         // Save text chunks to PostgreSQL for hybrid search (FTS) — non-blocking, can proceed independently
         await SaveTextChunksForHybridSearchAsync(pdfId, pdfDoc, allDocumentChunks, db, scope, cancellationToken).ConfigureAwait(false);
@@ -564,53 +565,26 @@ internal partial class UploadPdfCommandHandler
     }
 
     /// <summary>
-    /// Updates or creates VectorDocument record after successful indexing.
+    /// Creates or updates VectorDocument record after successful indexing via IPdfIndexingPipeline.
+    /// The pipeline delegates to <c>VectorDocument.Create</c> which raises
+    /// <c>VectorDocumentIndexedEvent</c> structurally through
+    /// the repository → SaveChanges dispatcher → MediatR path (#2244 / epic #2242 Sub #2).
     /// </summary>
     private async Task UpdateVectorDocumentAsync(
         string pdfId,
         PdfDocumentEntity pdfDoc,
         int indexedCount,
         MeepleAiDbContext db,
+        IPdfIndexingPipeline pipeline,
         CancellationToken cancellationToken)
     {
-        var pdfGuid = Guid.Parse(pdfId);
-        // AsTracking required (DbContext default is NoTracking — PERF-06).
-        var vectorDoc = await db.VectorDocuments
-            .AsTracking()
-            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, cancellationToken)
+        var resolvedGameId = await PdfGameIdResolver.ResolveAsync(db, pdfDoc, cancellationToken)
             .ConfigureAwait(false);
-
-        if (vectorDoc == null)
-        {
-            // vector_documents.GameId is FK to games.Id (NOT shared_games.id) — see PdfGameIdResolver.
-            // Same constraint that applies to text_chunks.GameId.
-            var resolvedGameId = await PdfGameIdResolver.ResolveAsync(db, pdfDoc, cancellationToken)
-                .ConfigureAwait(false);
-
-            vectorDoc = new VectorDocumentEntity
-            {
-                Id = Guid.NewGuid(),
-                GameId = resolvedGameId,
-                SharedGameId = pdfDoc.SharedGameId, // Issue #5185: propagate SharedGameId from PDF
-                PdfDocumentId = pdfGuid,
-                IndexingStatus = "completed",
-                ChunkCount = indexedCount,
-                TotalCharacters = pdfDoc.ExtractedText?.Length ?? 0,
-                IndexedAt = _timeProvider.GetUtcNow().UtcDateTime
-            };
-            db.VectorDocuments.Add(vectorDoc);
-        }
-        else
-        {
-            vectorDoc.IndexingStatus = "completed";
-            vectorDoc.ChunkCount = indexedCount;
-            vectorDoc.TotalCharacters = pdfDoc.ExtractedText?.Length ?? 0;
-            vectorDoc.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
-        }
 
         try
         {
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await pipeline.ExecuteAsync(pdfDoc, indexedCount, resolvedGameId ?? Guid.Empty, cancellationToken)
+                .ConfigureAwait(false);
         }
         catch (DbUpdateConcurrencyException ex)
         {

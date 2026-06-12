@@ -203,9 +203,23 @@ public sealed class PdfIndexingFlowKbFlagIntegrationTests : IAsyncLifetime
         // Mock IProcessingMetricsService (required by PdfStateChangedMetricsEventHandler)
         services.AddSingleton(Mock.Of<Api.BoundedContexts.DocumentProcessing.Application.Services.IProcessingMetricsService>());
 
-        // Mock IVectorDocumentRepository (required by VectorDocumentIndexedEventHandler relay
-        // that fires after Sub #1 Block A publishes VectorDocumentIndexedEvent)
-        services.AddScoped(_ => Mock.Of<Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IVectorDocumentRepository>());
+        // Real IVectorDocumentRepository — required by IPdfIndexingPipeline (Task 3, #2244) so that
+        // AddAsync actually inserts VectorDocument rows into the test DB (mock would be a no-op).
+        // Also required by VectorDocumentIndexedEventHandler relay that fires after the structural
+        // VectorDocumentIndexedEvent raised inside VectorDocument.Create flows through SaveChanges.
+        services.AddScoped<Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IVectorDocumentRepository,
+            Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.VectorDocumentRepository>();
+
+        // IPdfIndexingPipeline — required by UploadPdfCommandHandler.Processing.cs after #2244 Task 3.
+        // Concrete PdfIndexingPipeline depends on IVectorDocumentRepository (registered above).
+        services.AddScoped<Api.BoundedContexts.DocumentProcessing.Application.Services.PdfIndexingPipeline>();
+        services.AddScoped<Api.BoundedContexts.DocumentProcessing.Application.Services.IPdfIndexingPipeline>(
+            sp => sp.GetRequiredService<Api.BoundedContexts.DocumentProcessing.Application.Services.PdfIndexingPipeline>());
+
+        // ISharedGameRepository — required by SharedGameIndexingAdminNotificationHandler which fires
+        // when the structural VectorDocumentIndexedEvent (raised via VectorDocument.Create in the pipeline)
+        // propagates through VectorDocumentIndexedEventHandler → VectorDocumentReadyIntegrationEvent.
+        services.AddScoped(_ => Mock.Of<Api.BoundedContexts.SharedGameCatalog.Domain.Repositories.ISharedGameRepository>());
 
         // HybridCache + dependencies — required by VectorDocumentIndexedForKbFlagHandler
         // (the handler that actually flips shared_games.has_knowledge_base = true on the event).

@@ -210,7 +210,7 @@ export function DiscoverHub({ pathnameOverride }: DiscoverHubProps = {}) {
   const trendingVisible = entity === 'all' || entity === 'games';
 
   return (
-    <HubLayout searchPlaceholder={t('pages.discover.search.placeholder')}>
+    <HubLayout searchPlaceholder={t('pages.discover.search.placeholder')} showSearch={false}>
       <DiscoverHero
         title={t('pages.discover.hero.title')}
         subtitle={t('pages.discover.hero.subtitle')}

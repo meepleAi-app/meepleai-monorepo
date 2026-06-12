@@ -55,6 +55,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     // SaveChangesAsync so the SharedGame.PdfCoverR2Key column is populated.
     // Nullable so pre-#1852 test constructors compile without adding a new mock param.
     private readonly IDomainEventCollector? _eventCollector;
+    // #2244 Sub #2 Task 4: single owner of VectorDocument construction/persistence/event-raising
+    // for the Quartz retry path. Optional so pre-#2244 test constructors compile without updates.
+    private readonly IPdfIndexingPipeline? _pipeline;
 
     public PdfProcessingPipelineService(
         MeepleAiDbContext db,
@@ -74,7 +77,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         IFeatureFlagService? featureFlagService = null,
         IRoleClassifierService? roleClassifier = null,
         IPdfCoverExtractor? pdfCoverExtractor = null,
-        IDomainEventCollector? eventCollector = null)
+        IDomainEventCollector? eventCollector = null,
+        IPdfIndexingPipeline? pipeline = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _pdfClaimService = pdfClaimService ?? throw new ArgumentNullException(nameof(pdfClaimService));
@@ -97,6 +101,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         // to compile without updating every mock site. The Collect() call
         // in ExtractCoverImageAsync is guarded with a null-check.
         _eventCollector = eventCollector;
+        // pipeline is optional so pre-#2244 unit-test constructors compile without updates.
+        // Production DI (DocumentProcessingServiceExtensions) always injects it.
+        _pipeline = pipeline;
     }
 
     public async Task ProcessAsync(
@@ -743,54 +750,99 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     {
         var chunkCount = translatedChunks.Count;
 
-        // Update or create VectorDocument record (tracking)
-        var vectorDoc = await _db.VectorDocuments
-            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfDoc.Id, cancellationToken)
-            .ConfigureAwait(false);
+        // GameId resolution: same strategy as IndexPdfCommandHandler.effectiveGameId.
+        // Resolved early so it can be passed to both the domain pipeline and pgvector indexing.
+        var gameId = pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId ?? Guid.Empty;
 
-        if (vectorDoc == null)
+        // #2244 Sub #2 Task 4: delegate VectorDocument creation/update to the domain pipeline
+        // so VectorDocument.Create raises VectorDocumentIndexedEvent → MediatR →
+        // VectorDocumentIndexedForKbFlagHandler flips shared_games.has_knowledge_base = true.
+        //
+        // _pipeline is null only when pre-#2244 unit-test constructors omit the parameter.
+        // Production DI always injects it (DocumentProcessingServiceExtensions registers it Scoped).
+        Guid vectorDocId;
+        if (_pipeline is not null)
         {
-            vectorDoc = new VectorDocumentEntity
+            if (gameId == Guid.Empty)
             {
-                Id = Guid.NewGuid(),
-                GameId = pdfDoc.SharedGameId,
-                SharedGameId = pdfDoc.SharedGameId,
-                PdfDocumentId = pdfDoc.Id,
-                IndexingStatus = "completed",
-                ChunkCount = chunkCount,
-                TotalCharacters = pdfDoc.ExtractedText?.Length ?? 0,
-                IndexedAt = _timeProvider.GetUtcNow().UtcDateTime
-            };
-            _db.VectorDocuments.Add(vectorDoc);
+                _logger.LogWarning(
+                    "[PdfPipeline] No GameId for PDF {PdfId}, skipping VectorDocument creation",
+                    pdfDoc.Id);
+                return;
+            }
+
+            KbEntities.VectorDocument vectorDomain;
+            try
+            {
+                vectorDomain = await _pipeline.ExecuteAsync(pdfDoc, chunkCount, gameId, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                    nameof(PdfProcessingPipelineService),
+                    MeepleAiMetrics.PdfConcurrencyCategories.B);
+                _logger.LogWarning(ex,
+                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                    pdfDoc.Id, nameof(PdfProcessingPipelineService));
+                return; // CRITICAL: do not throw — Quartz must see job as successful (no double-fire retry)
+            }
+
+            vectorDocId = vectorDomain.Id;
         }
         else
         {
-            vectorDoc.IndexingStatus = "completed";
-            vectorDoc.ChunkCount = chunkCount;
-            vectorDoc.TotalCharacters = pdfDoc.ExtractedText?.Length ?? 0;
-            vectorDoc.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
+            // Pre-#2244 fallback: direct EF write (unit tests that omit IPdfIndexingPipeline).
+            // Does NOT raise VectorDocumentIndexedEvent — acceptable for isolated unit tests.
+            var vectorDocEntity = await _db.VectorDocuments
+                .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfDoc.Id, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (vectorDocEntity == null)
+            {
+                vectorDocEntity = new VectorDocumentEntity
+                {
+                    Id = Guid.NewGuid(),
+                    GameId = pdfDoc.SharedGameId,
+                    SharedGameId = pdfDoc.SharedGameId,
+                    PdfDocumentId = pdfDoc.Id,
+                    IndexingStatus = "completed",
+                    ChunkCount = chunkCount,
+                    TotalCharacters = pdfDoc.ExtractedText?.Length ?? 0,
+                    IndexedAt = _timeProvider.GetUtcNow().UtcDateTime
+                };
+                _db.VectorDocuments.Add(vectorDocEntity);
+            }
+            else
+            {
+                vectorDocEntity.IndexingStatus = "completed";
+                vectorDocEntity.ChunkCount = chunkCount;
+                vectorDocEntity.TotalCharacters = pdfDoc.ExtractedText?.Length ?? 0;
+                vectorDocEntity.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
+            }
+
+            try
+            {
+                await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                    nameof(PdfProcessingPipelineService),
+                    MeepleAiMetrics.PdfConcurrencyCategories.B);
+                _logger.LogWarning(ex,
+                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                    pdfDoc.Id, nameof(PdfProcessingPipelineService));
+                return; // CRITICAL: do not throw — Quartz must see job as successful
+            }
+
+            vectorDocId = vectorDocEntity.Id;
         }
 
-        try
-        {
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (DbUpdateConcurrencyException ex)
-        {
-            MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                nameof(PdfProcessingPipelineService),
-                MeepleAiMetrics.PdfConcurrencyCategories.B);
-            _logger.LogWarning(ex,
-                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                pdfDoc.Id, nameof(PdfProcessingPipelineService));
-            return; // CRITICAL: do not throw — Quartz must see job as successful
-        }
-
-        // Index embeddings in pgvector for semantic search
+        // Index embeddings in pgvector for semantic search.
+        // Uses vectorDocId resolved from either path above.
         if (_vectorStore != null && embeddings.Count == translatedChunks.Count)
         {
-            // GameId resolution: same strategy as IndexPdfCommandHandler.effectiveGameId
-            var gameId = pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId ?? Guid.Empty;
             if (gameId == Guid.Empty)
             {
                 _logger.LogWarning(
@@ -805,7 +857,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 .ConfigureAwait(false);
 
             // Delete old embeddings for this document (re-processing support)
-            await _vectorStore.DeleteByVectorDocumentIdAsync(vectorDoc.Id, cancellationToken)
+            await _vectorStore.DeleteByVectorDocumentIdAsync(vectorDocId, cancellationToken)
                 .ConfigureAwait(false);
 
             // Build Embedding domain objects and bulk-insert via pgvector COPY.
@@ -825,7 +877,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 textChunkLookup.TryGetValue(i, out var tc);
                 return new KbEntities.Embedding(
                     id: Guid.NewGuid(),
-                    vectorDocumentId: vectorDoc.Id,
+                    vectorDocumentId: vectorDocId,
                     textContent: item.chunk.Text,
                     vector: new KbValueObjects.Vector(embeddings[i]),
                     model: modelName,

@@ -21,6 +21,7 @@ internal sealed class WikidataCoverEnrichmentRunner : IWikidataCoverEnrichmentRu
     private readonly IUnitOfWork _unitOfWork;
     private readonly IWikidataCoverEnrichmentRetryPolicy _policy;
     private readonly TimeProvider _timeProvider;
+    private readonly IWikidataEnrichmentEventBroadcaster _broadcaster;
     private readonly ILogger<WikidataCoverEnrichmentRunner> _logger;
 
     public WikidataCoverEnrichmentRunner(
@@ -29,6 +30,7 @@ internal sealed class WikidataCoverEnrichmentRunner : IWikidataCoverEnrichmentRu
         IUnitOfWork unitOfWork,
         IWikidataCoverEnrichmentRetryPolicy policy,
         TimeProvider timeProvider,
+        IWikidataEnrichmentEventBroadcaster broadcaster,
         ILogger<WikidataCoverEnrichmentRunner> logger)
     {
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
@@ -36,6 +38,7 @@ internal sealed class WikidataCoverEnrichmentRunner : IWikidataCoverEnrichmentRu
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _policy = policy ?? throw new ArgumentNullException(nameof(policy));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _broadcaster = broadcaster ?? throw new ArgumentNullException(nameof(broadcaster));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -111,6 +114,22 @@ internal sealed class WikidataCoverEnrichmentRunner : IWikidataCoverEnrichmentRu
         {
             MeepleAiMetrics.IncrementWikidataDeadLetterCount();
         }
+
+        // Issue #1823 Phase E F4: SSE broadcast for live admin dead-letter
+        // page updates. Same post-SaveChanges placement as the F1 gauge — a
+        // pre-commit publish would leak phantom rows if the DB write fails.
+        // The broadcaster is fire-and-forget; a slow SSE subscriber is
+        // dropped rather than back-pressured (per its DropOldest channel
+        // policy) so the M9 scheduler tick budget is preserved.
+        _broadcaster.Publish(new WikidataEnrichmentEvent(
+            AttemptId: newAttempt.Id,
+            SharedGameId: newAttempt.SharedGameId,
+            Outcome: newAttempt.Outcome.ToString(),
+            Reason: newAttempt.Reason,
+            AttemptedAt: newAttempt.AttemptedAt,
+            RetryCount: newAttempt.RetryCount,
+            NextRetryAt: newAttempt.NextRetryAt,
+            DeadLetteredAt: newAttempt.DeadLetteredAt));
 
         _logger.LogDebug(
             "WikidataCoverEnrichmentRunner: game {GameId} outcome={Outcome} reason={Reason} retry={RetryCount} nextRetryAt={NextRetryAt} forceRefresh={ForceRefresh}",

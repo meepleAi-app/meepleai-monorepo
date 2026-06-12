@@ -1,5 +1,7 @@
+using System.Text.Json;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatalogCover;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.Extensions;
 using Api.Filters;
 using MediatR;
@@ -48,6 +50,12 @@ internal static class AdminWikidataCoverEnrichmentEndpoints
         // Phase E F3 — per-game attempt timeline (drawer payload).
         group.MapGet("/games/{gameId:guid}/attempts", HandleGetAttemptTimeline)
             .WithName("AdminWikidataCoverEnrichment_GetAttemptTimeline")
+            .WithTags("Admin", "WikidataCoverEnrichment");
+
+        // Phase E F4 — SSE stream of attempt-recorded events for live admin
+        // dead-letter row updates.
+        group.MapGet("/events", HandleEventsStream)
+            .WithName("AdminWikidataCoverEnrichment_EventsStream")
             .WithTags("Admin", "WikidataCoverEnrichment");
 
         return group;
@@ -138,5 +146,92 @@ internal static class AdminWikidataCoverEnrichmentEndpoints
 
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);
+    }
+
+    private static readonly TimeSpan SseHeartbeatInterval = TimeSpan.FromSeconds(15);
+
+    private static readonly JsonSerializerOptions SseJsonOptions = new(JsonSerializerDefaults.Web);
+
+    /// <summary>
+    /// Issue #1823 Phase E F4 — SSE stream of attempt-recorded events. Each
+    /// event is a single JSON-serialised <see cref="WikidataEnrichmentEvent"/>.
+    /// </summary>
+    /// <remarks>
+    /// Mirror of the <see cref="Api.Routing.AdminEventsEndpoints"/> pattern:
+    /// 15s <c>:hb\n\n</c> heartbeat keeps proxies / load balancers from
+    /// closing the connection, <c>X-Accel-Buffering: no</c> defeats nginx
+    /// buffering if it ever lands in the stack, the body is committed
+    /// immediately with <c>:ok\n\n</c> so the client sees headers without
+    /// waiting for the first event.
+    /// </remarks>
+    private static async Task HandleEventsStream(
+        HttpContext context,
+        IWikidataEnrichmentEventBroadcaster broadcaster,
+        CancellationToken ct)
+    {
+        // Group-level RequireAdminSessionFilter has already authorised the
+        // request — SSE handlers can't return IResult once the body has
+        // started, so any auth failure would have happened before we got
+        // here.
+
+        context.Response.Headers.ContentType = "text/event-stream";
+        context.Response.Headers.CacheControl = "no-cache";
+        context.Response.Headers.Connection = "keep-alive";
+        context.Response.Headers["X-Accel-Buffering"] = "no";
+
+        // Commit headers + flush so the client sees the open stream
+        // immediately (and so TestServer's ResponseHeadersRead mode unblocks).
+        await context.Response.WriteAsync(":ok\n\n", ct).ConfigureAwait(false);
+        await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
+
+        var heartbeatTask = Task.Run(async () =>
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                try
+                {
+                    await Task.Delay(SseHeartbeatInterval, ct).ConfigureAwait(false);
+                    if (ct.IsCancellationRequested) break;
+                    await context.Response.WriteAsync(":hb\n\n", ct).ConfigureAwait(false);
+                    await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception)
+                {
+                    // Client disconnected — stop heartbeat silently.
+                    break;
+                }
+            }
+        }, ct);
+
+        try
+        {
+            await foreach (var payload in broadcaster.SubscribeAsync(ct).ConfigureAwait(false))
+            {
+                var json = JsonSerializer.Serialize(payload, SseJsonOptions);
+                await context.Response.WriteAsync($"event: attempt-recorded\ndata: {json}\n\n", ct)
+                    .ConfigureAwait(false);
+                await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected: client disconnected or server shutting down.
+        }
+        finally
+        {
+            try
+            {
+                await heartbeatTask.ConfigureAwait(false);
+            }
+            catch
+            {
+                // Heartbeat task swallows its own errors; rethrowing here would
+                // mask the cancellation that triggered the finally.
+            }
+        }
     }
 }

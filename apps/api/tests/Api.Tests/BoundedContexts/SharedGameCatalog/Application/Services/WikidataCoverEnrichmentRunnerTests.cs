@@ -32,10 +32,12 @@ public class WikidataCoverEnrichmentRunnerTests
     private readonly Mock<IUnitOfWork> _uow = new();
     private readonly WikidataCoverEnrichmentRetryPolicy _policy = new();
     private readonly FakeTimeProvider _time = new(new DateTimeOffset(FixedNow, TimeSpan.Zero));
+    private readonly Mock<IWikidataEnrichmentEventBroadcaster> _broadcaster = new();
 
     private WikidataCoverEnrichmentRunner Sut() => new(
         _mediator.Object, _attempts.Object, _uow.Object, _policy,
-        _time, NullLogger<WikidataCoverEnrichmentRunner>.Instance);
+        _time, _broadcaster.Object,
+        NullLogger<WikidataCoverEnrichmentRunner>.Instance);
 
     [Fact]
     public async Task EnrichAndRecordAsync_SuccessOutcome_RecordsSuccessAttempt()

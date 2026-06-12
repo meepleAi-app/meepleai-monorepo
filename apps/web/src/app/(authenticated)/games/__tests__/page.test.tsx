@@ -56,6 +56,13 @@ vi.mock('@/components/features/discover/DiscoverHub', () => ({
   },
 }));
 
+// Issue #2191: TrendingTabContent now wires the live /catalog/trending hook.
+// Mock to a stub so this orchestrator test stays focused on tab routing — the
+// component itself is covered by TrendingTabContent.test.tsx.
+vi.mock('@/components/features/games/TrendingTabContent', () => ({
+  TrendingTabContent: () => <div data-testid="games-tab-trending">TrendingTabContent mock</div>,
+}));
+
 // ─── Import under test (after mocks) ──────────────────────────────────────
 
 import GamesHubPage from '../page';
@@ -139,14 +146,15 @@ describe('/games hub multi-tab page (Asse D P2)', () => {
       expect(screen.queryByTestId('discover-hub-mock')).not.toBeInTheDocument();
     });
 
-    it('renders Trending placeholder when ?tab=trending', () => {
+    it('renders live Trending content when ?tab=trending (#2191 wired)', () => {
       setQueryParam('tab', 'trending');
       render(<GamesHubPage />);
 
       const hub = screen.getByTestId('games-hub');
       expect(hub).toHaveAttribute('data-active-tab', 'trending');
-      expect(screen.getByTestId('games-tab-trending-coming-soon')).toBeInTheDocument();
-      expect(screen.getByText('Trending')).toBeInTheDocument();
+      // Issue #2191: Trending is wired to /catalog/trending — no longer ComingSoon.
+      expect(screen.getByTestId('games-tab-trending')).toBeInTheDocument();
+      expect(screen.queryByTestId('games-tab-trending-coming-soon')).not.toBeInTheDocument();
       expect(screen.queryByTestId('discover-hub-mock')).not.toBeInTheDocument();
     });
 

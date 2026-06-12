@@ -166,6 +166,12 @@ internal static class DocumentProcessingServiceExtensions
         // Shared PDF processing pipeline (used by recovery job and future handler consolidation)
         services.AddScoped<IPdfProcessingPipelineService, PdfProcessingPipelineService>();
 
+        // #2244 Sub #2: single owner of VectorDocument construction/persistence/event-raising.
+        // Per CLAUDE.md #2565: register both impl and interface so background tasks (e.g. Quartz
+        // handlers in Tasks 3-5) can resolve either — impl directly or interface via the mapping.
+        services.AddScoped<PdfIndexingPipeline>();
+        services.AddScoped<IPdfIndexingPipeline>(sp => sp.GetRequiredService<PdfIndexingPipeline>());
+
         // Stale PDF recovery: runs once on startup to reprocess stuck PDFs
         services.AddHostedService<StalePdfRecoveryService>();
 

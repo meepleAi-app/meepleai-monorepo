@@ -7,6 +7,7 @@ using Api.Helpers;
 using Api.Middleware;
 using Api.Models;
 using MediatR;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Api.Services;
@@ -35,6 +36,7 @@ internal class FeatureFlagService : IFeatureFlagService
 {
     private readonly IConfigurationService _configService;
     private readonly IMediator _mediator;
+    private readonly IWebHostEnvironment _environment;
     private readonly ILogger<FeatureFlagService> _logger;
     private const string FeatureFlagCategory = "FeatureFlags";
     private const string TierPrefix = "Tier";
@@ -42,10 +44,12 @@ internal class FeatureFlagService : IFeatureFlagService
     public FeatureFlagService(
         IConfigurationService configService,
         IMediator mediator,
+        IWebHostEnvironment environment,
         ILogger<FeatureFlagService> logger)
     {
         _configService = configService;
         _mediator = mediator;
+        _environment = environment;
         _logger = logger;
     }
 
@@ -177,8 +181,13 @@ internal class FeatureFlagService : IFeatureFlagService
     {
         var key = role.HasValue ? $"{featureName}.{role.Value}" : featureName;
 
-        // Check if configuration exists
-        var existing = await _configService.GetConfigurationByKeyAsync(key).ConfigureAwait(false);
+        // Bug #2162 (same pattern as #2116): pass the current environment to the
+        // lookup so it stays symmetric with the CREATE branch below. Without it
+        // the lookup falls back to _environment.EnvironmentName via the
+        // ConfigurationService default, while the CREATE used to hardcode
+        // "Production" — the asymmetry caused 23505 collisions in non-Production.
+        var environmentName = _environment.EnvironmentName;
+        var existing = await _configService.GetConfigurationByKeyAsync(key, environmentName).ConfigureAwait(false);
 
         var userGuid = userId != null && Guid.TryParse(userId, out var parsed) ? parsed : Guid.Empty;
 
@@ -210,7 +219,7 @@ internal class FeatureFlagService : IFeatureFlagService
                 CreatedByUserId: userGuid,
                 Description: $"Feature flag: {featureName}",
                 Category: FeatureFlagCategory,
-                Environment: "Production",
+                Environment: environmentName,
                 RequiresRestart: false);
 
             await _mediator.Send(command).ConfigureAwait(false);
@@ -227,8 +236,9 @@ internal class FeatureFlagService : IFeatureFlagService
     {
         var key = role.HasValue ? $"{featureName}.{role.Value}" : featureName;
 
-        // Check if configuration exists
-        var existing = await _configService.GetConfigurationByKeyAsync(key).ConfigureAwait(false);
+        // Bug #2162: symmetric lookup + CREATE per environment. See EnableFeatureAsync.
+        var environmentName = _environment.EnvironmentName;
+        var existing = await _configService.GetConfigurationByKeyAsync(key, environmentName).ConfigureAwait(false);
 
         var userGuid = userId != null && Guid.TryParse(userId, out var parsed) ? parsed : Guid.Empty;
 
@@ -260,7 +270,7 @@ internal class FeatureFlagService : IFeatureFlagService
                 CreatedByUserId: userGuid,
                 Description: $"Feature flag: {featureName}",
                 Category: FeatureFlagCategory,
-                Environment: "Production",
+                Environment: environmentName,
                 RequiresRestart: false);
 
             await _mediator.Send(command).ConfigureAwait(false);
@@ -278,8 +288,9 @@ internal class FeatureFlagService : IFeatureFlagService
         ArgumentNullException.ThrowIfNull(tier);
         var key = $"{featureName}.{TierPrefix}.{tier.Value}";
 
-        // Check if configuration exists
-        var existing = await _configService.GetConfigurationByKeyAsync(key).ConfigureAwait(false);
+        // Bug #2162: symmetric lookup + CREATE per environment. See EnableFeatureAsync.
+        var environmentName = _environment.EnvironmentName;
+        var existing = await _configService.GetConfigurationByKeyAsync(key, environmentName).ConfigureAwait(false);
 
         var userGuid = userId != null && Guid.TryParse(userId, out var parsed) ? parsed : Guid.Empty;
 
@@ -311,7 +322,7 @@ internal class FeatureFlagService : IFeatureFlagService
                 CreatedByUserId: userGuid,
                 Description: $"Feature flag: {featureName} (tier: {tier.Value})",
                 Category: FeatureFlagCategory,
-                Environment: "Production",
+                Environment: environmentName,
                 RequiresRestart: false);
 
             await _mediator.Send(command).ConfigureAwait(false);
@@ -329,8 +340,9 @@ internal class FeatureFlagService : IFeatureFlagService
         ArgumentNullException.ThrowIfNull(tier);
         var key = $"{featureName}.{TierPrefix}.{tier.Value}";
 
-        // Check if configuration exists
-        var existing = await _configService.GetConfigurationByKeyAsync(key).ConfigureAwait(false);
+        // Bug #2162: symmetric lookup + CREATE per environment. See EnableFeatureAsync.
+        var environmentName = _environment.EnvironmentName;
+        var existing = await _configService.GetConfigurationByKeyAsync(key, environmentName).ConfigureAwait(false);
 
         var userGuid = userId != null && Guid.TryParse(userId, out var parsed) ? parsed : Guid.Empty;
 
@@ -362,7 +374,7 @@ internal class FeatureFlagService : IFeatureFlagService
                 CreatedByUserId: userGuid,
                 Description: $"Feature flag: {featureName} (tier: {tier.Value})",
                 Category: FeatureFlagCategory,
-                Environment: "Production",
+                Environment: environmentName,
                 RequiresRestart: false);
 
             await _mediator.Send(command).ConfigureAwait(false);

@@ -40,6 +40,16 @@ internal static class AdminWikidataCoverEnrichmentEndpoints
             .WithName("AdminWikidataCoverEnrichment_ListDeadLetters")
             .WithTags("Admin", "WikidataCoverEnrichment");
 
+        // Phase E F2 — bulk-retry endpoint.
+        group.MapPost("/bulk-retry", HandleBulkRetry)
+            .WithName("AdminWikidataCoverEnrichment_BulkRetry")
+            .WithTags("Admin", "WikidataCoverEnrichment");
+
+        // Phase E F3 — per-game attempt timeline (drawer payload).
+        group.MapGet("/games/{gameId:guid}/attempts", HandleGetAttemptTimeline)
+            .WithName("AdminWikidataCoverEnrichment_GetAttemptTimeline")
+            .WithTags("Admin", "WikidataCoverEnrichment");
+
         return group;
     }
 
@@ -84,6 +94,47 @@ internal static class AdminWikidataCoverEnrichmentEndpoints
             Skip: skip ?? 0,
             Take: take ?? 50,
             ReasonFilter: string.IsNullOrWhiteSpace(reason) ? null : reason);
+
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    /// <summary>Body for the F2 bulk-retry endpoint.</summary>
+    internal sealed record AdminBulkRetryWikidataRequest(IReadOnlyList<Guid>? AttemptIds);
+
+    /// <summary>
+    /// Issue #1823 Phase E F2 — bulk re-trigger of one or more dead-letter
+    /// attempts. Each id is resolved to its parent SharedGameId and dispatched
+    /// via the M9 runner with <c>forceRefresh=true</c>. Returns a per-row
+    /// envelope so the admin UI can render partial success/failure.
+    /// </summary>
+    private static async Task<IResult> HandleBulkRetry(
+        AdminBulkRetryWikidataRequest? request,
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var command = new AdminBulkRetryWikidataCoverCommand(
+            AttemptIds: request?.AttemptIds ?? Array.Empty<Guid>(),
+            TriggeredByUserId: context.User.GetUserId());
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    /// <summary>
+    /// Issue #1823 Phase E F3 — per-game attempt timeline. Query string:
+    /// <c>?limit=20</c> (default 50, max 200).
+    /// </summary>
+    private static async Task<IResult> HandleGetAttemptTimeline(
+        Guid gameId,
+        [FromQuery] int? limit,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var query = new GetWikidataAttemptTimelineQuery(
+            GameId: gameId,
+            Limit: limit ?? 50);
 
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);

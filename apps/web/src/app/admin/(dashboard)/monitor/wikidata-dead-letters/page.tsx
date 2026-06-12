@@ -1,17 +1,16 @@
 /**
  * Admin Wikidata Cover Enrichment — Dead-Letter Visibility Page.
- * Issue #1823 Wave 3 M13.
+ * Issue #1823 Wave 3 M13 + Phase E F2 (bulk-retry) + F3 (per-row timeline drawer).
  *
- * Minimal MVP scope:
+ * In-scope:
  *   - paginated list of dead-letter attempts (server endpoint already paginates)
  *   - optional reason filter
  *   - per-row retry button (POST {gameId} with forceRefresh=true via M12)
+ *   - F2: checkbox column + bulk retry toolbar (max 50 per batch)
+ *   - F3: click on game title → drawer with WikidataCoverEnrichmentAttempt timeline
  *
- * Out-of-scope for this iteration (tracked in Wave 3 follow-up):
- *   - bulk retry / acknowledge
- *   - per-row drawer with full attempt history (joins WikidataCoverEnrichmentAttempt
- *     timeline)
- *   - real-time refresh via SSE on scheduler-emitted events
+ * Out-of-scope for this iteration:
+ *   - real-time refresh via SSE on scheduler-emitted events (Phase E F4 candidate)
  */
 
 'use client';
@@ -19,10 +18,15 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import {
+  BULK_RETRY_MAX_BATCH,
+  bulkRetryDeadLetters,
   listDeadLetters,
   retryDeadLetter,
+  type AdminBulkRetryWikidataCoverResult,
   type WikidataDeadLetterAttemptDto,
 } from '@/lib/api/admin-wikidata-dead-letters';
+
+import { AttemptTimelineDrawer } from './AttemptTimelineDrawer';
 
 const PAGE_SIZE = 50;
 
@@ -47,6 +51,11 @@ interface RetryStatus {
   error?: string;
 }
 
+interface DrawerState {
+  gameId: string;
+  gameTitle: string;
+}
+
 export default function WikidataDeadLettersPage() {
   const [items, setItems] = useState<WikidataDeadLetterAttemptDto[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -55,6 +64,14 @@ export default function WikidataDeadLettersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryStatus, setRetryStatus] = useState<Record<string, RetryStatus>>({});
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkState, setBulkState] = useState<
+    | { state: 'idle' }
+    | { state: 'running' }
+    | { state: 'done'; result: AdminBulkRetryWikidataCoverResult }
+    | { state: 'error'; error: string }
+  >({ state: 'idle' });
+  const [drawer, setDrawer] = useState<DrawerState | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -67,6 +84,10 @@ export default function WikidataDeadLettersPage() {
       });
       setItems(response.items);
       setTotalCount(response.totalCount);
+      // Reset selection on every page/filter change — the previously selected
+      // rows may no longer be visible, and bulk-retrying invisible rows would
+      // be a surprising UX violation.
+      setSelectedIds(new Set());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
@@ -97,7 +118,51 @@ export default function WikidataDeadLettersPage() {
     }
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else if (next.size < BULK_RETRY_MAX_BATCH) {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const togglePageSelection = () => {
+    setSelectedIds(prev => {
+      const allSelected = items.every(i => prev.has(i.id));
+      if (allSelected) return new Set();
+      const next = new Set(prev);
+      for (const item of items) {
+        if (next.size >= BULK_RETRY_MAX_BATCH) break;
+        next.add(item.id);
+      }
+      return next;
+    });
+  };
+
+  const handleBulkRetry = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setBulkState({ state: 'running' });
+    try {
+      const result = await bulkRetryDeadLetters(ids);
+      setBulkState({ state: 'done', result });
+      // After a bulk run, reload to reflect new attempt rows.
+      void load();
+    } catch (err) {
+      setBulkState({
+        state: 'error',
+        error: err instanceof Error ? err.message : 'Unknown error',
+      });
+    }
+  };
+
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const selectionAtCap = selectedIds.size >= BULK_RETRY_MAX_BATCH;
+  const allOnPageSelected = items.length > 0 && items.every(i => selectedIds.has(i.id));
 
   return (
     <main className="space-y-4 p-6">
@@ -143,6 +208,50 @@ export default function WikidataDeadLettersPage() {
         </div>
       </section>
 
+      {/* Phase E F2 — bulk-retry toolbar. Sticky so it stays visible while
+          scrolling a long table. */}
+      <section
+        aria-label="Bulk actions"
+        className="sticky top-0 z-10 flex flex-wrap items-center gap-3 rounded border bg-card p-3 shadow-sm"
+      >
+        <span className="text-sm font-medium">
+          {selectedIds.size} selected
+          {selectionAtCap && (
+            <span className="ml-1 text-xs text-amber-700">(max {BULK_RETRY_MAX_BATCH})</span>
+          )}
+        </span>
+
+        <button
+          type="button"
+          className="rounded bg-primary px-3 py-1 text-sm text-primary-foreground hover:opacity-90 disabled:opacity-50"
+          onClick={() => void handleBulkRetry()}
+          disabled={selectedIds.size === 0 || bulkState.state === 'running'}
+        >
+          {bulkState.state === 'running' ? 'Retrying…' : 'Retry selected'}
+        </button>
+
+        <button
+          type="button"
+          className="rounded border px-3 py-1 text-sm hover:bg-muted disabled:opacity-50"
+          onClick={() => setSelectedIds(new Set())}
+          disabled={selectedIds.size === 0 || bulkState.state === 'running'}
+        >
+          Clear selection
+        </button>
+
+        {bulkState.state === 'done' && (
+          <span className="text-xs text-muted-foreground">
+            ✔ {bulkState.result.triggeredCount} triggered · {bulkState.result.notFoundCount}{' '}
+            not-found · {bulkState.result.failedCount} failed
+          </span>
+        )}
+        {bulkState.state === 'error' && (
+          <span className="text-xs text-destructive" role="alert">
+            ✗ {bulkState.error}
+          </span>
+        )}
+      </section>
+
       {error && (
         <div
           role="alert"
@@ -162,6 +271,14 @@ export default function WikidataDeadLettersPage() {
         <table className="w-full border-collapse text-sm">
           <thead className="bg-muted text-left">
             <tr>
+              <th className="border-b p-2">
+                <input
+                  type="checkbox"
+                  aria-label="Select all rows on this page"
+                  checked={allOnPageSelected}
+                  onChange={togglePageSelection}
+                />
+              </th>
               <th className="border-b p-2">Game</th>
               <th className="border-b p-2">Reason</th>
               <th className="border-b p-2">Details</th>
@@ -173,9 +290,30 @@ export default function WikidataDeadLettersPage() {
           <tbody>
             {items.map(row => {
               const status = retryStatus[row.id]?.state ?? 'idle';
+              const checked = selectedIds.has(row.id);
               return (
                 <tr key={row.id} className="border-b">
-                  <td className="p-2 font-medium">{row.gameTitle}</td>
+                  <td className="p-2">
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${row.gameTitle}`}
+                      checked={checked}
+                      onChange={() => toggleSelect(row.id)}
+                      disabled={!checked && selectionAtCap}
+                    />
+                  </td>
+                  <td className="p-2 font-medium">
+                    <button
+                      type="button"
+                      className="text-left underline-offset-2 hover:underline"
+                      onClick={() =>
+                        setDrawer({ gameId: row.sharedGameId, gameTitle: row.gameTitle })
+                      }
+                      aria-label={`Open timeline for ${row.gameTitle}`}
+                    >
+                      {row.gameTitle}
+                    </button>
+                  </td>
                   <td className="p-2">
                     <code className="rounded bg-muted px-1 py-0.5 text-xs">{row.reason}</code>
                   </td>
@@ -228,6 +366,15 @@ export default function WikidataDeadLettersPage() {
           Next
         </button>
       </nav>
+
+      {drawer && (
+        <AttemptTimelineDrawer
+          gameId={drawer.gameId}
+          gameTitle={drawer.gameTitle}
+          open={drawer !== null}
+          onClose={() => setDrawer(null)}
+        />
+      )}
     </main>
   );
 }

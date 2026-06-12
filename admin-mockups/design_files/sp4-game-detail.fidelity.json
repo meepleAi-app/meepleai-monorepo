@@ -26,7 +26,9 @@
     "designer_approved_on": "",
     "story_path": "",
     "fixtures_path": "",
-    "design_intent": "current",
+    "design_intent": "forward-refactor",
+    "design_intent_tracking_issue": "2079",
+    "design_intent_notes": "Phase B reclassified `current` → `forward-refactor` per #2079 audit (5 finding). F5 (animated underline) is already shipped via #2105 M7 — non-blocking. F1 (hero gradient-overlay-bottom-title) requires a dedicated GameHero component (MeepleCard hero variant differs structurally). F2 (Stats tab) requires both BE endpoint /api/v1/library/games/{id}/stats and FE tab (StatsTab + KPI cards + Leaderboard) — promoted to child issue. F3 (Documents tab) requires a product decision: granular per-doc list vs aggregated view inside toolbox/aiChat. F4 (ConnectionBar 6 vs 4 pip) requires design decision on which two extra slots to commission — current canonical (`KB/Agent/Chat/Sessioni`) is shipped across 10 card consumers.",
     "viewports": [
       "desktop"
     ],

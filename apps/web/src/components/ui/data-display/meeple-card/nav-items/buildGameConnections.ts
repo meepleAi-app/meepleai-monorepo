@@ -63,7 +63,9 @@ export function buildGameConnections(
       disabled: !handlers.onChatClick && !gameId,
       onClick: handlers.onChatClick,
       onCreate: counts.chatCount === 0 ? handlers.onChatPlus : undefined,
-      href: gameId ? `/games/${gameId}/chat` : undefined,
+      // ADR-061: /games/{id}/chat removed (was orphan). Redirect to chat
+      // creation flow with game pre-selected via query filter.
+      href: gameId ? `/chat/new?gameId=${gameId}` : undefined,
     },
     {
       label: 'Sessioni',

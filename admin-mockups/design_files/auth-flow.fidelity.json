@@ -26,7 +26,9 @@
     "designer_approved_on": "",
     "story_path": "apps/web/src/components/auth/auth-flow.stories.tsx",
     "fixtures_path": "apps/web/src/__tests__/fixtures/mockup-pilots/auth/auth-flow.ts",
-    "design_intent": "current",
+    "design_intent": "forward-refactor",
+    "design_intent_tracking_issue": "2170",
+    "design_intent_notes": "Phase B reclassified `current` → `forward-refactor` per #2170: the live /login?reason=session_expired surface (warning banner on top of AuthCard) is NOT covered by any of the 6 phone screens in auth-flow.html. Designer signoff required to commission a 7th screen (SessionExpiredScreen) showing the banner + form. Bonus drift: OAuth providers — mockup shows Google + Discord (2), live shows Google + Discord + GitHub (3).",
     "viewports": [
       "desktop"
     ],

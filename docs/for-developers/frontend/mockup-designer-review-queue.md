@@ -89,6 +89,13 @@ Spec-panel critique with 4 experts (Cockburn lead · Adzic · Wiegers · Fowler)
 
 Second spec-panel critique on nav-chrome / BGG / naming consistency. Full report: [`audits/2026-06-10-nav-chrome-bgg-naming-audit.md`](../../../audits/2026-06-10-nav-chrome-bgg-naming-audit.md).
 
+## US-2 walkthrough addendum — auth-flow gap (2026-06-12, #2170)
+
+`auth-flow.fidelity.json` was reclassified `current` → `forward-refactor` to track a gap discovered during the US-2 Marco Socratic walkthrough.
+
+- [ ] **#2170 — `auth-flow.html`: add `SessionExpiredScreen`** — The live `/login?reason=session_expired` surface renders a warning banner above `AuthCard` (`t('auth.session.expired')` — yellow alert). The mockup ships 6 phone screens but none of them shows this state, so the design intent for "resume session" (central to US-2) is undocumented. Decision required: commission a 7th screen, or downgrade the live banner to match the mockup.
+- [ ] **OAuth provider drift (#2170 bonus)** — Mockup shows 2 OAuth providers (Google + Discord). Live shows 3 (Google + Discord + GitHub). Decision required: add GitHub to the mockup, or remove GitHub from the live UI.
+
 ### 3 follow-up decisions (Drafts 14/15/16 — created post designer sign-off)
 
 - [ ] **Draft 14 (Fowler, architecture)**: Nav-chrome 3-way drift — primitives never consumed by page-mocks or runtime. Decide deprecate-or-backfill.

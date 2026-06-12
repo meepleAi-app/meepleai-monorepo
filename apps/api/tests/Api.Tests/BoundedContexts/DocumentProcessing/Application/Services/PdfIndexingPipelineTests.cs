@@ -92,6 +92,7 @@ public sealed class PdfIndexingPipelineTests
         var result = await pipeline.ExecuteAsync(pdfEntity, indexedChunkCount: 12, resolvedGameId: gameId, CancellationToken.None);
 
         result.Id.Should().Be(existing.Id, "re-index reuses the same aggregate id (idempotent)");
+        result.TotalChunks.Should().Be(12, "re-index should reflect the new chunk count");
         repo.VerifyAll();
     }
 }

@@ -63,7 +63,11 @@ internal sealed class PdfIndexingPipeline : IPdfIndexingPipeline
             return domain;
         }
 
-        // Idempotent re-index: keep the existing aggregate Id but rebuild with fresh chunk count
+        // Idempotent re-index: keep the existing aggregate Id but rebuild with fresh chunk count.
+        // NOTE: re-index intentionally resets IndexedAt (now), SearchCount (0), LastSearchedAt (null),
+        // and Metadata (null) — every re-index is a fresh slate. If analytics field preservation
+        // becomes a requirement, introduce a VectorDocument.ReIndex(int newChunkCount) domain method
+        // and switch to Rehydrate(existing.IndexedAt, ...) here instead.
         var refreshed = VectorDocument.Create(
             id: existing.Id,
             gameId: resolvedGameId,

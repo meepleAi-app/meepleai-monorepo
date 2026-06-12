@@ -2546,8 +2546,8 @@ const KbEmptyState = () => (
       }}>
         {[
           {
-            icon: '🎲', title: 'Connetti BGG',
-            desc: 'Sincronizza la tua collezione BoardGameGeek e importa i manuali in un click.',
+            icon: '🎲', title: 'Importa da catalogo',
+            desc: 'Importa i manuali dal catalogo condiviso interno in un click.',
             tag: 'OAuth · 30s',
           },
           {

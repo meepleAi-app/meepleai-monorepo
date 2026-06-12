@@ -540,7 +540,13 @@ export function AgentDetailView({ agentId }: AgentDetailViewProps): ReactElement
           createdAt: safeAgent.createdAt,
         }}
         ctaBack={() => router.push('/agents')}
-        ctaPlay={variant === 'active' ? () => router.push(`/agents/${agentId}/chat`) : undefined}
+        // Issue #2199: /agents/[id]/chat was an orphan route (no page.tsx
+        // exists). Redirect to the chat creation flow with the agent
+        // pre-selected via query param. Pattern matches the chat slot in
+        // buildGameConnections (#2190 follow-up).
+        ctaPlay={
+          variant === 'active' ? () => router.push(`/chat/new?agentId=${agentId}`) : undefined
+        }
         ctaSetup={
           variant === 'draft' && safeAgent.gameId
             ? () => router.push(`/library/${safeAgent.gameId}/play/setup-wizard`)

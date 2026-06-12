@@ -23,6 +23,9 @@ import noHardcodedColorUtility from "./eslint-rules/no-hardcoded-color-utility.j
 // (post-#1229 regression preventer; rationale in rule docstring)
 import apiClientV1Prefix from "./eslint-rules/api-client-v1-prefix.js";
 import noBggHost from "./eslint-rules/no-bgg-host.js";
+// Game detail orphan routes guard — ADR-061 removed
+// /games/[id]/{reviews,strategies,chat}; restoration requires a follow-up ADR.
+import noGameDetailOrphanRoutes from "./eslint-rules/no-game-detail-orphan-routes.js";
 
 export default [
   {
@@ -108,6 +111,8 @@ export default [
           "api-client-v1-prefix": apiClientV1Prefix,
           // Issue #2123 — BGG ToS compliance hard ban on user-side BGG asset traffic.
           "no-bgg-host": noBggHost,
+          // ADR-061 — game detail orphan routes removed; re-scaffolding requires a follow-up ADR.
+          "no-game-detail-orphan-routes": noGameDetailOrphanRoutes,
         },
       },
     },
@@ -269,6 +274,9 @@ export default [
       // BGG host blocklist itself (cover-utils.ts) get path-based overrides
       // further down in this config — see the `local/no-bgg-host: off` blocks.
       "local/no-bgg-host": "error",
+      // ADR-061 — /games/[id]/{reviews,strategies,chat} were removed; restoration
+      // requires a follow-up ADR superseding ADR-061 (not gap-fix scaffolding).
+      "local/no-game-detail-orphan-routes": "error",
     },
     settings: {
       react: {

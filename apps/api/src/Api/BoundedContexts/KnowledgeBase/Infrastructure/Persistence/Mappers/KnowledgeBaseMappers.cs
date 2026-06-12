@@ -43,22 +43,15 @@ internal static class KnowledgeBaseMappers
         ArgumentNullException.ThrowIfNull(entity);
         // #2244: use Rehydrate (not the public ctor) so reading from DB does NOT enqueue
         // a fresh VectorDocumentIndexedEvent — that was a latent read-side bug.
-        var domain = VectorDocument.Rehydrate(
+        return VectorDocument.Rehydrate(
             id: entity.Id,
             gameId: entity.GameId ?? Guid.Empty,
             pdfDocumentId: entity.PdfDocumentId,
             language: "en", // Not stored on entity — default to "en"
             totalChunks: entity.ChunkCount,
             indexedAt: entity.IndexedAt ?? DateTime.UtcNow,
-            sharedGameId: entity.SharedGameId); // Issue #5185
-
-        // Restore metadata using internal method
-        if (!string.IsNullOrEmpty(entity.Metadata))
-        {
-            domain.SetMetadata(entity.Metadata);
-        }
-
-        return domain;
+            sharedGameId: entity.SharedGameId, // Issue #5185
+            metadata: entity.Metadata);
     }
 
     /// <summary>

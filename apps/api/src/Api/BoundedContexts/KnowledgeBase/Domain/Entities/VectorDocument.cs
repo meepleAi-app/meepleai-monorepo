@@ -103,9 +103,10 @@ internal sealed class VectorDocument : AggregateRoot<Guid>
         string language,
         int totalChunks,
         DateTime indexedAt,
-        Guid? sharedGameId)
+        Guid? sharedGameId,
+        string? metadata = null)
     {
-        return new VectorDocument(
+        var domain = new VectorDocument(
             id: id,
             gameId: gameId,
             pdfDocumentId: pdfDocumentId,
@@ -113,6 +114,8 @@ internal sealed class VectorDocument : AggregateRoot<Guid>
             totalChunks: totalChunks <= 0 ? 1 : totalChunks,
             indexedAt: indexedAt,
             sharedGameId: sharedGameId);
+        domain.Metadata = metadata;
+        return domain;
     }
 
     /// <summary>
@@ -135,19 +138,5 @@ internal sealed class VectorDocument : AggregateRoot<Guid>
         AddDomainEvent(new VectorDocumentMetadataUpdatedEvent(Id, metadata));
     }
 
-    /// <summary>
-    /// Sets metadata value (internal for mapper use only).
-    /// </summary>
-    internal void SetMetadata(string? metadata)
-    {
-        Metadata = metadata;
-    }
 
-    /// <summary>
-    /// Sets shared game ID (internal for mapper use only).
-    /// </summary>
-    internal void SetSharedGameId(Guid? sharedGameId)
-    {
-        SharedGameId = sharedGameId;
-    }
 }

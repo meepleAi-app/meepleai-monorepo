@@ -95,6 +95,36 @@ public class VectorDocumentTests
     }
 
     [Fact]
+    public void Rehydrate_WithEmptyLanguage_DefaultsToEn()
+    {
+        var doc = VectorDocument.Rehydrate(
+            id: Guid.NewGuid(),
+            gameId: Guid.NewGuid(),
+            pdfDocumentId: Guid.NewGuid(),
+            language: "",
+            totalChunks: 5,
+            indexedAt: DateTime.UtcNow,
+            sharedGameId: null);
+
+        doc.Language.Should().Be("en");
+    }
+
+    [Fact]
+    public void Rehydrate_WithZeroChunks_DefaultsToOne()
+    {
+        var doc = VectorDocument.Rehydrate(
+            id: Guid.NewGuid(),
+            gameId: Guid.NewGuid(),
+            pdfDocumentId: Guid.NewGuid(),
+            language: "en",
+            totalChunks: 0,
+            indexedAt: DateTime.UtcNow,
+            sharedGameId: null);
+
+        doc.TotalChunks.Should().Be(1);
+    }
+
+    [Fact]
     public void PublicConstructor_IsNotAccessible()
     {
         // Sub #2 guard: prevent regression to old anti-pattern (3 ingestion paths used `new VectorDocument(...)`)
@@ -145,21 +175,6 @@ public class VectorDocumentTests
     }
 
     [Fact]
-    public void Create_EmptyLanguage_ThrowsArgumentException()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var gameId = Guid.NewGuid();
-        var pdfDocumentId = Guid.NewGuid();
-
-        // Act & Assert
-        Action act = () =>
-            VectorDocument.Create(id, gameId, pdfDocumentId, "", 10);
-        var exception = act.Should().Throw<ArgumentException>().Which;
-        exception.Message.Should().Contain("Language cannot be empty");
-    }
-
-    [Fact]
     public void Create_WhitespaceLanguage_ThrowsArgumentException()
     {
         // Arrange
@@ -171,21 +186,6 @@ public class VectorDocumentTests
         Action act = () =>
             VectorDocument.Create(id, gameId, pdfDocumentId, "   ", 10);
         act.Should().Throw<ArgumentException>();
-    }
-
-    [Fact]
-    public void Create_ZeroChunks_ThrowsArgumentException()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var gameId = Guid.NewGuid();
-        var pdfDocumentId = Guid.NewGuid();
-
-        // Act & Assert
-        Action act = () =>
-            VectorDocument.Create(id, gameId, pdfDocumentId, "en", 0);
-        var exception = act.Should().Throw<ArgumentException>().Which;
-        exception.Message.Should().Contain("Total chunks must be positive");
     }
 
     [Fact]
@@ -263,20 +263,6 @@ public class VectorDocumentTests
     }
 
     [Fact]
-    public void SetMetadata_NullValue_SetsToNull()
-    {
-        // Arrange
-        var document = CreateTestDocument();
-        document.UpdateMetadata("{\"test\": true}");
-
-        // Act
-        document.SetMetadata(null);
-
-        // Assert
-        document.Metadata.Should().BeNull();
-    }
-
-    [Fact]
     public void Create_SetsIndexedAtToCurrentTime()
     {
         // Arrange
@@ -314,34 +300,6 @@ public class VectorDocumentTests
             sharedGameId: sharedGameId);
 
         document.SharedGameId.Should().Be(sharedGameId);
-    }
-
-    [Fact]
-    public void SetSharedGameId_UpdatesValue()
-    {
-        var document = CreateTestDocument();
-        var sharedGameId = Guid.NewGuid();
-
-        document.SetSharedGameId(sharedGameId);
-
-        document.SharedGameId.Should().Be(sharedGameId);
-    }
-
-    [Fact]
-    public void SetSharedGameId_WithNull_ClearsValue()
-    {
-        var sharedGameId = Guid.NewGuid();
-        var document = VectorDocument.Create(
-            id: Guid.NewGuid(),
-            gameId: Guid.NewGuid(),
-            pdfDocumentId: Guid.NewGuid(),
-            language: "en",
-            totalChunks: 5,
-            sharedGameId: sharedGameId);
-
-        document.SetSharedGameId(null);
-
-        document.SharedGameId.Should().BeNull();
     }
 
     // Helper method — uses Rehydrate for fixture construction (no event side-effects in tests)

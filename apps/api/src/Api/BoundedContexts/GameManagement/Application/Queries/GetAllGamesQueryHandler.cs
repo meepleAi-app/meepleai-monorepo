@@ -49,7 +49,9 @@ internal class GetAllGamesQueryHandler : IQueryHandler<GetAllGamesQuery, Paginat
                 g.PlayingTimeMinutes,
                 g.BggId,
                 g.CreatedAt,
-                g.ImageUrl
+                g.ImageUrl,
+                // Issue #2243 (epic #2242) Block C: expose HasKnowledgeBase on GameDto
+                g.HasKnowledgeBase
             })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -71,7 +73,8 @@ internal class GetAllGamesQueryHandler : IQueryHandler<GetAllGamesQuery, Paginat
                 SharedGameId: null,
                 IsPublished: false,
                 ApprovalStatus: null,
-                PublishedAt: null
+                PublishedAt: null,
+                HasKnowledgeBase: g.HasKnowledgeBase
             ))
             .ToList();
 

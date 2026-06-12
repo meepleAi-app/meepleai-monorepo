@@ -829,6 +829,35 @@ internal partial class UploadPdfCommandHandler
             await scopedMediator.Publish(
                 new PdfStateChangedEvent(pdfGuidForEvent, PdfProcessingState.Indexing, PdfProcessingState.Ready, userId),
                 CancellationToken.None).ConfigureAwait(false);
+
+            // Issue #2243 (epic #2242) Block A — tactical compensating publish:
+            // The three ingestion paths (ProcessPdfAsync, PdfProcessingPipelineService,
+            // IndexPdfCommandHandler) all write VectorDocumentEntity directly via EF instead of
+            // constructing the VectorDocument domain entity whose constructor raises
+            // VectorDocumentIndexedEvent. As a result VectorDocumentIndexedForKbFlagHandler
+            // never runs and shared_games.has_knowledge_base stays false even after a successful
+            // indexing. Manually publish the event here so the SharedGameCatalog projection
+            // updates and admin/user UIs can show "agente pronto".
+            //
+            // Sub #2 (architecture refactor) replaces this with a VectorDocument.Create() factory
+            // chained from an IPdfIndexingPipeline service so the event flows structurally and
+            // this manual publish can be removed.
+            var vectorDocSnapshot = await db.Set<VectorDocumentEntity>()
+                .AsNoTracking()
+                .Where(v => v.PdfDocumentId == pdfGuidForEvent)
+                .Select(v => new { v.Id, v.GameId, v.SharedGameId, v.ChunkCount })
+                .FirstOrDefaultAsync(cancellationToken)
+                .ConfigureAwait(false);
+            if (vectorDocSnapshot is not null)
+            {
+                await scopedMediator.Publish(
+                    new Api.BoundedContexts.KnowledgeBase.Domain.Events.VectorDocumentIndexedEvent(
+                        documentId: vectorDocSnapshot.Id,
+                        gameId: vectorDocSnapshot.GameId ?? Guid.Empty,
+                        chunkCount: vectorDocSnapshot.ChunkCount,
+                        sharedGameId: vectorDocSnapshot.SharedGameId),
+                    CancellationToken.None).ConfigureAwait(false);
+            }
         }
 
         var cacheKey = (pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId)?.ToString() ?? string.Empty;

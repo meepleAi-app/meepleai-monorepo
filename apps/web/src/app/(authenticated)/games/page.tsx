@@ -39,6 +39,7 @@
 
 import { Suspense } from 'react';
 
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
 import { DiscoverHub } from '@/components/features/discover/DiscoverHub';
@@ -77,6 +78,24 @@ function ComingSoonTab({ label }: { label: string }) {
       <p className="text-sm text-muted-foreground">
         Funzionalità in arrivo. Disponibile in una release futura.
       </p>
+      {/* Issue #2192: dead-end UX fix — provide fallback CTAs so users who
+          land on a ComingSoon tab from a deep link have a clear next step
+          instead of bouncing. */}
+      <div
+        className="mt-4 flex flex-col items-center gap-2 text-sm"
+        data-slot="games-coming-soon-fallbacks"
+      >
+        <p className="text-xs text-muted-foreground">Nel frattempo, puoi:</p>
+        <Link
+          href="/games?tab=discover"
+          className="text-foreground underline-offset-2 hover:underline"
+        >
+          ↳ Esplora i giochi con Discover
+        </Link>
+        <Link href="/library" className="text-foreground underline-offset-2 hover:underline">
+          ↳ Vai alla tua libreria
+        </Link>
+      </div>
     </div>
   );
 }

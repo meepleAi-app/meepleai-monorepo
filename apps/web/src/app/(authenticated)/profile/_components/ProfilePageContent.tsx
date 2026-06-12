@@ -49,11 +49,14 @@ const VALID_TABS = new Set<Tab>(['overview', 'achievements', 'activity', 'settin
 // ─── TabBar ───────────────────────────────────────────────────────────────────
 
 function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
+  // Issue #2201: tab labels were hardcoded EN; panel content is IT. Translate
+  // 3 of the 4 to match panel language. 'Achievement' kept as accepted Italian
+  // gaming anglicism (matches in-product usage in achievements panel).
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
-    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-    { id: 'achievements', label: 'Achievements', icon: Trophy },
-    { id: 'activity', label: 'Activity', icon: Activity },
-    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'overview', label: 'Panoramica', icon: LayoutDashboard },
+    { id: 'achievements', label: 'Achievement', icon: Trophy },
+    { id: 'activity', label: 'Attività', icon: Activity },
+    { id: 'settings', label: 'Impostazioni', icon: Settings },
   ];
 
   return (

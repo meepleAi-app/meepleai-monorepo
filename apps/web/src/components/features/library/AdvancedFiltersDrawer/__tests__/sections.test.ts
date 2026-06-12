@@ -2,9 +2,9 @@
  * AdvancedFiltersDrawer — DRAWER_SECTIONS configuration tests.
  *
  * SP4 mockup conformance (Issue #1585-followup, plan Task 3.3). The drawer
- * uses a static 7-section descriptor (no scope dispatch). Tests assert the
- * shape, ordering, kind variety, and default-open behaviour matches the
- * mockup (admin-mockups/design_files/sp4-library-desktop.jsx:319-388).
+ * originally shipped a 7-section descriptor; Issue #2186 dropped the
+ * `entities` chips-multi (it duplicated LibraryTabs entity scope) so the
+ * descriptor is now 6 sections.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -12,10 +12,9 @@ import { describe, expect, it } from 'vitest';
 import { DRAWER_SECTIONS, isDefaultOpen } from '../sections';
 
 describe('DRAWER_SECTIONS', () => {
-  it('exposes 7 sections matching the mockup order', () => {
+  it('exposes 6 sections after the #2186 entity-section removal', () => {
     expect(DRAWER_SECTIONS.map(s => s.key)).toEqual([
       'statuses',
-      'entities',
       'games',
       'period',
       'tags',
@@ -24,9 +23,13 @@ describe('DRAWER_SECTIONS', () => {
     ]);
   });
 
-  it('uses chips-multi for status / entity / tags / weights sections', () => {
+  it('does not register an "entities" chips-multi (#2186 — handled by LibraryTabs)', () => {
+    expect(DRAWER_SECTIONS.find(s => s.key === 'entities')).toBeUndefined();
+  });
+
+  it('uses chips-multi for status / tags / weights sections', () => {
     const chipsMultiKeys = DRAWER_SECTIONS.filter(s => s.kind === 'chips-multi').map(s => s.key);
-    expect(chipsMultiKeys).toEqual(['statuses', 'entities', 'tags', 'weights']);
+    expect(chipsMultiKeys).toEqual(['statuses', 'tags', 'weights']);
   });
 
   it('uses select-multi for games section', () => {
@@ -58,14 +61,6 @@ describe('DRAWER_SECTIONS', () => {
     expect(section?.kind).toBe('chips-multi');
     if (section && section.kind === 'chips-multi') {
       expect(section.options.map(o => o.value)).toEqual(['owned', 'wishlist', 'setup', 'archived']);
-    }
-  });
-
-  it('exposes 5 entity options (game/agent/kb/session/chat)', () => {
-    const section = DRAWER_SECTIONS.find(s => s.key === 'entities');
-    expect(section?.kind).toBe('chips-multi');
-    if (section && section.kind === 'chips-multi') {
-      expect(section.options.map(o => o.value)).toEqual(['game', 'agent', 'kb', 'session', 'chat']);
     }
   });
 
@@ -112,16 +107,11 @@ describe('DRAWER_SECTIONS', () => {
     }
   });
 
-  it('assigns icons to status / entity chip options (mockup affordance)', () => {
+  it('assigns icons to status chip options (mockup affordance)', () => {
     const statusSection = DRAWER_SECTIONS.find(s => s.key === 'statuses');
     if (statusSection && statusSection.kind === 'chips-multi') {
       expect(statusSection.options.find(o => o.value === 'owned')?.icon).toBe('✓');
       expect(statusSection.options.find(o => o.value === 'wishlist')?.icon).toBe('★');
-    }
-    const entitySection = DRAWER_SECTIONS.find(s => s.key === 'entities');
-    if (entitySection && entitySection.kind === 'chips-multi') {
-      expect(entitySection.options.find(o => o.value === 'game')?.icon).toBe('🎲');
-      expect(entitySection.options.find(o => o.value === 'agent')?.icon).toBe('🤖');
     }
   });
 
@@ -144,6 +134,5 @@ describe('isDefaultOpen', () => {
     expect(isDefaultOpen(3)).toBe(false);
     expect(isDefaultOpen(4)).toBe(false);
     expect(isDefaultOpen(5)).toBe(false);
-    expect(isDefaultOpen(6)).toBe(false);
   });
 });

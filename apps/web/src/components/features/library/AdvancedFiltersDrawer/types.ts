@@ -22,6 +22,12 @@
 
 export type LibraryFilterStatus = 'owned' | 'wishlist' | 'setup' | 'archived';
 
+/**
+ * @deprecated Issue #2186 — the AdvancedFiltersDrawer no longer ships an
+ * entity-type filter section because it duplicated the LibraryTabs entity
+ * scope (Tutti / Giochi / Agenti / KB / Sessioni / Chat). The type is kept
+ * for one release so external consumers can migrate; remove in a follow-up.
+ */
 export type LibraryFilterEntity = 'game' | 'agent' | 'kb' | 'session' | 'chat';
 
 export type LibraryFilterPeriod = '7d' | '30d' | '1y' | 'all' | 'range';
@@ -40,6 +46,11 @@ export type LibraryFilterWeight = 'light' | 'medium' | 'heavy' | 'extra';
 
 export interface LibraryFilters {
   readonly statuses?: ReadonlyArray<LibraryFilterStatus>;
+  /**
+   * @deprecated Issue #2186 — removed in favor of the LibraryTabs entity
+   * scope. Field kept optional for one release so persisted user state can
+   * be migrated. Always undefined for new state.
+   */
   readonly entities?: ReadonlyArray<LibraryFilterEntity>;
   readonly games?: ReadonlyArray<string>;
   readonly period?: LibraryFilterPeriod;

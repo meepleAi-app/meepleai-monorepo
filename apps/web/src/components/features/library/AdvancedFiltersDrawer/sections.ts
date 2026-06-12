@@ -24,7 +24,6 @@
  */
 
 import type {
-  LibraryFilterEntity,
   LibraryFilterPeriod,
   LibraryFilterStatus,
   LibraryFilterTag,
@@ -96,7 +95,6 @@ export interface RangeSection {
 
 export type SectionConfig =
   | ChipsMultiSection<LibraryFilterStatus>
-  | ChipsMultiSection<LibraryFilterEntity>
   | ChipsMultiSection<LibraryFilterTag>
   | ChipsMultiSection<LibraryFilterWeight>
   | SelectMultiSection
@@ -130,38 +128,10 @@ const STATUS_OPTIONS: ReadonlyArray<ChipOption<LibraryFilterStatus>> = [
   },
 ];
 
-const ENTITY_OPTIONS: ReadonlyArray<ChipOption<LibraryFilterEntity>> = [
-  {
-    value: 'game',
-    i18nKey: 'pages.library.filters.section.entity.options.game',
-    icon: '🎲',
-    color: 'game',
-  },
-  {
-    value: 'agent',
-    i18nKey: 'pages.library.filters.section.entity.options.agent',
-    icon: '🤖',
-    color: 'agent',
-  },
-  {
-    value: 'kb',
-    i18nKey: 'pages.library.filters.section.entity.options.kb',
-    icon: '📚',
-    color: 'kb',
-  },
-  {
-    value: 'session',
-    i18nKey: 'pages.library.filters.section.entity.options.session',
-    icon: '🎯',
-    color: 'session',
-  },
-  {
-    value: 'chat',
-    i18nKey: 'pages.library.filters.section.entity.options.chat',
-    icon: '💬',
-    color: 'chat',
-  },
-];
+// Issue #2186: ENTITY_OPTIONS removed — entity scope is the responsibility
+// of LibraryTabs (Tutti / Giochi / Agenti / KB / Sessioni / Chat) and
+// duplicating it inside the AdvancedFiltersDrawer created two parallel
+// filter paths with overlapping semantics.
 
 const PERIOD_OPTIONS: ReadonlyArray<PeriodQuickOption<LibraryFilterPeriod>> = [
   { value: '7d', i18nKey: 'pages.library.filters.section.period.options.7d' },
@@ -230,9 +200,10 @@ const WEIGHT_OPTIONS: ReadonlyArray<ChipOption<LibraryFilterWeight>> = [
 ];
 
 /**
- * Static 7-section descriptor matching the mockup `DRAWER_SECTIONS` array.
- * Order is significant: first 3 sections are open by default (see drawer
- * `defaultOpen` logic), remaining 4 collapse on initial render.
+ * Static 6-section descriptor (#2186: 'entities' removed, was index 1 / 7-of-7
+ * in the original mockup). Order is significant: first 3 sections are open
+ * by default (see drawer `defaultOpen` logic), remaining 3 collapse on
+ * initial render.
  */
 export const DRAWER_SECTIONS: ReadonlyArray<SectionConfig> = [
   {
@@ -242,13 +213,7 @@ export const DRAWER_SECTIONS: ReadonlyArray<SectionConfig> = [
     icon: '●',
     options: STATUS_OPTIONS,
   },
-  {
-    kind: 'chips-multi',
-    key: 'entities',
-    i18nLabel: 'pages.library.filters.section.entity.title',
-    icon: '⌗',
-    options: ENTITY_OPTIONS,
-  },
+  // Issue #2186: 'entities' section removed — handled by LibraryTabs instead.
   {
     kind: 'select-multi',
     key: 'games',

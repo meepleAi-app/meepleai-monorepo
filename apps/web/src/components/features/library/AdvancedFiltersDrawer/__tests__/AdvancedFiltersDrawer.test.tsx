@@ -204,9 +204,9 @@ describe('AdvancedFiltersDrawer — 7-section rendering', () => {
       />
     );
     const slots = screen.getAllByTestId(/^advanced-filters-section-/);
+    // Issue #2186: 'entities' removed (handled by LibraryTabs entity scope).
     expect(slots.map(el => el.getAttribute('data-slot'))).toEqual([
       'advanced-filters-section-statuses',
-      'advanced-filters-section-entities',
       'advanced-filters-section-games',
       'advanced-filters-section-period',
       'advanced-filters-section-tags',
@@ -215,7 +215,21 @@ describe('AdvancedFiltersDrawer — 7-section rendering', () => {
     ]);
   });
 
-  it('opens the first 3 sections by default (mockup parity)', () => {
+  it('does not render the legacy "entities" section (#2186)', () => {
+    renderWithIntl(
+      <AdvancedFiltersDrawer
+        open={true}
+        onOpenChange={noop}
+        activeFilters={emptyFilters}
+        onApply={noop}
+        onClear={noop}
+      />
+    );
+    expect(screen.queryByTestId('advanced-filters-section-entities')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Tipo entità/ })).not.toBeInTheDocument();
+  });
+
+  it('opens the first 3 sections by default (Stato / Gioco / Periodo after #2186)', () => {
     renderWithIntl(
       <AdvancedFiltersDrawer
         open={true}
@@ -226,11 +240,11 @@ describe('AdvancedFiltersDrawer — 7-section rendering', () => {
       />
     );
     expect(screen.getByRole('button', { name: /Stato/, expanded: true })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Tipo entità/, expanded: true })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Gioco/, expanded: true })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Periodo/, expanded: true })).toBeInTheDocument();
   });
 
-  it('keeps sections at index >= 3 collapsed by default', () => {
+  it('keeps sections at index >= 3 collapsed by default (Tags / Rating / Complessità)', () => {
     renderWithIntl(
       <AdvancedFiltersDrawer
         open={true}
@@ -240,7 +254,8 @@ describe('AdvancedFiltersDrawer — 7-section rendering', () => {
         onClear={noop}
       />
     );
-    expect(screen.getByRole('button', { name: /Periodo/, expanded: false })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Tag/, expanded: false })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Rating/, expanded: false })).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: /Complessità/, expanded: false })
     ).toBeInTheDocument();
@@ -257,9 +272,11 @@ describe('AdvancedFiltersDrawer — 7-section rendering', () => {
         onClear={noop}
       />
     );
-    const periodToggle = screen.getByRole('button', { name: /Periodo/, expanded: false });
-    await user.click(periodToggle);
-    expect(screen.getByRole('button', { name: /Periodo/, expanded: true })).toBeInTheDocument();
+    // After #2186 'Periodo' is in the first 3 (default-open). Use a section
+    // from the collapsed tail (Tag is index 3) to exercise the expand toggle.
+    const tagToggle = screen.getByRole('button', { name: /Tag/, expanded: false });
+    await user.click(tagToggle);
+    expect(screen.getByRole('button', { name: /Tag/, expanded: true })).toBeInTheDocument();
   });
 });
 
@@ -374,8 +391,8 @@ describe('AdvancedFiltersDrawer — period-quick (period section)', () => {
         onClear={noop}
       />
     );
-    // Period collapses by default → expand first
-    await user.click(screen.getByRole('button', { name: /Periodo/ }));
+    // Period is now in the first 3 default-open sections (#2186 — entities
+    // was removed so Period moved from index 3 → index 2).
     const radiogroup = screen.getByRole('radiogroup', { name: /Periodo/ });
     const options = within(radiogroup).getAllByRole('radio');
     expect(options).toHaveLength(5);
@@ -393,7 +410,6 @@ describe('AdvancedFiltersDrawer — period-quick (period section)', () => {
         onClear={noop}
       />
     );
-    await user.click(screen.getByRole('button', { name: /Periodo/ }));
     await user.click(screen.getByRole('radio', { name: /Ultimi 30 giorni/ }));
     await user.click(screen.getByRole('button', { name: /^Applica/ }));
     expect(onApply).toHaveBeenCalledWith({ period: '30d' });

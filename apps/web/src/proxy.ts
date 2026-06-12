@@ -342,8 +342,11 @@ function getSecurityHeaders(requestOrigin?: string) {
     // XSS filter for legacy browsers
     'X-XSS-Protection': '1; mode=block',
 
-    // Referrer policy
-    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    // Referrer policy — Issue #2168 defense in depth: `strict-origin` sends
+    // only the origin (no path/query) on ALL requests (same- and cross-origin),
+    // preventing query-param exfiltration (e.g. `?from=` or session tokens)
+    // via the Referer header. Stricter than `strict-origin-when-cross-origin`.
+    'Referrer-Policy': 'strict-origin',
 
     // Permissions policy
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
@@ -381,7 +384,10 @@ export async function proxy(request: NextRequest) {
   if (hostname === '127.0.0.1') {
     const normalizedUrl = new URL(request.url);
     normalizedUrl.hostname = 'localhost';
-    return NextResponse.redirect(normalizedUrl);
+    // Issue #2168: apply security headers (including Referrer-Policy) on this
+    // early-exit redirect path, same as all other return sites below.
+    const normalizeResponse = NextResponse.redirect(normalizedUrl);
+    return addSecurityHeaders(normalizeResponse, requestOrigin);
   }
 
   // Check if user has a session cookie

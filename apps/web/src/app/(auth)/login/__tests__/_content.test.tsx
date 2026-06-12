@@ -63,6 +63,7 @@ vi.mock('@/components/auth/oauth-url', () => ({
 
 // Import AFTER mocks
 import { LoginPageContent, LoginFallback } from '../_content';
+import { logger } from '@/lib/logger';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -254,6 +255,84 @@ describe('LoginPageContent (v2 AuthCard)', () => {
     await waitFor(() => {
       expect(pushMock).toHaveBeenCalledWith('/library');
     });
+  });
+});
+
+describe('LoginPageContent — open redirect protection (#2168)', () => {
+  it('falls back to /library when ?from= is external URL', async () => {
+    setSearchParams({ from: 'https://evil.com' });
+    loginMock.mockResolvedValueOnce({
+      user: { id: 'u1', email: 't@e.com', role: 'User' },
+      requiresTwoFactor: false,
+    });
+
+    render(<LoginPageContent />);
+
+    fireEvent.change(screen.getByLabelText(/auth\.login\.emailLabel/i), {
+      target: { value: 'user@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/auth\.login\.passwordLabel/i), {
+      target: { value: 'StrongPassword1' },
+    });
+    fireEvent.submit(screen.getByTestId('login-form'));
+
+    await waitFor(() => {
+      expect(pushMock).toHaveBeenCalledWith('/library');
+    });
+    expect(pushMock).not.toHaveBeenCalledWith('https://evil.com');
+
+    // Unsafe input must trigger a warn log
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Rejected unsafe ?from= redirect target on login',
+      expect.objectContaining({
+        metadata: expect.objectContaining({ fromMasked: expect.any(String) }),
+      })
+    );
+  });
+
+  it('preserves valid relative ?from= path', async () => {
+    setSearchParams({ from: '/sessions/abc-123' });
+    loginMock.mockResolvedValueOnce({
+      user: { id: 'u1', email: 't@e.com', role: 'User' },
+      requiresTwoFactor: false,
+    });
+
+    render(<LoginPageContent />);
+
+    fireEvent.change(screen.getByLabelText(/auth\.login\.emailLabel/i), {
+      target: { value: 'user@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/auth\.login\.passwordLabel/i), {
+      target: { value: 'StrongPassword1' },
+    });
+    fireEvent.submit(screen.getByTestId('login-form'));
+
+    await waitFor(() => {
+      expect(pushMock).toHaveBeenCalledWith('/sessions/abc-123');
+    });
+
+    // Safe input must NOT trigger a warn log
+    expect(logger.warn).not.toHaveBeenCalled();
+  });
+
+  it('logs unsafe ?from= attempt on initial render (before any user action)', async () => {
+    setSearchParams({ from: 'https://evil.com' });
+
+    render(<LoginPageContent />);
+
+    // useEffect fires after render commit — wait for it
+    await waitFor(() => {
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Rejected unsafe ?from= redirect target on login',
+        expect.objectContaining({
+          metadata: expect.objectContaining({ fromMasked: expect.any(String) }),
+        })
+      );
+    });
+
+    // No form submission — warn fires on mount only, not tied to login action
+    expect(loginMock).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
   });
 });
 

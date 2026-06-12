@@ -18,6 +18,7 @@ import userEvent from '@testing-library/user-event';
 
 import NotificationsPage from '../page';
 import type { NotificationDto } from '@/lib/api';
+import { logger } from '@/lib/logger';
 import { EMPTY } from '../../../../__tests__/fixtures/test-strings';
 // #1816 P3-i18n: CatalogPagination (rendered when notifications > 20) calls
 // useTranslation which requires IntlProvider in the tree. Use renderWithIntl
@@ -392,5 +393,98 @@ describe('NotificationsPage', () => {
     expect(screen.getByRole('heading', { name: /oggi/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /ieri/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /precedenti/i })).toBeInTheDocument();
+  });
+
+  // ── detail.link safety (#2182) ───────────────────────────────────
+  describe('Notifications detail.link click handler (#2182)', () => {
+    it('calls window.location.assign for safe relative path', async () => {
+      const user = userEvent.setup();
+      const assignMock = vi.fn();
+      const originalLocation = window.location;
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        writable: true,
+        value: { ...originalLocation, assign: assignMock },
+      });
+
+      try {
+        const notifications = [
+          createNotification({
+            title: 'Safe link notification',
+            link: '/games/abc-123',
+            isRead: true,
+          }),
+        ];
+        setupStore({ notifications, unreadCount: 0 });
+
+        render(<NotificationsPage />);
+
+        // Open the detail drawer by clicking the card
+        const card = screen.getByRole('button', { name: /safe link notification/i });
+        await user.click(card);
+
+        // The "Apri" button should now be rendered inside the open drawer
+        const apriBtn = await screen.findByRole('button', { name: /^apri$/i });
+        await user.click(apriBtn);
+
+        expect(assignMock).toHaveBeenCalledWith('/games/abc-123');
+      } finally {
+        Object.defineProperty(window, 'location', {
+          configurable: true,
+          writable: true,
+          value: originalLocation,
+        });
+      }
+    });
+
+    it('does NOT call window.location.assign for external URL', async () => {
+      const user = userEvent.setup();
+      const assignMock = vi.fn();
+      const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
+      const originalLocation = window.location;
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        writable: true,
+        value: { ...originalLocation, assign: assignMock },
+      });
+
+      try {
+        const notifications = [
+          createNotification({
+            title: 'Unsafe link notification',
+            link: 'https://evil.com',
+            isRead: true,
+          }),
+        ];
+        setupStore({ notifications, unreadCount: 0 });
+
+        render(<NotificationsPage />);
+
+        // Open detail drawer
+        const card = screen.getByRole('button', { name: /unsafe link notification/i });
+        await user.click(card);
+
+        // The "Apri" button renders because detail.link is truthy
+        const apriBtn = await screen.findByRole('button', { name: /^apri$/i });
+        await user.click(apriBtn);
+
+        // window.location.assign must NOT be called for an external URL
+        expect(assignMock).not.toHaveBeenCalled();
+        // Rejection must be logged via logger.warn
+        expect(warnSpy).toHaveBeenCalledWith(
+          'Rejected unsafe detail.link in notification',
+          expect.objectContaining({
+            metadata: expect.objectContaining({ linkMasked: 'https://evil.com' }),
+          })
+        );
+      } finally {
+        warnSpy.mockRestore();
+        Object.defineProperty(window, 'location', {
+          configurable: true,
+          writable: true,
+          value: originalLocation,
+        });
+      }
+    });
   });
 });

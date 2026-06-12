@@ -41,6 +41,8 @@ import {
 import type { EntityType } from '@/components/ui/entity-tokens';
 import { NotificationCard } from '@/components/ui/notification-card';
 import type { NotificationDto, NotificationType } from '@/lib/api';
+import { logger } from '@/lib/logger';
+import { isSafeRelativeLink } from '@/lib/url-safety';
 import { cn } from '@/lib/utils';
 import { useNotificationStore, selectNotifications } from '@/stores/notification/store';
 
@@ -393,7 +395,18 @@ export default function NotificationsPage() {
                     entity={mapTypeToEntity(detail.type)}
                     fullWidth
                     onClick={() => {
-                      if (detail.link) window.location.assign(detail.link);
+                      // Issue #2182: defensive validation even though backend currently
+                      // produces only relative paths (Notification.cs:17 audit 2026-06-11).
+                      if (isSafeRelativeLink(detail.link)) {
+                        window.location.assign(detail.link!);
+                      } else {
+                        logger.warn('Rejected unsafe detail.link in notification', {
+                          metadata: {
+                            linkMasked: detail.link?.slice(0, 32),
+                            notificationId: detail.id,
+                          },
+                        });
+                      }
                     }}
                   >
                     Apri

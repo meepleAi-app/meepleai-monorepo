@@ -53,6 +53,10 @@ export function RegisterPageContent() {
   const [error, setError] = useState<string>('');
 
   const oauthDisabled = searchParams?.get('oauth_disabled') === 'true';
+  // Audit (#2168): register does NOT read ?from=. Post-registration redirect is
+  // hardcoded to /verification-pending (line below in handleRegister). If a
+  // ?from= param is ever introduced here, use assertSafeRelativeOrFallback from
+  // @/lib/url-safety before passing it to router.push().
 
   // Fetch registration mode on mount
   useEffect(() => {
@@ -94,6 +98,7 @@ export function RegisterPageContent() {
         // (matches AuthModal.handleRegister behavior)
         await new Promise(resolve => setTimeout(resolve, 100));
 
+        // #2168 audit: hardcoded redirect target — see header comment.
         await router.push(`/verification-pending?email=${encodeURIComponent(data.email)}`);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : t('auth.register.genericError');

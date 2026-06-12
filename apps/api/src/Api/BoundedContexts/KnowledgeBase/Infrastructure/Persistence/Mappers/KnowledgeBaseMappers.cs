@@ -41,14 +41,16 @@ internal static class KnowledgeBaseMappers
     public static VectorDocument ToDomain(this VectorDocumentEntity entity)
     {
         ArgumentNullException.ThrowIfNull(entity);
-        var domain = new VectorDocument(
+        // #2244: use Rehydrate (not the public ctor) so reading from DB does NOT enqueue
+        // a fresh VectorDocumentIndexedEvent — that was a latent read-side bug.
+        var domain = VectorDocument.Rehydrate(
             id: entity.Id,
             gameId: entity.GameId ?? Guid.Empty,
             pdfDocumentId: entity.PdfDocumentId,
-            language: "en", // Default language (not stored in entity)
+            language: "en", // Not stored on entity — default to "en"
             totalChunks: entity.ChunkCount,
-            sharedGameId: entity.SharedGameId // Issue #5185
-        );
+            indexedAt: entity.IndexedAt ?? DateTime.UtcNow,
+            sharedGameId: entity.SharedGameId); // Issue #5185
 
         // Restore metadata using internal method
         if (!string.IsNullOrEmpty(entity.Metadata))

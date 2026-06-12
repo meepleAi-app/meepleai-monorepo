@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Xunit;
 using FluentAssertions;
 using Api.Tests.Constants;
@@ -8,12 +9,104 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Entities;
 /// <summary>
 /// Unit tests for VectorDocument aggregate root.
 /// Issue #2639: KnowledgeBase test suite
+/// Issue #2244: factory + rehydrate pattern (epic #2242 Sub #2)
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "KnowledgeBase")]
 public class VectorDocumentTests
 {
+    // ── #2244 new factory tests ───────────────────────────────────────────────
+
     [Fact]
-    public void Constructor_ValidParameters_CreatesVectorDocument()
+    public void Create_WithValidArgs_RaisesVectorDocumentIndexedEventOnce()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+        var sharedGameId = Guid.NewGuid();
+
+        // Act
+        var doc = VectorDocument.Create(
+            id: id,
+            gameId: gameId,
+            pdfDocumentId: pdfId,
+            language: "en",
+            totalChunks: 42,
+            sharedGameId: sharedGameId);
+
+        // Assert
+        doc.DomainEvents.OfType<VectorDocumentIndexedEvent>().Should().HaveCount(1);
+        var evt = doc.DomainEvents.OfType<VectorDocumentIndexedEvent>().Single();
+        evt.DocumentId.Should().Be(id);
+        evt.GameId.Should().Be(gameId);
+        evt.ChunkCount.Should().Be(42);
+        evt.SharedGameId.Should().Be(sharedGameId);
+    }
+
+    [Fact]
+    public void Create_NormalizesLanguageToLowerInvariant()
+    {
+        var doc = VectorDocument.Create(
+            id: Guid.NewGuid(),
+            gameId: Guid.NewGuid(),
+            pdfDocumentId: Guid.NewGuid(),
+            language: "EN-US",
+            totalChunks: 1);
+
+        doc.Language.Should().Be("en-us");
+    }
+
+    [Fact]
+    public void Create_WithEmptyLanguage_Throws()
+    {
+        var act = () => VectorDocument.Create(
+            id: Guid.NewGuid(), gameId: Guid.NewGuid(),
+            pdfDocumentId: Guid.NewGuid(), language: "",
+            totalChunks: 1);
+
+        act.Should().Throw<ArgumentException>().WithMessage("*language*");
+    }
+
+    [Fact]
+    public void Create_WithZeroChunks_Throws()
+    {
+        var act = () => VectorDocument.Create(
+            id: Guid.NewGuid(), gameId: Guid.NewGuid(),
+            pdfDocumentId: Guid.NewGuid(), language: "en",
+            totalChunks: 0);
+
+        act.Should().Throw<ArgumentException>().WithMessage("*chunks*");
+    }
+
+    [Fact]
+    public void Rehydrate_DoesNotRaiseDomainEvents()
+    {
+        var doc = VectorDocument.Rehydrate(
+            id: Guid.NewGuid(),
+            gameId: Guid.NewGuid(),
+            pdfDocumentId: Guid.NewGuid(),
+            language: "en",
+            totalChunks: 5,
+            indexedAt: DateTime.UtcNow,
+            sharedGameId: null);
+
+        doc.DomainEvents.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void PublicConstructor_IsNotAccessible()
+    {
+        // Sub #2 guard: prevent regression to old anti-pattern (3 ingestion paths used `new VectorDocument(...)`)
+        var ctor = typeof(VectorDocument)
+            .GetConstructors(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+        ctor.Should().BeEmpty("VectorDocument must only be constructible via Create() factory or Rehydrate() (read-side)");
+    }
+
+    // ── Existing tests migrated to factory/rehydrate (#2244) ─────────────────
+
+    [Fact]
+    public void Create_ValidParameters_CreatesVectorDocument()
     {
         // Arrange
         var id = Guid.NewGuid();
@@ -23,7 +116,7 @@ public class VectorDocumentTests
         var totalChunks = 10;
 
         // Act
-        var document = new VectorDocument(id, gameId, pdfDocumentId, language, totalChunks);
+        var document = VectorDocument.Create(id, gameId, pdfDocumentId, language, totalChunks);
 
         // Assert
         document.Id.Should().Be(id);
@@ -37,7 +130,7 @@ public class VectorDocumentTests
     }
 
     [Fact]
-    public void Constructor_LanguageWithUpperCase_NormalizesToLowerCase()
+    public void Create_LanguageWithUpperCase_NormalizesToLowerCase()
     {
         // Arrange
         var id = Guid.NewGuid();
@@ -45,14 +138,14 @@ public class VectorDocumentTests
         var pdfDocumentId = Guid.NewGuid();
 
         // Act
-        var document = new VectorDocument(id, gameId, pdfDocumentId, "EN-US", 5);
+        var document = VectorDocument.Create(id, gameId, pdfDocumentId, "EN-US", 5);
 
         // Assert
         document.Language.Should().Be("en-us");
     }
 
     [Fact]
-    public void Constructor_EmptyLanguage_ThrowsArgumentException()
+    public void Create_EmptyLanguage_ThrowsArgumentException()
     {
         // Arrange
         var id = Guid.NewGuid();
@@ -61,13 +154,13 @@ public class VectorDocumentTests
 
         // Act & Assert
         Action act = () =>
-            new VectorDocument(id, gameId, pdfDocumentId, "", 10);
+            VectorDocument.Create(id, gameId, pdfDocumentId, "", 10);
         var exception = act.Should().Throw<ArgumentException>().Which;
         exception.Message.Should().Contain("Language cannot be empty");
     }
 
     [Fact]
-    public void Constructor_WhitespaceLanguage_ThrowsArgumentException()
+    public void Create_WhitespaceLanguage_ThrowsArgumentException()
     {
         // Arrange
         var id = Guid.NewGuid();
@@ -76,12 +169,12 @@ public class VectorDocumentTests
 
         // Act & Assert
         Action act = () =>
-            new VectorDocument(id, gameId, pdfDocumentId, "   ", 10);
+            VectorDocument.Create(id, gameId, pdfDocumentId, "   ", 10);
         act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
-    public void Constructor_ZeroChunks_ThrowsArgumentException()
+    public void Create_ZeroChunks_ThrowsArgumentException()
     {
         // Arrange
         var id = Guid.NewGuid();
@@ -90,13 +183,13 @@ public class VectorDocumentTests
 
         // Act & Assert
         Action act = () =>
-            new VectorDocument(id, gameId, pdfDocumentId, "en", 0);
+            VectorDocument.Create(id, gameId, pdfDocumentId, "en", 0);
         var exception = act.Should().Throw<ArgumentException>().Which;
         exception.Message.Should().Contain("Total chunks must be positive");
     }
 
     [Fact]
-    public void Constructor_NegativeChunks_ThrowsArgumentException()
+    public void Create_NegativeChunks_ThrowsArgumentException()
     {
         // Arrange
         var id = Guid.NewGuid();
@@ -105,7 +198,7 @@ public class VectorDocumentTests
 
         // Act & Assert
         Action act = () =>
-            new VectorDocument(id, gameId, pdfDocumentId, "en", -5);
+            VectorDocument.Create(id, gameId, pdfDocumentId, "en", -5);
         act.Should().Throw<ArgumentException>();
     }
 
@@ -184,7 +277,7 @@ public class VectorDocumentTests
     }
 
     [Fact]
-    public void Constructor_SetsIndexedAtToCurrentTime()
+    public void Create_SetsIndexedAtToCurrentTime()
     {
         // Arrange
         var beforeCreation = DateTime.UtcNow;
@@ -200,7 +293,7 @@ public class VectorDocumentTests
     // ── SharedGameId (Issue #5185) ────────────────────────────────────────────
 
     [Fact]
-    public void Constructor_WithoutSharedGameId_DefaultsToNull()
+    public void Create_WithoutSharedGameId_DefaultsToNull()
     {
         var document = CreateTestDocument();
 
@@ -208,11 +301,11 @@ public class VectorDocumentTests
     }
 
     [Fact]
-    public void Constructor_WithSharedGameId_SetsSharedGameId()
+    public void Create_WithSharedGameId_SetsSharedGameId()
     {
         var sharedGameId = Guid.NewGuid();
 
-        var document = new VectorDocument(
+        var document = VectorDocument.Create(
             id: Guid.NewGuid(),
             gameId: Guid.NewGuid(),
             pdfDocumentId: Guid.NewGuid(),
@@ -238,7 +331,7 @@ public class VectorDocumentTests
     public void SetSharedGameId_WithNull_ClearsValue()
     {
         var sharedGameId = Guid.NewGuid();
-        var document = new VectorDocument(
+        var document = VectorDocument.Create(
             id: Guid.NewGuid(),
             gameId: Guid.NewGuid(),
             pdfDocumentId: Guid.NewGuid(),
@@ -251,17 +344,18 @@ public class VectorDocumentTests
         document.SharedGameId.Should().BeNull();
     }
 
-    // Helper method
+    // Helper method — uses Rehydrate for fixture construction (no event side-effects in tests)
     private static VectorDocument CreateTestDocument(
         string language = "en",
         int totalChunks = 10)
     {
-        return new VectorDocument(
+        return VectorDocument.Rehydrate(
             id: Guid.NewGuid(),
             gameId: Guid.NewGuid(),
             pdfDocumentId: Guid.NewGuid(),
             language: language,
-            totalChunks: totalChunks
-        );
+            totalChunks: totalChunks,
+            indexedAt: DateTime.UtcNow,
+            sharedGameId: null);
     }
 }

@@ -43,7 +43,8 @@ internal sealed class KnowledgeBaseIngestService(
 
         if (vd is null)
         {
-            vd = new VectorDocument(
+            // #2244: use VectorDocument.Create() factory so VectorDocumentIndexedEvent is raised structurally.
+            vd = VectorDocument.Create(
                 id: Guid.NewGuid(),
                 gameId: gameId,
                 pdfDocumentId: sourceDocumentId,

@@ -90,7 +90,7 @@ public sealed class GameSessionContextIntegrationTests
             });
 
         // Primary + expansion1 have KB; expansion2 does not
-        var mockDoc = new VectorDocument(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "en", 10);
+        var mockDoc = VectorDocument.Rehydrate(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "en", 10, DateTime.UtcNow, null);
         _vectorDocRepoMock.Setup(r => r.GetByGameIdAsync(primaryGameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<VectorDocument> { mockDoc });
         _vectorDocRepoMock.Setup(r => r.GetByGameIdAsync(expansion1, It.IsAny<CancellationToken>()))

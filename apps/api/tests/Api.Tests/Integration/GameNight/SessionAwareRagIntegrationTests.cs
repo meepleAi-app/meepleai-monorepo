@@ -98,7 +98,7 @@ public sealed class SessionAwareRagIntegrationTests
     private void SetupVectorDocs(Guid gameId, bool hasDocs)
     {
         var docs = hasDocs
-            ? new List<VectorDocument> { new VectorDocument(Guid.NewGuid(), gameId, Guid.NewGuid(), "en", 10) }
+            ? new List<VectorDocument> { VectorDocument.Rehydrate(Guid.NewGuid(), gameId, Guid.NewGuid(), "en", 10, DateTime.UtcNow, null) }
             : new List<VectorDocument>();
 
         _vectorDocRepoMock.Setup(r => r.GetByGameIdAsync(gameId, It.IsAny<CancellationToken>()))

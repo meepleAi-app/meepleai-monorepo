@@ -91,12 +91,14 @@ public class KnowledgeBaseIngestServiceTests
         // ARRANGE
         var sourceId = Guid.NewGuid();
         var gameId = Guid.NewGuid();
-        var existingVd = new VectorDocument(
+        var existingVd = VectorDocument.Rehydrate(
             id: Guid.NewGuid(),
             gameId: gameId,
             pdfDocumentId: sourceId,
             language: "en",
-            totalChunks: 5);
+            totalChunks: 5,
+            indexedAt: DateTime.UtcNow,
+            sharedGameId: null);
 
         _vdRepo.GetByGameAndSourceAsync(gameId, sourceId, Arg.Any<CancellationToken>())
             .Returns(existingVd);
@@ -159,12 +161,14 @@ public class KnowledgeBaseIngestServiceTests
         var sourceId = Guid.NewGuid();
         var gameId = Guid.NewGuid();
         var vdId = Guid.NewGuid();
-        var existingVd = new VectorDocument(
+        var existingVd = VectorDocument.Rehydrate(
             id: vdId,
             gameId: gameId,
             pdfDocumentId: sourceId,
             language: "en",
-            totalChunks: 5);
+            totalChunks: 5,
+            indexedAt: DateTime.UtcNow,
+            sharedGameId: null);
 
         _vdRepo.GetByGameAndSourceAsync(gameId, sourceId, Arg.Any<CancellationToken>())
             .Returns(existingVd);

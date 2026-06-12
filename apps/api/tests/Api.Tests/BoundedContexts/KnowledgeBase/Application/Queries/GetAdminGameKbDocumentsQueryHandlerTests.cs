@@ -55,7 +55,7 @@ public sealed class GetAdminGameKbDocumentsQueryHandlerTests
         var docId = Guid.NewGuid();
         var pdfDocId = Guid.NewGuid();
 
-        var vectorDoc = new VectorDocument(docId, gameId, pdfDocId, "en", 42);
+        var vectorDoc = VectorDocument.Rehydrate(docId, gameId, pdfDocId, "en", 42, DateTime.UtcNow, null);
 
         _repo.GetByGameIdAsync(gameId, Arg.Any<CancellationToken>())
             .Returns(new List<VectorDocument> { vectorDoc });

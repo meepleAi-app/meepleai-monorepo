@@ -61,7 +61,7 @@ public sealed class VectorDocumentIndexedEventHandlerTests
         new(_documentId, _gameId, TestChunkCount);
 
     private VectorDocument CreateVectorDocument() =>
-        new(_documentId, _gameId, _pdfDocumentId, "it", TestChunkCount);
+        VectorDocument.Rehydrate(_documentId, _gameId, _pdfDocumentId, "it", TestChunkCount, DateTime.UtcNow, null);
 
     private PdfDocument CreatePdfDocument() =>
         new PdfDocumentBuilder()

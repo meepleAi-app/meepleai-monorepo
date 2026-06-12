@@ -60,7 +60,7 @@ public sealed class GetUserGameKbStatusQueryHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        var vectorDoc = new VectorDocument(Guid.NewGuid(), gameId, Guid.NewGuid(), "en", 10);
+        var vectorDoc = VectorDocument.Rehydrate(Guid.NewGuid(), gameId, Guid.NewGuid(), "en", 10, DateTime.UtcNow, null);
 
         _vectorRepoMock
             .GetByGameIdAsync(gameId, Arg.Any<CancellationToken>())
@@ -91,7 +91,7 @@ public sealed class GetUserGameKbStatusQueryHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        var vectorDoc = new VectorDocument(Guid.NewGuid(), gameId, Guid.NewGuid(), "it", 25);
+        var vectorDoc = VectorDocument.Rehydrate(Guid.NewGuid(), gameId, Guid.NewGuid(), "it", 25, DateTime.UtcNow, null);
 
         _vectorRepoMock
             .GetByGameIdAsync(gameId, Arg.Any<CancellationToken>())
@@ -139,7 +139,7 @@ public sealed class GetUserGameKbStatusQueryHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        var vectorDoc = new VectorDocument(Guid.NewGuid(), gameId, Guid.NewGuid(), "en", 15);
+        var vectorDoc = VectorDocument.Rehydrate(Guid.NewGuid(), gameId, Guid.NewGuid(), "en", 15, DateTime.UtcNow, null);
 
         _vectorRepoMock
             .GetByGameIdAsync(gameId, Arg.Any<CancellationToken>())
@@ -187,7 +187,7 @@ public sealed class GetUserGameKbStatusQueryHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        var vectorDoc = new VectorDocument(Guid.NewGuid(), gameId, Guid.NewGuid(), "en", 5);
+        var vectorDoc = VectorDocument.Rehydrate(Guid.NewGuid(), gameId, Guid.NewGuid(), "en", 5, DateTime.UtcNow, null);
 
         _vectorRepoMock
             .GetByGameIdAsync(gameId, Arg.Any<CancellationToken>())

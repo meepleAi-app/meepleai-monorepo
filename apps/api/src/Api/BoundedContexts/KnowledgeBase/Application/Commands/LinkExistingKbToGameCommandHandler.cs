@@ -107,8 +107,9 @@ internal class LinkExistingKbToGameCommandHandler
         }
 
         // 6. Create VectorDocument clone for the target game
+        // #2244: use VectorDocument.Create() factory so VectorDocumentIndexedEvent is raised structurally.
         var language = sourcePdf.Language ?? "en";
-        var clonedVd = new VectorDocument(
+        var clonedVd = VectorDocument.Create(
             id: Guid.NewGuid(),
             gameId: targetGameId,
             pdfDocumentId: command.SourcePdfDocumentId,

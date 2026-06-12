@@ -196,7 +196,7 @@ public class GameSessionOrchestratorServiceTests
         SetupEntityLinks(gameId, new List<EntityLink>());
 
         // Vector documents exist for primary game
-        var vectorDoc = new VectorDocument(Guid.NewGuid(), gameId, Guid.NewGuid(), "en", 10);
+        var vectorDoc = VectorDocument.Rehydrate(Guid.NewGuid(), gameId, Guid.NewGuid(), "en", 10, DateTime.UtcNow, null);
         SetupVectorDocuments(gameId, new List<VectorDocument> { vectorDoc });
 
         // Rulebook analysis exists
@@ -263,7 +263,7 @@ public class GameSessionOrchestratorServiceTests
         // Primary game has NO vector doc
         SetupVectorDocuments(primaryGameId, new List<VectorDocument>());
         // Expansion HAS vector doc
-        var expansionVectorDoc = new VectorDocument(Guid.NewGuid(), expansionId, Guid.NewGuid(), "en", 5);
+        var expansionVectorDoc = VectorDocument.Rehydrate(Guid.NewGuid(), expansionId, Guid.NewGuid(), "en", 5, DateTime.UtcNow, null);
         SetupVectorDocuments(expansionId, new List<VectorDocument> { expansionVectorDoc });
 
         // No rulebook analyses
@@ -302,7 +302,7 @@ public class GameSessionOrchestratorServiceTests
         SetupEntityLinks(primaryGameId, new List<EntityLink> { expansionLink });
 
         // Primary game has vector doc
-        var primaryVectorDoc = new VectorDocument(Guid.NewGuid(), primaryGameId, Guid.NewGuid(), "en", 10);
+        var primaryVectorDoc = VectorDocument.Rehydrate(Guid.NewGuid(), primaryGameId, Guid.NewGuid(), "en", 10, DateTime.UtcNow, null);
         SetupVectorDocuments(primaryGameId, new List<VectorDocument> { primaryVectorDoc });
 
         // Expansion does NOT have vector doc
@@ -396,7 +396,7 @@ public class GameSessionOrchestratorServiceTests
 
         SetupEntityLinks(gameId, new List<EntityLink>());
 
-        var vectorDoc = new VectorDocument(Guid.NewGuid(), gameId, Guid.NewGuid(), "en", 10);
+        var vectorDoc = VectorDocument.Rehydrate(Guid.NewGuid(), gameId, Guid.NewGuid(), "en", 10, DateTime.UtcNow, null);
         SetupVectorDocuments(gameId, new List<VectorDocument> { vectorDoc });
 
         _rulebookRepoMock
@@ -522,7 +522,7 @@ public class GameSessionOrchestratorServiceTests
 
         SetupEntityLinks(gameId, new List<EntityLink>());
 
-        var vectorDoc = new VectorDocument(Guid.NewGuid(), gameId, Guid.NewGuid(), "en", 10);
+        var vectorDoc = VectorDocument.Rehydrate(Guid.NewGuid(), gameId, Guid.NewGuid(), "en", 10, DateTime.UtcNow, null);
         SetupVectorDocuments(gameId, new List<VectorDocument> { vectorDoc });
 
         var analysis = CreateTestAnalysis(gameId, "Catan");

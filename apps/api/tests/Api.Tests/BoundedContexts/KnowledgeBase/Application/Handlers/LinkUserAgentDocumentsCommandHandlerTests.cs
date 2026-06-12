@@ -51,8 +51,8 @@ public sealed class LinkUserAgentDocumentsCommandHandlerTests
         var docId1 = Guid.NewGuid();
         var docId2 = Guid.NewGuid();
 
-        var document1 = new VectorDocument(docId1, gameId, Guid.NewGuid(), "it", 50);
-        var document2 = new VectorDocument(docId2, gameId, Guid.NewGuid(), "it", 30);
+        var document1 = VectorDocument.Rehydrate(docId1, gameId, Guid.NewGuid(), "it", 50, DateTime.UtcNow, null);
+        var document2 = VectorDocument.Rehydrate(docId2, gameId, Guid.NewGuid(), "it", 30, DateTime.UtcNow, null);
 
         var agentDefinition = AgentDefinitionEntity.Create(
             "Test Agent",
@@ -119,7 +119,7 @@ public sealed class LinkUserAgentDocumentsCommandHandlerTests
         // Arrange
         var gameId = Guid.NewGuid();
         var agentDefinitionId = Guid.NewGuid();
-        var document = new VectorDocument(Guid.NewGuid(), gameId, Guid.NewGuid(), "en", 25);
+        var document = VectorDocument.Rehydrate(Guid.NewGuid(), gameId, Guid.NewGuid(), "en", 25, DateTime.UtcNow, null);
 
         _vectorDocRepoMock
             .Setup(r => r.GetByGameIdAsync(gameId, It.IsAny<CancellationToken>()))
@@ -149,7 +149,7 @@ public sealed class LinkUserAgentDocumentsCommandHandlerTests
         var agentDefinitionId = Guid.NewGuid();
         var docId = Guid.NewGuid();
 
-        var document = new VectorDocument(docId, gameId, Guid.NewGuid(), "en", 100);
+        var document = VectorDocument.Rehydrate(docId, gameId, Guid.NewGuid(), "en", 100, DateTime.UtcNow, null);
 
         var agentDefinition = AgentDefinitionEntity.Create(
             "Single Doc Agent",

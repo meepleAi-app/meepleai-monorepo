@@ -55,7 +55,7 @@ public sealed class RemoveDocumentFromKbCommandHandlerTests
         // Arrange
         var vectorDocId = Guid.NewGuid();
         var gameId = Guid.NewGuid();
-        var vectorDoc = new VectorDocument(vectorDocId, gameId, Guid.NewGuid(), "en", 10);
+        var vectorDoc = VectorDocument.Rehydrate(vectorDocId, gameId, Guid.NewGuid(), "en", 10, DateTime.UtcNow, null);
 
         _repo.GetByIdAsync(vectorDocId, Arg.Any<CancellationToken>())
             .Returns(vectorDoc);
@@ -77,7 +77,7 @@ public sealed class RemoveDocumentFromKbCommandHandlerTests
         var ownerGameId = Guid.NewGuid();
         var requestedGameId = Guid.NewGuid(); // different game
 
-        var vectorDoc = new VectorDocument(vectorDocId, ownerGameId, Guid.NewGuid(), "it", 5);
+        var vectorDoc = VectorDocument.Rehydrate(vectorDocId, ownerGameId, Guid.NewGuid(), "it", 5, DateTime.UtcNow, null);
 
         _repo.GetByIdAsync(vectorDocId, Arg.Any<CancellationToken>())
             .Returns(vectorDoc);

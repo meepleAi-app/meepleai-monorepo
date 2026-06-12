@@ -247,13 +247,14 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         await pdfRepository.UpdateAsync(reloadedPdf2, TestCancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
-        var vectorDoc = new VectorDocument(
+        var vectorDoc = VectorDocument.Rehydrate(
             Guid.NewGuid(),
             gameEntity.Id,
             pdfDocument.Id,
             language: "en",
-            totalChunks: 15
-        );
+            totalChunks: 15,
+            indexedAt: DateTime.UtcNow,
+            sharedGameId: null);
         vectorDoc.UpdateMetadata("{\"page\": 12, \"source\": \"scythe-rules.pdf\", \"quality\": 0.95}");
         await vectorRepository.AddAsync(vectorDoc, TestCancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
@@ -301,13 +302,14 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         pdfDocument.MarkAsCompleted(24);
         await pdfRepository.AddAsync(pdfDocument, TestCancellationToken);
 
-        var vectorDoc = new VectorDocument(
+        var vectorDoc = VectorDocument.Rehydrate(
             Guid.NewGuid(),
             gameEntity.Id,
             pdfDocument.Id,
             language: "en",
-            totalChunks: 12
-        );
+            totalChunks: 12,
+            indexedAt: DateTime.UtcNow,
+            sharedGameId: null);
         await vectorRepository.AddAsync(vectorDoc, TestCancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 

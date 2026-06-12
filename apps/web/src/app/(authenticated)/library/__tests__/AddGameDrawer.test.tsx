@@ -68,9 +68,11 @@ vi.mock('@/app/(authenticated)/library/CatalogSearchStep', () => ({
   CatalogSearchStep: ({
     onSelect,
     onBack,
+    onGoToManual,
   }: {
     onSelect: (gameId: string, gameName: string) => void;
     onBack: () => void;
+    onGoToManual?: () => void;
   }) => (
     <div data-testid="catalog-search-step">
       <button data-testid="catalog-select-game" onClick={() => onSelect('game-123', 'Catan')}>
@@ -79,6 +81,11 @@ vi.mock('@/app/(authenticated)/library/CatalogSearchStep', () => ({
       <button data-testid="catalog-back" onClick={onBack}>
         Back
       </button>
+      {onGoToManual && (
+        <button data-testid="catalog-go-to-manual" onClick={onGoToManual}>
+          Go to manual
+        </button>
+      )}
     </div>
   ),
 }));
@@ -258,6 +265,20 @@ describe('AddGameDrawer', () => {
       const wizard = screen.getByTestId('user-wizard-client');
       expect(wizard).toHaveAttribute('data-compact-mode', 'true');
     });
+
+    // #2269 P0-1 (M1) — when the catalog is empty, CatalogSearchStep exposes
+    // an onGoToManual bridge that must transition the drawer to step "manual".
+    // This breaks the dead-end in the empty-search flow.
+    it('transitions to manual step when CatalogSearchStep invokes onGoToManual', async () => {
+      const user = userEvent.setup();
+      renderDrawer({ open: true });
+
+      await user.click(screen.getByTestId('add-game-choice-catalog'));
+      await user.click(screen.getByTestId('catalog-go-to-manual'));
+
+      expect(screen.getByTestId('add-game-step-manual')).toBeInTheDocument();
+      expect(screen.queryByTestId('add-game-step-catalog')).not.toBeInTheDocument();
+    });
   });
 
   describe('Close behavior', () => {
@@ -269,6 +290,36 @@ describe('AddGameDrawer', () => {
       await user.keyboard('{Escape}');
 
       expect(onClose).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // #2269 P0-3 (M4) — Accessibility regression guards. The drawer must
+  // expose itself as a modal dialog and be labelled by its title so screen
+  // readers announce it as "Add a game, dialog". Memory `radix-dialog-no-
+  // aria-modal` notes that the Radix Dialog primitive (which Sheet wraps)
+  // does NOT emit `aria-modal` on its own — we force the attribute here.
+  describe('Accessibility (M4)', () => {
+    it('exposes role="dialog" on the SheetContent', () => {
+      renderDrawer({ open: true });
+      // Radix renders the modal content into a portal; the role survives.
+      const dialog = screen.getByRole('dialog');
+      expect(dialog).toBeInTheDocument();
+    });
+
+    it('exposes aria-modal="true" on the dialog', () => {
+      renderDrawer({ open: true });
+      const dialog = screen.getByRole('dialog');
+      expect(dialog).toHaveAttribute('aria-modal', 'true');
+    });
+
+    it('connects aria-labelledby to the SheetTitle element', () => {
+      renderDrawer({ open: true });
+      const dialog = screen.getByRole('dialog');
+      const labelledById = dialog.getAttribute('aria-labelledby');
+      expect(labelledById).toBeTruthy();
+
+      const title = screen.getByTestId('add-game-drawer-title');
+      expect(title.id).toBe(labelledById);
     });
   });
 

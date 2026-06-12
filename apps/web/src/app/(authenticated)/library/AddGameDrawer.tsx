@@ -51,8 +51,11 @@ function ChoiceCard({ icon, title, description, onClick, 'data-testid': testId }
       onClick={onClick}
       className={[
         'w-full text-left rounded-xl border-2 border-border/50 p-5',
-        'hover:border-orange-500/60 hover:bg-orange-50/50 dark:hover:bg-orange-950/20',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500',
+        // #2269 P0-4 — token canonical: orange-* hardcoded → entity-game.
+        // The entity utility resolves to --c-game and is theme-aware (light
+        // + dark), removing the need for `dark:` variants.
+        'hover:border-entity-game/60 hover:bg-entity-game/10',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-entity-game',
         'transition-colors cursor-pointer',
       ].join(' ')}
     >
@@ -63,7 +66,7 @@ function ChoiceCard({ icon, title, description, onClick, 'data-testid': testId }
           choice. `aria-hidden` keeps screen readers from announcing
           "image, image" before the meaningful label.
         */}
-        <div aria-hidden="true" className="flex-shrink-0 mt-0.5 text-orange-500">
+        <div aria-hidden="true" className="flex-shrink-0 mt-0.5 text-entity-game">
           {icon}
         </div>
         <div>
@@ -123,12 +126,22 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
   // Called by CatalogSearchStep after game is successfully added to library.
   // Simplified flow: no longer transitions to a PDF step — close drawer and
   // jump straight to the game detail page where PDF/Agent CTAs await.
-  const handleCatalogSelect = useCallback(
-    (gameId: string, _gameName: string) => {
+  // #2269 P0-2 (M2) — shared with the blocked-alert CTA (`onNavigateToGame`)
+  // so the "Vai alla scheda" path produces the same close+redirect as a
+  // successful add.
+  const handleNavigateToGame = useCallback(
+    (gameId: string) => {
       onClose();
       router.push(`/library/${gameId}`);
     },
     [onClose, router]
+  );
+
+  const handleCatalogSelect = useCallback(
+    (gameId: string, _gameName: string) => {
+      handleNavigateToGame(gameId);
+    },
+    [handleNavigateToGame]
   );
 
   const drawerTitle =
@@ -144,6 +157,10 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
         side="right"
         className="w-full sm:max-w-xl flex flex-col p-0"
         data-testid="add-game-drawer"
+        // #2269 P0-3 (M4) — Radix Dialog primitive does not emit aria-modal
+        // on its own (see memory `radix-dialog-no-aria-modal`); we set it
+        // explicitly so screen readers announce the drawer as a modal.
+        aria-modal="true"
       >
         <SheetHeader className="px-6 py-4 border-b border-border/50">
           <SheetTitle data-testid="add-game-drawer-title">{drawerTitle}</SheetTitle>
@@ -193,7 +210,17 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
           {/* Step 1b: Catalog search (1-click add → redirect to detail) */}
           {step === 'catalog' && (
             <div data-testid="add-game-step-catalog">
-              <CatalogSearchStep onSelect={handleCatalogSelect} onBack={() => setStep('choice')} />
+              <CatalogSearchStep
+                onSelect={handleCatalogSelect}
+                onBack={() => setStep('choice')}
+                // #2269 P0-1 (M1) — bridge for empty-state CTA so users searching
+                // a game that does not exist in the catalog can switch to manual
+                // creation without closing the drawer.
+                onGoToManual={() => setStep('manual')}
+                // #2269 P0-2 (M2) — blocked-alert "Vai alla scheda" CTA jumps
+                // to the existing game's detail page (close drawer + push).
+                onNavigateToGame={handleNavigateToGame}
+              />
             </div>
           )}
         </div>

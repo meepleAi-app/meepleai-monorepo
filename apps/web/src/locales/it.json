@@ -2111,7 +2111,11 @@
           "emptyResultsHeading": "Nessun risultato",
           "emptyResultsSubtitle": "Prova con un titolo diverso o controlla l'ortografia.",
           "toastAdded": "«{gameName}» aggiunto alla tua libreria!",
-          "toastError": "Impossibile aggiungere «{gameName}». Riprova."
+          "toastError": "Impossibile aggiungere «{gameName}». Riprova.",
+          "emptyManualCta": "Aggiungi manualmente",
+          "blockedMessage": "Hai già «{gameTitle}» in libreria.",
+          "blockedCta": "Vai alla scheda",
+          "blockedDismiss": "Chiudi"
         }
       },
       "catalogPagination": {

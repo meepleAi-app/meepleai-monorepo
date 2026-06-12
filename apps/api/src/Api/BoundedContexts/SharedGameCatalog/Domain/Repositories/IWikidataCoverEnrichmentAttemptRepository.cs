@@ -68,6 +68,33 @@ public interface IWikidataCoverEnrichmentAttemptRepository
         int take,
         string? reasonFilter,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Issue #1823 Phase E F2 — resolves the supplied attempt ids to their
+    /// parent <c>SharedGameId</c> in a single round-trip. Missing ids are
+    /// simply absent from the dictionary so the caller can report
+    /// <c>not-found</c> to the admin UI.
+    /// </summary>
+    /// <param name="attemptIds">Set of attempt ids to resolve.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Map <c>attemptId → SharedGameId</c>; absent keys = attempt not found.</returns>
+    Task<IReadOnlyDictionary<Guid, Guid>> GetSharedGameIdsByAttemptIdsAsync(
+        IReadOnlyCollection<Guid> attemptIds,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Issue #1823 Phase E F3 — returns the full attempt timeline for a single
+    /// game, ordered by <c>AttemptedAt</c> DESC. Bounded by <paramref name="limit"/>
+    /// (clamped to a sane upper bound by the impl) so the admin drawer never
+    /// pulls thousands of rows.
+    /// </summary>
+    /// <param name="sharedGameId">Target game id.</param>
+    /// <param name="limit">Max rows to return (clamped to [1, 200]).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<WikidataCoverEnrichmentAttempt>> GetAttemptsByGameIdAsync(
+        Guid sharedGameId,
+        int limit,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>

@@ -200,6 +200,50 @@ internal sealed class WikidataCoverEnrichmentAttemptRepository
         return new DeadLetterPage(items, totalCount);
     }
 
+    public async Task<IReadOnlyDictionary<Guid, Guid>> GetSharedGameIdsByAttemptIdsAsync(
+        IReadOnlyCollection<Guid> attemptIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(attemptIds);
+
+        if (attemptIds.Count == 0)
+        {
+            return new Dictionary<Guid, Guid>();
+        }
+
+        // Defensive cap mirroring the F2 validator MaxBatchSize (50). EF Core
+        // translates a Contains() against a parameterized list into a single
+        // SARGable WHERE id = ANY(@p) on PostgreSQL.
+        var ids = attemptIds.Distinct().Take(50).ToArray();
+
+        var rows = await DbContext.WikidataCoverEnrichmentAttempts
+            .AsNoTracking()
+            .Where(a => ids.Contains(a.Id))
+            .Select(a => new { a.Id, a.SharedGameId })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return rows.ToDictionary(r => r.Id, r => r.SharedGameId);
+    }
+
+    public async Task<IReadOnlyList<WikidataCoverEnrichmentAttempt>> GetAttemptsByGameIdAsync(
+        Guid sharedGameId,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        limit = Math.Clamp(limit, 1, 200);
+
+        var entities = await DbContext.WikidataCoverEnrichmentAttempts
+            .AsNoTracking()
+            .Where(a => a.SharedGameId == sharedGameId)
+            .OrderByDescending(a => a.AttemptedAt)
+            .Take(limit)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entities.Select(Map).ToList();
+    }
+
     private static WikidataCoverEnrichmentAttempt Map(WikidataCoverEnrichmentAttemptEntity entity) =>
         WikidataCoverEnrichmentAttempt.Reconstitute(
             id: entity.Id,

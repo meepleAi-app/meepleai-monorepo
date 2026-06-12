@@ -97,7 +97,7 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 
         _output("Applying migrations...");
-        await MigrateWithRetry(_dbContext);
+        await TestMigrationHelper.MigrateWithRetryAsync(_dbContext, TestCancellationToken, onRetry: _output);
         _output("✓ Migrations applied");
         _output("✓ Test infrastructure ready");
     }
@@ -733,26 +733,4 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
 
     #endregion
 
-    #region Helper Methods
-
-    private async Task MigrateWithRetry(MeepleAiDbContext context, int maxRetries = 3)
-    {
-        for (int i = 0; i < maxRetries; i++)
-        {
-            try
-            {
-                await context.Database.MigrateAsync(TestCancellationToken);
-                return;
-            }
-            catch (Exception ex) when (i < maxRetries - 1)
-            {
-                _output($"Migration attempt {i + 1} failed: {ex.Message}. Retrying...");
-                await Task.Delay(1000, TestCancellationToken);
-            }
-        }
-
-        throw new InvalidOperationException("Failed to apply migrations after maximum retries");
-    }
-
-    #endregion
 }

@@ -17,7 +17,6 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
-using Npgsql;
 using Xunit;
 
 namespace Api.Tests.Integration.DocumentProcessing;
@@ -84,7 +83,7 @@ public sealed class PdfRowVersionConcurrencyIntegrationTests : IAsyncLifetime
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        await MigrateWithRetryAsync(_dbContext);
+        await TestMigrationHelper.MigrateWithRetryAsync(_dbContext, TestCancellationToken);
         await SeedBaseAsync();
     }
 
@@ -107,23 +106,6 @@ public sealed class PdfRowVersionConcurrencyIntegrationTests : IAsyncLifetime
             catch
             {
                 // best-effort cleanup — test isolation already achieved
-            }
-        }
-    }
-
-    private static async Task MigrateWithRetryAsync(MeepleAiDbContext db)
-    {
-        const int maxAttempts = 3;
-        for (var attempt = 1; attempt <= maxAttempts; attempt++)
-        {
-            try
-            {
-                await db.Database.MigrateAsync(TestCancellationToken);
-                return;
-            }
-            catch (NpgsqlException) when (attempt < maxAttempts)
-            {
-                await Task.Delay(TestConstants.Timing.RetryDelay, TestCancellationToken);
             }
         }
     }

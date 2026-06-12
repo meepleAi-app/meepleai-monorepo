@@ -382,6 +382,7 @@ Companion: [gap report demo Claude Design](./docs/for-developers/audits/2026-06-
 | #2593 | Kill testhost before running tests; use culture-independent `$"{val*100:0}%"` |
 | #2600 | OAuth: Defensive validation + InMemory transaction + manual rollback |
 | #2620 | FK constraints: seed dependent entities first; HybridCache needs `IHybridCacheService` for event handlers |
+| [ADR-062](./docs/for-claude/architecture/adr/adr-062-config-environment-field-semantics.md) | Config `Environment` field: default to `"All"` for global keys; per-env per-row only when value diverges by environment design. Decision tree in the ADR. |
 
 ---
 

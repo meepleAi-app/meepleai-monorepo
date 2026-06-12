@@ -76,9 +76,16 @@ internal sealed class InMemoryWikidataEnrichmentEventBroadcaster : IWikidataEnri
 
         try
         {
+            // NOTE: never use `yield break` from inside a nested catch — the
+            // C# async-iterator state machine guarantees `finally` runs on
+            // `yield break`, but the inversion via a `break` flag is the safer
+            // pattern for a long-running subscriber loop (avoids any future
+            // refactor accidentally moving `yield break` to a position that
+            // skips the outer finally cleanup of the subscriber map entry).
             while (!cancellationToken.IsCancellationRequested)
             {
-                WikidataEnrichmentEvent payload;
+                WikidataEnrichmentEvent? payload = null;
+                var shouldBreak = false;
                 try
                 {
                     payload = await channel.Reader
@@ -87,14 +94,15 @@ internal sealed class InMemoryWikidataEnrichmentEventBroadcaster : IWikidataEnri
                 }
                 catch (OperationCanceledException)
                 {
-                    yield break;
+                    shouldBreak = true;
                 }
                 catch (ChannelClosedException)
                 {
-                    yield break;
+                    shouldBreak = true;
                 }
 
-                yield return payload;
+                if (shouldBreak) break;
+                yield return payload!;
             }
         }
         finally

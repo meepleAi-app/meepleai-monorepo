@@ -24,7 +24,7 @@ internal static class KnowledgeBaseMappers
             GameId = domain.GameId,
             PdfDocumentId = domain.PdfDocumentId,
             ChunkCount = domain.TotalChunks,
-            TotalCharacters = 0, // Not tracked in domain
+            TotalCharacters = domain.TotalCharacters,
             IndexingStatus = "completed", // Simplified status mapping
             IndexedAt = domain.IndexedAt,
             IndexingError = null,
@@ -51,7 +51,8 @@ internal static class KnowledgeBaseMappers
             totalChunks: entity.ChunkCount,
             indexedAt: entity.IndexedAt ?? DateTime.UtcNow,
             sharedGameId: entity.SharedGameId, // Issue #5185
-            metadata: entity.Metadata);
+            metadata: entity.Metadata,
+            totalCharacters: entity.TotalCharacters);
     }
 
     /// <summary>

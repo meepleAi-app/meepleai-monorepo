@@ -54,6 +54,7 @@ public sealed class PdfIndexingPipelineTests
         result.GameId.Should().Be(gameId);
         result.SharedGameId.Should().Be(sharedGameId);
         result.TotalChunks.Should().Be(7);
+        result.TotalCharacters.Should().Be(1000, "pipeline must derive TotalCharacters from pdfDoc.ExtractedText.Length");
         result.DomainEvents.OfType<VectorDocumentIndexedEvent>().Should().HaveCount(1);
         repo.VerifyAll();
     }

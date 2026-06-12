@@ -21,6 +21,7 @@ internal sealed class VectorDocument : AggregateRoot<Guid>
     public Guid PdfDocumentId { get; private set; }
     public string Language { get; private set; }
     public int TotalChunks { get; private set; }
+    public int TotalCharacters { get; private set; }
     public DateTime IndexedAt { get; private set; }
     public DateTime? LastSearchedAt { get; private set; }
     public int SearchCount { get; private set; }
@@ -50,6 +51,7 @@ internal sealed class VectorDocument : AggregateRoot<Guid>
         Guid pdfDocumentId,
         string language,
         int totalChunks,
+        int totalCharacters,
         DateTime indexedAt,
         Guid? sharedGameId) : base(id)
     {
@@ -57,6 +59,7 @@ internal sealed class VectorDocument : AggregateRoot<Guid>
         PdfDocumentId = pdfDocumentId;
         Language = language;
         TotalChunks = totalChunks;
+        TotalCharacters = totalCharacters;
         IndexedAt = indexedAt;
         SearchCount = 0;
         SharedGameId = sharedGameId;
@@ -72,12 +75,15 @@ internal sealed class VectorDocument : AggregateRoot<Guid>
         Guid pdfDocumentId,
         string language,
         int totalChunks,
-        Guid? sharedGameId = null)
+        Guid? sharedGameId = null,
+        int totalCharacters = 0)
     {
         if (string.IsNullOrWhiteSpace(language))
             throw new ArgumentException("Language cannot be empty", nameof(language));
         if (totalChunks <= 0)
             throw new ArgumentException("Total chunks must be positive", nameof(totalChunks));
+        if (totalCharacters < 0)
+            throw new ArgumentException("Total characters must be non-negative", nameof(totalCharacters));
 
         var doc = new VectorDocument(
             id: id,
@@ -85,6 +91,7 @@ internal sealed class VectorDocument : AggregateRoot<Guid>
             pdfDocumentId: pdfDocumentId,
             language: language.ToLowerInvariant(),
             totalChunks: totalChunks,
+            totalCharacters: totalCharacters,
             indexedAt: DateTime.UtcNow,
             sharedGameId: sharedGameId);
 
@@ -104,7 +111,8 @@ internal sealed class VectorDocument : AggregateRoot<Guid>
         int totalChunks,
         DateTime indexedAt,
         Guid? sharedGameId,
-        string? metadata = null)
+        string? metadata = null,
+        int totalCharacters = 0)
     {
         var domain = new VectorDocument(
             id: id,
@@ -112,6 +120,7 @@ internal sealed class VectorDocument : AggregateRoot<Guid>
             pdfDocumentId: pdfDocumentId,
             language: string.IsNullOrWhiteSpace(language) ? "en" : language.ToLowerInvariant(),
             totalChunks: totalChunks <= 0 ? 1 : totalChunks,
+            totalCharacters: totalCharacters < 0 ? 0 : totalCharacters,
             indexedAt: indexedAt,
             sharedGameId: sharedGameId);
         domain.Metadata = metadata;

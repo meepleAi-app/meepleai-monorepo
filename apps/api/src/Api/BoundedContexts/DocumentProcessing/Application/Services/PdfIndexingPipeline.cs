@@ -45,6 +45,7 @@ internal sealed class PdfIndexingPipeline : IPdfIndexingPipeline
             .ConfigureAwait(false);
 
         var language = string.IsNullOrWhiteSpace(pdfDoc.Language) ? "en" : pdfDoc.Language;
+        var totalCharacters = pdfDoc.ExtractedText?.Length ?? 0;
 
         if (existing is null)
         {
@@ -54,12 +55,13 @@ internal sealed class PdfIndexingPipeline : IPdfIndexingPipeline
                 pdfDocumentId: pdfDoc.Id,
                 language: language,
                 totalChunks: indexedChunkCount,
-                sharedGameId: pdfDoc.SharedGameId);
+                sharedGameId: pdfDoc.SharedGameId,
+                totalCharacters: totalCharacters);
 
             await _repository.AddAsync(domain, cancellationToken).ConfigureAwait(false);
             _logger.LogInformation(
-                "[PdfIndexingPipeline] Created VectorDocument {VectorDocId} for Pdf {PdfId} ({ChunkCount} chunks)",
-                domain.Id, pdfDoc.Id, indexedChunkCount);
+                "[PdfIndexingPipeline] Created VectorDocument {VectorDocId} for Pdf {PdfId} ({ChunkCount} chunks, {CharCount} chars)",
+                domain.Id, pdfDoc.Id, indexedChunkCount, totalCharacters);
             return domain;
         }
 
@@ -74,12 +76,13 @@ internal sealed class PdfIndexingPipeline : IPdfIndexingPipeline
             pdfDocumentId: pdfDoc.Id,
             language: language,
             totalChunks: indexedChunkCount,
-            sharedGameId: pdfDoc.SharedGameId);
+            sharedGameId: pdfDoc.SharedGameId,
+            totalCharacters: totalCharacters);
 
         await _repository.UpdateAsync(refreshed, cancellationToken).ConfigureAwait(false);
         _logger.LogInformation(
-            "[PdfIndexingPipeline] Re-indexed VectorDocument {VectorDocId} for Pdf {PdfId} ({ChunkCount} chunks)",
-            refreshed.Id, pdfDoc.Id, indexedChunkCount);
+            "[PdfIndexingPipeline] Re-indexed VectorDocument {VectorDocId} for Pdf {PdfId} ({ChunkCount} chunks, {CharCount} chars)",
+            refreshed.Id, pdfDoc.Id, indexedChunkCount, totalCharacters);
         return refreshed;
     }
 }

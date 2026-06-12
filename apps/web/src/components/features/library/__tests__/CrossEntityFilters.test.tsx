@@ -211,7 +211,7 @@ describe('CrossEntityFilters', () => {
 
   // Task 1.4 — SP4 mockup conformance (jsx:218–310): search row + filter chips + view toggle.
 
-  it('renders the 4 cross-entity filter chips (STATO/GIOCO/DATA/SORT)', () => {
+  it('renders the 3 cross-entity filter chips after the #2186 GIOCO removal', () => {
     renderWithIntl(
       <CrossEntityFilters
         {...surfaceDefaults}
@@ -221,10 +221,12 @@ describe('CrossEntityFilters', () => {
         onMoreFilters={vi.fn()}
       />
     );
+    // STATO + DATA + SORT remain; GIOCO removed (#2186 — duplicated the
+    // LibraryTabs entity scope and contributed to triple-filter overlap).
     expect(screen.getByRole('button', { name: /STATO/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /GIOCO/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /DATA/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /SORT/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /GIOCO/ })).not.toBeInTheDocument();
   });
 
   it('renders search input with / keyboard hint badge', () => {

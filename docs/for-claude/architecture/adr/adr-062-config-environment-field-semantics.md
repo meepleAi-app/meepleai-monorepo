@@ -55,10 +55,12 @@ var environment = request.Environment ?? "All";
 
 | File | Line | Default |
 |---|---|---|
-| `ConfigurationEndpoints.cs` | 176-184 | from `CreateConfigurationRequest.Environment` (no default — DTO contract) |
-| `FeatureFlagEndpoints.cs` | 191-200 | `request.Environment ?? "All"` |
+| `ConfigurationEndpoints.cs` | 176-184 | from `CreateConfigurationRequest.Environment` — DTO default is `"All"` (`Api/Models/Contracts.cs:688`) |
+| `FeatureFlagEndpoints.cs` | 191-202 | `request.Environment ?? "All"` |
 
 Semantics: **admin caller declares the target environment explicitly**. Used for A/B testing, staging-only flags, or any flag intentionally scoped per environment.
+
+> **Note**: when the caller omits the `Environment` field in the request DTO, both paths above silently fall back to `"All"`. This means **Idiom 2 with a missing field is functionally equivalent to Idiom 1**. The distinction matters only when the admin actively supplies a concrete environment name (e.g., `"Staging"` for a staging-only experiment).
 
 ### Idiom 3 — Current-env per-row (introduced by recent bugfixes)
 
@@ -124,7 +126,7 @@ Applying the decision tree to the two recent bugfixes:
 | Config key | Current idiom (post-bugfix) | Recommended idiom | Rationale |
 |---|---|---|---|
 | `Registration:PublicEnabled` | Idiom 3 (per-env) | **Idiom 1 (`"All"`)** | A global feature flag; the toggle is a tenant-wide policy decision, not per-env scoping. Admin UI does not expose an env selector. |
-| `<FeatureFlag>` (4 `FeatureFlagService` paths) | Idiom 3 (per-env) | **Idiom 1 (`"All"`)** | Same rationale — these are tenant-wide kill switches, not env-scoped experiments. Admin endpoint at `FeatureFlagEndpoints.cs` is the right surface for per-env overrides when needed. |
+| `<FeatureFlag>` (4 `FeatureFlagService` paths, including role-keyed `<FeatureFlag>.<Role>` and tier-keyed `<FeatureFlag>.Tier.<TierName>` variants) | Idiom 3 (per-env) | **Idiom 1 (`"All"`)** | Same rationale — these are tenant-wide kill switches, not env-scoped experiments. Role/tier scoping is encoded in the Key itself (`<FeatureFlag>.Admin`, `<FeatureFlag>.Tier.premium`), independent of the Environment column. Admin endpoint at `FeatureFlagEndpoints.cs` remains the right surface for per-env overrides when intentionally needed. |
 
 The 6 `Update*LimitsCommandHandler` files already use Idiom 1 correctly. The 2 endpoint files at `ConfigurationEndpoints.cs` / `FeatureFlagEndpoints.cs` already use Idiom 2 correctly.
 
@@ -208,11 +210,22 @@ For each affected environment (Production, Staging, any dev DB that has been tou
 
 BEGIN;
 
--- Step 1: take the most recent row per Key (in case multiple env-specific rows exist post-bugfix) and promote to "All".
-WITH most_recent AS (
-    SELECT DISTINCT ON ("Key") *
+-- Step 0: lock all rows for the affected keys to prevent concurrent admin toggles
+-- racing with the migration. PostgreSQL 9.5+ supports FOR UPDATE inside a CTE.
+WITH locked_rows AS (
+    SELECT "Id"
     FROM system_configurations
     WHERE "Key" IN ('Registration:PublicEnabled')  -- extend with feature flag keys
+    FOR UPDATE
+)
+SELECT 1 FROM locked_rows;  -- materialize the lock
+
+-- Step 1: pick the most recent row per Key (in case multiple env-specific rows exist post-bugfix)
+-- and promote it to "All". This becomes the canonical row.
+WITH most_recent AS (
+    SELECT DISTINCT ON ("Key") "Id"
+    FROM system_configurations
+    WHERE "Key" IN ('Registration:PublicEnabled')  -- same list
     ORDER BY "Key", "UpdatedAt" DESC, "Version" DESC
 )
 UPDATE system_configurations sc
@@ -223,14 +236,15 @@ WHERE sc."Id" IN (SELECT "Id" FROM most_recent);
 
 -- Step 2: delete the orphan rows that the bugfix created in other environments.
 DELETE FROM system_configurations
-WHERE "Key" IN ('Registration:PublicEnabled')  -- same list as above
+WHERE "Key" IN ('Registration:PublicEnabled')  -- same list
   AND "Environment" <> 'All';
 
 COMMIT;
 ```
 
 Ops checklist:
-- Run M2 in a transaction with `SELECT ... FOR UPDATE` to prevent concurrent toggles.
+- The `FOR UPDATE` in Step 0 guarantees serializability against concurrent admin toggles. Alternative if the PostgreSQL version does not support `FOR UPDATE` in CTEs: run during a maintenance window with admin UI temporarily disabled.
+- **Sequence**: deploy PR M1 (code change) FIRST, then run PR M2 (data migration), then invalidate the HybridCache. Running M2 before M1 is harmless (no code yet relies on the `"All"` row), but the reverse order leaves a window where the code looks up `"All"` and finds nothing until M2 lands.
 - Verify post-migration: `SELECT "Key", "Environment", "Value" FROM system_configurations WHERE "Key" IN (...)` returns exactly one row per Key with `Environment = 'All'`.
 - The HybridCache TTL is 5 min — invalidate the cache via `POST /admin/cache/invalidate` (if exposed) or wait one TTL window after the migration.
 

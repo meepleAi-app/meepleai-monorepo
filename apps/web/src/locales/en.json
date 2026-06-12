@@ -2061,7 +2061,11 @@
           "emptyResultsHeading": "No results",
           "emptyResultsSubtitle": "Try a different title or check the spelling.",
           "toastAdded": "\"{gameName}\" added to your library!",
-          "toastError": "Could not add \"{gameName}\". Please try again."
+          "toastError": "Could not add \"{gameName}\". Please try again.",
+          "emptyManualCta": "Add manually",
+          "blockedMessage": "You already have \"{gameTitle}\" in your library.",
+          "blockedCta": "Go to game page",
+          "blockedDismiss": "Dismiss"
         }
       },
       "catalogPagination": {

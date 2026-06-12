@@ -1,8 +1,8 @@
 # ADR-062 — `SystemConfigurationEntity.Environment` Field Semantics
 
-**Status**: Proposed
+**Status**: Accepted
 **Date**: 2026-06-12
-**Deciders**: Pending (Product Owner / Tech Lead review)
+**Deciders**: @badsworm (ratified at PR #2268 review)
 **Tracking**: discovered during audit follow-up of [#2116](https://github.com/meepleAi-app/meepleai-monorepo/issues/2116) — see `docs/for-developers/audits/2026-06-11-config-key-environment-asymmetry-audit.md` § Recommendations item 2.
 **Related**: [#2116 closed](https://github.com/meepleAi-app/meepleai-monorepo/issues/2116) ([PR #2159](https://github.com/meepleAi-app/meepleai-monorepo/pull/2159)) · [#2162 closed](https://github.com/meepleAi-app/meepleai-monorepo/issues/2162) ([PR #2261](https://github.com/meepleAi-app/meepleai-monorepo/pull/2261)) · [PR #2163](https://github.com/meepleAi-app/meepleai-monorepo/pull/2163) (IT testcontainers + audit) · [PR #2267](https://github.com/meepleAi-app/meepleai-monorepo/pull/2267) (test infra refactor).
 
@@ -252,21 +252,13 @@ Ops checklist:
 
 PR M1 is fully reversible (revert commit). PR M2 is reversible only if M2 was idempotent and the data state pre-migration was captured (recommend `pg_dump` of the `system_configurations` table immediately before M2). Without a snapshot, rollback would require manually re-creating per-env rows.
 
-## Why this is `Proposed`, not `Accepted`
+## Implementation rule (effective immediately)
 
-The Product Owner / Tech Lead has not yet ratified the migration cost. The two recent bugfixes (#2159 and #2261) chose Idiom 3 as a deliberate decision at review time. Re-litigating that choice across two more PRs and a data migration deserves explicit signoff before scheduling work.
+Convention added to `CLAUDE.md` § Known Pitfalls — new handlers MUST follow the decision tree above when persisting via `CreateConfigurationCommand`. The default is **Idiom 1 (`"All"`)** unless the value genuinely diverges by environment design.
 
-Open questions for the deciders:
+The two recent bugfixes (#2159, #2261) remain on `main-dev` with Idiom 3. Migration to Idiom 1 is scheduled as a follow-up — see "Migration Path" above (PR M1 = code reclassification, PR M2 = data UPDATE). Both are non-urgent: the Idiom 3 code works correctly, the migration is a hygiene improvement aligning with this ADR.
 
-1. **Does the cost of M1 + M2 outweigh the future-bug-prevention value?** The current Idiom 3 code works; the migration is a hygiene improvement, not a P0 fix.
-2. **Are there any planned config keys in the next 60 days that the decision tree would route to Idiom 3?** If yes, this ADR is more valuable; if all upcoming keys are clearly Idiom 1, the existing inconsistency may simply be grandfathered.
-3. **Tolerance for orphan rows on staging post-deploy?** Currently mitigated by the [post-#2116 smoke checklist](../../../for-developers/operations/2026-06-11-issue-2116-post-deploy-smoke.md). If the checklist is reliably followed, the orphan-row problem is contained.
-
-## Implementation rule (if Accepted)
-
-Add to `CLAUDE.md` under the existing **Known Pitfalls** section:
-
-> **Config `Environment` field**: see [ADR-062](./docs/for-claude/architecture/adr/adr-062-config-environment-field-semantics.md). Default to `"All"` for new global config keys; per-env per-row only when the value must diverge by environment design. Decision tree in the ADR.
+Until M1 + M2 land, the orphan-row issue on non-Production deploys is mitigated by the [post-#2116 smoke checklist](../../../for-developers/operations/2026-06-11-issue-2116-post-deploy-smoke.md).
 
 ## References
 

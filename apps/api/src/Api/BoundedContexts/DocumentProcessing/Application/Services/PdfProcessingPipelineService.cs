@@ -56,8 +56,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     // Nullable so pre-#1852 test constructors compile without adding a new mock param.
     private readonly IDomainEventCollector? _eventCollector;
     // #2244 Sub #2 Task 4: single owner of VectorDocument construction/persistence/event-raising
-    // for the Quartz retry path. Optional so pre-#2244 test constructors compile without updates.
-    private readonly IPdfIndexingPipeline? _pipeline;
+    // for the Quartz retry path. Required — production DI registers it; unit tests pass a mock.
+    private readonly IPdfIndexingPipeline _pipeline;
 
     public PdfProcessingPipelineService(
         MeepleAiDbContext db,
@@ -71,14 +71,14 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         ILogger<PdfProcessingPipelineService> logger,
         ILanguageDetector languageDetector,
         IChunkTranslationService chunkTranslationService,
+        IPdfIndexingPipeline pipeline,
         IRaptorIndexer? raptorIndexer = null,
         IEntityExtractor? entityExtractor = null,
         IVectorStoreAdapter? vectorStore = null,
         IFeatureFlagService? featureFlagService = null,
         IRoleClassifierService? roleClassifier = null,
         IPdfCoverExtractor? pdfCoverExtractor = null,
-        IDomainEventCollector? eventCollector = null,
-        IPdfIndexingPipeline? pipeline = null)
+        IDomainEventCollector? eventCollector = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _pdfClaimService = pdfClaimService ?? throw new ArgumentNullException(nameof(pdfClaimService));
@@ -101,8 +101,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         // to compile without updating every mock site. The Collect() call
         // in ExtractCoverImageAsync is guarded with a null-check.
         _eventCollector = eventCollector;
-        // pipeline is optional so pre-#2244 unit-test constructors compile without updates.
-        // Production DI (DocumentProcessingServiceExtensions) always injects it.
+        ArgumentNullException.ThrowIfNull(pipeline);
         _pipeline = pipeline;
     }
 
@@ -757,87 +756,32 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         // #2244 Sub #2 Task 4: delegate VectorDocument creation/update to the domain pipeline
         // so VectorDocument.Create raises VectorDocumentIndexedEvent → MediatR →
         // VectorDocumentIndexedForKbFlagHandler flips shared_games.has_knowledge_base = true.
-        //
-        // _pipeline is null only when pre-#2244 unit-test constructors omit the parameter.
-        // Production DI always injects it (DocumentProcessingServiceExtensions registers it Scoped).
-        Guid vectorDocId;
-        if (_pipeline is not null)
+        if (gameId == Guid.Empty)
         {
-            if (gameId == Guid.Empty)
-            {
-                _logger.LogWarning(
-                    "[PdfPipeline] No GameId for PDF {PdfId}, skipping VectorDocument creation",
-                    pdfDoc.Id);
-                return;
-            }
-
-            KbEntities.VectorDocument vectorDomain;
-            try
-            {
-                vectorDomain = await _pipeline.ExecuteAsync(pdfDoc, chunkCount, gameId, cancellationToken)
-                    .ConfigureAwait(false);
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                    nameof(PdfProcessingPipelineService),
-                    MeepleAiMetrics.PdfConcurrencyCategories.B);
-                _logger.LogWarning(ex,
-                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                    pdfDoc.Id, nameof(PdfProcessingPipelineService));
-                return; // CRITICAL: do not throw — Quartz must see job as successful (no double-fire retry)
-            }
-
-            vectorDocId = vectorDomain.Id;
+            _logger.LogWarning(
+                "[PdfPipeline] No GameId for PDF {PdfId}, skipping VectorDocument creation",
+                pdfDoc.Id);
+            return;
         }
-        else
+
+        KbEntities.VectorDocument vectorDomain;
+        try
         {
-            // Pre-#2244 fallback: direct EF write (unit tests that omit IPdfIndexingPipeline).
-            // Does NOT raise VectorDocumentIndexedEvent — acceptable for isolated unit tests.
-            var vectorDocEntity = await _db.VectorDocuments
-                .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfDoc.Id, cancellationToken)
+            vectorDomain = await _pipeline.ExecuteAsync(pdfDoc, chunkCount, gameId, cancellationToken)
                 .ConfigureAwait(false);
-
-            if (vectorDocEntity == null)
-            {
-                vectorDocEntity = new VectorDocumentEntity
-                {
-                    Id = Guid.NewGuid(),
-                    GameId = pdfDoc.SharedGameId,
-                    SharedGameId = pdfDoc.SharedGameId,
-                    PdfDocumentId = pdfDoc.Id,
-                    IndexingStatus = "completed",
-                    ChunkCount = chunkCount,
-                    TotalCharacters = pdfDoc.ExtractedText?.Length ?? 0,
-                    IndexedAt = _timeProvider.GetUtcNow().UtcDateTime
-                };
-                _db.VectorDocuments.Add(vectorDocEntity);
-            }
-            else
-            {
-                vectorDocEntity.IndexingStatus = "completed";
-                vectorDocEntity.ChunkCount = chunkCount;
-                vectorDocEntity.TotalCharacters = pdfDoc.ExtractedText?.Length ?? 0;
-                vectorDocEntity.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
-            }
-
-            try
-            {
-                await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                    nameof(PdfProcessingPipelineService),
-                    MeepleAiMetrics.PdfConcurrencyCategories.B);
-                _logger.LogWarning(ex,
-                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                    pdfDoc.Id, nameof(PdfProcessingPipelineService));
-                return; // CRITICAL: do not throw — Quartz must see job as successful
-            }
-
-            vectorDocId = vectorDocEntity.Id;
         }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(PdfProcessingPipelineService),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(ex,
+                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                pdfDoc.Id, nameof(PdfProcessingPipelineService));
+            return; // CRITICAL: do not throw — Quartz must see job as successful (no double-fire retry)
+        }
+
+        var vectorDocId = vectorDomain.Id;
 
         // Index embeddings in pgvector for semantic search.
         // Uses vectorDocId resolved from either path above.

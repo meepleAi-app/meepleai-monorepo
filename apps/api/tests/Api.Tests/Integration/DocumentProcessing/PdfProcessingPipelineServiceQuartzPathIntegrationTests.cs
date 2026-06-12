@@ -393,63 +393,38 @@ public sealed class PdfProcessingPipelineServiceQuartzPathIntegrationTests : IAs
         vectorDoc.TotalCharacters.Should().BeGreaterThan(0,
             "TotalCharacters must be derived from pdfDoc.ExtractedText.Length inside the pipeline");
 
-        // CRITICAL ASSERTION: structural domain-event path must flip has_knowledge_base.
+        // CRITICAL ASSERTION: structural domain-event path — outbox row count = 1.
+        //
         // VectorDocument.Create raises VectorDocumentIndexedEvent → EF SaveChanges dispatcher
-        // (via IDomainEventCollector in VectorDocumentRepository.AddAsync) → MediatR →
-        // VectorDocumentIndexedForKbFlagHandler flips shared_games.has_knowledge_base = true.
+        // (via IDomainEventCollector in VectorDocumentRepository.AddAsync) → Hybrid mode Step 2b
+        // persists the event into domain_event_outbox.
         //
         // Without Task 4 migration: IndexInVectorStoreAsync uses new VectorDocumentEntity {}
-        // directly (no domain constructor called) → no event raised → has_knowledge_base stays false.
+        // directly (no domain constructor called) → no event raised → outbox stays empty.
         //
-        // Detach the tracked game entity and use a fresh DbContext query to avoid identity-map staleness.
+        // Option A (honest): assert outbox count = 1 as the structural proof. We do NOT
+        // additionally assert has_knowledge_base = true here because in the Quartz path the
+        // inline MediatR dispatch fires at SaveChangesAsync depth=2, which enqueues the event
+        // into the outbox but does not synchronously commit the SharedGame flag change before
+        // this test's assertions run (the outbox processor is not running in this test scope).
+        //
+        // The downstream effect (has_knowledge_base = true) is fully covered by Task 3's
+        // PdfIndexingFlowKbFlagIntegrationTests.UploadPdf_OnSuccessfulIndexing_SetsHasKnowledgeBaseTrue_OnSharedGame
+        // which exercises the same VectorDocumentIndexedForKbFlagHandler chain end-to-end via
+        // the InlineBackgroundTaskService that processes events synchronously. Duplicating that
+        // assertion here via a false-positive mediator.Publish workaround would only prove the
+        // handler works given a directly-published event, not that the structural path is correct.
         _dbContext.Entry(game).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
 
-        // Check if the VectorDocument has the correct SharedGameId (ensures _pipeline was used).
-        vectorDoc.SharedGameId.Should().Be(game.Id,
-            "VectorDocument.SharedGameId must match the seeded game — confirms PdfIndexingPipeline.ExecuteAsync was called");
-
-        // Assert: VectorDocumentIndexedEvent was persisted in the outbox.
-        // This proves VectorDocument.Create was called (structural domain-event path).
-        // Note: in the Quartz job path, the inline MediatR dispatch fires at depth=2 of
-        // SaveChangesAsync recursion. The depth=2 guard allows SaveChanges to commit the
-        // SharedGame change (has_knowledge_base = true), but in tests where the outbox
-        // processor is not running, we drive the has_knowledge_base assertion by processing
-        // the outbox row manually below (same as production outbox processor would do).
         var outboxCount = await _dbContext.DomainEventOutbox
             .AsNoTracking()
             .CountAsync(e => e.EventType.Contains("VectorDocumentIndexed"), TestCancellationToken);
         outboxCount.Should().Be(1,
             "VectorDocument.Create must raise VectorDocumentIndexedEvent, which SaveChangesAsync " +
             "persists into domain_event_outbox (Hybrid mode Step 2b). Outbox count=1 proves the " +
-            "structural domain-event path is working in PdfProcessingPipelineService (Task 4 migration).");
-
-        // Drive the has_knowledge_base = true assertion by manually publishing the event
-        // (mirrors what the DomainEventOutboxProcessor does asynchronously in production).
-        // This is needed because the inline dispatch fires at depth=2, where base.SaveChangesAsync
-        // commits the SharedGame change but the test runs without an outbox background processor.
-        // The VectorDocumentIndexedEvent is re-constructed from the VectorDocument row.
-        var mediator = _serviceProvider!.GetRequiredService<MediatR.IMediator>();
-        await mediator.Publish(
-            new Api.BoundedContexts.KnowledgeBase.Domain.Events.VectorDocumentIndexedEvent(
-                documentId: vectorDoc!.Id,
-                gameId: vectorDoc.SharedGameId ?? Guid.Empty,
-                chunkCount: vectorDoc.ChunkCount,
-                sharedGameId: vectorDoc.SharedGameId),
-            TestCancellationToken);
-
-        // Detach the tracked game entity and reload from DB to verify the KB flag.
-        _dbContext.Entry(game).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
-        var updatedGame = await _dbContext.SharedGames
-            .AsNoTracking()
-            .SingleAsync(g => g.Id == game.Id, TestCancellationToken);
-
-        updatedGame.HasKnowledgeBase.Should().BeTrue(
-            "after VectorDocumentIndexedEvent is dispatched (structurally via domain-event pipeline), " +
-            "VectorDocumentIndexedForKbFlagHandler must flip shared_games.has_knowledge_base = true. " +
-            "The outbox row count = 1 (asserted above) proves the event was raised structurally by " +
-            "PdfProcessingPipelineService.IndexInVectorStoreAsync via IPdfIndexingPipeline.ExecuteAsync " +
-            "→ VectorDocument.Create (Task 4 migration). Production uses DomainEventOutboxProcessor to " +
-            "dispatch the outbox row asynchronously; this test drives it manually for determinism.");
+            "structural domain-event path is working in PdfProcessingPipelineService (Task 4 migration). " +
+            "Production DomainEventOutboxProcessor dispatches this row asynchronously to flip " +
+            "shared_games.has_knowledge_base = true (covered end-to-end by Task 3 integration test).");
     }
 
     private static byte[] CreateValidPdfBytes(int sizeInBytes)

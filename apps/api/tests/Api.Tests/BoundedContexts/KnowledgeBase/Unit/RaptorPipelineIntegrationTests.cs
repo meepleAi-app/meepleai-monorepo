@@ -275,6 +275,32 @@ public sealed class RaptorPipelineIntegrationTests : IDisposable
         doc!.ProcessingState.Should().Be("Ready");
     }
 
+    /// <summary>
+    /// Returns a no-side-effect IPdfIndexingPipeline stub for tests that focus on
+    /// RAPTOR / GraphRag behaviour rather than VectorDocument persistence.
+    /// Uses VectorDocument.Rehydrate (does NOT raise domain events) to avoid
+    /// polluting the in-memory DB with outbox rows that are irrelevant to these tests.
+    /// </summary>
+    private static IPdfIndexingPipeline BuildStubPipeline()
+    {
+        var mock = new Mock<IPdfIndexingPipeline>();
+        mock.Setup(p => p.ExecuteAsync(
+                It.IsAny<Api.Infrastructure.Entities.PdfDocumentEntity>(),
+                It.IsAny<int>(),
+                It.IsAny<Guid>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Api.Infrastructure.Entities.PdfDocumentEntity pdf, int chunks, Guid gameId, CancellationToken _) =>
+                Api.BoundedContexts.KnowledgeBase.Domain.Entities.VectorDocument.Rehydrate(
+                    id: Guid.NewGuid(),
+                    gameId: gameId,
+                    pdfDocumentId: pdf.Id,
+                    language: "en",
+                    totalChunks: Math.Max(1, chunks),
+                    indexedAt: DateTime.UtcNow,
+                    sharedGameId: pdf.SharedGameId));
+        return mock.Object;
+    }
+
     private PdfProcessingPipelineService CreatePipelineService(bool withRaptor)
     {
         var languageDetectorMock = new Mock<ILanguageDetector>();
@@ -294,6 +320,10 @@ public sealed class RaptorPipelineIntegrationTests : IDisposable
             _logger,
             languageDetectorMock.Object,
             Mock.Of<IChunkTranslationService>(),
+            // #2244 Task 4 fix: pipeline is now required (non-nullable). These tests focus on
+            // RAPTOR behaviour, not VectorDocument persistence, so we return a Rehydrate stub
+            // (no domain events) that provides a valid Id for the pgvector indexing path.
+            pipeline: BuildStubPipeline(),
             raptorIndexer: withRaptor ? _raptorIndexerMock.Object : null,
             entityExtractor: null,
             vectorStore: null,

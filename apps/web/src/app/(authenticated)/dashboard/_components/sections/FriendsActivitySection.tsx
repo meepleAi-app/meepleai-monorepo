@@ -34,7 +34,8 @@ const VERB_LABEL_IT: Record<FriendActivityVerb, string> = {
 };
 
 const SECTION_ICON = '🎉';
-const SECTION_TITLE = 'Cosa fanno i tuoi';
+// Issue #2178: previously 'Cosa fanno i tuoi' truncated mid-sentence.
+const SECTION_TITLE = 'Cosa fanno i tuoi amici';
 const SECTION_ID = 'friends-activity';
 
 export type FriendsActivitySectionState = 'default' | 'empty' | 'loading' | 'error';

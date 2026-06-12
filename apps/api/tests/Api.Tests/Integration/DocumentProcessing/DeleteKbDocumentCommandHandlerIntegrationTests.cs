@@ -18,7 +18,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Npgsql;
 using Xunit;
 
 namespace Api.Tests.Integration.DocumentProcessing;

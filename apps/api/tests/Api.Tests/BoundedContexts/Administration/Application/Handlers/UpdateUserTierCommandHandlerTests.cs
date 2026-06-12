@@ -83,7 +83,7 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 
         // Apply migrations with simple retry to handle transient container readiness
-        await TestMigrationHelper.MigrateWithRetryAsync(_dbContext, TestCancellationToken);
+        await TestMigrationHelper.MigrateWithRetryAsync(_dbContext, TestCancellationToken, onRetry: _output);
         _output("Database migrations applied");
     }
 

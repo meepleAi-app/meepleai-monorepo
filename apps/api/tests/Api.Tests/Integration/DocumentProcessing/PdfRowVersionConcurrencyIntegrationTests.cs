@@ -17,7 +17,6 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
-using Npgsql;
 using Xunit;
 
 namespace Api.Tests.Integration.DocumentProcessing;

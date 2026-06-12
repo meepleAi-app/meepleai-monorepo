@@ -34,7 +34,7 @@ internal static class TestMigrationHelper
                 await context.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
                 return;
             }
-            catch (Exception ex) when (i < maxRetries - 1)
+            catch (Exception ex) when (i < maxRetries - 1 && ex is not OperationCanceledException)
             {
                 onRetry?.Invoke($"Migration attempt {i + 1} failed: {ex.Message}. Retrying...");
                 await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken).ConfigureAwait(false);

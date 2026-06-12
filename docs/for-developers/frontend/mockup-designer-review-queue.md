@@ -89,6 +89,15 @@ Spec-panel critique with 4 experts (Cockburn lead · Adzic · Wiegers · Fowler)
 
 Second spec-panel critique on nav-chrome / BGG / naming consistency. Full report: [`audits/2026-06-10-nav-chrome-bgg-naming-audit.md`](../../../audits/2026-06-10-nav-chrome-bgg-naming-audit.md).
 
+## Manual test addendum — sp4-game-detail 4-finding decomposition (2026-06-12, #2079)
+
+`sp4-game-detail.fidelity.json` was reclassified `current` → `forward-refactor` to track the 4 open finding from the manual test session (2026-06-09). F5 (animated underline) was already shipped via #2105 M7 and is marked done.
+
+- [ ] **#2079 F1 — Hero gradient-overlay-bottom-title** — Live `/library/[gameId]` mounts `MeepleCard` hero variant (`min-h-[320px]`, fluid). Mockup ships a fixed `height: 240px` cover with gradient overlay + bottom-anchored title + variant-aware CTA. Decision required: build a dedicated `GameHero` component OR extend MeepleCard hero variant with a `gradient-bottom-title` mode. Child issue tracked.
+- [ ] **#2079 F2 — Stats tab MISSING (promoted to P1)** — Live tab set is `info / aiChat / toolbox / houseRules / partite`; mockup ships an additional `stats` tab with 4 KpiCard + Leaderboard. Requires BE endpoint `GET /api/v1/library/games/{id}/stats` (winRate, avgScore, gamesCount, lastPlayedAt, leaderboard) + FE tab. Child issue tracked.
+- [ ] **#2079 F3 — Documents tab (product decision)** — Mockup ships a granular `documents` tab with per-doc `DocItem` cards; live merges KB docs inside `toolbox` / `aiChat`. Product owner decision required: granular tab vs aggregated view.
+- [ ] **#2079 F4 — ConnectionBar 4 vs 6 pip** — Canonical builder (`buildGameConnections`) ships 4 slots (`KB / Agent / Chat / Sessioni`) across 10 card consumers; mockup ships 6. Design decision required on which 2 extra slots to commission (candidates: Stats / Documents / Toolbox / HouseRules) before extending the shared builder.
+
 ## US-25 walkthrough addendum — notifications mockup form-factor gap (2026-06-12, #2180)
 
 `notifications.fidelity.json` was reclassified `current` → `forward-refactor` to track the desktop variant gap discovered during the US-25 Sara Socratic walkthrough.

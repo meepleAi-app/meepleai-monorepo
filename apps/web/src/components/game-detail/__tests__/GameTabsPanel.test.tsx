@@ -40,6 +40,21 @@ describe('GameTabsPanel', () => {
     expect(screen.getAllByRole('tab')).toHaveLength(5);
   });
 
+  it('mounts the animated underline indicator (#2079 F5 regression guard)', () => {
+    const { container } = render(<GameTabsPanel gameId="00000000-0000-4000-8000-000000000001" />);
+    // Issue #2079 F5 closed: PR #2105 M7 already ships the animated underline
+    // indicator (data-slot="game-tabs-indicator") with a 300ms cubic-bezier
+    // transition on left + width. The audit observation "tabsHasUnderline=false"
+    // was based on a stale snapshot. This test pins the slot so future
+    // refactors can't quietly drop it.
+    const indicator = container.querySelector('[data-slot="game-tabs-indicator"]');
+    expect(indicator).not.toBeNull();
+    expect(indicator).toHaveAttribute('aria-hidden', 'true');
+    const inlineStyle = indicator?.getAttribute('style') ?? '';
+    expect(inlineStyle).toContain('transition');
+    expect(inlineStyle).toContain('cubic-bezier');
+  });
+
   it('defaults to the Info tab as selected', () => {
     render(<GameTabsPanel gameId="00000000-0000-4000-8000-000000000001" />);
     const infoTab = screen.getByRole('tab', { name: /info/i });

@@ -89,6 +89,12 @@ Spec-panel critique with 4 experts (Cockburn lead · Adzic · Wiegers · Fowler)
 
 Second spec-panel critique on nav-chrome / BGG / naming consistency. Full report: [`audits/2026-06-10-nav-chrome-bgg-naming-audit.md`](../../../audits/2026-06-10-nav-chrome-bgg-naming-audit.md).
 
+## US-25 walkthrough addendum — notifications mockup form-factor gap (2026-06-12, #2180)
+
+`notifications.fidelity.json` was reclassified `current` → `forward-refactor` to track the desktop variant gap discovered during the US-25 Sara Socratic walkthrough.
+
+- [ ] **#2180 — `notifications.html`: commission desktop variant** — The mockup ships 5 phone-only screens (380px + PhoneTopBar) while the live `/notifications` route is desktop+mobile responsive (max-w-3xl container, horizontal pill bar, Drawer detail). Sara persona target is confirmed desktop+mobile responsive (user input 2026-06-11). Decision required: commission `notifications-desktop.{html,jsx,fidelity.json}` and rename the existing set to `notifications-mobile.*`, or downgrade `/notifications` to mobile-only.
+
 ## US-2 walkthrough addendum — auth-flow gap (2026-06-12, #2170)
 
 `auth-flow.fidelity.json` was reclassified `current` → `forward-refactor` to track a gap discovered during the US-2 Marco Socratic walkthrough.

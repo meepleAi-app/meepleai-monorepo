@@ -261,12 +261,16 @@ describe('NotificationsPage', () => {
     expect(markAllButton).toBeDisabled();
   });
 
-  it('should show empty state when no notifications', () => {
+  it('should show empty state when no notifications (#2183)', () => {
     setupStore({ notifications: [], unreadCount: 0, isFetching: false });
 
     render(<NotificationsPage />);
 
-    expect(screen.getByText(EMPTY.notifications)).toBeInTheDocument();
+    // Heading: explicit "no notifications yet" headline (#2183 contextual copy)
+    expect(screen.getByText(EMPTY.notificationsEmptyDefault)).toBeInTheDocument();
+    // CTA to /notifications/preferences must always render
+    const cta = screen.getByTestId('notifications-empty-preferences-cta');
+    expect(cta).toHaveAttribute('href', '/notifications/preferences');
   });
 
   it('should show empty state with unread message when unread-only toggle is on (#2181)', async () => {
@@ -298,8 +302,9 @@ describe('NotificationsPage', () => {
     });
     render(<NotificationsPage />);
     const newToggle = screen.getAllByTestId('notifications-unread-toggle').at(-1)!;
-    // Toggle is disabled (unreadCount === 0), so the "all-read" message lives
-    // both in the toggle label and in the empty-state copy.
+    // Toggle is disabled (unreadCount === 0), so the "all-read" message
+    // lives both in the toggle label and in the empty-state copy (#2181
+    // toggle + #2183 contextual empty-state heading).
     expect(newToggle).toBeDisabled();
     expect(screen.getAllByText(EMPTY.notificationsUnread).length).toBeGreaterThanOrEqual(1);
   });
@@ -344,7 +349,7 @@ describe('NotificationsPage', () => {
     expect(screen.getByText('2 non lette')).toBeInTheDocument();
   });
 
-  it('should show type-specific empty state when filter has no results', async () => {
+  it('should show type-specific empty state when filter has no results (#2183)', async () => {
     const user = userEvent.setup();
     const notifications = [createNotification({ type: 'document_ready' })];
     setupStore({ notifications, unreadCount: 1 });
@@ -354,7 +359,7 @@ describe('NotificationsPage', () => {
     // Click a filter category that has no matching notifications
     await user.click(screen.getByRole('button', { name: /serate/i }));
 
-    expect(screen.getByText(EMPTY.notificationsOfType)).toBeInTheDocument();
+    expect(screen.getByText(EMPTY.notificationsEmptyCategory)).toBeInTheDocument();
   });
 
   it('should display all filter category pills', () => {

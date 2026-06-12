@@ -27,7 +27,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { Bell, CheckCheck, Loader2 } from 'lucide-react';
+import { Bell, BellOff, CheckCheck, Loader2, Settings } from 'lucide-react';
+import Link from 'next/link';
 
 import { CatalogPagination } from '@/components/catalog/CatalogPagination';
 import { Btn } from '@/components/ui/btn';
@@ -314,20 +315,50 @@ export default function NotificationsPage() {
       )}
 
       {!isFetching && !error && filtered.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
+        <div
+          className="flex flex-col items-center justify-center py-16 text-center gap-4"
+          data-testid="notifications-empty-state"
+        >
           <div
             className="flex h-24 w-24 items-center justify-center rounded-full bg-muted/60"
             aria-hidden="true"
           >
-            <Bell className="h-10 w-10 text-muted-foreground/60" />
+            {/* Issue #2183: BellOff communicates "you're all caught up" much
+                more clearly than Bell — the latter looked identical to the
+                inbox header, leaving Sara wondering if the page had failed
+                to load. Bell is kept for the broader "no notifications yet"
+                state because the inbox is genuinely awaiting its first
+                arrival, not muted. */}
+            {unreadOnly || notifications.length > 0 ? (
+              <BellOff className="h-10 w-10 text-muted-foreground/60" />
+            ) : (
+              <Bell className="h-10 w-10 text-muted-foreground/60" />
+            )}
           </div>
-          <p className="text-sm text-muted-foreground">
-            {unreadOnly
-              ? 'Nessuna notifica non letta'
-              : filter !== 'all'
-                ? 'Nessuna notifica di questo tipo'
-                : 'Nessuna notifica'}
-          </p>
+          <div className="flex flex-col items-center gap-1">
+            <p className="text-base font-semibold text-foreground">
+              {unreadOnly
+                ? 'Sei in pari'
+                : filter !== 'all'
+                  ? 'Nessuna notifica in questa categoria'
+                  : 'Nessuna notifica per ora'}
+            </p>
+            <p className="text-sm text-muted-foreground max-w-sm">
+              {unreadOnly
+                ? 'Tutte le notifiche sono state lette. Configura le preferenze per scegliere cosa ricevere in futuro.'
+                : filter !== 'all'
+                  ? 'Cambia categoria oppure modifica le preferenze per ricevere questo tipo di notifiche.'
+                  : 'Non hai ancora ricevuto notifiche. Configura le preferenze per personalizzare quando avvisarti.'}
+            </p>
+          </div>
+          <Link
+            href="/notifications/preferences"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors"
+            data-testid="notifications-empty-preferences-cta"
+          >
+            <Settings className="h-4 w-4" aria-hidden="true" />
+            Configura preferenze
+          </Link>
         </div>
       )}
 

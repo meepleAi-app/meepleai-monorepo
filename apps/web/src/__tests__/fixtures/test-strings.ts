@@ -17,6 +17,10 @@ export const EMPTY = {
   notifications: 'Nessuna notifica',
   notificationsOfType: 'Nessuna notifica di questo tipo',
   notificationsUnread: 'Nessuna notifica non letta',
+  // Issue #2183: contextual empty-state copy variants
+  notificationsEmptyDefault: 'Nessuna notifica per ora',
+  notificationsEmptyCategory: 'Nessuna notifica in questa categoria',
+  notificationsEmptyAllRead: 'Sei in pari',
   sessions: 'Nessuna partita',
   sessionsActive: 'Nessuna partita in corso',
   proposals: 'Nessuna Proposta',

@@ -78,6 +78,7 @@
 | `sp4-game-nights-index.html` | page-mock | `/game-nights` |
 | `sp4-games-index.html` | page-mock | `/games` |
 | `sp4-kb-detail.html` | page-mock | `/knowledge-base/[id]` (deferred — G4 v3 pivot) |
+| `sp4-kb-globale.html` | page-mock | `/knowledge-base/global` |
 | `sp4-kb-hub.html` | page-mock | `/knowledge-base` |
 | `sp4-library-desktop.html` | page-mock | `/library` (Wave B.3 done) |
 | `sp4-library-mobile.html` | page-mock | `/library` (mobile <768px variant, SP8 brief 2026-05-30, IA semplificata 3 tab + overflow) |

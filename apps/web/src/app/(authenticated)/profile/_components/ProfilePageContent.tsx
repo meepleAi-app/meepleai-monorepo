@@ -300,14 +300,10 @@ function OverviewTab() {
 function AchievementsTab() {
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground font-nunito">Badge guadagnati e progressi</p>
-        <Button asChild variant="ghost" size="sm" className="font-nunito gap-1">
-          <Link href="/profile/achievements">
-            Tutti <ChevronRight className="h-3 w-3" />
-          </Link>
-        </Button>
-      </div>
+      {/* Issue #2202: removed self-referencing "Tutti →" link to
+          /profile/achievements (user is already on the achievements view —
+          the link was a loop). Tab content surfaces the full grid directly. */}
+      <p className="text-sm text-muted-foreground font-nunito">Badge guadagnati e progressi</p>
       <AchievementsGrid />
     </div>
   );

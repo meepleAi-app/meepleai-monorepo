@@ -11,6 +11,14 @@ export interface DiscoverHeroProps {
   readonly searchSlot?: ReactNode;
   /** FilterPillBar slot (rendered below search). */
   readonly filterSlot?: ReactNode;
+  /**
+   * Pathname displayed in the eyebrow badge (e.g. `/discover` or `/games`).
+   * Defaults to `/discover` for backward compatibility. Issue #2193: the
+   * standalone `/discover` route and the `/games?tab=discover` hub mount
+   * the same Discover surface, so the badge must reflect the actual route
+   * the user is on, not a hardcoded label.
+   */
+  readonly pathLabel?: string;
 }
 
 /**
@@ -20,7 +28,13 @@ export interface DiscoverHeroProps {
  * (entity event → toolkit → agent). Mockup-faithful pattern; not coupled to
  * DiscoverSearchBox or EntityFilterPillBar (both passed via slot props).
  */
-export function DiscoverHero({ title, subtitle, searchSlot, filterSlot }: DiscoverHeroProps) {
+export function DiscoverHero({
+  title,
+  subtitle,
+  searchSlot,
+  filterSlot,
+  pathLabel = '/discover',
+}: DiscoverHeroProps) {
   return (
     <header
       data-slot="discover-hero"
@@ -37,7 +51,7 @@ export function DiscoverHero({ title, subtitle, searchSlot, filterSlot }: Discov
             className="inline-flex w-fit items-center gap-1 rounded-full bg-muted/60 px-2 py-0.5 font-mono text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground"
             aria-hidden="true"
           >
-            <span>🔍</span>Hub · /discover
+            <span>🔍</span>Hub · {pathLabel}
           </span>
           <h1
             className="font-bold font-[Quicksand] text-2xl sm:text-3xl tracking-tight text-foreground"

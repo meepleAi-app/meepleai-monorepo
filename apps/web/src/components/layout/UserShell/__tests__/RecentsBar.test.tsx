@@ -1,14 +1,13 @@
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { act } from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RecentsBar } from '../RecentsBar';
 import { useRecentsStore } from '@/stores/use-recents';
 
-// Mock next/navigation
-const mockPush = vi.fn();
+// Mock next/navigation — RecentsBar no longer needs useRouter after #2193
+// sub#3 (pills became next/link <a>), but the page mock still needs
+// usePathname for the "exclude current path" logic.
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: mockPush }),
   usePathname: () => '/games/g1',
 }));
 
@@ -27,7 +26,6 @@ describe('RecentsBar', () => {
   beforeEach(() => {
     sessionStorage.clear();
     act(() => useRecentsStore.getState().clear());
-    mockPush.mockClear();
   });
 
   it('renders nothing when no recents', () => {
@@ -57,14 +55,22 @@ describe('RecentsBar', () => {
     expect(screen.getByTestId('recent-pill-g2')).toBeInTheDocument();
   });
 
-  it('navigates on click', async () => {
+  it('renders pills as next/link <a> with the destination href (#2193 sub#3)', () => {
     seedRecents();
     render(<RecentsBar />);
-    await userEvent.click(screen.getByTestId('recent-pill-g2'));
-    expect(mockPush).toHaveBeenCalledWith('/games/g2');
+    const pill = screen.getByTestId('recent-pill-g2');
+    expect(pill.tagName.toLowerCase()).toBe('a');
+    expect(pill).toHaveAttribute('href', '/games/g2');
   });
 
-  it('shows tooltip with title on hover', async () => {
+  it('exposes a descriptive aria-label so the single-letter content is not ambiguous (#2193 sub#3)', () => {
+    seedRecents();
+    render(<RecentsBar />);
+    const pill = screen.getByTestId('recent-pill-g2');
+    expect(pill).toHaveAttribute('aria-label', 'Apri Catan');
+  });
+
+  it('shows tooltip with title on hover', () => {
     seedRecents();
     render(<RecentsBar />);
     const pill = screen.getByTestId('recent-pill-g2');

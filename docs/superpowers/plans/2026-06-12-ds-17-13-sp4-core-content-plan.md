@@ -39,20 +39,18 @@
 |---|---|---|
 | `admin-mockups/design_files/sp4-kb-globale.jsx` | 2549, 2550 | Remove "Connetti BGG" + "BoardGameGeek" references |
 
-### Files created (Stage 1b route-create — Agent dispatch decides exact paths)
+### Files created (Stage 1b story only — route + component EXIST)
 
 | Path | Responsibility |
 |---|---|
-| `apps/web/src/app/(authenticated)/knowledge-base/globale/page.tsx` | Server wrapper |
-| `apps/web/src/app/(authenticated)/knowledge-base/globale/page.stories.tsx` | Storybook entry |
-| `apps/web/src/components/features/knowledge-base/KbGlobaleHome.tsx` (or alternative path per existing patterns) | Client component |
+| `apps/web/src/app/(authenticated)/knowledge-base/global/page.stories.tsx` | Storybook entry (route EXISTS, NO new route or component needed) |
 
 ### Files modified (Stage 1b)
 
 | Path | Action |
 |---|---|
 | `admin-mockups/design_files/sp4-kb-globale.fidelity.json` | Update `story_path` |
-| `admin-mockups/MOCKUPS_INDEX.md` | Add sp4-kb-globale → /knowledge-base/globale mapping |
+| `admin-mockups/MOCKUPS_INDEX.md` | Add `sp4-kb-globale.html` → `/knowledge-base/global` mapping (NEW entry under SP4 section) |
 
 ### Files created (Stage 3 inline batch, 15 stories)
 
@@ -65,7 +63,7 @@
 | sp4-editor-proposals-edit | `apps/web/src/app/(authenticated)/editor/agent-proposals/[id]/edit/page.stories.tsx` |
 | sp4-editor-proposals-test | `apps/web/src/app/(authenticated)/editor/agent-proposals/[id]/test/page.stories.tsx` |
 | sp4-toolkit-history | `apps/web/src/app/(authenticated)/toolkit/history/page.stories.tsx` |
-| sp4-toolkit-play | `apps/web/src/app/(authenticated)/toolkit/play/page.stories.tsx` |
+| sp4-toolkit-play | `apps/web/src/app/(authenticated)/toolkit/[sessionId]/page.stories.tsx` (dynamic route, ActiveSessionPage) |
 | sp4-toolkit-stats | `apps/web/src/app/(authenticated)/toolkit/stats/page.stories.tsx` |
 | sp4-toolkit-templates | `apps/web/src/app/(authenticated)/toolkit/templates/page.stories.tsx` |
 | sp4-play-records-index | `apps/web/src/app/(authenticated)/play-records/page.stories.tsx` |
@@ -81,7 +79,7 @@ Total: 15 inline batch story files (P251).
 | Stem | Story file |
 |---|---|
 | sp4-kb-detail (Agent) | `apps/web/src/app/(authenticated)/knowledge-base/[id]/page.stories.tsx` |
-| sp4-toolkit-detail (Agent, P254 canonical) | `apps/web/src/app/(authenticated)/toolkit/page.stories.tsx` |
+| sp4-toolkit-detail (Agent, P254 canonical hub primary) | `apps/web/src/app/(authenticated)/toolkit/page.stories.tsx` |
 
 ### Files modified (Stage 3 fidelity updates if needed)
 
@@ -241,62 +239,122 @@ Expected: tracking issue # like `#22XX`, story_path populated, commit on branch.
 
 ---
 
-## Stage 1b — sp4-kb-globale route-create (~2h)
+## Stage 1b — sp4-kb-globale story scaffold (~30 min) — REVISED per review CRITICAL-1
 
-### Task 1.2: Agent dispatch for sp4-kb-globale NEW route + KbGlobaleHome
+### Task 1.2: Agent dispatch for sp4-kb-globale story (route EXISTS)
 
-**Pattern reference**: sp3-library-public route-create (DS-17-10, PR #2211).
+**CRITICAL FIX**: Route `/knowledge-base/global` (English, NO trailing 'e') already exists at `apps/web/src/app/(authenticated)/knowledge-base/global/page.tsx` exporting `KnowledgeBaseGlobalPage`. Client component `_components/KbGlobaleView.tsx` exists. NO new route or component creation needed. Task reduces to story scaffold + MOCKUPS_INDEX mapping.
 
 - [ ] **Step 1: Dispatch implementer subagent**
 
 ```
-You are implementing sp4-kb-globale NEW route + component for DS-17-13 #2220.
+You are implementing sp4-kb-globale story scaffold for DS-17-13 #2220.
+
+CRITICAL CONTEXT (per plan review fix C-1):
+- Route /knowledge-base/global ALREADY EXISTS (English spelling, NO trailing 'e')
+- Page component: apps/web/src/app/(authenticated)/knowledge-base/global/page.tsx exports `KnowledgeBaseGlobalPage`
+- Client component: _components/KbGlobaleView.tsx (already exists)
+- Tests: _components/__tests__/ already exist
+- DO NOT create new route, page.tsx, or component — only story + MOCKUPS_INDEX mapping needed
 
 Context:
-- MISSING route: apps/web/src/app/(authenticated)/knowledge-base/globale/
-- Mockup: admin-mockups/design_files/sp4-kb-globale.{html,jsx,fidelity.json} (large file, ~2500+ LOC)
+- Mockup: admin-mockups/design_files/sp4-kb-globale.{html,jsx,fidelity.json}
 - design_intent: current (POST-Stage 0 BGG cleanup)
-- Pattern reference: sp3-library-public route-create DS-17-10 PR #2211 (apps/web/src/app/(public)/library-public/)
 
 Steps:
-1. Read first 80 lines of mockup + identify top-level page component name + sections
-2. Identify reuse primitives via grep:
-   - grep -rln "HeroGradient" apps/web/src/components --include="*.tsx" | head -3
-   - grep -rln "MeepleCard" apps/web/src/components --include="*.tsx" | head -3
-3. Create page.tsx server wrapper at apps/web/src/app/(authenticated)/knowledge-base/globale/page.tsx with mock data fixtures inline (Stage 1 simplification)
-4. Create KbGlobaleHome client component at apps/web/src/components/features/knowledge-base/KbGlobaleHome.tsx (or alternative path matching existing patterns)
-5. Create Storybook story at apps/web/src/app/(authenticated)/knowledge-base/globale/page.stories.tsx
-6. Add basic smoke test (~3 it() blocks resilient assertions)
-7. Update sp4-kb-globale.fidelity.json story_path
-8. Update admin-mockups/MOCKUPS_INDEX.md with sp4-kb-globale → /knowledge-base/globale mapping (under SP4 — Authenticated core section)
-9. Commit feat(knowledge-base): #2220 sp4-kb-globale route + KbGlobaleHome
+1. Read existing page apps/web/src/app/(authenticated)/knowledge-base/global/page.tsx to confirm default export name (KnowledgeBaseGlobalPage)
+2. Create Storybook story at apps/web/src/app/(authenticated)/knowledge-base/global/page.stories.tsx:
+
+```tsx
+/**
+ * sp4-kb-globale — DS-17-13 #2220 sub-issue.
+ *
+ * Mockup parity: `admin-mockups/design_files/sp4-kb-globale.{html,jsx}`.
+ * Post Stage 0 BGG cleanup (lines 2549-2550 "Connetti BGG" import card removed).
+ */
+
+import type { Meta, StoryObj } from '@storybook/react';
+
+import KnowledgeBaseGlobalPage from './page';
+
+const meta: Meta<typeof KnowledgeBaseGlobalPage> = {
+  title: 'Authenticated / sp4-kb-globale',
+  component: KnowledgeBaseGlobalPage,
+  parameters: {
+    layout: 'fullscreen',
+    nextjs: { appDirectory: true },
+    viewport: { defaultViewport: 'desktop' },
+    docs: {
+      description: {
+        component: '#2220 DS-17-13. Knowledge base globale page (community KB catalog).',
+      },
+    },
+  },
+};
+
+export default meta;
+
+type Story = StoryObj<typeof KnowledgeBaseGlobalPage>;
+
+export const Default: Story = {};
+```
+
+3. Update sp4-kb-globale.fidelity.json story_path:
+```bash
+jq '.acceptance.story_path = "apps/web/src/app/(authenticated)/knowledge-base/global/page.stories.tsx"' \
+   admin-mockups/design_files/sp4-kb-globale.fidelity.json > /tmp/sp4-kb-globale-tmp.json && \
+mv /tmp/sp4-kb-globale-tmp.json admin-mockups/design_files/sp4-kb-globale.fidelity.json
+```
+
+4. Update admin-mockups/MOCKUPS_INDEX.md: ADD new entry under "SP4 — Authenticated core" section in alphabetical position:
+```
+| `sp4-kb-globale.html` | page-mock | `/knowledge-base/global` |
+```
+
+5. Verify typecheck + lint:fidelity:
+```bash
+pnpm --filter @meepleai/web typecheck 2>&1 | tail -3
+pnpm --filter @meepleai/web lint:fidelity 2>&1 | grep "sp4-kb-globale"
+```
+
+6. Commit:
+```bash
+git add apps/web/src/app/\(authenticated\)/knowledge-base/global/page.stories.tsx \
+        admin-mockups/design_files/sp4-kb-globale.fidelity.json \
+        admin-mockups/MOCKUPS_INDEX.md
+
+git commit -m "feat(stories): #2220 sp4-kb-globale story + INDEX mapping
+
+Stage 1b: scaffold story for existing /knowledge-base/global route (route + KnowledgeBaseGlobalPage component EXIST pre-DS-17-13, only story missing).
+
+Pattern: @storybook/react import. NO hand-written @mockup JSDoc.
+fidelity.json story_path updated. MOCKUPS_INDEX entry added.
+
+Refs: #2220, spec section 4.3 (revised per plan review C-1)."
+```
 
 Constraints:
-- @storybook/react import
-- NO hand-written @mockup JSDoc
-- Use semantic Tailwind tokens (bg-card, border-border/50, text-foreground, bg-entity-*/12)
-- Use HeroGradient primitive if API matches (apps/web/src/components/ui/hero-gradient/hero-gradient.tsx)
-- A11y compliance (text-entity-toolkit-text for AA contrast on bg-entity-toolkit/12)
-- NO BGG references (Stage 0 cleanup done in mockup, codebase BGG-free)
-- Mock data fixtures inline (no real backend wire)
-- Verify pnpm typecheck + lint:fidelity + lint:bgg pass
+- @storybook/react import (NOT @storybook/nextjs)
+- NO hand-written @mockup JSDoc (injector runs Stage 4)
+- DO NOT create new route or component
+- DO NOT modify existing page.tsx or KbGlobaleView.tsx
 
 Working directory: D:\Repositories\meepleai-monorepo-frontend
 
-Report: DONE / DONE_WITH_CONCERNS / BLOCKED with commit SHA + files created + paths verified.
+Report: DONE / DONE_WITH_CONCERNS / BLOCKED with commit SHA + files modified.
 ```
 
 - [ ] **Step 2: Verify Agent output**
 
 ```bash
 git log --oneline -3
-ls apps/web/src/app/\(authenticated\)/knowledge-base/globale/page.tsx \
-   apps/web/src/app/\(authenticated\)/knowledge-base/globale/page.stories.tsx
-find apps/web/src/components -name "KbGlobaleHome.tsx" 2>/dev/null
+ls apps/web/src/app/\(authenticated\)/knowledge-base/global/page.stories.tsx
+jq -r '.acceptance.story_path' admin-mockups/design_files/sp4-kb-globale.fidelity.json
 grep "sp4-kb-globale" admin-mockups/MOCKUPS_INDEX.md
+pnpm --filter @meepleai/web typecheck 2>&1 | tail -3
 ```
 
-Expected: NEW route + KbGlobaleHome component + story + MOCKUPS_INDEX mapping.
+Expected: story file exists + fidelity story_path populated + MOCKUPS_INDEX entry + typecheck 0 errors.
 
 ---
 
@@ -368,7 +426,7 @@ for path in \
   "apps/web/src/app/(authenticated)/editor/agent-proposals/[id]/edit/page.tsx" \
   "apps/web/src/app/(authenticated)/editor/agent-proposals/[id]/test/page.tsx" \
   "apps/web/src/app/(authenticated)/toolkit/history/page.tsx" \
-  "apps/web/src/app/(authenticated)/toolkit/play/page.tsx" \
+  "apps/web/src/app/(authenticated)/toolkit/[sessionId]/page.tsx" \
   "apps/web/src/app/(authenticated)/toolkit/stats/page.tsx" \
   "apps/web/src/app/(authenticated)/toolkit/templates/page.tsx" \
   "apps/web/src/app/(authenticated)/play-records/page.tsx" \
@@ -436,7 +494,7 @@ export const Default: Story = {};
 5. **sp4-editor-proposals-edit** → `editor/agent-proposals/[id]/edit/page.stories.tsx`, `AgentProposalsEditPage`, description: "Agent proposal edit", dynamic route `pathname: '/editor/agent-proposals/sp4-fixture-id/edit'`
 6. **sp4-editor-proposals-test** → `editor/agent-proposals/[id]/test/page.stories.tsx`, `AgentProposalsTestPage`, description: "Agent proposal test runner", dynamic route `pathname: '/editor/agent-proposals/sp4-fixture-id/test'`
 7. **sp4-toolkit-history** → `toolkit/history/page.stories.tsx`, `ToolkitHistoryPage`, description: "Toolkit session history"
-8. **sp4-toolkit-play** → `toolkit/play/page.stories.tsx`, `ToolkitPlayPage`, description: "Toolkit play view"
+8. **sp4-toolkit-play** → `toolkit/[sessionId]/page.stories.tsx`, `ActiveSessionPage`, description: "Toolkit active session live view", dynamic route `pathname: '/toolkit/sp4-fixture-session-id'`
 9. **sp4-toolkit-stats** → `toolkit/stats/page.stories.tsx`, `ToolkitStatsPage`, description: "Toolkit statistics"
 10. **sp4-toolkit-templates** → `toolkit/templates/page.stories.tsx`, `ToolkitTemplatesPage`, description: "Toolkit templates library"
 11. **sp4-play-records-index** → `play-records/page.stories.tsx`, `PlayRecordsIndexPage`, description: "Play records list"
@@ -465,7 +523,7 @@ git add apps/web/src/app/\(authenticated\)/knowledge-base/page.stories.tsx \
         apps/web/src/app/\(authenticated\)/editor/agent-proposals/\[id\]/edit/page.stories.tsx \
         apps/web/src/app/\(authenticated\)/editor/agent-proposals/\[id\]/test/page.stories.tsx \
         apps/web/src/app/\(authenticated\)/toolkit/history/page.stories.tsx \
-        apps/web/src/app/\(authenticated\)/toolkit/play/page.stories.tsx \
+        apps/web/src/app/\(authenticated\)/toolkit/\[sessionId\]/page.stories.tsx \
         apps/web/src/app/\(authenticated\)/toolkit/stats/page.stories.tsx \
         apps/web/src/app/\(authenticated\)/toolkit/templates/page.stories.tsx \
         apps/web/src/app/\(authenticated\)/play-records/page.stories.tsx \

@@ -29,13 +29,13 @@ Inherited 6 DEC from Phase C-2 META spec + 3 new sess.46p.
 |---|---|---|---|---|---|
 | 1 | sp4-kb-hub | `(authenticated)/knowledge-base/` | current | Ship (inline) | ~30 min |
 | 2 | sp4-kb-detail | `(authenticated)/knowledge-base/[id]/` | **forward-refactor** | **Agent + tracking issue** | ~2h |
-| 3 | **sp4-kb-globale** | `(authenticated)/knowledge-base/globale/` ❌ NEW | current | **Agent + route-create + KbGlobaleHome** | ~2h |
+| 3 | **sp4-kb-globale** | `(authenticated)/knowledge-base/global/` ✓ EXISTS | current | **Agent story scaffold + MOCKUPS_INDEX mapping** (NO route-create) | ~30 min |
 | 4 | sp4-editor-index | `(authenticated)/editor/` | current | Ship (inline) | ~30 min |
 | 5 | sp4-editor-proposals-create | `(authenticated)/editor/agent-proposals/create/` | current | Ship (inline) | ~30 min |
 | 6 | sp4-editor-proposals-edit | `(authenticated)/editor/agent-proposals/[id]/edit/` | current | Ship (inline) | ~30 min |
 | 7 | sp4-editor-proposals-index | `(authenticated)/editor/agent-proposals/` | current | Ship (inline) | ~30 min |
 | 8 | sp4-editor-proposals-test | `(authenticated)/editor/agent-proposals/[id]/test/` | current | Ship (inline) | ~30 min |
-| 9 | **sp4-toolkit-detail** | `(authenticated)/toolkit/[id]/` (canonical P254 multi-route) | current | **Agent multi-route + POST-#2096 GameToolboxTab integration verify** | ~1h |
+| 9 | **sp4-toolkit-detail** | `(authenticated)/toolkit/` (canonical P254 multi-route, hub primary) | current | **Agent multi-route + POST-#2096 GameToolboxTab integration verify** | ~1h |
 | 10 | sp4-toolkit-history | `(authenticated)/toolkit/history/` | current | Ship (inline) | ~30 min |
 | 11 | sp4-toolkit-play | `(authenticated)/toolkit/[sessionId]/` | current | Ship (inline) | ~30 min |
 | 12 | sp4-toolkit-stats | `(authenticated)/toolkit/stats/` | current | Ship (inline) | ~30 min |

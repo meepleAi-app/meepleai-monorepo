@@ -24,12 +24,12 @@
     ],
     "designer_approved_by": "",
     "designer_approved_on": "",
-    "story_path": "",
+    "story_path": "apps/web/src/app/(authenticated)/knowledge-base/[id]/page.stories.tsx",
     "fixtures_path": "",
     "design_intent": "forward-refactor",
     "viewports": [
       "desktop"
     ],
-    "obsolete_tracking_issue": ""
+    "obsolete_tracking_issue": "#2223"
   }
 }

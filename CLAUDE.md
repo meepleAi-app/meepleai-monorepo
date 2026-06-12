@@ -262,11 +262,13 @@ tests/Api.Tests/          # Backend test suite
 ## Known Flaky Tests
 
 Tests confirmed failing on `main-dev` baseline independently of any specific PR.
-Triage history: #1349 (closed, Phase 2d carryover) → #1422 (2026-05-21, 12 SharedGameId/PDF cluster resolved) → 2026-05-22 (4 baseline failures cleared; S3Storage entry was stale) → 2026-06-09 (#1887 PdfDocument_SevenStateProgression cleared via PR #2038, baseline now empty).
+Triage history: #1349 (closed, Phase 2d carryover) → #1422 (2026-05-21, 12 SharedGameId/PDF cluster resolved) → 2026-05-22 (4 baseline failures cleared; S3Storage entry was stale) → 2026-06-09 (#1887 PdfDocument_SevenStateProgression cleared via PR #2038, baseline now empty) → 2026-06-12 (#2270 cleared orphan `asse-b-axe.test.tsx` left behind by PR #2161 layout-shell dedupe; baseline clean again).
 
 | Test | File | First observed | Reason | Action |
 |---|---|---|---|---|
 | _(none — baseline currently clean)_ | | | | |
+
+**Resolved 2026-06-12 (#2270)**: `apps/web/__tests__/asse-b-axe.test.tsx` — Frontend Tests shard 2/3 fail with `Failed to resolve import "@/components/layout/main-nav/MainNavList"`. Orphan test left behind by PR [#2161](https://github.com/meepleAi-app/meepleai-monorepo/pull/2161) "refactor(frontend): dedupe layout shell + retire PageHeader legacy", which deleted 8 source files (`MainSidebar.tsx`, `MainNavList.tsx`, `main-nav-config.ts`, `filter-nav-by-permission.ts` + their tests) but missed the asse-B axe smoke test that imported `MainNavList` + `MAIN_NAV_ITEMS` + `WizardModal`. `WizardModal` survives but the nav surface is gone, so the test is unsalvageable as a smoke; deleted outright in this PR. Fix shipped as a one-file `chore(tests)` follow-up alongside the #2269 AddGameDrawer parity work — would otherwise have blocked the PR with a baseline-regression CI red.
 
 **Resolved 2026-06-09 (#1887)**: `PdfDocument_SevenStateProgression_ShouldAdvanceThroughAllStates` (fix PR [#2038](https://github.com/meepleAi-app/meepleai-monorepo/pull/2038)) — assertion split into `HaveCount(7)` + typed `OfType<>()` (6 `PdfStateChangedEvent` + 1 `KbDocIndexedEvent` raised on the Ready transition for the activity rail, per BE-3 #1590 B2). The previous baseline entry misattributed the 7th event to PR #1873's `PdfDocumentDeleted` — actual extra event is `KbDocIndexedEvent` from `TransitionTo()` (`PdfDocument.cs:433-443`).
 

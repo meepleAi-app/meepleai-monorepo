@@ -105,9 +105,6 @@ const FILTERS: readonly FilterDef[] = [
   },
 ];
 
-// Legacy "Tutte / Non lette" tab filter (preserved from previous page)
-type TabValue = 'all' | 'unread';
-
 // ─── Type → EntityType mapping for NotificationCard border color ─
 function mapTypeToEntity(type: NotificationType): EntityType {
   if (type.startsWith('game_night_')) return 'event';
@@ -158,7 +155,10 @@ export default function NotificationsPage() {
   const markAllAsRead = useNotificationStore(state => state.markAllAsRead);
   const markAsRead = useNotificationStore(state => state.markAsRead);
 
-  const [activeTab, setActiveTab] = useState<TabValue>('all');
+  // Issue #2181: replaced legacy "Tutte / Non lette" tab pair with a single
+  // toggle on the header counter. The state name stays semantically explicit
+  // — "unreadOnly" — instead of overloading a tab enum with read-state.
+  const [unreadOnly, setUnreadOnly] = useState(false);
   const [filter, setFilter] = useState<FilterKey>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [detail, setDetail] = useState<NotificationDto | null>(null);
@@ -169,17 +169,17 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, filter]);
+  }, [unreadOnly, filter]);
 
-  // Apply tab + filter
+  // Apply unread toggle + category filter
   const filtered = useMemo(() => {
     let result: NotificationDto[] = notifications;
-    if (activeTab === 'unread') result = result.filter(n => !n.isRead);
+    if (unreadOnly) result = result.filter(n => !n.isRead);
     const f = FILTERS.find(x => x.key === filter);
     const types = f?.types;
     if (types) result = result.filter(n => types.includes(n.type));
     return result;
-  }, [notifications, activeTab, filter]);
+  }, [notifications, unreadOnly, filter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const paginatedItems = useMemo(() => {
@@ -235,43 +235,44 @@ export default function NotificationsPage() {
     <div className="container max-w-3xl mx-auto py-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold mb-1">Notifiche</h1>
-          <p className="text-muted-foreground text-sm">
-            {unreadCount > 0 ? `${unreadCount} non lette` : 'Nessuna notifica non letta'}
-          </p>
-        </div>
-        {hasUnread && (
-          <Btn
-            variant="outline"
-            size="sm"
-            onClick={() => void markAllAsRead()}
-            leftIcon={<CheckCheck className="h-4 w-4" aria-hidden="true" />}
-            aria-label="Segna tutte come lette"
-          >
-            Segna tutte come lette
-          </Btn>
-        )}
-      </div>
-
-      {/* Legacy Tutte / Non lette tabs (roles preserved for existing tests) */}
-      <div className="flex gap-1 mb-4" role="tablist" aria-label="Filtro notifiche">
-        {(['all', 'unread'] as const).map(tab => (
+        <div className="flex flex-col gap-1">
+          <h1 className="text-3xl font-bold">Notifiche</h1>
+          {/* Issue #2181: the unread counter is now a toggle. Clicking it
+              filters to unread-only; clicking again restores the full list.
+              The legacy "Tutte / Non lette" tab pair has been removed in
+              favor of this single semantic control. */}
           <button
-            key={tab}
-            role="tab"
-            aria-selected={activeTab === tab}
-            onClick={() => setActiveTab(tab)}
+            type="button"
+            onClick={() => setUnreadOnly(prev => !prev)}
+            aria-pressed={unreadOnly}
+            aria-label={
+              unreadCount > 0
+                ? `Filtra le ${unreadCount} notifiche non lette`
+                : 'Nessuna notifica non letta'
+            }
+            disabled={unreadCount === 0}
             className={cn(
-              'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
-              activeTab === tab
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-muted'
+              'inline-flex w-fit items-center gap-1 rounded-full border px-2 py-0.5 text-sm transition-colors',
+              unreadOnly
+                ? 'border-event text-event'
+                : 'border-transparent text-muted-foreground hover:border-border',
+              unreadCount === 0 && 'cursor-default'
             )}
+            data-testid="notifications-unread-toggle"
           >
-            {tab === 'all' ? 'Tutte' : `Non lette (${unreadCount})`}
+            {unreadCount > 0 ? `${unreadCount} non lette` : 'Nessuna notifica non letta'}
           </button>
-        ))}
+        </div>
+        <Btn
+          variant="outline"
+          size="sm"
+          onClick={() => void markAllAsRead()}
+          disabled={!hasUnread}
+          leftIcon={<CheckCheck className="h-4 w-4" aria-hidden="true" />}
+          aria-label="Segna tutte come lette"
+        >
+          Segna tutte come lette
+        </Btn>
       </div>
 
       {/* Filters bar (Claude Design v1: entity-colored outline pills) */}
@@ -321,7 +322,7 @@ export default function NotificationsPage() {
             <Bell className="h-10 w-10 text-muted-foreground/60" />
           </div>
           <p className="text-sm text-muted-foreground">
-            {activeTab === 'unread'
+            {unreadOnly
               ? 'Nessuna notifica non letta'
               : filter !== 'all'
                 ? 'Nessuna notifica di questo tipo'

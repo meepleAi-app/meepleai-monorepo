@@ -112,7 +112,21 @@ export function AttemptTimelineDrawer({
                   data-outcome={node.outcome}
                 >
                   <div className="flex items-baseline justify-between gap-3">
-                    <span className="text-sm font-semibold">{node.outcome}</span>
+                    <span className="text-sm font-semibold">
+                      {node.outcome}
+                      {node.triggeredByAdminUserId && (
+                        <span
+                          title={
+                            node.triggeredByAdminFullName
+                              ? `Triggered by admin ${node.triggeredByAdminFullName}`
+                              : 'Triggered by admin (deleted user)'
+                          }
+                          className="ml-2 inline-flex items-center rounded border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary"
+                        >
+                          admin
+                        </span>
+                      )}
+                    </span>
                     <time className="text-xs text-muted-foreground" dateTime={node.attemptedAt}>
                       {formatUtc(node.attemptedAt)}
                     </time>

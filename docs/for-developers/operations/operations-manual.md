@@ -2167,6 +2167,7 @@ S3_FORCE_PATH_STYLE=false
 | Access denied | Wrong credentials | Check `storage.secret` |
 | Upload fails | S3_FORCE_PATH_STYLE wrong | Set to `true` for MinIO |
 | Console not loading | Port 9001 not exposed | Check compose override |
+| `Could not determine content length` on R2 PUT | Non-seekable stream + R2 strict checksum validation | Fixed in #2271 (PR #2280) — `S3BlobStorageService.StoreAsync` pre-buffers non-seekable streams + sets `Headers.ContentLength` + `DisableDefaultChecksumValidation`. Health-check (`HEAD` bucket only) does not exercise PUT; rely on `make seed-index` smoke run. |
 
 #### Disaster Recovery
 

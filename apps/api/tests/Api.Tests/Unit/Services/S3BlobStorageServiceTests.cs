@@ -487,4 +487,124 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         result.Should().NotBeNull();
         result.Should().Be(expectedUrl);
     }
+
+    // ── Issue #2271: non-seekable stream handling ────────────────────────────
+    // R2 (and other S3-compatible providers) reject PutObject when the SDK's
+    // checksum calculator cannot read a stream's Length. This happens when the
+    // caller hands us a non-seekable Stream (e.g. HTTP request body forwarded
+    // raw from ASP.NET). The service must transparently buffer the payload so
+    // PutObjectRequest gets a seekable stream with an explicit ContentLength.
+
+    [Fact]
+    public async Task StoreAsync_WithNonSeekableStream_BuffersAndSetsContentLength()
+    {
+        // Arrange
+        var fileName = "wingspan-rules.pdf";
+        var gameId = "game-2271";
+        var content = "PDF binary content"u8.ToArray();
+        using var nonSeekable = new NonSeekableReadStream(content);
+
+        // Snapshot the request shape DURING the call — the buffered MemoryStream
+        // is disposed in StoreAsync's `finally` after the SDK returns, so reading
+        // CanSeek after the await would always observe False.
+        bool capturedCanSeek = false;
+        long capturedContentLength = -1;
+        long capturedHeaderContentLength = -1;
+        bool capturedDisableChecksumValidation = false;
+        bool capturedDisablePayloadSigning = false;
+        string? capturedKey = null;
+
+        _mockS3Client
+            .Setup(x => x.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<PutObjectRequest, CancellationToken>((req, _) =>
+            {
+                capturedCanSeek = req.InputStream.CanSeek;
+                capturedContentLength = req.InputStream.Length;
+                capturedHeaderContentLength = req.Headers.ContentLength;
+                capturedDisableChecksumValidation = req.DisableDefaultChecksumValidation ?? false;
+                capturedDisablePayloadSigning = req.DisablePayloadSigning ?? false;
+                capturedKey = req.Key;
+            })
+            .ReturnsAsync(new PutObjectResponse { HttpStatusCode = HttpStatusCode.OK, ETag = "\"buffered-etag\"" });
+
+        // Act
+        var result = await _sut.StoreAsync(nonSeekable, fileName, BlobCategory.Pdf, gameId);
+
+        // Assert — outcome
+        result.Success.Should().BeTrue(because: "non-seekable streams must be transparently buffered");
+        result.FileSizeBytes.Should().Be(content.Length);
+
+        // Assert — request shape (snapshot from the live request inside PutObjectAsync)
+        capturedCanSeek.Should().BeTrue(
+            because: "the request stream must be seekable after buffering so the SDK can compute Length");
+        capturedContentLength.Should().Be(content.Length);
+        capturedHeaderContentLength.Should().Be(content.Length,
+            because: "ContentLength must be explicit to satisfy R2's strict header validation");
+        capturedDisableChecksumValidation.Should().BeTrue(
+            because: "default checksum validation would re-read the stream; we have the buffered length already");
+        capturedDisablePayloadSigning.Should().BeTrue(
+            because: "regression guard — pre-existing R2/MinIO compatibility flag");
+        capturedKey.Should().Contain("game-2271");
+    }
+
+    [Fact]
+    public async Task StoreAsync_WithSeekableStream_DoesNotAllocateBuffer()
+    {
+        // Arrange — verify the seekable path stays zero-copy (no perf regression)
+        var fileName = "small.pdf";
+        var gameId = "game-2271-seek";
+        var content = "PDF"u8.ToArray();
+        using var seekable = new MemoryStream(content);
+
+        bool capturedInputIsSameInstance = false;
+        long capturedHeaderContentLength = -1;
+        _mockS3Client
+            .Setup(x => x.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<PutObjectRequest, CancellationToken>((req, _) =>
+            {
+                capturedInputIsSameInstance = ReferenceEquals(req.InputStream, seekable);
+                capturedHeaderContentLength = req.Headers.ContentLength;
+            })
+            .ReturnsAsync(new PutObjectResponse { HttpStatusCode = HttpStatusCode.OK, ETag = "\"seek-etag\"" });
+
+        // Act
+        var result = await _sut.StoreAsync(seekable, fileName, BlobCategory.Pdf, gameId);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        capturedInputIsSameInstance.Should().BeTrue(
+            because: "seekable streams must be forwarded as-is, no allocation");
+        capturedHeaderContentLength.Should().Be(content.Length);
+    }
+
+    /// <summary>
+    /// Simulates an HTTP request body or a forward-only stream. Throws on Length
+    /// and Position to surface the AWS SDK's "Could not determine content length"
+    /// failure mode.
+    /// </summary>
+    private sealed class NonSeekableReadStream : Stream
+    {
+        private readonly MemoryStream _inner;
+        public NonSeekableReadStream(byte[] data) { _inner = new MemoryStream(data); }
+
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException("non-seekable");
+        public override long Position
+        {
+            get => throw new NotSupportedException("non-seekable");
+            set => throw new NotSupportedException("non-seekable");
+        }
+        public override int Read(byte[] buffer, int offset, int count) => _inner.Read(buffer, offset, count);
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException("non-seekable");
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override void Flush() { }
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) _inner.Dispose();
+            base.Dispose(disposing);
+        }
+    }
 }

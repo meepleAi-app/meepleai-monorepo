@@ -37,10 +37,34 @@ internal sealed class S3BlobStorageService : IBlobStorageService
 
     public async Task<BlobStorageResult> StoreAsync(Stream stream, string fileName, BlobCategory category, string resourceKey, CancellationToken ct = default)
     {
+        // Issue #2271: pre-buffer non-seekable streams so PutObject can declare an
+        // explicit ContentLength + skip the SDK's MD5 streaming pass. R2 (and other
+        // S3-compatible providers) fail with "Could not determine content length"
+        // when AmazonS3PostMarshallHandler.SetStreamChecksum() reads Length on a
+        // forward-only stream (e.g. an HTTP request body forwarded raw). The buffer
+        // is local to this call and disposed in `finally`.
+        MemoryStream? buffer = null;
         try
         {
             // SECURITY: Validate resourceKey to prevent path traversal
             PathSecurity.ValidateIdentifier(resourceKey, nameof(resourceKey));
+
+            Stream uploadStream;
+            long contentLength;
+
+            if (stream.CanSeek)
+            {
+                uploadStream = stream;
+                contentLength = stream.Length;
+            }
+            else
+            {
+                buffer = new MemoryStream();
+                await stream.CopyToAsync(buffer, ct).ConfigureAwait(false);
+                buffer.Position = 0;
+                uploadStream = buffer;
+                contentLength = buffer.Length;
+            }
 
             var fileId = Guid.NewGuid().ToString("N");
             var sanitizedFileName = SanitizeFileName(fileName);
@@ -50,11 +74,13 @@ internal sealed class S3BlobStorageService : IBlobStorageService
             {
                 BucketName = _options.BucketName,
                 Key = s3Key,
-                InputStream = stream,
+                InputStream = uploadStream,
                 ContentType = "application/pdf",
-                AutoCloseStream = false, // Caller owns the stream
-                DisablePayloadSigning = true // Required for S3-compatible providers (MinIO, R2) that don't support STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER
+                AutoCloseStream = false, // Caller owns the original stream; we own `buffer` and dispose it below.
+                DisablePayloadSigning = true, // Required for S3-compatible providers (MinIO, R2) that don't support STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER
+                DisableDefaultChecksumValidation = true, // Issue #2271: ContentLength is explicit; skip the checksum re-read of the stream.
             };
+            request.Headers.ContentLength = contentLength; // Issue #2271: explicit header required by R2 strict validation.
 
             // Server-side encryption if enabled
             if (_options.EnableEncryption)
@@ -66,9 +92,9 @@ internal sealed class S3BlobStorageService : IBlobStorageService
 
             _logger.LogInformation(
                 "Stored file to S3: {Key} (size: {Size} bytes, ETag: {ETag})",
-                s3Key, stream.Length, response.ETag);
+                s3Key, contentLength, response.ETag);
 
-            return new BlobStorageResult(true, fileId, s3Key, stream.Length);
+            return new BlobStorageResult(true, fileId, s3Key, contentLength);
         }
         catch (AmazonS3Exception ex)
         {
@@ -87,6 +113,13 @@ internal sealed class S3BlobStorageService : IBlobStorageService
             return new BlobStorageResult(false, null, null, 0, ex.Message);
         }
 #pragma warning restore CA1031 // Do not catch general exception types
+        finally
+        {
+            if (buffer is not null)
+            {
+                await buffer.DisposeAsync().ConfigureAwait(false);
+            }
+        }
     }
 
     public async Task<Stream?> RetrieveAsync(string fileId, BlobCategory category, string resourceKey, CancellationToken ct = default)

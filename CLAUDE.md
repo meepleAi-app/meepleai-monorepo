@@ -262,7 +262,7 @@ tests/Api.Tests/          # Backend test suite
 ## Known Flaky Tests
 
 Tests confirmed failing on `main-dev` baseline independently of any specific PR.
-Triage history: #1349 (closed, Phase 2d carryover) → #1422 (2026-05-21, 12 SharedGameId/PDF cluster resolved) → 2026-05-22 (4 baseline failures cleared; S3Storage entry was stale) → 2026-06-09 (#1887 PdfDocument_SevenStateProgression cleared via PR #2038, baseline now empty) → 2026-06-12 (#2270 cleared orphan `asse-b-axe.test.tsx` left behind by PR #2161 layout-shell dedupe; baseline clean again).
+Triage history: #1349 (closed, Phase 2d carryover) → #1422 (2026-05-21, 12 SharedGameId/PDF cluster resolved) → 2026-05-22 (4 baseline failures cleared; S3Storage entry was stale) → 2026-06-09 (#1887 PdfDocument_SevenStateProgression cleared via PR #2038, baseline now empty) → 2026-06-12 (#2270 cleared orphan `asse-b-axe.test.tsx` left behind by PR #2161 layout-shell dedupe; baseline clean again) → 2026-06-13 (#2266 cleared 2 nav-test follow-ups from PR #2279 #2190 cleanup — `AppTopBar.test.tsx` + `MobileBottomBar.test.tsx` still expecting label "Hub" after rename to "Games"; baseline clean again).
 
 | Test | File | First observed | Reason | Action |
 |---|---|---|---|---|

@@ -769,7 +769,21 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             .ConfigureAwait(false);
         if (vectorDoc is null)
         {
-            // Pipeline swallowed a concurrency conflict — exit without indexing.
+            // Pipeline swallowed a DbUpdateConcurrencyException and the row was never
+            // written — Quartz must still see job success, so we cannot rethrow. But
+            // silently skipping pgvector indexing here means the PDF is "Ready" with
+            // no embeddings until something forces a re-index. Surface the loss so
+            // ops can detect it: increment the same Category-B counter the pipeline
+            // itself uses, then log a WARN with the PDF id. The companion follow-up
+            // (issue tracked in #2248 Sub #6) wires a dedicated Prometheus gauge
+            // meepleai_pdf_indexed_no_kb_flag_total — this counter feeds into the
+            // same dashboard.
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(PdfProcessingPipelineService),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(
+                "PdfPipeline: VectorDocument row for PDF {PdfId} missing after IndexAsync — pipeline swallowed a concurrency conflict, pgvector embeddings skipped. PDF will need re-index.",
+                pdfDoc.Id);
             return;
         }
 

@@ -21,9 +21,10 @@ public class GetWikidataDeadLetterAttemptsQueryHandlerTests
 
     private GetWikidataDeadLetterAttemptsQueryHandler Sut() => new(_attempts.Object);
 
-    // Task 2.3 (#2254) bridge note — the handler hard-codes
-    // includeAcknowledged: false because Task 3.3 will expose it on the query
-    // DTO. The mocks pin the false value to lock the current bridge in place.
+    // Task 3.3 (#2254/#2255) — IncludeAcknowledged now lives on the query DTO
+    // (default false) and propagates straight to the repo. The DTO also carries
+    // the F5 ack metadata + F6 admin attribution fields surfaced via the repo
+    // LEFT JOIN on Users.
 
     [Fact]
     public async Task Handle_EmptyResult_ReturnsZeroItems()
@@ -107,5 +108,72 @@ public class GetWikidataDeadLetterAttemptsQueryHandlerTests
         var act = async () => await Sut().Handle(null!, default);
 
         await act.Should().ThrowAsync<ArgumentNullException>();
+    }
+
+    // Task 3.3 — IncludeAcknowledged exposed on query DTO -------------------
+
+    [Fact]
+    public async Task DefaultIncludeAcknowledgedFalse_PassedToRepo()
+    {
+        _attempts.Setup(r => r.GetDeadLettersAsync(0, 50, null, false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DeadLetterPage(Array.Empty<DeadLetterRow>(), 0));
+
+        var query = new GetWikidataDeadLetterAttemptsQuery(0, 50, null, IncludeAcknowledged: false);
+        await Sut().Handle(query, CancellationToken.None);
+
+        _attempts.Verify(
+            r => r.GetDeadLettersAsync(0, 50, null, false, It.IsAny<CancellationToken>()),
+            Times.Once,
+            "default IncludeAcknowledged=false must propagate straight to the repo");
+    }
+
+    [Fact]
+    public async Task IncludeAcknowledgedTrue_PassedThrough()
+    {
+        _attempts.Setup(r => r.GetDeadLettersAsync(0, 50, null, true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DeadLetterPage(Array.Empty<DeadLetterRow>(), 0));
+
+        var query = new GetWikidataDeadLetterAttemptsQuery(0, 50, null, IncludeAcknowledged: true);
+        await Sut().Handle(query, CancellationToken.None);
+
+        _attempts.Verify(
+            r => r.GetDeadLettersAsync(0, 50, null, true, It.IsAny<CancellationToken>()),
+            Times.Once,
+            "IncludeAcknowledged=true must reach the repo so the audit view sees ack'd rows");
+    }
+
+    [Fact]
+    public async Task DtoIncludesAckAndAdminFields()
+    {
+        var ackAt = FixedNow.AddMinutes(-15);
+        var ackBy = Guid.NewGuid();
+        var triggeredBy = Guid.NewGuid();
+        var row = new DeadLetterRow(
+            Id: Guid.NewGuid(),
+            SharedGameId: Guid.NewGuid(),
+            GameTitle: "Game",
+            AttemptedAt: FixedNow.AddHours(-1),
+            DeadLetteredAt: FixedNow,
+            Reason: "r2-upload-error",
+            Details: null,
+            RetryCount: 3,
+            AcknowledgedAt: ackAt,
+            AcknowledgedBy: ackBy,
+            AcknowledgedByFullName: "Alice",
+            TriggeredByAdminUserId: triggeredBy,
+            TriggeredByAdminFullName: "Bob");
+
+        _attempts.Setup(r => r.GetDeadLettersAsync(0, 50, null, true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DeadLetterPage(new[] { row }, 1));
+
+        var query = new GetWikidataDeadLetterAttemptsQuery(0, 50, null, IncludeAcknowledged: true);
+        var result = await Sut().Handle(query, CancellationToken.None);
+
+        var dto = result.Items.Single();
+        dto.AcknowledgedAt.Should().Be(ackAt);
+        dto.AcknowledgedBy.Should().Be(ackBy);
+        dto.AcknowledgedByFullName.Should().Be("Alice");
+        dto.TriggeredByAdminUserId.Should().Be(triggeredBy);
+        dto.TriggeredByAdminFullName.Should().Be("Bob");
     }
 }

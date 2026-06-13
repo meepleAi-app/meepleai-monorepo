@@ -18,14 +18,18 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import {
+  BULK_ACKNOWLEDGE_MAX_BATCH,
   BULK_RETRY_MAX_BATCH,
+  bulkAcknowledgeDeadLetters,
   bulkRetryDeadLetters,
   listDeadLetters,
   retryDeadLetter,
+  type AdminBulkAcknowledgeResult,
   type AdminBulkRetryWikidataCoverResult,
   type WikidataDeadLetterAttemptDto,
 } from '@/lib/api/admin-wikidata-dead-letters';
 
+import { AcknowledgeSelectedModal } from './AcknowledgeSelectedModal';
 import { AttemptTimelineDrawer } from './AttemptTimelineDrawer';
 import { useWikidataEnrichmentEvents } from './useWikidataEnrichmentEvents';
 
@@ -72,6 +76,15 @@ export default function WikidataDeadLettersPage() {
     | { state: 'done'; result: AdminBulkRetryWikidataCoverResult }
     | { state: 'error'; error: string }
   >({ state: 'idle' });
+  // Phase F F5 — bulk acknowledge (Issue #2254)
+  const [includeAcknowledged, setIncludeAcknowledged] = useState(false);
+  const [ackModalOpen, setAckModalOpen] = useState(false);
+  const [ackState, setAckState] = useState<
+    | { state: 'idle' }
+    | { state: 'running' }
+    | { state: 'done'; result: AdminBulkAcknowledgeResult }
+    | { state: 'error'; error: string }
+  >({ state: 'idle' });
   const [drawer, setDrawer] = useState<DrawerState | null>(null);
 
   // Phase E F4 — live attempt-recorded SSE feed. Each new event triggers a
@@ -86,6 +99,7 @@ export default function WikidataDeadLettersPage() {
         skip: page * PAGE_SIZE,
         take: PAGE_SIZE,
         reason: reasonFilter || undefined,
+        includeAcknowledged,
       });
       setItems(response.items);
       setTotalCount(response.totalCount);
@@ -98,7 +112,7 @@ export default function WikidataDeadLettersPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, reasonFilter]);
+  }, [page, reasonFilter, includeAcknowledged]);
 
   useEffect(() => {
     void load();
@@ -175,6 +189,27 @@ export default function WikidataDeadLettersPage() {
     }
   };
 
+  // Phase F F5 — handler invoked by the AcknowledgeSelectedModal Confirm action.
+  // Note is forwarded to the BE log-only (DEC-F-4), not persisted on the row.
+  const handleAcknowledgeConfirm = useCallback(
+    async (note: string | null) => {
+      setAckState({ state: 'running' });
+      try {
+        const result = await bulkAcknowledgeDeadLetters(Array.from(selectedIds), note);
+        setAckState({ state: 'done', result });
+        setSelectedIds(new Set());
+        setAckModalOpen(false);
+        await load();
+      } catch (err) {
+        setAckState({
+          state: 'error',
+          error: err instanceof Error ? err.message : 'Unknown error',
+        });
+      }
+    },
+    [selectedIds, load]
+  );
+
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const selectionAtCap = selectedIds.size >= BULK_RETRY_MAX_BATCH;
   const allOnPageSelected = items.length > 0 && items.every(i => selectedIds.has(i.id));
@@ -217,6 +252,30 @@ export default function WikidataDeadLettersPage() {
         >
           Refresh
         </button>
+
+        {/* Phase F F5 — toggle for acknowledged rows (default hidden). */}
+        <label className="flex items-center gap-2 text-sm text-foreground">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={includeAcknowledged}
+            aria-label="Show acknowledged"
+            onClick={() => {
+              setIncludeAcknowledged(v => !v);
+              setPage(0);
+            }}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+              includeAcknowledged ? 'bg-primary' : 'bg-muted'
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 rounded-full bg-background shadow transition-transform ${
+                includeAcknowledged ? 'translate-x-4' : 'translate-x-0.5'
+              }`}
+            />
+          </button>
+          Show acknowledged
+        </label>
 
         <div className="ml-auto flex items-center gap-3 text-sm text-muted-foreground">
           <span
@@ -264,6 +323,23 @@ export default function WikidataDeadLettersPage() {
           {bulkState.state === 'running' ? 'Retrying…' : 'Retry selected'}
         </button>
 
+        {/* Phase F F5 — bulk acknowledge (Issue #2254). Opens the confirmation
+            modal; the modal owns the optional note and forwards to the BE. */}
+        <button
+          type="button"
+          className="rounded bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground hover:bg-secondary/90 disabled:opacity-50"
+          onClick={() => setAckModalOpen(true)}
+          disabled={
+            selectedIds.size === 0 ||
+            selectedIds.size > BULK_ACKNOWLEDGE_MAX_BATCH ||
+            ackState.state === 'running'
+          }
+        >
+          {ackState.state === 'running'
+            ? 'Acknowledging…'
+            : `Acknowledge selected (${selectedIds.size})`}
+        </button>
+
         <button
           type="button"
           className="rounded border px-3 py-1 text-sm hover:bg-muted disabled:opacity-50"
@@ -282,6 +358,17 @@ export default function WikidataDeadLettersPage() {
         {bulkState.state === 'error' && (
           <span className="text-xs text-destructive" role="alert">
             ✗ {bulkState.error}
+          </span>
+        )}
+        {ackState.state === 'done' && (
+          <span className="text-xs text-muted-foreground">
+            ✔ {ackState.result.ackedCount} acked · {ackState.result.idempotentNoOpCount}{' '}
+            already-acked · {ackState.result.notFoundCount} not-found
+          </span>
+        )}
+        {ackState.state === 'error' && (
+          <span className="text-xs text-destructive" role="alert">
+            ✗ {ackState.error}
           </span>
         )}
       </section>
@@ -325,8 +412,9 @@ export default function WikidataDeadLettersPage() {
             {items.map(row => {
               const status = retryStatus[row.id]?.state ?? 'idle';
               const checked = selectedIds.has(row.id);
+              const isAcked = row.acknowledgedAt !== null;
               return (
-                <tr key={row.id} className="border-b">
+                <tr key={row.id} className={`border-b ${isAcked ? 'opacity-60' : ''}`}>
                   <td className="p-2">
                     <input
                       type="checkbox"
@@ -347,6 +435,12 @@ export default function WikidataDeadLettersPage() {
                     >
                       {row.gameTitle}
                     </button>
+                    {isAcked && row.acknowledgedByFullName && row.acknowledgedAt && (
+                      <span className="ml-2 inline-flex rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                        Acked by {row.acknowledgedByFullName} on{' '}
+                        {new Date(row.acknowledgedAt).toLocaleDateString()}
+                      </span>
+                    )}
                   </td>
                   <td className="p-2">
                     <code className="rounded bg-muted px-1 py-0.5 text-xs">{row.reason}</code>
@@ -409,6 +503,13 @@ export default function WikidataDeadLettersPage() {
           onClose={() => setDrawer(null)}
         />
       )}
+
+      <AcknowledgeSelectedModal
+        open={ackModalOpen}
+        selectedCount={selectedIds.size}
+        onConfirm={handleAcknowledgeConfirm}
+        onCancel={() => setAckModalOpen(false)}
+      />
     </main>
   );
 }

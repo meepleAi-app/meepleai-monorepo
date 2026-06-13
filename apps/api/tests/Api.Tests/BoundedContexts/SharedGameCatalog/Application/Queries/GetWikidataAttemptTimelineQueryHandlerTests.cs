@@ -114,4 +114,24 @@ public class GetWikidataAttemptTimelineQueryHandlerTests
 
         _attempts.Verify();
     }
+
+    [Fact]
+    public async Task Handler_MapsTriggeredByAdminFullName_FromRepoRow()
+    {
+        var repo = new Mock<IWikidataCoverEnrichmentAttemptRepository>();
+        var adminId = Guid.NewGuid();
+        var row = new WikidataAttemptTimelineRow(
+            Id: Guid.NewGuid(), AttemptedAt: DateTime.UtcNow,
+            Outcome: WikidataCoverEnrichmentOutcome.Success, Reason: "success", Details: null,
+            RetryCount: 0, NextRetryAt: null, DeadLetteredAt: null,
+            TriggeredByAdminUserId: adminId, TriggeredByAdminFullName: "Carol");
+        repo.Setup(r => r.GetAttemptsByGameIdAsync(It.IsAny<Guid>(), 50, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { row });
+
+        var handler = new GetWikidataAttemptTimelineQueryHandler(repo.Object);
+        var result = await handler.Handle(new GetWikidataAttemptTimelineQuery(Guid.NewGuid(), 50), default);
+
+        result.Items.Single().TriggeredByAdminUserId.Should().Be(adminId);
+        result.Items.Single().TriggeredByAdminFullName.Should().Be("Carol");
+    }
 }

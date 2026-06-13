@@ -22,7 +22,12 @@ public sealed record WikidataAttemptTimelineResult(
 
 /// <summary>
 /// Per-node payload on the timeline. Each maps 1:1 to a
-/// <see cref="Domain.Aggregates.WikidataCoverEnrichmentAttempt"/> row.
+/// <see cref="Domain.Aggregates.WikidataCoverEnrichmentAttempt"/> row,
+/// enriched with the F6 admin attribution (<see cref="TriggeredByAdminUserId"/>
+/// and <see cref="TriggeredByAdminFullName"/>) when the attempt was kicked off
+/// from the admin bulk-retry path (Phase F #2255). Both attribution fields are
+/// null for system/cron-triggered attempts so the FE can decide whether to
+/// render the badge.
 /// </summary>
 public sealed record WikidataAttemptTimelineNode(
     Guid Id,
@@ -32,7 +37,9 @@ public sealed record WikidataAttemptTimelineNode(
     string? Details,
     int RetryCount,
     DateTime? NextRetryAt,
-    DateTime? DeadLetteredAt);
+    DateTime? DeadLetteredAt,
+    Guid? TriggeredByAdminUserId,
+    string? TriggeredByAdminFullName);
 
 internal sealed class GetWikidataAttemptTimelineQueryHandler
     : IRequestHandler<GetWikidataAttemptTimelineQuery, WikidataAttemptTimelineResult>
@@ -54,11 +61,9 @@ internal sealed class GetWikidataAttemptTimelineQueryHandler
             .GetAttemptsByGameIdAsync(request.GameId, request.Limit, cancellationToken)
             .ConfigureAwait(false);
 
-        // Task 2.3 bridge — Task 3.4 will extend WikidataAttemptTimelineNode
-        // with the F6 admin attribution (TriggeredByAdminUserId +
-        // TriggeredByAdminFullName) so the FE drawer can render the badge.
-        // For now the row exposes the new repo fields but the DTO ignores
-        // them to keep the FE contract stable in this commit.
+        // Task 3.4 (#2255 F6) — bridge lifted. The repo row already carries the
+        // admin LEFT JOIN result so we pass `TriggeredByAdminUserId` and
+        // `TriggeredByAdminFullName` straight through to the FE drawer badge.
         var items = rows
             .Select(r => new WikidataAttemptTimelineNode(
                 r.Id,
@@ -68,7 +73,9 @@ internal sealed class GetWikidataAttemptTimelineQueryHandler
                 r.Details,
                 r.RetryCount,
                 r.NextRetryAt,
-                r.DeadLetteredAt))
+                r.DeadLetteredAt,
+                r.TriggeredByAdminUserId,
+                r.TriggeredByAdminFullName))
             .ToList();
 
         return new WikidataAttemptTimelineResult(request.GameId, items);

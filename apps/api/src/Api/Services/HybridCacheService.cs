@@ -219,6 +219,70 @@ internal class HybridCacheService : IHybridCacheService
         return keysToRemove.Count;
     }
 
+    /// <summary>
+    /// Redis Pub/Sub channel used for cross-replica L1 cache invalidation.
+    /// Subscribed by <see cref="HybridCacheInvalidationSubscriber"/>.
+    /// See ADR-062 (KB-flag cache propagation strategy).
+    /// </summary>
+    internal const string CrossReplicaInvalidationChannel = "meepleai:cache-invalidate:tag";
+
+    /// <inheritdoc />
+    public async Task<int> RemoveByTagAcrossReplicasAsync(string tag, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(tag))
+        {
+            throw new ArgumentException("Tag cannot be null or whitespace", nameof(tag));
+        }
+
+        // Step 1: local eviction (L1 of this replica + L2 distributed).
+        // RemoveByTagAsync already evicts L2 globally, so other replicas just need their L1 cleared.
+        var localCount = await RemoveByTagAsync(tag, ct).ConfigureAwait(false);
+
+        // Step 2: broadcast the tag to other replicas via Redis Pub/Sub.
+        // Each replica's HybridCacheInvalidationSubscriber receives the tag and evicts its L1.
+        // The publishing replica also receives its own message — no-op (already evicted in Step 1).
+        if (_redis is null)
+        {
+            _logger.LogWarning(
+                "Redis unavailable; cross-replica invalidation skipped for tag {Tag}. " +
+                "Behaviour degrades to single-replica L1 eviction.",
+                tag);
+            return localCount;
+        }
+
+        try
+        {
+            var subscriber = _redis.GetSubscriber();
+            var receivers = await subscriber
+                .PublishAsync(RedisChannel.Literal(CrossReplicaInvalidationChannel), tag)
+                .ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "Broadcast cross-replica invalidation: Tag={Tag}, LocalEvictedCount={LocalCount}, ReceivingReplicas={Receivers}",
+                tag,
+                localCount,
+                receivers);
+        }
+        catch (RedisConnectionException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Redis connection failed during cross-replica invalidation broadcast for tag {Tag}. " +
+                "Local eviction succeeded; other replicas will rely on LocalCacheExpiration.",
+                tag);
+        }
+        catch (RedisTimeoutException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Redis timeout during cross-replica invalidation broadcast for tag {Tag}. " +
+                "Local eviction succeeded; other replicas will rely on LocalCacheExpiration.",
+                tag);
+        }
+
+        return localCount;
+    }
+
     /// <inheritdoc />
     public async Task<int> RemoveByTagsAsync(string[] tags, CancellationToken ct = default)
     {

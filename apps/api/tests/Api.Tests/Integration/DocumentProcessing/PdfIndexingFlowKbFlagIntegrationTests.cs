@@ -215,6 +215,19 @@ public sealed class PdfIndexingFlowKbFlagIntegrationTests : IAsyncLifetime
         services.AddHybridCache();
         services.AddScoped<Api.Services.ICacheInvalidationRetryPolicy>(_ => new PassthroughRetryPolicy());
 
+        // ADR-062: IHybridCacheService wrapper used by VectorDocumentIndexedForKbFlagHandler
+        // for cross-replica L1 invalidation. Configuration mirrors production defaults; the
+        // wrapper still works in single-replica test mode (broadcast publish becomes no-op
+        // when only this Redis subscriber connects).
+        services.Configure<Api.Configuration.HybridCacheConfiguration>(opts =>
+        {
+            opts.EnableL2Cache = true;
+            opts.EnableTags = true;
+            opts.DefaultExpiration = TimeSpan.FromMinutes(5);
+            opts.MaxTagsPerEntry = 10;
+        });
+        services.AddSingleton<Api.Services.IHybridCacheService, Api.Services.HybridCacheService>();
+
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 

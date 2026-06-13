@@ -319,6 +319,9 @@ internal sealed class ContractTestHybridCacheService : IHybridCacheService
     public Task<int> RemoveByTagsAsync(string[] tags, CancellationToken ct = default)
         => Task.FromResult(0);
 
+    public Task<int> RemoveByTagAcrossReplicasAsync(string tag, CancellationToken ct = default)
+        => Task.FromResult(0);
+
     public Task<HybridCacheStats> GetStatsAsync(CancellationToken ct = default)
         => Task.FromResult(new HybridCacheStats());
 }

@@ -503,6 +503,106 @@ public sealed class HybridCacheServiceIntegrationTests : IAsyncLifetime
 
     #endregion
 
+    #region Cross-replica L1 invalidation (ADR-062 / Epic #2242 Sub #6 Block C)
+
+    /// <summary>
+    /// ADR-062: RemoveByTagAcrossReplicasAsync must perform local eviction (L1+L2) AND
+    /// publish the tag to the Redis Pub/Sub channel so other replicas can evict their L1.
+    /// </summary>
+    [Fact]
+    public async Task RemoveByTagAcrossReplicasAsync_BroadcastsTagViaRedisPubSub()
+    {
+        // Arrange — pre-populate cache with an entry tagged "test:cross-replica"
+        var key = _keyPrefix + "cross_replica_test";
+        var tag = _keyPrefix + "cross_replica_tag";
+        var factoryCalls = 0;
+
+        Func<CancellationToken, Task<TestCacheData>> factory = _ =>
+        {
+            factoryCalls++;
+            return Task.FromResult(new TestCacheData { Value = "v1", Timestamp = DateTime.UtcNow });
+        };
+
+        await _cacheService.GetOrCreateAsync(
+            key,
+            factory,
+            tags: new[] { tag },
+            ct: TestContext.Current.CancellationToken);
+
+        // Set up a parallel subscriber on the same Redis channel to capture the broadcast.
+        var subscriber = _redis.GetSubscriber();
+        var receivedTag = string.Empty;
+        var receivedSignal = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var queue = await subscriber.SubscribeAsync(RedisChannel.Literal(HybridCacheService.CrossReplicaInvalidationChannel));
+        queue.OnMessage(msg =>
+        {
+            receivedTag = msg.Message.ToString();
+            receivedSignal.TrySetResult(true);
+        });
+
+        try
+        {
+            // Act
+            var localCount = await _cacheService.RemoveByTagAcrossReplicasAsync(tag, TestContext.Current.CancellationToken);
+
+            // Assert: broadcast received via Redis Pub/Sub
+            var received = await Task.WhenAny(receivedSignal.Task, Task.Delay(TimeSpan.FromSeconds(5)));
+            received.Should().Be(receivedSignal.Task, "broadcast should arrive at the subscriber within 5s");
+            receivedTag.Should().Be(tag);
+            localCount.Should().BeGreaterThanOrEqualTo(1, "the entry tagged before the call should have been evicted locally");
+        }
+        finally
+        {
+            await queue.UnsubscribeAsync();
+        }
+    }
+
+    /// <summary>
+    /// ADR-062: RemoveByTagAcrossReplicasAsync without Redis still performs local eviction.
+    /// Pub/Sub failure must not break the local invalidation path.
+    /// </summary>
+    [Fact]
+    public async Task RemoveByTagAcrossReplicasAsync_WithoutRedis_DegradesToLocalOnly()
+    {
+        // Arrange — service constructed without a Redis IConnectionMultiplexer
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        services.AddLogging();
+        services.AddStackExchangeRedisCache(options =>
+        {
+            options.Configuration = _fixture.RedisConnectionString;
+            options.InstanceName = _keyPrefix + "no_redis_pub:";
+        });
+        services.AddHybridCache();
+
+        var serviceProvider = services.BuildServiceProvider();
+        var hybridCache = serviceProvider.GetRequiredService<HybridCache>();
+
+        var config = new HybridCacheConfiguration
+        {
+            EnableL2Cache = true,
+            EnableTags = true,
+            DefaultExpiration = TimeSpan.FromMinutes(5),
+            MaxTagsPerEntry = 10
+        };
+
+        var serviceNoRedis = new HybridCacheService(
+            hybridCache,
+            Options.Create(config),
+            _loggerMock.Object,
+            redis: null);
+
+        // Act
+        var act = async () => await serviceNoRedis.RemoveByTagAcrossReplicasAsync(
+            "missing_tag_" + Guid.NewGuid(),
+            TestContext.Current.CancellationToken);
+
+        // Assert — does not throw despite missing pub/sub channel
+        await act.Should().NotThrowAsync();
+    }
+
+    #endregion
+
     #region Helper Classes
 
     /// <summary>

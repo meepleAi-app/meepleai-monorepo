@@ -40,30 +40,30 @@ public class RagAccessServiceTests
         Guid id,
         bool isRagPublic = false,
         bool isDeleted = false) => new()
-    {
-        Id = id,
-        Title = $"Game-{id:N}",
-        Description = string.Empty,
-        ImageUrl = string.Empty,
-        ThumbnailUrl = string.Empty,
-        Status = 1,
-        GameDataStatus = 5,
-        IsRagPublic = isRagPublic,
-        IsDeleted = isDeleted,
-        CreatedBy = Guid.NewGuid(),
-        CreatedAt = DateTime.UtcNow,
-    };
+        {
+            Id = id,
+            Title = $"Game-{id:N}",
+            Description = string.Empty,
+            ImageUrl = string.Empty,
+            ThumbnailUrl = string.Empty,
+            Status = 1,
+            GameDataStatus = 5,
+            IsRagPublic = isRagPublic,
+            IsDeleted = isDeleted,
+            CreatedBy = Guid.NewGuid(),
+            CreatedAt = DateTime.UtcNow,
+        };
 
     private static UserLibraryEntryEntity MakeLibraryEntry(
         Guid userId,
         Guid sharedGameId,
         DateTime? ownershipDeclaredAt = null) => new()
-    {
-        Id = Guid.NewGuid(),
-        UserId = userId,
-        SharedGameId = sharedGameId,
-        OwnershipDeclaredAt = ownershipDeclaredAt,
-    };
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            SharedGameId = sharedGameId,
+            OwnershipDeclaredAt = ownershipDeclaredAt,
+        };
 
     // ─────────────────────────── Admin / SuperAdmin ───────────────────────────
 

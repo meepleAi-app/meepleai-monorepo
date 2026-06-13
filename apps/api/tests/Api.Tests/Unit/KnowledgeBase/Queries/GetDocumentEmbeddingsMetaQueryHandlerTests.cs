@@ -70,11 +70,11 @@ public sealed class GetDocumentEmbeddingsMetaQueryHandlerTests : IDisposable
     public async Task Returns_Meta_When_Document_Indexed()
     {
         var indexedAt = DateTime.UtcNow.AddHours(-2);
-        var pdfId = await SeedIndexedDocAsync(language: "en", indexedAt: indexedAt).ConfigureAwait(false);
+        var pdfId = await SeedIndexedDocAsync(language: "en", indexedAt: indexedAt);
 
         var result = await _handler.Handle(
             new GetDocumentEmbeddingsMetaQuery(pdfId),
-            CancellationToken.None).ConfigureAwait(false);
+            CancellationToken.None);
 
         result.DocId.Should().Be(pdfId);
         result.Model.Should().Be("bge-base-en-v1.5");
@@ -93,7 +93,7 @@ public sealed class GetDocumentEmbeddingsMetaQueryHandlerTests : IDisposable
             new GetDocumentEmbeddingsMetaQuery(unknownDocId),
             CancellationToken.None).ConfigureAwait(false);
 
-        var ex = await act.Should().ThrowAsync<NotFoundException>().ConfigureAwait(false);
+        var ex = await act.Should().ThrowAsync<NotFoundException>();
         ex.Which.ResourceType.Should().Be("Embeddings");
         ex.Which.ResourceId.Should().Be(unknownDocId.ToString());
     }
@@ -117,11 +117,11 @@ public sealed class GetDocumentEmbeddingsMetaQueryHandlerTests : IDisposable
     public async Task Returns_Default_Language_When_PdfDocument_Created_Without_Explicit_Language()
     {
         // PdfDocumentEntity.Language defaults to "en" — confirms join + DTO mapping
-        var pdfId = await SeedIndexedDocAsync(language: "it").ConfigureAwait(false);
+        var pdfId = await SeedIndexedDocAsync(language: "it");
 
         var result = await _handler.Handle(
             new GetDocumentEmbeddingsMetaQuery(pdfId),
-            CancellationToken.None).ConfigureAwait(false);
+            CancellationToken.None);
 
         result.Language.Should().Be("it");
     }
@@ -131,10 +131,10 @@ public sealed class GetDocumentEmbeddingsMetaQueryHandlerTests : IDisposable
     {
         // Security guarantee from spec §7 (Newman corpus-reconstruction risk mitigation):
         // Verifica che la DTO whitelist non esponga MAI valori vector raw nella JSON response.
-        var pdfId = await SeedIndexedDocAsync().ConfigureAwait(false);
+        var pdfId = await SeedIndexedDocAsync();
         var dto = await _handler.Handle(
             new GetDocumentEmbeddingsMetaQuery(pdfId),
-            CancellationToken.None).ConfigureAwait(false);
+            CancellationToken.None);
 
         var jsonOptions = new JsonSerializerOptions
         {

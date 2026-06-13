@@ -128,10 +128,10 @@ public sealed class GetKbNavCountsQueryHandlerTests
     {
         Action act = paramName switch
         {
-            "jobs"     => () => new GetKbNavCountsQueryHandler(null!, _feedback, _clock),
+            "jobs" => () => new GetKbNavCountsQueryHandler(null!, _feedback, _clock),
             "feedback" => () => new GetKbNavCountsQueryHandler(_jobs, null!, _clock),
-            "clock"    => () => new GetKbNavCountsQueryHandler(_jobs, _feedback, null!),
-            _          => throw new InvalidOperationException()
+            "clock" => () => new GetKbNavCountsQueryHandler(_jobs, _feedback, null!),
+            _ => throw new InvalidOperationException()
         };
         act.Should().Throw<ArgumentNullException>().WithParameterName(paramName);
     }

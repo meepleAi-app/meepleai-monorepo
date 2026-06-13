@@ -105,6 +105,7 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    [Obsolete]
     public async Task ToolkitDetail_WhenPublished_AnyAuthUser_Returns200WithViewerContext()
     {
         using var scope = _factory.Services.CreateScope();
@@ -166,6 +167,7 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
     /// the null-case coverage above.
     /// </summary>
     [Fact]
+    [Obsolete]
     public async Task ToolkitDetail_WithMarketplaceFieldsSet_SurfacesAllFields()
     {
         using var scope = _factory.Services.CreateScope();
@@ -275,6 +277,7 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    [Obsolete]
     public async Task ToolkitDetail_WhenOwnDraft_OwnerSeesIsOwnerTrue()
     {
         using var scope = _factory.Services.CreateScope();
@@ -302,6 +305,7 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    [Obsolete]
     public async Task ToolkitDetail_WhenUnpublishedDraft_NonAuthorReceives404()
     {
         // PR #732 §5.2 security boundary — server-side enforcement.
@@ -327,6 +331,7 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    [Obsolete]
     public async Task ToolkitDetail_WhenPendingReview_NonAuthorReceives404()
     {
         // Even PendingReview does not equal Approved; non-authors cannot see.
@@ -352,6 +357,7 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    [Obsolete]
     public async Task ToolkitDetail_OwnerStillSeesUnpublishedToolkit()
     {
         // Owners always see their own toolkits (parallel to "yanked-but-mine"
@@ -379,6 +385,7 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    [Obsolete]
     public async Task ToolkitDetail_AgentSummary_TruncatesSystemPromptTo500Chars()
     {
         using var scope = _factory.Services.CreateScope();
@@ -416,6 +423,7 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    [Obsolete]
     public async Task ToolkitDetail_PopulatesAuthorNameFromUser()
     {
         using var scope = _factory.Services.CreateScope();
@@ -479,6 +487,7 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    [Obsolete]
     public async Task ToolkitVersions_PublishedToolkit_Returns200WithStubV1()
     {
         // Schema reality v1 carryover (Gate B): single-row stub list.
@@ -512,6 +521,7 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    [Obsolete]
     public async Task ToolkitVersions_NonAuthorOnDraft_Returns404()
     {
         using var scope = _factory.Services.CreateScope();
@@ -536,6 +546,7 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    [Obsolete]
     public async Task ToolkitVersions_OwnerOnDraft_Returns200WithDraftChangelog()
     {
         using var scope = _factory.Services.CreateScope();
@@ -596,6 +607,7 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    [Obsolete]
     public async Task InstallToolkit_PublishedToolkit_Returns200WithHasInstalledTrue()
     {
         using var scope = _factory.Services.CreateScope();
@@ -624,6 +636,7 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    [Obsolete]
     public async Task InstallToolkit_Idempotent_RepeatedInstallsAlwaysReturn200()
     {
         // PR #732 §5.3.5 Nygard: repeated installs must NOT raise 409.
@@ -659,6 +672,7 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    [Obsolete]
     public async Task InstallToolkit_NonAuthorOnDraft_Returns404()
     {
         // PR #732 §5.2 boundary — viewers cannot install drafts.
@@ -684,6 +698,7 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    [Obsolete]
     public async Task InstallToolkit_OwnerCanInstallOwnDraft()
     {
         // Owners installing their own toolkit (e.g. for testing) is allowed.

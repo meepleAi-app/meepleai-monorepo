@@ -176,7 +176,7 @@ public sealed class ListUserKbDocsQueryHandlerIntegrationTests : IAsyncLifetime
 
         result.Total.Should().Be(2);
         result.Items.Should().HaveCount(2);
-        result.Items.Should().OnlyContain(d => d.FileName.StartsWith("a"));
+        result.Items.Should().OnlyContain(d => d.FileName.StartsWith('a'));
     }
 
     // ─── AC2: Cross-game + recency sort (ProcessedAt ?? UploadedAt DESC) ────

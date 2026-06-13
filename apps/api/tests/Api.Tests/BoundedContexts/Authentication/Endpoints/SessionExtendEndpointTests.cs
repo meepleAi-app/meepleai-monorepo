@@ -183,24 +183,4 @@ public sealed class SessionExtendEndpointTests : IAsyncLifetime
         request.Headers.Add("Cookie", $"{SessionCookieName}={sessionToken}");
         return request;
     }
-
-    /// <summary>
-    /// Extracts the meepleai_session cookie value from a Set-Cookie header.
-    /// </summary>
-    private static string? ExtractSessionCookieValue(HttpResponseMessage response)
-    {
-        if (!response.Headers.TryGetValues("Set-Cookie", out var cookies))
-            return null;
-
-        foreach (var cookie in cookies)
-        {
-            if (!cookie.StartsWith($"{SessionCookieName}=", StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            var value = cookie.Split(';')[0];
-            return value[(SessionCookieName.Length + 1)..];
-        }
-
-        return null;
-    }
 }

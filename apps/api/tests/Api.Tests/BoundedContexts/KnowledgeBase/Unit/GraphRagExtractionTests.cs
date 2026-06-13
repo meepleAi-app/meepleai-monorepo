@@ -41,10 +41,6 @@ public sealed class GraphRagExtractionTests : IDisposable
 
     private readonly Guid _pdfDocumentId = Guid.NewGuid();
     private readonly Guid _gameId = Guid.NewGuid();
-    // Issue #890 (review concern): keep games.Id distinct from shared_games.id so the
-    // resolver test exercises the real cross-table mapping rather than a degenerate
-    // case where the two Guids collapse to the same value.
-    private readonly Guid _sharedGameId = Guid.NewGuid();
 
     public GraphRagExtractionTests()
     {

@@ -88,7 +88,7 @@ public sealed class NoPiiInLogAnalyzerTests
             }
             """;
 
-        var diagnostics = await RunAnalyzerAsync(source).ConfigureAwait(false);
+        var diagnostics = await RunAnalyzerAsync(source);
         AssertSingleMaiDiagnostic(diagnostics, expectedPlaceholderName: "Email");
     }
 
@@ -111,7 +111,7 @@ public sealed class NoPiiInLogAnalyzerTests
             }
             """;
 
-        var diagnostics = await RunAnalyzerAsync(source).ConfigureAwait(false);
+        var diagnostics = await RunAnalyzerAsync(source);
         AssertSingleMaiDiagnostic(diagnostics, expectedPlaceholderName: "Token");
     }
 
@@ -134,7 +134,7 @@ public sealed class NoPiiInLogAnalyzerTests
             }
             """;
 
-        var diagnostics = await RunAnalyzerAsync(source).ConfigureAwait(false);
+        var diagnostics = await RunAnalyzerAsync(source);
         AssertSingleMaiDiagnostic(diagnostics, expectedPlaceholderName: "Phone");
     }
 
@@ -158,7 +158,7 @@ public sealed class NoPiiInLogAnalyzerTests
             }
             """;
 
-        var diagnostics = await RunAnalyzerAsync(source).ConfigureAwait(false);
+        var diagnostics = await RunAnalyzerAsync(source);
         AssertNoMaiDiagnostics(diagnostics);
     }
 
@@ -182,7 +182,7 @@ public sealed class NoPiiInLogAnalyzerTests
             }
             """;
 
-        var diagnostics = await RunAnalyzerAsync(source).ConfigureAwait(false);
+        var diagnostics = await RunAnalyzerAsync(source);
         AssertNoMaiDiagnostics(diagnostics);
     }
 
@@ -209,7 +209,7 @@ public sealed class NoPiiInLogAnalyzerTests
             }
             """;
 
-        var diagnostics = await RunAnalyzerAsync(source).ConfigureAwait(false);
+        var diagnostics = await RunAnalyzerAsync(source);
         AssertNoMaiDiagnostics(diagnostics);
     }
 
@@ -237,7 +237,7 @@ public sealed class NoPiiInLogAnalyzerTests
             }
             """;
 
-        var diagnostics = await RunAnalyzerAsync(source).ConfigureAwait(false);
+        var diagnostics = await RunAnalyzerAsync(source);
         AssertSingleTypedVoDiagnostic(diagnostics, "Api.BoundedContexts.Authentication.Domain.ValueObjects.Email");
     }
 
@@ -261,7 +261,7 @@ public sealed class NoPiiInLogAnalyzerTests
             }
             """;
 
-        var diagnostics = await RunAnalyzerAsync(source).ConfigureAwait(false);
+        var diagnostics = await RunAnalyzerAsync(source);
         AssertSingleTypedVoDiagnostic(diagnostics, "Api.BoundedContexts.Authentication.Domain.ValueObjects.PasswordHash");
     }
 
@@ -285,7 +285,7 @@ public sealed class NoPiiInLogAnalyzerTests
             }
             """;
 
-        var diagnostics = await RunAnalyzerAsync(source).ConfigureAwait(false);
+        var diagnostics = await RunAnalyzerAsync(source);
         AssertSingleTypedVoDiagnostic(diagnostics, "Api.BoundedContexts.Authentication.Domain.ValueObjects.SessionToken");
     }
 
@@ -310,7 +310,7 @@ public sealed class NoPiiInLogAnalyzerTests
             }
             """;
 
-        var diagnostics = await RunAnalyzerAsync(source).ConfigureAwait(false);
+        var diagnostics = await RunAnalyzerAsync(source);
         AssertNoMaiDiagnostics(diagnostics);
     }
 
@@ -334,7 +334,7 @@ public sealed class NoPiiInLogAnalyzerTests
             }
             """;
 
-        var diagnostics = await RunAnalyzerAsync(source).ConfigureAwait(false);
+        var diagnostics = await RunAnalyzerAsync(source);
         AssertNoMaiDiagnostics(diagnostics);
     }
 
@@ -361,7 +361,7 @@ public sealed class NoPiiInLogAnalyzerTests
             }
             """;
 
-        var diagnostics = await RunAnalyzerAsync(source).ConfigureAwait(false);
+        var diagnostics = await RunAnalyzerAsync(source);
         AssertSingleHeuristicNameDiagnostic(diagnostics, "password");
     }
 
@@ -384,7 +384,7 @@ public sealed class NoPiiInLogAnalyzerTests
             }
             """;
 
-        var diagnostics = await RunAnalyzerAsync(source).ConfigureAwait(false);
+        var diagnostics = await RunAnalyzerAsync(source);
         AssertSingleHeuristicNameDiagnostic(diagnostics, "accessToken");
     }
 
@@ -407,7 +407,7 @@ public sealed class NoPiiInLogAnalyzerTests
             }
             """;
 
-        var diagnostics = await RunAnalyzerAsync(source).ConfigureAwait(false);
+        var diagnostics = await RunAnalyzerAsync(source);
         AssertNoMaiDiagnostics(diagnostics);
     }
 
@@ -431,7 +431,7 @@ public sealed class NoPiiInLogAnalyzerTests
             }
             """;
 
-        var diagnostics = await RunAnalyzerAsync(source).ConfigureAwait(false);
+        var diagnostics = await RunAnalyzerAsync(source);
         AssertNoMaiDiagnostics(diagnostics);
     }
 
@@ -462,7 +462,7 @@ public sealed class NoPiiInLogAnalyzerTests
             }
             """;
 
-        var diagnostics = await RunAnalyzerAsync(source).ConfigureAwait(false);
+        var diagnostics = await RunAnalyzerAsync(source);
         var mai001 = diagnostics.Where(d => d.Id == NoPiiInLogAnalyzer.DiagnosticId).ToImmutableArray();
         var mai002 = diagnostics.Where(d => d.Id == NoPiiInLogAnalyzer.TypedVoDiagnosticId).ToImmutableArray();
         var mai003 = diagnostics.Where(d => d.Id == NoPiiInLogAnalyzer.HeuristicNameDiagnosticId).ToImmutableArray();

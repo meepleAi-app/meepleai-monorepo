@@ -155,14 +155,14 @@ public sealed class GetKbNavCountsQueryHandlerIntegrationTests : IAsyncLifetime
 
     private static ProcessingJobEntity MakeJob(
         Guid pdfDocumentId, Guid userId, JobStatus status, DateTime createdAt) => new()
-    {
-        Id = Guid.NewGuid(),
-        PdfDocumentId = pdfDocumentId,
-        UserId = userId,
-        Status = status.ToString(),
-        Priority = 0,
-        CreatedAt = new DateTimeOffset(createdAt, TimeSpan.Zero),
-    };
+        {
+            Id = Guid.NewGuid(),
+            PdfDocumentId = pdfDocumentId,
+            UserId = userId,
+            Status = status.ToString(),
+            Priority = 0,
+            CreatedAt = new DateTimeOffset(createdAt, TimeSpan.Zero),
+        };
 
     private static KbUserFeedback MakeFeedback(DateTime createdAt)
     {

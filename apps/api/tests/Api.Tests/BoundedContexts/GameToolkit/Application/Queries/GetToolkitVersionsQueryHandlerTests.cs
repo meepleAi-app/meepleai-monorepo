@@ -75,31 +75,6 @@ public class GetToolkitVersionsQueryHandlerTests
         return toolkit;
     }
 
-    private static ToolkitVersionEntity SeedVersion(
-        Api.Infrastructure.MeepleAiDbContext context,
-        Guid toolkitId,
-        string versionNumber,
-        DateTime publishedAt,
-        string? changelog = null,
-        bool yanked = false)
-    {
-        var row = new ToolkitVersionEntity
-        {
-            Id = Guid.NewGuid(),
-            ToolkitId = toolkitId,
-            VersionNumber = versionNumber,
-            Changelog = changelog,
-            PublishedAt = publishedAt,
-            PublishedBy = AuthorId,
-            YankedAt = yanked ? publishedAt.AddDays(1) : null,
-            YankReason = yanked ? "Test yank" : null,
-            YankedBy = yanked ? AuthorId : null,
-            RowVersion = [0],
-        };
-        context.Set<ToolkitVersionEntity>().Add(row);
-        return row;
-    }
-
     // ── Visibility (mirror legacy handler tests) ─────────────────────────────
 
     [Fact]

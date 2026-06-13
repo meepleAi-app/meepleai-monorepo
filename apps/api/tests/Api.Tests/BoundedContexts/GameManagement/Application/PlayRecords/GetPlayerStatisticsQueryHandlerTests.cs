@@ -512,19 +512,19 @@ public class GetPlayerStatisticsQueryHandlerTests : IDisposable
         string gameName = "Test Game",
         TimeSpan? duration = null,
         DateTime? sessionDate = null) => new()
-    {
-        Id = id,
-        GameId = gameId,
-        GameName = gameName,
-        CreatedByUserId = userId,
-        Visibility = 0,
-        SessionDate = sessionDate ?? DateTime.UtcNow.AddDays(-1),
-        Duration = duration,
-        Status = 2, // Completed
-        ScoringConfigJson = """{"Dimensions":["points","wins"],"Units":{"points":"pts","wins":"W"}}""",
-        CreatedAt = DateTime.UtcNow,
-        UpdatedAt = DateTime.UtcNow
-    };
+        {
+            Id = id,
+            GameId = gameId,
+            GameName = gameName,
+            CreatedByUserId = userId,
+            Visibility = 0,
+            SessionDate = sessionDate ?? DateTime.UtcNow.AddDays(-1),
+            Duration = duration,
+            Status = 2, // Completed
+            ScoringConfigJson = """{"Dimensions":["points","wins"],"Units":{"points":"pts","wins":"W"}}""",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
 
     private static RecordPlayerEntity MakePlayer(
         Guid id,

@@ -69,7 +69,7 @@ public sealed class NoPiiInLogCodeFixProviderTests
             }
             """;
 
-        var fixedSource = await ApplyCodeFixAsync(source).ConfigureAwait(false);
+        var fixedSource = await ApplyCodeFixAsync(source);
 
         Assert.Contains("DataMasking.MaskEmail(userEmail)", fixedSource);
         Assert.Contains("using Api.Infrastructure.Security;", fixedSource);
@@ -93,7 +93,7 @@ public sealed class NoPiiInLogCodeFixProviderTests
             }
             """;
 
-        var fixedSource = await ApplyCodeFixAsync(source).ConfigureAwait(false);
+        var fixedSource = await ApplyCodeFixAsync(source);
 
         Assert.Contains("DataMasking.MaskJwt(accessToken)", fixedSource);
     }
@@ -116,7 +116,7 @@ public sealed class NoPiiInLogCodeFixProviderTests
             }
             """;
 
-        var fixedSource = await ApplyCodeFixAsync(source).ConfigureAwait(false);
+        var fixedSource = await ApplyCodeFixAsync(source);
 
         Assert.Contains("DataMasking.MaskIpAddress(clientIpAddress)", fixedSource);
     }
@@ -140,7 +140,7 @@ public sealed class NoPiiInLogCodeFixProviderTests
             }
             """;
 
-        var fixedSource = await ApplyCodeFixAsync(source).ConfigureAwait(false);
+        var fixedSource = await ApplyCodeFixAsync(source);
 
         // VO-typed args get `.Value` appended so the string-typed Mask method accepts them.
         Assert.Contains("DataMasking.MaskEmail(email.Value)", fixedSource);
@@ -164,7 +164,7 @@ public sealed class NoPiiInLogCodeFixProviderTests
             }
             """;
 
-        var fixedSource = await ApplyCodeFixAsync(source).ConfigureAwait(false);
+        var fixedSource = await ApplyCodeFixAsync(source);
 
         Assert.Contains("DataMasking.MaskString(password)", fixedSource);
     }

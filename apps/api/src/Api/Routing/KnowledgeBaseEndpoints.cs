@@ -195,7 +195,7 @@ internal static class KnowledgeBaseEndpoints
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
         var userId = session.Principal!.Subject.Id;
-        var role   = session.Principal!.EffectiveActor.Role;
+        var role = session.Principal!.EffectiveActor.Role;
 
         if (!Enum.TryParse<UserRole>(role, ignoreCase: true, out var userRole))
             userRole = UserRole.User;
@@ -211,9 +211,9 @@ internal static class KnowledgeBaseEndpoints
             userId, role, request.Query);
 
         // Set SSE headers — must be set before writing the body
-        context.Response.Headers["Content-Type"]  = "text/event-stream";
+        context.Response.Headers["Content-Type"] = "text/event-stream";
         context.Response.Headers["Cache-Control"] = "no-cache";
-        context.Response.Headers["Connection"]    = "keep-alive";
+        context.Response.Headers["Connection"] = "keep-alive";
 
         // EC-3: use HttpContext.RequestAborted so client disconnect stops the LLM stream
         var streamCt = context.RequestAborted;
@@ -221,11 +221,11 @@ internal static class KnowledgeBaseEndpoints
         try
         {
             var query = new CrossGameStreamQaQuery(
-                Query:         request.Query,
-                UserId:        userId,
-                Role:          userRole,
+                Query: request.Query,
+                UserId: userId,
+                Role: userRole,
                 AgentLanguage: request.Language ?? "it",
-                TopK:          request.TopK ?? 8);
+                TopK: request.TopK ?? 8);
 
             await foreach (var evt in mediator.CreateStream(query, streamCt).ConfigureAwait(false))
             {

@@ -25,14 +25,14 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Queries;
 public sealed class CrossGameStreamQaQueryHandlerTests
 {
     // ── Shared test fixtures ────────────────────────────────────────────────
-    private static readonly Guid UserId   = Guid.NewGuid();
-    private static readonly Guid GameId1  = Guid.NewGuid();
-    private static readonly Guid GameId2  = Guid.NewGuid();
+    private static readonly Guid UserId = Guid.NewGuid();
+    private static readonly Guid GameId1 = Guid.NewGuid();
+    private static readonly Guid GameId2 = Guid.NewGuid();
 
-    private readonly IRagAccessService            _ragAccessService   = Substitute.For<IRagAccessService>();
-    private readonly IMultiGameHybridSearchService _searchService     = Substitute.For<IMultiGameHybridSearchService>();
-    private readonly IRagPromptAssemblyService    _promptService      = Substitute.For<IRagPromptAssemblyService>();
-    private readonly ILlmService                  _llmService         = Substitute.For<ILlmService>();
+    private readonly IRagAccessService _ragAccessService = Substitute.For<IRagAccessService>();
+    private readonly IMultiGameHybridSearchService _searchService = Substitute.For<IMultiGameHybridSearchService>();
+    private readonly IRagPromptAssemblyService _promptService = Substitute.For<IRagPromptAssemblyService>();
+    private readonly ILlmService _llmService = Substitute.For<ILlmService>();
 
     private CrossGameStreamQaQueryHandler CreateSut() => new(
         _ragAccessService,
@@ -106,13 +106,13 @@ public sealed class CrossGameStreamQaQueryHandlerTests
         types.Should().NotContain(StreamingEventType.Error);
 
         var stateUpdateIdx = types.IndexOf(StreamingEventType.StateUpdate);
-        var citationsIdx   = types.IndexOf(StreamingEventType.Citations);
-        var firstTokenIdx  = types.IndexOf(StreamingEventType.Token);
-        var completeIdx    = types.LastIndexOf(StreamingEventType.Complete);
+        var citationsIdx = types.IndexOf(StreamingEventType.Citations);
+        var firstTokenIdx = types.IndexOf(StreamingEventType.Token);
+        var completeIdx = types.LastIndexOf(StreamingEventType.Complete);
 
-        stateUpdateIdx.Should().BeLessThan(citationsIdx,    "StateUpdate comes before Citations");
-        citationsIdx.Should().BeLessThan(firstTokenIdx,     "Citations comes before first Token");
-        firstTokenIdx.Should().BeLessThan(completeIdx,      "Tokens come before Complete");
+        stateUpdateIdx.Should().BeLessThan(citationsIdx, "StateUpdate comes before Citations");
+        citationsIdx.Should().BeLessThan(firstTokenIdx, "Citations comes before first Token");
+        firstTokenIdx.Should().BeLessThan(completeIdx, "Tokens come before Complete");
     }
 
     // ── Citations carry GameId for cross-game deep-link ──────────────────────
@@ -358,14 +358,14 @@ public sealed class CrossGameStreamQaQueryHandlerTests
     private static MultiGameSearchResultItem MakeSearchResult(Guid gameId, string chunkId, string docId) =>
         new()
         {
-            GameId        = gameId,
-            ChunkId       = chunkId,
+            GameId = gameId,
+            ChunkId = chunkId,
             PdfDocumentId = docId,
-            ChunkIndex    = 0,
-            PageNumber    = 1,
-            Content       = "Some rule text",
-            HybridScore   = 0.85f,
-            Mode          = SearchMode.Hybrid
+            ChunkIndex = 0,
+            PageNumber = 1,
+            Content = "Some rule text",
+            HybridScore = 0.85f,
+            Mode = SearchMode.Hybrid
         };
 
     private static async Task<List<RagStreamingEvent>> CollectEventsAsync(

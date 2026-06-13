@@ -130,11 +130,11 @@ public sealed class GetDocumentEmbeddingsMetaIntegrationTests : IAsyncLifetime
     [Fact(Timeout = 30000)]
     public async Task Returns_Meta_When_Document_Indexed()
     {
-        var pdfId = await SeedIndexedDocAsync(language: "it", chunkCount: 100).ConfigureAwait(false);
+        var pdfId = await SeedIndexedDocAsync(language: "it", chunkCount: 100);
 
         var result = await _mediator!.Send(
             new GetDocumentEmbeddingsMetaQuery(pdfId),
-            TestCancellationToken).ConfigureAwait(false);
+            TestCancellationToken);
 
         result.Should().NotBeNull();
         result.DocId.Should().Be(pdfId);
@@ -154,7 +154,7 @@ public sealed class GetDocumentEmbeddingsMetaIntegrationTests : IAsyncLifetime
             new GetDocumentEmbeddingsMetaQuery(unknownDocId),
             TestCancellationToken).ConfigureAwait(false);
 
-        var ex = await act.Should().ThrowAsync<NotFoundException>().ConfigureAwait(false);
+        var ex = await act.Should().ThrowAsync<NotFoundException>();
         ex.Which.ResourceType.Should().Be("Embeddings");
         ex.Which.ResourceId.Should().Be(unknownDocId.ToString());
     }
@@ -167,11 +167,11 @@ public sealed class GetDocumentEmbeddingsMetaIntegrationTests : IAsyncLifetime
         // direttamente senza richiedere PgVectorEmbedding rows.
         var pdfId = await SeedIndexedDocAsync(
             model: "custom-test-model-v2",
-            dimensions: 1024).ConfigureAwait(false);
+            dimensions: 1024);
 
         var result = await _mediator!.Send(
             new GetDocumentEmbeddingsMetaQuery(pdfId),
-            TestCancellationToken).ConfigureAwait(false);
+            TestCancellationToken);
 
         result.Model.Should().Be("custom-test-model-v2");
         result.Dimensions.Should().Be(1024);
@@ -181,14 +181,14 @@ public sealed class GetDocumentEmbeddingsMetaIntegrationTests : IAsyncLifetime
     public async Task Multiple_Sequential_Calls_Are_Consistent()
     {
         // Sanity check: idempotent read-only query, same result across calls.
-        var pdfId = await SeedIndexedDocAsync().ConfigureAwait(false);
+        var pdfId = await SeedIndexedDocAsync();
 
         var first = await _mediator!.Send(
             new GetDocumentEmbeddingsMetaQuery(pdfId),
-            TestCancellationToken).ConfigureAwait(false);
+            TestCancellationToken);
         var second = await _mediator!.Send(
             new GetDocumentEmbeddingsMetaQuery(pdfId),
-            TestCancellationToken).ConfigureAwait(false);
+            TestCancellationToken);
 
         first.Should().BeEquivalentTo(second);
     }

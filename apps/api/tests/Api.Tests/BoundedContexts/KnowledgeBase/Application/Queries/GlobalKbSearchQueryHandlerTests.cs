@@ -230,20 +230,31 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
         var pdfIds = Enumerable.Range(0, limit + 1).Select(_ => Guid.NewGuid()).ToList();
         var sharedGame = new SharedGameEntity
         {
-            Id = gameId, Title = "HasMore Game", IsDeleted = false, IsRagPublic = true,
-            CreatedAt = DateTime.UtcNow, CreatedBy = Guid.NewGuid()
+            Id = gameId,
+            Title = "HasMore Game",
+            IsDeleted = false,
+            IsRagPublic = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = Guid.NewGuid()
         };
         _db.SharedGames.Add(sharedGame);
         foreach (var pdfId in pdfIds)
         {
             _db.PdfDocuments.Add(new PdfDocumentEntity
             {
-                Id = pdfId, FileName = $"doc-{pdfId}.pdf", FilePath = $"/f/{pdfId}",
-                UploadedByUserId = userId, DocumentType = "base", SharedGameId = gameId
+                Id = pdfId,
+                FileName = $"doc-{pdfId}.pdf",
+                FilePath = $"/f/{pdfId}",
+                UploadedByUserId = userId,
+                DocumentType = "base",
+                SharedGameId = gameId
             });
             _db.VectorDocuments.Add(new VectorDocumentEntity
             {
-                Id = pdfId, PdfDocumentId = pdfId, SharedGameId = gameId, GameId = gameId,
+                Id = pdfId,
+                PdfDocumentId = pdfId,
+                SharedGameId = gameId,
+                GameId = gameId,
                 IndexingStatus = "completed"
             });
         }
@@ -294,18 +305,29 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
         var pdfId = Guid.NewGuid();
         var sharedGame = new SharedGameEntity
         {
-            Id = gameId, Title = "Game", IsDeleted = false, IsRagPublic = true,
-            CreatedAt = DateTime.UtcNow, CreatedBy = Guid.NewGuid()
+            Id = gameId,
+            Title = "Game",
+            IsDeleted = false,
+            IsRagPublic = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = Guid.NewGuid()
         };
         _db.SharedGames.Add(sharedGame);
         _db.PdfDocuments.Add(new PdfDocumentEntity
         {
-            Id = pdfId, FileName = "doc.pdf", FilePath = "/f/doc",
-            UploadedByUserId = userId, DocumentType = "base", SharedGameId = gameId
+            Id = pdfId,
+            FileName = "doc.pdf",
+            FilePath = "/f/doc",
+            UploadedByUserId = userId,
+            DocumentType = "base",
+            SharedGameId = gameId
         });
         _db.VectorDocuments.Add(new VectorDocumentEntity
         {
-            Id = pdfId, PdfDocumentId = pdfId, SharedGameId = gameId, GameId = gameId,
+            Id = pdfId,
+            PdfDocumentId = pdfId,
+            SharedGameId = gameId,
+            GameId = gameId,
             IndexingStatus = "completed"
         });
         await _db.SaveChangesAsync();
@@ -347,20 +369,31 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
         var pdfIds = Enumerable.Range(0, limit + 1).Select(_ => Guid.NewGuid()).ToList();
         var sharedGame = new SharedGameEntity
         {
-            Id = gameId, Title = "Cursor Game", IsDeleted = false, IsRagPublic = true,
-            CreatedAt = DateTime.UtcNow, CreatedBy = Guid.NewGuid()
+            Id = gameId,
+            Title = "Cursor Game",
+            IsDeleted = false,
+            IsRagPublic = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = Guid.NewGuid()
         };
         _db.SharedGames.Add(sharedGame);
         foreach (var id in pdfIds)
         {
             _db.PdfDocuments.Add(new PdfDocumentEntity
             {
-                Id = id, FileName = $"{id}.pdf", FilePath = $"/f/{id}",
-                UploadedByUserId = userId, DocumentType = "base", SharedGameId = gameId
+                Id = id,
+                FileName = $"{id}.pdf",
+                FilePath = $"/f/{id}",
+                UploadedByUserId = userId,
+                DocumentType = "base",
+                SharedGameId = gameId
             });
             _db.VectorDocuments.Add(new VectorDocumentEntity
             {
-                Id = id, PdfDocumentId = id, SharedGameId = gameId, GameId = gameId,
+                Id = id,
+                PdfDocumentId = id,
+                SharedGameId = gameId,
+                GameId = gameId,
                 IndexingStatus = "completed"
             });
         }
@@ -517,18 +550,29 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
 
         var sharedGame = new SharedGameEntity
         {
-            Id = gameId, Title = "Game EC-6", IsDeleted = false, IsRagPublic = true,
-            CreatedAt = DateTime.UtcNow, CreatedBy = Guid.NewGuid()
+            Id = gameId,
+            Title = "Game EC-6",
+            IsDeleted = false,
+            IsRagPublic = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = Guid.NewGuid()
         };
         _db.SharedGames.Add(sharedGame);
         _db.PdfDocuments.Add(new PdfDocumentEntity
         {
-            Id = pdfId, FileName = "doc.pdf", FilePath = "/f/doc",
-            UploadedByUserId = userId, DocumentType = "base", SharedGameId = gameId
+            Id = pdfId,
+            FileName = "doc.pdf",
+            FilePath = "/f/doc",
+            UploadedByUserId = userId,
+            DocumentType = "base",
+            SharedGameId = gameId
         });
         _db.VectorDocuments.Add(new VectorDocumentEntity
         {
-            Id = pdfId, PdfDocumentId = pdfId, SharedGameId = gameId, GameId = gameId,
+            Id = pdfId,
+            PdfDocumentId = pdfId,
+            SharedGameId = gameId,
+            GameId = gameId,
             IndexingStatus = "completed"
         });
         await _db.SaveChangesAsync();
@@ -686,9 +730,12 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
 
         var sharedGame = new SharedGameEntity
         {
-            Id = gameId, Title = "DocType Facet Game",
-            IsDeleted = false, IsRagPublic = true,
-            CreatedAt = DateTime.UtcNow, CreatedBy = Guid.NewGuid()
+            Id = gameId,
+            Title = "DocType Facet Game",
+            IsDeleted = false,
+            IsRagPublic = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = Guid.NewGuid()
         };
         _db.SharedGames.Add(sharedGame);
         _db.PdfDocuments.AddRange(
@@ -738,9 +785,12 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
 
         var sharedGame = new SharedGameEntity
         {
-            Id = gameId, Title = "Lang Facet Game",
-            IsDeleted = false, IsRagPublic = true,
-            CreatedAt = DateTime.UtcNow, CreatedBy = Guid.NewGuid()
+            Id = gameId,
+            Title = "Lang Facet Game",
+            IsDeleted = false,
+            IsRagPublic = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = Guid.NewGuid()
         };
         _db.SharedGames.Add(sharedGame);
         _db.PdfDocuments.AddRange(
@@ -792,9 +842,12 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
 
         var sharedGame = new SharedGameEntity
         {
-            Id = gameId, Title = "Combined Facet Game",
-            IsDeleted = false, IsRagPublic = true,
-            CreatedAt = DateTime.UtcNow, CreatedBy = Guid.NewGuid()
+            Id = gameId,
+            Title = "Combined Facet Game",
+            IsDeleted = false,
+            IsRagPublic = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = Guid.NewGuid()
         };
         _db.SharedGames.Add(sharedGame);
         _db.PdfDocuments.AddRange(
@@ -876,15 +929,23 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
 
         var sharedGame = new SharedGameEntity
         {
-            Id = gameId, Title = "Empty Facet Game",
-            IsDeleted = false, IsRagPublic = true,
-            CreatedAt = DateTime.UtcNow, CreatedBy = Guid.NewGuid()
+            Id = gameId,
+            Title = "Empty Facet Game",
+            IsDeleted = false,
+            IsRagPublic = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = Guid.NewGuid()
         };
         _db.SharedGames.Add(sharedGame);
         _db.PdfDocuments.Add(new PdfDocumentEntity
         {
-            Id = pdfId, FileName = "b.pdf", FilePath = "/f/b",
-            UploadedByUserId = userId, DocumentType = "base", SharedGameId = gameId, Language = "en"
+            Id = pdfId,
+            FileName = "b.pdf",
+            FilePath = "/f/b",
+            UploadedByUserId = userId,
+            DocumentType = "base",
+            SharedGameId = gameId,
+            Language = "en"
         });
         await _db.SaveChangesAsync();
 
@@ -915,15 +976,23 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
 
         var sharedGame = new SharedGameEntity
         {
-            Id = gameId, Title = "Lang Empty Game",
-            IsDeleted = false, IsRagPublic = true,
-            CreatedAt = DateTime.UtcNow, CreatedBy = Guid.NewGuid()
+            Id = gameId,
+            Title = "Lang Empty Game",
+            IsDeleted = false,
+            IsRagPublic = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = Guid.NewGuid()
         };
         _db.SharedGames.Add(sharedGame);
         _db.PdfDocuments.Add(new PdfDocumentEntity
         {
-            Id = pdfId, FileName = "e.pdf", FilePath = "/f/e",
-            UploadedByUserId = userId, DocumentType = "base", SharedGameId = gameId, Language = "en"
+            Id = pdfId,
+            FileName = "e.pdf",
+            FilePath = "/f/e",
+            UploadedByUserId = userId,
+            DocumentType = "base",
+            SharedGameId = gameId,
+            Language = "en"
         });
         await _db.SaveChangesAsync();
 

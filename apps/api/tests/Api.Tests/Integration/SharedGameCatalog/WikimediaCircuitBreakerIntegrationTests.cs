@@ -45,7 +45,6 @@ public class WikimediaCircuitBreakerIntegrationTests
     private sealed class FakeWikidataClient : IFakeWikidataClient
     {
         private readonly HttpClient _client;
-        public FakeWikidataClient(HttpClient client) => _client = client;
         public Task<HttpResponseMessage> GetAsync(string path, CancellationToken ct) =>
             _client.GetAsync(path, ct);
     }
@@ -53,7 +52,6 @@ public class WikimediaCircuitBreakerIntegrationTests
     private sealed class FakeCommonsClient : IFakeCommonsClient
     {
         private readonly HttpClient _client;
-        public FakeCommonsClient(HttpClient client) => _client = client;
         public Task<HttpResponseMessage> GetAsync(string path, CancellationToken ct) =>
             _client.GetAsync(path, ct);
     }

@@ -351,6 +351,63 @@ public class PdfDocumentTests
         document.ProcessingState.Should().Be(PdfProcessingState.Chunking);
     }
 
+    // #2284 follow-up: TD1 — MarkProcessed domain method
+    [Fact]
+    public void MarkProcessed_FromReadyState_SetsProcessedAt()
+    {
+        // Arrange — advance the document fully to Ready first.
+        var document = CreateTestDocument(LanguageCode.English);
+        document.TransitionTo(PdfProcessingState.Uploading);
+        document.TransitionTo(PdfProcessingState.Extracting);
+        document.TransitionTo(PdfProcessingState.Chunking);
+        document.TransitionTo(PdfProcessingState.Embedding);
+        document.TransitionTo(PdfProcessingState.Indexing);
+        document.TransitionTo(PdfProcessingState.Ready);
+        var expected = new DateTime(2026, 6, 13, 12, 0, 0, DateTimeKind.Utc);
+
+        // Act
+        document.MarkProcessed(expected);
+
+        // Assert
+        document.ProcessedAt.Should().Be(expected);
+        document.ProcessingState.Should().Be(PdfProcessingState.Ready,
+            "MarkProcessed is a pure audit setter — state must remain Ready");
+    }
+
+    [Fact]
+    public void MarkProcessed_FromNonReadyState_Throws()
+    {
+        var document = CreateTestDocument(LanguageCode.English);
+        document.TransitionTo(PdfProcessingState.Uploading);
+
+        var act = () => document.MarkProcessed(DateTime.UtcNow);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*Ready*");
+    }
+
+    [Fact]
+    public void MarkProcessed_DoesNotRaiseDomainEvent()
+    {
+        // MarkProcessed is intentionally a pure audit setter — no event raised.
+        // Consumers receive PdfStateChangedEvent + KbDocIndexedEvent from
+        // TransitionTo(Ready) instead.
+        var document = CreateTestDocument(LanguageCode.English);
+        document.TransitionTo(PdfProcessingState.Uploading);
+        document.TransitionTo(PdfProcessingState.Extracting);
+        document.TransitionTo(PdfProcessingState.Chunking);
+        document.TransitionTo(PdfProcessingState.Embedding);
+        document.TransitionTo(PdfProcessingState.Indexing);
+        document.TransitionTo(PdfProcessingState.Ready);
+
+        var eventsBeforeMark = document.DomainEvents.Count;
+
+        document.MarkProcessed(DateTime.UtcNow);
+
+        document.DomainEvents.Count.Should().Be(eventsBeforeMark,
+            "MarkProcessed must NOT add a new domain event");
+    }
+
     [Fact]
     public void MarkAsFailed_WithCategory_SetsAllFields()
     {

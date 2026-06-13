@@ -301,6 +301,31 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         return document;
     }
 
+    /// <summary>
+    /// Records the moment when the document finished processing (transition to Ready).
+    /// Pure audit field setter — does NOT raise a domain event because:
+    /// (1) ProcessedAt is metadata, not a state-change consumers care about beyond the
+    ///     Ready transition itself; (2) TransitionTo(Ready) already raises
+    ///     PdfStateChangedEvent + KbDocIndexedEvent which carry the meaningful signal.
+    ///
+    /// Invariant: caller MUST call this only after the aggregate has transitioned to
+    /// Ready (i.e., the pipeline's structural finalization is complete). Throws if
+    /// called from any other state.
+    ///
+    /// #2284 follow-up: replaces the legacy `pdfDoc.ProcessedAt = now` EF mutation
+    /// that survived PR #2297 in FinalizeProcessingAsync.
+    /// </summary>
+    /// <param name="processedAt">The wall-clock time when processing completed.</param>
+    public void MarkProcessed(DateTime processedAt)
+    {
+        if (ProcessingState != PdfProcessingState.Ready)
+        {
+            throw new InvalidOperationException(
+                $"MarkProcessed can only be called after TransitionTo(Ready); current state is {ProcessingState}.");
+        }
+        ProcessedAt = processedAt;
+    }
+
     // Issue #4215: Deprecated methods - use TransitionTo() instead
     // Deprecated: Use TransitionTo() instead (remove in Issue #4216)
     public void MarkAsProcessing()

@@ -468,6 +468,38 @@ public sealed class PdfIndexingFlowKbFlagIntegrationTests : IAsyncLifetime
         kbStatus.TotalChunks.Should().BeGreaterThan(0,
             "Block D: KnowledgeBaseStatusDto must surface the real chunk count when Ready, " +
             "not the 0 hardcoded at GetKnowledgeBaseStatusQueryHandler.cs:165.");
+
+        // #2284 follow-up coverage gap: assert the pipeline raises exactly 6
+        // PdfStateChangedEvent into the domain-event outbox (one per state transition:
+        // Pending→Uploading, Uploading→Extracting, Extracting→Chunking,
+        // Chunking→Embedding, Embedding→Indexing, Indexing→Ready) plus exactly 1
+        // KbDocIndexedEvent on the Ready transition. Pre-refactor the count was 1 due
+        // to the bridge-save shortcut (Uploading → Indexing via EF). The 6-event count
+        // matches the PdfDocument_SevenStateProgression baseline contract.
+        // Match outbox rows by checking the JSON payload contains the PdfDocumentId — the
+        // outbox row schema does not store an AggregateId column, so the test filters
+        // on the serialised event body. Acceptable in test scope because the only PDF in
+        // play is the one this test seeded.
+        var pdfIdString = pdfDocId.ToString();
+        var pdfStateChangedCount = await _dbContext.DomainEventOutbox
+            .AsNoTracking()
+            .CountAsync(
+                e => e.EventType.Contains("PdfStateChanged") && e.PayloadJson.Contains(pdfIdString),
+                TestCancellationToken);
+        pdfStateChangedCount.Should().Be(6,
+            "pipeline must raise PdfStateChangedEvent for EVERY state transition " +
+            "(Pending→Uploading + Uploading→Extracting + Extracting→Chunking + " +
+            "Chunking→Embedding + Embedding→Indexing + Indexing→Ready). " +
+            "If this counts 1, the bridge-save shortcut from PR #2295 has regressed.");
+
+        var kbDocIndexedCount = await _dbContext.DomainEventOutbox
+            .AsNoTracking()
+            .CountAsync(
+                e => e.EventType.Contains("KbDocIndexed") && e.PayloadJson.Contains(pdfIdString),
+                TestCancellationToken);
+        kbDocIndexedCount.Should().Be(1,
+            "KbDocIndexedEvent must fire exactly once per upload, raised by " +
+            "PdfDocument.TransitionTo(Ready) (PdfDocument.cs:435-442).");
     }
 
     /// <summary>

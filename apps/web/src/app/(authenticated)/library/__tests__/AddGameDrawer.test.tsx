@@ -286,6 +286,24 @@ describe('AddGameDrawer', () => {
       expect(screen.getByTestId('add-game-step-manual')).toBeInTheDocument();
       expect(screen.queryByTestId('add-game-step-catalog')).not.toBeInTheDocument();
     });
+
+    // #2269 P0-2 (M2 / review #2270 finding C1) — when the user clicks an
+    // already-in-library card, the blocked-alert CTA triggers
+    // onNavigateToGame, which the drawer wires to close + router.push to the
+    // game's detail page. Pre-fix the mock destructured only onSelect/onBack/
+    // onGoToManual so this wiring had no unit-level guard (only the live
+    // Playwright QA in PR #2270 exercised it).
+    it('closes drawer and pushes to /library/{id} when CatalogSearchStep invokes onNavigateToGame', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+      renderDrawer({ open: true, onClose });
+
+      await user.click(screen.getByTestId('add-game-choice-catalog'));
+      await user.click(screen.getByTestId('catalog-navigate-to-game'));
+
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(mockRouter.push).toHaveBeenCalledWith('/library/game-456');
+    });
   });
 
   describe('Close behavior', () => {

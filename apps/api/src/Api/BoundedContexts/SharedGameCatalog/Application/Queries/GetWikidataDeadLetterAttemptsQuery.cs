@@ -58,8 +58,12 @@ internal sealed class GetWikidataDeadLetterAttemptsQueryHandler
         var skip = Math.Max(0, request.Skip);
         var take = Math.Clamp(request.Take, 1, 200);
 
+        // Task 2.3 bridge — Task 3.3 will propagate an optional
+        // IncludeAcknowledged param through the query DTO. For now retain the
+        // existing semantics (hide acknowledged rows on the default open-work
+        // view) by hard-coding includeAcknowledged: false.
         var page = await _attempts
-            .GetDeadLettersAsync(skip, take, request.ReasonFilter, cancellationToken)
+            .GetDeadLettersAsync(skip, take, request.ReasonFilter, includeAcknowledged: false, cancellationToken)
             .ConfigureAwait(false);
 
         var items = page.Items

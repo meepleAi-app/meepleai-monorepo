@@ -21,10 +21,14 @@ public class GetWikidataDeadLetterAttemptsQueryHandlerTests
 
     private GetWikidataDeadLetterAttemptsQueryHandler Sut() => new(_attempts.Object);
 
+    // Task 2.3 (#2254) bridge note — the handler hard-codes
+    // includeAcknowledged: false because Task 3.3 will expose it on the query
+    // DTO. The mocks pin the false value to lock the current bridge in place.
+
     [Fact]
     public async Task Handle_EmptyResult_ReturnsZeroItems()
     {
-        _attempts.Setup(r => r.GetDeadLettersAsync(0, 50, null, It.IsAny<CancellationToken>()))
+        _attempts.Setup(r => r.GetDeadLettersAsync(0, 50, null, false, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new DeadLetterPage(Array.Empty<DeadLetterRow>(), 0));
 
         var result = await Sut().Handle(new GetWikidataDeadLetterAttemptsQuery(0, 50, null), default);
@@ -46,9 +50,14 @@ public class GetWikidataDeadLetterAttemptsQueryHandlerTests
             DeadLetteredAt: FixedNow,
             Reason: "r2-upload-error",
             Details: "503",
-            RetryCount: 3);
+            RetryCount: 3,
+            AcknowledgedAt: null,
+            AcknowledgedBy: null,
+            AcknowledgedByFullName: null,
+            TriggeredByAdminUserId: null,
+            TriggeredByAdminFullName: null);
 
-        _attempts.Setup(r => r.GetDeadLettersAsync(0, 50, "r2-upload-error", It.IsAny<CancellationToken>()))
+        _attempts.Setup(r => r.GetDeadLettersAsync(0, 50, "r2-upload-error", false, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new DeadLetterPage(new[] { row }, TotalCount: 1));
 
         var result = await Sut().Handle(
@@ -69,12 +78,12 @@ public class GetWikidataDeadLetterAttemptsQueryHandlerTests
     [Fact]
     public async Task Handle_NegativeSkip_ClampsToZero()
     {
-        _attempts.Setup(r => r.GetDeadLettersAsync(0, 50, null, It.IsAny<CancellationToken>()))
+        _attempts.Setup(r => r.GetDeadLettersAsync(0, 50, null, false, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new DeadLetterPage(Array.Empty<DeadLetterRow>(), 0));
 
         await Sut().Handle(new GetWikidataDeadLetterAttemptsQuery(-5, 50, null), default);
 
-        _attempts.Verify(r => r.GetDeadLettersAsync(0, 50, null, It.IsAny<CancellationToken>()), Times.Once,
+        _attempts.Verify(r => r.GetDeadLettersAsync(0, 50, null, false, It.IsAny<CancellationToken>()), Times.Once,
             "handler must clamp negative skip to 0 before delegating to the repo");
     }
 
@@ -84,12 +93,12 @@ public class GetWikidataDeadLetterAttemptsQueryHandlerTests
     [InlineData(1000, 200)] // take=1000 clamps to 200
     public async Task Handle_TakeOutOfRange_Clamped(int requestTake, int expectedTake)
     {
-        _attempts.Setup(r => r.GetDeadLettersAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+        _attempts.Setup(r => r.GetDeadLettersAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new DeadLetterPage(Array.Empty<DeadLetterRow>(), 0));
 
         await Sut().Handle(new GetWikidataDeadLetterAttemptsQuery(0, requestTake, null), default);
 
-        _attempts.Verify(r => r.GetDeadLettersAsync(0, expectedTake, null, It.IsAny<CancellationToken>()), Times.Once);
+        _attempts.Verify(r => r.GetDeadLettersAsync(0, expectedTake, null, false, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

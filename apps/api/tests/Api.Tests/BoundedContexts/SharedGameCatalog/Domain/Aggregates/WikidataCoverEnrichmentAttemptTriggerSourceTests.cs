@@ -69,4 +69,21 @@ public class WikidataCoverEnrichmentAttemptTriggerSourceTests
         hydrated.AcknowledgedAt.Should().BeNull();
         hydrated.AcknowledgedBy.Should().BeNull();
     }
+
+    [Fact]
+    public void RecordSkipped_AdminTriggered_PersistsAdminId()
+    {
+        var a = WikidataCoverEnrichmentAttempt.RecordSkipped(
+            GameId, "qid-missing", 0, At, triggeredByAdminUserId: AdminId);
+        a.TriggeredByAdminUserId.Should().Be(AdminId);
+    }
+
+    [Fact]
+    public void RecordFailedWithRetry_AdminTriggered_PersistsAdminId()
+    {
+        var a = WikidataCoverEnrichmentAttempt.RecordFailedWithRetry(
+            GameId, "r2-upload-error", null, 1, At, At.AddMinutes(5),
+            triggeredByAdminUserId: AdminId);
+        a.TriggeredByAdminUserId.Should().Be(AdminId);
+    }
 }

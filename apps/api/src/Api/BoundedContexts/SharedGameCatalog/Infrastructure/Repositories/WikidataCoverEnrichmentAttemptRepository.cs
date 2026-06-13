@@ -37,6 +37,9 @@ internal sealed class WikidataCoverEnrichmentAttemptRepository
             RetryCount = attempt.RetryCount,
             NextRetryAt = attempt.NextRetryAt,
             DeadLetteredAt = attempt.DeadLetteredAt,
+            // Task 2.3 will add: AcknowledgedAt = attempt.AcknowledgedAt
+            // Task 2.3 will add: AcknowledgedBy = attempt.AcknowledgedBy
+            // Task 2.3 will add: TriggeredByAdminUserId = attempt.TriggeredByAdminUserId
         }, cancellationToken).ConfigureAwait(false);
 
         CollectDomainEvents(attempt);

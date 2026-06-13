@@ -275,9 +275,16 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         }
         else
         {
-            // Create new VectorDocumentEntity
+            // Create new VectorDocumentEntity in "processing" state. IPdfIndexingPipeline.IndexAsync
+            // (called downstream by the Handler) transitions it to "completed" and raises
+            // VectorDocumentIndexedEvent structurally via the VectorDocument domain aggregate.
+            // The intermediate "processing" entity exists so the PgVectorEmbedding rows have
+            // a stable VectorDocumentId FK to reference during embedding generation.
             var embeddingDimensions = _embeddingService.GetEmbeddingDimensions();
 
+#pragma warning disable MAI005 // Two-phase create: this entity is the placeholder for the
+                                // FK during embedding generation; pipeline.IndexAsync later
+                                // owns the structural event raising (see #2244 / P234).
             existingVectorDoc = new VectorDocumentEntity
             {
                 Id = Guid.NewGuid(),
@@ -288,6 +295,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                 EmbeddingModel = _embeddingService.GetModelName(),
                 EmbeddingDimensions = embeddingDimensions
             };
+#pragma warning restore MAI005
             _db.Set<VectorDocumentEntity>().Add(existingVectorDoc);
             try
             {

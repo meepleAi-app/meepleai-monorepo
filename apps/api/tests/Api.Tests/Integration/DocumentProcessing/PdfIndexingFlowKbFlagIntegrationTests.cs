@@ -242,6 +242,29 @@ public sealed class PdfIndexingFlowKbFlagIntegrationTests : IAsyncLifetime
         // Default EmbeddingBatchSize=100 is sufficient for the small text seeded by this test.
         services.Configure<Api.Configuration.IndexingSettings>(opts => opts.EmbeddingBatchSize = 100);
 
+        // #2244 Task 6: configure MeepleAiDbContext to use Hybrid dispatch mode so that
+        // VectorDocumentIndexedEvent raised structurally by VectorDocumentRepository.AddAsync
+        // is dispatched inline via MediatR (depth=1 path) within the same scope, allowing
+        // VectorDocumentIndexedForKbFlagHandler to flip has_knowledge_base = true during the test.
+        //
+        // The production default is OutboxOnly (post-T9 cutover, DomainEventOutboxOptions.cs:49).
+        // In production the outbox processor (DomainEventOutboxProcessor) drains the event and
+        // dispatches it asynchronously. In this integration test there is no background processor,
+        // so OutboxOnly silently drops the handler call (event persisted in domain_event_outbox
+        // but never dispatched), and the HasKnowledgeBase assertion would fail.
+        //
+        // Hybrid = inline MediatR.Publish (depth=1) + outbox row written (Step 2b).
+        // The UploadPdf test asserts the synchronous end-to-end effect (HasKnowledgeBase=true),
+        // while the IndexPdf test (call site 3/3) asserts only the outbox row (outboxCount=1).
+        //
+        // DomainEventOutboxOptions uses init-only properties; use Options.Create() rather than
+        // services.Configure<T>(opts => opts.Mode = ...) which would fail to compile on init setter.
+        services.AddSingleton<IOptions<Api.Infrastructure.DomainEventOutbox.DomainEventOutboxOptions>>(
+            Options.Create(new Api.Infrastructure.DomainEventOutbox.DomainEventOutboxOptions
+            {
+                Mode = Api.Infrastructure.DomainEventOutbox.DomainEventDispatchMode.Hybrid
+            }));
+
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 
@@ -413,17 +436,19 @@ public sealed class PdfIndexingFlowKbFlagIntegrationTests : IAsyncLifetime
         vectorDoc.ChunkCount.Should().BeGreaterThan(0,
             "at least one chunk must be persisted for the rulebook text");
 
-        // CRITICAL ASSERTION: this is the bug.
+        // STRUCTURAL ASSERTION (#2244 Sub #2 / Task 6):
         // VectorDocumentIndexedForKbFlagHandler subscribes to VectorDocumentIndexedEvent
         // and is the only place that sets has_knowledge_base = true on shared_games.
-        // The event is currently NEVER published from any of the 3 ingestion paths
-        // (UploadPdfCommandHandler.ProcessPdfAsync, PdfProcessingPipelineService, IndexPdfCommandHandler)
-        // because they write VectorDocumentEntity directly via EF instead of constructing
-        // the VectorDocument domain entity whose constructor raises the event.
         //
-        // Sub #1 Block A fix: publish the event manually in FinalizeProcessingAsync
-        // after PdfStateChangedEvent. Sub #2 refactors the architecture to use a domain
-        // factory so the event is raised structurally.
+        // After Task 3 migration, UploadPdfCommandHandler.ProcessPdfAsync uses IPdfIndexingPipeline
+        // which calls VectorDocument.Create → raises VectorDocumentIndexedEvent structurally via
+        // VectorDocumentRepository.AddAsync → IDomainEventCollector → SaveChangesAsync → MediatR.
+        //
+        // The test fixture configures Hybrid dispatch mode (see InitializeAsync) so the inline
+        // MediatR.Publish fires within SaveChangesAsync at depth=1. The handler updates
+        // has_knowledge_base = true in the same scope, verifiable by this assertion.
+        //
+        // Sub #1 Block A (manual publish in FinalizeProcessingAsync) has been removed by Task 6.
         var updatedGame = await _dbContext.SharedGames
             .AsNoTracking()
             .SingleAsync(g => g.Id == testGame.Id, TestCancellationToken);

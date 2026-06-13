@@ -254,5 +254,8 @@ internal sealed class WikidataCoverEnrichmentAttemptRepository
             details: entity.Details,
             retryCount: entity.RetryCount,
             nextRetryAt: entity.NextRetryAt,
-            deadLetteredAt: entity.DeadLetteredAt);
+            deadLetteredAt: entity.DeadLetteredAt,
+            acknowledgedAt: null,            // Task 2.3 will replace with entity.AcknowledgedAt
+            acknowledgedBy: null,            // Task 2.3 will replace with entity.AcknowledgedBy
+            triggeredByAdminUserId: null);   // Task 2.3 will replace with entity.TriggeredByAdminUserId
 }

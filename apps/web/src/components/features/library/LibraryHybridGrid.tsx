@@ -94,12 +94,16 @@ function itemRating(item: HybridHubItem): number | undefined {
 }
 
 /**
- * Game-only visual extra: metadata chip that surfaces "agente pronto" /
- * "KB indicizzato" at a glance. The flag is mapped from
- * `UserLibraryEntry.hasKb` in `libraryEntryToHubItem` (see
- * `lib/library/hybrid-hub.mappers.ts`), which is `true` when the backend
- * reports ≥ 1 PDF fully indexed AND `shared_games.has_knowledge_base = true`
- * (closed end-to-end by #2244 / epic #2242 BE pipeline).
+ * Game-only visual extra: metadata chip that surfaces a "KB linked" state
+ * at a glance. The flag is mapped from `UserLibraryEntry` in
+ * `libraryEntryToHubItem` (see `lib/library/hybrid-hub.mappers.ts`) via
+ * `isKbEntry`, which returns true when EITHER the backend reports the
+ * shared game's `has_knowledge_base` flag (≥ 1 PDF fully indexed end-to-end
+ * by #2244 / epic #2242 BE pipeline) OR at least one PDF document is
+ * linked but still in the pipeline (`kbCardCount > 0`). The single
+ * `📄 KB` label intentionally collapses the two states for now; a
+ * separate `⏳ KB in elaborazione` variant for in-flight uploads is
+ * tracked as Block E follow-up of #2247.
  *
  * Non-game variants render nothing.
  */

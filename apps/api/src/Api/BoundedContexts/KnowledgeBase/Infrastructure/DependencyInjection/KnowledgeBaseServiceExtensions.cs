@@ -477,6 +477,12 @@ internal static class KnowledgeBaseServiceExtensions
         // Ownership/RAG access: cascading access check (admin → public → ownership)
         services.AddScoped<IRagAccessService, RagAccessService>();
 
+        // PDF indexing pipeline (#2244 / epic #2242): single write path for marking
+        // a PDF "indexed in the vector store". Replaces 5 EF-direct call sites in
+        // DocumentProcessing handlers so VectorDocumentIndexedEvent fires structurally
+        // and has_knowledge_base no longer drifts to false.
+        services.AddScoped<IPdfIndexingPipeline, PdfIndexingPipeline>();
+
         // Issue #1661: cross-game hybrid search — parallel orchestration wrapper
         // Scoped because IHybridSearchService (its dependency) is Scoped.
         services.AddScoped<IMultiGameHybridSearchService, MultiGameHybridSearchService>();

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
@@ -549,7 +550,7 @@ internal partial class UploadPdfCommandHandler
         var indexingStopwatch = Stopwatch.StartNew();
 
         // Create/update VectorDocument row FIRST so SaveEmbeddingsToPgVectorAsync can find it by PdfDocumentId
-        await UpdateVectorDocumentAsync(pdfId, pdfDoc, allDocumentChunks.Count, db, cancellationToken).ConfigureAwait(false);
+        await UpdateVectorDocumentAsync(pdfId, pdfDoc, allDocumentChunks.Count, db, scope, cancellationToken).ConfigureAwait(false);
 
         // Save text chunks to PostgreSQL for hybrid search (FTS) — non-blocking, can proceed independently
         await SaveTextChunksForHybridSearchAsync(pdfId, pdfDoc, allDocumentChunks, db, scope, cancellationToken).ConfigureAwait(false);
@@ -565,62 +566,33 @@ internal partial class UploadPdfCommandHandler
 
     /// <summary>
     /// Updates or creates VectorDocument record after successful indexing.
+    /// Delegates to <see cref="IPdfIndexingPipeline"/> (#2244 / epic #2242) so the
+    /// VectorDocumentIndexedEvent fires structurally and shared_games.has_knowledge_base
+    /// projection updates — replaces the direct EF write that bypassed the domain event.
     /// </summary>
     private async Task UpdateVectorDocumentAsync(
         string pdfId,
         PdfDocumentEntity pdfDoc,
         int indexedCount,
         MeepleAiDbContext db,
+        IServiceScope scope,
         CancellationToken cancellationToken)
     {
         var pdfGuid = Guid.Parse(pdfId);
-        // AsTracking required (DbContext default is NoTracking — PERF-06).
-        var vectorDoc = await db.VectorDocuments
-            .AsTracking()
-            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, cancellationToken)
+
+        // vector_documents.GameId is FK to games.Id (NOT shared_games.id) — see PdfGameIdResolver.
+        var resolvedGameId = await PdfGameIdResolver.ResolveAsync(db, pdfDoc, cancellationToken)
             .ConfigureAwait(false);
 
-        if (vectorDoc == null)
-        {
-            // vector_documents.GameId is FK to games.Id (NOT shared_games.id) — see PdfGameIdResolver.
-            // Same constraint that applies to text_chunks.GameId.
-            var resolvedGameId = await PdfGameIdResolver.ResolveAsync(db, pdfDoc, cancellationToken)
-                .ConfigureAwait(false);
-
-            vectorDoc = new VectorDocumentEntity
-            {
-                Id = Guid.NewGuid(),
-                GameId = resolvedGameId,
-                SharedGameId = pdfDoc.SharedGameId, // Issue #5185: propagate SharedGameId from PDF
-                PdfDocumentId = pdfGuid,
-                IndexingStatus = "completed",
-                ChunkCount = indexedCount,
-                TotalCharacters = pdfDoc.ExtractedText?.Length ?? 0,
-                IndexedAt = _timeProvider.GetUtcNow().UtcDateTime
-            };
-            db.VectorDocuments.Add(vectorDoc);
-        }
-        else
-        {
-            vectorDoc.IndexingStatus = "completed";
-            vectorDoc.ChunkCount = indexedCount;
-            vectorDoc.TotalCharacters = pdfDoc.ExtractedText?.Length ?? 0;
-            vectorDoc.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
-        }
-
-        try
-        {
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (DbUpdateConcurrencyException ex)
-        {
-            MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                nameof(UploadPdfCommandHandler),
-                MeepleAiMetrics.PdfConcurrencyCategories.B);
-            _logger.LogWarning(ex,
-                "Concurrency conflict on VectorDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                pdfId, nameof(UploadPdfCommandHandler));
-        }
+        var pipeline = scope.ServiceProvider.GetRequiredService<IPdfIndexingPipeline>();
+        await pipeline.IndexAsync(
+            pdfDocumentId: pdfGuid,
+            gameId: resolvedGameId,
+            sharedGameId: pdfDoc.SharedGameId,
+            chunkCount: indexedCount,
+            totalCharacters: pdfDoc.ExtractedText?.Length ?? 0,
+            language: string.IsNullOrWhiteSpace(pdfDoc.Language) ? "en" : pdfDoc.Language,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -830,34 +802,10 @@ internal partial class UploadPdfCommandHandler
                 new PdfStateChangedEvent(pdfGuidForEvent, PdfProcessingState.Indexing, PdfProcessingState.Ready, userId),
                 CancellationToken.None).ConfigureAwait(false);
 
-            // Issue #2243 (epic #2242) Block A — tactical compensating publish:
-            // The three ingestion paths (ProcessPdfAsync, PdfProcessingPipelineService,
-            // IndexPdfCommandHandler) all write VectorDocumentEntity directly via EF instead of
-            // constructing the VectorDocument domain entity whose constructor raises
-            // VectorDocumentIndexedEvent. As a result VectorDocumentIndexedForKbFlagHandler
-            // never runs and shared_games.has_knowledge_base stays false even after a successful
-            // indexing. Manually publish the event here so the SharedGameCatalog projection
-            // updates and admin/user UIs can show "agente pronto".
-            //
-            // Sub #2 (architecture refactor) replaces this with a VectorDocument.Create() factory
-            // chained from an IPdfIndexingPipeline service so the event flows structurally and
-            // this manual publish can be removed.
-            var vectorDocSnapshot = await db.Set<VectorDocumentEntity>()
-                .AsNoTracking()
-                .Where(v => v.PdfDocumentId == pdfGuidForEvent)
-                .Select(v => new { v.Id, v.GameId, v.SharedGameId, v.ChunkCount })
-                .FirstOrDefaultAsync(cancellationToken)
-                .ConfigureAwait(false);
-            if (vectorDocSnapshot is not null)
-            {
-                await scopedMediator.Publish(
-                    new Api.BoundedContexts.KnowledgeBase.Domain.Events.VectorDocumentIndexedEvent(
-                        documentId: vectorDocSnapshot.Id,
-                        gameId: vectorDocSnapshot.GameId ?? Guid.Empty,
-                        chunkCount: vectorDocSnapshot.ChunkCount,
-                        sharedGameId: vectorDocSnapshot.SharedGameId),
-                    CancellationToken.None).ConfigureAwait(false);
-            }
+            // Sub #1 (#2243) tactical compensating publish of VectorDocumentIndexedEvent
+            // removed by #2244: IPdfIndexingPipeline.IndexAsync now raises the event
+            // structurally through the VectorDocument domain aggregate. See
+            // UpdateVectorDocumentAsync above + IPdfIndexingPipeline.cs.
         }
 
         var cacheKey = (pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId)?.ToString() ?? string.Empty;

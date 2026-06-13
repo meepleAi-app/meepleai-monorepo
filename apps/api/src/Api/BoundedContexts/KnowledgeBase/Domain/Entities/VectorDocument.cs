@@ -35,7 +35,9 @@ internal sealed class VectorDocument : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Creates a new vector document.
+    /// Creates a new vector document. Constructor kept public for backward compatibility
+    /// with existing internal callers (KnowledgeBase mappers + ingest service). New code
+    /// SHOULD use <see cref="Create"/> to make the factory boundary explicit.
     /// </summary>
     public VectorDocument(
         Guid id,
@@ -60,6 +62,30 @@ internal sealed class VectorDocument : AggregateRoot<Guid>
         SharedGameId = sharedGameId;
 
         AddDomainEvent(new VectorDocumentIndexedEvent(id, gameId, totalChunks, sharedGameId));
+    }
+
+    /// <summary>
+    /// Factory entry point for a freshly indexed vector document.
+    /// Encapsulates Guid generation + parameter ordering so cross-BC callers
+    /// (DocumentProcessing) don't have to know id-allocation semantics.
+    /// Raises <see cref="VectorDocumentIndexedEvent"/> via the constructor —
+    /// closes #2244 by ensuring the domain event always fires when a new
+    /// VectorDocument enters the aggregate.
+    /// </summary>
+    public static VectorDocument Create(
+        Guid pdfDocumentId,
+        Guid gameId,
+        int totalChunks,
+        string language,
+        Guid? sharedGameId = null)
+    {
+        return new VectorDocument(
+            id: Guid.NewGuid(),
+            gameId: gameId,
+            pdfDocumentId: pdfDocumentId,
+            language: language,
+            totalChunks: totalChunks,
+            sharedGameId: sharedGameId);
     }
 
     /// <summary>

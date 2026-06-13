@@ -294,6 +294,7 @@ public sealed class RaptorPipelineIntegrationTests : IDisposable
             _logger,
             languageDetectorMock.Object,
             Mock.Of<IChunkTranslationService>(),
+            Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.IPdfIndexingPipeline>(),
             raptorIndexer: withRaptor ? _raptorIndexerMock.Object : null,
             entityExtractor: null,
             vectorStore: null,

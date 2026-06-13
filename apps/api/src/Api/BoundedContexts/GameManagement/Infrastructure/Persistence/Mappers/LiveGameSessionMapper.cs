@@ -66,6 +66,10 @@ internal static class LiveGameSessionMapper
             Notes = domain.Notes,
             AgentMode = (int)domain.AgentMode,
             ChatSessionId = domain.ChatSessionId,
+            // RowVersion is ValueGeneratedOnAddOrUpdate backed by a Postgres trigger
+            // (see migration LiveSessionRowVersionTrigger, Issue #2097).
+            // On INSERT: pass Array.Empty<byte>() — the trigger overwrites it with clock_timestamp().
+            // On UPDATE: pass the stale token from Domain so EF can enforce optimistic concurrency.
             RowVersion = domain.RowVersion.Length > 0 ? domain.RowVersion : Array.Empty<byte>()
         };
 

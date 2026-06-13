@@ -79,12 +79,15 @@ internal sealed class PdfIndexingPipeline : IPdfIndexingPipeline
             // Build the domain aggregate so the constructor raises
             // VectorDocumentIndexedEvent — this is the contract Sub #1's
             // tactical publish was emulating.
+            // #2284 issue 2: thread totalCharacters to the domain so it survives the
+            // mapper round-trip (mapper now writes domain.TotalCharacters instead of 0).
             newDomainAggregate = VectorDocument.Create(
                 pdfDocumentId: pdfDocumentId,
                 gameId: gameId ?? Guid.Empty,
                 totalChunks: chunkCount,
                 language: language,
-                sharedGameId: sharedGameId);
+                sharedGameId: sharedGameId,
+                totalCharacters: totalCharacters);
 
             existing = new VectorDocumentEntity
             {

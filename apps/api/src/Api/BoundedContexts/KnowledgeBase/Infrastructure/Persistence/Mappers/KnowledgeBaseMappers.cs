@@ -24,7 +24,9 @@ internal static class KnowledgeBaseMappers
             GameId = domain.GameId,
             PdfDocumentId = domain.PdfDocumentId,
             ChunkCount = domain.TotalChunks,
-            TotalCharacters = 0, // Not tracked in domain
+            // #2284 issue 2: thread TotalCharacters through the domain (was hardcoded 0,
+            // silently zeroing the audit field on every new ingestion).
+            TotalCharacters = domain.TotalCharacters,
             IndexingStatus = "completed", // Simplified status mapping
             IndexedAt = domain.IndexedAt,
             IndexingError = null,
@@ -41,22 +43,19 @@ internal static class KnowledgeBaseMappers
     public static VectorDocument ToDomain(this VectorDocumentEntity entity)
     {
         ArgumentNullException.ThrowIfNull(entity);
-        var domain = new VectorDocument(
+        // #2284 issue 1: use Rehydrate (not the public ctor) so reading from DB does NOT
+        // enqueue a fresh VectorDocumentIndexedEvent into the outbox — that was a latent
+        // read-side bug introduced by PR #2278 (every mapper ToDomain raised an event).
+        return VectorDocument.Rehydrate(
             id: entity.Id,
             gameId: entity.GameId ?? Guid.Empty,
             pdfDocumentId: entity.PdfDocumentId,
-            language: "en", // Default language (not stored in entity)
+            language: "en", // Default language (not stored on entity)
             totalChunks: entity.ChunkCount,
-            sharedGameId: entity.SharedGameId // Issue #5185
-        );
-
-        // Restore metadata using internal method
-        if (!string.IsNullOrEmpty(entity.Metadata))
-        {
-            domain.SetMetadata(entity.Metadata);
-        }
-
-        return domain;
+            indexedAt: entity.IndexedAt ?? DateTime.UtcNow,
+            sharedGameId: entity.SharedGameId, // Issue #5185
+            metadata: entity.Metadata,
+            totalCharacters: entity.TotalCharacters);
     }
 
     /// <summary>

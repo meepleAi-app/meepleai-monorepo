@@ -302,6 +302,14 @@ const nextConfig = {
       //   '/games/:id/strategies'  → '/discover/:id?tab=strategies'
 
       // ── Legacy redirects (pre-Issue #5039) ───────────────────────────────
+      // Issue #2190 (2026-06-13): retire /hub/games list page in favor of the
+      // canonical multi-tab hub at /games (Asse D P2 #1899, default tab=discover).
+      // The detail sub-route /hub/games/[id] remains in place (out of scope, #2118).
+      {
+        source: '/hub/games',
+        destination: '/games?tab=discover',
+        permanent: true,
+      },
       // Issue #3843: Redirect old /giochi route to new /games route
       {
         source: '/giochi/:id*',

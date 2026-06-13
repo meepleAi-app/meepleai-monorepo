@@ -288,6 +288,13 @@ describe('sp4 navbar placement', () => {
     expect(toolkit?.group).toBe('strumenti');
   });
 
+  it('hub voice is labelled "Games" (Issue #2190 full cleanup)', () => {
+    const hub = UNIFIED_NAV_ITEMS.find(item => item.id === 'hub');
+    // Issue #2190: rename "Hub" voice to "Games" to disambiguate from the
+    // legacy /hub/* route family that was retired by Stage 3 #1026.
+    expect(hub?.label).toBe('Games');
+  });
+
   it('hub activePattern matches /games or /hub routes', () => {
     const hub = UNIFIED_NAV_ITEMS.find(item => item.id === 'hub')!;
     // Issue #2190: /games is the canonical hub; /hub/* preserved for legacy bookmarks.

@@ -626,6 +626,96 @@ public sealed class PdfIndexingFlowKbFlagIntegrationTests : IAsyncLifetime
     }
 
     /// <summary>
+    /// Task 7 / issue #2244 (Sub #2, final structural task): proves that
+    /// <see cref="UploadPdfCommandHandler.FinalizeProcessingAsync"/> uses
+    /// <c>PdfDocument.TransitionTo(Ready)</c> via <c>IPdfDocumentRepository</c>
+    /// to raise <c>PdfStateChangedEvent</c> and <c>KbDocIndexedEvent</c> structurally,
+    /// rather than the tactical <c>scopedMediator.Publish(PdfStateChangedEvent)</c>
+    /// that was removed in this task.
+    ///
+    /// Asserts:
+    ///   1. Exactly 1 <c>KbDocIndexedEvent</c> outbox row after the pipeline completes —
+    ///      proves the structural domain path fires exactly once (no duplicate from
+    ///      old tactical + new structural coexistence).
+    ///   2. Exactly 1 <c>PdfStateChangedEvent</c> outbox row with NewState=Ready —
+    ///      proves the Indexing→Ready transition event is structural, not tactical.
+    /// </summary>
+    [Fact(Timeout = 90000)]
+    public async Task UploadPdf_OnReady_RaisesKbDocIndexedEventOnce()
+    {
+        // Arrange
+        var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
+        var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
+
+        var pdfBytes = CreateValidPdfBytes(1024);
+        var formFile = CreateMockFormFile("rules-task7.pdf", pdfBytes);
+
+        var command = new UploadPdfCommand(
+            GameId: testGame.Id.ToString(),
+            Metadata: null,
+            PrivateGameId: null,
+            UserId: testUser.Id,
+            File: formFile);
+
+        // Act
+        var result = await handler.Handle(command, TestCancellationToken);
+        await _inlineBgService!.WaitForAllAsync();
+
+        // Precondition: upload and BG pipeline succeeded
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue("upload accept-stage must succeed for a valid PDF");
+        var pdfDocId = Guid.Parse(result.Document!.Id.ToString());
+
+        var pdfDoc = await _dbContext.PdfDocuments
+            .AsNoTracking()
+            .SingleAsync(p => p.Id == pdfDocId, TestCancellationToken);
+        pdfDoc.ProcessingState.Should().Be(
+            nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Ready),
+            "BG pipeline must reach Ready for this test to be meaningful");
+
+        // Assert 1: exactly 1 KbDocIndexedEvent in the domain_event_outbox.
+        // PdfDocument.TransitionTo(Ready) raises KbDocIndexedEvent structurally; the
+        // SaveChanges dispatcher (Hybrid mode Step 2b) persists it into the outbox.
+        // If the old tactical scopedMediator.Publish path were still present AND the
+        // structural path active, we would see 0 (tactical-only, no outbox row) or 1
+        // (structural-only). After Task 7, only the structural path exists → count = 1.
+        // KbDocIndexedEvent is registered in EventTypeRegistry as "kb.doc.indexed"
+        // (not the CLR name "KbDocIndexedEvent"). Query using the registry alias.
+        var kbIndexedCount = await _dbContext.DomainEventOutbox
+            .AsNoTracking()
+            .CountAsync(e => e.EventType == "kb.doc.indexed", TestCancellationToken);
+        kbIndexedCount.Should().Be(1,
+            "PdfDocument.TransitionTo(Ready) must raise exactly 1 KbDocIndexedEvent via the " +
+            "structural domain-event path (IPdfDocumentRepository.UpdateAsync → IDomainEventCollector " +
+            "→ SaveChangesAsync → outbox). The removed tactical scopedMediator.Publish(PdfStateChangedEvent) " +
+            "never raised KbDocIndexedEvent anyway; the structural path is the ONLY source.");
+
+        // Assert 2: exactly 1 PdfStateChangedEvent in the outbox for this pipeline run.
+        // Only the Ready transition in FinalizeProcessingAsync goes through the domain
+        // (other state transitions use direct EF entity mutation and don't raise events).
+        // PdfStateChangedEvent is unregistered in EventTypeRegistry so EventType = CLR FullName.
+        // The PayloadJson contains "Ready" as the newState enum value.
+        //
+        // Note: PdfStateChangedEvent was previously published via the tactical
+        // scopedMediator.Publish path (which bypassed the outbox entirely). After Task 7,
+        // it flows through the domain → structural path → outbox.
+        var pdfStateChangedEvents = await _dbContext.DomainEventOutbox
+            .AsNoTracking()
+            .Where(e => e.EventType.Contains("PdfStateChanged"))
+            .ToListAsync(TestCancellationToken);
+        pdfStateChangedEvents.Should().HaveCount(1,
+            "exactly 1 PdfStateChangedEvent must be in the outbox: the structural Ready transition. " +
+            "Other pipeline state transitions (Pending→Uploading, etc.) still use direct EF mutation " +
+            "and do not raise domain events. The removed tactical scopedMediator.Publish " +
+            "bypassed the outbox and is now replaced by the structural path.");
+        // PayloadJson uses camelCase + lowercase enum values (DomainEventJsonOptions).
+        // "newState": "ready" (not "Ready") is the correct assertion.
+        pdfStateChangedEvents[0].PayloadJson.Should().Contain("ready",
+            "the PdfStateChangedEvent outbox row must have newState=ready in its camelCase JSON payload.");
+    }
+
+    /// <summary>
     /// In-memory log sink. Diagnoses ProcessPdfAsync pipeline failures
     /// (which otherwise surface as opaque "Object reference not set" errors).
     /// </summary>

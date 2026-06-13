@@ -1,6 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
-using Api.BoundedContexts.DocumentProcessing.Domain.Events;
+using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Infrastructure;
@@ -11,7 +11,6 @@ using Api.Observability;
 using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
@@ -80,11 +79,11 @@ internal partial class UploadPdfCommandHandler
 
             // Complete processing
             _logger.LogInformation("🎉 [PDF-DEBUG] Step 5: Finalizing processing for {PdfId}", pdfId);
-            // Resolve mediator from the local async scope. The handler-injected `_mediator`
-            // belongs to the original HTTP request scope, which has long since been disposed
-            // by the time this background task reaches finalize for a multi-MB PDF.
-            var scopedMediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            await FinalizeProcessingAsync(pdfId, pdfDoc, userId, db, quotaService, scopedMediator, startTime, cancellationToken).ConfigureAwait(false);
+            // Resolve IPdfDocumentRepository from scope (same pattern as pipeline resolution in Tasks 3-5).
+            // FinalizeProcessingAsync uses it to transition through the domain state machine so
+            // PdfStateChangedEvent + KbDocIndexedEvent are raised structurally (#2244 Task 7).
+            var pdfRepo = scope.ServiceProvider.GetRequiredService<IPdfDocumentRepository>();
+            await FinalizeProcessingAsync(pdfId, pdfDoc, userId, db, quotaService, pdfRepo, startTime, cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("✅ [PDF-DEBUG] ProcessPdfAsync COMPLETE for {PdfId}", pdfId);
         }
         catch (OperationCanceledException)
@@ -762,6 +761,10 @@ internal partial class UploadPdfCommandHandler
 
     /// <summary>
     /// Finalizes PDF processing with completion status and quota confirmation.
+    /// Task 7 (#2244 Sub #2): uses PdfDocument.TransitionTo(Ready) via IPdfDocumentRepository
+    /// so PdfStateChangedEvent + KbDocIndexedEvent are raised structurally through the
+    /// domain-event path (repository → IDomainEventCollector → SaveChanges dispatcher → MediatR).
+    /// The tactical scopedMediator.Publish(PdfStateChangedEvent) is eliminated here.
     /// </summary>
     private async Task FinalizeProcessingAsync(
         string pdfId,
@@ -769,14 +772,21 @@ internal partial class UploadPdfCommandHandler
         Guid userId,
         MeepleAiDbContext db,
         IPdfUploadQuotaService quotaService,
-        IMediator scopedMediator,
+        IPdfDocumentRepository pdfRepo,
         DateTime startTime,
         CancellationToken cancellationToken)
     {
         var totalPages = pdfDoc.PageCount ?? 0;
         await UpdateProgressAsync(db, pdfId, ProcessingStep.Completed, totalPages, totalPages, startTime, null, cancellationToken).ConfigureAwait(false);
 
-        pdfDoc.ProcessingState = nameof(PdfProcessingState.Ready);
+        // Bridge: set the EF entity to Indexing state and stamp ProcessedAt before loading
+        // via the domain repository. The pipeline used direct EF mutations for all prior state
+        // transitions so the DB still shows Uploading; the domain state machine only allows
+        // Indexing → Ready, so we must persist Indexing first so GetByIdAsync reads the correct
+        // pre-Ready state. ProcessedAt is set here because PdfDocument.TransitionTo does not
+        // set it (domain-pure; no wall-clock access inside the aggregate).
+        var pdfGuid = Guid.Parse(pdfId);
+        pdfDoc.ProcessingState = nameof(PdfProcessingState.Indexing);
         pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
         try
         {
@@ -793,18 +803,29 @@ internal partial class UploadPdfCommandHandler
             return; // CRITICAL: do not throw — background task must see success
         }
 
-        // Publish PdfStateChangedEvent so downstream handlers fire:
-        // AutoCreateAgentOnPdfReadyHandler (admin PDFs), PdfNotificationEventHandler, PdfStateChangedMetricsEventHandler.
-        // Must be published after SaveChanges so handlers can query the updated entity.
-        // Use scopedMediator (resolved from the live async scope), not the handler's _mediator
-        // field which references the disposed HTTP request scope.
-        if (Guid.TryParse(pdfId, out var pdfGuidForEvent))
+        // Load domain aggregate from repository (reads Indexing state persisted above).
+        // TransitionTo(Ready) raises PdfStateChangedEvent + KbDocIndexedEvent structurally.
+        // UpdateAsync collects domain events via IDomainEventCollector; the subsequent
+        // db.SaveChangesAsync dispatches them through MediatR (Hybrid mode inline + outbox row).
+        // Sub #2: no manual scopedMediator.Publish(PdfStateChangedEvent) — structural path only.
+        var pdfDomain = await pdfRepo.GetByIdAsync(pdfGuid, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException($"PdfDocument {pdfGuid} not found while finalizing processing");
+
+        try
         {
-            // PdfStateChangedEvent is removed in Task 7 (TransitionTo). For now keep the manual
-            // publish so handlers continue to fire while we ship one structural change per task.
-            await scopedMediator.Publish(
-                new PdfStateChangedEvent(pdfGuidForEvent, PdfProcessingState.Indexing, PdfProcessingState.Ready, userId),
-                CancellationToken.None).ConfigureAwait(false);
+            pdfDomain.TransitionTo(PdfProcessingState.Ready);
+            await pdfRepo.UpdateAsync(pdfDomain, cancellationToken).ConfigureAwait(false);  // collects domain events, detaches old pdfDoc
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);  // persists Ready + dispatches events
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(UploadPdfCommandHandler),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(ex,
+                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                pdfId, nameof(UploadPdfCommandHandler));
+            return;
         }
 
         var cacheKey = (pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId)?.ToString() ?? string.Empty;

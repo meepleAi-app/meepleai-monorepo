@@ -48,9 +48,22 @@ public static class EventTypeRegistry
         [typeof(ChatSessionCreatedEvent)] = "chat.session.created",
 
         // H3: kb.doc.indexed fires ONLY when PdfDocument.TransitionTo(Ready) succeeds.
-        //     PdfStateChangedEvent (fires on every transition) remains UNREGISTERED to avoid
-        //     log explosion (one row per pipeline step). Decision B3 from #1590 spec panel.
+        //     KbDocIndexedEvent stays as the user-meaningful "doc indexed" milestone for the
+        //     activity rail / Activity Feed.
         [typeof(KbDocIndexedEvent)] = "kb.doc.indexed",
+
+        // Issue #2245 (epic #2242 Sub #3) — register every PDF state transition so the
+        // admin LiveEventLog SSE stream can render real-time pipeline progress without
+        // the FE polling /api/v1/pdfs/{id} on a 2s tick.
+        //
+        // NOTE — revisits B3 (#1590 spec panel): the original decision left this UNREGISTERED
+        // to avoid log explosion (one row per pipeline step × 6 transitions per PDF).
+        // The trade-off is now accepted because: (a) the SSE consumer eliminates polling
+        // load, (b) the activity-feed query path already filters by event_type, and
+        // (c) DomainEventOutboxRetentionService prunes old rows beyond the retention window.
+        // If the row volume becomes a problem, the mitigation is to add an EventBroadcastFilter
+        // entry that drops the persistence step for this alias while keeping the SSE fanout.
+        [typeof(PdfStateChangedEvent)] = "pdf.state.changed",
 
         // SessionTracking lifecycle. session.created is orthogonal to the session_events diary
         // "session_created" row (#1590 C3 — different consumers). session.finalized also (re)wires

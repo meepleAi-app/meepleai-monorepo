@@ -362,9 +362,9 @@ public sealed class GlobalKbAskStreamEndpointTests : IAsyncLifetime
         });
 
         // Seed three games
-        _gamePublicId    = Guid.NewGuid();
+        _gamePublicId = Guid.NewGuid();
         _gameAliceOwnedId = Guid.NewGuid();
-        _gameBobOwnedId  = Guid.NewGuid();
+        _gameBobOwnedId = Guid.NewGuid();
 
         db.SharedGames.AddRange(
             new SharedGameEntity
@@ -373,10 +373,13 @@ public sealed class GlobalKbAskStreamEndpointTests : IAsyncLifetime
                 Title = "Public Ask Game",
                 Description = "Publicly indexed",
                 YearPublished = 2022,
-                MinPlayers = 2, MaxPlayers = 4,
-                PlayingTimeMinutes = 60, MinAge = 10,
+                MinPlayers = 2,
+                MaxPlayers = 4,
+                PlayingTimeMinutes = 60,
+                MinAge = 10,
                 IsRagPublic = true,
-                CreatedBy = seedUserId, CreatedAt = DateTime.UtcNow
+                CreatedBy = seedUserId,
+                CreatedAt = DateTime.UtcNow
             },
             new SharedGameEntity
             {
@@ -384,10 +387,13 @@ public sealed class GlobalKbAskStreamEndpointTests : IAsyncLifetime
                 Title = "Alice Ask Private Game",
                 Description = "Private to Alice",
                 YearPublished = 2022,
-                MinPlayers = 2, MaxPlayers = 4,
-                PlayingTimeMinutes = 60, MinAge = 10,
+                MinPlayers = 2,
+                MaxPlayers = 4,
+                PlayingTimeMinutes = 60,
+                MinAge = 10,
                 IsRagPublic = false,
-                CreatedBy = seedUserId, CreatedAt = DateTime.UtcNow
+                CreatedBy = seedUserId,
+                CreatedAt = DateTime.UtcNow
             },
             new SharedGameEntity
             {
@@ -395,10 +401,13 @@ public sealed class GlobalKbAskStreamEndpointTests : IAsyncLifetime
                 Title = "Bob Ask Private Game",
                 Description = "Private to Bob",
                 YearPublished = 2022,
-                MinPlayers = 2, MaxPlayers = 4,
-                PlayingTimeMinutes = 60, MinAge = 10,
+                MinPlayers = 2,
+                MaxPlayers = 4,
+                PlayingTimeMinutes = 60,
+                MinAge = 10,
                 IsRagPublic = false,
-                CreatedBy = seedUserId, CreatedAt = DateTime.UtcNow
+                CreatedBy = seedUserId,
+                CreatedAt = DateTime.UtcNow
             }
         );
 
@@ -493,13 +502,13 @@ public sealed class GlobalKbAskStreamEndpointTests : IAsyncLifetime
                 {
                     results.Add(new MultiGameSearchResultItem
                     {
-                        GameId      = gameId,
-                        ChunkId     = $"{Guid.NewGuid():N}_0",
+                        GameId = gameId,
+                        ChunkId = $"{Guid.NewGuid():N}_0",
                         PdfDocumentId = Guid.NewGuid().ToString(),
-                        ChunkIndex  = 0,
-                        Content     = $"Movement rule: move up to 3 spaces per turn (game {gameId}).",
+                        ChunkIndex = 0,
+                        Content = $"Movement rule: move up to 3 spaces per turn (game {gameId}).",
                         HybridScore = 0.90f,
-                        Mode        = mode
+                        Mode = mode
                     });
                 }
                 return (IReadOnlyList<MultiGameSearchResultItem>)results.AsReadOnly();

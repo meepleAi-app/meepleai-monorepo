@@ -181,8 +181,8 @@ public sealed class SearchDocumentChunksQueryHandlerIntegrationTests : IAsyncLif
         // emb1 query-aligned: [1, 0, 0, ... ] → cosine similarity with query ≈ 1.0
         // emb2 orthogonal:    [0, 1, 0, ... ] → cosine similarity with query ≈ 0.0
         var queryVector = MakeVector(Dims, firstComponent: 1f);
-        var embVector1  = MakeVector(Dims, firstComponent: 1f);   // identical → sim ~1
-        var embVector2  = MakeVector(Dims, secondComponent: 1f);  // orthogonal → sim ~0
+        var embVector1 = MakeVector(Dims, firstComponent: 1f);   // identical → sim ~1
+        var embVector2 = MakeVector(Dims, secondComponent: 1f);  // orthogonal → sim ~0
 
         // Configure mock to return the query vector when asked.
         _embeddingServiceMock

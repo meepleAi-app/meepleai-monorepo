@@ -1,72 +1,137 @@
-using System.Collections.Concurrent;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.BoundedContexts.GameManagement.Infrastructure.Persistence.Mappers;
+using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 
 /// <summary>
-/// In-memory repository for live game sessions.
-/// LiveGameSession is not EF-persisted (modelBuilder.Ignore) since sessions are transient.
-/// Issue #4749: CQRS commands/queries for live sessions.
+/// EF Core-backed repository for live game sessions.
+/// Issue #2097 / ADR-060: Replaced ConcurrentDictionary in-memory implementation
+/// with persistent storage on the live_game_sessions table tree.
+/// Live sessions now survive container restarts and are multi-instance ready.
 /// </summary>
-internal sealed class LiveSessionRepository : ILiveSessionRepository
+internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionRepository
 {
-    private readonly ConcurrentDictionary<Guid, LiveGameSession> _sessions = new();
+    private readonly ILogger<LiveSessionRepository> _logger;
 
-    public Task<LiveGameSession?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public LiveSessionRepository(
+        MeepleAiDbContext dbContext,
+        IDomainEventCollector eventCollector,
+        ILogger<LiveSessionRepository> logger)
+        : base(dbContext, eventCollector)
     {
-        _sessions.TryGetValue(id, out var session);
-        return Task.FromResult(session);
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public Task<LiveGameSession?> GetByCodeAsync(string sessionCode, CancellationToken cancellationToken = default)
+    public async Task<LiveGameSession?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var session = _sessions.Values.FirstOrDefault(s =>
-            string.Equals(s.SessionCode, sessionCode, StringComparison.OrdinalIgnoreCase));
-        return Task.FromResult(session);
+        var entity = await DbContext.LiveGameSessions
+            .Include(e => e.Players)
+            .Include(e => e.Teams)
+            .Include(e => e.RoundScores)
+            .Include(e => e.TurnRecords)
+            .FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
+            .ConfigureAwait(false);
+
+        return entity != null ? LiveGameSessionMapper.ToDomain(entity) : null;
     }
 
-    public Task<IReadOnlyList<LiveGameSession>> GetActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<LiveGameSession?> GetByCodeAsync(string sessionCode, CancellationToken cancellationToken = default)
     {
-        var activeSessions = _sessions.Values
-            .Where(s => s.CreatedByUserId == userId && s.IsActive)
-            .OrderByDescending(s => s.UpdatedAt)
-            .ToList();
+        var normalized = sessionCode?.ToUpperInvariant();
+        var entity = await DbContext.LiveGameSessions
+            .Include(e => e.Players)
+            .Include(e => e.Teams)
+            .Include(e => e.RoundScores)
+            .Include(e => e.TurnRecords)
+            .FirstOrDefaultAsync(e => e.SessionCode == normalized, cancellationToken)
+            .ConfigureAwait(false);
 
-        return Task.FromResult<IReadOnlyList<LiveGameSession>>(activeSessions);
+        return entity != null ? LiveGameSessionMapper.ToDomain(entity) : null;
     }
 
-    public Task<IReadOnlyList<LiveGameSession>> GetAllActiveAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<LiveGameSession>> GetActiveByUserIdAsync(
+        Guid userId, CancellationToken cancellationToken = default)
     {
-        var activeSessions = _sessions.Values
-            .Where(s => s.IsActive)
-            .OrderByDescending(s => s.UpdatedAt)
-            .ToList();
+        var activeStatuses = new[]
+        {
+            (int)LiveSessionStatus.Created,
+            (int)LiveSessionStatus.Setup,
+            (int)LiveSessionStatus.InProgress,
+            (int)LiveSessionStatus.Paused
+        };
 
-        return Task.FromResult<IReadOnlyList<LiveGameSession>>(activeSessions);
+        var entities = await DbContext.LiveGameSessions
+            .Include(e => e.Players)
+            .Include(e => e.Teams)
+            .Include(e => e.RoundScores)
+            .Include(e => e.TurnRecords)
+            .Where(e => e.CreatedByUserId == userId && activeStatuses.Contains(e.Status))
+            .OrderByDescending(e => e.UpdatedAt)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entities.Select(LiveGameSessionMapper.ToDomain).ToList();
     }
 
-    public Task AddAsync(LiveGameSession session, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<LiveGameSession>> GetAllActiveAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var activeStatuses = new[]
+        {
+            (int)LiveSessionStatus.Created,
+            (int)LiveSessionStatus.Setup,
+            (int)LiveSessionStatus.InProgress,
+            (int)LiveSessionStatus.Paused
+        };
+
+        var entities = await DbContext.LiveGameSessions
+            .Include(e => e.Players)
+            .Include(e => e.Teams)
+            .Include(e => e.RoundScores)
+            .Include(e => e.TurnRecords)
+            .Where(e => activeStatuses.Contains(e.Status))
+            .OrderByDescending(e => e.UpdatedAt)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entities.Select(LiveGameSessionMapper.ToDomain).ToList();
+    }
+
+    public async Task AddAsync(LiveGameSession session, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(session);
+        CollectDomainEvents(session);
 
-        if (!_sessions.TryAdd(session.Id, session))
-            throw new InvalidOperationException($"Session {session.Id} already exists");
+        var entity = LiveGameSessionMapper.ToEntity(session);
+        await DbContext.LiveGameSessions.AddAsync(entity, cancellationToken).ConfigureAwait(false);
 
-        return Task.CompletedTask;
+        _logger.LogDebug("Staged LiveGameSession {SessionId} for insert", session.Id);
     }
 
     public Task UpdateAsync(LiveGameSession session, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(session);
+        CollectDomainEvents(session);
 
-        _sessions[session.Id] = session;
+        var entity = LiveGameSessionMapper.ToEntity(session);
+        DbContext.LiveGameSessions.Update(entity);
+
+        _logger.LogDebug("Staged LiveGameSession {SessionId} for update", session.Id);
         return Task.CompletedTask;
     }
 
-    public Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(_sessions.ContainsKey(id));
+        return await DbContext.LiveGameSessions
+            .AsNoTracking()
+            .AnyAsync(e => e.Id == id, cancellationToken)
+            .ConfigureAwait(false);
     }
 }

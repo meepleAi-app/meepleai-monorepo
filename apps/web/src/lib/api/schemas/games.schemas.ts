@@ -23,9 +23,12 @@ export const GameSchema = z.object({
   bggId: z.number().int().nonnegative().nullable(),
   createdAt: z.string().datetime({ offset: true }),
   // Issue #1830: UI-003 GameCard enhancements
-  imageUrl: z.string().url().nullable().optional(),
+  // Accept empty string as a sentinel for "no image" — the BE returns "" rather
+  // than null for some catalogue rows (#2247 follow-up: schema validation
+  // failed and broke the /library page badge wiring downstream).
+  imageUrl: z.string().nullable().optional(),
   // Admin Wizard: Game icon URL
-  iconUrl: z.string().url().nullable().optional(),
+  iconUrl: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   faqCount: z.number().int().nonnegative().nullable().optional(),
   averageRating: z.number().nullable().optional(),

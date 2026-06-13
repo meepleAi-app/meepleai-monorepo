@@ -42,7 +42,10 @@ import type { ReactElement } from 'react';
 import clsx from 'clsx';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
-import type { MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
+import type {
+  MeepleCardMetadata,
+  MeepleCardVariant,
+} from '@/components/ui/data-display/meeple-card';
 import type { HybridHubItem } from '@/lib/library/hybrid-hub.types';
 
 export type LibraryViewMode = 'grid' | 'list' | 'compact';
@@ -90,6 +93,21 @@ function itemRating(item: HybridHubItem): number | undefined {
   return item.entity === 'game' ? item.rating : undefined;
 }
 
+/**
+ * Game-only visual extra: metadata chip that surfaces "agente pronto" /
+ * "KB indicizzato" at a glance. The flag is mapped from
+ * `UserLibraryEntry.hasKb` in `libraryEntryToHubItem` (see
+ * `lib/library/hybrid-hub.mappers.ts`), which is `true` when the backend
+ * reports ≥ 1 PDF fully indexed AND `shared_games.has_knowledge_base = true`
+ * (closed end-to-end by #2244 / epic #2242 BE pipeline).
+ *
+ * Non-game variants render nothing.
+ */
+function itemMetadata(item: HybridHubItem): MeepleCardMetadata[] | undefined {
+  if (item.entity !== 'game' || !item.hasKb) return undefined;
+  return [{ label: '📄 KB' }];
+}
+
 export function LibraryHybridGrid({
   items,
   view,
@@ -135,6 +153,7 @@ export function LibraryHybridGrid({
               imageUrl={itemImageUrl(item)}
               rating={itemRating(item)}
               ratingMax={10}
+              metadata={itemMetadata(item)}
               headingLevel={2}
             />
             {isSelectMode && isSelected ? (

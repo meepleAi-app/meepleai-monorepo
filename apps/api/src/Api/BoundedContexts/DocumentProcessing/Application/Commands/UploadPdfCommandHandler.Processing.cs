@@ -33,7 +33,7 @@ internal partial class UploadPdfCommandHandler
         try
         {
             _logger.LogInformation("🔍 [PDF-DEBUG] Calling ValidateAndPrepareProcessingAsync for {PdfId}", pdfId);
-            var pdfDoc = await ValidateAndPrepareProcessingAsync(pdfId, userId, db, quotaService, cancellationToken).ConfigureAwait(false);
+            var pdfDoc = await ValidateAndPrepareProcessingAsync(pdfId, userId, db, scope, quotaService, cancellationToken).ConfigureAwait(false);
             if (pdfDoc == null)
             {
                 _logger.LogWarning("⚠️ [PDF-DEBUG] ValidateAndPrepareProcessingAsync returned null for {PdfId} - EARLY EXIT", pdfId);
@@ -107,15 +107,15 @@ internal partial class UploadPdfCommandHandler
         }
         catch (OperationCanceledException)
         {
-            await HandleProcessingCancellationAsync(pdfId, userId, db, quotaService, startTime, cancellationToken).ConfigureAwait(false);
+            await HandleProcessingCancellationAsync(pdfId, userId, db, scope, quotaService, startTime, cancellationToken).ConfigureAwait(false);
         }
         catch (InvalidOperationException ex)
         {
-            await HandleProcessingErrorAsync(pdfId, userId, db, quotaService, startTime, ex, "Invalid operation", cancellationToken).ConfigureAwait(false);
+            await HandleProcessingErrorAsync(pdfId, userId, db, scope, quotaService, startTime, ex, "Invalid operation", cancellationToken).ConfigureAwait(false);
         }
         catch (DbUpdateException ex)
         {
-            await HandleProcessingErrorAsync(pdfId, userId, db, quotaService, startTime, ex, "Database error occurred", cancellationToken).ConfigureAwait(false);
+            await HandleProcessingErrorAsync(pdfId, userId, db, scope, quotaService, startTime, ex, "Database error occurred", cancellationToken).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out
@@ -125,7 +125,7 @@ internal partial class UploadPdfCommandHandler
         catch (Exception ex)
 #pragma warning restore CA1031
         {
-            await HandleProcessingErrorAsync(pdfId, userId, db, quotaService, startTime, ex, ex.Message, cancellationToken).ConfigureAwait(false);
+            await HandleProcessingErrorAsync(pdfId, userId, db, scope, quotaService, startTime, ex, ex.Message, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -136,6 +136,7 @@ internal partial class UploadPdfCommandHandler
         string pdfId,
         Guid userId,
         MeepleAiDbContext db,
+        IServiceScope scope,
         IPdfUploadQuotaService quotaService,
         CancellationToken cancellationToken)
     {
@@ -183,25 +184,26 @@ internal partial class UploadPdfCommandHandler
             return null;
         }
 
-        // Mark as processing (optimistic locking)
-        _logger.LogInformation("🔄 [PDF-DEBUG-VALIDATE] Updating status from 'pending' to 'processing'");
-        pdfDoc.ProcessingState = nameof(PdfProcessingState.Uploading);
+        // Mark as processing — transition through the domain so PdfStateChangedEvent
+        // (Pending → Uploading) is raised structurally instead of via direct EF mutation.
+        // #2284 follow-up: closes TD3.
+        _logger.LogInformation("🔄 [PDF-DEBUG-VALIDATE] Updating status from 'pending' to 'uploading' via domain");
         try
         {
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await TransitionStateAsync(scope, db, pdfGuid, PdfProcessingState.Uploading, cancellationToken).ConfigureAwait(false);
         }
-        catch (DbUpdateConcurrencyException ex)
+        catch (DbUpdateConcurrencyException)
         {
-            MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                nameof(UploadPdfCommandHandler),
-                MeepleAiMetrics.PdfConcurrencyCategories.B);
-            _logger.LogWarning(ex,
-                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                pdfId, nameof(UploadPdfCommandHandler));
+            // TransitionStateAsync already recorded the metric + logged before throwing.
             return null; // Null signals to caller that preparation failed; pipeline will skip
         }
         _logger.LogInformation("✅ [PDF-DEBUG-VALIDATE] Status updated, proceeding with processing");
 
+        // Reload the EF snapshot the rest of ProcessPdfAsync uses — TransitionStateAsync
+        // persisted the new state via the repository (which detaches the existing tracked
+        // entity), so the local pdfDoc reference is stale w.r.t. ProcessingState.
+        pdfDoc = await db.PdfDocuments.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == pdfGuid, cancellationToken).ConfigureAwait(false);
         return pdfDoc;
     }
 
@@ -242,23 +244,12 @@ internal partial class UploadPdfCommandHandler
             {
                 RecordPipelineMetricSafely("extraction_error", 0);
                 await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, extractResult.ErrorMessage, cancellationToken).ConfigureAwait(false);
-                pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
-                pdfDoc.ProcessingError = extractResult.ErrorMessage;
-                pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                try
-                {
-                    await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-                }
-                catch (DbUpdateConcurrencyException ex)
-                {
-                    MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                        nameof(UploadPdfCommandHandler),
-                        MeepleAiMetrics.PdfConcurrencyCategories.B);
-                    _logger.LogWarning(ex,
-                        "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                        pdfId, nameof(UploadPdfCommandHandler));
-                    return (false, null, null);
-                }
+                // #2284 follow-up: TD2 — transition Failed via domain (raises
+                // PdfStateChangedEvent(Extracting → Failed) + PdfFailedEvent).
+                await TransitionToFailedAsync(
+                    scope, db, Guid.Parse(pdfId), extractResult.ErrorMessage ?? "Extraction failed",
+                    Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.Parsing,
+                    PdfProcessingState.Extracting, cancellationToken).ConfigureAwait(false);
                 return (false, null, null);
             }
 
@@ -447,7 +438,7 @@ internal partial class UploadPdfCommandHandler
             {
                 _logger.LogError("❌ [BATCH-EMBED] Batch {Current}/{Total} FAILED: {Error}",
                     batchIndex + 1, batchCount, batchResult.ErrorMessage);
-                await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, quotaService, startTime,
+                await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, scope, quotaService, startTime,
                     $"Embedding generation failed at batch {batchIndex + 1}/{batchCount}: {batchResult.ErrorMessage}", cancellationToken).ConfigureAwait(false);
                 return (false, null);
             }
@@ -456,7 +447,7 @@ internal partial class UploadPdfCommandHandler
             {
                 var mismatch = $"Batch {batchIndex + 1} returned {batchResult.Embeddings?.Count ?? 0} embeddings for {batchTexts.Count} texts";
                 _logger.LogError("❌ [BATCH-EMBED] {Mismatch}", mismatch);
-                await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, quotaService, startTime, mismatch, cancellationToken).ConfigureAwait(false);
+                await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, scope, quotaService, startTime, mismatch, cancellationToken).ConfigureAwait(false);
                 return (false, null);
             }
 
@@ -467,7 +458,7 @@ internal partial class UploadPdfCommandHandler
                 {
                     var error = $"Invalid embedding detected in batch {batchIndex + 1}";
                     _logger.LogError("❌ [BATCH-EMBED] {Error}", error);
-                    await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, quotaService, startTime, error, cancellationToken).ConfigureAwait(false);
+                    await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, scope, quotaService, startTime, error, cancellationToken).ConfigureAwait(false);
                     return (false, null);
                 }
             }
@@ -506,7 +497,7 @@ internal partial class UploadPdfCommandHandler
         {
             var mismatch = $"Total embeddings {allEmbeddings.Count} != total chunks {allDocumentChunks.Count}";
             _logger.LogError("❌ [BATCH-EMBED] {Mismatch}", mismatch);
-            await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, quotaService, startTime, mismatch, cancellationToken).ConfigureAwait(false);
+            await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, scope, quotaService, startTime, mismatch, cancellationToken).ConfigureAwait(false);
             return (false, null);
         }
 
@@ -521,6 +512,7 @@ internal partial class UploadPdfCommandHandler
         Guid userId,
         PdfDocumentEntity pdfDoc,
         MeepleAiDbContext db,
+        IServiceScope scope,
         IPdfUploadQuotaService quotaService,
         DateTime startTime,
         string errorMessage,
@@ -528,22 +520,13 @@ internal partial class UploadPdfCommandHandler
     {
         await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, errorMessage, cancellationToken).ConfigureAwait(false);
         await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
-        pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
-        pdfDoc.ProcessingError = errorMessage;
-        pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-        try
-        {
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (DbUpdateConcurrencyException ex)
-        {
-            MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                nameof(UploadPdfCommandHandler),
-                MeepleAiMetrics.PdfConcurrencyCategories.B);
-            _logger.LogWarning(ex,
-                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                pdfId, nameof(UploadPdfCommandHandler));
-        }
+        // #2284 follow-up: TD2 — transition Failed via domain. ErrorCategory.Service
+        // because embedding failure typically signals the embedding microservice is
+        // unreachable or returning malformed responses.
+        await TransitionToFailedAsync(
+            scope, db, Guid.Parse(pdfId), errorMessage,
+            Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.Service,
+            PdfProcessingState.Embedding, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -816,6 +799,66 @@ internal partial class UploadPdfCommandHandler
     }
 
     /// <summary>
+    /// Marks the document as Failed via the domain aggregate (PdfDocument.MarkAsFailed)
+    /// so PdfStateChangedEvent(&lt;prev&gt; → Failed) + PdfFailedEvent are raised
+    /// structurally and dispatched through MediatR. Replaces the legacy pattern of
+    /// `pdfDoc.ProcessingState = "Failed"; pdfDoc.ProcessingError = ...;
+    /// pdfDoc.ProcessedAt = ...; db.SaveChangesAsync()` which raised no events.
+    ///
+    /// #2284 follow-up: closes TD2 across 4 error sites (line ~245, ~531, ~916, ~962
+    /// pre-refactor) so failure transitions are observable by downstream metric +
+    /// notification handlers, not silent.
+    ///
+    /// DbUpdateConcurrencyException is logged + swallowed (best-effort) because the
+    /// caller already returns to the error path — re-throwing would mask the original
+    /// failure reason.
+    /// </summary>
+    private async Task TransitionToFailedAsync(
+        IServiceScope scope,
+        MeepleAiDbContext db,
+        Guid pdfGuid,
+        string errorMessage,
+        Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory category,
+        PdfProcessingState? failedAtState,
+        CancellationToken cancellationToken)
+    {
+        var pdfRepo = scope.ServiceProvider.GetRequiredService<Api.BoundedContexts.DocumentProcessing.Domain.Repositories.IPdfDocumentRepository>();
+        var pdfDomain = await pdfRepo.GetByIdAsync(pdfGuid, cancellationToken).ConfigureAwait(false);
+        if (pdfDomain is null)
+        {
+            // Pdf may have been deleted by an admin mutation; nothing structurally to
+            // raise. The caller will still return its error path.
+            _logger.LogWarning(
+                "PdfDocument {PdfId} not found while transitioning to Failed (best-effort)",
+                pdfGuid);
+            return;
+        }
+
+        // failedAtState == null signals "I don't know which step failed — use the
+        // aggregate's current state". Used by generic catch blocks (cancellation,
+        // unexpected exception) where the upstream code can't pinpoint the step.
+        var resolvedFailedAtState = failedAtState ?? pdfDomain.ProcessingState;
+
+        try
+        {
+            pdfDomain.MarkAsFailed(errorMessage, category, resolvedFailedAtState);
+            await pdfRepo.UpdateAsync(pdfDomain, cancellationToken).ConfigureAwait(false);
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(UploadPdfCommandHandler),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(ex,
+                "Concurrency conflict transitioning PdfDocument {PdfId} to Failed (Category B) — admin mutation wins, error path still completes",
+                pdfGuid);
+            // Swallow: the caller already records the upstream failure reason; the
+            // missing event is a tolerable observability gap relative to throwing here.
+        }
+    }
+
+    /// <summary>
     /// Finalizes PDF processing with completion status and quota confirmation.
     /// #2284 PR C: drives the final state transition through PdfDocument.TransitionTo(Ready)
     /// via IPdfDocumentRepository so PdfStateChangedEvent + KbDocIndexedEvent are raised
@@ -842,15 +885,14 @@ internal partial class UploadPdfCommandHandler
 
         var pdfGuid = Guid.Parse(pdfId);
 
-        // Set ProcessedAt on the EF entity so it survives the upcoming UpdateAsync (mapper
-        // round-trip preserves it). The state transition is handled by TransitionTo(Ready)
-        // below — no bridge save needed because the pipeline progressed through Indexing
-        // via TransitionStateAsync.
-        pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-
-        // Load aggregate, call TransitionTo(Ready) so PdfStateChangedEvent + KbDocIndexedEvent
-        // are raised structurally, then persist via repository so IDomainEventCollector picks
-        // them up and the DbContext SaveChanges dispatcher publishes them through MediatR.
+        // Load aggregate, call TransitionTo(Ready) + MarkProcessed(now) so
+        // PdfStateChangedEvent + KbDocIndexedEvent are raised structurally and
+        // ProcessedAt is set via the domain (not via direct EF mutation). Persist
+        // via repository so IDomainEventCollector picks the events up and the
+        // DbContext SaveChanges dispatcher publishes them through MediatR.
+        //
+        // #2284 follow-up: closes TD1 — the legacy `pdfDoc.ProcessedAt = _timeProvider...`
+        // EF mutation that survived PR #2297 is replaced by pdfDomain.MarkProcessed(now).
         var pdfDomain = await pdfRepo.GetByIdAsync(pdfGuid, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException(
                 $"PdfDocument {pdfGuid} not found while finalizing processing");
@@ -858,6 +900,7 @@ internal partial class UploadPdfCommandHandler
         try
         {
             pdfDomain.TransitionTo(PdfProcessingState.Ready);
+            pdfDomain.MarkProcessed(_timeProvider.GetUtcNow().UtcDateTime);
             await pdfRepo.UpdateAsync(pdfDomain, cancellationToken).ConfigureAwait(false);
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
@@ -897,6 +940,7 @@ internal partial class UploadPdfCommandHandler
         string pdfId,
         Guid userId,
         MeepleAiDbContext db,
+        IServiceScope scope,
         IPdfUploadQuotaService quotaService,
         DateTime startTime,
         CancellationToken cancellationToken)
@@ -905,31 +949,16 @@ internal partial class UploadPdfCommandHandler
         await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, "Processing cancelled by user", cancellationToken).ConfigureAwait(false);
         await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
 
+        // #2284 follow-up: TD2 — transition Failed via domain. failedAtState=null →
+        // resolved to current pdfDomain.ProcessingState (whatever step the cancellation
+        // hit). Use CancellationToken.None because the cancellation token that triggered
+        // this branch is already signalled; we still want to persist the Failed state.
         if (Guid.TryParse(pdfId, out var cancelledPdfGuid))
         {
-            var pdfDoc = await db.PdfDocuments
-                .AsTracking()
-                .FirstOrDefaultAsync(p => p.Id == cancelledPdfGuid, CancellationToken.None)
-                .ConfigureAwait(false);
-            if (pdfDoc != null)
-            {
-                pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
-                pdfDoc.ProcessingError = "Processing cancelled by user";
-                pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                try
-                {
-                    await db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
-                }
-                catch (DbUpdateConcurrencyException ex)
-                {
-                    MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                        nameof(UploadPdfCommandHandler),
-                        MeepleAiMetrics.PdfConcurrencyCategories.B);
-                    _logger.LogWarning(ex,
-                        "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                        pdfId, nameof(UploadPdfCommandHandler));
-                }
-            }
+            await TransitionToFailedAsync(
+                scope, db, cancelledPdfGuid, "Processing cancelled by user",
+                Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.Unknown,
+                failedAtState: null, CancellationToken.None).ConfigureAwait(false);
         }
     }
 
@@ -940,6 +969,7 @@ internal partial class UploadPdfCommandHandler
         string pdfId,
         Guid userId,
         MeepleAiDbContext db,
+        IServiceScope scope,
         IPdfUploadQuotaService quotaService,
         DateTime startTime,
         Exception ex,
@@ -951,31 +981,15 @@ internal partial class UploadPdfCommandHandler
         await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, errorMessage, cancellationToken).ConfigureAwait(false);
         await quotaService.ReleaseQuotaAsync(userId, pdfId, cancellationToken).ConfigureAwait(false);
 
+        // #2284 follow-up: TD2 — transition Failed via domain. failedAtState=null →
+        // resolved to current pdfDomain.ProcessingState (the catch is generic, so the
+        // upstream step that threw is whatever pdfDomain currently observes).
         if (Guid.TryParse(pdfId, out var errorPdfGuid))
         {
-            var pdfDoc = await db.PdfDocuments
-                .AsTracking()
-                .FirstOrDefaultAsync(p => p.Id == errorPdfGuid, cancellationToken)
-                .ConfigureAwait(false);
-            if (pdfDoc != null)
-            {
-                pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
-                pdfDoc.ProcessingError = errorMessage;
-                pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                try
-                {
-                    await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-                }
-                catch (DbUpdateConcurrencyException concEx)
-                {
-                    MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                        nameof(UploadPdfCommandHandler),
-                        MeepleAiMetrics.PdfConcurrencyCategories.B);
-                    _logger.LogWarning(concEx,
-                        "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                        pdfId, nameof(UploadPdfCommandHandler));
-                }
-            }
+            await TransitionToFailedAsync(
+                scope, db, errorPdfGuid, errorMessage,
+                Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.Unknown,
+                failedAtState: null, cancellationToken).ConfigureAwait(false);
         }
     }
 

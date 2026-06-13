@@ -1,7 +1,9 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.Configuration;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -69,7 +71,8 @@ public class IndexPdfCommandHandlerTests
             embeddingServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            CreatePipelineMockForHandle(context).Object);
 
         // Assert
         handler.Should().NotBeNull();
@@ -91,6 +94,7 @@ public class IndexPdfCommandHandlerTests
             loggerMock.Object,
             indexingSettingsMock.Object,
             Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>(),
             timeProvider);
 
         // Assert
@@ -112,6 +116,7 @@ public class IndexPdfCommandHandlerTests
             loggerMock.Object,
             indexingSettingsMock.Object,
             Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>(),
             null);
 
         // Assert
@@ -265,7 +270,8 @@ public class IndexPdfCommandHandlerTests
             embeddingServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            CreatePipelineMockForHandle(context).Object);
 
         var command = new IndexPdfCommand(pdfId.ToString());
 
@@ -328,7 +334,8 @@ public class IndexPdfCommandHandlerTests
             embeddingServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            CreatePipelineMockForHandle(context).Object);
 
         var command = new IndexPdfCommand(pdfId.ToString());
 
@@ -388,7 +395,8 @@ public class IndexPdfCommandHandlerTests
             embeddingServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            CreatePipelineMockForHandle(context).Object);
 
         var command = new IndexPdfCommand(pdfId.ToString());
 
@@ -430,7 +438,8 @@ public class IndexPdfCommandHandlerTests
             embeddingServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            CreatePipelineMockForHandle(context).Object);
 
         var command = new IndexPdfCommand(pdfId.ToString());
 
@@ -487,7 +496,8 @@ public class IndexPdfCommandHandlerTests
         var handler = new IndexPdfCommandHandler(
             context, chunkingServiceMock.Object, embeddingServiceMock.Object,
             loggerMock.Object, indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            CreatePipelineMockForHandle(context).Object);
 
         // Act
         var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
@@ -523,7 +533,8 @@ public class IndexPdfCommandHandlerTests
         var handler = new IndexPdfCommandHandler(
             context, chunkingServiceMock.Object, embeddingServiceMock.Object,
             loggerMock.Object, indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            CreatePipelineMockForHandle(context).Object);
 
         // Act
         var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
@@ -559,7 +570,8 @@ public class IndexPdfCommandHandlerTests
         var handler = new IndexPdfCommandHandler(
             context, chunkingServiceMock.Object, embeddingServiceMock.Object,
             loggerMock.Object, indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            CreatePipelineMockForHandle(context).Object);
 
         // Act
         var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
@@ -573,12 +585,70 @@ public class IndexPdfCommandHandlerTests
         updatedPdf.ProcessingError.Should().Contain("Unexpected chunking crash");
     }
 
+    /// <summary>
+    /// Creates an <see cref="IPdfIndexingPipeline"/> mock suitable for unit tests that exercise
+    /// <see cref="IndexPdfCommandHandler.Handle"/>.
+    ///
+    /// The mock intercepts <see cref="IPdfIndexingPipeline.ExecuteAsync"/> and:
+    ///   1. Inserts a <see cref="VectorDocumentEntity"/> into the in-memory <paramref name="context"/>
+    ///      so the handler's subsequent EF reload (<c>FirstAsync(v =&gt; v.Id == domainDoc.Id)</c>) succeeds.
+    ///   2. Returns a <see cref="VectorDocument"/> rehydrated from that entity (no domain event raised).
+    ///
+    /// Without this, <c>Mock.Of&lt;IPdfIndexingPipeline&gt;()</c> returns <c>null</c> for the Task result,
+    /// causing a NullReferenceException when the handler tries to reload the EF entity by Id.
+    /// </summary>
+    private static Mock<IPdfIndexingPipeline> CreatePipelineMockForHandle(MeepleAiDbContext context)
+    {
+        var mock = new Mock<IPdfIndexingPipeline>();
+        mock.Setup(p => p.ExecuteAsync(
+                It.IsAny<Api.Infrastructure.Entities.PdfDocumentEntity>(),
+                It.IsAny<int>(),
+                It.IsAny<Guid>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Api.Infrastructure.Entities.PdfDocumentEntity pdf, int chunkCount, Guid gameId, CancellationToken _) =>
+            {
+                var vectorDocId = Guid.NewGuid();
+                // Insert the entity into the in-memory context so the handler's reload succeeds.
+                var entity = new Api.Infrastructure.Entities.VectorDocumentEntity
+                {
+                    Id = vectorDocId,
+                    GameId = gameId == Guid.Empty ? null : gameId,
+                    SharedGameId = pdf.SharedGameId,
+                    PdfDocumentId = pdf.Id,
+                    IndexingStatus = "processing",
+                    ChunkCount = chunkCount,
+                    TotalCharacters = pdf.ExtractedText?.Length ?? 0,
+                    IndexedAt = DateTime.UtcNow,
+                };
+                context.Set<Api.Infrastructure.Entities.VectorDocumentEntity>().Add(entity);
+                context.SaveChanges(); // synchronous — in-memory DB, no async needed
+
+                // Return a VectorDocument rehydrated from the entity (no domain event raised — unit test).
+                return VectorDocument.Rehydrate(
+                    id: vectorDocId,
+                    gameId: gameId,
+                    pdfDocumentId: pdf.Id,
+                    language: string.IsNullOrWhiteSpace(pdf.Language) ? "en" : pdf.Language,
+                    totalChunks: chunkCount,
+                    indexedAt: DateTime.UtcNow,
+                    sharedGameId: pdf.SharedGameId,
+                    totalCharacters: pdf.ExtractedText?.Length ?? 0);
+            });
+        return mock;
+    }
+
     // Helper methods
     private static PdfDocumentEntity CreatePdfDocument(Guid id, Guid gameId, string status, string extractedText)
     {
         return new PdfDocumentEntity
         {
             Id = id,
+            // #2244 Task 5: SharedGameId must be set so IndexPdfCommandHandler can resolve
+            // effectiveGameId = pdf.PrivateGameId ?? pdf.SharedGameId ?? Guid.Empty without throwing.
+            // Pre-Task-5 the legacy code created VectorDocumentEntity with GameId = pdf.SharedGameId
+            // even when SharedGameId was null, silently producing an orphan row — the strict guard
+            // in Task 5 surfaces this latent test-fixture bug.
+            SharedGameId = gameId,
             FileName = "test.pdf",
             FilePath = "/uploads/test.pdf",
             FileSizeBytes = 1024,
@@ -651,7 +721,8 @@ public class IndexPdfCommandHandlerTests
         var handler = new IndexPdfCommandHandler(
             context, chunkingServiceMock.Object, embeddingServiceMock.Object,
             loggerMock.Object, indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            CreatePipelineMockForHandle(context).Object);
 
         // Act
         var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
@@ -718,7 +789,8 @@ public class IndexPdfCommandHandlerTests
         var handler = new IndexPdfCommandHandler(
             context, chunkingServiceMock.Object, embeddingServiceMock.Object,
             loggerMock.Object, indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            CreatePipelineMockForHandle(context).Object);
 
         // Act
         var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);

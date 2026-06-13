@@ -327,7 +327,15 @@ internal sealed class WikidataCoverEnrichmentAttemptRepository
     {
         ArgumentNullException.ThrowIfNull(attempt);
 
+        // AsTracking() override: DbContext default is QueryTrackingBehavior.NoTracking
+        // (PERF-06 — see InfrastructureServiceExtensions). Without an explicit
+        // .AsTracking() the loaded entity is NOT registered with the change
+        // tracker, so the subsequent property assignment silently no-ops and
+        // SaveChangesAsync emits no UPDATE. Caught by F5 integration tests
+        // (handler-only mock tests cannot reproduce the global tracking
+        // default).
         var entity = await DbContext.WikidataCoverEnrichmentAttempts
+            .AsTracking()
             .FirstOrDefaultAsync(e => e.Id == attempt.Id, cancellationToken)
             .ConfigureAwait(false)
             ?? throw new InvalidOperationException(

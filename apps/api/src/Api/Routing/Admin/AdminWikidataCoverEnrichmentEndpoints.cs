@@ -47,6 +47,11 @@ internal static class AdminWikidataCoverEnrichmentEndpoints
             .WithName("AdminWikidataCoverEnrichment_BulkRetry")
             .WithTags("Admin", "WikidataCoverEnrichment");
 
+        // Phase F F5 (#2254) — bulk-acknowledge endpoint.
+        group.MapPost("/bulk-acknowledge", HandleBulkAcknowledge)
+            .WithName("AdminWikidataCoverEnrichment_BulkAcknowledge")
+            .WithTags("Admin", "WikidataCoverEnrichment");
+
         // Phase E F3 — per-game attempt timeline (drawer payload).
         group.MapGet("/games/{gameId:guid}/attempts", HandleGetAttemptTimeline)
             .WithName("AdminWikidataCoverEnrichment_GetAttemptTimeline")
@@ -89,19 +94,24 @@ internal static class AdminWikidataCoverEnrichmentEndpoints
 
     /// <summary>
     /// Issue #1823 Wave 3 M13 — paginated dead-letter visibility for the admin
-    /// page. Query string: <c>?skip=0&amp;take=50&amp;reason=r2-upload-error</c>.
+    /// page. Query string: <c>?skip=0&amp;take=50&amp;reason=r2-upload-error&amp;includeAcknowledged=true</c>.
+    /// Phase F (#2254) added the optional <c>includeAcknowledged</c> toggle so
+    /// the admin UI can switch between the default open-work view (hide acked
+    /// rows) and the historical audit view (show everything).
     /// </summary>
     private static async Task<IResult> HandleListDeadLetters(
         [FromQuery] int? skip,
         [FromQuery] int? take,
         [FromQuery] string? reason,
+        [FromQuery] bool? includeAcknowledged,
         IMediator mediator,
         CancellationToken ct)
     {
         var query = new GetWikidataDeadLetterAttemptsQuery(
             Skip: skip ?? 0,
             Take: take ?? 50,
-            ReasonFilter: string.IsNullOrWhiteSpace(reason) ? null : reason);
+            ReasonFilter: string.IsNullOrWhiteSpace(reason) ? null : reason,
+            IncludeAcknowledged: includeAcknowledged ?? false);
 
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);
@@ -124,6 +134,40 @@ internal static class AdminWikidataCoverEnrichmentEndpoints
     {
         var command = new AdminBulkRetryWikidataCoverCommand(
             AttemptIds: request?.AttemptIds ?? Array.Empty<Guid>(),
+            TriggeredByUserId: context.User.GetUserId());
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    /// <summary>Body for the F5 bulk-acknowledge endpoint.</summary>
+    internal sealed record AdminBulkAcknowledgeWikidataRequest(
+        IReadOnlyList<Guid>? AttemptIds,
+        string? Note);
+
+    /// <summary>
+    /// Issue #1823 Phase F F5 (#2254) — bulk-acknowledge one or more dead-letter
+    /// attempts. Each id is hydrated by the handler, mutated via
+    /// <c>WikidataCoverEnrichmentAttempt.Acknowledge(by, at)</c> (idempotent on
+    /// re-call) and persisted via the unit of work. Returns a per-row envelope
+    /// so the admin UI can render partial success/failure (acked /
+    /// already-acked / not-found / wrong-state).
+    /// </summary>
+    /// <remarks>
+    /// Mirrors <see cref="HandleBulkRetry"/> in shape: nullable body, defensive
+    /// fallback to <see cref="Array.Empty{T}"/>, dispatch via MediatR (CQRS —
+    /// zero direct service injection). The optional <c>Note</c> is DEC-F-4
+    /// log-only (not persisted on the attempt row).
+    /// </remarks>
+    private static async Task<IResult> HandleBulkAcknowledge(
+        AdminBulkAcknowledgeWikidataRequest? request,
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var command = new AdminBulkAcknowledgeWikidataCoverCommand(
+            AttemptIds: request?.AttemptIds ?? Array.Empty<Guid>(),
+            Note: request?.Note,
             TriggeredByUserId: context.User.GetUserId());
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);

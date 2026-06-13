@@ -27,8 +27,11 @@
 
 import { useEffect, useMemo, type ReactElement } from 'react';
 
+import Link from 'next/link';
+
 import { useAuth } from '@/components/auth/AuthProvider';
 import { CascadeDrawerHost } from '@/components/dashboard/CascadeDrawerHost';
+import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
 import { useCompletedGameNights, useUpcomingGameNights } from '@/hooks/queries/useGameNights';
 import { useLibrary, useLibraryStats } from '@/hooks/queries/useLibrary';
@@ -208,6 +211,18 @@ export function DashboardClient(): ReactElement {
     suggestedCards.length,
   ]);
 
+  // ── Block C (#2289 / #2247 follow-up): Agenti pronti ─────────────────────
+  // Surfaces the user's library entries that already have an indexed KB
+  // (`hasKb=true`, mapped from `UserLibraryEntry`). Mirrors the at-a-glance
+  // chip wired on `/library` so the dashboard's headline answer to "which of
+  // my games already have a chat-ready agent?" is one fold above the
+  // suggested cards. The section is hidden when the list is empty so first-
+  // login users with no KB-ready games still see a clean dashboard.
+  const agentiProntiEntries = useMemo(
+    () => (libraryQuery.data?.items ?? []).filter(entry => entry.hasKb).slice(0, 6),
+    [libraryQuery.data]
+  );
+
   // ── Slot #4: Friends Activity ────────────────────────────────────────────
   const friendsActivities = friendsActivityQuery.data ?? [];
   const friendsState: FriendsActivitySectionState = deriveSectionState(
@@ -276,6 +291,66 @@ export function DashboardClient(): ReactElement {
             void libraryQuery.refetch();
           }}
         />
+
+        {/* Block C (#2289 / #2247): inline section because the dashboard
+            already adopts the "filter → render-if-non-empty → MeepleCard grid"
+            pattern (see SuggestedSection internals) and a dedicated section
+            primitive here would add a `Section/Empty/Error/Loading` family
+            that's outside the scope of this follow-up — `hasKb` data piggy-
+            backs on `libraryQuery`, so loading/error states are already
+            covered upstream by SuggestedSection rendering. */}
+        {agentiProntiEntries.length > 0 ? (
+          <section
+            data-slot="dashboard-agenti-pronti"
+            aria-label="Giochi con agente pronto"
+            className="flex flex-col gap-4"
+          >
+            <header className="flex items-baseline justify-between gap-3">
+              <h2 className="font-display text-[18px] font-extrabold text-foreground">
+                Giochi con agente pronto
+              </h2>
+              <Link
+                href="/library?hasKb=true"
+                className="font-display text-[12px] font-bold text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Vedi tutti →
+              </Link>
+            </header>
+            <ul
+              role="list"
+              className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
+            >
+              {agentiProntiEntries.map(entry => (
+                <li key={entry.id} role="listitem">
+                  <Link
+                    href={`/library/${entry.gameId}`}
+                    className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <MeepleCard
+                      entity="game"
+                      variant="compact"
+                      id={entry.id}
+                      title={entry.gameTitle}
+                      subtitle={entry.gamePublisher ?? undefined}
+                      imageUrl={entry.coverUrl ?? entry.gameImageUrl ?? undefined}
+                      rating={entry.averageRating ?? undefined}
+                      ratingMax={10}
+                      metadata={[
+                        {
+                          label:
+                            entry.kbCardCount > 1
+                              ? `📄 ${entry.kbIndexedCount}/${entry.kbCardCount} KB`
+                              : '📄 KB',
+                        },
+                      ]}
+                      headingLevel={3}
+                    />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         <FriendsActivitySection state={friendsState} activities={friendsActivities} />
       </div>

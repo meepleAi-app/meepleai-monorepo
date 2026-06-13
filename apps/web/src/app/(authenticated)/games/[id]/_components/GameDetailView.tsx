@@ -829,11 +829,21 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
         >
           <div className="flex flex-col gap-6">
             <GameDetailAgentsList state={agentsState} labels={agentsLabels} />
-            {/* Inline chat preview (#1471) — empty for now; full chat lives at /library/{id}/agent */}
+            {/* Inline chat preview (#1471) — `messages={[]}` stays empty for now: this
+                is the catalogue preview, not a live thread; full chat lives at
+                /library/{id}/agent. Block A of #2289 / #2247 wires the
+                `disabled` guard so the CTA is unreachable until the SharedGame
+                has indexed KB. */}
             <GameDetailChatTab
               messages={[]}
               openHref={`/library/${gameId}/agent`}
               labels={chatTabLabels}
+              disabled={!safeDetail.hasKnowledgeBase}
+              disabledTitle={
+                !safeDetail.hasKnowledgeBase
+                  ? "Disponibile dopo l'indicizzazione del primo PDF di regole."
+                  : undefined
+              }
             />
           </div>
         </div>
@@ -846,7 +856,24 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
           hidden={tab !== 'documents'}
           data-slot="game-detail-panel-documents"
         >
-          <GameDetailKbDocList docs={[]} labels={kbDocLabels} />
+          {/* Block A of #2289 / #2247: surface the real published KB list from
+              SharedGameDetail.kbs instead of the previous empty placeholder.
+              `PublishedKbPreview` from the BE only carries (id, language,
+              totalChunks, indexedAt) — map it onto the visual `GameDetailKbDocEntry`
+              with sensible defaults for the catalogue surface (status="indexed"
+              because the BE only returns published rows; size/pages are not
+              modelled at this level and intentionally show as 0/N-chunks). */}
+          <GameDetailKbDocList
+            docs={safeDetail.kbs.map(kb => ({
+              id: kb.id,
+              title: `KB · ${kb.language.toUpperCase()}`,
+              status: 'indexed' as const,
+              sizeFormatted: `${kb.totalChunks} chunks`,
+              pages: 0,
+              chunks: kb.totalChunks,
+            }))}
+            labels={kbDocLabels}
+          />
         </div>
       </div>
     </div>

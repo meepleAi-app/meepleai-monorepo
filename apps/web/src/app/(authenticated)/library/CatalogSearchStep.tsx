@@ -30,7 +30,8 @@ import Image from 'next/image';
 import { CatalogPagination } from '@/components/catalog/CatalogPagination';
 import { toast } from '@/components/layout';
 import { Button } from '@/components/ui/primitives/button';
-import { useGameInLibraryStatus, useSharedGames } from '@/hooks/queries';
+import { useSharedGames } from '@/hooks/queries';
+import { useBatchGameStatus } from '@/hooks/queries/useBatchGameStatus';
 import { useAddGameToLibrary } from '@/hooks/queries/useLibrary';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { SharedGame } from '@/lib/api';
@@ -46,6 +47,12 @@ interface SelectableGameCardProps {
   game: SharedGame;
   onSelect: (gameId: string, gameName: string) => void;
   isSelecting: boolean;
+  /**
+   * #2275 — Library status passed in from the parent's batched
+   * useBatchGameStatus call instead of a per-card useGameInLibraryStatus
+   * (avoids N+1 requests when the grid renders ≤9 cards per page).
+   */
+  inLibrary: boolean;
   labels: {
     noImage: string;
     inLibraryBadge: string;
@@ -64,11 +71,10 @@ function SelectableGameCard({
   game,
   onSelect,
   isSelecting,
+  inLibrary,
   labels,
   onBlocked,
 }: SelectableGameCardProps) {
-  const { data: status } = useGameInLibraryStatus(game.id);
-  const inLibrary = status?.inLibrary ?? false;
   const isBlockable = inLibrary && Boolean(onBlocked);
 
   return (
@@ -301,6 +307,13 @@ export function CatalogSearchStep({
     status: 2, // Published / Active
   });
 
+  // #2275 — Batched library-status lookup for all cards on the current
+  // page. Replaces the per-card useGameInLibraryStatus(gameId) that was
+  // firing N (≤9) HTTP requests per fresh search. The hook returns a
+  // results map keyed by gameId; cards read their own status from it.
+  const gameIds = data?.items.map(g => g.id) ?? [];
+  const { data: batchStatus } = useBatchGameStatus(gameIds);
+
   const addMutation = useAddGameToLibrary();
 
   const handleSelect = useCallback(
@@ -418,6 +431,7 @@ export function CatalogSearchStep({
                 game={game}
                 onSelect={handleSelect}
                 isSelecting={selectingId === game.id}
+                inLibrary={batchStatus?.results[game.id]?.inLibrary ?? false}
                 labels={cardLabels}
                 onBlocked={onNavigateToGame ? handleBlocked : undefined}
               />

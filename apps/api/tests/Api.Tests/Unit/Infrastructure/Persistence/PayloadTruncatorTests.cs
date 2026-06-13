@@ -34,7 +34,7 @@ public class PayloadTruncatorTests
         var result = PayloadTruncator.Truncate(props, maxBytes: 256_000);
 
         var trimmedGames = result["Games"].Should().BeAssignableTo<IEnumerable<object>>().Subject;
-        trimmedGames.Cast<object>().Should().HaveCount(10);
+        trimmedGames.Should().HaveCount(10);
         result["_truncated"].Should().BeOfType<List<string>>();
         ((List<string>)result["_truncated"]!).Should().Contain("Games");
         var counts = result["_original_count"].Should().BeAssignableTo<IDictionary<string, int>>().Subject;
@@ -58,7 +58,7 @@ public class PayloadTruncatorTests
         var items = Enumerable.Range(0, 50).Select(i => $"item-{i}").ToList();
         var props = new Dictionary<string, object?> { ["Items"] = items };
         var result = PayloadTruncator.Truncate(props, maxBytes: 256_000);
-        ((IEnumerable<object>)result["Items"]!).Cast<object>().Should().HaveCount(50);
+        ((IEnumerable<object>)result["Items"]!).Should().HaveCount(50);
         result.ContainsKey("_truncated").Should().BeFalse();
     }
 

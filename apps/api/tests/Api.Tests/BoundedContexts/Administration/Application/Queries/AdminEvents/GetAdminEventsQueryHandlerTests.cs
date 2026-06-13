@@ -82,9 +82,6 @@ public sealed class GetAdminEventsQueryHandlerTests
     private static GetAdminEventsQueryHandler CreateHandler(MeepleAiDbContext db)
         => new(db, new FakeTimeProvider(new DateTimeOffset(_now)));
 
-    private static GetAdminEventsQueryHandler CreateHandler(MeepleAiDbContext db, TimeProvider timeProvider)
-        => new(db, timeProvider);
-
     // -------------------------------------------------------------------------
     // Test 1: ORDER BY LoggedAt DESC
     // -------------------------------------------------------------------------

@@ -242,7 +242,7 @@ public sealed class AdminEventsEndpointsIntegrationTests : IAsyncLifetime
         await SeedEventAsync("agent.created", "Agent");
 
         // Warm-up: issue a non-SSE request first to ensure the TestServer pipeline is ready.
-        var warmup = await _client.GetAsync(EventsTypes).ConfigureAwait(false);
+        var warmup = await _client.GetAsync(EventsTypes);
         warmup.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var sseClient = _factory.CreateClient(new WebApplicationFactoryClientOptions
@@ -258,7 +258,7 @@ public sealed class AdminEventsEndpointsIntegrationTests : IAsyncLifetime
         // SendAsync with ResponseHeadersRead returns once the SSE handler writes ":ok\n\n"
         // and flushes — the content pipe becomes readable, unblocking the client.
         using var response = await sseClient.SendAsync(
-            request, HttpCompletionOption.ResponseHeadersRead, cts.Token).ConfigureAwait(false);
+            request, HttpCompletionOption.ResponseHeadersRead, cts.Token);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK,
             "authenticated SSE connect must return 200");
@@ -283,7 +283,7 @@ public sealed class AdminEventsEndpointsIntegrationTests : IAsyncLifetime
         // Same pattern as Test 5: the ":ok\n\n" initial write unblocks ResponseHeadersRead.
 
         // Warm-up: issue a non-SSE request first to ensure the TestServer pipeline is ready.
-        var warmup = await _client.GetAsync(EventsTypes).ConfigureAwait(false);
+        var warmup = await _client.GetAsync(EventsTypes);
         warmup.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var sseClient = _factory.CreateClient(new WebApplicationFactoryClientOptions
@@ -297,7 +297,7 @@ public sealed class AdminEventsEndpointsIntegrationTests : IAsyncLifetime
         request.Headers.Add("Cookie", $"{TestSessionHelper.SessionCookieName}={_adminSessionToken}");
 
         using var response = await sseClient.SendAsync(
-            request, HttpCompletionOption.ResponseHeadersRead, cts.Token).ConfigureAwait(false);
+            request, HttpCompletionOption.ResponseHeadersRead, cts.Token);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -324,12 +324,12 @@ public sealed class AdminEventsEndpointsIntegrationTests : IAsyncLifetime
         //   2. Polling endpoint confirms the same seeded data (same DB query the backfill runs).
 
         // Arrange: seed 3 historical events
-        await SeedEventsAsync(3, baseOffset: TimeSpan.FromMinutes(-5)).ConfigureAwait(false);
+        await SeedEventsAsync(3, baseOffset: TimeSpan.FromMinutes(-5));
 
         // Identify the oldest event ID via the polling endpoint
-        var listResponse = await _client.GetAsync($"{EventsBase}?limit=100").ConfigureAwait(false);
+        var listResponse = await _client.GetAsync($"{EventsBase}?limit=100");
         listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var listBody = await listResponse.Content.ReadFromJsonAsync<JsonElement>(ApiJsonOptions).ConfigureAwait(false);
+        var listBody = await listResponse.Content.ReadFromJsonAsync<JsonElement>(ApiJsonOptions);
         var eventsList = listBody!.GetProperty("events").EnumerateArray().ToList();
 
         eventsList.Should().HaveCountGreaterThanOrEqualTo(3,
@@ -338,7 +338,7 @@ public sealed class AdminEventsEndpointsIntegrationTests : IAsyncLifetime
         var oldestEventId = eventsList.Last().GetProperty("id").GetGuid();
 
         // Warm-up: polling requests above already primed the pipeline.
-        var warmup = await _client.GetAsync(EventsTypes).ConfigureAwait(false);
+        var warmup = await _client.GetAsync(EventsTypes);
         warmup.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Act: connect to SSE stream with Last-Event-ID = oldest event
@@ -354,7 +354,7 @@ public sealed class AdminEventsEndpointsIntegrationTests : IAsyncLifetime
         request.Headers.Add("Last-Event-ID", oldestEventId.ToString());
 
         using var response = await sseClient.SendAsync(
-            request, HttpCompletionOption.ResponseHeadersRead, cts.Token).ConfigureAwait(false);
+            request, HttpCompletionOption.ResponseHeadersRead, cts.Token);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK,
             "SSE stream with Last-Event-ID must return 200, not a 4xx/5xx from cursor logic");
@@ -363,9 +363,9 @@ public sealed class AdminEventsEndpointsIntegrationTests : IAsyncLifetime
         cts.Cancel();
 
         // Cross-verify: polling endpoint returns the same events the backfill would stream.
-        var verifyResponse = await _client.GetAsync($"{EventsBase}?limit=100").ConfigureAwait(false);
+        var verifyResponse = await _client.GetAsync($"{EventsBase}?limit=100");
         verifyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var verifyBody = await verifyResponse.Content.ReadFromJsonAsync<JsonElement>(ApiJsonOptions).ConfigureAwait(false);
+        var verifyBody = await verifyResponse.Content.ReadFromJsonAsync<JsonElement>(ApiJsonOptions);
         var verifyEvents = verifyBody!.GetProperty("events").EnumerateArray().ToList();
 
         verifyEvents.Should().Contain(e => e.GetProperty("id").GetGuid() == oldestEventId,

@@ -28,15 +28,15 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries.CrossGameStreamQ
 /// </summary>
 internal sealed class CrossGameStreamQaQueryHandler : IStreamingQueryHandler<CrossGameStreamQaQuery, RagStreamingEvent>
 {
-    private readonly IRagAccessService             _ragAccessService;
+    private readonly IRagAccessService _ragAccessService;
     private readonly IMultiGameHybridSearchService _searchService;
-    private readonly IRagPromptAssemblyService     _promptService;
-    private readonly ILlmService                   _llmService;
+    private readonly IRagPromptAssemblyService _promptService;
+    private readonly ILlmService _llmService;
     private readonly ILogger<CrossGameStreamQaQueryHandler> _logger;
-    private readonly TimeProvider                  _timeProvider;
+    private readonly TimeProvider _timeProvider;
 
     private const string CrossGameTitle = "la tua libreria";
-    private const string AgentTypology  = "tutor";
+    private const string AgentTypology = "tutor";
 
     public CrossGameStreamQaQueryHandler(
         IRagAccessService ragAccessService,
@@ -47,11 +47,11 @@ internal sealed class CrossGameStreamQaQueryHandler : IStreamingQueryHandler<Cro
         TimeProvider? timeProvider = null)
     {
         _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
-        _searchService    = searchService    ?? throw new ArgumentNullException(nameof(searchService));
-        _promptService    = promptService    ?? throw new ArgumentNullException(nameof(promptService));
-        _llmService       = llmService       ?? throw new ArgumentNullException(nameof(llmService));
-        _logger           = logger           ?? throw new ArgumentNullException(nameof(logger));
-        _timeProvider     = timeProvider ?? TimeProvider.System;
+        _searchService = searchService ?? throw new ArgumentNullException(nameof(searchService));
+        _promptService = promptService ?? throw new ArgumentNullException(nameof(promptService));
+        _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public async IAsyncEnumerable<RagStreamingEvent> Handle(
@@ -147,10 +147,10 @@ internal sealed class CrossGameStreamQaQueryHandler : IStreamingQueryHandler<Cro
         yield return CreateEvent(StreamingEventType.Complete,
             new StreamingComplete(
                 estimatedReadingTimeMinutes: 0,
-                promptTokens:     llmUsage?.PromptTokens     ?? 0,
+                promptTokens: llmUsage?.PromptTokens ?? 0,
                 completionTokens: llmUsage?.CompletionTokens ?? tokenEvents.Count,
-                totalTokens:      llmUsage?.TotalTokens       ?? tokenEvents.Count,
-                confidence:       null));
+                totalTokens: llmUsage?.TotalTokens ?? tokenEvents.Count,
+                confidence: null));
 
         _logger.LogInformation(
             "[CrossGameAsk] Complete for user {UserId}, tokens: {Tokens}",
@@ -243,7 +243,7 @@ internal sealed class CrossGameStreamQaQueryHandler : IStreamingQueryHandler<Cro
     {
         var tokenEvents = new List<RagStreamingEvent>();
         LlmUsage? usage = null;
-        LlmCost?  cost  = null;
+        LlmCost? cost = null;
 
         try
         {
@@ -258,7 +258,7 @@ internal sealed class CrossGameStreamQaQueryHandler : IStreamingQueryHandler<Cro
                 if (chunk.IsFinal && chunk.Usage != null)
                 {
                     usage = chunk.Usage;
-                    cost  = chunk.Cost;
+                    cost = chunk.Cost;
                     continue;
                 }
 
@@ -289,15 +289,15 @@ internal sealed class CrossGameStreamQaQueryHandler : IStreamingQueryHandler<Cro
         IReadOnlyList<MultiGameSearchResultItem> results)
     {
         return results.Select(r => new ChunkCitation(
-            DocumentId:        r.PdfDocumentId,
-            PageNumber:        r.PageNumber ?? 0,
-            RelevanceScore:    r.HybridScore,
-            SnippetPreview:    r.Content.Length > 200 ? r.Content[..200] : r.Content,
-            CopyrightTier:     CopyrightTier.Protected,
+            DocumentId: r.PdfDocumentId,
+            PageNumber: r.PageNumber ?? 0,
+            RelevanceScore: r.HybridScore,
+            SnippetPreview: r.Content.Length > 200 ? r.Content[..200] : r.Content,
+            CopyrightTier: CopyrightTier.Protected,
             ParaphrasedSnippet: null,
-            IsPublic:          false)
+            IsPublic: false)
         {
-            GameId   = r.GameId,
+            GameId = r.GameId,
             FullText = r.Content
         }).ToList();
     }

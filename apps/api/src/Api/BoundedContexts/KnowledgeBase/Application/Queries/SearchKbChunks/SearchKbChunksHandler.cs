@@ -99,9 +99,9 @@ internal sealed class SearchKbChunksHandler : IQueryHandler<SearchKbChunksQuery,
             FROM ranked
             ORDER BY ""Rank"" DESC
             OFFSET {2} LIMIT {3}";
-            // No trailing ';' — EF Core wraps SqlQueryRaw in a subquery when
-            // composed with .Select()/.FirstAsync(), and an inner semicolon
-            // produces "syntax error at or near ';'" (Postgres 42601).
+        // No trailing ';' — EF Core wraps SqlQueryRaw in a subquery when
+        // composed with .Select()/.FirstAsync(), and an inner semicolon
+        // produces "syntax error at or near ';'" (Postgres 42601).
 
         var rows = await _dbContext.Database
             .SqlQueryRaw<SearchRow>(ftsSQL, query.DocumentId, query.Query, skip, take)
@@ -113,9 +113,9 @@ internal sealed class SearchKbChunksHandler : IQueryHandler<SearchKbChunksQuery,
             SELECT COUNT(*)::int AS ""Value""
             FROM text_chunks tc, plainto_tsquery('simple', {1}) q
             WHERE tc.""PdfDocumentId"" = {0} AND tc.search_vector @@ q";
-            // No trailing ';' — composed with .Select(r => r.Value).FirstAsync(),
-            // EF Core wraps this in a subquery and an inner semicolon produces
-            // Postgres 42601 "syntax error at or near ';'" (Issue: SearchChunks 500).
+        // No trailing ';' — composed with .Select(r => r.Value).FirstAsync(),
+        // EF Core wraps this in a subquery and an inner semicolon produces
+        // Postgres 42601 "syntax error at or near ';'" (Issue: SearchChunks 500).
 
         var totalCount = await _dbContext.Database
             .SqlQueryRaw<IntValueRow>(countSQL, query.DocumentId, query.Query)
@@ -174,8 +174,8 @@ internal sealed class SearchKbChunksHandler : IQueryHandler<SearchKbChunksQuery,
             FROM chunk_path
             WHERE ""Heading"" IS NOT NULL
             ORDER BY start_id, depth DESC";
-            // No trailing ';' — see SearchKbChunksHandler.cs:112 for the EF Core
-            // SqlQueryRaw subquery-composition reason.
+        // No trailing ';' — see SearchKbChunksHandler.cs:112 for the EF Core
+        // SqlQueryRaw subquery-composition reason.
 
         var raw = await _dbContext.Database
             .SqlQueryRaw<HeadingPathRow>(headingPathCte, chunkIds.ToArray())

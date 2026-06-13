@@ -173,17 +173,17 @@ public sealed class PdfCoverPropagationIntegrationTests : IAsyncLifetime
         Guid uploadedByUserId,
         string coverGenerationStatus,
         string? coverR2Key) => new()
-    {
-        Id = pdfId,
-        SharedGameId = sharedGameId,
-        UploadedByUserId = uploadedByUserId,
-        FileName = $"test-{pdfId:N}.pdf",
-        FilePath = $"/test/{pdfId:N}.pdf",
-        FileSizeBytes = 1024,
-        ContentType = "application/pdf",
-        UploadedAt = DateTime.UtcNow,
-        ProcessingState = "Ready",
-        CoverGenerationStatus = coverGenerationStatus,
-        CoverR2Key = coverR2Key
-    };
+        {
+            Id = pdfId,
+            SharedGameId = sharedGameId,
+            UploadedByUserId = uploadedByUserId,
+            FileName = $"test-{pdfId:N}.pdf",
+            FilePath = $"/test/{pdfId:N}.pdf",
+            FileSizeBytes = 1024,
+            ContentType = "application/pdf",
+            UploadedAt = DateTime.UtcNow,
+            ProcessingState = "Ready",
+            CoverGenerationStatus = coverGenerationStatus,
+            CoverR2Key = coverR2Key
+        };
 }

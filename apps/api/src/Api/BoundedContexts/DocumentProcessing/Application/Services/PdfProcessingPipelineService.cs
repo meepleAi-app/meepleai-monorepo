@@ -534,46 +534,46 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             switch (result.Outcome)
             {
                 case PdfCoverExtractionOutcome.Generated:
-                {
-                    var resourceKey = $"pdf-cover-{pdfDoc.Id}";
-
-                    // Upload thumb + preview as separate blobs. The CoverR2Key
-                    // we persist is the resourceKey prefix — the resolver
-                    // endpoint reconstructs `{prefix}/{size}.webp` at read time.
-                    using (var thumbStream = new MemoryStream(result.ThumbnailWebp!, writable: false))
                     {
-                        await _blobStorageService.StoreAsync(
-                            thumbStream, "thumb.webp", BlobCategory.GameImage, resourceKey, cancellationToken)
-                            .ConfigureAwait(false);
+                        var resourceKey = $"pdf-cover-{pdfDoc.Id}";
+
+                        // Upload thumb + preview as separate blobs. The CoverR2Key
+                        // we persist is the resourceKey prefix — the resolver
+                        // endpoint reconstructs `{prefix}/{size}.webp` at read time.
+                        using (var thumbStream = new MemoryStream(result.ThumbnailWebp!, writable: false))
+                        {
+                            await _blobStorageService.StoreAsync(
+                                thumbStream, "thumb.webp", BlobCategory.GameImage, resourceKey, cancellationToken)
+                                .ConfigureAwait(false);
+                        }
+                        using (var previewStream = new MemoryStream(result.PreviewWebp!, writable: false))
+                        {
+                            await _blobStorageService.StoreAsync(
+                                previewStream, "preview.webp", BlobCategory.GameImage, resourceKey, cancellationToken)
+                                .ConfigureAwait(false);
+                        }
+
+                        pdfDoc.CoverR2Key = resourceKey;
+                        pdfDoc.CoverGenerationStatus = "Generated";
+                        pdfDoc.CoverPageIndex = result.SelectedPageIndex;
+                        pdfDoc.CoverGenerationError = null;
+
+                        // Issue #1852 (Gap A): raise the propagation event so
+                        // PdfCoverGeneratedEventHandler can populate SharedGame.PdfCoverR2Key.
+                        // Dispatched by MeepleAiDbContext.SaveChangesAsync (~line 154) after
+                        // the pipeline transitions to Chunking. Guard is present so existing
+                        // test constructors that omit eventCollector keep working.
+                        _eventCollector?.Collect(new PdfCoverGeneratedEvent(
+                            pdfDocumentId: pdfDoc.Id,
+                            sharedGameId: pdfDoc.SharedGameId,
+                            coverR2Key: resourceKey,
+                            coverPageIndex: result.SelectedPageIndex ?? 0));
+
+                        _logger.LogInformation(
+                            "[PdfPipeline] Cover image generated for PDF {PdfId} from page {PageIndex} (resourceKey={ResourceKey})",
+                            pdfDoc.Id, result.SelectedPageIndex, resourceKey);
+                        break;
                     }
-                    using (var previewStream = new MemoryStream(result.PreviewWebp!, writable: false))
-                    {
-                        await _blobStorageService.StoreAsync(
-                            previewStream, "preview.webp", BlobCategory.GameImage, resourceKey, cancellationToken)
-                            .ConfigureAwait(false);
-                    }
-
-                    pdfDoc.CoverR2Key = resourceKey;
-                    pdfDoc.CoverGenerationStatus = "Generated";
-                    pdfDoc.CoverPageIndex = result.SelectedPageIndex;
-                    pdfDoc.CoverGenerationError = null;
-
-                    // Issue #1852 (Gap A): raise the propagation event so
-                    // PdfCoverGeneratedEventHandler can populate SharedGame.PdfCoverR2Key.
-                    // Dispatched by MeepleAiDbContext.SaveChangesAsync (~line 154) after
-                    // the pipeline transitions to Chunking. Guard is present so existing
-                    // test constructors that omit eventCollector keep working.
-                    _eventCollector?.Collect(new PdfCoverGeneratedEvent(
-                        pdfDocumentId: pdfDoc.Id,
-                        sharedGameId: pdfDoc.SharedGameId,
-                        coverR2Key: resourceKey,
-                        coverPageIndex: result.SelectedPageIndex ?? 0));
-
-                    _logger.LogInformation(
-                        "[PdfPipeline] Cover image generated for PDF {PdfId} from page {PageIndex} (resourceKey={ResourceKey})",
-                        pdfDoc.Id, result.SelectedPageIndex, resourceKey);
-                    break;
-                }
                 case PdfCoverExtractionOutcome.Skipped:
                     pdfDoc.CoverGenerationStatus = "Skipped";
                     pdfDoc.CoverPageIndex = result.SelectedPageIndex;

@@ -207,7 +207,7 @@ public class GetAdminOverviewStatsQueryHandlerTests : IDisposable
             {
                 Id = Guid.NewGuid(),
                 Title = $"Unpublished Game {i}",
-                Status = 0, 
+                Status = 0,
                 CreatedAt = DateTime.UtcNow
             });
         }

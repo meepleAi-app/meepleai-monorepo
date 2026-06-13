@@ -133,7 +133,7 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
             MinPlayers = 2,
             MaxPlayers = 4,
             PlayingTimeMinutes = 30,
-                        CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow
         };
         _dbContext.SharedGames.Add(game);
 

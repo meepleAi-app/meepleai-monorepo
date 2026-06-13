@@ -149,7 +149,8 @@ public sealed class SessionAttachmentServiceTests
 
         _blobStorageMock
             .Setup(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Callback<Stream, string, BlobCategory, string, CancellationToken>((_, fileName, _, _, _) => {
+            .Callback<Stream, string, BlobCategory, string, CancellationToken>((_, fileName, _, _, _) =>
+            {
                 callCount++;
                 if (callCount == 1) capturedFileName = fileName; // Capture only the original upload
             })

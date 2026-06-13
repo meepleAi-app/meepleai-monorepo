@@ -75,8 +75,8 @@ public sealed class S1AcceptanceScenariosTests
 
         // Given: 2 admins (so the "last admin" guard passes if target were admin) + 1 regular target.
         var requestingAdminId = await SeedUserAsync(ctx.Db, "alice@meeple.app", "superadmin");
-        var anotherAdminId    = await SeedUserAsync(ctx.Db, "second@meeple.app", "admin");
-        var targetUserId      = await SeedUserAsync(ctx.Db, "bob@example.com",   "user");
+        var anotherAdminId = await SeedUserAsync(ctx.Db, "second@meeple.app", "admin");
+        var targetUserId = await SeedUserAsync(ctx.Db, "bob@example.com", "user");
 
         // When
         var mediator = ctx.Sp.GetRequiredService<IMediator>();
@@ -126,8 +126,8 @@ public sealed class S1AcceptanceScenariosTests
         await using var ctx = await SetupAsync();
 
         var requestingAdminId = await SeedUserAsync(ctx.Db, "alice@s2.test", "superadmin");
-        var anotherAdminId    = await SeedUserAsync(ctx.Db, "second@s2.test", "admin");
-        var targetUserId      = await SeedUserAsync(ctx.Db, "bob@s2.test",    "user");
+        var anotherAdminId = await SeedUserAsync(ctx.Db, "second@s2.test", "admin");
+        var targetUserId = await SeedUserAsync(ctx.Db, "bob@s2.test", "user");
 
         var mediator = ctx.Sp.GetRequiredService<IMediator>();
         await mediator.Send(
@@ -142,7 +142,7 @@ public sealed class S1AcceptanceScenariosTests
         processed.Should().Be(1, because: "exactly one Pending row existed");
 
         ctx.Db.ChangeTracker.Clear();
-        var auditLog  = await ctx.Db.AuditLogs.AsNoTracking().SingleAsync(TestCancellationToken);
+        var auditLog = await ctx.Db.AuditLogs.AsNoTracking().SingleAsync(TestCancellationToken);
         var outboxRow = await ctx.Db.AuditOutbox.AsNoTracking().SingleAsync(TestCancellationToken);
 
         auditLog.Id.Should().Be(outboxRow.Id,
@@ -233,10 +233,10 @@ public sealed class S1AcceptanceScenariosTests
         var targetUserId = await SeedUserAsync(ctx.Db, "promote.me@s4.test", "user");
 
         var mediator = ctx.Sp.GetRequiredService<IMediator>();
-        var command  = new ChangeUserRoleCommand(
-            UserId:    targetUserId.ToString(),
-            NewRole:   "Editor",
-            Reason:    "Scenario 4 acceptance test",
+        var command = new ChangeUserRoleCommand(
+            UserId: targetUserId.ToString(),
+            NewRole: "Editor",
+            Reason: "Scenario 4 acceptance test",
             AdminRole: "superadmin");
 
         // When + Then: must NOT throw despite the audit stub being broken.
@@ -285,17 +285,17 @@ public sealed class S1AcceptanceScenariosTests
         await using var ctx = await SetupAsync();
 
         var requestingAdminId = await SeedUserAsync(ctx.Db, "admin@s5.test", "superadmin");
-        var targetUserId      = await SeedUserAsync(ctx.Db, "heavy@s5.test", "user");
+        var targetUserId = await SeedUserAsync(ctx.Db, "heavy@s5.test", "user");
 
         // Seed 60 backup codes for the target — above the trim threshold (50).
         for (var i = 0; i < 60; i++)
         {
             ctx.Db.UserBackupCodes.Add(new UserBackupCodeEntity
             {
-                Id        = Guid.NewGuid(),
-                UserId    = targetUserId,
-                CodeHash  = $"hash-{i:D3}-{Guid.NewGuid():N}",
-                IsUsed    = false,
+                Id = Guid.NewGuid(),
+                UserId = targetUserId,
+                CodeHash = $"hash-{i:D3}-{Guid.NewGuid():N}",
+                IsUsed = false,
                 CreatedAt = DateTime.UtcNow,
             });
         }
@@ -410,12 +410,12 @@ public sealed class S1AcceptanceScenariosTests
         var id = Guid.NewGuid();
         db.Users.Add(new UserEntity
         {
-            Id          = id,
-            Email       = email,
+            Id = id,
+            Email = email,
             DisplayName = email.Split('@')[0],
-            Role        = role,
-            Tier        = "free",
-            CreatedAt   = DateTime.UtcNow,
+            Role = role,
+            Tier = "free",
+            CreatedAt = DateTime.UtcNow,
         });
         await db.SaveChangesAsync(TestCancellationToken);
         db.ChangeTracker.Clear();
@@ -425,17 +425,17 @@ public sealed class S1AcceptanceScenariosTests
     private static AuditOutboxPayload BuildPayload(string action, DateTimeOffset timestamp)
         => new()
         {
-            Action      = action,
-            Resource    = "TestResource",
-            UserId      = Guid.NewGuid().ToString(),
-            ResourceId  = "test-resource-id",
-            Result      = "Success",
-            IpAddress   = "127.0.0.1",
-            UserAgent   = "xunit",
+            Action = action,
+            Resource = "TestResource",
+            UserId = Guid.NewGuid().ToString(),
+            ResourceId = "test-resource-id",
+            Result = "Success",
+            IpAddress = "127.0.0.1",
+            UserAgent = "xunit",
             RequestType = "TestCommand",
-            Details     = "{}",
-            Timestamp   = timestamp,
-            Oversize    = false,
+            Details = "{}",
+            Timestamp = timestamp,
+            Oversize = false,
         };
 
     private static async Task ApplyMigrationsAsync(MeepleAiDbContext db)

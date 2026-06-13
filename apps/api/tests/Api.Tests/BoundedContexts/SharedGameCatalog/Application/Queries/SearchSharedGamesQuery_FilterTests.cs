@@ -66,7 +66,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
     {
         Id = Guid.NewGuid(),
         Title = $"Game-{sharedGameId:N}",
-        Status = 1, 
+        Status = 1,
         CreatedAt = DateTime.UtcNow,
     };
 

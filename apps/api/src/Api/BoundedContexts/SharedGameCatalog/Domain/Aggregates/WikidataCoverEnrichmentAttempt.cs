@@ -71,6 +71,12 @@ public sealed class WikidataCoverEnrichmentAttempt : AggregateRoot<Guid>
     /// <summary>UTC timestamp at which the attempt was dead-lettered. Non-null only when <see cref="Outcome"/> is <see cref="WikidataCoverEnrichmentOutcome.DeadLetter"/>.</summary>
     public DateTime? DeadLetteredAt { get; private set; }
 
+    /// <summary>UTC timestamp when an operator acknowledged the dead-letter; <see langword="null"/> when not yet acknowledged or not a dead-letter.</summary>
+    public DateTime? AcknowledgedAt { get; private set; }
+
+    /// <summary>User id of the operator who acknowledged the dead-letter; <see langword="null"/> when not yet acknowledged.</summary>
+    public Guid? AcknowledgedBy { get; private set; }
+
     /// <summary>EF Core / repository reconstitution — do not call directly.</summary>
     private WikidataCoverEnrichmentAttempt() : base() { }
 
@@ -190,5 +196,34 @@ public sealed class WikidataCoverEnrichmentAttempt : AggregateRoot<Guid>
             retryCount: retryCount,
             nextRetryAt: nextRetryAt,
             deadLetteredAt: deadLetteredAt);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Mutators
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Issue #1823 Phase F F5 — operator marks a dead-letter as "not actionable".
+    /// EXCEPTION to the record-of-fact pattern documented on the type: ack is
+    /// operational metadata orthogonal to the pipeline (parallel to
+    /// <see cref="DeadLetteredAt"/>), not a new pipeline event. Idempotent on
+    /// re-call: the first ack is preserved and subsequent calls are no-ops so
+    /// repeated bulk-acknowledge clicks cannot rewrite the audit trail.
+    /// </summary>
+    /// <param name="userId">Acknowledging admin user id; must not be <see cref="Guid.Empty"/>.</param>
+    /// <param name="ackedAt">UTC acknowledgement timestamp.</param>
+    public void Acknowledge(Guid userId, DateTime ackedAt)
+    {
+        if (Outcome != WikidataCoverEnrichmentOutcome.DeadLetter)
+            throw new InvalidOperationException(
+                $"Only DeadLetter attempts can be acknowledged; current Outcome={Outcome}.");
+
+        if (userId == Guid.Empty)
+            throw new ArgumentException("UserId cannot be Guid.Empty.", nameof(userId));
+
+        if (AcknowledgedAt is not null) return; // idempotent
+
+        AcknowledgedAt = ackedAt;
+        AcknowledgedBy = userId;
     }
 }

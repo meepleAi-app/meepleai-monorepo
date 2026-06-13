@@ -6,6 +6,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using MediatR;
 using Microsoft.Extensions.Time.Testing;
@@ -27,6 +28,7 @@ public class RestoreSessionSnapshotCommandHandlerTests
     private readonly Mock<ISessionSnapshotRepository> _snapshotRepositoryMock;
     private readonly Mock<ILiveSessionRepository> _sessionRepositoryMock;
     private readonly Mock<IMediator> _mediatorMock;
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly FakeTimeProvider _timeProvider;
 
     public RestoreSessionSnapshotCommandHandlerTests()
@@ -34,6 +36,7 @@ public class RestoreSessionSnapshotCommandHandlerTests
         _snapshotRepositoryMock = new Mock<ISessionSnapshotRepository>();
         _sessionRepositoryMock = new Mock<ILiveSessionRepository>();
         _mediatorMock = new Mock<IMediator>();
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
         _timeProvider = new FakeTimeProvider(new DateTimeOffset(2026, 3, 9, 10, 0, 0, TimeSpan.Zero));
     }
 
@@ -41,7 +44,8 @@ public class RestoreSessionSnapshotCommandHandlerTests
         new(_snapshotRepositoryMock.Object,
             _sessionRepositoryMock.Object,
             _mediatorMock.Object,
-            _timeProvider);
+            _timeProvider,
+            _unitOfWorkMock.Object);
 
     private LiveGameSession CreateActiveSession(Guid? sessionId = null)
     {

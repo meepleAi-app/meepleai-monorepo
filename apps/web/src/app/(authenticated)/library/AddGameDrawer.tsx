@@ -150,10 +150,6 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
         side="right"
         className="w-full sm:max-w-xl flex flex-col p-0"
         data-testid="add-game-drawer"
-        // #2269 P0-3 (M4) — Radix Dialog primitive does not emit aria-modal
-        // on its own (see memory `radix-dialog-no-aria-modal`); we set it
-        // explicitly so screen readers announce the drawer as a modal.
-        aria-modal="true"
       >
         <SheetHeader className="px-6 py-4 border-b border-border/50">
           <SheetTitle data-testid="add-game-drawer-title">{drawerTitle}</SheetTitle>

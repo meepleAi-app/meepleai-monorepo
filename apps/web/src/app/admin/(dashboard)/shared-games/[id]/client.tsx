@@ -198,10 +198,22 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
     enabled: !!game,
   });
 
+  // Issue #2246 Block D: refetch kb-cards while any card is still indexing,
+  // so the freshly-uploaded PDF transitions Completed without page reload.
+  // Status comparison is case-insensitive because the backend writes lowercase
+  // ("completed"/"failed") while some surfaces normalize to PascalCase.
   const { data: kbCards } = useQuery({
     queryKey: ['admin', 'shared-games', gameId, 'kb-cards'],
     queryFn: () => api.sharedGames.getKbCards(gameId),
     enabled: !!game,
+    refetchInterval: query => {
+      const list = query.state.data ?? [];
+      const hasInProgress = list.some(c => {
+        const s = (c.indexingStatus ?? '').toLowerCase();
+        return s !== 'completed' && s !== 'failed';
+      });
+      return hasInProgress ? 5_000 : false;
+    },
   });
 
   const { data: agentDefinitions, isLoading: agentsLoading } = useQuery({

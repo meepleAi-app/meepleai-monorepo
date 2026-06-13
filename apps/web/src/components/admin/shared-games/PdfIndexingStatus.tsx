@@ -5,6 +5,10 @@
  * Polls the status endpoint and shows processing stages.
  *
  * Stages: Uploaded → Processing → Extracted → Chunked → Embedding → Indexed
+ *
+ * Issue #2246 Block C: STAGE_ORDER aligned with backend PdfProcessingState enum.
+ * Backend canonical order: Pending → Uploading → Extracting → Chunking →
+ * Embedding → Indexing → Ready (Failed is a terminal off-pipeline state).
  */
 
 'use client';
@@ -27,7 +31,13 @@ import {
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
 import { Progress } from '@/components/ui/feedback/progress';
 import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
@@ -83,7 +93,34 @@ const STAGES: {
   { id: 'indexed', label: 'Indicizzato', icon: Database, description: 'Pronto per RAG' },
 ];
 
-const STAGE_ORDER: Record<IndexingStage, number> = {
+/**
+ * Backend `PdfProcessingState` enum canonical order (Issue #2246 Block C).
+ * MUST match exactly: `apps/api/src/Api/BoundedContexts/DocumentProcessing/
+ * Domain/Enums/PdfProcessingState.cs` and the discriminated union in
+ * `apps/web/src/lib/api/schemas/pdf.schemas.ts`.
+ *
+ * `Failed` is a terminal off-pipeline state and is not part of the linear
+ * progression — it is handled separately in the component logic.
+ */
+export const STAGE_ORDER = [
+  'Pending',
+  'Uploading',
+  'Extracting',
+  'Chunking',
+  'Embedding',
+  'Indexing',
+  'Ready',
+] as const;
+
+export type PdfProcessingStage = (typeof STAGE_ORDER)[number];
+
+/**
+ * Legacy STAGE_ORDER record kept for backward-compat with the existing
+ * lowercase IndexingStage local type (used by this component's render logic
+ * around the `/api/v1/pdfs/{id}/progress` endpoint that emits camelCase stages).
+ * Will be removed once the endpoint emits backend-aligned PascalCase states.
+ */
+const LEGACY_STAGE_ORDER: Record<IndexingStage, number> = {
   uploaded: 0,
   processing: 1,
   extracted: 2,
@@ -146,7 +183,7 @@ export function PdfIndexingStatus({
   }, [status, hasCompleted, onComplete, onError]);
 
   // Get current stage index
-  const currentStageIndex = status ? STAGE_ORDER[status.status] : 0;
+  const currentStageIndex = status ? LEGACY_STAGE_ORDER[status.status] : 0;
   const isComplete = status?.status === 'indexed';
   const isFailed = status?.status === 'failed';
 
@@ -213,9 +250,7 @@ export function PdfIndexingStatus({
               <XCircle className="h-3 w-3 mr-1" />
               Errore
             </Badge>
-            {status?.error && (
-              <span className="text-sm text-destructive">{status.error}</span>
-            )}
+            {status?.error && <span className="text-sm text-destructive">{status.error}</span>}
           </>
         ) : (
           <>
@@ -246,9 +281,7 @@ export function PdfIndexingStatus({
               )}
               Stato Indicizzazione
             </CardTitle>
-            {fileName && (
-              <CardDescription className="mt-1">{fileName}</CardDescription>
-            )}
+            {fileName && <CardDescription className="mt-1">{fileName}</CardDescription>}
           </div>
           {isComplete && (
             <Badge variant="default" className="bg-green-600 hover:bg-green-700">
@@ -292,8 +325,11 @@ export function PdfIndexingStatus({
                 <div
                   className={cn(
                     'flex items-center justify-center h-8 w-8 rounded-full',
-                    isCompletedStage && 'bg-green-100 dark:bg-green-800 text-green-600 dark:text-green-400',
-                    isCurrentStage && !isFailed && 'bg-amber-100 dark:bg-amber-800 text-amber-600 dark:text-amber-400',
+                    isCompletedStage &&
+                      'bg-green-100 dark:bg-green-800 text-green-600 dark:text-green-400',
+                    isCurrentStage &&
+                      !isFailed &&
+                      'bg-amber-100 dark:bg-amber-800 text-amber-600 dark:text-amber-400',
                     isFailedAtStage && 'bg-destructive/20 text-destructive',
                     !isCompletedStage && !isCurrentStage && 'bg-muted text-muted-foreground'
                   )}

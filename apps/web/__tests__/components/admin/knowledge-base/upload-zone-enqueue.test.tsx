@@ -1,4 +1,5 @@
 import { render } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock next/navigation (no variable reference)
@@ -37,13 +38,24 @@ vi.mock('@/lib/domain-hooks/useGameSearch', () => ({
 
 import { UploadZone } from '@/components/admin/knowledge-base/upload-zone';
 
+function createTestQueryClient() {
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+}
+
 describe('UploadZone enqueue error handling', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('renders without crashing', () => {
-    const { container } = render(<UploadZone />);
+    const qc = createTestQueryClient();
+    const { container } = render(
+      <QueryClientProvider client={qc}>
+        <UploadZone />
+      </QueryClientProvider>
+    );
     expect(container).toBeTruthy();
   });
 

@@ -105,7 +105,12 @@ internal static class LiveGameSessionMapper
         {
             entity.RoundScores.Add(new LiveRoundScoreEntity
             {
-                Id = Guid.NewGuid(),
+                // Deterministic Id derived from the unique tuple
+                // (sessionId, playerId, round, dimension) — matches the unique index
+                // ix_live_round_scores_session_player_round_dim. This keeps the PK
+                // stable across repeated ToEntity calls so EF treats subsequent
+                // UpdateAsync as UPDATE rather than INSERT (which would dup-key crash).
+                Id = DeterministicScoreId(domain.Id, score.PlayerId, score.Round, score.Dimension),
                 LiveGameSessionId = domain.Id,
                 PlayerId = score.PlayerId,
                 Round = score.Round,
@@ -120,7 +125,10 @@ internal static class LiveGameSessionMapper
         {
             entity.TurnRecords.Add(new LiveTurnRecordEntity
             {
-                Id = Guid.NewGuid(),
+                // Deterministic Id derived from (sessionId, turnIndex) — matches the
+                // unique index ix_live_turn_records_session_turn. Same rationale as
+                // RoundScore above: stable PK across re-mapping.
+                Id = DeterministicTurnId(domain.Id, record.TurnIndex),
                 LiveGameSessionId = domain.Id,
                 TurnIndex = record.TurnIndex,
                 PlayerId = record.PlayerId,
@@ -299,5 +307,28 @@ internal static class LiveGameSessionMapper
         if (dto == null) return null;
 
         return new SnapshotTriggerConfig(dto.EnabledTriggers, dto.DebounceDurationSeconds, dto.MaxSnapshotsPerMinute);
+    }
+
+    // ── Deterministic PK helpers for child rows that have no domain-side Id ──
+    //
+    // RoundScore and TurnRecord are value objects in the Domain (no Id). The Entity tables
+    // need PKs. Using Guid.NewGuid() on every ToEntity() call would make every UpdateAsync
+    // generate fresh PKs, which causes EF to issue UPDATEs against non-existent rows on
+    // the first save, and duplicate-key crashes on subsequent saves. Deriving the PK
+    // deterministically from the row's unique tuple keeps it stable across calls so EF's
+    // change tracker recognises existing rows. The tuple matches the unique index
+    // configured on each child table.
+
+    private static Guid DeterministicScoreId(Guid sessionId, Guid playerId, int round, string dimension)
+        => DeterministicGuid($"score:{sessionId:N}:{playerId:N}:{round}:{dimension.ToLowerInvariant()}");
+
+    private static Guid DeterministicTurnId(Guid sessionId, int turnIndex)
+        => DeterministicGuid($"turn:{sessionId:N}:{turnIndex}");
+
+    private static Guid DeterministicGuid(string seed)
+    {
+        Span<byte> hash = stackalloc byte[32];
+        System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(seed), hash);
+        return new Guid(hash[..16]);
     }
 }

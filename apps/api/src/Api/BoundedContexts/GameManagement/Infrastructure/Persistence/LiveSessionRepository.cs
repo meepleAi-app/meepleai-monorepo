@@ -32,6 +32,7 @@ internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionReposi
     public async Task<LiveGameSession?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var entity = await DbContext.LiveGameSessions
+            .AsNoTracking()
             .Include(e => e.Players)
             .Include(e => e.Teams)
             .Include(e => e.RoundScores)
@@ -46,6 +47,7 @@ internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionReposi
     {
         var normalized = sessionCode?.ToUpperInvariant();
         var entity = await DbContext.LiveGameSessions
+            .AsNoTracking()
             .Include(e => e.Players)
             .Include(e => e.Teams)
             .Include(e => e.RoundScores)
@@ -59,20 +61,17 @@ internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionReposi
     public async Task<IReadOnlyList<LiveGameSession>> GetActiveByUserIdAsync(
         Guid userId, CancellationToken cancellationToken = default)
     {
-        var activeStatuses = new[]
-        {
-            (int)LiveSessionStatus.Created,
-            (int)LiveSessionStatus.Setup,
-            (int)LiveSessionStatus.InProgress,
-            (int)LiveSessionStatus.Paused
-        };
-
+        // Mirrors LiveGameSession.IsActive (Setup | InProgress | Paused). 'Created' is
+        // intentionally excluded — a session that's been created but never moved past the
+        // initial state is not "actively" being played and should not show up in
+        // dashboards/auto-save sweeps.
         var entities = await DbContext.LiveGameSessions
+            .AsNoTracking()
             .Include(e => e.Players)
             .Include(e => e.Teams)
             .Include(e => e.RoundScores)
             .Include(e => e.TurnRecords)
-            .Where(e => e.CreatedByUserId == userId && activeStatuses.Contains(e.Status))
+            .Where(e => e.CreatedByUserId == userId && ActiveStatuses.Contains(e.Status))
             .OrderByDescending(e => e.UpdatedAt)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -83,26 +82,26 @@ internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionReposi
     public async Task<IReadOnlyList<LiveGameSession>> GetAllActiveAsync(
         CancellationToken cancellationToken = default)
     {
-        var activeStatuses = new[]
-        {
-            (int)LiveSessionStatus.Created,
-            (int)LiveSessionStatus.Setup,
-            (int)LiveSessionStatus.InProgress,
-            (int)LiveSessionStatus.Paused
-        };
-
         var entities = await DbContext.LiveGameSessions
+            .AsNoTracking()
             .Include(e => e.Players)
             .Include(e => e.Teams)
             .Include(e => e.RoundScores)
             .Include(e => e.TurnRecords)
-            .Where(e => activeStatuses.Contains(e.Status))
+            .Where(e => ActiveStatuses.Contains(e.Status))
             .OrderByDescending(e => e.UpdatedAt)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         return entities.Select(LiveGameSessionMapper.ToDomain).ToList();
     }
+
+    private static readonly int[] ActiveStatuses =
+    {
+        (int)LiveSessionStatus.Setup,
+        (int)LiveSessionStatus.InProgress,
+        (int)LiveSessionStatus.Paused
+    };
 
     public async Task AddAsync(LiveGameSession session, CancellationToken cancellationToken = default)
     {

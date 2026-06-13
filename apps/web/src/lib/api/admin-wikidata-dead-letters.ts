@@ -20,6 +20,13 @@ export interface WikidataDeadLetterAttemptDto {
   reason: string;
   details: string | null;
   retryCount: number;
+  // Phase F F5 — acknowledgement (Issue #2254)
+  acknowledgedAt: string | null;
+  acknowledgedBy: string | null;
+  acknowledgedByFullName: string | null;
+  // Phase F F6 — attempt-source attribution (Issue #2255)
+  triggeredByAdminUserId: string | null;
+  triggeredByAdminFullName: string | null;
 }
 
 export interface WikidataDeadLetterAttemptsResult {
@@ -54,12 +61,18 @@ async function rejectAs(response: Response, message: string): Promise<never> {
 }
 
 export async function listDeadLetters(
-  options: { skip?: number; take?: number; reason?: string } = {}
+  options: {
+    skip?: number;
+    take?: number;
+    reason?: string;
+    includeAcknowledged?: boolean;
+  } = {}
 ): Promise<WikidataDeadLetterAttemptsResult> {
   const params = new URLSearchParams();
   if (options.skip !== undefined) params.set('skip', String(options.skip));
   if (options.take !== undefined) params.set('take', String(options.take));
   if (options.reason) params.set('reason', options.reason);
+  if (options.includeAcknowledged) params.set('includeAcknowledged', 'true');
 
   const url = `${ENDPOINT_BASE}/dead-letters${params.size > 0 ? `?${params.toString()}` : ''}`;
   const response = await fetch(url, { credentials: 'include' });
@@ -146,6 +159,9 @@ export interface WikidataAttemptTimelineNode {
   retryCount: number;
   nextRetryAt: string | null;
   deadLetteredAt: string | null;
+  // Phase F F6 — attempt-source attribution (Issue #2255)
+  triggeredByAdminUserId: string | null;
+  triggeredByAdminFullName: string | null;
 }
 
 export interface WikidataAttemptTimelineResult {
@@ -166,4 +182,55 @@ export async function getAttemptTimeline(
     await rejectAs(response, 'Failed to load attempt timeline');
   }
   return (await response.json()) as WikidataAttemptTimelineResult;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase F F5 — bulk acknowledge (Issue #2254)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * BE-side cap (mirrors AdminBulkAcknowledgeWikidataCoverCommandValidator.MaxBatchSize).
+ * Larger client-side selections MUST be chunked before invoking the endpoint.
+ */
+export const BULK_ACKNOWLEDGE_MAX_BATCH = 50;
+
+/**
+ * BE-side note maxLength (mirrors AdminBulkAcknowledgeWikidataCoverCommandValidator.MaxNoteLength).
+ */
+export const BULK_ACKNOWLEDGE_NOTE_MAX_LENGTH = 500;
+
+export type BulkAcknowledgeRowOutcome = 'acked' | 'already-acked' | 'not-found' | 'wrong-state';
+
+export interface BulkAcknowledgeRow {
+  attemptId: string;
+  gameId: string | null;
+  outcome: BulkAcknowledgeRowOutcome;
+  reason: string | null;
+}
+
+export interface AdminBulkAcknowledgeResult {
+  ackedCount: number;
+  idempotentNoOpCount: number;
+  notFoundCount: number;
+  rows: BulkAcknowledgeRow[];
+}
+
+/**
+ * Bulk-acknowledge dead-letter attempts. Optional note is log-only on the BE
+ * (DEC-F-4); not persisted on the attempt row.
+ */
+export async function bulkAcknowledgeDeadLetters(
+  attemptIds: string[],
+  note: string | null
+): Promise<AdminBulkAcknowledgeResult> {
+  const response = await fetch(`${ENDPOINT_BASE}/bulk-acknowledge`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ attemptIds, note }),
+  });
+  if (!response.ok) {
+    await rejectAs(response, 'Failed to bulk-acknowledge enrichments');
+  }
+  return (await response.json()) as AdminBulkAcknowledgeResult;
 }

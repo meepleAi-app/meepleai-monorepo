@@ -435,6 +435,36 @@ public class PdfDocumentTests
         document.CanRetry().Should().BeFalse(); // Can't retry completed document
     }
 
+    [Fact]
+    public void TransitionTo_Ready_FromIndexing_RaisesExactlyTwoDomainEvents_Tripwire()
+    {
+        // TRIPWIRE (#2284): pins the event count raised by PdfDocument.TransitionTo(Ready) at 2.
+        // The Ready transition raises BOTH PdfStateChangedEvent (consumed by 4 handlers:
+        // cache-invalidation, notification, metrics, auto-agent-creation) AND KbDocIndexedEvent
+        // (activity rail milestone, BE-3 #1590 B2).
+        //
+        // If a future change adds a third event to TransitionTo(Ready), this test fails and
+        // forces the developer to wire the new event into the appropriate downstream handlers
+        // before merging — preventing silent drift between domain emission and handler coverage.
+        var document = CreateDefaultDocument();
+        document.TransitionTo(PdfProcessingState.Uploading);
+        document.TransitionTo(PdfProcessingState.Extracting);
+        document.TransitionTo(PdfProcessingState.Chunking);
+        document.TransitionTo(PdfProcessingState.Embedding);
+        document.TransitionTo(PdfProcessingState.Indexing);
+        document.ClearDomainEvents();
+
+        document.TransitionTo(PdfProcessingState.Ready);
+
+        document.DomainEvents.Should().HaveCount(2,
+            because: "PdfDocument.TransitionTo(Ready) is documented to raise exactly " +
+                     "PdfStateChangedEvent + KbDocIndexedEvent. Adding a third event without " +
+                     "wiring its handlers breaks the structural-dispatch contract used by " +
+                     "FinalizeProcessingAsync (#2284 PR C and follow-ups).");
+        document.DomainEvents.Should().ContainSingle(e => e is PdfStateChangedEvent);
+        document.DomainEvents.Should().ContainSingle(e => e is KbDocIndexedEvent);
+    }
+
     #region BaseDocumentId Tests (Issue #5444)
 
     [Fact]

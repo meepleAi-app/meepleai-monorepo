@@ -7,6 +7,7 @@ using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using MediatR;
 using Microsoft.Extensions.Time.Testing;
@@ -29,16 +30,18 @@ public class AdvanceLiveSessionPhaseCommandHandlerTests
     private readonly Mock<ILiveSessionRepository> _repositoryMock;
     private readonly Mock<IMediator> _mediatorMock;
     private readonly FakeTimeProvider _timeProvider;
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
 
     public AdvanceLiveSessionPhaseCommandHandlerTests()
     {
         _repositoryMock = new Mock<ILiveSessionRepository>();
         _mediatorMock = new Mock<IMediator>();
         _timeProvider = new FakeTimeProvider(new DateTimeOffset(2026, 2, 19, 14, 0, 0, TimeSpan.Zero));
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
     }
 
     private AdvanceLiveSessionPhaseCommandHandler CreateHandler() =>
-        new(_repositoryMock.Object, _timeProvider, _mediatorMock.Object);
+        new(_repositoryMock.Object, _timeProvider, _mediatorMock.Object, _unitOfWorkMock.Object);
 
     private LiveGameSession CreateStartedSessionWithPhases(
         Guid? sessionId = null, string[]? phases = null)
@@ -182,15 +185,17 @@ public class ConfigureLiveSessionPhasesCommandHandlerTests
 {
     private readonly Mock<ILiveSessionRepository> _repositoryMock;
     private readonly FakeTimeProvider _timeProvider;
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
 
     public ConfigureLiveSessionPhasesCommandHandlerTests()
     {
         _repositoryMock = new Mock<ILiveSessionRepository>();
         _timeProvider = new FakeTimeProvider(new DateTimeOffset(2026, 2, 19, 14, 0, 0, TimeSpan.Zero));
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
     }
 
     private ConfigureLiveSessionPhasesCommandHandler CreateHandler() =>
-        new(_repositoryMock.Object, _timeProvider);
+        new(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
 
     private LiveGameSession CreateStartedSession(Guid? sessionId = null)
     {
@@ -281,16 +286,18 @@ public class TriggerEventSnapshotCommandHandlerTests
     private readonly Mock<ILiveSessionRepository> _repositoryMock;
     private readonly Mock<IMediator> _mediatorMock;
     private readonly FakeTimeProvider _timeProvider;
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
 
     public TriggerEventSnapshotCommandHandlerTests()
     {
         _repositoryMock = new Mock<ILiveSessionRepository>();
         _mediatorMock = new Mock<IMediator>();
         _timeProvider = new FakeTimeProvider(new DateTimeOffset(2026, 2, 19, 14, 0, 0, TimeSpan.Zero));
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
     }
 
     private TriggerEventSnapshotCommandHandler CreateHandler() =>
-        new(_repositoryMock.Object, _mediatorMock.Object, _timeProvider);
+        new(_repositoryMock.Object, _mediatorMock.Object, _timeProvider, _unitOfWorkMock.Object);
 
     private LiveGameSession CreateStartedSessionWithConfig(
         Guid? sessionId = null, SnapshotTriggerConfig? config = null)

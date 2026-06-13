@@ -873,10 +873,13 @@ public sealed class GlobalKbSearchEndpointTests : IAsyncLifetime
                 Title = "Public RAG Game",
                 Description = "Publicly indexed",
                 YearPublished = 2022,
-                MinPlayers = 2, MaxPlayers = 4,
-                PlayingTimeMinutes = 60, MinAge = 10,
+                MinPlayers = 2,
+                MaxPlayers = 4,
+                PlayingTimeMinutes = 60,
+                MinAge = 10,
                 IsRagPublic = true,
-                CreatedBy = seedUserId, CreatedAt = DateTime.UtcNow
+                CreatedBy = seedUserId,
+                CreatedAt = DateTime.UtcNow
             },
             new SharedGameEntity
             {
@@ -884,10 +887,13 @@ public sealed class GlobalKbSearchEndpointTests : IAsyncLifetime
                 Title = "Alice Private Game",
                 Description = "Alice-owned private game",
                 YearPublished = 2022,
-                MinPlayers = 2, MaxPlayers = 4,
-                PlayingTimeMinutes = 60, MinAge = 10,
+                MinPlayers = 2,
+                MaxPlayers = 4,
+                PlayingTimeMinutes = 60,
+                MinAge = 10,
                 IsRagPublic = false,
-                CreatedBy = seedUserId, CreatedAt = DateTime.UtcNow
+                CreatedBy = seedUserId,
+                CreatedAt = DateTime.UtcNow
             },
             new SharedGameEntity
             {
@@ -895,10 +901,13 @@ public sealed class GlobalKbSearchEndpointTests : IAsyncLifetime
                 Title = "Bob Private Game",
                 Description = "Bob-owned private game",
                 YearPublished = 2022,
-                MinPlayers = 2, MaxPlayers = 4,
-                PlayingTimeMinutes = 60, MinAge = 10,
+                MinPlayers = 2,
+                MaxPlayers = 4,
+                PlayingTimeMinutes = 60,
+                MinAge = 10,
                 IsRagPublic = false,
-                CreatedBy = seedUserId, CreatedAt = DateTime.UtcNow
+                CreatedBy = seedUserId,
+                CreatedAt = DateTime.UtcNow
             }
         );
 

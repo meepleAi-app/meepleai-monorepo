@@ -38,6 +38,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
     // Phase D4 (gamebook multi-book): optional role classifier for tagging chunks at ingest.
     // Optional so unit tests that pre-date Phase D continue to compile without updates.
     private readonly IRoleClassifierService? _roleClassifier;
+    private readonly IPdfIndexingPipeline _pipeline;
 
     public IndexPdfCommandHandler(
         MeepleAiDbContext db,
@@ -46,6 +47,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         ILogger<IndexPdfCommandHandler> logger,
         IOptions<IndexingSettings> indexingSettings,
         ISemanticResponseCache semanticCache,
+        IPdfIndexingPipeline pipeline,
         TimeProvider? timeProvider = null,
         IRoleClassifierService? roleClassifier = null)
     {
@@ -55,6 +57,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _indexingSettings = indexingSettings?.Value ?? throw new ArgumentNullException(nameof(indexingSettings));
         _semanticCache = semanticCache ?? throw new ArgumentNullException(nameof(semanticCache));
+        _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
         _timeProvider = timeProvider ?? TimeProvider.System;
         _roleClassifier = roleClassifier;
     }
@@ -114,6 +117,19 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                 return await MarkIndexingFailedAsync(vectorDoc!, "Vector indexing failed", PdfIndexingErrorCode.VectorIndexingFailed, cancellationToken).ConfigureAwait(false);
             }
 
+            // Transition VectorDocument processing → completed via the centralised pipeline
+            // (#2244 / epic #2242). The pipeline raises VectorDocumentIndexedEvent on the
+            // transition so has_knowledge_base is flipped projection-side. Replaces the
+            // inline mutation that previously lived inside IndexChunksInVectorStoreAsync.
+            await _pipeline.IndexAsync(
+                pdfDocumentId: Guid.Parse(pdfId),
+                gameId: pdf.PrivateGameId ?? pdf.SharedGameId,
+                sharedGameId: pdf.SharedGameId,
+                chunkCount: documentChunks!.Count,
+                totalCharacters: pdf.ExtractedText!.Length,
+                language: string.IsNullOrWhiteSpace(pdf.Language) ? "en" : pdf.Language,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
             // Step 4: Save text chunks to PostgreSQL for hybrid search
             // text_chunks.GameId is FK to games.Id (NOT shared_games.id) — resolve via PdfGameIdResolver.
             var chunkGameId = await PdfGameIdResolver.ResolveAsync(_db, pdf, cancellationToken).ConfigureAwait(false);
@@ -148,7 +164,11 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             return IndexingResultDto.CreateSuccess(
                 vectorDoc!.Id.ToString(),
                 documentChunks.Count,
-                vectorDoc.IndexedAt!.Value);
+                // IndexedAt timestamp is the moment "this call" completed indexing.
+                // The pipeline persists its own IndexedAt to the DB; we emit ours
+                // to the DTO so callers don't have to re-read after we just
+                // wrote — keeps the return self-contained.
+                _timeProvider.GetUtcNow().UtcDateTime);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out
@@ -438,12 +458,11 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             }
         }
 
-        // Update VectorDocument
-        vectorDoc.IndexingStatus = "completed";
-        vectorDoc.ChunkCount = documentChunks.Count;
-        vectorDoc.TotalCharacters = extractedText.Length;
-        vectorDoc.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
-        vectorDoc.IndexingError = null;
+        // VectorDocument transition processing → completed is centralised in
+        // IPdfIndexingPipeline (called by the Handle method right after this
+        // function returns true). Kept out of here so the domain event
+        // (VectorDocumentIndexedEvent) is raised from a single code path —
+        // see epic #2242 / #2244.
 
         _logger.LogInformation("✅ [REINDEX] PDF {PdfId}: {Count} chunks indexed in pgvector", pdfId, documentChunks.Count);
         return true;

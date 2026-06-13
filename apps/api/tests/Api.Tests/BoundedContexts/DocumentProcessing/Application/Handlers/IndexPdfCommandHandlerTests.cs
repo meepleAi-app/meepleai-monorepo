@@ -69,7 +69,8 @@ public class IndexPdfCommandHandlerTests
             embeddingServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>());
 
         // Assert
         handler.Should().NotBeNull();
@@ -91,6 +92,7 @@ public class IndexPdfCommandHandlerTests
             loggerMock.Object,
             indexingSettingsMock.Object,
             Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>(),
             timeProvider);
 
         // Assert
@@ -112,6 +114,7 @@ public class IndexPdfCommandHandlerTests
             loggerMock.Object,
             indexingSettingsMock.Object,
             Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>(),
             null);
 
         // Assert
@@ -265,7 +268,8 @@ public class IndexPdfCommandHandlerTests
             embeddingServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>());
 
         var command = new IndexPdfCommand(pdfId.ToString());
 
@@ -328,7 +332,8 @@ public class IndexPdfCommandHandlerTests
             embeddingServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>());
 
         var command = new IndexPdfCommand(pdfId.ToString());
 
@@ -388,7 +393,8 @@ public class IndexPdfCommandHandlerTests
             embeddingServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>());
 
         var command = new IndexPdfCommand(pdfId.ToString());
 
@@ -430,7 +436,8 @@ public class IndexPdfCommandHandlerTests
             embeddingServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>());
 
         var command = new IndexPdfCommand(pdfId.ToString());
 
@@ -487,7 +494,8 @@ public class IndexPdfCommandHandlerTests
         var handler = new IndexPdfCommandHandler(
             context, chunkingServiceMock.Object, embeddingServiceMock.Object,
             loggerMock.Object, indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>());
 
         // Act
         var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
@@ -523,7 +531,8 @@ public class IndexPdfCommandHandlerTests
         var handler = new IndexPdfCommandHandler(
             context, chunkingServiceMock.Object, embeddingServiceMock.Object,
             loggerMock.Object, indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>());
 
         // Act
         var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
@@ -559,7 +568,8 @@ public class IndexPdfCommandHandlerTests
         var handler = new IndexPdfCommandHandler(
             context, chunkingServiceMock.Object, embeddingServiceMock.Object,
             loggerMock.Object, indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>());
 
         // Act
         var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
@@ -651,7 +661,8 @@ public class IndexPdfCommandHandlerTests
         var handler = new IndexPdfCommandHandler(
             context, chunkingServiceMock.Object, embeddingServiceMock.Object,
             loggerMock.Object, indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>());
 
         // Act
         var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
@@ -718,7 +729,8 @@ public class IndexPdfCommandHandlerTests
         var handler = new IndexPdfCommandHandler(
             context, chunkingServiceMock.Object, embeddingServiceMock.Object,
             loggerMock.Object, indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>());
 
         // Act
         var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);

@@ -12,16 +12,14 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatal
 /// <param name="GameId">Target shared-game id.</param>
 /// <param name="ForceRefresh">When <see langword="true"/>, the M8 90-day freshness window is bypassed.</param>
 /// <param name="TriggeredByUserId">
-/// Admin user id captured ONLY in the structured log line emitted by the handler
-/// (<c>AdminEnrichWikidataCover: triggered by user {UserId} for game {GameId}</c>) —
-/// NOT persisted to the <c>WikidataCoverEnrichmentAttempt</c> row. This is by
-/// design for M12 scope: attempt rows are record-of-fact about the enrichment
-/// pipeline outcome (success / skipped / failed / dead-letter) and remain
-/// indistinguishable between scheduler-triggered and admin-triggered runs so
-/// the audit trail stays uniform. If the M13 admin dead-letter page needs to
-/// show "triggered by admin X", it must source that information from the
-/// structured log stream or a separate trigger-audit table introduced in M13,
-/// not from <c>WikidataCoverEnrichmentAttempt</c>.
+/// Admin user id of the operator pressing the trigger button. Captured in the
+/// structured log line emitted by the handler (<c>AdminEnrichWikidataCover:
+/// triggered by user {UserId} for game {GameId}</c>) AND threaded into the
+/// runner so it is persisted on the new
+/// <c>WikidataCoverEnrichmentAttempt.TriggeredByAdminUserId</c> column —
+/// surfacing "triggered by admin X" on the F6 timeline drawer + F4 SSE payload
+/// without a separate audit table. Issue #1823 Phase F F6 (was log-only in M12,
+/// promoted to persisted in F6 per #2255 carry-forward).
 /// </param>
 internal sealed record AdminEnrichWikidataCoverCommand(
     Guid GameId,

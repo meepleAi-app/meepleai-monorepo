@@ -55,7 +55,7 @@ public class WikidataCoverEnrichmentRunnerTests
             .Callback<WikidataCoverEnrichmentAttempt, CancellationToken>((a, _) => recorded = a)
             .Returns(Task.CompletedTask);
 
-        var result = await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, default);
+        var result = await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, cancellationToken: default);
 
         result.Should().BeOfType<EnrichCatalogCoverResult.Success>();
         recorded.Should().NotBeNull();
@@ -81,7 +81,7 @@ public class WikidataCoverEnrichmentRunnerTests
             .Callback<WikidataCoverEnrichmentAttempt, CancellationToken>((a, _) => recorded = a)
             .Returns(Task.CompletedTask);
 
-        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, default);
+        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, cancellationToken: default);
 
         recorded!.Outcome.Should().Be(WikidataCoverEnrichmentOutcome.Skipped);
         recorded.Reason.Should().Be(EnrichCatalogCoverCommandHandler.SkipReasonQidMissing);
@@ -104,7 +104,7 @@ public class WikidataCoverEnrichmentRunnerTests
             .Callback<WikidataCoverEnrichmentAttempt, CancellationToken>((a, _) => recorded = a)
             .Returns(Task.CompletedTask);
 
-        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, default);
+        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, cancellationToken: default);
 
         recorded!.Outcome.Should().Be(WikidataCoverEnrichmentOutcome.Failed);
         recorded.RetryCount.Should().Be(1);
@@ -131,7 +131,7 @@ public class WikidataCoverEnrichmentRunnerTests
             .Callback<WikidataCoverEnrichmentAttempt, CancellationToken>((a, _) => recorded = a)
             .Returns(Task.CompletedTask);
 
-        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, default);
+        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, cancellationToken: default);
 
         recorded!.Outcome.Should().Be(WikidataCoverEnrichmentOutcome.DeadLetter);
         recorded.DeadLetteredAt.Should().Be(FixedNow);
@@ -156,7 +156,7 @@ public class WikidataCoverEnrichmentRunnerTests
             .Callback<WikidataCoverEnrichmentAttempt, CancellationToken>((a, _) => recorded = a)
             .Returns(Task.CompletedTask);
 
-        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, default);
+        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, cancellationToken: default);
 
         recorded!.Outcome.Should().Be(WikidataCoverEnrichmentOutcome.DeadLetter);
         recorded.RetryCount.Should().Be(0, "no retries attempted for corrupted-image failure");
@@ -178,7 +178,7 @@ public class WikidataCoverEnrichmentRunnerTests
         _attempts.Setup(r => r.AddAsync(It.IsAny<WikidataCoverEnrichmentAttempt>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: true, default);
+        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: true, cancellationToken: default);
 
         sent.Should().NotBeNull();
         sent!.GameId.Should().Be(gameId);
@@ -208,7 +208,7 @@ public class WikidataCoverEnrichmentRunnerTests
             .Callback<WikidataCoverEnrichmentAttempt, CancellationToken>((a, _) => recorded = a)
             .Returns(Task.CompletedTask);
 
-        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, default);
+        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, cancellationToken: default);
 
         recorded!.RetryCount.Should().Be(2,
             "circuit-open is an upstream-infra trip — the runner MUST NOT burn another DEC-3j retry budget slot");
@@ -228,7 +228,7 @@ public class WikidataCoverEnrichmentRunnerTests
         _attempts.Setup(r => r.AddAsync(It.IsAny<WikidataCoverEnrichmentAttempt>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var result = await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, default);
+        var result = await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, cancellationToken: default);
 
         result.Should().BeSameAs(expected,
             "the runner returns the M8 result verbatim so admin callers can map it to a DTO");
@@ -253,7 +253,7 @@ public class WikidataCoverEnrichmentRunnerTests
         // Anchor the gauge so the assertion is independent of cross-test leakage.
         MeepleAiMetrics.SetWikidataDeadLetterCount(5);
 
-        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, default);
+        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, cancellationToken: default);
 
         ReadGauge(MeepleAiMetrics.WikidataDeadLetterCount).Should().Be(6,
             "F1 hybrid update: runner increments by 1 per persisted DeadLetter attempt");
@@ -277,7 +277,7 @@ public class WikidataCoverEnrichmentRunnerTests
         _attempts.Setup(r => r.AddAsync(It.IsAny<WikidataCoverEnrichmentAttempt>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, default);
+        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, cancellationToken: default);
 
         _broadcaster.Verify(b => b.Publish(It.Is<WikidataEnrichmentEvent>(
                 e => e.SharedGameId == gameId
@@ -304,10 +304,100 @@ public class WikidataCoverEnrichmentRunnerTests
 
         MeepleAiMetrics.SetWikidataDeadLetterCount(7);
 
-        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, default);
+        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, cancellationToken: default);
 
         ReadGauge(MeepleAiMetrics.WikidataDeadLetterCount).Should().Be(7,
             "F1: Failed-with-retry is not a terminal — gauge MUST stay anchored at the previous value");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // F6 — TriggeredByAdminUserId persistence + SSE payload (#1823 Phase F / #2255)
+    // ──────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task EnrichAndRecordAsync_NullAdminId_PersistsNullOnAttempt()
+    {
+        // F6 #1823 Phase F: the M9 scheduler path passes a null trigger id;
+        // the runner MUST forward that null down to the factory so the attempt
+        // row preserves the "scheduler-authored" trigger source.
+        var gameId = Guid.NewGuid();
+
+        _attempts.Setup(r => r.GetLatestBySharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((WikidataCoverEnrichmentAttempt?)null);
+        _mediator.Setup(m => m.Send(It.IsAny<EnrichCatalogCoverCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EnrichCatalogCoverResult.Success("k", "CC0", null, "u"));
+
+        WikidataCoverEnrichmentAttempt? recorded = null;
+        _attempts.Setup(r => r.AddAsync(It.IsAny<WikidataCoverEnrichmentAttempt>(), It.IsAny<CancellationToken>()))
+            .Callback<WikidataCoverEnrichmentAttempt, CancellationToken>((a, _) => recorded = a)
+            .Returns(Task.CompletedTask);
+
+        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, triggeredByAdminUserId: null, default);
+
+        recorded.Should().NotBeNull();
+        recorded!.TriggeredByAdminUserId.Should().BeNull(
+            "scheduler-authored attempts MUST persist a null trigger source so the F6 timeline drawer can distinguish them from manual admin dispatches");
+    }
+
+    [Fact]
+    public async Task EnrichAndRecordAsync_AdminTriggered_PersistsAdminIdOnAttempt()
+    {
+        // F6 #1823 Phase F: M12 single-trigger + F2 bulk-retry paths thread the
+        // admin user id into the runner. The runner MUST stamp it onto the
+        // attempt row via the new factory parameter (which has a default null
+        // for backward compatibility with non-admin paths).
+        var adminId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+
+        _attempts.Setup(r => r.GetLatestBySharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((WikidataCoverEnrichmentAttempt?)null);
+        _mediator.Setup(m => m.Send(It.IsAny<EnrichCatalogCoverCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EnrichCatalogCoverResult.Success("k", "CC0", null, "u"));
+
+        WikidataCoverEnrichmentAttempt? recorded = null;
+        _attempts.Setup(r => r.AddAsync(It.IsAny<WikidataCoverEnrichmentAttempt>(), It.IsAny<CancellationToken>()))
+            .Callback<WikidataCoverEnrichmentAttempt, CancellationToken>((a, _) => recorded = a)
+            .Returns(Task.CompletedTask);
+
+        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, triggeredByAdminUserId: adminId, default);
+
+        recorded.Should().NotBeNull();
+        recorded!.TriggeredByAdminUserId.Should().Be(adminId,
+            "admin-triggered attempts MUST persist the operator id so the F6 timeline drawer can show 'triggered by admin X'");
+    }
+
+    [Fact]
+    public async Task EnrichAndRecordAsync_PublishesEventWithTriggeredByAdmin()
+    {
+        // F6 #1823 Phase F: the SSE broadcaster payload MUST include the new
+        // TriggeredByAdminUserId field so subscribers can update the row inline
+        // without a round-trip to the timeline query. The full name is NOT
+        // resolved here (would require a DB LEFT JOIN per publish, incompatible
+        // with the DEC-3e scheduler tick budget) — it is filled in by the F6
+        // query path. Asserting null guards against accidental future eager
+        // resolution that could regress the broadcast latency contract.
+        var adminId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+
+        _attempts.Setup(r => r.GetLatestBySharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((WikidataCoverEnrichmentAttempt?)null);
+        _mediator.Setup(m => m.Send(It.IsAny<EnrichCatalogCoverCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EnrichCatalogCoverResult.Failed(
+                EnrichCatalogCoverCommandHandler.FailReasonR2Upload, "503"));
+        _attempts.Setup(r => r.AddAsync(It.IsAny<WikidataCoverEnrichmentAttempt>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        WikidataEnrichmentEvent? published = null;
+        _broadcaster.Setup(b => b.Publish(It.IsAny<WikidataEnrichmentEvent>()))
+            .Callback<WikidataEnrichmentEvent>(e => published = e);
+
+        await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, triggeredByAdminUserId: adminId, default);
+
+        published.Should().NotBeNull();
+        published!.TriggeredByAdminUserId.Should().Be(adminId,
+            "F6: the SSE payload MUST carry the trigger id so the admin page can update the row inline");
+        published.TriggeredByAdminFullName.Should().BeNull(
+            "F6: the broadcaster MUST NOT resolve the full name — that is the responsibility of the F6 timeline query (LEFT JOIN per row)");
     }
 
     private static int ReadGauge(System.Diagnostics.Metrics.ObservableGauge<int> gauge)

@@ -141,7 +141,16 @@ public sealed class WikidataCoverEnrichmentJob : IJob
                 // Scheduler always uses forceRefresh=false — freshness window
                 // honoured. The admin trigger endpoint uses forceRefresh=true
                 // for dogfood re-runs.
-                await runner.EnrichAndRecordAsync(gameId, forceRefresh: false, ct).ConfigureAwait(false);
+                //
+                // Issue #1823 Phase F F6: the scheduler tick has no admin actor,
+                // so triggeredByAdminUserId stays at its default null — attempt
+                // rows authored by the cron are persisted with a null trigger
+                // source so the admin UI can distinguish them from manual M12/F2
+                // dispatches. Named arg avoids silent positional drift if the
+                // runner signature grows in future.
+                await runner
+                    .EnrichAndRecordAsync(gameId, forceRefresh: false, cancellationToken: ct)
+                    .ConfigureAwait(false);
                 processed++;
             }
             // OperationCanceledException is intentionally allowed to propagate

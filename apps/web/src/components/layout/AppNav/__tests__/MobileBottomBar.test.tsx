@@ -26,7 +26,8 @@ describe('MobileBottomBar', () => {
     render(<MobileBottomBar />);
     expect(screen.getByText('Home')).toBeDefined();
     expect(screen.getByText('Libreria')).toBeDefined();
-    expect(screen.getByText('Hub')).toBeDefined();
+    // PR #2279 (#2190 nav cleanup, 2026-06-13) renamed "Hub" → "Games".
+    expect(screen.getByText('Games')).toBeDefined();
     expect(screen.getByText('Chat')).toBeDefined();
     expect(screen.getByText('Profilo')).toBeDefined();
     // The override means the dashboard tab does NOT show "Dashboard".

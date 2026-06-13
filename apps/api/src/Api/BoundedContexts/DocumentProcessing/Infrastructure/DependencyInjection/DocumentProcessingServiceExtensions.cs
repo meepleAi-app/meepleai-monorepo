@@ -187,6 +187,10 @@ internal static class DocumentProcessingServiceExtensions
         // Issue #1831 follow-up: Register Quartz job for orphan cover recovery (daily at 03:00 UTC)
         RegisterPdfCoverOrphanRecoveryJob(services);
 
+        // Issue #2248 (epic #2242, Sub #6 Block B): periodic audit for the
+        // "Ready ⇒ HasKnowledgeBase" invariant. Runs every 10 minutes.
+        RegisterKbFlagDriftAuditJob(services);
+
         return services;
     }
 
@@ -309,6 +313,33 @@ internal static class DocumentProcessingServiceExtensions
                     .WithIntervalInSeconds(10)
                     .RepeatForever())
                 .WithDescription("Picks up and processes the next queued PDF every 10 seconds")
+            );
+        });
+    }
+
+    /// <summary>
+    /// Issue #2248 (epic #2242 Sub #6 Block B): periodic guard against the
+    /// silent-failure mode where PdfDocument.ProcessingState=Ready but
+    /// SharedGame.HasKnowledgeBase=false. Increments
+    /// <c>meepleai.pdf.indexed.no.kb.flag.total</c> for each drifted row.
+    /// SLO=0; any increment is a P1 alert.
+    /// </summary>
+    private static void RegisterKbFlagDriftAuditJob(IServiceCollection services)
+    {
+        // Only register job definition here — AddQuartzHostedService is bootstrapped
+        // once in the Administration context.
+        services.AddQuartz(q =>
+        {
+            var jobKey = new Quartz.JobKey("KbFlagDriftAuditJob", "DocumentProcessing");
+
+            q.AddJob<Api.BoundedContexts.DocumentProcessing.Application.Jobs.KbFlagDriftAuditJob>(opts =>
+                opts.WithIdentity(jobKey));
+
+            q.AddTrigger(opts => opts
+                .ForJob(jobKey)
+                .WithIdentity("KbFlagDriftAuditTrigger", "DocumentProcessing")
+                .WithCronSchedule("0 */10 * * * ?") // Every 10 minutes
+                .WithDescription("Audits Ready PDFs against SharedGame.HasKnowledgeBase invariant (#2248)")
             );
         });
     }

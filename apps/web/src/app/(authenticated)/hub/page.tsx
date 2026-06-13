@@ -1,21 +1,18 @@
 /**
- * /hub — section index. Redirects to `/hub/games` (default tab).
+ * /hub — legacy section index.
  *
- * Authenticated route (moved from `(public)` to `(authenticated)` to fix chrome
- * drift: the Hub voice in `UNIFIED_NAV_ITEMS` is `authOnly` and lives in
- * `TOP_BAR_NAV_IDS` / `BOTTOM_TAB_NAV_IDS`, but the previous public location
- * forced `PublicLayout` / `UnifiedHeader` to render on intra-section navigation,
- * causing the AppTopBar to disappear when crossing `/hub/agents` → `/hub/games`.
+ * Issue #2190 (2026-06-13): redirects directly to the canonical multi-tab hub
+ * `/games?tab=discover` (Asse D P2 #1899) instead of the retired `/hub/games`
+ * list page. The full `/hub/*` retirement is tracked by Draft 13 (Fowler).
  *
- * All three subroutes (`/hub/games`, `/hub/agents`, `/hub/toolkits`) now share
- * the same `UserShell` chrome.
- *
- * Temporary 307 (not permanent) — replaceable with a real section landing
- * (e.g. tabbed switcher) when product owns the spec.
+ * Kept as a runtime redirect (not pure next.config.js) because `/hub/agents`
+ * and `/hub/toolkits` siblings still live under `(authenticated)` and need
+ * the UserShell chrome — collapsing this to a config redirect would short-
+ * circuit chrome continuity for those siblings.
  */
 
 import { redirect } from 'next/navigation';
 
 export default function HubIndexPage(): never {
-  redirect('/hub/games');
+  redirect('/games?tab=discover');
 }

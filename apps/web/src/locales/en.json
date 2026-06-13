@@ -2188,7 +2188,7 @@
         "resultsCountTemplate": "{filtered} of {total} results"
       },
       "games": {
-        "badge": "Hub · /hub/games · Community",
+        "badge": "Games · /games · Community",
         "title": "Community games catalog",
         "subtitle": "Browse community-indexed games.",
         "kpi": {

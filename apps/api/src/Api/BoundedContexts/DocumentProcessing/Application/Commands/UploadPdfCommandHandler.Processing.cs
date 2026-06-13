@@ -41,6 +41,13 @@ internal partial class UploadPdfCommandHandler
             }
             _logger.LogInformation("✅ [PDF-DEBUG] Validation passed for {PdfId}, State: {State}", pdfId, pdfDoc.ProcessingState);
 
+            // #2284 follow-up: transition Uploading → Extracting via domain so the state
+            // machine + structural event raising stays consistent across the pipeline.
+            // (Replaces the bridge-save hack from PR C which set ProcessingState=Indexing
+            // directly via EF in FinalizeProcessingAsync.)
+            var pdfGuid = Guid.Parse(pdfId);
+            await TransitionStateAsync(scope, db, pdfGuid, PdfProcessingState.Extracting, cancellationToken).ConfigureAwait(false);
+
             // Step 1: Extract text with page tracking (20-40%)
             _logger.LogInformation("📄 [PDF-DEBUG] Step 1: Starting ExtractPdfContentAsync for {PdfId}", pdfId);
             var (extractionSuccess, fullText, extractResult) = await ExtractPdfContentAsync(
@@ -54,11 +61,15 @@ internal partial class UploadPdfCommandHandler
             }
             _logger.LogInformation("✅ [PDF-DEBUG] Extraction SUCCESS for {PdfId}: {CharCount} chars, {Pages} pages", pdfId, fullText?.Length ?? 0, extractResult?.TotalPages ?? 0);
 
+            await TransitionStateAsync(scope, db, pdfGuid, PdfProcessingState.Chunking, cancellationToken).ConfigureAwait(false);
+
             // Step 2: Chunk text with page tracking (40-60%)
             _logger.LogInformation("✂️ [PDF-DEBUG] Step 2: Starting ChunkExtractedTextAsync for {PdfId}", pdfId);
             var allDocumentChunks = await ChunkExtractedTextAsync(
                 pdfId, fullText!, extractResult!, db, scope, startTime, cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("✅ [PDF-DEBUG] Chunking SUCCESS: {ChunkCount} chunks created", allDocumentChunks.Count);
+
+            await TransitionStateAsync(scope, db, pdfGuid, PdfProcessingState.Embedding, cancellationToken).ConfigureAwait(false);
 
             // Step 3: Generate embeddings (60-80%)
             _logger.LogInformation("🧠 [PDF-DEBUG] Step 3: Starting GenerateAndValidateEmbeddingsAsync for {ChunkCount} chunks", allDocumentChunks.Count);
@@ -71,6 +82,8 @@ internal partial class UploadPdfCommandHandler
                 return;
             }
             _logger.LogInformation("✅ [PDF-DEBUG] Embeddings SUCCESS: {EmbeddingCount} vectors generated", embeddings!.Count);
+
+            await TransitionStateAsync(scope, db, pdfGuid, PdfProcessingState.Indexing, cancellationToken).ConfigureAwait(false);
 
             // Step 4: Index in pgvector (80-100%)
             _logger.LogInformation("🔍 [PDF-DEBUG] Step 4: Starting IndexInVectorStoreAsync for {PdfId}", pdfId);
@@ -763,11 +776,55 @@ internal partial class UploadPdfCommandHandler
     }
 
     /// <summary>
+    /// Transitions the PdfDocument aggregate to the target state via the domain
+    /// (PdfDocument.TransitionTo) so PdfStateChangedEvent is raised structurally and
+    /// dispatched through MediatR via the IDomainEventCollector + DbContext SaveChanges flow.
+    ///
+    /// #2284 follow-up: replaces the bridge-save hack from PR C. Called once per pipeline
+    /// step (Extracting/Chunking/Embedding/Indexing) so the state machine progresses through
+    /// every valid transition. The earlier shortcut of jumping Uploading → Indexing via direct
+    /// EF mutation tripped the state-machine guard ValidateStateTransition (PdfDocument.cs:463-468).
+    /// </summary>
+    private async Task TransitionStateAsync(
+        IServiceScope scope,
+        MeepleAiDbContext db,
+        Guid pdfGuid,
+        PdfProcessingState targetState,
+        CancellationToken cancellationToken)
+    {
+        var pdfRepo = scope.ServiceProvider.GetRequiredService<Api.BoundedContexts.DocumentProcessing.Domain.Repositories.IPdfDocumentRepository>();
+        var pdfDomain = await pdfRepo.GetByIdAsync(pdfGuid, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException(
+                $"PdfDocument {pdfGuid} not found while transitioning to {targetState}");
+
+        try
+        {
+            pdfDomain.TransitionTo(targetState);
+            await pdfRepo.UpdateAsync(pdfDomain, cancellationToken).ConfigureAwait(false);
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(UploadPdfCommandHandler),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(ex,
+                "Concurrency conflict transitioning PdfDocument {PdfId} to {State} (Category B) — admin mutation wins, pipeline aborts",
+                pdfGuid, targetState);
+            throw; // Mid-pipeline concurrency IS a regression — let outer catch handle as Failed
+        }
+    }
+
+    /// <summary>
     /// Finalizes PDF processing with completion status and quota confirmation.
     /// #2284 PR C: drives the final state transition through PdfDocument.TransitionTo(Ready)
     /// via IPdfDocumentRepository so PdfStateChangedEvent + KbDocIndexedEvent are raised
     /// structurally (via IDomainEventCollector → DbContext SaveChanges dispatcher) instead
     /// of the legacy direct EF mutation + manual scopedMediator.Publish.
+    ///
+    /// #2284 follow-up: bridge-save (Uploading → Indexing via direct EF) removed because the
+    /// pipeline now transitions through every state via TransitionStateAsync. When this method
+    /// runs the DB state is Indexing — TransitionTo(Ready) is a valid domain transition.
     /// </summary>
     private async Task FinalizeProcessingAsync(
         string pdfId,
@@ -785,35 +842,11 @@ internal partial class UploadPdfCommandHandler
 
         var pdfGuid = Guid.Parse(pdfId);
 
-        // BRIDGE-SAVE (#2284 PR C tech debt): the pipeline steps
-        // (Extracting/Chunking/Embedding/Indexing) never advance pdfDoc.ProcessingState in
-        // the DB — they only update progress tracking. As a result the DB row is still in
-        // Uploading when we reach this point, but the domain state-machine guard requires
-        // Indexing → Ready as the only valid predecessor.
-        //
-        // Bridge-save Uploading → Indexing via direct EF mutation so the domain
-        // reconstitution gives us an aggregate in the valid pre-Ready state. ProcessedAt
-        // is set here so it survives the subsequent UpdateAsync round-trip.
-        //
-        // FOLLOW-UP: migrate the pipeline's intermediate state transitions to
-        // pdfDomain.TransitionTo(<State>) calls one-by-one so this bridge becomes
-        // unnecessary and FinalizeProcessingAsync becomes a pure domain operation.
-        pdfDoc.ProcessingState = nameof(PdfProcessingState.Indexing);
+        // Set ProcessedAt on the EF entity so it survives the upcoming UpdateAsync (mapper
+        // round-trip preserves it). The state transition is handled by TransitionTo(Ready)
+        // below — no bridge save needed because the pipeline progressed through Indexing
+        // via TransitionStateAsync.
         pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-        try
-        {
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (DbUpdateConcurrencyException ex)
-        {
-            MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                nameof(UploadPdfCommandHandler),
-                MeepleAiMetrics.PdfConcurrencyCategories.B);
-            _logger.LogWarning(ex,
-                "Concurrency conflict on PdfDocument {PdfId} (bridge save to Indexing) in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                pdfId, nameof(UploadPdfCommandHandler));
-            return; // CRITICAL: do not throw — background task must see success
-        }
 
         // Load aggregate, call TransitionTo(Ready) so PdfStateChangedEvent + KbDocIndexedEvent
         // are raised structurally, then persist via repository so IDomainEventCollector picks

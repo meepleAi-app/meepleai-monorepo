@@ -3353,7 +3353,9 @@
           "continueLive": "Vai alla sessione live"
         },
         "notFound": {
-          "title": "Sessione non trovata",
+          "title": "Nessuna sessione attiva",
+          "description": "La sessione richiesta non esiste o non è ancora stata creata.",
+          "newSession": "Inizia nuova sessione",
           "backToSessions": "Torna alle sessioni"
         }
       }

@@ -25,7 +25,10 @@ import { CatalogSearchStep } from '../CatalogSearchStep';
 
 vi.mock('@/hooks/queries', () => ({
   useSharedGames: vi.fn(),
-  useGameInLibraryStatus: vi.fn(),
+}));
+
+vi.mock('@/hooks/queries/useBatchGameStatus', () => ({
+  useBatchGameStatus: vi.fn(),
 }));
 
 vi.mock('@/hooks/queries/useLibrary', () => ({
@@ -65,13 +68,29 @@ vi.mock('next/image', () => ({
   ),
 }));
 
-import { useSharedGames, useGameInLibraryStatus } from '@/hooks/queries';
+import { useSharedGames } from '@/hooks/queries';
+import { useBatchGameStatus } from '@/hooks/queries/useBatchGameStatus';
 import { useAddGameToLibrary } from '@/hooks/queries/useLibrary';
 import { toast } from '@/components/layout';
 
 const mockUseSharedGames = useSharedGames as Mock;
-const mockUseGameInLibraryStatus = useGameInLibraryStatus as Mock;
+const mockUseBatchGameStatus = useBatchGameStatus as Mock;
 const mockUseAddGameToLibrary = useAddGameToLibrary as Mock;
+
+// #2275 helper — build the {results, totalChecked} shape returned by
+// useBatchGameStatus from a map of `{gameId: inLibrary?}`. Defaults
+// isFavorite/isOwned to false (tests don't currently exercise those).
+function makeBatchStatus(map: Record<string, boolean> = {}) {
+  const ids = Object.keys(map);
+  return {
+    data: {
+      results: Object.fromEntries(
+        ids.map(id => [id, { inLibrary: map[id], isFavorite: false, isOwned: false }])
+      ),
+      totalChecked: ids.length,
+    },
+  };
+}
 
 // ── Shared fixtures ────────────────────────────────────────────────────────────
 
@@ -154,7 +173,7 @@ describe('CatalogSearchStep', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseSharedGames.mockReturnValue({ data: makeGamesData(), isLoading: false });
-    mockUseGameInLibraryStatus.mockReturnValue({ data: { inLibrary: false } });
+    mockUseBatchGameStatus.mockReturnValue(makeBatchStatus());
     mockUseAddGameToLibrary.mockReturnValue({ mutateAsync });
   });
 
@@ -328,9 +347,7 @@ describe('CatalogSearchStep', () => {
 
   describe('Already in library', () => {
     it('disables Select button for games already in library', () => {
-      mockUseGameInLibraryStatus.mockImplementation((gameId: string) => ({
-        data: { inLibrary: gameId === 'g1' },
-      }));
+      mockUseBatchGameStatus.mockReturnValue(makeBatchStatus({ g1: true, g2: false }));
       renderStep();
 
       expect(screen.getByTestId('catalog-card-g1-select-btn')).toBeDisabled();
@@ -338,16 +355,14 @@ describe('CatalogSearchStep', () => {
     });
 
     it('shows "Already in library" button label for in-library games', () => {
-      mockUseGameInLibraryStatus.mockReturnValue({ data: { inLibrary: true } });
+      mockUseBatchGameStatus.mockReturnValue(makeBatchStatus({ g1: true, g2: true }));
       renderStep();
 
       expect(screen.getAllByText('Already in library').length).toBeGreaterThan(0);
     });
 
     it('shows "In library" badge on in-library cards', () => {
-      mockUseGameInLibraryStatus.mockImplementation((gameId: string) => ({
-        data: { inLibrary: gameId === 'g1' },
-      }));
+      mockUseBatchGameStatus.mockReturnValue(makeBatchStatus({ g1: true, g2: false }));
       renderStep();
 
       expect(screen.getByTestId('catalog-card-g1-in-library-badge')).toBeInTheDocument();
@@ -361,9 +376,7 @@ describe('CatalogSearchStep', () => {
     // admin-mockups/design_files/sp4-add-game-drawer.jsx:506-541.
     describe('Blocked: already in library', () => {
       beforeEach(() => {
-        mockUseGameInLibraryStatus.mockImplementation((gameId: string) => ({
-          data: { inLibrary: gameId === 'g1' },
-        }));
+        mockUseBatchGameStatus.mockReturnValue(makeBatchStatus({ g1: true, g2: false }));
       });
 
       it('does not show alert by default before any click', () => {

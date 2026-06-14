@@ -37,6 +37,9 @@ internal sealed class WikidataCoverEnrichmentAttemptRepository
             RetryCount = attempt.RetryCount,
             NextRetryAt = attempt.NextRetryAt,
             DeadLetteredAt = attempt.DeadLetteredAt,
+            AcknowledgedAt = attempt.AcknowledgedAt,
+            AcknowledgedBy = attempt.AcknowledgedBy,
+            TriggeredByAdminUserId = attempt.TriggeredByAdminUserId,
         }, cancellationToken).ConfigureAwait(false);
 
         CollectDomainEvents(attempt);
@@ -143,6 +146,7 @@ internal sealed class WikidataCoverEnrichmentAttemptRepository
         int skip,
         int take,
         string? reasonFilter,
+        bool includeAcknowledged,
         CancellationToken cancellationToken = default)
     {
         if (skip < 0) skip = 0;
@@ -155,6 +159,16 @@ internal sealed class WikidataCoverEnrichmentAttemptRepository
             from a in DbContext.WikidataCoverEnrichmentAttempts.AsNoTracking()
             where a.DeadLetteredAt != null && a.Outcome == DeadLetterOutcome
             select a;
+
+        // Phase F (#2254) — default view hides acknowledged rows so operators
+        // see only open work. Partial index ix_wikidata_cover_attempts_acknowledged_at
+        // (acknowledged_at IS NOT NULL) is the inverse predicate used by the
+        // "show acked" toggle; the default !includeAcknowledged path uses the
+        // existing ix_wikidata_cover_attempts_dead_letter for the scan.
+        if (!includeAcknowledged)
+        {
+            query = query.Where(a => a.AcknowledgedAt == null);
+        }
 
         if (!string.IsNullOrWhiteSpace(reasonFilter))
         {
@@ -178,11 +192,22 @@ internal sealed class WikidataCoverEnrichmentAttemptRepository
         // FE paginator (totalCount > items.Count). LEFT-join idiom with a
         // fallback string also defends against an orphaned FK on a
         // hard-deleted game (cascade should prevent it, but defensive).
+        //
+        // Phase F adds two further LEFT JOINs on Users to surface DisplayName
+        // for the ack admin (F5) and the trigger admin (F6). LEFT JOIN (vs
+        // INNER) defends against a hard-deleted user account: row survives,
+        // FullName field is null.
         var pageQuery =
             from a in query.OrderByDescending(x => x.DeadLetteredAt).Skip(skip).Take(take)
             join sg in DbContext.SharedGames.AsNoTracking().IgnoreQueryFilters()
                 on a.SharedGameId equals sg.Id into sgs
             from sg in sgs.DefaultIfEmpty()
+            join ackUser in DbContext.Users.AsNoTracking()
+                on a.AcknowledgedBy equals ackUser.Id into ackUsers
+            from ackUser in ackUsers.DefaultIfEmpty()
+            join trgUser in DbContext.Users.AsNoTracking()
+                on a.TriggeredByAdminUserId equals trgUser.Id into trgUsers
+            from trgUser in trgUsers.DefaultIfEmpty()
             select new DeadLetterRow(
                 a.Id,
                 a.SharedGameId,
@@ -191,7 +216,12 @@ internal sealed class WikidataCoverEnrichmentAttemptRepository
                 a.DeadLetteredAt!.Value,
                 a.Reason,
                 a.Details,
-                a.RetryCount);
+                a.RetryCount,
+                a.AcknowledgedAt,
+                a.AcknowledgedBy,
+                ackUser != null ? ackUser.DisplayName : null,
+                a.TriggeredByAdminUserId,
+                trgUser != null ? trgUser.DisplayName : null);
 
         var items = await pageQuery
             .ToListAsync(cancellationToken)
@@ -226,22 +256,99 @@ internal sealed class WikidataCoverEnrichmentAttemptRepository
         return rows.ToDictionary(r => r.Id, r => r.SharedGameId);
     }
 
-    public async Task<IReadOnlyList<WikidataCoverEnrichmentAttempt>> GetAttemptsByGameIdAsync(
+    public async Task<IReadOnlyList<WikidataAttemptTimelineRow>> GetAttemptsByGameIdAsync(
         Guid sharedGameId,
         int limit,
         CancellationToken cancellationToken = default)
     {
         limit = Math.Clamp(limit, 1, 200);
 
-        var entities = await DbContext.WikidataCoverEnrichmentAttempts
-            .AsNoTracking()
-            .Where(a => a.SharedGameId == sharedGameId)
-            .OrderByDescending(a => a.AttemptedAt)
+        // Phase F (#2255) — LEFT JOIN on Users surfaces the F6 admin
+        // attribution alongside the existing pipeline fields. The ORDER BY
+        // sits BEFORE the JOIN clause in the LINQ tree so EF translates it as
+        // a SELECT ... ORDER BY ... LIMIT subquery feeding the join, which
+        // keeps the ix_wikidata_cover_attempts_game_latest composite index
+        // covering. The .Take() applied at the very end of the chain caps the
+        // post-join row count.
+        var query =
+            from a in DbContext.WikidataCoverEnrichmentAttempts.AsNoTracking()
+            where a.SharedGameId == sharedGameId
+            orderby a.AttemptedAt descending
+            join u in DbContext.Users.AsNoTracking()
+                on a.TriggeredByAdminUserId equals u.Id into us
+            from u in us.DefaultIfEmpty()
+            select new WikidataAttemptTimelineRow(
+                a.Id,
+                a.AttemptedAt,
+                (WikidataCoverEnrichmentOutcome)a.Outcome,
+                a.Reason,
+                a.Details,
+                a.RetryCount,
+                a.NextRetryAt,
+                a.DeadLetteredAt,
+                a.TriggeredByAdminUserId,
+                u != null ? u.DisplayName : null);
+
+        return await query
             .Take(limit)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+    }
 
-        return entities.Select(Map).ToList();
+    public async Task<IReadOnlyDictionary<Guid, WikidataCoverEnrichmentAttempt>> GetByIdsAsync(
+        IReadOnlyCollection<Guid> attemptIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(attemptIds);
+
+        if (attemptIds.Count == 0)
+        {
+            return new Dictionary<Guid, WikidataCoverEnrichmentAttempt>();
+        }
+
+        // Defensive cap mirroring the F5 validator MaxBatchSize (50) — same
+        // budget as the F2 bulk-retry endpoint. EF Core translates a Contains
+        // against a parameterized list into a SARGable WHERE id = ANY(@p) on
+        // PostgreSQL. NOT AsNoTracking() because the caller will mutate the
+        // hydrated aggregate via Acknowledge() and persist via UpdateAsync().
+        var ids = attemptIds.Distinct().Take(50).ToArray();
+
+        var entities = await DbContext.WikidataCoverEnrichmentAttempts
+            .Where(a => ids.Contains(a.Id))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entities.ToDictionary(e => e.Id, Map);
+    }
+
+    public async Task UpdateAsync(
+        WikidataCoverEnrichmentAttempt attempt,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(attempt);
+
+        // AsTracking() override: DbContext default is QueryTrackingBehavior.NoTracking
+        // (PERF-06 — see InfrastructureServiceExtensions). Without an explicit
+        // .AsTracking() the loaded entity is NOT registered with the change
+        // tracker, so the subsequent property assignment silently no-ops and
+        // SaveChangesAsync emits no UPDATE. Caught by F5 integration tests
+        // (handler-only mock tests cannot reproduce the global tracking
+        // default).
+        var entity = await DbContext.WikidataCoverEnrichmentAttempts
+            .AsTracking()
+            .FirstOrDefaultAsync(e => e.Id == attempt.Id, cancellationToken)
+            .ConfigureAwait(false)
+            ?? throw new InvalidOperationException(
+                $"WikidataCoverEnrichmentAttempt {attempt.Id} not found for update.");
+
+        // Only ack metadata is mutable per the record-of-fact pattern on the
+        // aggregate (Acknowledge is the single mutator). Other fields stay
+        // frozen — if a caller hands us a divergent aggregate it's a bug, not
+        // a silent overwrite we want to perform.
+        entity.AcknowledgedAt = attempt.AcknowledgedAt;
+        entity.AcknowledgedBy = attempt.AcknowledgedBy;
+
+        CollectDomainEvents(attempt);
     }
 
     private static WikidataCoverEnrichmentAttempt Map(WikidataCoverEnrichmentAttemptEntity entity) =>
@@ -254,5 +361,8 @@ internal sealed class WikidataCoverEnrichmentAttemptRepository
             details: entity.Details,
             retryCount: entity.RetryCount,
             nextRetryAt: entity.NextRetryAt,
-            deadLetteredAt: entity.DeadLetteredAt);
+            deadLetteredAt: entity.DeadLetteredAt,
+            acknowledgedAt: entity.AcknowledgedAt,
+            acknowledgedBy: entity.AcknowledgedBy,
+            triggeredByAdminUserId: entity.TriggeredByAdminUserId);
 }

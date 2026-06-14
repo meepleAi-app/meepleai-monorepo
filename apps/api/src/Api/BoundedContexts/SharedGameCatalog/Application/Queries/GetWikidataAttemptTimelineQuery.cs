@@ -1,4 +1,3 @@
-using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using MediatR;
 
@@ -23,7 +22,12 @@ public sealed record WikidataAttemptTimelineResult(
 
 /// <summary>
 /// Per-node payload on the timeline. Each maps 1:1 to a
-/// <see cref="Domain.Aggregates.WikidataCoverEnrichmentAttempt"/> row.
+/// <see cref="Domain.Aggregates.WikidataCoverEnrichmentAttempt"/> row,
+/// enriched with the F6 admin attribution (<see cref="TriggeredByAdminUserId"/>
+/// and <see cref="TriggeredByAdminFullName"/>) when the attempt was kicked off
+/// from the admin bulk-retry path (Phase F #2255). Both attribution fields are
+/// null for system/cron-triggered attempts so the FE can decide whether to
+/// render the badge.
 /// </summary>
 public sealed record WikidataAttemptTimelineNode(
     Guid Id,
@@ -33,7 +37,9 @@ public sealed record WikidataAttemptTimelineNode(
     string? Details,
     int RetryCount,
     DateTime? NextRetryAt,
-    DateTime? DeadLetteredAt);
+    DateTime? DeadLetteredAt,
+    Guid? TriggeredByAdminUserId,
+    string? TriggeredByAdminFullName);
 
 internal sealed class GetWikidataAttemptTimelineQueryHandler
     : IRequestHandler<GetWikidataAttemptTimelineQuery, WikidataAttemptTimelineResult>
@@ -51,20 +57,25 @@ internal sealed class GetWikidataAttemptTimelineQueryHandler
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var attempts = await _attempts
+        var rows = await _attempts
             .GetAttemptsByGameIdAsync(request.GameId, request.Limit, cancellationToken)
             .ConfigureAwait(false);
 
-        var items = attempts
-            .Select(a => new WikidataAttemptTimelineNode(
-                a.Id,
-                a.AttemptedAt,
-                a.Outcome.ToString(),
-                a.Reason,
-                a.Details,
-                a.RetryCount,
-                a.NextRetryAt,
-                a.DeadLetteredAt))
+        // Task 3.4 (#2255 F6) — bridge lifted. The repo row already carries the
+        // admin LEFT JOIN result so we pass `TriggeredByAdminUserId` and
+        // `TriggeredByAdminFullName` straight through to the FE drawer badge.
+        var items = rows
+            .Select(r => new WikidataAttemptTimelineNode(
+                r.Id,
+                r.AttemptedAt,
+                r.Outcome.ToString(),
+                r.Reason,
+                r.Details,
+                r.RetryCount,
+                r.NextRetryAt,
+                r.DeadLetteredAt,
+                r.TriggeredByAdminUserId,
+                r.TriggeredByAdminFullName))
             .ToList();
 
         return new WikidataAttemptTimelineResult(request.GameId, items);

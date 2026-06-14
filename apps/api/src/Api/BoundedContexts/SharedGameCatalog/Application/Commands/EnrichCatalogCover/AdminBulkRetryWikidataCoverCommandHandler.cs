@@ -76,8 +76,15 @@ internal sealed class AdminBulkRetryWikidataCoverCommandHandler
 
             try
             {
+                // Issue #1823 Phase F F6: pass the bulk-retry initiator id to
+                // the runner so each re-dispatched attempt row records the
+                // admin who pressed the button (mirror of M12 single-trigger).
                 await _runner
-                    .EnrichAndRecordAsync(gameId, forceRefresh: true, cancellationToken)
+                    .EnrichAndRecordAsync(
+                        gameId,
+                        forceRefresh: true,
+                        triggeredByAdminUserId: request.TriggeredByUserId,
+                        cancellationToken)
                     .ConfigureAwait(false);
 
                 rows.Add(new AdminBulkRetryRow(

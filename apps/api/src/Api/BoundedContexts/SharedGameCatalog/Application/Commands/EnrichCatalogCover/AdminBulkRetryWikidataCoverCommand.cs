@@ -14,8 +14,11 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatal
 /// </summary>
 /// <param name="AttemptIds">Dead-letter attempt ids selected on the admin page (max 50 enforced by the validator).</param>
 /// <param name="TriggeredByUserId">
-/// Admin user id captured ONLY in the structured log line; not persisted on the
-/// new attempt rows. Same intent as <see cref="AdminEnrichWikidataCoverCommand.TriggeredByUserId"/>.
+/// Admin user id of the operator who initiated the bulk-retry. Captured in the
+/// structured log line AND threaded into each per-row runner invocation so the
+/// new attempt rows persist <c>TriggeredByAdminUserId</c>. Same semantics as
+/// <see cref="AdminEnrichWikidataCoverCommand.TriggeredByUserId"/>; surfaces on
+/// the F6 timeline drawer + F4 SSE payload. Issue #1823 Phase F F6.
 /// </param>
 internal sealed record AdminBulkRetryWikidataCoverCommand(
     IReadOnlyList<Guid> AttemptIds,

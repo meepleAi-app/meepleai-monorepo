@@ -45,6 +45,7 @@ internal sealed class WikidataCoverEnrichmentRunner : IWikidataCoverEnrichmentRu
     public async Task<EnrichCatalogCoverResult> EnrichAndRecordAsync(
         Guid gameId,
         bool forceRefresh,
+        Guid? triggeredByAdminUserId = null,
         CancellationToken cancellationToken = default)
     {
         var previous = await _attempts
@@ -78,21 +79,26 @@ internal sealed class WikidataCoverEnrichmentRunner : IWikidataCoverEnrichmentRu
             _ => previousRetryCount,
         };
 
+        // Issue #1823 Phase F F6: thread the triggering admin id into every
+        // factory variant so attempt rows persist the trigger source (M9 cron =
+        // null, M12 admin = id, F2 bulk-retry = id). The default null on the
+        // factory signatures keeps existing callers backward-compatible.
         WikidataCoverEnrichmentAttempt newAttempt = (decision, result) switch
         {
             (WikidataCoverEnrichmentRetryDecision.Terminal, EnrichCatalogCoverResult.Success) =>
-                WikidataCoverEnrichmentAttempt.RecordSuccess(gameId, nextRetryCount, nowUtc),
+                WikidataCoverEnrichmentAttempt.RecordSuccess(gameId, nextRetryCount, nowUtc, triggeredByAdminUserId),
 
             (WikidataCoverEnrichmentRetryDecision.Terminal, EnrichCatalogCoverResult.Skipped skipped) =>
-                WikidataCoverEnrichmentAttempt.RecordSkipped(gameId, skipped.Reason, nextRetryCount, nowUtc),
+                WikidataCoverEnrichmentAttempt.RecordSkipped(gameId, skipped.Reason, nextRetryCount, nowUtc, triggeredByAdminUserId),
 
             (WikidataCoverEnrichmentRetryDecision.ScheduleRetry retry, EnrichCatalogCoverResult.Failed failed) =>
                 WikidataCoverEnrichmentAttempt.RecordFailedWithRetry(
-                    gameId, failed.Reason, failed.Details, nextRetryCount, nowUtc, retry.NextRetryAt),
+                    gameId, failed.Reason, failed.Details, nextRetryCount, nowUtc, retry.NextRetryAt,
+                    triggeredByAdminUserId),
 
             (WikidataCoverEnrichmentRetryDecision.DeadLetter, EnrichCatalogCoverResult.Failed failed) =>
                 WikidataCoverEnrichmentAttempt.RecordDeadLetter(
-                    gameId, failed.Reason, failed.Details, nextRetryCount, nowUtc),
+                    gameId, failed.Reason, failed.Details, nextRetryCount, nowUtc, triggeredByAdminUserId),
 
             // Defensive: a mismatched (decision, result) pair shouldn't happen
             // because the policy only emits ScheduleRetry/DeadLetter for Failed
@@ -100,7 +106,7 @@ internal sealed class WikidataCoverEnrichmentRunner : IWikidataCoverEnrichmentRu
             _ => WikidataCoverEnrichmentAttempt.RecordDeadLetter(
                 gameId, "unexpected-decision",
                 $"{decision.GetType().Name} for {result.GetType().Name}",
-                nextRetryCount, nowUtc),
+                nextRetryCount, nowUtc, triggeredByAdminUserId),
         };
 
         await _attempts.AddAsync(newAttempt, cancellationToken).ConfigureAwait(false);
@@ -121,6 +127,12 @@ internal sealed class WikidataCoverEnrichmentRunner : IWikidataCoverEnrichmentRu
         // The broadcaster is fire-and-forget; a slow SSE subscriber is
         // dropped rather than back-pressured (per its DropOldest channel
         // policy) so the M9 scheduler tick budget is preserved.
+        //
+        // F6 (Phase F): the payload includes TriggeredByAdminUserId so the
+        // admin SSE consumer can update the row inline; TriggeredByAdminFullName
+        // is intentionally null here (resolved in the F6 timeline query path
+        // via LEFT JOIN — the broadcaster cannot afford a per-publish DB lookup
+        // without breaking the DEC-3e scheduler tick budget).
         _broadcaster.Publish(new WikidataEnrichmentEvent(
             AttemptId: newAttempt.Id,
             SharedGameId: newAttempt.SharedGameId,
@@ -129,11 +141,13 @@ internal sealed class WikidataCoverEnrichmentRunner : IWikidataCoverEnrichmentRu
             AttemptedAt: newAttempt.AttemptedAt,
             RetryCount: newAttempt.RetryCount,
             NextRetryAt: newAttempt.NextRetryAt,
-            DeadLetteredAt: newAttempt.DeadLetteredAt));
+            DeadLetteredAt: newAttempt.DeadLetteredAt,
+            TriggeredByAdminUserId: newAttempt.TriggeredByAdminUserId,
+            TriggeredByAdminFullName: null));
 
         _logger.LogDebug(
-            "WikidataCoverEnrichmentRunner: game {GameId} outcome={Outcome} reason={Reason} retry={RetryCount} nextRetryAt={NextRetryAt} forceRefresh={ForceRefresh}",
-            gameId, newAttempt.Outcome, newAttempt.Reason, newAttempt.RetryCount, newAttempt.NextRetryAt, forceRefresh);
+            "WikidataCoverEnrichmentRunner: game {GameId} outcome={Outcome} reason={Reason} retry={RetryCount} nextRetryAt={NextRetryAt} forceRefresh={ForceRefresh} triggeredByAdmin={TriggeredByAdminUserId}",
+            gameId, newAttempt.Outcome, newAttempt.Reason, newAttempt.RetryCount, newAttempt.NextRetryAt, forceRefresh, newAttempt.TriggeredByAdminUserId);
 
         return result;
     }

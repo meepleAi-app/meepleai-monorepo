@@ -26,4 +26,13 @@ public class WikidataCoverEnrichmentAttemptEntity
 
     /// <summary>UTC timestamp when the attempt was dead-lettered; null otherwise.</summary>
     public DateTime? DeadLetteredAt { get; set; }
+
+    /// <summary>F5 — UTC timestamp when an operator acknowledged the dead-letter; null otherwise.</summary>
+    public DateTime? AcknowledgedAt { get; set; }
+
+    /// <summary>F5 — User id of the operator who acknowledged; null otherwise.</summary>
+    public Guid? AcknowledgedBy { get; set; }
+
+    /// <summary>F6 — Admin user id when triggered via M12 or F2; null for M9 scheduler.</summary>
+    public Guid? TriggeredByAdminUserId { get; set; }
 }

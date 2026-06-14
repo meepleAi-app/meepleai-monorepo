@@ -22,10 +22,20 @@ internal interface IWikidataCoverEnrichmentRunner
     /// window (admin dogfood / edge-case re-runs); the scheduler always passes
     /// <see langword="false"/>.
     /// </param>
+    /// <param name="triggeredByAdminUserId">
+    /// Issue #1823 Phase F F6 — user id of the admin who triggered this attempt
+    /// (M12 single trigger or F2 bulk retry). Stamped onto the persisted
+    /// <see cref="Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates.WikidataCoverEnrichmentAttempt.TriggeredByAdminUserId"/>
+    /// and on the SSE broadcast payload so the admin timeline drawer + dead-letter
+    /// page can show "triggered by admin X" without a separate audit table.
+    /// Defaults to <see langword="null"/> for the M9 scheduler tick (the dominant
+    /// caller); admin callers MUST pass their user id explicitly.
+    /// </param>
     /// <param name="cancellationToken">Cancellation token honoured by all downstream calls.</param>
     /// <returns>The terminal outcome of the underlying <see cref="EnrichCatalogCoverCommand"/>.</returns>
     Task<EnrichCatalogCoverResult> EnrichAndRecordAsync(
         Guid gameId,
         bool forceRefresh,
+        Guid? triggeredByAdminUserId = null,
         CancellationToken cancellationToken = default);
 }

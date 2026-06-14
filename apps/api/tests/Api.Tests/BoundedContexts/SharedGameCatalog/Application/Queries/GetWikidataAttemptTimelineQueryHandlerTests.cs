@@ -22,12 +22,32 @@ public class GetWikidataAttemptTimelineQueryHandlerTests
 
     private GetWikidataAttemptTimelineQueryHandler Sut() => new(_attempts.Object);
 
+    // Phase F (#2255) note — Task 2.3 changed the repo return type from
+    // WikidataCoverEnrichmentAttempt[] to WikidataAttemptTimelineRow[] so the
+    // F6 admin LEFT JOIN result is included in a single round-trip. Mocks
+    // updated accordingly; the F6 admin DTO surface (TriggeredByAdminUserId +
+    // TriggeredByAdminFullName) lands on the timeline node in Task 3.4.
+
+    private static WikidataAttemptTimelineRow Row(
+        Guid attemptId,
+        DateTime attemptedAt,
+        WikidataCoverEnrichmentOutcome outcome,
+        string reason,
+        string? details = null,
+        int retryCount = 0,
+        DateTime? nextRetryAt = null,
+        DateTime? deadLetteredAt = null,
+        Guid? triggeredByAdminUserId = null,
+        string? triggeredByAdminFullName = null) =>
+        new(attemptId, attemptedAt, outcome, reason, details, retryCount,
+            nextRetryAt, deadLetteredAt, triggeredByAdminUserId, triggeredByAdminFullName);
+
     [Fact]
     public async Task Handle_NoAttempts_ReturnsEmptyTimeline()
     {
         var gameId = Guid.NewGuid();
         _attempts.Setup(r => r.GetAttemptsByGameIdAsync(gameId, It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<WikidataCoverEnrichmentAttempt>());
+            .ReturnsAsync(Array.Empty<WikidataAttemptTimelineRow>());
 
         var result = await Sut().Handle(new GetWikidataAttemptTimelineQuery(gameId, 50), default);
 
@@ -39,15 +59,16 @@ public class GetWikidataAttemptTimelineQueryHandlerTests
     public async Task Handle_MixedAttempts_MapsAllFieldsAndOutcomes()
     {
         var gameId = Guid.NewGuid();
-        var success = WikidataCoverEnrichmentAttempt.RecordSuccess(gameId, retryCount: 0, attemptedAt: FixedNow);
-        var skipped = WikidataCoverEnrichmentAttempt.RecordSkipped(gameId, "qid-missing",
-            retryCount: 0, attemptedAt: FixedNow.AddMinutes(-5));
-        var failedWithRetry = WikidataCoverEnrichmentAttempt.RecordFailedWithRetry(
-            gameId, "r2-upload-error", "503",
-            retryCount: 1, attemptedAt: FixedNow.AddMinutes(-10), nextRetryAt: FixedNow.AddMinutes(-5));
-        var deadLetter = WikidataCoverEnrichmentAttempt.RecordDeadLetter(
-            gameId, "image-processing-error", "corrupted",
-            retryCount: 0, attemptedAt: FixedNow.AddMinutes(-15));
+        var success = Row(Guid.NewGuid(), FixedNow,
+            WikidataCoverEnrichmentOutcome.Success, "success");
+        var skipped = Row(Guid.NewGuid(), FixedNow.AddMinutes(-5),
+            WikidataCoverEnrichmentOutcome.Skipped, "qid-missing");
+        var failedWithRetry = Row(Guid.NewGuid(), FixedNow.AddMinutes(-10),
+            WikidataCoverEnrichmentOutcome.Failed, "r2-upload-error",
+            details: "503", retryCount: 1, nextRetryAt: FixedNow.AddMinutes(-5));
+        var deadLetter = Row(Guid.NewGuid(), FixedNow.AddMinutes(-15),
+            WikidataCoverEnrichmentOutcome.DeadLetter, "image-processing-error",
+            details: "corrupted", deadLetteredAt: FixedNow.AddMinutes(-15));
 
         _attempts.Setup(r => r.GetAttemptsByGameIdAsync(gameId, 50, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { success, skipped, failedWithRetry, deadLetter });
@@ -67,8 +88,10 @@ public class GetWikidataAttemptTimelineQueryHandlerTests
         // Repo guarantees DESC AttemptedAt; the handler MUST NOT re-order so
         // the drawer renders the most-recent attempt at the top of the timeline.
         var gameId = Guid.NewGuid();
-        var newer = WikidataCoverEnrichmentAttempt.RecordSuccess(gameId, 0, FixedNow);
-        var older = WikidataCoverEnrichmentAttempt.RecordSkipped(gameId, "qid-missing", 0, FixedNow.AddDays(-1));
+        var newer = Row(Guid.NewGuid(), FixedNow,
+            WikidataCoverEnrichmentOutcome.Success, "success");
+        var older = Row(Guid.NewGuid(), FixedNow.AddDays(-1),
+            WikidataCoverEnrichmentOutcome.Skipped, "qid-missing");
 
         _attempts.Setup(r => r.GetAttemptsByGameIdAsync(gameId, 50, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { newer, older });
@@ -84,11 +107,31 @@ public class GetWikidataAttemptTimelineQueryHandlerTests
     {
         var gameId = Guid.NewGuid();
         _attempts.Setup(r => r.GetAttemptsByGameIdAsync(gameId, 7, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<WikidataCoverEnrichmentAttempt>())
+            .ReturnsAsync(Array.Empty<WikidataAttemptTimelineRow>())
             .Verifiable();
 
         await Sut().Handle(new GetWikidataAttemptTimelineQuery(gameId, 7), default);
 
         _attempts.Verify();
+    }
+
+    [Fact]
+    public async Task Handler_MapsTriggeredByAdminFullName_FromRepoRow()
+    {
+        var repo = new Mock<IWikidataCoverEnrichmentAttemptRepository>();
+        var adminId = Guid.NewGuid();
+        var row = new WikidataAttemptTimelineRow(
+            Id: Guid.NewGuid(), AttemptedAt: DateTime.UtcNow,
+            Outcome: WikidataCoverEnrichmentOutcome.Success, Reason: "success", Details: null,
+            RetryCount: 0, NextRetryAt: null, DeadLetteredAt: null,
+            TriggeredByAdminUserId: adminId, TriggeredByAdminFullName: "Carol");
+        repo.Setup(r => r.GetAttemptsByGameIdAsync(It.IsAny<Guid>(), 50, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { row });
+
+        var handler = new GetWikidataAttemptTimelineQueryHandler(repo.Object);
+        var result = await handler.Handle(new GetWikidataAttemptTimelineQuery(Guid.NewGuid(), 50), default);
+
+        result.Items.Single().TriggeredByAdminUserId.Should().Be(adminId);
+        result.Items.Single().TriggeredByAdminFullName.Should().Be("Carol");
     }
 }

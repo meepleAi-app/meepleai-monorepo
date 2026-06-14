@@ -35,8 +35,16 @@ internal sealed class AdminEnrichWikidataCoverCommandHandler
             "AdminEnrichWikidataCover: triggered by user {UserId} for game {GameId} (forceRefresh={ForceRefresh})",
             request.TriggeredByUserId, request.GameId, request.ForceRefresh);
 
+        // Issue #1823 Phase F F6: thread the admin user id into the runner so
+        // it is persisted on the attempt row + broadcast on the SSE payload —
+        // surfacing "triggered by admin X" in the admin timeline drawer + dead-letter
+        // page without a separate audit table.
         var result = await _runner
-            .EnrichAndRecordAsync(request.GameId, request.ForceRefresh, cancellationToken)
+            .EnrichAndRecordAsync(
+                request.GameId,
+                request.ForceRefresh,
+                triggeredByAdminUserId: request.TriggeredByUserId,
+                cancellationToken)
             .ConfigureAwait(false);
 
         return result switch

@@ -44,7 +44,7 @@ public class WikidataCoverEnrichmentJobTests
         await Sut().RunBatchAsync(_attempts.Object, _runner.Object, default);
 
         _runner.Verify(
-            r => r.EnrichAndRecordAsync(It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()),
+            r => r.EnrichAndRecordAsync(It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -57,15 +57,19 @@ public class WikidataCoverEnrichmentJobTests
                 It.IsAny<int>(), FixedNow, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { game });
 
-        _runner.Setup(r => r.EnrichAndRecordAsync(game, false, It.IsAny<CancellationToken>()))
+        _runner.Setup(r => r.EnrichAndRecordAsync(game, false, It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EnrichCatalogCoverResult.Success("k", "CC0", null, "u"));
 
         await Sut().RunBatchAsync(_attempts.Object, _runner.Object, default);
 
+        // F6 #1823 Phase F: scheduler passes triggeredByAdminUserId=null (default
+        // value) because the cron has no admin actor — the runner stamps null
+        // on the attempt row so the F6 timeline drawer can distinguish
+        // scheduler-authored attempts from manual admin dispatches.
         _runner.Verify(
-            r => r.EnrichAndRecordAsync(game, false, It.IsAny<CancellationToken>()),
+            r => r.EnrichAndRecordAsync(game, false, (Guid?)null, It.IsAny<CancellationToken>()),
             Times.Once,
-            "scheduler MUST always pass forceRefresh=false — freshness window honoured");
+            "scheduler MUST always pass forceRefresh=false AND triggeredByAdminUserId=null");
     }
 
     [Fact]
@@ -78,14 +82,14 @@ public class WikidataCoverEnrichmentJobTests
                 It.IsAny<int>(), FixedNow, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { game1, game2 });
 
-        _runner.Setup(r => r.EnrichAndRecordAsync(game1, false, It.IsAny<CancellationToken>()))
+        _runner.Setup(r => r.EnrichAndRecordAsync(game1, false, It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("boom"));
-        _runner.Setup(r => r.EnrichAndRecordAsync(game2, false, It.IsAny<CancellationToken>()))
+        _runner.Setup(r => r.EnrichAndRecordAsync(game2, false, It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EnrichCatalogCoverResult.Success("k", "CC0", null, "u"));
 
         await Sut().RunBatchAsync(_attempts.Object, _runner.Object, default);
 
-        _runner.Verify(r => r.EnrichAndRecordAsync(game2, false, It.IsAny<CancellationToken>()), Times.Once,
+        _runner.Verify(r => r.EnrichAndRecordAsync(game2, false, It.IsAny<Guid?>(), It.IsAny<CancellationToken>()), Times.Once,
             "game1 throw should be swallowed (logged); the loop continues with game2");
     }
 
@@ -100,13 +104,13 @@ public class WikidataCoverEnrichmentJobTests
                 It.IsAny<int>(), FixedNow, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { game1, game2 });
 
-        _runner.Setup(r => r.EnrichAndRecordAsync(game1, false, It.IsAny<CancellationToken>()))
+        _runner.Setup(r => r.EnrichAndRecordAsync(game1, false, It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .Callback(() => cts.Cancel())
             .ReturnsAsync(new EnrichCatalogCoverResult.Success("k", "CC0", null, "u"));
 
         await Sut().RunBatchAsync(_attempts.Object, _runner.Object, cts.Token);
 
-        _runner.Verify(r => r.EnrichAndRecordAsync(game2, false, It.IsAny<CancellationToken>()), Times.Never,
+        _runner.Verify(r => r.EnrichAndRecordAsync(game2, false, It.IsAny<Guid?>(), It.IsAny<CancellationToken>()), Times.Never,
             "after game1 finishes (and cancels the token), the loop top check breaks before game2");
     }
 }

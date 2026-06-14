@@ -38,7 +38,7 @@ public class AdminBulkRetryWikidataCoverCommandHandlerTests
             .ReturnsAsync(new Dictionary<Guid, Guid> { [a1] = g1, [a2] = g2 });
 
         _runner.Setup(r => r.EnrichAndRecordAsync(
-                It.IsAny<Guid>(), true, It.IsAny<CancellationToken>()))
+                It.IsAny<Guid>(), true, It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EnrichCatalogCoverResult.Success("k", "CC0", null, "u"));
 
         var result = await Sut().Handle(
@@ -52,8 +52,8 @@ public class AdminBulkRetryWikidataCoverCommandHandlerTests
         result.FailedCount.Should().Be(0);
         result.Rows.Should().HaveCount(2);
         result.Rows.Should().AllSatisfy(row => row.Outcome.Should().Be(AdminBulkRetryRow.OutcomeTriggered));
-        _runner.Verify(r => r.EnrichAndRecordAsync(g1, true, It.IsAny<CancellationToken>()), Times.Once);
-        _runner.Verify(r => r.EnrichAndRecordAsync(g2, true, It.IsAny<CancellationToken>()), Times.Once);
+        _runner.Verify(r => r.EnrichAndRecordAsync(g1, true, It.IsAny<Guid?>(), It.IsAny<CancellationToken>()), Times.Once);
+        _runner.Verify(r => r.EnrichAndRecordAsync(g2, true, It.IsAny<Guid?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public class AdminBulkRetryWikidataCoverCommandHandlerTests
                 It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<Guid, Guid> { [known] = gameId });
 
-        _runner.Setup(r => r.EnrichAndRecordAsync(It.IsAny<Guid>(), true, It.IsAny<CancellationToken>()))
+        _runner.Setup(r => r.EnrichAndRecordAsync(It.IsAny<Guid>(), true, It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EnrichCatalogCoverResult.Success("k", "CC0", null, "u"));
 
         var result = await Sut().Handle(
@@ -81,7 +81,7 @@ public class AdminBulkRetryWikidataCoverCommandHandlerTests
         result.FailedCount.Should().Be(0);
         result.Rows.Single(r => r.AttemptId == unknown).Outcome.Should().Be(AdminBulkRetryRow.OutcomeNotFound);
         result.Rows.Single(r => r.AttemptId == unknown).GameId.Should().BeNull();
-        _runner.Verify(r => r.EnrichAndRecordAsync(It.IsAny<Guid>(), true, It.IsAny<CancellationToken>()), Times.Once,
+        _runner.Verify(r => r.EnrichAndRecordAsync(It.IsAny<Guid>(), true, It.IsAny<Guid?>(), It.IsAny<CancellationToken>()), Times.Once,
             "the unknown id must NOT invoke the runner");
     }
 
@@ -97,9 +97,9 @@ public class AdminBulkRetryWikidataCoverCommandHandlerTests
                 It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<Guid, Guid> { [a1] = g1, [a2] = g2 });
 
-        _runner.Setup(r => r.EnrichAndRecordAsync(g1, true, It.IsAny<CancellationToken>()))
+        _runner.Setup(r => r.EnrichAndRecordAsync(g1, true, It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("simulated runner failure"));
-        _runner.Setup(r => r.EnrichAndRecordAsync(g2, true, It.IsAny<CancellationToken>()))
+        _runner.Setup(r => r.EnrichAndRecordAsync(g2, true, It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EnrichCatalogCoverResult.Success("k", "CC0", null, "u"));
 
         var result = await Sut().Handle(
@@ -126,7 +126,7 @@ public class AdminBulkRetryWikidataCoverCommandHandlerTests
                 It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<Guid, Guid> { [a1] = g1 });
 
-        _runner.Setup(r => r.EnrichAndRecordAsync(g1, true, It.IsAny<CancellationToken>()))
+        _runner.Setup(r => r.EnrichAndRecordAsync(g1, true, It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
 
         var act = async () => await Sut().Handle(
@@ -158,7 +158,38 @@ public class AdminBulkRetryWikidataCoverCommandHandlerTests
         result.NotFoundCount.Should().Be(3);
         result.FailedCount.Should().Be(0);
         result.Rows.Should().HaveCount(3);
-        _runner.Verify(r => r.EnrichAndRecordAsync(It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()),
+        _runner.Verify(r => r.EnrichAndRecordAsync(It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_ForwardsTriggeringAdminIdToRunnerPerRow()
+    {
+        // F6 #1823 Phase F: every per-row runner invocation MUST receive the
+        // command's TriggeredByUserId so the persisted attempt rows can record
+        // which admin pressed the bulk-retry button — mirror of M12 single-trigger.
+        var attemptId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var adminId = Guid.NewGuid();
+
+        _attempts.Setup(r => r.GetSharedGameIdsByAttemptIdsAsync(
+                It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, Guid> { [attemptId] = gameId });
+
+        _runner.Setup(r => r.EnrichAndRecordAsync(
+                gameId, true, (Guid?)adminId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EnrichCatalogCoverResult.Success("k", "CC0", null, "u"));
+
+        var result = await Sut().Handle(
+            new AdminBulkRetryWikidataCoverCommand(
+                AttemptIds: new[] { attemptId },
+                TriggeredByUserId: adminId),
+            default);
+
+        result.TriggeredCount.Should().Be(1);
+        _runner.Verify(r => r.EnrichAndRecordAsync(
+                gameId, true, (Guid?)adminId, It.IsAny<CancellationToken>()),
+            Times.Once,
+            "F6: per-row dispatch MUST forward the command's TriggeredByUserId so each new attempt row records the operator");
     }
 }

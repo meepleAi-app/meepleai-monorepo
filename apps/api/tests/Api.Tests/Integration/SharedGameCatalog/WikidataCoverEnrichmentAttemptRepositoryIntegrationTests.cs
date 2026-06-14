@@ -2,6 +2,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
@@ -179,6 +180,7 @@ public class WikidataCoverEnrichmentAttemptRepositoryIntegrationTests : IAsyncLi
 
         var page = await _sut.GetDeadLettersAsync(
             skip: 0, take: 50, reasonFilter: null,
+            includeAcknowledged: false,
             cancellationToken: TestContext.Current.CancellationToken);
 
         page.TotalCount.Should().Be(1);
@@ -203,6 +205,7 @@ public class WikidataCoverEnrichmentAttemptRepositoryIntegrationTests : IAsyncLi
 
         var page = await _sut.GetDeadLettersAsync(
             skip: 0, take: 50, reasonFilter: null,
+            includeAcknowledged: false,
             cancellationToken: TestContext.Current.CancellationToken);
 
         page.TotalCount.Should().Be(1, "soft-deleting the game MUST NOT drop the attempt from the count");
@@ -224,6 +227,7 @@ public class WikidataCoverEnrichmentAttemptRepositoryIntegrationTests : IAsyncLi
 
         var page = await _sut.GetDeadLettersAsync(
             skip: 0, take: 50, reasonFilter: "image-processing-error",
+            includeAcknowledged: false,
             cancellationToken: TestContext.Current.CancellationToken);
 
         page.TotalCount.Should().Be(1);
@@ -243,6 +247,7 @@ public class WikidataCoverEnrichmentAttemptRepositoryIntegrationTests : IAsyncLi
 
         var page = await _sut.GetDeadLettersAsync(
             skip: 0, take: 50, reasonFilter: null,
+            includeAcknowledged: false,
             cancellationToken: TestContext.Current.CancellationToken);
 
         page.Items.Should().HaveCount(2);
@@ -262,6 +267,7 @@ public class WikidataCoverEnrichmentAttemptRepositoryIntegrationTests : IAsyncLi
 
         var page = await _sut.GetDeadLettersAsync(
             skip: 0, take: 50, reasonFilter: null,
+            includeAcknowledged: false,
             cancellationToken: TestContext.Current.CancellationToken);
 
         page.TotalCount.Should().Be(0,
@@ -384,8 +390,132 @@ public class WikidataCoverEnrichmentAttemptRepositoryIntegrationTests : IAsyncLi
     }
 
     // ──────────────────────────────────────────────────────────────────────
+    // F5 (#2254) — includeAcknowledged filter + Users JOIN for AcknowledgedByFullName
+    // ──────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetDeadLettersAsync_DefaultExcludesAcknowledgedRows()
+    {
+        var g1 = SeedGame(qid: "Q1", title: "Acked Game");
+        var g2 = SeedGame(qid: "Q2", title: "Open Game");
+        await _dbContext!.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var dl1 = WikidataCoverEnrichmentAttempt.RecordDeadLetter(
+            g1.Id, "r2-upload-error", details: null, retryCount: 3,
+            attemptedAt: FixedNow.AddDays(-2));
+        var dl2 = WikidataCoverEnrichmentAttempt.RecordDeadLetter(
+            g2.Id, "r2-upload-error", details: null, retryCount: 3,
+            attemptedAt: FixedNow.AddDays(-1));
+        dl1.Acknowledge(Guid.NewGuid(), FixedNow.AddDays(-1));
+
+        await _sut.AddAsync(dl1, TestContext.Current.CancellationToken);
+        await _sut.AddAsync(dl2, TestContext.Current.CancellationToken);
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var page = await _sut.GetDeadLettersAsync(
+            skip: 0, take: 50, reasonFilter: null,
+            includeAcknowledged: false,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        page.TotalCount.Should().Be(1,
+            "default view hides acknowledged dead-letters so operators see only open work");
+        page.Items[0].SharedGameId.Should().Be(g2.Id);
+    }
+
+    [Fact]
+    public async Task GetDeadLettersAsync_IncludeAcknowledgedTrue_IncludesThem()
+    {
+        var g1 = SeedGame(qid: "Q1", title: "Acked Game");
+        await _dbContext!.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var dl = WikidataCoverEnrichmentAttempt.RecordDeadLetter(
+            g1.Id, "r2-upload-error", details: null, retryCount: 3,
+            attemptedAt: FixedNow.AddDays(-1));
+        dl.Acknowledge(Guid.NewGuid(), FixedNow);
+        await _sut.AddAsync(dl, TestContext.Current.CancellationToken);
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var page = await _sut.GetDeadLettersAsync(
+            skip: 0, take: 50, reasonFilter: null,
+            includeAcknowledged: true,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        page.TotalCount.Should().Be(1);
+        page.Items[0].AcknowledgedAt.Should().NotBeNull();
+        page.Items[0].AcknowledgedBy.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task GetDeadLettersAsync_PopulatesAcknowledgedByDisplayName_FromUsersJoin()
+    {
+        // User entity uses DisplayName (nullable) rather than FullName; repo
+        // exposes it via DeadLetterRow.AcknowledgedByFullName (semantic name
+        // chosen by the F5 spec — the column populates from DisplayName).
+        var admin = SeedUser(displayName: "Alice Admin");
+        var g1 = SeedGame(qid: "Q1", title: "Game 1");
+        await _dbContext!.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var dl = WikidataCoverEnrichmentAttempt.RecordDeadLetter(
+            g1.Id, "r2-upload-error", details: null, retryCount: 3,
+            attemptedAt: FixedNow.AddDays(-1));
+        dl.Acknowledge(admin.Id, FixedNow);
+        await _sut.AddAsync(dl, TestContext.Current.CancellationToken);
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var page = await _sut.GetDeadLettersAsync(
+            skip: 0, take: 50, reasonFilter: null,
+            includeAcknowledged: true,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        page.Items[0].AcknowledgedByFullName.Should().Be("Alice Admin",
+            "LEFT JOIN on Users.DisplayName populates the denormalized admin name on the row");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // F6 (#2255) — GetAttemptsByGameIdAsync timeline rows with admin LEFT JOIN
+    // ──────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetAttemptsByGameIdAsync_PopulatesTriggeredByAdminFullName()
+    {
+        var admin = SeedUser(displayName: "Bob Admin");
+        var g1 = SeedGame(qid: "Q1", title: "Game 1");
+        await _dbContext!.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var attempt = WikidataCoverEnrichmentAttempt.RecordSuccess(
+            g1.Id, retryCount: 0, attemptedAt: FixedNow,
+            triggeredByAdminUserId: admin.Id);
+        await _sut.AddAsync(attempt, TestContext.Current.CancellationToken);
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var rows = await _sut.GetAttemptsByGameIdAsync(
+            g1.Id, limit: 50,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        rows.Should().HaveCount(1);
+        rows[0].TriggeredByAdminUserId.Should().Be(admin.Id);
+        rows[0].TriggeredByAdminFullName.Should().Be("Bob Admin",
+            "LEFT JOIN on Users.DisplayName surfaces the admin attribution on the F3 timeline drawer");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
     // Helpers
     // ──────────────────────────────────────────────────────────────────────
+
+    private UserEntity SeedUser(string displayName)
+    {
+        var user = new UserEntity
+        {
+            Id = Guid.NewGuid(),
+            Email = $"{Guid.NewGuid():N}@test.local",
+            DisplayName = displayName,
+            Role = "admin",
+            Tier = "premium",
+            CreatedAt = DateTime.UtcNow,
+        };
+        _dbContext!.Users.Add(user);
+        return user;
+    }
 
     private SharedGameEntity SeedGame(string? qid, string? title = null)
     {

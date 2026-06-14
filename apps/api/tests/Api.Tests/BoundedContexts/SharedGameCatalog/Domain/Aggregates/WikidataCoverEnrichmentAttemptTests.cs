@@ -162,7 +162,10 @@ public class WikidataCoverEnrichmentAttemptTests
             details: null,
             retryCount: 0,
             nextRetryAt: null,
-            deadLetteredAt: FixedNow);
+            deadLetteredAt: FixedNow,
+            acknowledgedAt: null,
+            acknowledgedBy: null,
+            triggeredByAdminUserId: null);
 
         attempt.Id.Should().Be(id);
         attempt.SharedGameId.Should().Be(sgid);

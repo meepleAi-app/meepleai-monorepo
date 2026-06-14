@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Api.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatalogCover;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
@@ -206,6 +207,19 @@ public sealed class AdminWikidataCoverEnrichmentEndpointsTests : IAsyncLifetime
         string gameTitle = "M16 Test Game",
         string reason = "r2-upload-error")
     {
+        var (gameId, _) = await SeedDeadLetterAttemptAsync(gameTitle, reason);
+        return gameId;
+    }
+
+    /// <summary>
+    /// Phase F sibling of <see cref="SeedDeadLetterAsync"/> that also surfaces
+    /// the attempt id (required by F5 bulk-acknowledge tests, which pass attempt
+    /// ids — NOT game ids — in the request body).
+    /// </summary>
+    private async Task<(Guid GameId, Guid AttemptId)> SeedDeadLetterAttemptAsync(
+        string gameTitle = "M16 Test Game",
+        string reason = "r2-upload-error")
+    {
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
@@ -241,6 +255,139 @@ public sealed class AdminWikidataCoverEnrichmentEndpointsTests : IAsyncLifetime
         dbContext.WikidataCoverEnrichmentAttempts.Add(attempt);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        return game.Id;
+        return (game.Id, attempt.Id);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Phase F F5 (#2254) — bulk-acknowledge endpoint integration coverage.
+    //
+    // These tests close the F5 endpoint contract: anonymous probes get 401,
+    // admin sessions ack a real dead-letter row (the result envelope reports
+    // ackedCount=1 and the default list view immediately drops it), and
+    // over-cap batches are rejected by the FluentValidation pipeline as 422
+    // (the project-wide convention from Issue #1449 — the plan-text "400" is
+    // shorthand for "validation rejection"; the ApiExceptionHandlerMiddleware
+    // returns 422 for FluentValidation.ValidationException).
+    // ──────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task BulkAcknowledge_AnonymousRequest_Returns401()
+    {
+        // Auth filter must reject anonymous probes BEFORE the MediatR pipeline.
+        var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"{EndpointBase}/bulk-acknowledge")
+        {
+            Content = JsonContent.Create(new
+            {
+                attemptIds = new[] { Guid.NewGuid() },
+                note = (string?)null,
+            }),
+        };
+
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized,
+            "the bulk-acknowledge admin endpoint must require an admin session");
+    }
+
+    [Fact]
+    public async Task BulkAcknowledge_AdminWithDeadLetter_AcksRowAndDropsFromDefaultList()
+    {
+        var (gameId, attemptId) = await SeedDeadLetterAttemptAsync(
+            gameTitle: "F5 Acknowledge Game",
+            reason: "r2-upload-error");
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            $"{EndpointBase}/bulk-acknowledge",
+            _adminSessionToken,
+            new
+            {
+                attemptIds = new[] { attemptId },
+                note = "F5 endpoint smoke test",
+            });
+
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        var result = JsonSerializer.Deserialize<AdminBulkAcknowledgeResult>(body, JsonOptions);
+
+        result.Should().NotBeNull();
+        result!.AckedCount.Should().Be(1);
+        result.IdempotentNoOpCount.Should().Be(0);
+        result.NotFoundCount.Should().Be(0);
+        result.WrongStateCount.Should().Be(0);
+        result.Rows.Should().ContainSingle();
+        result.Rows[0].AttemptId.Should().Be(attemptId);
+        result.Rows[0].GameId.Should().Be(gameId);
+        result.Rows[0].Outcome.Should().Be(AdminBulkAcknowledgeRow.OutcomeAcked);
+
+        // Direct DB verification: bypass the list endpoint to isolate the layer
+        // (handler vs query). If THIS fails, the handler/repo persistence path
+        // is broken; if the LIST endpoint check below fails while this passes,
+        // the bug is in the query / filter.
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var persisted = await dbContext.WikidataCoverEnrichmentAttempts
+                .AsNoTracking()
+                .FirstOrDefaultAsync(a => a.Id == attemptId, TestContext.Current.CancellationToken);
+            persisted.Should().NotBeNull();
+            persisted!.AcknowledgedAt.Should().NotBeNull(
+                "the F5 handler+repo must persist AcknowledgedAt via SaveChangesAsync");
+            persisted.AcknowledgedBy.Should().Be(TestAdminId,
+                "the F5 handler must record the admin user id who acked the row");
+        }
+
+        // Default list view (includeAcknowledged omitted) hides the acked row.
+        var listRequest = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            $"{EndpointBase}/dead-letters",
+            _adminSessionToken);
+        var listResponse = await _client.SendAsync(listRequest, TestContext.Current.CancellationToken);
+        listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var listBody = await listResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        var list = JsonSerializer.Deserialize<WikidataDeadLetterAttemptsResult>(listBody, JsonOptions);
+        list!.Items.Should().NotContain(i => i.Id == attemptId,
+            "default list view hides acknowledged rows so operators only see open work");
+
+        // includeAcknowledged=true surfaces the row again for the audit view.
+        var includedRequest = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            $"{EndpointBase}/dead-letters?includeAcknowledged=true",
+            _adminSessionToken);
+        var includedResponse = await _client.SendAsync(includedRequest, TestContext.Current.CancellationToken);
+        includedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var includedBody = await includedResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        var included = JsonSerializer.Deserialize<WikidataDeadLetterAttemptsResult>(includedBody, JsonOptions);
+        var includedItem = included!.Items.Should().ContainSingle(i => i.Id == attemptId).Subject;
+        includedItem.AcknowledgedAt.Should().NotBeNull("F5 ack metadata must round-trip via the audit view");
+        includedItem.AcknowledgedBy.Should().Be(TestAdminId);
+    }
+
+    [Fact]
+    public async Task BulkAcknowledge_OverFifty_ReturnsValidationError()
+    {
+        // FluentValidation rejects batches > MaxBatchSize. Issue #1449 convention:
+        // FluentValidation.ValidationException → HTTP 422 (NOT 400) via
+        // ApiExceptionHandlerMiddleware. Plan-text uses "400" as shorthand.
+        var ids = Enumerable.Range(0, 51).Select(_ => Guid.NewGuid()).ToArray();
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            $"{EndpointBase}/bulk-acknowledge",
+            _adminSessionToken,
+            new
+            {
+                attemptIds = ids,
+                note = (string?)null,
+            });
+
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity,
+            "FluentValidation rejects > MaxBatchSize batches and the middleware maps to 422");
     }
 }

@@ -76,5 +76,24 @@ internal sealed class WikidataCoverEnrichmentAttemptEntityConfiguration
         builder.HasIndex(e => e.DeadLetteredAt)
             .HasDatabaseName("ix_wikidata_cover_attempts_dead_letter")
             .HasFilter("dead_lettered_at IS NOT NULL");
+
+        // Issue #2254 (F5) — bulk acknowledge metadata.
+        builder.Property(e => e.AcknowledgedAt)
+            .HasColumnName("acknowledged_at")
+            .IsRequired(false);
+
+        builder.Property(e => e.AcknowledgedBy)
+            .HasColumnName("acknowledged_by")
+            .IsRequired(false);
+
+        // Issue #2255 (F6) — admin-triggered attribution (null for M9 scheduler).
+        builder.Property(e => e.TriggeredByAdminUserId)
+            .HasColumnName("triggered_by_admin_user_id")
+            .IsRequired(false);
+
+        // F5 partial index: speeds up default list view (exclude acked = WHERE acknowledged_at IS NULL).
+        builder.HasIndex(e => e.AcknowledgedAt)
+            .HasDatabaseName("ix_wikidata_cover_attempts_acknowledged_at")
+            .HasFilter("acknowledged_at IS NOT NULL");
     }
 }

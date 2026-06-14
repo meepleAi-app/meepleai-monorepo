@@ -71,6 +71,23 @@ public sealed class WikidataCoverEnrichmentAttempt : AggregateRoot<Guid>
     /// <summary>UTC timestamp at which the attempt was dead-lettered. Non-null only when <see cref="Outcome"/> is <see cref="WikidataCoverEnrichmentOutcome.DeadLetter"/>.</summary>
     public DateTime? DeadLetteredAt { get; private set; }
 
+    /// <summary>UTC timestamp when an operator acknowledged the dead-letter; <see langword="null"/> when not yet acknowledged or not a dead-letter.</summary>
+    public DateTime? AcknowledgedAt { get; private set; }
+
+    /// <summary>
+    /// User id of the operator who acknowledged the dead-letter; <see langword="null"/> when not yet acknowledged.
+    /// Invariant pair with <see cref="AcknowledgedAt"/>: both fields are non-null iff the row has been acknowledged
+    /// (they are written atomically in <see cref="Acknowledge"/> and must be reconstituted together).
+    /// </summary>
+    public Guid? AcknowledgedBy { get; private set; }
+
+    /// <summary>
+    /// Issue #1823 Phase F F6 — user id of the admin who manually triggered this
+    /// attempt via M12 (single trigger) or F2 (bulk retry). <see langword="null"/>
+    /// when invoked by the M9 scheduler (the default path).
+    /// </summary>
+    public Guid? TriggeredByAdminUserId { get; private set; }
+
     /// <summary>EF Core / repository reconstitution — do not call directly.</summary>
     private WikidataCoverEnrichmentAttempt() : base() { }
 
@@ -83,7 +100,10 @@ public sealed class WikidataCoverEnrichmentAttempt : AggregateRoot<Guid>
         string? details,
         int retryCount,
         DateTime? nextRetryAt,
-        DateTime? deadLetteredAt) : base(id)
+        DateTime? deadLetteredAt,
+        DateTime? acknowledgedAt,
+        Guid? acknowledgedBy,
+        Guid? triggeredByAdminUserId) : base(id)
     {
         SharedGameId = sharedGameId;
         AttemptedAt = attemptedAt;
@@ -93,6 +113,9 @@ public sealed class WikidataCoverEnrichmentAttempt : AggregateRoot<Guid>
         RetryCount = retryCount;
         NextRetryAt = nextRetryAt;
         DeadLetteredAt = deadLetteredAt;
+        AcknowledgedAt = acknowledgedAt;
+        AcknowledgedBy = acknowledgedBy;
+        TriggeredByAdminUserId = triggeredByAdminUserId;
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -103,20 +126,24 @@ public sealed class WikidataCoverEnrichmentAttempt : AggregateRoot<Guid>
     public static WikidataCoverEnrichmentAttempt RecordSuccess(
         Guid sharedGameId,
         int retryCount,
-        DateTime attemptedAt) =>
+        DateTime attemptedAt,
+        Guid? triggeredByAdminUserId = null) =>
         Create(sharedGameId, attemptedAt, WikidataCoverEnrichmentOutcome.Success,
             reason: "success", details: null, retryCount: retryCount,
-            nextRetryAt: null, deadLetteredAt: null);
+            nextRetryAt: null, deadLetteredAt: null,
+            triggeredByAdminUserId: triggeredByAdminUserId);
 
     /// <summary>Records a business skip (qid-missing, license-not-whitelisted, etc.). Terminal — no retry.</summary>
     public static WikidataCoverEnrichmentAttempt RecordSkipped(
         Guid sharedGameId,
         string reason,
         int retryCount,
-        DateTime attemptedAt) =>
+        DateTime attemptedAt,
+        Guid? triggeredByAdminUserId = null) =>
         Create(sharedGameId, attemptedAt, WikidataCoverEnrichmentOutcome.Skipped,
             reason: reason, details: null, retryCount: retryCount,
-            nextRetryAt: null, deadLetteredAt: null);
+            nextRetryAt: null, deadLetteredAt: null,
+            triggeredByAdminUserId: triggeredByAdminUserId);
 
     /// <summary>Records a technical failure with a retry scheduled.</summary>
     public static WikidataCoverEnrichmentAttempt RecordFailedWithRetry(
@@ -125,10 +152,12 @@ public sealed class WikidataCoverEnrichmentAttempt : AggregateRoot<Guid>
         string? details,
         int retryCount,
         DateTime attemptedAt,
-        DateTime nextRetryAt) =>
+        DateTime nextRetryAt,
+        Guid? triggeredByAdminUserId = null) =>
         Create(sharedGameId, attemptedAt, WikidataCoverEnrichmentOutcome.Failed,
             reason: reason, details: details, retryCount: retryCount,
-            nextRetryAt: nextRetryAt, deadLetteredAt: null);
+            nextRetryAt: nextRetryAt, deadLetteredAt: null,
+            triggeredByAdminUserId: triggeredByAdminUserId);
 
     /// <summary>Records a dead-letter — terminal failure after max retries OR unrecoverable error.</summary>
     public static WikidataCoverEnrichmentAttempt RecordDeadLetter(
@@ -136,10 +165,12 @@ public sealed class WikidataCoverEnrichmentAttempt : AggregateRoot<Guid>
         string reason,
         string? details,
         int retryCount,
-        DateTime attemptedAt) =>
+        DateTime attemptedAt,
+        Guid? triggeredByAdminUserId = null) =>
         Create(sharedGameId, attemptedAt, WikidataCoverEnrichmentOutcome.DeadLetter,
             reason: reason, details: details, retryCount: retryCount,
-            nextRetryAt: null, deadLetteredAt: attemptedAt);
+            nextRetryAt: null, deadLetteredAt: attemptedAt,
+            triggeredByAdminUserId: triggeredByAdminUserId);
 
     /// <summary>Repository hydration — bypasses invariants. Caller guarantees state validity.</summary>
     public static WikidataCoverEnrichmentAttempt Reconstitute(
@@ -151,9 +182,13 @@ public sealed class WikidataCoverEnrichmentAttempt : AggregateRoot<Guid>
         string? details,
         int retryCount,
         DateTime? nextRetryAt,
-        DateTime? deadLetteredAt) =>
+        DateTime? deadLetteredAt,
+        DateTime? acknowledgedAt,
+        Guid? acknowledgedBy,
+        Guid? triggeredByAdminUserId) =>
         new(id, sharedGameId, attemptedAt, outcome, reason, details,
-            retryCount, nextRetryAt, deadLetteredAt);
+            retryCount, nextRetryAt, deadLetteredAt,
+            acknowledgedAt, acknowledgedBy, triggeredByAdminUserId);
 
     private static WikidataCoverEnrichmentAttempt Create(
         Guid sharedGameId,
@@ -163,7 +198,8 @@ public sealed class WikidataCoverEnrichmentAttempt : AggregateRoot<Guid>
         string? details,
         int retryCount,
         DateTime? nextRetryAt,
-        DateTime? deadLetteredAt)
+        DateTime? deadLetteredAt,
+        Guid? triggeredByAdminUserId)
     {
         if (sharedGameId == Guid.Empty)
             throw new ArgumentException("SharedGameId cannot be Guid.Empty.", nameof(sharedGameId));
@@ -189,6 +225,38 @@ public sealed class WikidataCoverEnrichmentAttempt : AggregateRoot<Guid>
             details: details,
             retryCount: retryCount,
             nextRetryAt: nextRetryAt,
-            deadLetteredAt: deadLetteredAt);
+            deadLetteredAt: deadLetteredAt,
+            acknowledgedAt: null,
+            acknowledgedBy: null,
+            triggeredByAdminUserId: triggeredByAdminUserId);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Mutators
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Issue #1823 Phase F F5 — operator marks a dead-letter as "not actionable".
+    /// EXCEPTION to the record-of-fact pattern documented on the type: ack is
+    /// operational metadata orthogonal to the pipeline (parallel to
+    /// <see cref="DeadLetteredAt"/>), not a new pipeline event. Idempotent on
+    /// re-call: the first ack is preserved and subsequent calls are no-ops so
+    /// repeated bulk-acknowledge clicks cannot rewrite the audit trail.
+    /// </summary>
+    /// <param name="userId">Acknowledging admin user id; must not be <see cref="Guid.Empty"/>.</param>
+    /// <param name="ackedAt">UTC acknowledgement timestamp.</param>
+    public void Acknowledge(Guid userId, DateTime ackedAt)
+    {
+        if (Outcome != WikidataCoverEnrichmentOutcome.DeadLetter)
+            throw new InvalidOperationException(
+                $"Only DeadLetter attempts can be acknowledged; current Outcome={Outcome}.");
+
+        if (userId == Guid.Empty)
+            throw new ArgumentException("UserId cannot be Guid.Empty.", nameof(userId));
+
+        if (AcknowledgedAt is not null) return; // idempotent
+
+        AcknowledgedAt = ackedAt;
+        AcknowledgedBy = userId;
     }
 }

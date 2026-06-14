@@ -22,7 +22,11 @@ public class InMemoryWikidataEnrichmentEventBroadcasterTests
         AttemptedAt: new DateTime(2026, 6, 12, 0, 0, 0, DateTimeKind.Utc),
         RetryCount: 3,
         NextRetryAt: null,
-        DeadLetteredAt: new DateTime(2026, 6, 12, 0, 0, 0, DateTimeKind.Utc));
+        DeadLetteredAt: new DateTime(2026, 6, 12, 0, 0, 0, DateTimeKind.Utc),
+        // F6 #1823 Phase F: broadcaster fan-out exercise is trigger-source
+        // agnostic; sample defaults to scheduler-authored (null).
+        TriggeredByAdminUserId: null,
+        TriggeredByAdminFullName: null);
 
     private static InMemoryWikidataEnrichmentEventBroadcaster CreateSut() => new(
         NullLogger<InMemoryWikidataEnrichmentEventBroadcaster>.Instance);

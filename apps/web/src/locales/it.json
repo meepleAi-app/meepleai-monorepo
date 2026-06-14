@@ -2250,7 +2250,7 @@
         "emptyBody": "Nessun gioco è ancora stato aggiunto al catalogo della community."
       },
       "agents": {
-        "badge": "Hub · /hub/agents",
+        "badge": "Hub · /agents",
         "title": "Agenti community",
         "subtitle": "Scopri agenti AI condivisi dalla community per i tuoi giochi preferiti.",
         "installLabel": "Installa agente",
@@ -2264,7 +2264,7 @@
         "emptyBody": "La community non ha ancora pubblicato agenti AI."
       },
       "toolkits": {
-        "badge": "Hub · /hub/toolkits",
+        "badge": "Hub · /toolkits",
         "title": "Toolkit community",
         "subtitle": "Toolkit di strumenti condivisi dalla community per arricchire le tue sessioni.",
         "installLabel": "Installa toolkit",
@@ -2348,7 +2348,7 @@
           "statusIdle": "Inattivo",
           "callsTemplate": "{count} call",
           "emptyTitle": "Nessun agente AI attivo.",
-          "emptyCta": "Esplora /hub/agents"
+          "emptyCta": "Esplora /agents"
         },
         "sessions": {
           "title": "Sessioni",

@@ -161,7 +161,26 @@ internal sealed class WikidataCatalogProvider : ICatalogProvider
 
             return ParseCoverResponse(body, qid, sourceUrl);
         }
-        catch (OperationCanceledException) { throw; }
+        // Issue #2157: real caller cancellation propagates so the batch handler
+        // can decide to abort. We MUST guard with `when (ct.IsCancellationRequested)`
+        // because HttpClient.Timeout firing also raises a TaskCanceledException
+        // (subclass of OperationCanceledException) WITHOUT cancelling the caller
+        // token — without the guard we would conflate a per-game HTTP timeout
+        // with a batch-wide user cancel, aborting the entire batch on the first
+        // slow upstream response.
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        // Issue #2157: HttpClient.Timeout (TaskCanceledException) with caller
+        // token NOT cancelled = upstream timeout. Map to NotFound so the batch
+        // continues with the next game; the batch handler still records a
+        // distinct outcome for ops via the per-game audit trail.
+        catch (OperationCanceledException oce)
+        {
+            _logger.LogWarning(oce, "Wikidata cover fetch TIMEOUT for QID {Qid}", qid);
+            return WikidataCoverImageResult.NotFound(qid);
+        }
         // Issue #1823 Wave 3 M13 (M10 follow-up): the WikimediaCircuitBreakerHandler
         // (DEC-3f) throws BrokenCircuitException when its circuit is OPEN. Letting
         // the generic catch swallow it would silently map "upstream temporarily

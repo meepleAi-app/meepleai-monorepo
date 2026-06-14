@@ -98,9 +98,24 @@ internal sealed class WikimediaCommonsClient : IWikimediaCommonsClient
             var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             return ParseResponse(body, filename, decoded);
         }
-        // OperationCanceledException is intentionally NOT caught: it is not a
-        // subclass of HttpRequestException or JsonException, so it propagates
-        // naturally to honour caller cancellation (see XML doc on the interface).
+        // Issue #2157: real caller cancellation propagates so the batch handler
+        // can decide to abort. HttpClient.Timeout firing also raises
+        // TaskCanceledException (subclass of OperationCanceledException) WITHOUT
+        // cancelling the caller token; we MUST distinguish via the
+        // `when (ct.IsCancellationRequested)` guard or the batch handler will
+        // mistake a per-game upstream timeout for a batch-wide user cancel.
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogWarning(ex,
+                "Commons imageinfo TIMEOUT for file '{Filename}' (decoded='{Decoded}'). Caller decides retry.",
+                filename,
+                decoded);
+            return CommonsLicenseResult.NotAvailable();
+        }
         catch (HttpRequestException ex)
         {
             _logger.LogWarning(ex,
@@ -168,8 +183,24 @@ internal sealed class WikimediaCommonsClient : IWikimediaCommonsClient
 
             return bytes;
         }
-        // OperationCanceledException intentionally NOT caught: propagates to
-        // honour caller cancellation (see XML doc on the interface).
+        // Issue #2157: real caller cancellation propagates so the batch handler
+        // can decide to abort. HttpClient.Timeout firing also raises
+        // TaskCanceledException (subclass of OperationCanceledException) WITHOUT
+        // cancelling the caller token; we MUST distinguish via the
+        // `when (ct.IsCancellationRequested)` guard so the batch handler can
+        // record the per-game timeout and continue with the next id.
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogWarning(ex,
+                "Commons FilePath TIMEOUT for file '{Filename}' (decoded='{Decoded}'). Caller decides retry.",
+                filename,
+                decoded);
+            return null;
+        }
         catch (HttpRequestException ex)
         {
             _logger.LogWarning(ex,

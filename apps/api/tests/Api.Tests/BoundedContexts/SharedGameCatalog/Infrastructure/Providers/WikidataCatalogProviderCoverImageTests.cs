@@ -239,8 +239,12 @@ public sealed class WikidataCatalogProviderCoverImageTests
     }
 
     [Fact]
-    public async Task FetchCoverImageAsync_HttpCancellation_RethrowsOperationCanceledException()
+    public async Task FetchCoverImageAsync_CallerCancellation_RethrowsOperationCanceledException()
     {
+        // Issue #2157: caller cancellation MUST propagate. We assert by using a
+        // CancellationTokenSource that IS cancelled — the provider's exception
+        // filter `when (ct.IsCancellationRequested)` rethrows for real caller
+        // cancel and swallows-as-NotFound only for HttpClient.Timeout leaks.
         var handler = new Mock<HttpMessageHandler>();
         handler.Protected()
             .Setup<Task<HttpResponseMessage>>(
@@ -254,9 +258,105 @@ public sealed class WikidataCatalogProviderCoverImageTests
         };
         var provider = MakeProvider(client);
 
-        var act = async () => await provider.FetchCoverImageAsync("Q17215001", CancellationToken.None);
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var act = async () => await provider.FetchCoverImageAsync("Q17215001", cts.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    /// <summary>
+    /// Issue #2157: <see cref="HttpClient.Timeout"/> firing produces
+    /// <see cref="TaskCanceledException"/> (subclass of
+    /// <see cref="OperationCanceledException"/>) EVEN WHEN the caller's
+    /// <see cref="CancellationToken"/> is NOT cancelled. The provider must
+    /// distinguish these two cases by guarding the rethrow with
+    /// <c>when (ct.IsCancellationRequested)</c> and mapping the HTTP timeout
+    /// to <see cref="WikidataCoverImageResult.NotFound"/>. Otherwise the
+    /// batch handler's `OperationCanceledException` catch aborts the entire
+    /// batch on the first slow Wikidata response, surfacing a 500 to the
+    /// admin client and forfeiting any partial enrichment.
+    /// </summary>
+    [Fact]
+    public async Task FetchCoverImageAsync_HttpClientTimeout_ReturnsNotFound_DoesNotRethrow()
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ThrowsAsync(new TaskCanceledException("HttpClient timeout simulation"));
+        var client = new HttpClient(handler.Object)
+        {
+            BaseAddress = new Uri("https://query.wikidata.org/"),
+        };
+        var provider = MakeProvider(client);
+
+        using var callerCts = new CancellationTokenSource();
+        // callerCts is NOT cancelled — the TaskCanceledException originates
+        // from HttpClient.Timeout, not the caller's token.
+        var result = await provider.FetchCoverImageAsync("Q17215001", callerCts.Token);
+
+        result.HasImage.Should().BeFalse("HttpClient.Timeout maps to NotFound, not exception");
+        result.Filename.Should().BeNull();
+        result.SourceUrl.Should().Be("https://www.wikidata.org/wiki/Q17215001");
+        callerCts.IsCancellationRequested.Should().BeFalse(
+            "sanity check: caller token was never cancelled in this scenario");
+    }
+
+    /// <summary>
+    /// Issue #2157 integration-style coverage: spin up a real
+    /// <see cref="HttpClient"/> with a 100 ms timeout pointed at a delegating
+    /// handler that delays 500 ms — exercises the actual
+    /// <see cref="HttpClient.Timeout"/> code path (vs the Moq throw above)
+    /// to lock the guard against future Polly / .NET runtime changes.
+    /// </summary>
+    [Fact]
+    public async Task FetchCoverImageAsync_RealHttpClientTimeout_IsCaughtAsNotFound()
+    {
+        using var slowHandler = new SlowResponseHandler(TimeSpan.FromMilliseconds(500));
+        using var httpClient = new HttpClient(slowHandler)
+        {
+            BaseAddress = new Uri("https://query.wikidata.org/"),
+            Timeout = TimeSpan.FromMilliseconds(100),
+        };
+        var rateLimiter = new Mock<IWikimediaRateLimiter>();
+        rateLimiter.Setup(r => r.AcquireAsync(It.IsAny<CancellationToken>())).Returns(ValueTask.CompletedTask);
+        var provider = new WikidataCatalogProvider(
+            httpClient,
+            NullLogger<WikidataCatalogProvider>.Instance,
+            rateLimiter.Object);
+
+        using var callerCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var result = await provider.FetchCoverImageAsync("Q17215001", callerCts.Token);
+
+        result.HasImage.Should().BeFalse();
+        callerCts.IsCancellationRequested.Should().BeFalse(
+            "real HttpClient.Timeout fires independently of caller token");
+    }
+
+    private sealed class SlowResponseHandler : DelegatingHandler
+    {
+        private readonly TimeSpan _delay;
+
+        public SlowResponseHandler(TimeSpan delay)
+        {
+            _delay = delay;
+            InnerHandler = new HttpClientHandler();
+        }
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            await Task.Delay(_delay, cancellationToken).ConfigureAwait(false);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"results\":{\"bindings\":[]}}", System.Text.Encoding.UTF8, "application/sparql-results+json"),
+            };
+        }
     }
 
     [Fact]

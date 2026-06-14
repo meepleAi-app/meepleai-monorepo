@@ -12,7 +12,7 @@
 set -euo pipefail
 source "$(dirname "$(readlink -f "$0")")/lib/common.sh"
 
-banner "30 — KB PDFs (6 SP4)"
+banner "30 — KB PDFs (SP4)"
 ADMIN_JAR=$(cookie_jar_for "admin")
 [[ -s "$ADMIN_JAR" ]] || { admin_login; }
 

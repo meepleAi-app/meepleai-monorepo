@@ -37,6 +37,15 @@ public class TextChunkEntity
     public short Level { get; set; } = 1;
     public string ElementType { get; set; } = "NarrativeText";
 
+    /// <summary>
+    /// #2311 BE-1 — denormalized counter of distinct assistant messages that cited this chunk.
+    /// Forward-looking metric (start-from-0 per DEC-D2): incremented post-SaveChanges by
+    /// <see cref="Api.BoundedContexts.KnowledgeBase.Application.Commands.IncrementChunkUsageCountsCommand"/>
+    /// inside <see cref="Api.BoundedContexts.KnowledgeBase.Application.Commands.ChatWithSessionAgentCommandHandler"/>.
+    /// Surfaced via <see cref="Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunks.KbChunkSummaryDto.UsedInChats"/>.
+    /// </summary>
+    public int UsageCount { get; set; }
+
     // PostgreSQL full-text search vector (automatically maintained by trigger)
     // This column is populated by the tsvector_update_text_chunks trigger
     [Column("search_vector")]

@@ -1,9 +1,10 @@
 # ADR-060: Live session persistence strategy
 
-**Status**: Proposed
+**Status**: Accepted
 **Date**: 2026-06-09
+**Implemented**: 2026-06-14 (EPIC #2097)
 **Authors**: badsworm@gmail.com (Project Owner), Claude Opus 4.7 (Spec-panel facilitator)
-**Related issues**: #2090 (umbrella), #4750 (original schema design), session manual test 2026-06-09
+**Related issues**: #2090 (umbrella), #2097 (implementation epic), #4750 (original schema design), session manual test 2026-06-09
 
 ## Context
 

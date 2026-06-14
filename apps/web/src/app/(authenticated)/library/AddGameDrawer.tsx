@@ -20,7 +20,6 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { BookOpen, PenLine } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { CatalogSearchStep } from '@/app/(authenticated)/library/CatalogSearchStep';
@@ -28,6 +27,7 @@ import { UserWizardClient } from '@/app/(authenticated)/library/private/add/clie
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/navigation/sheet';
 import { useTranslation } from '@/hooks/useTranslation';
 import { trackEvent } from '@/lib/analytics/track-event';
+import { cn } from '@/lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,45 +35,110 @@ type DrawerStep = 'choice' | 'manual' | 'catalog';
 
 // ─── Step 0: Choice cards ─────────────────────────────────────────────────────
 
+/**
+ * Visual accent per choice card. `game` for the manual (create-from-scratch)
+ * path, `kb` for the catalog (knowledge-base / community catalog) path.
+ *
+ * Maps to the canonical entity tokens `--c-game` / `--c-kb` (see
+ * `apps/web/src/styles/design-tokens-canonical.css`). Implements the SP4
+ * mockup `sp4-add-game-drawer.jsx:99-145` per issue #2076.
+ */
+type ChoiceAccent = 'game' | 'kb';
+
 interface ChoiceCardProps {
-  icon: React.ReactNode;
+  accent: ChoiceAccent;
+  /** Emoji glyph (decorative) — e.g. `✍️` for manual, `📚` for catalog. */
+  glyph: string;
   title: string;
   description: string;
   onClick: () => void;
   'data-testid'?: string;
 }
 
-function ChoiceCard({ icon, title, description, onClick, 'data-testid': testId }: ChoiceCardProps) {
+const ACCENT_STYLES: Record<
+  ChoiceAccent,
+  {
+    border: string;
+    glyphBg: string;
+    chevron: string;
+    ring: string;
+    hoverBg: string;
+  }
+> = {
+  game: {
+    border: 'hover:border-[hsl(var(--c-game)/0.55)]',
+    glyphBg: 'bg-[hsl(var(--c-game)/0.14)]',
+    chevron: 'group-hover:text-[hsl(var(--c-game))]',
+    ring: 'group-hover:ring-2 group-hover:ring-[hsl(var(--c-game)/0.12)]',
+    hoverBg: 'hover:bg-[hsl(var(--c-game)/0.05)]',
+  },
+  kb: {
+    border: 'hover:border-[hsl(var(--c-kb)/0.55)]',
+    glyphBg: 'bg-[hsl(var(--c-kb)/0.14)]',
+    chevron: 'group-hover:text-[hsl(var(--c-kb))]',
+    ring: 'group-hover:ring-2 group-hover:ring-[hsl(var(--c-kb)/0.12)]',
+    hoverBg: 'hover:bg-[hsl(var(--c-kb)/0.05)]',
+  },
+};
+
+function ChoiceCard({
+  accent,
+  glyph,
+  title,
+  description,
+  onClick,
+  'data-testid': testId,
+}: ChoiceCardProps) {
+  const styles = ACCENT_STYLES[accent];
   return (
     <button
       type="button"
       data-testid={testId}
       onClick={onClick}
-      className={[
-        'w-full text-left rounded-xl border-2 border-border/50 p-5',
-        // #2269 P0-4 — token canonical: orange-* hardcoded → entity-game.
-        // The entity utility resolves to --c-game and is theme-aware (light
-        // + dark), removing the need for `dark:` variants.
-        'hover:border-entity-game/60 hover:bg-entity-game/10',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-entity-game',
-        'transition-colors cursor-pointer',
-      ].join(' ')}
+      className={cn(
+        'group w-full text-left rounded-xl border-[1.5px] border-border bg-card p-5 shadow-xs',
+        'flex items-start gap-4',
+        'hover:-translate-y-0.5 hover:shadow-sm',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+        'transition-[transform,box-shadow,border-color,background-color] duration-150 ease-out cursor-pointer',
+        styles.border,
+        styles.hoverBg
+      )}
     >
-      <div className="flex items-start gap-4">
-        {/*
-          F2.2 T6 #1974 (audit 2026-06-07, a11y audit): icon is purely
-          decorative — the title + description below already convey the
-          choice. `aria-hidden` keeps screen readers from announcing
-          "image, image" before the meaningful label.
-        */}
-        <div aria-hidden="true" className="flex-shrink-0 mt-0.5 text-entity-game">
-          {icon}
-        </div>
-        <div>
-          <p className="font-semibold text-foreground">{title}</p>
-          <p className="text-sm text-muted-foreground mt-1">{description}</p>
-        </div>
-      </div>
+      {/*
+        F2.2 T6 #1974 + #2076: glyph is purely decorative — title + description
+        below carry the meaning. `aria-hidden` prevents screen readers from
+        announcing the emoji before the labelled choice.
+      */}
+      <span
+        aria-hidden="true"
+        className={cn(
+          'shrink-0 flex h-[46px] w-[46px] items-center justify-center rounded-lg text-[22px]',
+          'transition-shadow duration-150 ease-out',
+          styles.glyphBg,
+          styles.ring
+        )}
+      >
+        {glyph}
+      </span>
+      <span className="flex-1 min-w-0">
+        <span className="block font-quicksand font-extrabold text-lg leading-tight text-foreground">
+          {title}
+        </span>
+        <span className="block mt-1.5 text-base leading-snug text-muted-foreground">
+          {description}
+        </span>
+      </span>
+      <span
+        aria-hidden="true"
+        className={cn(
+          'shrink-0 self-center text-lg font-extrabold text-muted-foreground',
+          'transition-[color,transform] duration-150 ease-out group-hover:translate-x-0.5',
+          styles.chevron
+        )}
+      >
+        ›
+      </span>
     </button>
   );
 }
@@ -163,7 +228,8 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
 
               <ChoiceCard
                 data-testid="add-game-choice-manual"
-                icon={<PenLine className="h-6 w-6" />}
+                accent="game"
+                glyph="✍️"
                 title={t('pages.library.addGame.manualLabel')}
                 description={t('pages.library.addGame.manualDescription')}
                 onClick={() => {
@@ -174,7 +240,8 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
 
               <ChoiceCard
                 data-testid="add-game-choice-catalog"
-                icon={<BookOpen className="h-6 w-6" />}
+                accent="kb"
+                glyph="📚"
                 title={t('pages.library.addGame.catalogLabel')}
                 description={t('pages.library.addGame.catalogDescription')}
                 onClick={() => {

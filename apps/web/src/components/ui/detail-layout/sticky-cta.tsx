@@ -1,4 +1,6 @@
 /* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
+'use client';
+
 /**
  * StickyCta — guest gating CTA for /shared-games/[id] V2.
  *
@@ -13,6 +15,13 @@
  *
  * Both share the same href + label (`signInHref` + `installLabel`). Component is
  * stateless / link-only — actual auth flow happens on `signInHref` route.
+ *
+ * Issue #2081 — Internal auth guard via useCurrentUser():
+ *  - Returns null when authenticated (no flash for logged-in users)
+ *  - Returns null during auth loading (conservative — prevents flash)
+ *  - Renders full CTA only for confirmed guests
+ *  - Caller's `hideStickyCta` prop on SharedGameDetailPageClient is still
+ *    honored as explicit override.
  */
 
 import type { JSX } from 'react';
@@ -20,6 +29,7 @@ import type { JSX } from 'react';
 import clsx from 'clsx';
 
 import { entityHsl } from '@/components/ui/data-display/meeple-card/tokens';
+import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 
 export interface StickyCtaLabels {
   /** Mobile full-width button label, e.g. "🔒 Accedi per installare". */
@@ -38,7 +48,14 @@ export interface StickyCtaProps {
   readonly className?: string;
 }
 
-export function StickyCta({ signInHref, labels, className }: StickyCtaProps): JSX.Element {
+export function StickyCta({ signInHref, labels, className }: StickyCtaProps): JSX.Element | null {
+  const { data: user, isLoading } = useCurrentUser();
+
+  // Issue #2081: hide CTA when user is authenticated or during initial auth check
+  if (isLoading || user) {
+    return null;
+  }
+
   return (
     <>
       {/* Mobile: full-width sticky bar */}

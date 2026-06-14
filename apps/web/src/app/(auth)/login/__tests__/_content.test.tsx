@@ -336,6 +336,35 @@ describe('LoginPageContent — open redirect protection (#2168)', () => {
   });
 });
 
+describe('LoginPageContent — error logging dedup (#2171)', () => {
+  // Bug #2171: previously 4 console.error per failed login (HTTP 400 from
+  // browser + 2× [API Error] from retry layer + 1× [ERROR] Login failed from
+  // caller). PR #2236 removed the retry-layer duplicate; this PR removes the
+  // caller-side `logger.error('Login failed:', err)` because HttpClient already
+  // calls logApiError on failed responses. The caller's job is UX feedback
+  // via setError, not logging.
+  it('does NOT call logger.error when login API call rejects', async () => {
+    loginMock.mockRejectedValueOnce(new Error('Invalid email or password'));
+
+    render(<LoginPageContent />);
+
+    fireEvent.change(screen.getByLabelText(/auth\.login\.emailLabel/i), {
+      target: { value: 'bad@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/auth\.login\.passwordLabel/i), {
+      target: { value: 'WrongPassword1' },
+    });
+    fireEvent.submit(screen.getByTestId('login-form'));
+
+    // Wait until error path settles (setError → re-render)
+    await waitFor(() => {
+      expect(screen.getByText('Invalid email or password')).toBeInTheDocument();
+    });
+
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+});
+
 describe('LoginFallback', () => {
   it('renders loading message', () => {
     render(<LoginFallback />);

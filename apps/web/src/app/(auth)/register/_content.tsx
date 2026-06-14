@@ -15,7 +15,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from '@/hooks/useTranslation';
 import { trackSignUp } from '@/lib/analytics/flywheel-events';
 import { useApiClient } from '@/lib/api/context';
-import { logger } from '@/lib/logger';
 
 // ============================================================================
 // Types
@@ -103,7 +102,8 @@ export function RegisterPageContent() {
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : t('auth.register.genericError');
         setError(errorMessage);
-        logger.error('Registration failed:', err);
+        // Issue #2171: HttpClient already calls logApiError on failed responses —
+        // re-logging here produced duplicate console.error noise.
       } finally {
         setIsAuthenticating(false);
       }

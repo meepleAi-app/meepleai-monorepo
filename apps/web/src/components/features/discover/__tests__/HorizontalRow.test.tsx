@@ -381,4 +381,48 @@ describe('HorizontalRow', () => {
     );
     expect(screen.getByText('Mario Rossi')).toBeInTheDocument();
   });
+
+  // Issue #2290: featured card renders the "KB" pill (mirror of HubGameCard
+  // style) when item.hasKnowledgeBase === true. Drives the AI-Ready badge on
+  // Discover Row 1 (Block B of #2289).
+  describe('featured card — KB badge (#2290)', () => {
+    it('renders KB badge when hasKnowledgeBase=true', () => {
+      const { container } = render(
+        <HorizontalRow
+          rowId="trending"
+          title="Trending"
+          variant="featured"
+          items={[{ id: '1', name: 'Catan', hasKnowledgeBase: true }]}
+        />
+      );
+      const badge = container.querySelector('[data-slot="row-card-kb-badge"]');
+      expect(badge).not.toBeNull();
+      expect(badge).toHaveAttribute('aria-label', 'AI Ready');
+      expect(badge?.textContent).toBe('KB');
+    });
+
+    it('omits KB badge when hasKnowledgeBase=false', () => {
+      const { container } = render(
+        <HorizontalRow
+          rowId="trending"
+          title="Trending"
+          variant="featured"
+          items={[{ id: '1', name: 'Catan', hasKnowledgeBase: false }]}
+        />
+      );
+      expect(container.querySelector('[data-slot="row-card-kb-badge"]')).toBeNull();
+    });
+
+    it('omits KB badge when hasKnowledgeBase is undefined (other-row safety)', () => {
+      const { container } = render(
+        <HorizontalRow
+          rowId="games"
+          title="Giochi"
+          variant="featured"
+          items={[{ id: '1', name: 'Catan' }]}
+        />
+      );
+      expect(container.querySelector('[data-slot="row-card-kb-badge"]')).toBeNull();
+    });
+  });
 });

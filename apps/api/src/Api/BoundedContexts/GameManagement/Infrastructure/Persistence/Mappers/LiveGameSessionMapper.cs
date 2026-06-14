@@ -101,7 +101,9 @@ internal static class LiveGameSessionMapper
                 Id = team.Id,
                 LiveGameSessionId = domain.Id,
                 Name = team.Name,
-                Color = team.Color
+                Color = team.Color,
+                TeamScore = team.TeamScore,
+                CurrentRank = team.CurrentRank
             });
         }
 
@@ -202,6 +204,23 @@ internal static class LiveGameSessionMapper
             liveGameSessionId: entity.Id,
             name: t.Name,
             color: t.Color)).ToList();
+
+        // Restore mutable team state (score, rank) — these aren't ctor params.
+        // Also rebuild Team._playerIds from the Players' TeamId pointers — the ctor
+        // initializes the list empty and the domain reassignment path expects
+        // oldTeam._playerIds.Contains(playerId) to be true (LiveSessionTeam.RemovePlayer
+        // throws otherwise).
+        foreach (var entityTeam in entity.Teams)
+        {
+            var domainTeam = teams.First(dt => dt.Id == entityTeam.Id);
+            domainTeam.UpdateScore(entityTeam.TeamScore, entityTeam.CurrentRank);
+        }
+        foreach (var entityPlayer in entity.Players)
+        {
+            if (entityPlayer.TeamId is not Guid teamId) continue;
+            var domainTeam = teams.FirstOrDefault(dt => dt.Id == teamId);
+            domainTeam?.AddPlayer(entityPlayer.Id);
+        }
 
         var roundScores = entity.RoundScores.Select(s => new RoundScore(
             playerId: s.PlayerId,

@@ -127,7 +127,11 @@ internal sealed class StartImprovvisataSessionCommandHandler
             timeProvider: _timeProvider,
             role: PlayerRole.Host);
 
-        // 5. Register the session in the in-memory repository (for real-time tracking)
+        // 5. Stage the LiveGameSession via repository (mapper populates the full entity
+        //    including child collections + all jsonb columns). Previously a second manual
+        //    DbContext.LiveGameSessions.Add(...) was performed here, which after Phase 1
+        //    of #2097 (EF-backed repository) would throw "instance with same key already
+        //    tracked" at SaveChangesAsync. Removed; the repository does the full insert.
         await _sessionRepository.AddAsync(session, cancellationToken).ConfigureAwait(false);
 
         // 6. Create SessionInvite domain object (24h expiry, max 10 uses)
@@ -137,27 +141,7 @@ internal sealed class StartImprovvisataSessionCommandHandler
             maxUses: InviteMaxUses,
             expiryMinutes: InviteExpiryMinutes);
 
-        // 7. Persist LiveGameSession entity to database
-        _dbContext.LiveGameSessions.Add(new LiveGameSessionEntity
-        {
-            Id = session.Id,
-            SessionCode = session.SessionCode,
-            GameId = session.GameId,
-            GameName = session.GameName,
-            ToolkitId = session.ToolkitId,
-            CreatedByUserId = session.CreatedByUserId,
-            Visibility = (int)session.Visibility,
-            GroupId = session.GroupId,
-            Status = (int)session.Status,
-            CurrentTurnIndex = session.CurrentTurnIndex,
-            CreatedAt = session.CreatedAt,
-            UpdatedAt = session.UpdatedAt,
-            AgentMode = (int)session.AgentMode,
-            ScoringConfigJson = "{}",
-            RowVersion = new byte[] { 1 }
-        });
-
-        // 8. Persist SessionInvite entity to database
+        // 7. Persist SessionInvite entity to database
         _dbContext.SessionInvites.Add(new SessionInviteEntity
         {
             Id = invite.Id,
@@ -172,15 +156,15 @@ internal sealed class StartImprovvisataSessionCommandHandler
             IsRevoked = invite.IsRevoked
         });
 
-        // 9. Save atomically
+        // 8. Save atomically (session staged in step 5 + invite staged in step 7)
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        // 10. Record tier usage after successful creation
+        // 9. Record tier usage after successful creation
         await _tierEnforcementService
             .RecordUsageAsync(request.UserId, TierAction.CreatePrivateGame, cancellationToken)
             .ConfigureAwait(false);
 
-        // 11. Build share link
+        // 10. Build share link
         var shareLink = $"/join/{invite.LinkToken}";
 
         _logger.LogInformation(

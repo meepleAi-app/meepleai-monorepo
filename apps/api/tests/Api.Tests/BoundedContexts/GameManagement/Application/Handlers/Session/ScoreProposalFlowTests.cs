@@ -67,7 +67,8 @@ public sealed class ScoreProposalFlowTests
             _sessionRepoMock.Object,
             _hubContextMock.Object,
             confirmLogger.Object,
-            unitOfWorkMock.Object);
+            unitOfWorkMock.Object,
+            TimeProvider.System);
     }
 
     private async Task SeedSessionWithParticipant(

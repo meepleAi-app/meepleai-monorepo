@@ -750,13 +750,19 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Updates the game state (free-form JSON).
+    /// Updates the game state (free-form JSON). The previous <see cref="JsonDocument"/>
+    /// (if any) is disposed to release its <see cref="System.Buffers.ArrayPool{T}"/> rental;
+    /// callers must not retain references to the prior value.
     /// </summary>
     public void UpdateGameState(JsonDocument? gameState, TimeProvider? timeProvider = null)
     {
         if (Status == LiveSessionStatus.Completed)
             throw new ConflictException("Cannot update game state on a completed session");
 
+        // Dispose the prior JsonDocument before reassigning. JsonDocument owns pooled buffers
+        // and only releases them on Dispose — repeated assignments without disposal cause
+        // steady ArrayPool starvation visible as LOH growth (auto-save sweep × active sessions).
+        GameState?.Dispose();
         GameState = gameState;
         var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
         UpdatedAt = now;

@@ -48,7 +48,8 @@ internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionReposi
 
     public async Task<LiveGameSession?> GetByCodeAsync(string sessionCode, CancellationToken cancellationToken = default)
     {
-        var normalized = sessionCode?.ToUpperInvariant();
+        ArgumentException.ThrowIfNullOrWhiteSpace(sessionCode);
+        var normalized = sessionCode.ToUpperInvariant();
         var entity = await DbContext.LiveGameSessions
             .AsNoTracking()
             .Include(e => e.Players)
@@ -127,70 +128,64 @@ internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionReposi
         CollectDomainEvents(session);
 
         var sw = Stopwatch.StartNew();
-        try
+
+        // Map to entity snapshot for scalar values and child collections
+        var snapshot = LiveGameSessionMapper.ToEntity(session);
+
+        // Preserve Entity-only fields that Domain doesn't surface.
+        // TotalPausedDurationMs (Issue #216 server-side timer) lives only on the Entity;
+        // read it back from DB (AsNoTracking, no change-tracker pollution) to prevent reset.
+        snapshot.TotalPausedDurationMs = await DbContext.LiveGameSessions
+            .AsNoTracking()
+            .Where(e => e.Id == session.Id)
+            .Select(e => e.TotalPausedDurationMs)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        // Capture child collection snapshots BEFORE modifying snapshot.Players etc.
+        var snapshotPlayers = snapshot.Players.ToList();
+        var snapshotTeams = snapshot.Teams.ToList();
+        var snapshotRoundScores = snapshot.RoundScores.ToList();
+        var snapshotTurnRecords = snapshot.TurnRecords.ToList();
+
+        // ── Root entity: use Entry-based update so EF uses OriginalValues.RowVersion ──────
+        var trackedRoot = DbContext.ChangeTracker.Entries<LiveGameSessionEntity>()
+            .FirstOrDefault(e => e.Entity.Id == session.Id)?.Entity;
+
+        if (trackedRoot == null)
         {
-            // Map to entity snapshot for scalar values and child collections
-            var snapshot = LiveGameSessionMapper.ToEntity(session);
-
-            // Preserve Entity-only fields that Domain doesn't surface.
-            // TotalPausedDurationMs (Issue #216 server-side timer) lives only on the Entity;
-            // read it back from DB (AsNoTracking, no change-tracker pollution) to prevent reset.
-            snapshot.TotalPausedDurationMs = await DbContext.LiveGameSessions
-                .AsNoTracking()
-                .Where(e => e.Id == session.Id)
-                .Select(e => e.TotalPausedDurationMs)
-                .FirstOrDefaultAsync(cancellationToken)
-                .ConfigureAwait(false);
-
-            // Capture child collection snapshots BEFORE modifying snapshot.Players etc.
-            var snapshotPlayers = snapshot.Players.ToList();
-            var snapshotTeams = snapshot.Teams.ToList();
-            var snapshotRoundScores = snapshot.RoundScores.ToList();
-            var snapshotTurnRecords = snapshot.TurnRecords.ToList();
-
-            // ── Root entity: use Entry-based update so EF uses OriginalValues.RowVersion ──────
-            // Find or load the tracked root entity. If it's already in the change tracker
-            // (same DbContext scope), EF returns the cached instance; otherwise it hits the DB.
-            // We then set CurrentValues from the snapshot so EF marks scalars as Modified.
-            var trackedRoot = DbContext.ChangeTracker.Entries<LiveGameSessionEntity>()
-                .FirstOrDefault(e => e.Entity.Id == session.Id)?.Entity;
-
-            if (trackedRoot == null)
-            {
-                // Not in cache: attach snapshot as disconnected entity and let EF generate
-                // a standard UPDATE WHERE id=... AND row_version=@original.
-                // Clear navigation collections on the snapshot root so EF doesn't double-track
-                // children that we will handle explicitly below via SyncXxxAsync.
-                snapshot.Players.Clear();
-                snapshot.Teams.Clear();
-                snapshot.RoundScores.Clear();
-                snapshot.TurnRecords.Clear();
-                DbContext.Entry(snapshot).State = EntityState.Modified;
-            }
-            else
-            {
-                // In cache: copy scalar properties from snapshot onto the tracked entity.
-                // EF keeps OriginalValues from the load, so WHERE row_version = @original is correct.
-                DbContext.Entry(trackedRoot).CurrentValues.SetValues(snapshot);
-            }
-
-            // ── Child collections: sync against DB-resident rows ──────────────────────────────
-            // Use the captured snapshots (BEFORE Clear() was called on the root entity's collections).
-            await SyncPlayersAsync(session, snapshotPlayers, cancellationToken).ConfigureAwait(false);
-            await SyncTeamsAsync(session, snapshotTeams, cancellationToken).ConfigureAwait(false);
-            await SyncRoundScoresAsync(session, snapshotRoundScores, cancellationToken).ConfigureAwait(false);
-            await SyncTurnRecordsAsync(session, snapshotTurnRecords, cancellationToken).ConfigureAwait(false);
-
-            _logger.LogDebug("Staged LiveGameSession {SessionId} for update", session.Id);
+            // Not in cache: attach snapshot as disconnected entity and let EF generate
+            // a standard UPDATE WHERE id=... AND row_version=@original.
+            snapshot.Players.Clear();
+            snapshot.Teams.Clear();
+            snapshot.RoundScores.Clear();
+            snapshot.TurnRecords.Clear();
+            DbContext.Entry(snapshot).State = EntityState.Modified;
         }
-        finally
+        else
         {
-            sw.Stop();
-            MeepleAiMetrics.LiveSessionWritesTotal.Add(
-                1,
-                new KeyValuePair<string, object?>("op", "update"));
-            MeepleAiMetrics.LiveSessionUpdateDurationSeconds.Record(sw.Elapsed.TotalSeconds);
+            // In cache: copy scalar properties from snapshot onto the tracked entity.
+            // EF keeps OriginalValues from the load, so WHERE row_version = @original is correct.
+            DbContext.Entry(trackedRoot).CurrentValues.SetValues(snapshot);
         }
+
+        // ── Child collections: sync against DB-resident rows ──────────────────────────────
+        await SyncPlayersAsync(session, snapshotPlayers, cancellationToken).ConfigureAwait(false);
+        await SyncTeamsAsync(session, snapshotTeams, cancellationToken).ConfigureAwait(false);
+        await SyncRoundScoresAsync(session, snapshotRoundScores, cancellationToken).ConfigureAwait(false);
+        await SyncTurnRecordsAsync(session, snapshotTurnRecords, cancellationToken).ConfigureAwait(false);
+
+        // Record metrics on the happy path only. If any of the above threw, we never reach here
+        // and writes_total{op=update} stays consistent with actually-staged writes. The counter
+        // still measures STAGED operations (caller's SaveChangesAsync may still fail with a
+        // DbUpdateConcurrencyException) — duration histogram likewise observes mapper+sync work.
+        sw.Stop();
+        MeepleAiMetrics.LiveSessionWritesTotal.Add(
+            1,
+            new KeyValuePair<string, object?>("op", "update"));
+        MeepleAiMetrics.LiveSessionUpdateDurationSeconds.Record(sw.Elapsed.TotalSeconds);
+
+        _logger.LogDebug("Staged LiveGameSession {SessionId} for update", session.Id);
     }
 
     // ── Child collection sync helpers ─────────────────────────────────────────────────────

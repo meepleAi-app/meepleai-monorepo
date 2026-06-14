@@ -92,10 +92,12 @@ public sealed class LiveSessionRepositoryIntegrationTests : IAsyncLifetime
         _connStrAC2 = BuildConnStr(_containerAC2);
         _connStrAC5 = BuildConnStr(_containerAC5);
 
-        // Wait for Postgres inside private containers, then migrate
+        // Wait for Postgres inside private containers to finish initializing, then migrate.
+        // maxRetries=30 at 2s = 90s max. Private containers (no tmpfs) need time for
+        // Postgres to initialize its data directory on first start.
         await Task.WhenAll(
-            TestcontainersWaitHelpers.WaitForPostgresReadyAsync(_connStrAC2),
-            TestcontainersWaitHelpers.WaitForPostgresReadyAsync(_connStrAC5));
+            TestcontainersWaitHelpers.WaitForPostgresReadyAsync(_connStrAC2, maxRetries: 30, initialDelayMs: 2000),
+            TestcontainersWaitHelpers.WaitForPostgresReadyAsync(_connStrAC5, maxRetries: 30, initialDelayMs: 2000));
 
         _factoryAC2 = CreateMigratedFactory(_connStrAC2);
         _factoryAC5 = CreateMigratedFactory(_connStrAC5);
@@ -161,12 +163,15 @@ public sealed class LiveSessionRepositoryIntegrationTests : IAsyncLifetime
         Guid sessionId;
         Guid playerId;
 
-        // Set up — create session + add player + start
-        await using (var setupScope = _factoryAC2!.Services.CreateAsyncScope())
+        // Set up — create session + add player in one scope, then start in a FRESH scope.
+        // Using separate scopes for Create/AddPlayer vs Start avoids EF change-tracker
+        // accumulation issues when multiple handlers share the same DbContext instance.
+        Guid userId;
+        await using (var scope1 = _factoryAC2!.Services.CreateAsyncScope())
         {
-            var mediator = setupScope.ServiceProvider.GetRequiredService<IMediator>();
-            var db = setupScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            var userId = await SeedUserAsync(db);
+            var mediator = scope1.ServiceProvider.GetRequiredService<IMediator>();
+            var db = scope1.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            userId = await SeedUserAsync(db);
 
             sessionId = await mediator.Send(new CreateLiveSessionCommand(
                 UserId: userId,
@@ -178,7 +183,14 @@ public sealed class LiveSessionRepositoryIntegrationTests : IAsyncLifetime
                 Color: PlayerColor.Red,
                 UserId: userId));
 
+        }
+
+        // Start in a fresh scope so the change tracker is clean
+        await using (var scope2 = _factoryAC2.Services.CreateAsyncScope())
+        {
+            var mediator = scope2.ServiceProvider.GetRequiredService<IMediator>();
             await mediator.Send(new StartLiveSessionCommand(sessionId));
+
         }
 
         // Simulate container restart — stop then start the private Postgres container
@@ -188,7 +200,20 @@ public sealed class LiveSessionRepositoryIntegrationTests : IAsyncLifetime
         NpgsqlConnection.ClearAllPools();
 
         await _containerAC2.StartAsync();
-        await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(_connStrAC2);
+
+        // After restart, re-derive the connection string from the container's CURRENT mapped port
+        // (Testcontainers may assign a different host port after start — the connection string
+        // cached at InitializeAsync time may no longer be valid).
+        _connStrAC2 = BuildConnStr(_containerAC2);
+
+        // After a stop/start the Postgres process needs time to perform WAL recovery;
+        // use a generous maxRetries=30 with 2s initial delay to allow up to ~90s total wait.
+        await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(
+            _connStrAC2, maxRetries: 30, initialDelayMs: 2000);
+
+        // Re-create the factory with the new connection string (if port changed)
+        await _factoryAC2!.DisposeAsync();
+        _factoryAC2 = CreateMigratedFactory(_connStrAC2);
 
         // Verify — fresh scope, read back after restart
         await using var verifyScope = _factoryAC2.Services.CreateAsyncScope();
@@ -333,7 +358,15 @@ public sealed class LiveSessionRepositoryIntegrationTests : IAsyncLifetime
         await _containerAC5!.StopAsync();
         NpgsqlConnection.ClearAllPools();
         await _containerAC5.StartAsync();
-        await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(_connStrAC5);
+
+        // Re-derive the connection string with the current mapped port after restart
+        _connStrAC5 = BuildConnStr(_containerAC5);
+        await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(
+            _connStrAC5, maxRetries: 30, initialDelayMs: 2000);
+
+        // Re-create factory pointing at the restarted container
+        await _factoryAC5!.DisposeAsync();
+        _factoryAC5 = CreateMigratedFactory(_connStrAC5);
 
         // Verify — all 100 RoundScore rows must survive the restart
         await using var verifyScope = _factoryAC5.Services.CreateAsyncScope();
@@ -377,7 +410,8 @@ public sealed class LiveSessionRepositoryIntegrationTests : IAsyncLifetime
 
     /// <summary>
     /// Builds a private (non-shared) Postgres container for restart tests.
-    /// Uses a random host port and an in-memory tmpfs mount so it starts fast.
+    /// Uses a random host port. Data is stored in the container's overlay FS (NOT tmpfs)
+    /// so that it survives container stop/start (simulating a crash-recovery scenario for AC-2/5).
     /// </summary>
     private static IContainer BuildPrivateContainer()
     {
@@ -387,9 +421,9 @@ public sealed class LiveSessionRepositoryIntegrationTests : IAsyncLifetime
             .WithEnvironment("POSTGRES_PASSWORD", TestcontainersConfiguration.PostgresPassword)
             .WithEnvironment("POSTGRES_DB", "live_session_restart_test")
             .WithPortBinding(5432, assignRandomHostPort: true)
-            .WithTmpfsMount("/var/lib/postgresql/data")
+            // Note: NO tmpfs mount — data must survive container stop/start for AC-2/AC-5
             .WithCommand(
-                "-c", $"max_connections=50",
+                "-c", "max_connections=50",
                 "-c", "shared_buffers=64MB")
             .WithCleanUp(true)
             .Build();

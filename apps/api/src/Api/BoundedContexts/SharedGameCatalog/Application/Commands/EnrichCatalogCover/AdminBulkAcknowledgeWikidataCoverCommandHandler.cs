@@ -73,6 +73,7 @@ internal sealed class AdminBulkAcknowledgeWikidataCoverCommandHandler
         var acked = 0;
         var alreadyAcked = 0;
         var notFound = 0;
+        var wrongState = 0;
         var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
         var anyUpdated = false;
 
@@ -98,6 +99,7 @@ internal sealed class AdminBulkAcknowledgeWikidataCoverCommandHandler
                     GameId: attempt.SharedGameId,
                     Outcome: AdminBulkAcknowledgeRow.OutcomeWrongState,
                     Reason: $"current-outcome:{attempt.Outcome}"));
+                wrongState++;
                 continue;
             }
 
@@ -132,6 +134,7 @@ internal sealed class AdminBulkAcknowledgeWikidataCoverCommandHandler
             AckedCount: acked,
             IdempotentNoOpCount: alreadyAcked,
             NotFoundCount: notFound,
+            WrongStateCount: wrongState,
             Rows: rows);
     }
 }

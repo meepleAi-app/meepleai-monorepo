@@ -212,6 +212,13 @@ export interface AdminBulkAcknowledgeResult {
   ackedCount: number;
   idempotentNoOpCount: number;
   notFoundCount: number;
+  /**
+   * Rows resolved to an attempt NOT in the dead-letter state (race with the
+   * 7-day retention sweep deleting + re-creating rows). Surfaced so the admin
+   * chip can report "K skipped (wrong state)" instead of silently dropping
+   * these rows from the operator-visible count.
+   */
+  wrongStateCount: number;
   rows: BulkAcknowledgeRow[];
 }
 

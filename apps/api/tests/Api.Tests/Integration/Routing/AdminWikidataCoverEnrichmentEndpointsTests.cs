@@ -318,6 +318,7 @@ public sealed class AdminWikidataCoverEnrichmentEndpointsTests : IAsyncLifetime
         result!.AckedCount.Should().Be(1);
         result.IdempotentNoOpCount.Should().Be(0);
         result.NotFoundCount.Should().Be(0);
+        result.WrongStateCount.Should().Be(0);
         result.Rows.Should().ContainSingle();
         result.Rows[0].AttemptId.Should().Be(attemptId);
         result.Rows[0].GameId.Should().Be(gameId);

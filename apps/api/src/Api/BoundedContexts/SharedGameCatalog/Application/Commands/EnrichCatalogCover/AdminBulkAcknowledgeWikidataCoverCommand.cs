@@ -61,9 +61,17 @@ public sealed record AdminBulkAcknowledgeRow(
 /// <param name="AckedCount">Rows newly transitioned to acknowledged.</param>
 /// <param name="IdempotentNoOpCount">Rows already acknowledged before this request.</param>
 /// <param name="NotFoundCount">Ids that did not resolve to an existing attempt row.</param>
+/// <param name="WrongStateCount">
+/// Ids resolved to an attempt that is NOT in the dead-letter state (e.g. a fresh
+/// Success / Skipped / Failed-with-retry row) — reachable under a race with the
+/// 7-day retention sweep (DEC-3j) that deletes + re-creates rows. Surfaced so
+/// the admin chip can report "K skipped (wrong state)" instead of silently
+/// dropping these rows from the operator-visible count.
+/// </param>
 /// <param name="Rows">Per-input-id outcome detail in the order received.</param>
 public sealed record AdminBulkAcknowledgeResult(
     int AckedCount,
     int IdempotentNoOpCount,
     int NotFoundCount,
+    int WrongStateCount,
     IReadOnlyList<AdminBulkAcknowledgeRow> Rows);

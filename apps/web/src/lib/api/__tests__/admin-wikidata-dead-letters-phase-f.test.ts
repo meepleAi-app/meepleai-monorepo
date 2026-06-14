@@ -25,6 +25,7 @@ describe('bulkAcknowledgeDeadLetters (F5 client)', () => {
       ackedCount: 1,
       idempotentNoOpCount: 0,
       notFoundCount: 0,
+      wrongStateCount: 0,
       rows: [{ attemptId: 'a-1', gameId: 'g-1', outcome: 'acked', reason: null }],
     };
     const fetchMock = vi.fn().mockResolvedValue(
@@ -55,7 +56,13 @@ describe('bulkAcknowledgeDeadLetters (F5 client)', () => {
       .fn()
       .mockResolvedValue(
         new Response(
-          JSON.stringify({ ackedCount: 0, idempotentNoOpCount: 0, notFoundCount: 0, rows: [] }),
+          JSON.stringify({
+            ackedCount: 0,
+            idempotentNoOpCount: 0,
+            notFoundCount: 0,
+            wrongStateCount: 0,
+            rows: [],
+          }),
           { status: 200, headers: { 'content-type': 'application/json' } }
         )
       );

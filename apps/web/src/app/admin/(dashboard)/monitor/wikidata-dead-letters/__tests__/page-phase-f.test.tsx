@@ -47,6 +47,7 @@ describe('WikidataDeadLettersPage — Phase F integration', () => {
       ackedCount: 1,
       idempotentNoOpCount: 0,
       notFoundCount: 0,
+      wrongStateCount: 0,
       rows: [
         {
           attemptId: 'a-1',

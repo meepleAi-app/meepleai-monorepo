@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 
 import { BULK_ACKNOWLEDGE_NOTE_MAX_LENGTH } from '@/lib/api/admin-wikidata-dead-letters';
 
@@ -15,6 +15,7 @@ interface AcknowledgeSelectedModalProps {
  * Issue #1823 Phase F F5 — confirmation modal for bulk-acknowledge.
  * Optional free-text note (max 500 chars, log-only on the BE per DEC-F-4).
  * Pre-empties to `null` instead of empty string so the BE log line shows `note=<none>`.
+ * A11y: aria-modal + aria-labelledby; Escape dismisses; opens with focus on textarea.
  */
 export function AcknowledgeSelectedModal({
   open,
@@ -24,8 +25,24 @@ export function AcknowledgeSelectedModal({
 }: AcknowledgeSelectedModalProps) {
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // A11y: when the modal opens, programmatically focus the textarea so screen-reader
+  // users land inside the dialog without having to tab through the page background.
+  useEffect(() => {
+    if (open) {
+      textareaRef.current?.focus();
+    }
+  }, [open]);
 
   if (!open) return null;
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Escape' && !submitting) {
+      e.stopPropagation();
+      onCancel();
+    }
+  };
 
   const handleConfirm = async () => {
     setSubmitting(true);
@@ -42,6 +59,7 @@ export function AcknowledgeSelectedModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="ack-modal-title"
+      onKeyDown={handleKeyDown}
       className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
     >
       <div className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-lg">
@@ -58,6 +76,7 @@ export function AcknowledgeSelectedModal({
         </label>
         <textarea
           id="ack-note"
+          ref={textareaRef}
           aria-label="note"
           maxLength={BULK_ACKNOWLEDGE_NOTE_MAX_LENGTH}
           value={note}

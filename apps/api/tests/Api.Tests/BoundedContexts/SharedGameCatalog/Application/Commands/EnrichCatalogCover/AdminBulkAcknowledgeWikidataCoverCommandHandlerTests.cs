@@ -128,6 +128,7 @@ public class AdminBulkAcknowledgeWikidataCoverCommandHandlerTests
             TriggeredByUserId: _user), CancellationToken.None);
 
         result.AckedCount.Should().Be(0);
+        result.WrongStateCount.Should().Be(1);
         result.Rows.Single().Outcome.Should().Be(AdminBulkAcknowledgeRow.OutcomeWrongState);
         _repo.Verify(r => r.UpdateAsync(It.IsAny<WikidataCoverEnrichmentAttempt>(), It.IsAny<CancellationToken>()), Times.Never);
         _uow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -155,6 +156,7 @@ public class AdminBulkAcknowledgeWikidataCoverCommandHandlerTests
         result.AckedCount.Should().Be(1);
         result.IdempotentNoOpCount.Should().Be(1);
         result.NotFoundCount.Should().Be(1);
+        result.WrongStateCount.Should().Be(0);
         result.Rows.Should().HaveCount(3);
         // SaveChanges invoked exactly once for the batch because exactly one row was mutated.
         _uow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);

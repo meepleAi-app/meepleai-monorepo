@@ -72,4 +72,28 @@ describe('AcknowledgeSelectedModal', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
+
+  it('a11y: Escape key invokes onCancel', () => {
+    const onConfirm = vi.fn();
+    const onCancel = vi.fn();
+
+    render(
+      <AcknowledgeSelectedModal open selectedCount={1} onConfirm={onConfirm} onCancel={onCancel} />
+    );
+
+    const dialog = screen.getByRole('dialog');
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it('a11y: textarea receives focus on open', () => {
+    render(
+      <AcknowledgeSelectedModal open selectedCount={1} onConfirm={vi.fn()} onCancel={vi.fn()} />
+    );
+
+    const textarea = screen.getByLabelText(/note/i) as HTMLTextAreaElement;
+    expect(document.activeElement).toBe(textarea);
+  });
 });

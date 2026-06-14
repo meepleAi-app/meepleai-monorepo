@@ -364,6 +364,9 @@ export default function WikidataDeadLettersPage() {
           <span className="text-xs text-muted-foreground">
             ✔ {ackState.result.ackedCount} acked · {ackState.result.idempotentNoOpCount}{' '}
             already-acked · {ackState.result.notFoundCount} not-found
+            {ackState.result.wrongStateCount > 0 && (
+              <> · {ackState.result.wrongStateCount} skipped (wrong state)</>
+            )}
           </span>
         )}
         {ackState.state === 'error' && (

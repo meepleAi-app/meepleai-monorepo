@@ -85,6 +85,66 @@ edits this table — do not coin synonyms.
 
 ---
 
+## State variants (#2071, DS-17 Phase 1)
+
+Multi-state mockups follow a canonical naming pattern so designers and
+developers can refer to each state unambiguously. A mockup that ships
+empty / loading / error / SSE / offline variants names them with a
+fixed `-state-NN-<label>` tail:
+
+| Pattern | Meaning |
+|---|---|
+| `<base>.html`                          | `state-01-default` (canonical, no tail) |
+| `<base>-state-02-empty.html`           | Zero-data state (no records yet) |
+| `<base>-state-03-loading.html`         | Skeleton / shimmer while data fetches |
+| `<base>-state-04-error.html`           | Failure (network, server, validation) |
+| `<base>-state-05-sse.html`             | Live SSE stream rendering (incremental) |
+| `<base>-state-06-offline.html`         | Offline / PWA fallback |
+
+Rules:
+
+1. **`NN` is fixed** — `02` always means empty, `04` always means error.
+   This lets `<base>-state-04-error.html` mean the same thing across all
+   mockups and frees the lint check from per-mockup config.
+2. **The default state has NO `-state-NN-default` suffix.** The bare
+   `<base>.html` IS the default — adding a redundant `-state-01-default`
+   creates two files for the same view.
+3. **Only states actually shipped are present.** A page that never has
+   an empty state (e.g. a 404 page) does not need `state-02-empty`. A
+   page that does not stream data (e.g. settings) does not need
+   `state-05-sse`. States `05` and `06` are opt-in.
+4. **Sibling fidelity.json is shared.** The canonical
+   `<base>.fidelity.json` covers all `<base>-state-NN-*.html` variants.
+   The DS-17 lint scripts (`lint:tokens:mockups`, `lint:bgg-mockups`)
+   strip the `-state-NN-<label>` tail before reading the fidelity file.
+
+Lint enforcement: `pnpm lint:mockup-state-naming` (`scripts/validate-state-naming.mjs`)
+fails CI when a file matches `*-state-*.html` or `*-state-*.jsx` but
+violates the `state-NN-<label>` pattern (e.g. `*-state-empty.html`
+missing the `NN` prefix, or `state-99-typo` outside the catalog of
+defined NN slots).
+
+State content guidance (#2071):
+
+- Empty states use an icon (96px) + tagline + CTA. **No emoji-heavy
+  default illustrations.** Use a placeholder until a brand illustrator
+  is briefed.
+- Loading states use the skeleton primitives from
+  `admin-mockups/design_files/04-design-system.html`.
+- Error states are inline banners, not modals (per the existing
+  "Error states" guidance in the design system section below).
+- SSE states show the first frame of incremental content + the
+  "streaming" indicator from `sp4-chat.html`.
+
+Refs:
+
+- Spec: [`2026-06-09-mockup-to-app-drift-spec-panel-review.md`](../docs/superpowers/specs/2026-06-09-mockup-to-app-drift-spec-panel-review.md) § Adzic CRIT-2
+- Sub-issue: [#2071](https://github.com/meepleAi-app/meepleai-monorepo/issues/2071)
+- Umbrella: [#2063](https://github.com/meepleAi-app/meepleai-monorepo/issues/2063)
+- Pattern reference (dev fixture): `admin-mockups/design_files/state-matrix.html`
+
+---
+
 ## About the Design Files
 
 The files in `design_files/` are **design references created in HTML** — prototypes

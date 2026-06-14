@@ -139,6 +139,17 @@ These mockups carry user-side BGG surfaces forbidden per #1903 ADR. Phase B init
 | Route architecture | 6.0/10 |
 | **Overall structural** | **5.5/10** |
 
+## Nav-chrome D7 chat-panel — deprecated (#2321, 2026-06-14)
+
+Decision locked in #2150 (Hybrid pragmatico backfill): the D7 chat-panel
+primitive (`primitive-nav-chat-panel.html`, was `nanolith-nav-chat-panel.html`
+pre-#2317) is **deprecated**. No demand evidence + no runtime backfill planned.
+The corresponding `useChatPanel` runtime hook stays untouched; the primitive
+itself is retired from the design system canonical set.
+
+- [x] **#2321 — `primitive-nav-chat-panel.fidelity.json` `design_intent` flipped to `forward-refactor-obsolete`** with `obsolete_tracking_issue: "#2321"`. Designer review queue entry below tracks final approval.
+- [ ] Designer sign-off on the deprecation (this checkbox is a paper trail — the runtime decision is already shipped via #2150).
+
 ## US-9 sub-tab coverage — AI placeholder stubs (#2148, 2026-06-14)
 
 5 game-detail sub-tabs were shipped without designer-validated mockup

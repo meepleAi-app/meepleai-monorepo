@@ -113,12 +113,14 @@ public sealed class LiveSessionRepositoryIntegrationTests : IAsyncLifetime
         if (_factoryAC5 != null) await _factoryAC5.DisposeAsync();
 
         // Drop shared-fixture-backed databases
+        // (SharedTestcontainersFixture.DropIsolatedDatabaseAsync already calls
+        // NpgsqlConnection.ClearAllPools() internally per its own cleanup contract;
+        // calling it AGAIN here would risk dropping live pools held by sibling
+        // tests running in the same xunit collection.)
         await Task.WhenAll(
             _fixture.DropIsolatedDatabaseAsync(_dbAC1),
             _fixture.DropIsolatedDatabaseAsync(_dbAC3),
             _fixture.DropIsolatedDatabaseAsync(_dbAC4));
-
-        NpgsqlConnection.ClearAllPools();
 
         // Dispose private containers
         if (_containerAC2 != null) await _containerAC2.DisposeAsync();
@@ -316,7 +318,12 @@ public sealed class LiveSessionRepositoryIntegrationTests : IAsyncLifetime
     // AC-5 — 100 score updates + container restart → all 100 RoundScores persist
     // ─────────────────────────────────────────────────────────────────────────
 
-    [Fact(DisplayName = "AC-5: 100 score updates + container restart → all 100 RoundScores persist")]
+    // Timeout=600s (10 min) covers worst-case Docker Desktop load: 100 sequential
+    // RecordLiveSessionScoreCommand sends (each ~300ms under load) + container restart
+    // wait (max 90s) + EF migration replay + verify GET. Without this, the default
+    // xunit method timeout (180s in xunit.runner.json) would kill the test under load
+    // and cascade into sibling test failures.
+    [Fact(Timeout = 600_000, DisplayName = "AC-5: 100 score updates + container restart → all 100 RoundScores persist")]
     public async Task AC5_HighFrequencyUpdates_RestartSafe()
     {
         Guid sessionId;

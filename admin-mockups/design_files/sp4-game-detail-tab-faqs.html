@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SP4 · game-detail sub-tab — FAQs (placeholder)</title>
+<!--
+  @route /games/{id}/faqs
+  @last-verified 2026-06-14
+  @verified-by ai-placeholder
+  @status placeholder
+  @parent-mockup sp4-game-detail.html
+  @tracking-issue 2148
+
+  AI-generated game-detail-scoped FAQ stub (#2148). The shared
+  sp3-faq-enhanced.html covers public-app FAQ; this variant scopes to
+  game-specific questions (rules clarifications, common edge cases).
+  Designer review required.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+<link rel="stylesheet" href="components.css"/>
+<style>
+  body { font-family: 'Nunito', system-ui, sans-serif; background: hsl(var(--bg, 0 0% 100%)); color: hsl(var(--fg, 0 0% 12%)); margin: 0; padding: 24px; }
+  .placeholder-banner { background: hsl(var(--c-kb, 50 90% 50%) / 0.10); border: 1px dashed hsl(var(--c-kb, 50 90% 50%) / 0.4); border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; font-size: 13px; line-height: 1.5; }
+  .placeholder-banner strong { color: hsl(var(--c-kb, 50 90% 50%)); }
+  main { max-width: 880px; margin: 0 auto; }
+  h1 { font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 28px; margin: 0 0 8px; display: flex; align-items: center; gap: 12px; }
+  h1 .entity-chip { font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 8px; border-radius: 999px; background: hsl(var(--c-kb, 50 90% 50%) / 0.14); color: hsl(var(--c-kb, 50 90% 50%)); }
+  .subtitle { color: hsl(var(--fg-muted, 0 0% 40%)); font-size: 14px; margin-bottom: 32px; }
+  details.faq { background: hsl(var(--card, 0 0% 100%)); border: 1px solid hsl(var(--border, 0 0% 88%)); border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; }
+  details.faq summary { font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 16px; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+  details.faq summary::after { content: '+'; color: hsl(var(--c-kb, 50 90% 50%)); font-size: 22px; font-weight: 800; }
+  details.faq[open] summary::after { content: '−'; }
+  details.faq p { margin: 12px 0 0; line-height: 1.6; color: hsl(var(--fg-muted, 0 0% 30%)); }
+  .meta-row { display: flex; gap: 12px; font-size: 12px; color: hsl(var(--fg-muted, 0 0% 40%)); margin-top: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <p class="placeholder-banner">
+    <strong>AI-generated placeholder (#2148)</strong> — sub-tab `/games/[id]/faqs`.
+    Variant scoped to game-specific FAQs (rules clarifications, edge cases) —
+    distinct from the public-app sp3-faq-enhanced.html. <strong>Designer review required.</strong>
+  </p>
+  <header>
+    <h1>FAQ <span class="entity-chip">📚 KB</span></h1>
+    <p class="subtitle">Domande frequenti su questo gioco. Approvate dalla community.</p>
+  </header>
+
+  <details class="faq" open>
+    <summary>Si possono giocare in 2 giocatori?</summary>
+    <p>Sì, con la variante "duello" descritta nel manuale (Cap. 7). Cambiano alcune regole di setup ma non il flusso di gioco.</p>
+    <div class="meta-row"><span>👁️ 320 visualizzazioni</span><span>👍 28 utili</span></div>
+  </details>
+
+  <details class="faq">
+    <summary>Cosa succede se l'azione termina senza vincitore?</summary>
+    <p>Si applica la regola del "tempo limite" (Cap. 4, p. 16): chi ha più punti vince.</p>
+    <div class="meta-row"><span>👁️ 180 visualizzazioni</span><span>👍 14 utili</span></div>
+  </details>
+
+  <details class="faq">
+    <summary>Il setup avanzato è raccomandato per principianti?</summary>
+    <p>No, è raccomandato iniziare con il setup base. Il setup avanzato aggiunge 2 carte azione e regole speciali.</p>
+    <div class="meta-row"><span>👁️ 95 visualizzazioni</span><span>👍 8 utili</span></div>
+  </details>
+</main>
+</body>
+</html>

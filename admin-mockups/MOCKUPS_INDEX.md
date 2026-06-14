@@ -74,6 +74,11 @@
 | `sp4-discover.html` | page-mock | `/discover` |
 | `sp4-game-chat-tab.html` | component-mock | Chat tab embedded in `/library/[gameId]/agent`, `/games/[id]` |
 | `sp4-game-detail.html` | page-mock | `/games/[id]`, `/library/[gameId]`, `/private-games/[id]` |
+| `sp4-game-detail-tab-rules.html` | sub-tab placeholder (#2148) | `/games/[id]/rules` — AI placeholder, designer review required |
+| `sp4-game-detail-tab-reviews.html` | sub-tab placeholder (#2148) | `/games/[id]/reviews` — friend-first M1 variant, designer review required |
+| `sp4-game-detail-tab-strategies.html` | sub-tab placeholder (#2148) | `/games/[id]/strategies` — AI placeholder, designer review required |
+| `sp4-game-detail-tab-chat.html` | sub-tab placeholder (#2148) | `/games/[id]/chat` — standalone (was partial via composite), designer review required |
+| `sp4-game-detail-tab-faqs.html` | sub-tab placeholder (#2148) | `/games/[id]/faqs` — game-scoped variant of public FAQ, designer review required |
 | `sp4-game-nights-index.html` | page-mock | `/game-nights` |
 | `sp4-games-index.html` | page-mock | `/games` |
 | `sp4-kb-detail.html` | page-mock | `/knowledge-base/[id]` (deferred — G4 v3 pivot) |

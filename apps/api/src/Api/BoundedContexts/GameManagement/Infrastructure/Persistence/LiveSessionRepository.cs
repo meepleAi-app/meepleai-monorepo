@@ -177,6 +177,40 @@ internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionReposi
 
     // ── Child collection sync helpers ─────────────────────────────────────────────────────
 
+    // ── Generic child entity attachment helper ────────────────────────────────────────────
+
+    /// <summary>
+    /// Attaches <paramref name="snapshotEntity"/> to the change tracker with the specified
+    /// <paramref name="targetState"/>, correctly handling the case where an entity with the
+    /// same primary key is already tracked (uses SetValues in-place rather than re-attaching
+    /// the new object, which would throw InvalidOperationException).
+    /// </summary>
+    private void AttachOrUpdate<T>(T snapshotEntity, Guid id, EntityState targetState)
+        where T : class
+    {
+        var existingEntry = DbContext.ChangeTracker.Entries<T>()
+            .FirstOrDefault(e => e.Property("Id").CurrentValue is Guid g && g == id);
+
+        if (existingEntry != null)
+        {
+            // Entity already tracked — update in place via SetValues so we don't conflict
+            if (targetState == EntityState.Modified)
+            {
+                existingEntry.CurrentValues.SetValues(snapshotEntity);
+                existingEntry.State = EntityState.Modified;
+            }
+            else if (targetState == EntityState.Deleted)
+            {
+                existingEntry.State = EntityState.Deleted;
+            }
+            // EntityState.Added is a no-op if already tracked (entity exists)
+        }
+        else
+        {
+            DbContext.Entry(snapshotEntity).State = targetState;
+        }
+    }
+
     private async Task SyncPlayersAsync(
         LiveGameSession session, ICollection<SessionPlayerEntity> snapshotPlayers,
         CancellationToken cancellationToken)
@@ -190,10 +224,9 @@ internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionReposi
 
         foreach (var p in snapshotPlayers)
         {
-            if (existingIds.Contains(p.Id))
-                DbContext.Entry(p).State = EntityState.Modified;
-            else
-                DbContext.Entry(p).State = EntityState.Added;
+            AttachOrUpdate(p, p.Id, existingIds.Contains(p.Id)
+                ? EntityState.Modified
+                : EntityState.Added);
         }
 
         // Delete players removed from domain
@@ -201,7 +234,7 @@ internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionReposi
         foreach (var removedId in existingIds.Where(id => !snapshotIds.Contains(id)))
         {
             var stub = new SessionPlayerEntity { Id = removedId, LiveGameSessionId = session.Id };
-            DbContext.Entry(stub).State = EntityState.Deleted;
+            AttachOrUpdate(stub, removedId, EntityState.Deleted);
         }
     }
 
@@ -218,16 +251,16 @@ internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionReposi
 
         foreach (var t in snapshotTeams)
         {
-            DbContext.Entry(t).State = existingIds.Contains(t.Id)
+            AttachOrUpdate(t, t.Id, existingIds.Contains(t.Id)
                 ? EntityState.Modified
-                : EntityState.Added;
+                : EntityState.Added);
         }
 
         var snapshotIds = snapshotTeams.Select(t => t.Id).ToHashSet();
         foreach (var removedId in existingIds.Where(id => !snapshotIds.Contains(id)))
         {
-            DbContext.Entry(new SessionTeamEntity { Id = removedId, LiveGameSessionId = session.Id })
-                .State = EntityState.Deleted;
+            var stub = new SessionTeamEntity { Id = removedId, LiveGameSessionId = session.Id };
+            AttachOrUpdate(stub, removedId, EntityState.Deleted);
         }
     }
 
@@ -244,16 +277,16 @@ internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionReposi
 
         foreach (var s in snapshotScores)
         {
-            DbContext.Entry(s).State = existingIds.Contains(s.Id)
+            AttachOrUpdate(s, s.Id, existingIds.Contains(s.Id)
                 ? EntityState.Modified
-                : EntityState.Added;
+                : EntityState.Added);
         }
 
         var snapshotIds = snapshotScores.Select(s => s.Id).ToHashSet();
         foreach (var removedId in existingIds.Where(id => !snapshotIds.Contains(id)))
         {
-            DbContext.Entry(new LiveRoundScoreEntity { Id = removedId, LiveGameSessionId = session.Id })
-                .State = EntityState.Deleted;
+            var stub = new LiveRoundScoreEntity { Id = removedId, LiveGameSessionId = session.Id };
+            AttachOrUpdate(stub, removedId, EntityState.Deleted);
         }
     }
 
@@ -270,16 +303,16 @@ internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionReposi
 
         foreach (var t in snapshotTurnRecords)
         {
-            DbContext.Entry(t).State = existingIds.Contains(t.Id)
+            AttachOrUpdate(t, t.Id, existingIds.Contains(t.Id)
                 ? EntityState.Modified
-                : EntityState.Added;
+                : EntityState.Added);
         }
 
         var snapshotIds = snapshotTurnRecords.Select(t => t.Id).ToHashSet();
         foreach (var removedId in existingIds.Where(id => !snapshotIds.Contains(id)))
         {
-            DbContext.Entry(new LiveTurnRecordEntity { Id = removedId, LiveGameSessionId = session.Id })
-                .State = EntityState.Deleted;
+            var stub = new LiveTurnRecordEntity { Id = removedId, LiveGameSessionId = session.Id };
+            AttachOrUpdate(stub, removedId, EntityState.Deleted);
         }
     }
 

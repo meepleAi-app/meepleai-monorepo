@@ -9,9 +9,17 @@
  */
 
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('@/hooks/queries/useCurrentUser', () => ({
+  useCurrentUser: vi.fn(),
+}));
+
+import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 
 import { StickyCta } from './sticky-cta';
+
+const mockedUseCurrentUser = vi.mocked(useCurrentUser);
 
 const labels = {
   mobileLabel: 'Accedi per installare',
@@ -21,6 +29,15 @@ const labels = {
 };
 
 describe('StickyCta (Wave A.4)', () => {
+  beforeEach(() => {
+    mockedUseCurrentUser.mockReturnValue({
+      data: null,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+    } as never);
+  });
+
   it('renders both mobile and desktop region landmarks', () => {
     render(<StickyCta signInHref="/sign-in" labels={labels} />);
     const regions = screen.getAllByRole('region', { name: 'Sticky CTA' });
@@ -56,5 +73,49 @@ describe('StickyCta (Wave A.4)', () => {
     render(<StickyCta signInHref="/sign-in" labels={labels} />);
     expect(screen.getByText('Per installare questi contenuti...')).toBeInTheDocument();
     expect(screen.getByText('Accedi')).toBeInTheDocument();
+  });
+
+  describe('issue #2081 — auth guard', () => {
+    afterEach(() => {
+      mockedUseCurrentUser.mockReset();
+    });
+
+    it('returns null when user is authenticated (no CTA rendered)', () => {
+      mockedUseCurrentUser.mockReturnValue({
+        data: { id: 'u1', email: 'a@b.com', role: 'user' } as never,
+        isLoading: false,
+        isError: false,
+        isSuccess: true,
+      } as never);
+
+      const { container } = render(<StickyCta signInHref="/sign-in" labels={labels} />);
+      expect(container.firstChild).toBeNull();
+      expect(screen.queryAllByRole('region', { name: 'Sticky CTA' })).toHaveLength(0);
+    });
+
+    it('returns null while auth state is loading (no flash)', () => {
+      mockedUseCurrentUser.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+        isError: false,
+        isSuccess: false,
+      } as never);
+
+      const { container } = render(<StickyCta signInHref="/sign-in" labels={labels} />);
+      expect(container.firstChild).toBeNull();
+    });
+
+    it('renders full CTA when user is not authenticated (guest)', () => {
+      mockedUseCurrentUser.mockReturnValue({
+        data: null,
+        isLoading: false,
+        isError: false,
+        isSuccess: true,
+      } as never);
+
+      render(<StickyCta signInHref="/sign-in" labels={labels} />);
+      const regions = screen.getAllByRole('region', { name: 'Sticky CTA' });
+      expect(regions).toHaveLength(2); // mobile + desktop
+    });
   });
 });

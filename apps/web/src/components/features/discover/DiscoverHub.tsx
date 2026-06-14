@@ -128,12 +128,15 @@ export function DiscoverHub({ pathnameOverride }: DiscoverHubProps = {}) {
   const trending = useCatalogTrending(10);
 
   // ── DTO → RowItemBase adapter for Row 1 (trending) ───────────────────────
+  // Issue #2290: pass `hasKnowledgeBase` through so the featured card can
+  // render the KB badge (Block B of #2289).
   const trendingItems = useMemo<ReadonlyArray<RowItemBase>>(
     () =>
       (trending.data ?? []).map(g => ({
         id: g.gameId,
         name: g.title,
         imageUrl: g.thumbnailUrl,
+        hasKnowledgeBase: g.hasKnowledgeBase,
       })),
     [trending.data]
   );

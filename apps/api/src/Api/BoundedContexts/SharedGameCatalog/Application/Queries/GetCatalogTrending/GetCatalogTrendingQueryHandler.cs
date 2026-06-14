@@ -16,7 +16,11 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetCatalogTr
 /// </summary>
 internal sealed class GetCatalogTrendingQueryHandler : IRequestHandler<GetCatalogTrendingQuery, List<TrendingGameDto>>
 {
-    private const string CacheKey = "catalog:trending";
+    // Issue #2290: bumped to :v2 because the cached DTO schema gained
+    // HasKnowledgeBase. Old :v1 entries lacked the field, so deserializing
+    // them would render every trending card without the KB badge for up to
+    // 12 h after deploy. The new key naturally orphans the old cache.
+    private const string CacheKey = "catalog:trending:v2";
     private const int MaxCacheLimit = 50;
     private static readonly TimeSpan CacheTtl = TimeSpan.FromHours(12);
 
@@ -100,12 +104,14 @@ internal sealed class GetCatalogTrendingQueryHandler : IRequestHandler<GetCatalo
             .Take(limit)
             .ToList();
 
-        // Fetch game details for the trending games
+        // Fetch game details for the trending games. Issue #2290: project
+        // HasKnowledgeBase into the same round-trip so Discover row 1 has the
+        // KB badge data inline (no N+1 on SharedGameDto downstream).
         var gameIds = gameScores.Select(g => g.GameId).ToList();
         var games = await _context.Set<SharedGameEntity>()
             .AsNoTracking()
             .Where(g => gameIds.Contains(g.Id))
-            .Select(g => new { g.Id, g.Title, g.ThumbnailUrl })
+            .Select(g => new { g.Id, g.Title, g.ThumbnailUrl, g.HasKnowledgeBase })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -126,7 +132,8 @@ internal sealed class GetCatalogTrendingQueryHandler : IRequestHandler<GetCatalo
                 SearchCount = g.SearchCount,
                 ViewCount = g.ViewCount,
                 LibraryAddCount = g.LibraryAddCount,
-                PlayCount = g.PlayCount
+                PlayCount = g.PlayCount,
+                HasKnowledgeBase = game?.HasKnowledgeBase ?? false
             };
         }).ToList();
 

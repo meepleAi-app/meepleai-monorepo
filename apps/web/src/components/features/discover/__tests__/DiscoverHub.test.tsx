@@ -20,6 +20,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const searchParamsState: Record<string, string | null> = {};
 const replaceSpy = vi.fn();
+const pushSpy = vi.fn();
 
 vi.mock('next/navigation', () => ({
   useSearchParams: () => ({
@@ -30,7 +31,7 @@ vi.mock('next/navigation', () => ({
         .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
         .join('&'),
   }),
-  useRouter: () => ({ replace: replaceSpy, push: vi.fn() }),
+  useRouter: () => ({ replace: replaceSpy, push: pushSpy }),
   usePathname: () => '/discover',
 }));
 
@@ -40,11 +41,17 @@ vi.mock('@/hooks/useTranslation', () => ({
   }),
 }));
 
+const trendingState: { data: unknown[]; isLoading: boolean; isError: boolean } = {
+  data: [],
+  isLoading: false,
+  isError: false,
+};
+
 vi.mock('@/hooks/queries/useCatalogTrending', () => ({
   useCatalogTrending: () => ({
-    data: [],
-    isLoading: false,
-    isError: false,
+    data: trendingState.data,
+    isLoading: trendingState.isLoading,
+    isError: trendingState.isError,
     refetch: vi.fn(),
   }),
 }));
@@ -73,6 +80,9 @@ import { DiscoverHub } from '../DiscoverHub';
 
 function resetParams() {
   Object.keys(searchParamsState).forEach(k => delete searchParamsState[k]);
+  trendingState.data = [];
+  trendingState.isLoading = false;
+  trendingState.isError = false;
 }
 
 function renderHub(props: Parameters<typeof DiscoverHub>[0] = {}) {
@@ -119,5 +129,45 @@ describe('DiscoverHub component (extracted surface)', () => {
     // but we can assert that passing the override does not break the render.
     const { getByTestId } = renderHub({ pathnameOverride: '/games' });
     expect(getByTestId('hub-layout')).toBeInTheDocument();
+  });
+});
+
+describe('DiscoverHub navigation (#2085 F2/F3)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetParams();
+  });
+
+  it('navigates to /games/{id} when a trending card is clicked', async () => {
+    trendingState.data = [
+      {
+        rank: 1,
+        gameId: 'g-azul',
+        title: 'Azul',
+        thumbnailUrl: null,
+        score: 99,
+        searchCount: 0,
+        viewCount: 0,
+        libraryAddCount: 0,
+        playCount: 0,
+        hasKnowledgeBase: true,
+      },
+    ];
+
+    const { container } = renderHub();
+    const card = container.querySelector('[data-slot="row-card"]') as HTMLElement | null;
+    expect(card).not.toBeNull();
+
+    // Find the inner clickable element (button or link wrapper).
+    const clickable = (card!.tagName === 'BUTTON' ? card : card!.querySelector('button,a'))!;
+    (clickable as HTMLElement).click();
+
+    expect(pushSpy).toHaveBeenCalledWith('/games/g-azul');
+  });
+
+  it('does not navigate when the trending row is empty (no card to click)', () => {
+    trendingState.data = [];
+    renderHub();
+    expect(pushSpy).not.toHaveBeenCalled();
   });
 });

@@ -112,7 +112,7 @@ _FILE_DEST_MAP: list[tuple[re.Pattern, str]] = [
     # KB/knowledge base
     (re.compile(r"sp4-kb-detail"), "sp4-kb-hub.html"),
     (re.compile(r"sp4-kb-hub"), "sp4-kb-detail.html"),
-    (re.compile(r"sp4-kb-globale"), "sp4-kb-hub.html"),
+    (re.compile(r"sp4-kb-global(e)?"), "sp4-kb-hub.html"),
     # Library
     (re.compile(r"sp4-library"), "sp4-game-detail.html"),
     # Toolkit (note: sp4-hub-toolkits retired in DS-17 Phase B sweep — Stage 3
@@ -157,7 +157,8 @@ _FILE_DEST_MAP: list[tuple[re.Pattern, str]] = [
     # Settings
     (re.compile(r"settings"), "sp4-dashboard.html"),
     # Libro-game index
-    (re.compile(r"sp6-libro-game-index"), "librogame-runthrough-game-detail.html"),
+    # sp6-libro-game-* family retired in #2152 (#2025 cleanup completion).
+    # Equivalents now under librogame-runthrough-* (Aaron Iter 1 cluster).
     (re.compile(r"sp6-libro-game"), "librogame-runthrough-game-detail.html"),
     # Nanolith navigation components
     (re.compile(r"nanolith-nav"), "sp4-dashboard.html"),

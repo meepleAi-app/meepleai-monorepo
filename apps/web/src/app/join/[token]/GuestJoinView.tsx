@@ -3,7 +3,7 @@
  *
  * Game Night Improvvisata — Task 18
  *
- * Testable inner component that receives a plain `inviteToken` string.
+ * Testable inner component that receives a plain `token` string.
  * All interactive logic lives here; the parent page.tsx only unwraps params.
  */
 
@@ -72,10 +72,10 @@ async function saveParticipantData(token: string, name: string): Promise<void> {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export interface GuestJoinViewProps {
-  inviteToken: string;
+  token: string;
 }
 
-export function GuestJoinView({ inviteToken }: GuestJoinViewProps) {
+export function GuestJoinView({ token }: GuestJoinViewProps) {
   const [joinState, setJoinState] = useState<JoinState>('loading');
   const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null);
   const [guestName, setGuestName] = useState('');
@@ -92,7 +92,7 @@ export function GuestJoinView({ inviteToken }: GuestJoinViewProps) {
   const loadSession = useCallback(async () => {
     setJoinState('loading');
     try {
-      const res = await fetch(`/api/v1/live-sessions/code/${encodeURIComponent(inviteToken)}`);
+      const res = await fetch(`/api/v1/live-sessions/code/${encodeURIComponent(token)}`);
       if (!res.ok) {
         setErrorMessage('Link non valido o sessione non trovata.');
         setJoinState('error');
@@ -162,7 +162,7 @@ export function GuestJoinView({ inviteToken }: GuestJoinViewProps) {
       setErrorMessage('Errore di connessione. Riprova tra qualche secondo.');
       setJoinState('error');
     }
-  }, [inviteToken, setSession]);
+  }, [token, setSession]);
 
   useEffect(() => {
     loadSession();
@@ -301,7 +301,10 @@ export function GuestJoinView({ inviteToken }: GuestJoinViewProps) {
 
           <form onSubmit={handleJoin} className="space-y-3">
             <div className="space-y-1.5">
-              <label htmlFor="guest-name" className="text-sm font-nunito font-medium text-foreground">
+              <label
+                htmlFor="guest-name"
+                className="text-sm font-nunito font-medium text-foreground"
+              >
                 Il tuo nome
               </label>
               <Input

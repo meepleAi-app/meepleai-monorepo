@@ -141,7 +141,7 @@ internal static class GameSeeder
         return gameMap;
     }
 
-    private static SharedGameEntity CreateFromBggData(
+    internal static SharedGameEntity CreateFromBggData(
         BggGameDetailsDto bgg,
         string rulesLanguage,
         Guid systemUserId)
@@ -158,7 +158,9 @@ internal static class GameSeeder
             PlayingTimeMinutes = bgg.PlayingTime ?? bgg.MaxPlayTime ?? 60,
             MinAge = bgg.MinAge ?? 8,
             ComplexityRating = bgg.AverageWeight is > 0 ? (decimal)bgg.AverageWeight.Value : null,
-            AverageRating = bgg.AverageRating.HasValue ? (decimal)bgg.AverageRating.Value : null,
+            // Issue #2272: BGG returns AverageRating=0 for games with no votes; the Postgres
+            // constraint chk_shared_games_rating accepts NULL or 1.0..10.0, so normalize 0→null.
+            AverageRating = bgg.AverageRating is > 0 ? (decimal)bgg.AverageRating.Value : null,
             // Issue #2123: cover URLs are NEVER seeded inline. CoverUrlResolver
             // resolves at runtime from R2 (PDF / Wikidata) or returns null (FE renders placeholder).
             ImageUrl = null,
@@ -187,7 +189,9 @@ internal static class GameSeeder
             PlayingTimeMinutes = entry.PlayingTime ?? 60,
             MinAge = entry.MinAge ?? 10,
             ComplexityRating = entry.AverageWeight is > 0 ? (decimal)entry.AverageWeight.Value : null,
-            AverageRating = entry.AverageRating.HasValue ? (decimal)entry.AverageRating.Value : null,
+            // Issue #2272: same sentinel-0 normalization as CreateFromBggData (manifest YAML
+            // may also carry averageRating: 0 for games with no votes).
+            AverageRating = entry.AverageRating is > 0 ? (decimal)entry.AverageRating.Value : null,
             // Issue #2123: cover URLs are NEVER seeded inline. CoverUrlResolver
             // resolves at runtime from R2 (PDF / Wikidata) or returns null (FE renders placeholder).
             ImageUrl = null,

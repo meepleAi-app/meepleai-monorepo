@@ -197,3 +197,16 @@ L'intuizione iniziale dell'utente (Opzione D Hybrid) è stata **sovrascritta** d
 - Pattern reference: `apps/api/src/Api/BoundedContexts/GameManagement/Infrastructure/Persistence/GameNightEventRepository.cs` (corretto EF-backed con UnitOfWork)
 - CLAUDE.md § Key Data Patterns (Soft Delete, Audit, Concurrency RowVersion)
 - Test session: `docs/for-developers/qa/2026-06-09-manual-test-main-dev.md` Finding #11
+
+## Update 2026-06-14 — Trigger replaced with xmin
+
+Per code-review finding I-1 of PR #2301 and follow-up issue #2305, the `clock_timestamp()::text::bytea` trigger pattern initially shipped with this ADR was replaced with the codebase-standard `xmin` system-column mapping. Same column behavior (Postgres-managed concurrency token), better collision safety (xmin is a unique transaction id per row UPDATE), zero trigger maintenance.
+
+Implementation:
+- `LiveGameSessionEntity.Xmin` (uint) replaces `RowVersion` (byte[])
+- `LiveGameSessionEntityConfiguration` maps `Xmin` to Postgres `xmin xid` with `ValueGeneratedOnAddOrUpdate().IsConcurrencyToken()`
+- Migration `LiveSessionRowVersionToXmin` drops the `ef_update_row_version()` trigger, the helper function, and the legacy `row_version` column
+
+Same migration pattern applied to `GameNightPlaylist` and `MechanicDraft` (issue #2306) which had `bytea NOT NULL row_version` without any trigger — optimistic concurrency was effectively disabled on those tables. The new xmin pattern + integration tests prove the fix.
+
+Pattern reference: `apps/api/src/Api/Infrastructure/Configurations/SharedGameCatalog/MechanicAnalysisEntityConfiguration.cs:101-107`.

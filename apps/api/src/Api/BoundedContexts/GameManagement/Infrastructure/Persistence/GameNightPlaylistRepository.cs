@@ -144,8 +144,7 @@ internal class GameNightPlaylistRepository : RepositoryBase, IGameNightPlaylistR
         var isSharedProp = typeof(GameNightPlaylist).GetProperty("IsShared");
         isSharedProp?.SetValue(playlist, entity.IsShared);
 
-        var rowVersionProp = typeof(GameNightPlaylist).GetProperty("RowVersion");
-        rowVersionProp?.SetValue(playlist, entity.RowVersion);
+        playlist.SetXmin(entity.Xmin);
 
         // Restore games from JSON
         if (!string.IsNullOrEmpty(entity.GamesJson) && !string.Equals(entity.GamesJson, "[]", StringComparison.Ordinal))
@@ -178,7 +177,7 @@ internal class GameNightPlaylistRepository : RepositoryBase, IGameNightPlaylistR
             DeletedAt = domainEntity.DeletedAt,
             CreatedAt = domainEntity.CreatedAt,
             UpdatedAt = domainEntity.UpdatedAt,
-            RowVersion = domainEntity.RowVersion
+            Xmin = domainEntity.Xmin
         };
     }
 }

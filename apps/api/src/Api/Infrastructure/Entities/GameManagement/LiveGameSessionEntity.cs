@@ -64,8 +64,11 @@ public class LiveGameSessionEntity
     public int AgentMode { get; set; } // AgentSessionMode enum: 0=None,1=Assistant,2=GameMaster
     public Guid? ChatSessionId { get; set; }
 
-    // Concurrency
-    public byte[] RowVersion { get; set; } = default!;
+    // Optimistic concurrency via PostgreSQL's xmin system column (Issue #2305).
+    // Postgres assigns xmin = transaction-id-of-last-write per row; EF reads back via the
+    // xid type-mapped uint property. Server-owned: NO mapper assignment, NO client default,
+    // NO trigger maintenance.
+    public uint Xmin { get; set; }
 
     // Navigation Properties
     public ICollection<SessionPlayerEntity> Players { get; set; } = new List<SessionPlayerEntity>();

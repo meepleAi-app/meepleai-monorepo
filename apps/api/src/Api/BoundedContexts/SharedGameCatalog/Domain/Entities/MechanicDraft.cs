@@ -38,7 +38,7 @@ public sealed class MechanicDraft : Entity<Guid>
 
     private int _totalTokensUsed;
     private decimal _estimatedCostUsd;
-    private readonly byte[] _rowVersion = Array.Empty<byte>();
+    private uint _xmin;
 
     public new Guid Id => _id;
     public Guid SharedGameId => _sharedGameId;
@@ -66,7 +66,7 @@ public sealed class MechanicDraft : Entity<Guid>
 
     public int TotalTokensUsed => _totalTokensUsed;
     public decimal EstimatedCostUsd => _estimatedCostUsd;
-    public byte[] RowVersion => _rowVersion;
+    public uint Xmin => _xmin;
 
     /// <summary>
     /// Parameterless constructor for EF Core.
@@ -101,7 +101,7 @@ public sealed class MechanicDraft : Entity<Guid>
         MechanicDraftStatus status,
         int totalTokensUsed = 0,
         decimal estimatedCostUsd = 0m,
-        byte[]? rowVersion = null) : base(id)
+        uint xmin = 0) : base(id)
     {
         _id = id;
         _sharedGameId = sharedGameId;
@@ -125,7 +125,7 @@ public sealed class MechanicDraft : Entity<Guid>
         _status = status;
         _totalTokensUsed = totalTokensUsed;
         _estimatedCostUsd = estimatedCostUsd;
-        _rowVersion = rowVersion ?? Array.Empty<byte>();
+        _xmin = xmin;
     }
 
     /// <summary>
@@ -288,4 +288,11 @@ public sealed class MechanicDraft : Entity<Guid>
         _estimatedCostUsd += costUsd;
         _lastModified = DateTime.UtcNow;
     }
+
+    /// <summary>
+    /// Sets the PostgreSQL xmin concurrency token after reading from persistence.
+    /// Called by the repository during domain reconstitution so the typed assignment
+    /// satisfies Sonar S1144 (avoids unused private setter).
+    /// </summary>
+    internal void SetXmin(uint xmin) => _xmin = xmin;
 }

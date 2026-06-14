@@ -64,7 +64,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public AgentSessionMode AgentMode { get; private set; }
     public Guid? ChatSessionId { get; private set; }
     public TurnAdvancePolicy TurnAdvancePolicy { get; private set; }
-    public byte[] RowVersion { get; private set; } = Array.Empty<byte>();
+    public uint Xmin { get; private set; }
 
     // === Read-only collections ===
 
@@ -175,7 +175,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
         AgentSessionMode agentMode,
         Guid? chatSessionId,
         TurnAdvancePolicy turnAdvancePolicy,
-        byte[] rowVersion,
+        uint xmin,
         IEnumerable<LiveSessionPlayer> players,
         IEnumerable<LiveSessionTeam> teams,
         IEnumerable<Guid> turnOrder,
@@ -212,7 +212,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
             AgentMode = agentMode,
             ChatSessionId = chatSessionId,
             TurnAdvancePolicy = turnAdvancePolicy,
-            RowVersion = rowVersion ?? Array.Empty<byte>()
+            Xmin = xmin
         };
 
         if (setupChecklist != null)

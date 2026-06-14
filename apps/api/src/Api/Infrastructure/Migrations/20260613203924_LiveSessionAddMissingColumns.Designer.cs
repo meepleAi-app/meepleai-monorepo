@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -13,9 +14,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260613203924_LiveSessionAddMissingColumns")]
+    partial class LiveSessionAddMissingColumns
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -13242,14 +13245,6 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<DateTime?>("AcknowledgedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("acknowledged_at");
-
-                    b.Property<Guid?>("AcknowledgedBy")
-                        .HasColumnType("uuid")
-                        .HasColumnName("acknowledged_by");
-
                     b.Property<DateTime>("AttemptedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("attempted_at");
@@ -13285,15 +13280,7 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("shared_game_id");
 
-                    b.Property<Guid?>("TriggeredByAdminUserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("triggered_by_admin_user_id");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("AcknowledgedAt")
-                        .HasDatabaseName("ix_wikidata_cover_attempts_acknowledged_at")
-                        .HasFilter("acknowledged_at IS NOT NULL");
 
                     b.HasIndex("DeadLetteredAt")
                         .HasDatabaseName("ix_wikidata_cover_attempts_dead_letter")

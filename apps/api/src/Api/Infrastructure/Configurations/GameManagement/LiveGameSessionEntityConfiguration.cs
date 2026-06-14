@@ -81,6 +81,27 @@ internal sealed class LiveGameSessionEntityConfiguration : IEntityTypeConfigurat
             .HasColumnName("notes")
             .HasMaxLength(2000);
 
+        builder.Property(e => e.CurrentPhaseIndex)
+            .HasColumnName("current_phase_index")
+            .IsRequired()
+            .HasDefaultValue(0);
+
+        builder.Property(e => e.TurnAdvancePolicy)
+            .HasColumnName("turn_advance_policy")
+            .IsRequired()
+            .HasDefaultValue(0);
+
+        builder.Property(e => e.LastSnapshotTimestamp)
+            .HasColumnName("last_snapshot_timestamp");
+
+        builder.Property(e => e.PhaseNamesJson)
+            .HasColumnName("phase_names_json")
+            .HasColumnType("jsonb");
+
+        builder.Property(e => e.SnapshotTriggerConfigJson)
+            .HasColumnName("snapshot_trigger_config_json")
+            .HasColumnType("jsonb");
+
         builder.Property(e => e.AgentMode)
             .HasColumnName("agent_mode")
             .IsRequired()

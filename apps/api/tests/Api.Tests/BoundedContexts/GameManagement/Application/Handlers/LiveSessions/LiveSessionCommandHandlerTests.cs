@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
@@ -21,6 +22,7 @@ public class LiveSessionCommandHandlerTests
 {
     private readonly Mock<ILiveSessionRepository> _repositoryMock;
     private readonly TimeProvider _timeProvider;
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
 
     private static readonly Guid DefaultUserId = Guid.NewGuid();
 
@@ -28,6 +30,7 @@ public class LiveSessionCommandHandlerTests
     {
         _repositoryMock = new Mock<ILiveSessionRepository>();
         _timeProvider = TimeProvider.System;
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
     }
 
     // === Shared Helpers ===
@@ -94,7 +97,7 @@ public class LiveSessionCommandHandlerTests
     public async Task CreateLiveSession_HappyPath_DefaultConfig_ReturnsSessionId()
     {
         // Arrange
-        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new CreateLiveSessionCommand(DefaultUserId, "Catan");
 
         // Act
@@ -115,7 +118,7 @@ public class LiveSessionCommandHandlerTests
     public async Task CreateLiveSession_HappyPath_CustomScoring_ReturnsSessionId()
     {
         // Arrange
-        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var scoringDimensions = new List<string> { "Points", "Bonus" };
         var dimensionUnits = new Dictionary<string, string> { { "Points", "pts" }, { "Bonus", "pts" } };
         var command = new CreateLiveSessionCommand(
@@ -139,7 +142,7 @@ public class LiveSessionCommandHandlerTests
     public async Task CreateLiveSession_NullCommand_ThrowsArgumentNullException()
     {
         // Arrange
-        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
 
         // Act & Assert
         var act =
@@ -151,7 +154,7 @@ public class LiveSessionCommandHandlerTests
     public async Task CreateLiveSession_VerifiesAddAsyncCalled()
     {
         // Arrange
-        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new CreateLiveSessionCommand(DefaultUserId, "Ticket to Ride");
 
         LiveGameSession? capturedSession = null;
@@ -174,7 +177,7 @@ public class LiveSessionCommandHandlerTests
     public async Task CreateLiveSession_WithAllOptionalParams_CreatesCorrectly()
     {
         // Arrange
-        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var gameId = Guid.NewGuid();
         var groupId = Guid.NewGuid();
         var command = new CreateLiveSessionCommand(
@@ -218,7 +221,7 @@ public class LiveSessionCommandHandlerTests
         var session = CreateSessionWithPlayer(sessionId);
         SetupRepoGetById(sessionId, session);
 
-        var handler = new StartLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new StartLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new StartLiveSessionCommand(sessionId);
 
         // Act
@@ -238,7 +241,7 @@ public class LiveSessionCommandHandlerTests
         var sessionId = Guid.NewGuid();
         SetupRepoGetById(sessionId, null);
 
-        var handler = new StartLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new StartLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new StartLiveSessionCommand(sessionId);
 
         // Act & Assert
@@ -252,7 +255,7 @@ public class LiveSessionCommandHandlerTests
     public async Task StartLiveSession_NullCommand_ThrowsArgumentNullException()
     {
         // Arrange
-        var handler = new StartLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new StartLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
 
         // Act & Assert
         var act =
@@ -276,7 +279,7 @@ public class LiveSessionCommandHandlerTests
         var session = CreateSessionInProgress(sessionId);
         SetupRepoGetById(sessionId, session);
 
-        var handler = new PauseLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new PauseLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new PauseLiveSessionCommand(sessionId);
 
         // Act
@@ -296,7 +299,7 @@ public class LiveSessionCommandHandlerTests
         var sessionId = Guid.NewGuid();
         SetupRepoGetById(sessionId, null);
 
-        var handler = new PauseLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new PauseLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new PauseLiveSessionCommand(sessionId);
 
         // Act & Assert
@@ -310,7 +313,7 @@ public class LiveSessionCommandHandlerTests
     public async Task PauseLiveSession_NullCommand_ThrowsArgumentNullException()
     {
         // Arrange
-        var handler = new PauseLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new PauseLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
 
         // Act & Assert
         var act =
@@ -334,7 +337,7 @@ public class LiveSessionCommandHandlerTests
         var session = CreateSessionPaused(sessionId);
         SetupRepoGetById(sessionId, session);
 
-        var handler = new ResumeLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new ResumeLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new ResumeLiveSessionCommand(sessionId);
 
         // Act
@@ -354,7 +357,7 @@ public class LiveSessionCommandHandlerTests
         var sessionId = Guid.NewGuid();
         SetupRepoGetById(sessionId, null);
 
-        var handler = new ResumeLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new ResumeLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new ResumeLiveSessionCommand(sessionId);
 
         // Act & Assert
@@ -368,7 +371,7 @@ public class LiveSessionCommandHandlerTests
     public async Task ResumeLiveSession_NullCommand_ThrowsArgumentNullException()
     {
         // Arrange
-        var handler = new ResumeLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new ResumeLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
 
         // Act & Assert
         var act =
@@ -392,7 +395,7 @@ public class LiveSessionCommandHandlerTests
         var session = CreateSessionInProgress(sessionId);
         SetupRepoGetById(sessionId, session);
 
-        var handler = new CompleteLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new CompleteLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new CompleteLiveSessionCommand(sessionId);
 
         // Act
@@ -413,7 +416,7 @@ public class LiveSessionCommandHandlerTests
         var sessionId = Guid.NewGuid();
         SetupRepoGetById(sessionId, null);
 
-        var handler = new CompleteLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new CompleteLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new CompleteLiveSessionCommand(sessionId);
 
         // Act & Assert
@@ -427,7 +430,7 @@ public class LiveSessionCommandHandlerTests
     public async Task CompleteLiveSession_NullCommand_ThrowsArgumentNullException()
     {
         // Arrange
-        var handler = new CompleteLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new CompleteLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
 
         // Act & Assert
         var act =
@@ -451,7 +454,7 @@ public class LiveSessionCommandHandlerTests
         var session = CreateSessionInProgress(sessionId);
         SetupRepoGetById(sessionId, session);
 
-        var handler = new SaveLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new SaveLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new SaveLiveSessionCommand(sessionId);
 
         // Act
@@ -472,7 +475,7 @@ public class LiveSessionCommandHandlerTests
         var session = CreateSessionPaused(sessionId);
         SetupRepoGetById(sessionId, session);
 
-        var handler = new SaveLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new SaveLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new SaveLiveSessionCommand(sessionId);
 
         // Act
@@ -492,7 +495,7 @@ public class LiveSessionCommandHandlerTests
         var sessionId = Guid.NewGuid();
         SetupRepoGetById(sessionId, null);
 
-        var handler = new SaveLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new SaveLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new SaveLiveSessionCommand(sessionId);
 
         // Act & Assert
@@ -506,7 +509,7 @@ public class LiveSessionCommandHandlerTests
     public async Task SaveLiveSession_NullCommand_ThrowsArgumentNullException()
     {
         // Arrange
-        var handler = new SaveLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new SaveLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
 
         // Act & Assert
         var act =
@@ -530,7 +533,7 @@ public class LiveSessionCommandHandlerTests
         var session = CreateSessionInCreatedStatus(sessionId);
         SetupRepoGetById(sessionId, session);
 
-        var handler = new AddPlayerToLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new AddPlayerToLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new AddPlayerToLiveSessionCommand(
             sessionId,
             "Alice",
@@ -560,7 +563,7 @@ public class LiveSessionCommandHandlerTests
         SetupRepoGetById(sessionId, session);
 
         var userId = Guid.NewGuid();
-        var handler = new AddPlayerToLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new AddPlayerToLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new AddPlayerToLiveSessionCommand(
             sessionId,
             "Bob",
@@ -588,7 +591,7 @@ public class LiveSessionCommandHandlerTests
         var sessionId = Guid.NewGuid();
         SetupRepoGetById(sessionId, null);
 
-        var handler = new AddPlayerToLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new AddPlayerToLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new AddPlayerToLiveSessionCommand(sessionId, "Alice", PlayerColor.Red);
 
         // Act & Assert
@@ -602,7 +605,7 @@ public class LiveSessionCommandHandlerTests
     public async Task AddPlayer_NullCommand_ThrowsArgumentNullException()
     {
         // Arrange
-        var handler = new AddPlayerToLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new AddPlayerToLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
 
         // Act & Assert
         var act =
@@ -627,7 +630,7 @@ public class LiveSessionCommandHandlerTests
         var player = session.AddPlayer(null, "Solo Player", PlayerColor.Red, TimeProvider.System);
         SetupRepoGetById(sessionId, session);
 
-        var handler = new RemovePlayerFromLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new RemovePlayerFromLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new RemovePlayerFromLiveSessionCommand(sessionId, player.Id);
 
         // Act
@@ -647,7 +650,7 @@ public class LiveSessionCommandHandlerTests
         var sessionId = Guid.NewGuid();
         SetupRepoGetById(sessionId, null);
 
-        var handler = new RemovePlayerFromLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new RemovePlayerFromLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new RemovePlayerFromLiveSessionCommand(sessionId, Guid.NewGuid());
 
         // Act & Assert
@@ -661,7 +664,7 @@ public class LiveSessionCommandHandlerTests
     public async Task RemovePlayer_NullCommand_ThrowsArgumentNullException()
     {
         // Arrange
-        var handler = new RemovePlayerFromLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new RemovePlayerFromLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
 
         // Act & Assert
         var act =
@@ -687,7 +690,7 @@ public class LiveSessionCommandHandlerTests
         var player2 = session.AddPlayer(null, "Bob", PlayerColor.Blue, TimeProvider.System);
         SetupRepoGetById(sessionId, session);
 
-        var handler = new UpdatePlayerOrderCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new UpdatePlayerOrderCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         // Reverse the order
         var command = new UpdatePlayerOrderCommand(sessionId, new List<Guid> { player2.Id, player1.Id });
 
@@ -709,7 +712,7 @@ public class LiveSessionCommandHandlerTests
         var sessionId = Guid.NewGuid();
         SetupRepoGetById(sessionId, null);
 
-        var handler = new UpdatePlayerOrderCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new UpdatePlayerOrderCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new UpdatePlayerOrderCommand(sessionId, new List<Guid> { Guid.NewGuid() });
 
         // Act & Assert
@@ -723,7 +726,7 @@ public class LiveSessionCommandHandlerTests
     public async Task UpdatePlayerOrder_NullCommand_ThrowsArgumentNullException()
     {
         // Arrange
-        var handler = new UpdatePlayerOrderCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new UpdatePlayerOrderCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
 
         // Act & Assert
         var act =
@@ -747,7 +750,7 @@ public class LiveSessionCommandHandlerTests
         var session = CreateSessionInCreatedStatus(sessionId);
         SetupRepoGetById(sessionId, session);
 
-        var handler = new CreateLiveSessionTeamCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new CreateLiveSessionTeamCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new CreateLiveSessionTeamCommand(sessionId, "Red Team", "#FF0000");
 
         // Act
@@ -769,7 +772,7 @@ public class LiveSessionCommandHandlerTests
         var sessionId = Guid.NewGuid();
         SetupRepoGetById(sessionId, null);
 
-        var handler = new CreateLiveSessionTeamCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new CreateLiveSessionTeamCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new CreateLiveSessionTeamCommand(sessionId, "Team A", "#00FF00");
 
         // Act & Assert
@@ -783,7 +786,7 @@ public class LiveSessionCommandHandlerTests
     public async Task CreateTeam_NullCommand_ThrowsArgumentNullException()
     {
         // Arrange
-        var handler = new CreateLiveSessionTeamCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new CreateLiveSessionTeamCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
 
         // Act & Assert
         var act =
@@ -809,7 +812,7 @@ public class LiveSessionCommandHandlerTests
         var team = session.CreateTeam("Alpha", "#FF0000", TimeProvider.System);
         SetupRepoGetById(sessionId, session);
 
-        var handler = new AssignPlayerToTeamCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new AssignPlayerToTeamCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new AssignPlayerToTeamCommand(sessionId, player.Id, team.Id);
 
         // Act
@@ -829,7 +832,7 @@ public class LiveSessionCommandHandlerTests
         var sessionId = Guid.NewGuid();
         SetupRepoGetById(sessionId, null);
 
-        var handler = new AssignPlayerToTeamCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new AssignPlayerToTeamCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new AssignPlayerToTeamCommand(sessionId, Guid.NewGuid(), Guid.NewGuid());
 
         // Act & Assert
@@ -843,7 +846,7 @@ public class LiveSessionCommandHandlerTests
     public async Task AssignPlayerToTeam_NullCommand_ThrowsArgumentNullException()
     {
         // Arrange
-        var handler = new AssignPlayerToTeamCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new AssignPlayerToTeamCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
 
         // Act & Assert
         var act =
@@ -868,7 +871,7 @@ public class LiveSessionCommandHandlerTests
         var playerId = session.Players[0].Id;
         SetupRepoGetById(sessionId, session);
 
-        var handler = new RecordLiveSessionScoreCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new RecordLiveSessionScoreCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new RecordLiveSessionScoreCommand(sessionId, playerId, Round: 1, Dimension: "Points", Value: 10);
 
         // Act
@@ -892,7 +895,7 @@ public class LiveSessionCommandHandlerTests
         var playerId = session.Players[0].Id;
         SetupRepoGetById(sessionId, session);
 
-        var handler = new RecordLiveSessionScoreCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new RecordLiveSessionScoreCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new RecordLiveSessionScoreCommand(sessionId, playerId, Round: 1, Dimension: "Points", Value: 25, Unit: "pts");
 
         // Act
@@ -910,7 +913,7 @@ public class LiveSessionCommandHandlerTests
         var sessionId = Guid.NewGuid();
         SetupRepoGetById(sessionId, null);
 
-        var handler = new RecordLiveSessionScoreCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new RecordLiveSessionScoreCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new RecordLiveSessionScoreCommand(sessionId, Guid.NewGuid(), 1, "Points", 10);
 
         // Act & Assert
@@ -924,7 +927,7 @@ public class LiveSessionCommandHandlerTests
     public async Task RecordScore_NullCommand_ThrowsArgumentNullException()
     {
         // Arrange
-        var handler = new RecordLiveSessionScoreCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new RecordLiveSessionScoreCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
 
         // Act & Assert
         var act =
@@ -951,7 +954,7 @@ public class LiveSessionCommandHandlerTests
         session.RecordScore(playerId, 1, "Points", 10, TimeProvider.System);
         SetupRepoGetById(sessionId, session);
 
-        var handler = new EditLiveSessionScoreCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new EditLiveSessionScoreCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new EditLiveSessionScoreCommand(sessionId, playerId, Round: 1, Dimension: "Points", Value: 20);
 
         // Act
@@ -973,7 +976,7 @@ public class LiveSessionCommandHandlerTests
         var sessionId = Guid.NewGuid();
         SetupRepoGetById(sessionId, null);
 
-        var handler = new EditLiveSessionScoreCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new EditLiveSessionScoreCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new EditLiveSessionScoreCommand(sessionId, Guid.NewGuid(), 1, "Points", 10);
 
         // Act & Assert
@@ -987,7 +990,7 @@ public class LiveSessionCommandHandlerTests
     public async Task EditScore_NullCommand_ThrowsArgumentNullException()
     {
         // Arrange
-        var handler = new EditLiveSessionScoreCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new EditLiveSessionScoreCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
 
         // Act & Assert
         var act =
@@ -1012,7 +1015,7 @@ public class LiveSessionCommandHandlerTests
         var initialTurn = session.CurrentTurnIndex;
         SetupRepoGetById(sessionId, session);
 
-        var handler = new AdvanceLiveSessionTurnCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new AdvanceLiveSessionTurnCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new AdvanceLiveSessionTurnCommand(sessionId);
 
         // Act
@@ -1032,7 +1035,7 @@ public class LiveSessionCommandHandlerTests
         var sessionId = Guid.NewGuid();
         SetupRepoGetById(sessionId, null);
 
-        var handler = new AdvanceLiveSessionTurnCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new AdvanceLiveSessionTurnCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new AdvanceLiveSessionTurnCommand(sessionId);
 
         // Act & Assert
@@ -1046,7 +1049,7 @@ public class LiveSessionCommandHandlerTests
     public async Task AdvanceTurn_NullCommand_ThrowsArgumentNullException()
     {
         // Arrange
-        var handler = new AdvanceLiveSessionTurnCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new AdvanceLiveSessionTurnCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
 
         // Act & Assert
         var act =
@@ -1070,7 +1073,7 @@ public class LiveSessionCommandHandlerTests
         var session = CreateSessionInCreatedStatus(sessionId);
         SetupRepoGetById(sessionId, session);
 
-        var handler = new UpdateLiveSessionNotesCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new UpdateLiveSessionNotesCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new UpdateLiveSessionNotesCommand(sessionId, "Game is going well!");
 
         // Act
@@ -1092,7 +1095,7 @@ public class LiveSessionCommandHandlerTests
         session.UpdateNotes("Previous notes", TimeProvider.System);
         SetupRepoGetById(sessionId, session);
 
-        var handler = new UpdateLiveSessionNotesCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new UpdateLiveSessionNotesCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new UpdateLiveSessionNotesCommand(sessionId, null);
 
         // Act
@@ -1109,7 +1112,7 @@ public class LiveSessionCommandHandlerTests
         var sessionId = Guid.NewGuid();
         SetupRepoGetById(sessionId, null);
 
-        var handler = new UpdateLiveSessionNotesCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new UpdateLiveSessionNotesCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new UpdateLiveSessionNotesCommand(sessionId, "Notes");
 
         // Act & Assert
@@ -1123,7 +1126,7 @@ public class LiveSessionCommandHandlerTests
     public async Task UpdateNotes_NullCommand_ThrowsArgumentNullException()
     {
         // Arrange
-        var handler = new UpdateLiveSessionNotesCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new UpdateLiveSessionNotesCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
 
         // Act & Assert
         var act =
@@ -1143,7 +1146,7 @@ public class LiveSessionCommandHandlerTests
     public async Task CreateLiveSession_PassesCancellationTokenToRepository()
     {
         // Arrange
-        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new CreateLiveSessionCommand(DefaultUserId, "Token Test Game");
         using var cts = new CancellationTokenSource();
         var ct = cts.Token;
@@ -1165,7 +1168,7 @@ public class LiveSessionCommandHandlerTests
         var session = CreateSessionWithPlayer(sessionId);
         SetupRepoGetById(sessionId, session);
 
-        var handler = new StartLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
+        var handler = new StartLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
         var command = new StartLiveSessionCommand(sessionId);
         using var cts = new CancellationTokenSource();
         var ct = cts.Token;

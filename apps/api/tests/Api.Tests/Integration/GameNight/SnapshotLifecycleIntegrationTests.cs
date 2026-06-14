@@ -218,7 +218,8 @@ public sealed class SnapshotLifecycleIntegrationTests
                 Timestamp: DateTime.UtcNow, CreatedByPlayerId: null));
 
         var handler = new RestoreSessionSnapshotCommandHandler(
-            snapshotRepo.Object, sessionRepo.Object, mediator.Object, TimeProvider.System);
+            snapshotRepo.Object, sessionRepo.Object, mediator.Object, TimeProvider.System,
+            new Mock<IUnitOfWork>().Object);
 
         var command = new RestoreSessionSnapshotCommand(sessionId, 0);
 
@@ -256,7 +257,8 @@ public sealed class SnapshotLifecycleIntegrationTests
             new Mock<ISessionSnapshotRepository>().Object,
             sessionRepo.Object,
             new Mock<IMediator>().Object,
-            TimeProvider.System);
+            TimeProvider.System,
+            new Mock<IUnitOfWork>().Object);
 
         var command = new RestoreSessionSnapshotCommand(sessionId, 0);
 
@@ -286,7 +288,8 @@ public sealed class SnapshotLifecycleIntegrationTests
 
         var handler = new RestoreSessionSnapshotCommandHandler(
             snapshotRepo.Object, sessionRepo.Object,
-            new Mock<IMediator>().Object, TimeProvider.System);
+            new Mock<IMediator>().Object, TimeProvider.System,
+            new Mock<IUnitOfWork>().Object);
 
         var command = new RestoreSessionSnapshotCommand(sessionId, 99);
 

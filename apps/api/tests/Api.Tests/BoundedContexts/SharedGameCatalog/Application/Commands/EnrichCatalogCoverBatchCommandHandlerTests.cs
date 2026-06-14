@@ -141,4 +141,98 @@ public sealed class EnrichCatalogCoverBatchCommandHandlerTests
         await act.Should().ThrowAsync<OperationCanceledException>();
         callCount.Should().Be(1, "cancellation must short-circuit before dispatching the second command");
     }
+
+    [Fact]
+    public async Task Handle_TreatsTaskCanceledFromTimeoutAsFailed_ContinuesNotPropagates()
+    {
+        // Issue #2157: defense-in-depth. Even if a provider somehow leaks
+        // TaskCanceledException (e.g. HttpClient.Timeout above the provider
+        // guard, or any future code path bypassing the M3/M4 fix), the batch
+        // handler MUST distinguish it from a real caller cancellation and
+        // continue with the next game. The discriminator is the caller's
+        // CancellationToken state: if NOT cancelled, the leak is mapped to a
+        // per-game Failed("child-timeout") entry; if cancelled, it propagates.
+        var ok = Guid.NewGuid();
+        var timedOut = Guid.NewGuid();
+        _mediator
+            .Setup(m => m.Send(It.Is<EnrichCatalogCoverCommand>(c => c.GameId == ok), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EnrichCatalogCoverResult.Success("k", "CC0", null, "https://w/Q"));
+        _mediator
+            .Setup(m => m.Send(It.Is<EnrichCatalogCoverCommand>(c => c.GameId == timedOut), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new TaskCanceledException("simulated HTTP timeout leak"));
+
+        using var cts = new CancellationTokenSource(); // NOT cancelled
+        var result = await CreateHandler().Handle(
+            new EnrichCatalogCoverBatchCommand(new[] { ok, timedOut }), cts.Token);
+
+        result.TotalRequested.Should().Be(2);
+        result.SuccessCount.Should().Be(1);
+        result.FailedCount.Should().Be(1);
+        result.PerGame.Single(p => p.GameId == timedOut).Outcome.Should().Be("failed");
+        result.PerGame.Single(p => p.GameId == timedOut).Reason.Should().Be("child-timeout");
+
+        // FailedDetails carries exception drill-down for the admin UI.
+        result.FailedDetails.Should().NotBeNull();
+        result.FailedDetails!.Should().ContainSingle(d => d.GameId == timedOut);
+        var detail = result.FailedDetails!.Single(d => d.GameId == timedOut);
+        detail.ExceptionType.Should().Be("TaskCanceledException");
+        detail.ExceptionMessage.Should().Contain("HTTP timeout");
+    }
+
+    [Fact]
+    public async Task Handle_TreatsHttpRequestExceptionAsFailed_RecordsExceptionType()
+    {
+        // Issue #2157: any HttpRequestException leaked from the M8 single-entry
+        // handler (e.g. DNS error, connection refused, 5xx that bypasses the
+        // provider's catch) maps to a per-game Failed("http-error") entry with
+        // a FailedDetail payload carrying the exception type and (sanitised)
+        // message so the admin UI can drill down into transient vs permanent
+        // failures.
+        var ok = Guid.NewGuid();
+        var httpFail = Guid.NewGuid();
+        _mediator
+            .Setup(m => m.Send(It.Is<EnrichCatalogCoverCommand>(c => c.GameId == ok), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EnrichCatalogCoverResult.Success("k", "CC0", null, "https://w/Q"));
+        _mediator
+            .Setup(m => m.Send(It.Is<EnrichCatalogCoverCommand>(c => c.GameId == httpFail), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("DNS resolution failed", null, System.Net.HttpStatusCode.ServiceUnavailable));
+
+        var result = await CreateHandler().Handle(
+            new EnrichCatalogCoverBatchCommand(new[] { ok, httpFail }), CancellationToken.None);
+
+        result.TotalRequested.Should().Be(2);
+        result.SuccessCount.Should().Be(1);
+        result.FailedCount.Should().Be(1);
+        var entry = result.PerGame.Single(p => p.GameId == httpFail);
+        entry.Outcome.Should().Be("failed");
+        entry.Reason.Should().Be("http-error");
+
+        // FailedDetails populated for drill-down.
+        result.FailedDetails.Should().NotBeNull();
+        result.FailedDetails!.Should().ContainSingle(d => d.GameId == httpFail);
+        var detail = result.FailedDetails!.Single(d => d.GameId == httpFail);
+        detail.ExceptionType.Should().Be("HttpRequestException");
+        detail.ExceptionMessage.Should().Contain("DNS resolution failed");
+    }
+
+    [Fact]
+    public async Task Handle_FailedDetailsIsNull_WhenNoFailuresOccur()
+    {
+        // Backward-compat: existing callers MUST observe FailedDetails == null
+        // when every game succeeds (no allocation of empty list). This locks
+        // the optional-parameter default to null so any future serialization
+        // (JSON to admin UI, audit log) does not change shape on the green path.
+        var a = Guid.NewGuid();
+        var b = Guid.NewGuid();
+        _mediator
+            .Setup(m => m.Send(It.IsAny<EnrichCatalogCoverCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EnrichCatalogCoverResult.Success("k", "CC0", null, "https://w/Q"));
+
+        var result = await CreateHandler().Handle(
+            new EnrichCatalogCoverBatchCommand(new[] { a, b }), CancellationToken.None);
+
+        result.SuccessCount.Should().Be(2);
+        result.FailedCount.Should().Be(0);
+        result.FailedDetails.Should().BeNull("no exception path was taken — no drill-down payload allocated");
+    }
 }

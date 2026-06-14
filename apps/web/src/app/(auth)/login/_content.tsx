@@ -110,7 +110,9 @@ export function LoginPageContent() {
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : t('auth.login.genericError');
         setError(errorMessage);
-        logger.error('Login failed:', err);
+        // Issue #2171: HttpClient already calls logApiError on failed responses
+        // (apps/web/src/lib/api/core/httpClient.ts) → re-logging here produced
+        // duplicate console.error noise. UX feedback is preserved via setError.
       } finally {
         setIsAuthenticating(false);
       }
@@ -139,7 +141,7 @@ export function LoginPageContent() {
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : t('auth.twoFactor.error');
         setTwoFactorError(errorMessage);
-        logger.error('2FA verification failed:', err);
+        // Issue #2171: HttpClient already logs API failures — see comment in handleLogin.
       } finally {
         setIsAuthenticating(false);
       }

@@ -66,7 +66,6 @@
 
 | File | Type | Mapped routes |
 |------|------|---------------|
-| `sp4-add-game-bgg-step.html` | page-mock | `/library/proposals`, `/library/propose` |
 | `sp4-add-game-pdf-dedup.html` | page-mock | `/library/private/add`, `/upload` (partial) |
 | `sp4-agent-detail.html` | page-mock | `/agents/[id]`, `/library/[gameId]/agent` |
 | `sp4-agents-index.html` | page-mock | `/agents`, `/editor/agent-proposals/*` (partial), `/chat/agents/create` (partial) |

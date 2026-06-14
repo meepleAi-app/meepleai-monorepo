@@ -115,17 +115,17 @@ _FILE_DEST_MAP: list[tuple[re.Pattern, str]] = [
     (re.compile(r"sp4-kb-globale"), "sp4-kb-hub.html"),
     # Library
     (re.compile(r"sp4-library"), "sp4-game-detail.html"),
-    # Toolkit
-    (re.compile(r"sp4-hub-toolkits"), "sp4-toolkit-detail.html"),
-    (re.compile(r"sp4-toolkit-detail"), "sp4-hub-toolkits.html"),
+    # Toolkit (note: sp4-hub-toolkits retired in DS-17 Phase B sweep — Stage 3
+    # deversioning #1026 moved canonical surface to `/toolkits` rendered by
+    # `features/toolkits-index/`; back-link only points at the detail page).
+    (re.compile(r"sp4-toolkit-detail"), "sp4-discover.html"),
     # Game nights
     (re.compile(r"sp4-game-nights-index"), "sp7-game-night-detail-rsvp.html"),
     (re.compile(r"sp7-game-night-detail"), "sp4-game-nights-index.html"),
     (re.compile(r"sp7-game-night-join"), "sp7-game-night-detail-rsvp.html"),
     (re.compile(r"sp7-game-night-live"), "sp7-game-night-detail-rsvp.html"),
-    # Hub pages
-    (re.compile(r"sp4-hub-agents"), "sp4-agent-detail.html"),
-    (re.compile(r"sp4-hub-games"), "sp4-game-detail.html"),
+    # (sp4-hub-agents + sp4-hub-games retired in same DS-17 Phase B sweep —
+    # routes `/hub/{agents,games}` redirect to `/agents`/`/games` since #2279.)
     # Dashboard
     (re.compile(r"sp4-dashboard"), "sp4-game-detail.html"),
     # Shared games (public)
@@ -175,7 +175,10 @@ _TEXT_DEST_OVERRIDES: list[tuple[re.Pattern, str]] = [
     (re.compile(r"glossar", re.I), "librogame-runthrough-glossary-editor.html"),
     (re.compile(r"setup|🔧 setup", re.I), "librogame-runthrough-setup-wizard.html"),
     (re.compile(r"carica pdf", re.I), "sp4-add-game-pdf-dedup.html"),
-    (re.compile(r"aggiungi gioco|add game|bgg", re.I), "sp4-add-game-bgg-step.html"),
+    # "aggiungi gioco / add game" used to point at sp4-add-game-bgg-step but
+    # that mockup was retired (BGG ToS violation per ADR #1903 — user-side
+    # BGG access forbidden). Redirect to the library entry surface instead.
+    (re.compile(r"aggiungi gioco|add game", re.I), "sp4-library-desktop.html"),
     (re.compile(r"sessioni?|nuova sessione|apri sessione", re.I), "sp4-sessions-index.html"),
     (re.compile(r"game nights?|notte di gioco", re.I), "sp4-game-nights-index.html"),
     (re.compile(r"notifich", re.I), "notifications.html"),
@@ -195,7 +198,10 @@ _TEXT_DEST_OVERRIDES: list[tuple[re.Pattern, str]] = [
     (re.compile(r"traduci|traduzione|translat", re.I), "librogame-runthrough-translate-viewer.html"),
     (re.compile(r"completa setup", re.I), "librogame-runthrough-setup-wizard.html"),
     (re.compile(r"kb|knowledge base|base conoscenza", re.I), "sp4-kb-hub.html"),
-    (re.compile(r"toolkit", re.I), "sp4-hub-toolkits.html"),
+    # "toolkit" used to point at sp4-hub-toolkits but the index mockup was
+    # retired — route survives via `/toolkits` rendered from
+    # `features/toolkits-index/`. Redirect demo nav to the detail surface.
+    (re.compile(r"toolkit", re.I), "sp4-toolkit-detail.html"),
 ]
 
 # Texts clearly indicating "stays on page" actions (complement to the regex above)

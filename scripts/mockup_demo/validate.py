@@ -95,7 +95,8 @@ def _broken_targets(mockups_dir: Path) -> list[tuple[str, str]]:
 
 # Files intentionally excluded from user-facing reachability calculation:
 # - 00-05 design system docs (showcase pages, not part of user journey)
-# - nanolith-nav-* primitives (UI showcases, not navigable destinations)
+# - primitive-nav-* primitives (UI showcases, not navigable destinations —
+#   renamed from `nanolith-nav-*` in #2152 for naming clarity)
 _EXCLUDED = {
     "00-hub.html",
     "01-screens.html",
@@ -103,9 +104,9 @@ _EXCLUDED = {
     "03-drawer-variants.html",
     "04-design-system.html",
     "05-dark-mode.html",
-    "nanolith-nav-topbar.html",
-    "nanolith-nav-bottom-mobile.html",
-    "nanolith-nav-chat-panel.html",
+    "primitive-nav-topbar.html",
+    "primitive-nav-bottom-mobile.html",
+    "primitive-nav-chat-panel.html",
 }
 
 

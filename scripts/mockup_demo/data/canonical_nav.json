@@ -81,8 +81,8 @@
     "upload pdf": "sp4-upload-wizard-extended.html",
     "carica pdf": "sp4-upload-wizard-extended.html",
     "aggiungi gioco": "sp4-library-desktop.html",
-    "crea game night": "sp7-game-night-create.html",
-    "crea serata": "sp7-game-night-create.html",
+    "crea game night": "sp7-game-night-new.html",
+    "crea serata": "sp7-game-night-new.html",
     "glossary": "librogame-runthrough-glossary-editor.html",
     "glossario": "sp6-libro-game-glossary-editor.html"
   }

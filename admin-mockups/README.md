@@ -57,6 +57,34 @@ See:
 
 ---
 
+## Suffix vocabulary (#2152)
+
+Mockup file names use a `<prefix>-<entity>-<suffix>.html` convention. The suffix
+slot has accumulated 13 distinct tokens across the catalog; the table below
+is the **canonical definition** — new mockups should reuse an existing suffix
+rather than coin a synonym.
+
+| Suffix | Meaning | Example |
+|---|---|---|
+| `-live` | Active / live play state (timer running, players acting). | `sp7-game-night-live.html` |
+| `-summary` | Post-game / completed / read-only end state. | `sp7-game-night-summary.html` |
+| `-parts` | Shared sub-components for the family (consumed by siblings). | `sp4-parts-common.jsx` |
+| `-flavor` | Game-specific UI variant of a shared shell. | `sp4-session-flavor-catan.html` |
+| `-data` | Static dataset / fixture used by demo runtime. | `sp4-discover-data.json` |
+| `-renderers` | Polymorphic dispatcher that picks a sub-component by type. | `sp4-session-renderers.jsx` |
+| `-tabs` | Horizontal tab strip + content area. | `sp4-game-detail-tabs.jsx` |
+| `-sections` | Vertical layout sections of a long-form page. | `sp4-game-detail-sections.jsx` |
+| `-ui` | UI-only variant (no logic, presentational shell). | `sp4-onboarding-ui.html` |
+| `-bodies` | Body / content slot variants for a layout primitive. | `sp4-drawer-bodies.jsx` |
+| `-tools` | Toolkit-specific dispatch / tool launcher panel. | `sp4-session-tools.jsx` |
+| `-dice` | Dice / RNG rendering primitive. | `sp4-session-dice.jsx` |
+| `-stats` | Statistical KPI / scoreboard panel. | `sp4-session-stats.jsx` |
+
+When introducing a new conceptual category, propose the suffix in a PR that
+edits this table — do not coin synonyms.
+
+---
+
 ## About the Design Files
 
 The files in `design_files/` are **design references created in HTML** — prototypes

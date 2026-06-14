@@ -1,5 +1,5 @@
 /**
- * @mockup admin-mockups/design_files/sp7-game-night-create.html
+ * @mockup admin-mockups/design_files/sp7-game-night-new.html
  *
  * Game Night Create wizard argTypes matrix story — DS-17 Phase C-1 (sub-issue #2166).
  *

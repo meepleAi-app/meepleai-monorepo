@@ -1,5 +1,5 @@
 /**
- * Guest Landing Page — /join/[inviteToken]
+ * Guest Landing Page — /join/[token]
  *
  * Game Night Improvvisata — Task 18
  *
@@ -8,6 +8,11 @@
  * and score proposal form.
  *
  * Middleware note: /join/* is whitelisted in PUBLIC_PREFIXES in middleware.ts.
+ *
+ * Issue #2152 Bundle C: dynamic-param vocabulary alignment. Folder slug
+ * renamed `[inviteToken]` → `[token]` to match the broader "[token] =
+ * opaque secret" convention. The `InviteTokenResponse.inviteToken` DTO
+ * field is preserved (API contract — separate scope).
  */
 
 import { use, Suspense } from 'react';
@@ -15,7 +20,7 @@ import { use, Suspense } from 'react';
 import { GuestJoinView } from './GuestJoinView';
 
 interface GuestJoinPageProps {
-  params: Promise<{ inviteToken: string }>;
+  params: Promise<{ token: string }>;
 }
 
 /**
@@ -25,7 +30,7 @@ interface GuestJoinPageProps {
  * testable with a plain string prop.
  */
 export default function GuestJoinPage({ params }: GuestJoinPageProps) {
-  const { inviteToken } = use(params);
+  const { token } = use(params);
 
   return (
     <Suspense
@@ -35,7 +40,7 @@ export default function GuestJoinPage({ params }: GuestJoinPageProps) {
         </main>
       }
     >
-      <GuestJoinView inviteToken={inviteToken} />
+      <GuestJoinView token={token} />
     </Suspense>
   );
 }

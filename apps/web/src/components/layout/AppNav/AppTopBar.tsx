@@ -4,6 +4,7 @@ import { ChevronDown, Menu } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import { LiveSessionPill } from '@/components/layout/AppNav/LiveSessionPill';
 import { UserMenuDropdown } from '@/components/layout/UserMenuDropdown';
 import { BrandMark } from '@/components/ui/brand';
 import {
@@ -123,6 +124,11 @@ export function AppTopBar({ adminMode, onMenuClick, className }: AppTopBarProps)
       )}
 
       <div className="flex-1" />
+
+      {/* Issue #2150 — runtime backfill of nav-chrome primitive D5: surfaces a
+          chip when a live session is active, with a Resume CTA. Hidden when
+          `useLiveSessionStore.sessionId === null` or `status === 'Completed'`. */}
+      {!adminMode && <LiveSessionPill />}
 
       <UserMenuDropdown variant="pill" />
     </header>

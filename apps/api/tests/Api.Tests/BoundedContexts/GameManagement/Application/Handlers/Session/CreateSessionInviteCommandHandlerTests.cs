@@ -44,7 +44,7 @@ public sealed class CreateSessionInviteCommandHandlerTests
             Visibility = 0,
             AgentMode = 0,
             ScoringConfigJson = "{}",
-            RowVersion = new byte[] { 1 }
+            Xmin = 1u
         });
         await _dbContext.SaveChangesAsync();
     }

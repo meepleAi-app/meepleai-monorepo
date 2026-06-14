@@ -156,21 +156,35 @@ And response time < 30s (soglia operativa, non funzionale)
 **Soglia**: M4 ≥ M3 - 1 (tolleranza di 1 falso negativo per query non-cooperative).
 **Pass strict**: M4 == M3.
 
-## 4. Inventario atteso post-seed (baseline SP4)
+## 4. Inventario atteso post-seed (SP4 dopo Q1-Q4 closure)
+
+13 giochi totali (8 baseline + 5 nuovi), tutti happy path indexed:
 
 | # | Game | Slug | M1 catalog | M2 search | M3 KB Ready | M4 RAG cite | Note |
 |---|------|------|:---:|:---:|:---:|:---:|---|
 | 1 | Azul | azul | ✅ | ✅ | ✅ (2 PDF ITA+ENG) | ✅ | Happy path completo |
-| 2 | I Coloni di Catan | catan | ✅ | ✅ | ✅ (1 PDF) | ✅ | Happy path |
+| 2 | Catan | catan | ✅ | ✅ | ✅ (1 PDF) | ✅ | Happy path (Q4: canonical EN; IT IT via translation service follow-up) |
 | 3 | Wingspan | wingspan | ✅ | ✅ | ✅ (1 PDF) | ✅ | Happy path |
-| 4 | Brass: Birmingham | brass | ✅ | ✅ | ✅ (1 PDF, `_processing` fixture) | ✅ | UI fixture |
-| 5 | Gloomhaven | gloomhaven | ✅ | ✅ | ❌ `_targetState: failed` | ❌ | UI fixture failure |
-| 6 | Ark Nova | arknova | ✅ | ✅ | ❌ no PDF mapped | ❌ | **Gap fix candidate** |
-| 7 | Spirit Island | spirit | ✅ | ✅ | ❌ no PDF mapped | ❌ | **Gap fix candidate** |
-| 8 | 7 Wonders Duel | 7wonders | ✅ | ✅ | ❌ no PDF mapped | ❌ | **Gap fix candidate** |
+| 4 | Brass: Birmingham | brass | ✅ | ✅ | ✅ (1 PDF) | ✅ | Q1: fixture `_processing` rimossa |
+| 5 | Gloomhaven | gloomhaven | ✅ | ✅ | ✅ (1 PDF, 51 MB) | ✅ | Q2: fixture `failed` rimossa, ora indicizzato |
+| 6 | Ark Nova | arknova | ✅ | ✅ | ✅ (1 PDF) | ✅ | Q3 chiusura PDF orphan |
+| 7 | Spirit Island | spirit | ✅ | ✅ | ✅ (1 PDF, 55 MB) | ✅ | Q3 chiusura PDF orphan |
+| 8 | 7 Wonders Duel | 7wonders | ✅ | ✅ | ✅ (1 PDF) | ✅ | Q3 chiusura PDF orphan |
+| 9 | Codenames | codenames | ✅ | ✅ | ✅ (1 PDF) | ✅ | Catalog expansion |
+| 10 | Carcassonne | carcassonne | ✅ | ✅ | ✅ (1 PDF) | ✅ | Catalog expansion |
+| 11 | Ticket to Ride | ticket | ✅ | ✅ | ✅ (1 PDF, 177 MB) | ✅ | Catalog expansion (PDF grande) |
+| 12 | Pandemic | pandemic | ✅ | ✅ | ✅ (1 PDF) | ✅ | Catalog expansion |
+| 13 | Terraforming Mars | terraforming | ✅ | ✅ | ✅ (1 PDF, 39 MB) | ✅ | Catalog expansion |
 
-**Baseline atteso**: M1=8, M2=8, M3=4, M4=4.
-**Post gap-fix atteso**: M1=8, M2=8, M3=7, M4=7 (Gloomhaven resta failed by design).
+**Baseline atteso post Q1-Q4**: M1=13, M2=13, M3=13, M4≥12 (tolleranza 1 per query non-cooperative).
+**Pass strict**: M1=M2=M3=M4=13.
+
+**Total assets seedati**:
+- 13 game records
+- 14 kbDocs (Azul ha 2 ITA+ENG, gli altri 12 hanno 1 PDF ciascuno)
+- 13 agenti (1 per gioco + 0 universal duplicato)
+- 38 library entries totali (Q3 distribuzione: marco 12, sara 8, andrea 6, luca 5, giulia 5; era 19 prima)
+- 5 events (era 4, +1 "Strategici di gennaio")
 
 ## 5. Gap analysis
 
@@ -301,12 +315,19 @@ And asse A invariante #10 verificata: max 1 live per GameNightEvent
 - [ ] Local run `make seed-sp4 && make seed-index` verde con M1=M2=13, M3=12, M4≥11 (Gloomhaven excluded by design)
 - [ ] Verifica E2E 3 flow manuale con confronto mockup side-by-side, divergenze documentate
 
-## 9. Open questions / decisions pending
+## 9. Q1-Q4 closure (lockate 2026-06-14)
 
-- **Q1**: La fixture `_processing: true` su Brass è ancora utile come UI test? Se sì, NON convertire in Ready. Se no, rimuoverla.
-- **Q2**: Per Gloomhaven `_targetState: failed`, vogliamo mantenere il fixture o convertire a happy path (PDF è 51 MB, indicizzabile)?
-- **Q3**: I 5 nuovi giochi vanno inseriti nelle `library` per user, `events`, `playRecords`? Default conservativo: NO (la library è personalizzata, gli eventi sono mockup).
-- **Q4 (NEW dalla verifica live 2026-06-14)**: La snapshot del DB di sviluppo contiene **due righe Catan distinte** — `Catan` (EN, con KB completa) e `I Coloni di Catan` (IT, senza KB). Il seed SP4 inserisce solo il record IT. Decisione: rinominare il seed in `Catan` per matching col snapshot, oppure aggiungere un'alias-resolution layer (BE), oppure documentare come limite noto MVP.
+- **Q1 — RESOLVED**: rimossa fixture `_processing: true` su `kb-brass` → happy path indexed. Brass ora atteso `complete` in M3/M4.
+- **Q2 — RESOLVED**: rimossa fixture `_targetState: "failed"` + `_note` su `kb-gloomhaven` → happy path indexed. Gloomhaven ora atteso `complete`. Filename rinominato `gloomhaven-scenarios.pdf` → `gloomhaven-rules.pdf` per coerenza nomenclatura.
+- **Q3 — RESOLVED**: i 5 nuovi giochi inseriti in `library` (distribuzione: codenames/carcassonne/ticket/pandemic 3 utenti, terraforming 2 utenti) e `events` (1 nuovo evento `e-strategici` "Strategici di gennaio" con terraforming/pandemic/carcassonne). `playRecords` invariato (favoriteGameSlug resta sui giochi originali, soglia conservativa).
+- **Q4 — RESOLVED via canonical EN + translation deferred**: titolo del seed Catan rinominato da `I Coloni di Catan` → `Catan` (canonical EN). Risolve il dual-row anomaly su snapshot DB.
+  - **Translation service**: esiste backend (`Api.Infrastructure.Translation.IGenericTranslationService` + `OpenRouterTranslationService`, modelli DeepSeek V3 + Claude Sonnet 4.5) ma è wired SOLO per traduzione delle risposte LLM in `AskQuestionQueryHandler`, NON per i game titles del catalogo.
+  - **Schema attuale**: `shared_games.title` è una singola colonna (no `shared_game_translations` table, no `title_it`/`title_en`).
+  - **Frontend i18n**: react-intl attivo per UI labels (`apps/web/src/locales/it.json`), ma entity titles letti direttamente da `SharedGameDto.Title`.
+  - **Follow-up dedicato** (out of scope MVP): aprire issue per "Wire translation service to catalog entities" — opzioni:
+    - (A) Table-based: migration `shared_game_translations(shared_game_id, locale, title, description)` + BE `GameTitleResolver` + FE `useGameTitle()` hook.
+    - (B) On-demand: `IGenericTranslationService` con cache Redis 30gg per titoli; trigger asincrono al fetch quando `locale=it`.
+  - **Mitigazione interim**: il mapping curated UI in `apps/web/src/locales/it.json` può fornire override per i 13 titoli del seed (chiave `games.<slug>` → titolo IT), senza modifiche BE.
 
 ## 9.1 Baseline misurato su snapshot DB (2026-06-14)
 

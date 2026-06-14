@@ -62,18 +62,15 @@ Live `/library` come admin mostra UN solo frame (default grid view) con:
 
 4. **Mage Knight Board Game** appare come "Giochi 1": admin ha 1 gioco linkato alla sua library. Free tier marco avrebbe 8 giochi (per data.json `library.marco`). La differenza è coerente con il modello: admin non riceve seed library entries.
 
-## Catan dual-row anomaly
+## Catan dual-row anomaly — RESOLVED (Q4 closure 2026-06-14)
 
-DB `shared_games` contiene 2 row Catan distinte:
+DB `shared_games` containeva 2 row Catan distinte:
 - `Catan` (EN) → `has_knowledge_base = true` (snapshot pre-esistente)
 - `I Coloni di Catan` (IT) → `has_knowledge_base = false` (snapshot pre-esistente)
 
-Implicazione: rieseguire `make seed-sp4` con data.json corrente (slug `catan` → title `I Coloni di Catan`) genererà una terza row OR colliderà con quella esistente.
+**Risoluzione applicata in questo PR**: titolo del seed rinominato `I Coloni di Catan` → `Catan` (canonical EN). Il seed ora matcha il record EN dello snapshot. Slug `catan` invariato per backward compat con kbDocs/agents/library/events.
 
-**Decisione richiesta (Q4 spec doc §9)**:
-- (A) Rinominare il seed in `Catan` per match snapshot
-- (B) Aggiungere alias-resolution layer BE
-- (C) Documentare come limite noto MVP
+**Translation IT deferred a follow-up**: il servizio di traduzione esiste (`OpenRouterTranslationService`) ma è wired solo per risposte LLM, non per game titles. Opzioni per il follow-up documentate in spec doc §9 Q4 closure.
 
 ## Verifica dei 3 flussi utente richiesti
 

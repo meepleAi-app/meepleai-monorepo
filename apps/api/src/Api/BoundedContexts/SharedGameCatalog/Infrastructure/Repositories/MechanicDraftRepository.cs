@@ -75,7 +75,7 @@ internal sealed class MechanicDraftRepository : RepositoryBase, IMechanicDraftRe
 
     private static MechanicDraft MapToDomain(MechanicDraftEntity entity)
     {
-        return new MechanicDraft(
+        var draft = new MechanicDraft(
             entity.Id,
             entity.SharedGameId,
             entity.PdfDocumentId,
@@ -97,8 +97,9 @@ internal sealed class MechanicDraftRepository : RepositoryBase, IMechanicDraftRe
             entity.LastModified,
             (MechanicDraftStatus)entity.Status,
             entity.TotalTokensUsed,
-            entity.EstimatedCostUsd,
-            entity.RowVersion);
+            entity.EstimatedCostUsd);
+        draft.SetXmin(entity.Xmin);
+        return draft;
     }
 
     private static MechanicDraftEntity MapToEntity(MechanicDraft draft)
@@ -127,7 +128,7 @@ internal sealed class MechanicDraftRepository : RepositoryBase, IMechanicDraftRe
             Status = (int)draft.Status,
             TotalTokensUsed = draft.TotalTokensUsed,
             EstimatedCostUsd = draft.EstimatedCostUsd,
-            RowVersion = draft.RowVersion
+            Xmin = draft.Xmin
         };
     }
 }

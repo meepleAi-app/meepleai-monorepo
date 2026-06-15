@@ -54,109 +54,107 @@ export default function PlayerAchievementsPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background py-8 px-4">
-      <DetailPageContainer className="p-0">
-        {/* Back Button */}
-        <Button asChild variant="ghost" className="mb-6 font-nunito">
-          <Link href={`/players/${playerId}`}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to {playerName}
-          </Link>
-        </Button>
+    <DetailPageContainer className="min-h-screen bg-background py-8 px-4">
+      {/* Back Button */}
+      <Button asChild variant="ghost" className="mb-6 font-nunito">
+        <Link href={`/players/${playerId}`}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to {playerName}
+        </Link>
+      </Button>
 
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <Trophy className="h-6 w-6 text-primary" />
-          <div>
-            <h1 className="text-3xl font-bold font-quicksand">Achievements</h1>
-            <p className="text-muted-foreground font-nunito text-sm">
-              Badges and milestones earned by {playerName}
-            </p>
-          </div>
-          {!loading && badges.length > 0 && (
-            <Badge variant="secondary" className="ml-auto">
-              {badges.length} earned
-            </Badge>
-          )}
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-8">
+        <Trophy className="h-6 w-6 text-primary" />
+        <div>
+          <h1 className="text-3xl font-bold font-quicksand">Achievements</h1>
+          <p className="text-muted-foreground font-nunito text-sm">
+            Badges and milestones earned by {playerName}
+          </p>
         </div>
-
-        {/* Loading */}
-        {loading && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[...Array(6)].map((_, i) => (
-              <Skeleton key={i} className="h-36 w-full rounded-xl" />
-            ))}
-          </div>
+        {!loading && badges.length > 0 && (
+          <Badge variant="secondary" className="ml-auto">
+            {badges.length} earned
+          </Badge>
         )}
+      </div>
 
-        {/* Error */}
-        {error && !loading && (
-          <Alert variant="destructive">
-            <AlertDescription className="font-nunito">{error}</AlertDescription>
-          </Alert>
-        )}
+      {/* Loading */}
+      {loading && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <Skeleton key={i} className="h-36 w-full rounded-xl" />
+          ))}
+        </div>
+      )}
 
-        {/* Badges Grid */}
-        {!loading && !error && (
-          <>
-            {badges.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 flex flex-col items-center gap-4 text-center">
-                  <Lock className="h-12 w-12 text-muted-foreground/40" />
-                  <div>
-                    <p className="font-semibold font-quicksand">No badges yet</p>
-                    <p className="text-sm text-muted-foreground font-nunito mt-1">
-                      Keep playing to earn your first badge!
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {badges.map(badge => (
-                  <div
-                    key={badge.id}
-                    className="p-5 rounded-xl border border-primary/30 bg-card shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-start gap-3 mb-3">
-                      {badge.iconUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={badge.iconUrl}
-                          alt={badge.name}
-                          className="h-10 w-10 rounded-full object-cover shrink-0"
-                        />
-                      ) : (
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                          <Star className="h-5 w-5 text-primary" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold font-quicksand truncate">{badge.name}</h3>
-                        <p className="text-sm text-muted-foreground font-nunito line-clamp-2">
-                          {badge.description}
-                        </p>
+      {/* Error */}
+      {error && !loading && (
+        <Alert variant="destructive">
+          <AlertDescription className="font-nunito">{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Badges Grid */}
+      {!loading && !error && (
+        <>
+          {badges.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 flex flex-col items-center gap-4 text-center">
+                <Lock className="h-12 w-12 text-muted-foreground/40" />
+                <div>
+                  <p className="font-semibold font-quicksand">No badges yet</p>
+                  <p className="text-sm text-muted-foreground font-nunito mt-1">
+                    Keep playing to earn your first badge!
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {badges.map(badge => (
+                <div
+                  key={badge.id}
+                  className="p-5 rounded-xl border border-primary/30 bg-card shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-start gap-3 mb-3">
+                    {badge.iconUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={badge.iconUrl}
+                        alt={badge.name}
+                        className="h-10 w-10 rounded-full object-cover shrink-0"
+                      />
+                    ) : (
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <Star className="h-5 w-5 text-primary" />
                       </div>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2">
-                      <Badge variant="outline" className={cn('text-xs', TIER_COLORS[badge.tier])}>
-                        {badge.tier}
-                      </Badge>
-                      <p className="text-xs text-muted-foreground font-nunito">
-                        {new Intl.DateTimeFormat('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                        }).format(new Date(badge.earnedAt))}
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold font-quicksand truncate">{badge.name}</h3>
+                      <p className="text-sm text-muted-foreground font-nunito line-clamp-2">
+                        {badge.description}
                       </p>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </DetailPageContainer>
-    </div>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <Badge variant="outline" className={cn('text-xs', TIER_COLORS[badge.tier])}>
+                      {badge.tier}
+                    </Badge>
+                    <p className="text-xs text-muted-foreground font-nunito">
+                      {new Intl.DateTimeFormat('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      }).format(new Date(badge.earnedAt))}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </DetailPageContainer>
   );
 }

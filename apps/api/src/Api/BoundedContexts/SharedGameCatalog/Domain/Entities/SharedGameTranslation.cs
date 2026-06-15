@@ -168,4 +168,47 @@ public sealed class SharedGameTranslation
     /// finding C4 (avoid reflection trick).
     /// </summary>
     internal void SetXminForConcurrencyCheck(uint xmin) => Xmin = xmin;
+
+    /// <summary>
+    /// Rebuilds an aggregate from already-persisted state. Bypasses
+    /// <see cref="Create"/> validation because the row was validated when it
+    /// was first inserted; the persistence layer just needs to project the
+    /// EF entity back into a domain object without minting a fresh Id or
+    /// stamping a new <see cref="CreatedAt"/>. Intended for repository use
+    /// only — application/handler code MUST go through <see cref="Create"/>.
+    /// </summary>
+    public static SharedGameTranslation Rehydrate(
+        Guid id,
+        Guid sharedGameId,
+        Locale locale,
+        string title,
+        string? description,
+        TranslationSource source,
+        DateTimeOffset createdAt,
+        Guid? createdBy,
+        DateTimeOffset? updatedAt,
+        Guid? updatedBy,
+        bool isDeleted,
+        DateTimeOffset? deletedAt,
+        Guid? deletedBy,
+        uint xmin)
+    {
+        return new SharedGameTranslation
+        {
+            Id = id,
+            SharedGameId = sharedGameId,
+            Locale = locale,
+            Title = title,
+            Description = description,
+            Source = source,
+            CreatedAt = createdAt,
+            CreatedBy = createdBy,
+            UpdatedAt = updatedAt,
+            UpdatedBy = updatedBy,
+            IsDeleted = isDeleted,
+            DeletedAt = deletedAt,
+            DeletedBy = deletedBy,
+            Xmin = xmin
+        };
+    }
 }

@@ -103,6 +103,16 @@ internal class NotificationRepository : RepositoryBase, INotificationRepository
 
         // Broadcast to connected SSE clients (Issue #5005).
         // Fires before UnitOfWork.SaveChangesAsync — matches metric recording pattern.
+        //
+        // Phantom-broadcast risk (acknowledged): if the caller's external
+        // SaveChangesAsync subsequently throws (e.g. FK violation on a sibling
+        // entity, deadlock, late constraint check), the metric is already
+        // counted and the SSE frame has already shipped for a notification
+        // that was never durably stored. Affects the 12 non-dispatcher callers
+        // (Hangfire jobs + command handlers + non-dispatcher event handlers).
+        // The dispatcher path (#2383) routes through AddAndCommitAsync below,
+        // which emits these side-effects only after a successful save. A
+        // follow-up will migrate the remaining callers; see #2383 umbrella.
         _broadcaster.Publish(notification.UserId, MapToDto(notification));
     }
 

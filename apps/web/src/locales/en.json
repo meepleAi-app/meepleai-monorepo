@@ -3156,6 +3156,12 @@
         "visibilityShared": "Shared",
         "emptyMessage": "No messages yet."
       },
+      "chatAgent": {
+        "title": "ChatAgent",
+        "onlineLabel": "Online",
+        "latencyAriaLabel": "Latency {ms}ms",
+        "agentNameAriaLabel": "Agent name"
+      },
       "notes": {
         "title": "Notes",
         "inputAriaLabel": "Write a note",

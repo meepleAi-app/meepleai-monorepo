@@ -29,6 +29,12 @@ export type {
   ActionLogTimelineProps,
 } from '@/components/features/session-live/ActionLogTimeline';
 
+export { ChatAgentPanel } from '@/components/features/session-live/ChatAgentPanel';
+export type {
+  ChatAgentPanelLabels,
+  ChatAgentPanelProps,
+} from '@/components/features/session-live/ChatAgentPanel';
+
 export { DesktopBody } from '@/components/features/session-live/DesktopBody';
 export type { DesktopBodyProps } from '@/components/features/session-live/DesktopBody';
 

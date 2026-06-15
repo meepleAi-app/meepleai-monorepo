@@ -3263,6 +3263,12 @@
         "visibilityShared": "Condiviso",
         "emptyMessage": "Nessun messaggio ancora."
       },
+      "chatAgent": {
+        "title": "ChatAgent",
+        "onlineLabel": "Online",
+        "latencyAriaLabel": "Latenza {ms}ms",
+        "agentNameAriaLabel": "Nome agente"
+      },
       "notes": {
         "title": "Note",
         "inputAriaLabel": "Scrivi una nota",

@@ -185,6 +185,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<WaitlistEntryEntity> WaitlistEntries => Set<WaitlistEntryEntity>(); // ISSUE-589: Public Alpha waitlist (Wave A.2)
     public DbSet<NotificationEntity> Notifications => Set<NotificationEntity>(); // ISSUE-2053: User notifications
     public DbSet<SharedGameEntity> SharedGames => Set<SharedGameEntity>(); // ISSUE-2370: Shared game catalog
+    public DbSet<SharedGameTranslationEntity> SharedGameTranslations => Set<SharedGameTranslationEntity>(); // ISSUE-2339: Shared game translations (non-EN)
     public DbSet<GameDesignerEntity> GameDesigners => Set<GameDesignerEntity>(); // ISSUE-2370: Game designers
     public DbSet<GamePublisherEntity> GamePublishers => Set<GamePublisherEntity>(); // ISSUE-2370: Game publishers
     public DbSet<GameCategoryEntity> GameCategories => Set<GameCategoryEntity>(); // ISSUE-2370: Game categories taxonomy

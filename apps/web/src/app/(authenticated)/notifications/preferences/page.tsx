@@ -16,16 +16,17 @@
 
 export const dynamic = 'force-dynamic';
 
+import { SettingsPageContainer } from '@/components/layout/PageContainer';
 import { NotificationPreferences } from '@/components/notifications/NotificationPreferences';
 
 export default function NotificationPreferencesPage() {
   return (
-    <div className="container max-w-3xl mx-auto py-8">
+    <SettingsPageContainer className="py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Preferenze notifiche</h1>
         <p className="text-muted-foreground">Configura come e quando ricevere le notifiche</p>
       </div>
       <NotificationPreferences />
-    </div>
+    </SettingsPageContainer>
   );
 }

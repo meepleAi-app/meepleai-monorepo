@@ -22,6 +22,7 @@ import {
   type PlayerTopGamesCardLabels,
   type PlayerTrendCardLabels,
 } from '@/components/features/player-detail';
+import { DetailPageContainer } from '@/components/layout/PageContainer';
 import type { PlayerProfileFixture } from '@/lib/player-detail/player-detail-visual-test-fixture';
 
 export interface PlayerOverviewRegionLabels {
@@ -44,10 +45,7 @@ export function PlayerOverviewRegion({
   onFavoriteAgentClick,
 }: PlayerOverviewRegionProps): JSX.Element {
   return (
-    <div
-      data-slot="player-overview-region"
-      className="mx-auto w-full max-w-4xl px-4 sm:px-8 flex flex-col gap-4"
-    >
+    <DetailPageContainer data-slot="player-overview-region" className="gap-4 py-0">
       <PlayerStatsGrid
         totalSessions={stats.totalSessions}
         totalWins={stats.totalWins}
@@ -66,6 +64,6 @@ export function PlayerOverviewRegion({
       </div>
       <PlayerTopGamesCard items={stats.topGames} labels={labels.topGames} />
       <PlayerTrendCard points={stats.trendPoints} labels={labels.trend} />
-    </div>
+    </DetailPageContainer>
   );
 }

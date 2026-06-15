@@ -31,6 +31,7 @@ import Link from 'next/link';
 
 import { useAuth } from '@/components/auth/AuthProvider';
 import { CascadeDrawerHost } from '@/components/dashboard/CascadeDrawerHost';
+import { HubPageContainer } from '@/components/layout/PageContainer';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
 import { useCompletedGameNights, useUpcomingGameNights } from '@/hooks/queries/useGameNights';
@@ -263,10 +264,7 @@ export function DashboardClient(): ReactElement {
         labels={heroLabels}
       />
 
-      <div
-        data-slot="dashboard-priority-sections"
-        className="container mx-auto flex flex-col gap-8 px-4 py-8 pb-16 sm:px-8"
-      >
+      <HubPageContainer data-slot="dashboard-priority-sections" className="gap-8 py-8 pb-16">
         <ProssimiSection
           state={prossimiState}
           gameNights={prossimiCards}
@@ -353,7 +351,7 @@ export function DashboardClient(): ReactElement {
         ) : null}
 
         <FriendsActivitySection state={friendsState} activities={friendsActivities} />
-      </div>
+      </HubPageContainer>
 
       {/* #1929 WP5: cascade-store driven drawer renderer for dashboard card clicks */}
       <CascadeDrawerHost />

@@ -49,6 +49,7 @@ import {
   type GameDetailHeroMeta,
   type TabKey,
 } from '@/components/features/game-detail';
+import { DetailPageContainer } from '@/components/layout/PageContainer';
 import { toast } from '@/components/layout/Toast';
 import { useGameAgents } from '@/hooks/queries/useGameAgents';
 import {
@@ -749,7 +750,7 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
       />
 
       {/* Tab panels — role=tabpanel, aria-labelledby wired to tabIdFor */}
-      <div className="container mx-auto max-w-4xl px-4 py-6 sm:px-8">
+      <DetailPageContainer>
         {/* Cell 5: info tab */}
         <div
           role="tabpanel"
@@ -920,7 +921,7 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
         >
           <GameDetailKbDocList docs={documentsTabDocs} labels={kbDocLabels} />
         </div>
-      </div>
+      </DetailPageContainer>
     </div>
   );
 }

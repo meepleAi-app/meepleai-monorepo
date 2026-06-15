@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 
+import { FormPageContainer } from '@/components/layout/PageContainer';
 import { Button } from '@/components/ui/primitives/button';
 
 /**
@@ -13,7 +14,7 @@ export default function CreateProposalPage() {
   const router = useRouter();
 
   return (
-    <div className="container mx-auto p-6 max-w-2xl">
+    <FormPageContainer className="p-6">
       <div className="text-center py-24 space-y-4">
         <h1 className="text-2xl font-bold">Feature Removed</h1>
         <p className="text-muted-foreground">
@@ -22,6 +23,6 @@ export default function CreateProposalPage() {
         </p>
         <Button onClick={() => router.push('/editor/agent-proposals')}>Back to Proposals</Button>
       </div>
-    </div>
+    </FormPageContainer>
   );
 }

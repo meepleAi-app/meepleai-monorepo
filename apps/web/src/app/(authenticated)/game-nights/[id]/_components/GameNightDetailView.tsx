@@ -37,6 +37,7 @@ import { GameNightActions } from '@/components/game-night/GameNightActions';
 import { GameNightDiaryPanel } from '@/components/game-night/GameNightDiaryPanel';
 import { GameNightSessionsList } from '@/components/game-night/GameNightSessionsList';
 import { GameNightPlanningLayout } from '@/components/game-night/planning/GameNightPlanningLayout';
+import { FormPageContainer } from '@/components/layout/PageContainer';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
@@ -176,11 +177,11 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
 
   if (isLoading) {
     return (
-      <div className="p-4 max-w-2xl mx-auto space-y-4">
+      <FormPageContainer className="p-4 space-y-4">
         <Skeleton className="h-8 w-3/4" />
         <Skeleton className="h-4 w-1/2" />
         <Skeleton className="h-32 w-full" />
-      </div>
+      </FormPageContainer>
     );
   }
 
@@ -270,7 +271,7 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 p-4">
+    <FormPageContainer className="space-y-6 p-4">
       <GameNightDetailHero
         title={event.title}
         status={event.status}
@@ -378,6 +379,6 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
           </ul>
         </section>
       )}
-    </div>
+    </FormPageContainer>
   );
 }

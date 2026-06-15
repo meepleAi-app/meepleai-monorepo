@@ -22,6 +22,23 @@
 > The two are equivalent: HTML for browser preview, JSX for codebase clone. The index lists the
 > HTML file as canonical when both exist.
 
+> **State variants (DS-17 Phase 1, #2071)**: a mockup that ships multiple states uses the
+> `<base>-state-NN-<label>.{html,jsx}` pattern with a fixed `NN` slot per state. See the
+> dedicated section ["State variants"](./README.md#state-variants-2071-ds-17-phase-1)
+> in `README.md` for the canonical table. Quick reference:
+>
+> | Suffix | State |
+> |---|---|
+> | _(none — bare `<base>.html`)_ | `01-default` |
+> | `-state-02-empty` | empty / zero-data |
+> | `-state-03-loading` | skeleton / loading |
+> | `-state-04-error` | error / failure |
+> | `-state-05-sse` | live stream (opt-in) |
+> | `-state-06-offline` | offline / PWA fallback (opt-in) |
+>
+> Enforcement: `pnpm lint:mockup-state-naming` fails CI when a `*-state-*` file violates
+> the pattern (missing `NN`, unknown label, or `NN` outside the catalog).
+
 ## Dev fixtures (design system, prototype, tokens)
 
 | File | Type | Note |

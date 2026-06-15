@@ -277,6 +277,13 @@ jobs:
         run: pnpm lint
         # Note: package.json lint script has --max-warnings=15 for security false positives
 
+      # DS-17 Phase 1 (mockup state naming, #2071): hard gate on the
+      # canonical `<base>-state-NN-<label>.{html,jsx}` pattern. Cheap (regex
+      # over admin-mockups/**/*.{html,jsx} only) — runs before the heavier
+      # token/annotation/BGG scans below.
+      - name: Mockup state-variant naming gate (#2071)
+        run: pnpm lint:mockup-state-naming
+
       # DS-2 (token canonicalization, 2026-05-12):
       # Non-blocking inventory of `local/no-hardcoded-color-utility` violations.
       # Produces audits/2026-05-12-token-violations.{json,md} for cluster

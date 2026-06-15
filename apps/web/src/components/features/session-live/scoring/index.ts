@@ -21,6 +21,17 @@ export type {
 
 export { SCORING_VARIANT_LABELS } from './types';
 
+export {
+  ScoringPanelRenderer,
+  type ScoringPanelRendererLabels,
+  type ScoringPanelRendererProps,
+} from './ScoringPanelRenderer';
+export {
+  ScoringPanelEmpty,
+  type ScoringPanelEmptyLabels,
+  type ScoringPanelEmptyProps,
+} from './ScoringPanelEmpty';
+
 export { PointsPanel, type PointsPanelLabels, type PointsPanelProps } from './variants/PointsPanel';
 export {
   RankingPanel,

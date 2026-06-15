@@ -15,8 +15,15 @@ import { ArrowLeft, Calendar, Clock, Trophy } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
+import { DetailPageContainer } from '@/components/layout/PageContainer';
 import { Badge } from '@/components/ui/data-display/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { api, type GameSessionDto } from '@/lib/api';
@@ -57,16 +64,14 @@ export default function PlayerSessionsPage() {
     setLoading(true);
     api.sessions
       .getHistory({ limit: 50 })
-      .then((res) => {
+      .then(res => {
         // Filter sessions where this player participated
-        const playerSessions = res.sessions.filter((s) =>
-          s.players.some(
-            (p) => p.playerName.toLowerCase() === playerName.toLowerCase()
-          )
+        const playerSessions = res.sessions.filter(s =>
+          s.players.some(p => p.playerName.toLowerCase() === playerName.toLowerCase())
         );
         setSessions(playerSessions);
       })
-      .catch((err) => {
+      .catch(err => {
         setError(err instanceof Error ? err.message : 'Failed to load sessions');
       })
       .finally(() => setLoading(false));
@@ -74,7 +79,7 @@ export default function PlayerSessionsPage() {
 
   return (
     <div className="min-h-screen bg-background py-8 px-4">
-      <div className="container mx-auto max-w-4xl">
+      <DetailPageContainer className="p-0">
         {/* Back Button */}
         <Button asChild variant="ghost" className="mb-6 font-nunito">
           <Link href={`/players/${playerId}`}>
@@ -127,9 +132,9 @@ export default function PlayerSessionsPage() {
               </Card>
             ) : (
               <div className="space-y-3">
-                {sessions.map((session) => {
+                {sessions.map(session => {
                   const playerEntry = session.players.find(
-                    (p) => p.playerName.toLowerCase() === playerName.toLowerCase()
+                    p => p.playerName.toLowerCase() === playerName.toLowerCase()
                   );
                   const isWinner = session.winnerName?.toLowerCase() === playerName.toLowerCase();
 
@@ -140,16 +145,11 @@ export default function PlayerSessionsPage() {
                           <div className="flex items-start justify-between gap-3">
                             <CardTitle className="font-quicksand text-base flex items-center gap-2">
                               Session
-                              {isWinner && (
-                                <Trophy className="h-4 w-4 text-amber-500" />
-                              )}
+                              {isWinner && <Trophy className="h-4 w-4 text-amber-500" />}
                             </CardTitle>
                             <Badge
                               variant="outline"
-                              className={cn(
-                                'text-xs shrink-0',
-                                STATUS_COLORS[session.status]
-                              )}
+                              className={cn('text-xs shrink-0', STATUS_COLORS[session.status])}
                             >
                               {session.status}
                             </Badge>
@@ -163,14 +163,19 @@ export default function PlayerSessionsPage() {
                               <Clock className="h-3 w-3" />
                               {formatDuration(session.durationMinutes)}
                             </span>
-                            <span>{session.playerCount} player{session.playerCount !== 1 ? 's' : ''}</span>
+                            <span>
+                              {session.playerCount} player{session.playerCount !== 1 ? 's' : ''}
+                            </span>
                           </CardDescription>
                         </CardHeader>
                         {(session.winnerName ?? playerEntry?.color) && (
                           <CardContent className="pt-0 font-nunito text-sm text-muted-foreground">
                             {session.winnerName && (
                               <span>
-                                Winner: <span className="font-medium text-foreground">{session.winnerName}</span>
+                                Winner:{' '}
+                                <span className="font-medium text-foreground">
+                                  {session.winnerName}
+                                </span>
                               </span>
                             )}
                           </CardContent>
@@ -183,7 +188,7 @@ export default function PlayerSessionsPage() {
             )}
           </>
         )}
-      </div>
+      </DetailPageContainer>
     </div>
   );
 }

@@ -15,6 +15,7 @@ import { ChevronDown, ChevronRight, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
+import { DetailPageContainer } from '@/components/layout/PageContainer';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
@@ -90,7 +91,7 @@ export default function GameRulesPage() {
 
   return (
     <div className="min-h-screen bg-background py-8 px-4">
-      <div className="container mx-auto max-w-4xl">
+      <DetailPageContainer className="p-0">
         {/* #2158 (Fix #2 codemod): replaced legacy PageHeader with inline header. */}
         <header className="mb-8">
           <Link
@@ -141,7 +142,7 @@ export default function GameRulesPage() {
             )}
           </>
         )}
-      </div>
+      </DetailPageContainer>
     </div>
   );
 }

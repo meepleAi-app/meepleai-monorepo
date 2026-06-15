@@ -29,6 +29,7 @@ import {
   KbHeader,
   type KbChunkPreviewState,
 } from '@/components/features/knowledge-base';
+import { HubPageContainer } from '@/components/layout/PageContainer';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
@@ -104,10 +105,10 @@ export default function KnowledgeBaseDetailPage({ params }: { params: Promise<{ 
   if (documentQuery.isLoading) {
     return (
       <div className="min-h-screen bg-background py-8 px-4">
-        <div className="container mx-auto max-w-7xl">
+        <HubPageContainer className="p-0">
           <Skeleton className="h-8 w-48 mb-6" />
           <Skeleton className="h-[400px] w-full" />
-        </div>
+        </HubPageContainer>
       </div>
     );
   }
@@ -115,7 +116,7 @@ export default function KnowledgeBaseDetailPage({ params }: { params: Promise<{ 
   if (documentQuery.isError || !documentQuery.data) {
     return (
       <div className="min-h-screen bg-background py-8 px-4">
-        <div className="container mx-auto max-w-7xl">
+        <HubPageContainer className="p-0">
           <Alert variant="destructive">
             <AlertDescription>Documento non trovato o non accessibile.</AlertDescription>
           </Alert>
@@ -124,7 +125,7 @@ export default function KnowledgeBaseDetailPage({ params }: { params: Promise<{ 
               <ArrowLeft className="mr-2 h-4 w-4" /> Torna alla Libreria
             </Link>
           </Button>
-        </div>
+        </HubPageContainer>
       </div>
     );
   }

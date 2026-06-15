@@ -24,6 +24,7 @@ import { ArrowLeft, Clock, Gamepad2, Trophy, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
+import { DetailPageContainer } from '@/components/layout/PageContainer';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
@@ -97,7 +98,7 @@ export default function GameSessionsPage() {
 
   return (
     <div className="min-h-screen bg-background py-8 px-4">
-      <div className="container mx-auto max-w-4xl">
+      <DetailPageContainer className="p-0">
         {/* Back Button */}
         <Button asChild variant="ghost" className="mb-6 font-nunito">
           <Link href={`/library/${gameId}`}>
@@ -161,7 +162,7 @@ export default function GameSessionsPage() {
             )}
           </>
         )}
-      </div>
+      </DetailPageContainer>
     </div>
   );
 }

@@ -20,6 +20,7 @@ import {
   type GameNightCreateWizardLabels,
   type GameCandidateOption,
 } from '@/components/features/game-night-create';
+import { HubPageContainer } from '@/components/layout/PageContainer';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { useCreateGameNight } from '@/hooks/queries/useGameNights';
 import { useLibrary } from '@/hooks/queries/useLibrary';
@@ -326,7 +327,7 @@ export function NewGameNightContent(): ReactElement {
   const labels = useMemo(() => buildWizardLabels(t), [t]);
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <HubPageContainer className="py-6">
       <div className="mb-4">
         <label htmlFor="game-night-title" className="text-sm font-medium text-foreground">
           {t('gameNightsIndex.header.ctaNew')}
@@ -372,6 +373,6 @@ export function NewGameNightContent(): ReactElement {
           {t('gameNightCreate.draft.savingStatus')}
         </p>
       )}
-    </div>
+    </HubPageContainer>
   );
 }

@@ -13,6 +13,7 @@ import type { JSX } from 'react';
 
 import Link from 'next/link';
 
+import { DetailPageContainer } from '@/components/layout/PageContainer';
 import type { PlayerProfileFixture } from '@/lib/player-detail/player-detail-visual-test-fixture';
 
 export interface SessionsTabPanelLabels {
@@ -30,10 +31,7 @@ export interface SessionsTabPanelProps {
 export function SessionsTabPanel({ stats, labels }: SessionsTabPanelProps): JSX.Element {
   const isEmpty = stats.totalSessions === 0;
   return (
-    <div
-      data-slot="sessions-tab-panel"
-      className="mx-auto w-full max-w-4xl px-4 sm:px-8 flex flex-col gap-4"
-    >
+    <DetailPageContainer data-slot="sessions-tab-panel" className="gap-4 py-0">
       <h2 className="text-lg font-semibold">{labels.title}</h2>
       {isEmpty ? (
         <p className="text-muted-foreground">{labels.empty}</p>
@@ -51,6 +49,6 @@ export function SessionsTabPanel({ stats, labels }: SessionsTabPanelProps): JSX.
           </Link>
         </>
       )}
-    </div>
+    </DetailPageContainer>
   );
 }

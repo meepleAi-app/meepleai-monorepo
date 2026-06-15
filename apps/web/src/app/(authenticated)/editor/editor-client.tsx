@@ -32,6 +32,7 @@ import {
   ConflictResolutionModal,
   PresenceIndicator,
 } from '@/components/editor';
+import { HubPageContainer } from '@/components/layout/PageContainer';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import { useDebounce } from '@/hooks/useDebounce';
 import { api } from '@/lib/api';
@@ -511,7 +512,7 @@ export function EditorClient() {
   }
 
   return (
-    <main className="p-6 font-sans max-w-[1400px] mx-auto">
+    <HubPageContainer className="p-6 font-sans">
       {/* Issue #2055: Conflict Resolution Modal */}
       <ConflictResolutionModal
         open={showConflictModal}
@@ -664,7 +665,7 @@ export function EditorClient() {
           </div>
         </div>
       )}
-    </main>
+    </HubPageContainer>
   );
 }
 

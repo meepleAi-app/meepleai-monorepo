@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 
 import Link from 'next/link';
 
+import { HubPageContainer } from '@/components/layout/PageContainer';
 import { cn } from '@/lib/utils';
 
 type N8nConfig = {
@@ -189,26 +190,26 @@ export default function N8nWorkflowManagement() {
 
   if (loading) {
     return (
-      <main className="p-6 font-sans max-w-7xl mx-auto">
+      <HubPageContainer className="p-6 font-sans">
         <h1>Loading...</h1>
-      </main>
+      </HubPageContainer>
     );
   }
 
   if (error) {
     return (
-      <main className="p-6 font-sans max-w-7xl mx-auto">
+      <HubPageContainer className="p-6 font-sans">
         <h1>Error</h1>
         <p className="text-red-600">{error}</p>
         <Link href="/" className="text-blue-600 hover:underline">
           Back to Home
         </Link>
-      </main>
+      </HubPageContainer>
     );
   }
 
   return (
-    <main className="p-6 font-sans max-w-7xl mx-auto">
+    <HubPageContainer className="p-6 font-sans">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="m-0">n8n Workflow Management</h1>
@@ -327,7 +328,9 @@ export default function N8nWorkflowManagement() {
                   </div>
                   <p className="mt-1 mb-0 text-muted-foreground text-sm">{config.baseUrl}</p>
                   {config.webhookUrl && (
-                    <p className="mt-1 mb-0 text-muted-foreground text-sm">Webhook: {config.webhookUrl}</p>
+                    <p className="mt-1 mb-0 text-muted-foreground text-sm">
+                      Webhook: {config.webhookUrl}
+                    </p>
                   )}
                 </div>
                 <div className="flex gap-2">
@@ -390,6 +393,6 @@ export default function N8nWorkflowManagement() {
           ))}
         </div>
       )}
-    </main>
+    </HubPageContainer>
   );
 }

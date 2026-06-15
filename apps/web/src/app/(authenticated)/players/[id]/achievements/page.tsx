@@ -15,6 +15,7 @@ import { ArrowLeft, Lock, Star, Trophy } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
+import { DetailPageContainer } from '@/components/layout/PageContainer';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
@@ -45,8 +46,8 @@ export default function PlayerAchievementsPage() {
     setLoading(true);
     api.badges
       .getMyBadges()
-      .then((data) => setBadges(data))
-      .catch((err) => {
+      .then(data => setBadges(data))
+      .catch(err => {
         setError(err instanceof Error ? err.message : 'Failed to load badges');
       })
       .finally(() => setLoading(false));
@@ -54,7 +55,7 @@ export default function PlayerAchievementsPage() {
 
   return (
     <div className="min-h-screen bg-background py-8 px-4">
-      <div className="container mx-auto max-w-4xl">
+      <DetailPageContainer className="p-0">
         {/* Back Button */}
         <Button asChild variant="ghost" className="mb-6 font-nunito">
           <Link href={`/players/${playerId}`}>
@@ -111,7 +112,7 @@ export default function PlayerAchievementsPage() {
               </Card>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {badges.map((badge) => (
+                {badges.map(badge => (
                   <div
                     key={badge.id}
                     className="p-5 rounded-xl border border-primary/30 bg-card shadow-sm hover:shadow-md transition-shadow"
@@ -138,10 +139,7 @@ export default function PlayerAchievementsPage() {
                     </div>
 
                     <div className="flex items-center justify-between gap-2">
-                      <Badge
-                        variant="outline"
-                        className={cn('text-xs', TIER_COLORS[badge.tier])}
-                      >
+                      <Badge variant="outline" className={cn('text-xs', TIER_COLORS[badge.tier])}>
                         {badge.tier}
                       </Badge>
                       <p className="text-xs text-muted-foreground font-nunito">
@@ -158,7 +156,7 @@ export default function PlayerAchievementsPage() {
             )}
           </>
         )}
-      </div>
+      </DetailPageContainer>
     </div>
   );
 }

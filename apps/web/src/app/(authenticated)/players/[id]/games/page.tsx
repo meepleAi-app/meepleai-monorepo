@@ -13,6 +13,7 @@ import { ArrowLeft, Gamepad2, Trophy } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
+import { DetailPageContainer } from '@/components/layout/PageContainer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
@@ -39,7 +40,7 @@ export default function PlayerGamesPage() {
 
   return (
     <div className="min-h-screen bg-background py-8 px-4">
-      <div className="container mx-auto max-w-4xl">
+      <DetailPageContainer className="p-0">
         {/* Back Button */}
         <Button asChild variant="ghost" className="mb-6 font-nunito">
           <Link href={`/players/${playerId}`}>
@@ -122,7 +123,7 @@ export default function PlayerGamesPage() {
             )}
           </>
         )}
-      </div>
+      </DetailPageContainer>
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Calendar, Filter, Loader2, Trophy } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+import { HubPageContainer } from '@/components/layout/PageContainer';
 import { SessionDetailModal } from '@/components/session/SessionDetailModal';
 import type { Session } from '@/components/session/types';
 import { Badge } from '@/components/ui/data-display/badge';
@@ -82,7 +83,7 @@ export default function ToolkitHistoryPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <HubPageContainer className="py-8">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 mb-4 rounded-full bg-purple-100 dark:bg-purple-900">
@@ -91,9 +92,7 @@ export default function ToolkitHistoryPage() {
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
             Session History
           </h1>
-          <p className="text-lg text-muted-foreground">
-            Review past game sessions and statistics
-          </p>
+          <p className="text-lg text-muted-foreground">Review past game sessions and statistics</p>
         </div>
 
         {/* Filters */}
@@ -216,7 +215,7 @@ export default function ToolkitHistoryPage() {
             onOpenChange={setIsModalOpen}
           />
         )}
-      </div>
+      </HubPageContainer>
     </div>
   );
 }

@@ -20,6 +20,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
+import { FormPageContainer } from '@/components/layout/PageContainer';
 import { SessionCreateForm } from '@/components/play-records/SessionCreateForm';
 import { Button } from '@/components/ui/primitives/button';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -61,7 +62,7 @@ export default function NewPlayRecordPage() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <FormPageContainer className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button
@@ -84,6 +85,6 @@ export default function NewPlayRecordPage() {
         onCancel={handleCancel}
         isSubmitting={createRecord.isPending}
       />
-    </div>
+    </FormPageContainer>
   );
 }

@@ -63,6 +63,7 @@ import {
   type QuotaWidgetVariant,
   type SoftWarningCreditsLabels,
 } from '@/components/features/gamebook';
+import { HubPageContainer } from '@/components/layout/PageContainer';
 import { useGamebooks, useQuotaInfo } from '@/hooks/queries/useGamebooks';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { CheckoutPackId } from '@/lib/gamebook/checkout-packs';
@@ -87,19 +88,18 @@ const SKELETON_COUNT = 6;
 // Inline Italian labels. Future i18n extraction is out-of-scope per spec.
 
 const CHECKOUT_LABELS: CheckoutLabels = {
-  modalTitle: (s) => `Checkout · passo ${s} di 4`,
+  modalTitle: s => `Checkout · passo ${s} di 4`,
   close: 'Chiudi checkout',
   stepIndicator: {
     step1: 'Quota',
     step2: 'Pacchetto',
     step3: 'Pagamento',
     step4: 'Fatto',
-    ariaCurrent: (s) => `Passo ${s} di 4`,
+    ariaCurrent: s => `Passo ${s} di 4`,
   },
   step1: {
     heading: 'Quota raggiunta',
-    subheading:
-      'Hai tradotto 50 paragrafi questo mese. La quota gratuita si resetta il 1° giugno.',
+    subheading: 'Hai tradotto 50 paragrafi questo mese. La quota gratuita si resetta il 1° giugno.',
     quotaLabel: 'Quota mensile',
     resetIn: 'Reset tra 12 giorni',
     primaryCta: '💎 Acquista 100 crediti (€5)',
@@ -129,7 +129,7 @@ const CHECKOUT_LABELS: CheckoutLabels = {
       country: 'Paese',
     },
     trustChips: ['SSL secure', 'Stripe powered', 'Politica rimborso 14gg'],
-    payCta: (eur) => `Paga ${eur}`,
+    payCta: eur => `Paga ${eur}`,
     loadingCta: 'Elaborazione…',
     backLink: '← Torna ai pacchetti',
     failedBanner: {
@@ -140,7 +140,7 @@ const CHECKOUT_LABELS: CheckoutLabels = {
   },
   step4: {
     title: 'Crediti aggiunti!',
-    subtitle: (credits) => `${credits} crediti aggiunti al tuo account. Buon gioco!`,
+    subtitle: credits => `${credits} crediti aggiunti al tuo account. Buon gioco!`,
     recapLabels: {
       previous: 'Crediti precedenti',
       purchased: 'Crediti acquistati',
@@ -150,7 +150,7 @@ const CHECKOUT_LABELS: CheckoutLabels = {
       rate: '1 paragrafo = 1 credito',
     },
     backToGameCta: '🎯 Torna al gioco →',
-    receiptLink: (email) =>
+    receiptLink: email =>
       email ? `Vedi ricevuta · email a ${email}` : 'Vedi ricevuta · email inviata',
   },
 };
@@ -305,14 +305,11 @@ export function GamebookIndexView(): ReactElement {
     setCheckoutOpen(true);
   }, [dismissSoftWarning]);
 
-  const handlePurchaseSuccess = useCallback(
-    (_packId: CheckoutPackId, _creditsAdded: number) => {
-      // MVP: no real persistence (visual-only mockup). Future PR will
-      // invalidate the quota query here when the real billing endpoint
-      // lands. Underscore prefix signals intentional unused parameters.
-    },
-    []
-  );
+  const handlePurchaseSuccess = useCallback((_packId: CheckoutPackId, _creditsAdded: number) => {
+    // MVP: no real persistence (visual-only mockup). Future PR will
+    // invalidate the quota query here when the real billing endpoint
+    // lands. Underscore prefix signals intentional unused parameters.
+  }, []);
 
   // Format resetDate from ISO to human-readable Italian ("1 giugno").
   const formattedResetDate = useMemo(() => {
@@ -416,7 +413,11 @@ export function GamebookIndexView(): ReactElement {
   // Cell: loading
   if (fsmCell.kind === 'loading') {
     return (
-      <div data-slot="gamebook-index-view" data-ui-state="loading" className="flex flex-col">
+      <HubPageContainer
+        data-slot="gamebook-index-view"
+        data-ui-state="loading"
+        className="flex-col p-0"
+      >
         <GamebookHero
           totalGamebooks={0}
           totalSessions={0}
@@ -428,20 +429,24 @@ export function GamebookIndexView(): ReactElement {
           role="status"
           aria-label={t('gamebook.index.loading.label')}
           aria-live="polite"
-          className="mx-auto grid w-full max-w-[1280px] grid-cols-1 gap-4 px-4 py-4 sm:grid-cols-2 sm:px-8 lg:grid-cols-3"
+          className="grid w-full grid-cols-1 gap-4 py-4 sm:grid-cols-2 lg:grid-cols-3"
         >
           {Array.from({ length: SKELETON_COUNT }).map((_, idx) => (
             <GamebookCardSkeleton key={`gb-skeleton-${idx}`} />
           ))}
         </div>
-      </div>
+      </HubPageContainer>
     );
   }
 
   // Cell: error
   if (fsmCell.kind === 'error') {
     return (
-      <div data-slot="gamebook-index-view" data-ui-state="error" className="flex flex-col">
+      <HubPageContainer
+        data-slot="gamebook-index-view"
+        data-ui-state="error"
+        className="flex-col p-0"
+      >
         <GamebookHero
           totalGamebooks={0}
           totalSessions={0}
@@ -452,7 +457,7 @@ export function GamebookIndexView(): ReactElement {
         <div
           role="alert"
           data-slot="gamebook-index-error"
-          className="mx-auto flex max-w-[1280px] flex-col items-center gap-4 px-4 py-12 text-center sm:px-8"
+          className="flex flex-col items-center gap-4 py-12 text-center"
         >
           <p className="text-lg font-semibold text-foreground">{t('gamebook.index.error.title')}</p>
           <p className="text-sm text-foreground">{t('gamebook.index.error.description')}</p>
@@ -465,14 +470,18 @@ export function GamebookIndexView(): ReactElement {
             {t('gamebook.index.error.retry')}
           </button>
         </div>
-      </div>
+      </HubPageContainer>
     );
   }
 
   // Cell: empty (quota always present in this cell per FSM contract)
   if (fsmCell.kind === 'empty') {
     return (
-      <div data-slot="gamebook-index-view" data-ui-state="empty" className="flex flex-col">
+      <HubPageContainer
+        data-slot="gamebook-index-view"
+        data-ui-state="empty"
+        className="flex-col p-0"
+      >
         <GamebookHero
           totalGamebooks={0}
           totalSessions={0}
@@ -480,7 +489,7 @@ export function GamebookIndexView(): ReactElement {
           onAddManualClick={handleAddManualClick}
           labels={heroLabels}
         />
-        <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-6 px-4 py-6 sm:px-8">
+        <div className="flex w-full flex-col gap-6 py-6">
           <QuotaWidget
             quota={fsmCell.quota}
             variant="default"
@@ -489,7 +498,7 @@ export function GamebookIndexView(): ReactElement {
           />
           <EmptyGamebooks onAddManualClick={handleAddManualClick} labels={emptyLabels} />
         </div>
-      </div>
+      </HubPageContainer>
     );
   }
 
@@ -500,7 +509,11 @@ export function GamebookIndexView(): ReactElement {
     fsmCell.kind === 'quota-hard' ? 'hard' : fsmCell.kind === 'quota-soft' ? 'soft' : 'default';
 
   return (
-    <div data-slot="gamebook-index-view" data-ui-state={fsmCell.kind} className="flex flex-col">
+    <HubPageContainer
+      data-slot="gamebook-index-view"
+      data-ui-state={fsmCell.kind}
+      className="flex-col p-0"
+    >
       <GamebookHero
         totalGamebooks={kpiCounts.totalGamebooks}
         totalSessions={kpiCounts.totalSessions}
@@ -571,7 +584,7 @@ export function GamebookIndexView(): ReactElement {
         onClose={() => setCheckoutOpen(false)}
         onPurchaseSuccess={handlePurchaseSuccess}
       />
-    </div>
+    </HubPageContainer>
   );
 }
 

@@ -31,6 +31,7 @@ import { Bell, BellOff, CheckCheck, Loader2, Settings } from 'lucide-react';
 import Link from 'next/link';
 
 import { CatalogPagination } from '@/components/catalog/CatalogPagination';
+import { SettingsPageContainer } from '@/components/layout/PageContainer';
 import { Btn } from '@/components/ui/btn';
 import {
   Drawer,
@@ -233,7 +234,7 @@ export default function NotificationsPage() {
   );
 
   return (
-    <div className="container max-w-3xl mx-auto py-8">
+    <SettingsPageContainer className="py-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex flex-col gap-1">
@@ -449,6 +450,6 @@ export default function NotificationsPage() {
           )}
         </DrawerContent>
       </Drawer>
-    </div>
+    </SettingsPageContainer>
   );
 }

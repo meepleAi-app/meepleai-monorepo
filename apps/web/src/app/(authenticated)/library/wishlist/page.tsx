@@ -15,6 +15,7 @@ import { useMemo } from 'react';
 
 import { Heart, PlusCircle } from 'lucide-react';
 
+import { HubPageContainer } from '@/components/layout/PageContainer';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { AddToWishlistDialog } from '@/components/wishlist/AddToWishlistDialog';
@@ -99,7 +100,7 @@ export default function WishlistPage() {
   );
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <HubPageContainer className="py-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -136,6 +137,6 @@ export default function WishlistPage() {
           ))}
         </div>
       )}
-    </div>
+    </HubPageContainer>
   );
 }

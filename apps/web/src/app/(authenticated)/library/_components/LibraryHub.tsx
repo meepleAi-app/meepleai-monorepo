@@ -51,6 +51,7 @@ import {
   type LibraryTabConfig,
   type LibraryViewMode,
 } from '@/components/features/library';
+import { HubPageContainer } from '@/components/layout/PageContainer';
 import { useHybridHubItems } from '@/hooks/queries/useHybridHubItems';
 import { useLibrary, useRemoveGameFromLibrary } from '@/hooks/queries/useLibrary';
 import { useActivityFeed } from '@/hooks/useActivityFeed';
@@ -473,10 +474,10 @@ export function LibraryHub(): ReactElement {
   // breadcrumb/tabs/primaryAction sul MiniNavSlot creava duplicazione visiva e
   // ridondanza semantica (Hub/Wishlist non aggiungono nulla rispetto alle hub tabs).
   return (
-    <div
+    <HubPageContainer
       data-slot="library-hub-v2"
       data-state={effectiveKind}
-      className="mx-auto flex max-w-[1440px] flex-col gap-6 p-6 pb-24 sm:p-7"
+      className="gap-6 p-6 pb-24 sm:p-7"
     >
       <LibraryHeroDesktop
         labels={heroLabels}
@@ -573,6 +574,6 @@ export function LibraryHub(): ReactElement {
         onApply={setActiveFilters}
         onClear={() => setActiveFilters({})}
       />
-    </div>
+    </HubPageContainer>
   );
 }

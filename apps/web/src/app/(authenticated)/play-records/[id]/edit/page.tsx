@@ -31,6 +31,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
+import { FormPageContainer } from '@/components/layout/PageContainer';
 import { EditGateBanner } from '@/components/play-records/EditGateBanner';
 import { SessionCreateForm } from '@/components/play-records/SessionCreateForm';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
@@ -109,21 +110,21 @@ export default function EditPlayRecordPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <FormPageContainer className="p-6">
         <div className="h-8 bg-muted animate-pulse rounded w-48 mb-6" />
         <div className="space-y-4">
           <div className="h-12 bg-muted animate-pulse rounded" />
           <div className="h-12 bg-muted animate-pulse rounded" />
           <div className="h-32 bg-muted animate-pulse rounded" />
         </div>
-      </div>
+      </FormPageContainer>
     );
   }
 
   // Error state
   if (error || !record) {
     return (
-      <div className="container mx-auto p-6">
+      <FormPageContainer className="p-6">
         <Alert variant="destructive">
           <AlertDescription>
             {error instanceof Error ? error.message : t('playRecords.edit.error.loadFailed')}
@@ -133,14 +134,14 @@ export default function EditPlayRecordPage() {
           <ArrowLeft className="w-4 h-4 mr-2" />
           {t('playRecords.edit.actions.back')}
         </Button>
-      </div>
+      </FormPageContainer>
     );
   }
 
   // Archived state
   if (record.status === 'Archived') {
     return (
-      <div className="container mx-auto p-6">
+      <FormPageContainer className="p-6">
         <Alert>
           <AlertDescription>
             Archived sessions cannot be edited. This is a read-only view.
@@ -150,7 +151,7 @@ export default function EditPlayRecordPage() {
           <ArrowLeft className="w-4 h-4 mr-2" />
           {t('playRecords.edit.actions.back')}
         </Button>
-      </div>
+      </FormPageContainer>
     );
   }
 

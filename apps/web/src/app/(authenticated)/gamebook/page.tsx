@@ -33,6 +33,8 @@
 
 import { Suspense, type JSX } from 'react';
 
+import { HubPageContainer } from '@/components/layout/PageContainer';
+
 import { GamebookIndexView } from './_components/GamebookIndexView';
 
 export const metadata = {
@@ -42,14 +44,14 @@ export const metadata = {
 
 function PageFallback(): JSX.Element {
   return (
-    <div
+    <HubPageContainer
       data-slot="gamebook-index-page-fallback"
       role="status"
       aria-live="polite"
-      className="mx-auto max-w-[1280px] px-4 py-12"
+      className="py-12"
     >
       <div className="h-48 animate-pulse rounded-lg bg-muted/40" />
-    </div>
+    </HubPageContainer>
   );
 }
 

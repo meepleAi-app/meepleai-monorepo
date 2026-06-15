@@ -48,6 +48,7 @@ import {
   type KbDocsState,
   type SettingsState,
 } from '@/components/features/agent-detail';
+import { DetailPageContainer } from '@/components/layout/PageContainer';
 import { useAgent } from '@/hooks/queries/useAgent';
 import { useAgentConfig } from '@/hooks/queries/useAgentConfig';
 import { useAgentKbDocs, useAgentThreads } from '@/hooks/queries/useAgentData';
@@ -572,7 +573,7 @@ export function AgentDetailView({ agentId }: AgentDetailViewProps): ReactElement
       />
 
       {/* Tab panels — role=tabpanel, aria-labelledby wired to tabIdFor */}
-      <div className="container mx-auto max-w-4xl px-4 py-6 sm:px-8">
+      <DetailPageContainer>
         {/* Identity tab — Cell 5: persona + system prompt (no sub-hook fetch) */}
         <div
           role="tabpanel"
@@ -667,7 +668,7 @@ export function AgentDetailView({ agentId }: AgentDetailViewProps): ReactElement
             />
           </div>
         </div>
-      </div>
+      </DetailPageContainer>
     </div>
   );
 }

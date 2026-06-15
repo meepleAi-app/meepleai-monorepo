@@ -28,6 +28,7 @@ import Link from 'next/link';
 import { MultiDocumentCollectionUpload } from '@/components/documents';
 import { ErrorDisplay } from '@/components/errors';
 import { GamePicker } from '@/components/game/GamePicker';
+import { DetailPageContainer } from '@/components/layout/PageContainer';
 import { LoadingButton, Spinner } from '@/components/loading';
 import { PdfTable } from '@/components/pdf/PdfTable';
 import { PdfUploadForm } from '@/components/pdf/PdfUploadForm';
@@ -299,17 +300,17 @@ export function UploadClient({
   // Show loading state while auth is initializing (after all hooks)
   if (authLoading) {
     return (
-      <div className="p-10 max-w-4xl mx-auto flex flex-col items-center justify-center min-h-[400px]">
+      <DetailPageContainer className="p-10 items-center justify-center min-h-[400px]">
         <Spinner size="lg" />
         <p className="mt-4 text-muted-foreground">Loading...</p>
-      </div>
+      </DetailPageContainer>
     );
   }
 
   const confirmedGame = games.find(g => g.id === confirmedGameId);
 
   return (
-    <div className="p-10 max-w-4xl mx-auto">
+    <DetailPageContainer className="p-10">
       <div className="mb-5">
         <Link href="/" className="text-primary hover:underline">
           ← Back to Home
@@ -602,6 +603,6 @@ export function UploadClient({
           </Card>
         )}
       </main>
-    </div>
+    </DetailPageContainer>
   );
 }

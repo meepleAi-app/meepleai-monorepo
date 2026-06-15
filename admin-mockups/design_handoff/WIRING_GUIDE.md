@@ -180,7 +180,7 @@ Esempi di componenti che NON esistono ancora in produzione (sono "v2 nuovi"):
 | `KbDocList` | `sp4-agent-detail.jsx`, `sp4-kb-detail.jsx` | `src/components/ui/v2/kb-doc-list/` |
 | `CitationExpandedPanel` | `sp7-library-game-agent.jsx`, `sp4-citation-pdf-viewer.jsx` | `src/components/ui/v2/citation-expanded-panel/` |
 | `LibraryGameAgentShell` | `sp7-library-game-agent.jsx` | `src/components/ui/v2/library-game-agent-shell/` |
-| `StepIndicator` | `sp6-libro-game-*.jsx`, `sp7-game-night-create.jsx` | `src/components/ui/v2/step-indicator/` |
+| `StepIndicator` | `sp6-libro-game-*.jsx`, `sp7-game-night-new.jsx` | `src/components/ui/v2/step-indicator/` |
 | `ConfirmModal` | shared SP6/SP7 | `src/components/ui/v2/confirm-modal/` |
 
 Per ognuno, prompt a Claude Code:

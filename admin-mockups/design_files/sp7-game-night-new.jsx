@@ -1,5 +1,5 @@
 /* ===================================================================
-   SP7 Game Night — Create wizard (sp7-game-night-create.jsx)
+   SP7 Game Night — Create wizard (sp7-game-night-new.jsx)
    Route: /game-nights/new
    Persona: Marco, 35, host gruppo board game (desktop primary, mobile fallback)
    Coverage: US-31 Game Nights P1 — Sprint N+1

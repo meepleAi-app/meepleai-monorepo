@@ -32,7 +32,7 @@
       "screens": [
         {"id": 2, "mockFile": "sp4-game-nights-index", "route": "/game-nights", "endpoint": "GET /api/v1/game-nights?from=&to=", "priority": "P0", "sprint": 2},
         {"id": 3, "mockFile": "sp4-game-nights-index (drawer)", "route": "/game-nights?day=2026-03-22", "endpoint": "(filtered same)", "priority": "P0", "sprint": 2, "uiOnly": true},
-        {"id": 4, "mockFile": "sp7-game-night-create", "route": "/game-nights/new", "endpoint": "POST /api/v1/game-nights", "priority": "P0", "sprint": 2, "customComponents": ["StepIndicator", "DateTimePicker", "PlayerInviteList", "GameProposeList"]},
+        {"id": 4, "mockFile": "sp7-game-night-new", "route": "/game-nights/new", "endpoint": "POST /api/v1/game-nights", "priority": "P0", "sprint": 2, "customComponents": ["StepIndicator", "DateTimePicker", "PlayerInviteList", "GameProposeList"]},
         {"id": 5, "mockFile": "sp7-game-night-detail-rsvp (host)", "route": "/game-nights/[id]", "endpoint": "GET /api/v1/game-nights/{id}", "priority": "P0", "sprint": 2},
         {"id": 6, "mockFile": "sp7-game-night-detail-rsvp (invited)", "route": "/game-nights/[id]", "endpoint": "PATCH /api/v1/game-nights/{id}/rsvp", "priority": "P0", "sprint": 2, "variant": "invited"},
         {"id": 7, "mockFile": "sp7-game-night-transition", "route": "/game-nights/[id]/transition", "endpoint": "modal-only", "priority": "P1", "sprint": 2, "uiOnly": true}

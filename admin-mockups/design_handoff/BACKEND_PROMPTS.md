@@ -297,7 +297,7 @@ POST /api/sessions/{id}/share → restituisce { publicUrl, ogImageUrl }
 ### 8.1 — Game Night Create wizard
 
 ```
-Implementa /game-nights/new basato su design/sp7-game-night-create.jsx.
+Implementa /game-nights/new basato su design/sp7-game-night-new.jsx.
 
 Wizard 4 step:
 1. Quando (date+time picker)

@@ -232,7 +232,7 @@ Da `CLAUDE.md`:
   - `labels?: StepIndicatorLabels` per i18n (Wave D.3 pattern)
   - Entity color theming via `entity?: EntityType` (default game/orange)
 - **Effort**: M (~2-3h refactor + migration callers + Storybook + a11y test)
-- **Trigger**: quando arriverà la **terza** richiesta di step indicator (es. `sp7-game-night-create.jsx` wizard 4-step), refactor diventa positivo.
+- **Trigger**: quando arriverà la **terza** richiesta di step indicator (es. `sp7-game-night-new.jsx` wizard 4-step), refactor diventa positivo.
 
 **Action items**:
 1. ⚠️ Aprire issue separato per investigare violazioni DS-15 in entrambe le versioni.

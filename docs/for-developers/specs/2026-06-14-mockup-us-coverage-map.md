@@ -976,7 +976,7 @@ route asse-* unsigned + previene futuri umbrella closed-with-gate-violated.
 
 ---
 
-## Sezione 4b — US-GAP-* compact (18 user stories)
+## Sezione 4b — US-GAP-* compact (17 user stories)
 
 > **Formato compact**: ~25 righe per US. Title + actor + Gherkin GWT + 3-5 AC + mockup link + stato
 > + issue correlata. Per scenari completi end-to-end, vedi §4a.
@@ -1360,7 +1360,7 @@ And CI check via test snapshot per ogni stato
 
 ### 📋 WIEGERS — Sulla testabilità
 
-> *"5 US-INT-* full + 18 US-GAP-* compact = 23 US testabili. Ognuna ha AC misurabili (autosave 30s,
+> *"5 US-INT-* full + 17 US-GAP-* compact = 22 US testabili. Ognuna ha AC misurabili (autosave 30s,
 > P95 latency budget, error rate threshold). Ma noto due punti di tensione residui: (1) nessuna US
 > ha ancora un E2E Playwright esistente — sono tutte da scrivere; (2) le AC compact possono
 > degradare a 'checklist senza outcome' se non c'è enforcement CI. Suggerirei di aprire l'umbrella

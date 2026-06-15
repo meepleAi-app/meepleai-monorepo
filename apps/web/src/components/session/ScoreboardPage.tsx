@@ -20,6 +20,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Trophy, Users } from 'lucide-react';
 import Link from 'next/link';
 
+import { SessionStateRenderer } from '@/components/features/session-live';
 import {
   Sheet,
   SheetContent,
@@ -69,6 +70,8 @@ export function ScoreboardPage({ sessionId }: ScoreboardPageProps) {
     data: session,
     isPending,
     isError,
+    error,
+    refetch,
   } = useQuery({
     queryKey: ['session', sessionId],
     queryFn: () => api.sessions.getById(sessionId),
@@ -76,43 +79,40 @@ export function ScoreboardPage({ sessionId }: ScoreboardPageProps) {
     retry: false,
   });
 
-  // ----------- Loading state -----------
+  // ----------- Loading state (G7 SessionStateRenderer pilot — Issue #2356) -----------
   if (isPending) {
     return (
       <div data-testid="scoreboard-loading" className="min-h-screen bg-background p-4">
-        {/* Header skeleton */}
-        <div className="mb-6 flex items-center gap-3">
-          <div className="h-8 w-8 animate-pulse rounded-lg bg-muted" />
-          <div className="space-y-2">
-            <div className="h-4 w-40 animate-pulse rounded bg-muted" />
-            <div className="h-3 w-24 animate-pulse rounded bg-muted" />
-          </div>
-        </div>
-        {/* Player card skeletons */}
-        <div className="space-y-3">
-          {[1, 2, 3].map(i => (
-            <div
-              key={i}
-              className="flex h-16 items-center gap-4 rounded-xl border border-border bg-card p-4"
-            >
-              <div className="h-10 w-10 animate-pulse rounded-lg bg-muted" />
-              <div className="h-4 w-32 animate-pulse rounded bg-muted" />
-            </div>
-          ))}
-        </div>
+        <SessionStateRenderer
+          state={{
+            kind: 'loading',
+            loadingAriaLabel: 'Caricamento classifica in corso',
+          }}
+        />
       </div>
     );
   }
 
-  // ----------- Error / empty state -----------
+  // ----------- Error state (G7 SessionStateRenderer pilot — Issue #2356) -----------
   if (isError || !session) {
+    const fallbackError =
+      error instanceof Error ? error : new Error('Impossibile caricare la sessione');
     return (
       <div
         data-testid="scoreboard-error"
         className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background p-4 text-center"
       >
-        <p className="text-sm font-medium text-destructive">Impossibile caricare la sessione</p>
-        <p className="text-xs text-muted-foreground">Verifica la connessione e riprova.</p>
+        <SessionStateRenderer
+          state={{
+            kind: 'error',
+            error: fallbackError,
+            onRetry: () => {
+              void refetch();
+            },
+            errorTitle: 'Impossibile caricare la sessione',
+            retryLabel: 'Riprova',
+          }}
+        />
         <Button variant="outline" size="sm" asChild>
           <Link href="/sessions">Torna alle sessioni</Link>
         </Button>

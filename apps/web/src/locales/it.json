@@ -3172,7 +3172,11 @@
         "pauseCta": "Pausa",
         "resumeCta": "Riprendi",
         "endgameCta": "Termina sessione",
-        "exitAriaLabel": "Esci dalla sessione"
+        "exitAriaLabel": "Esci dalla sessione",
+        "elapsedTimeAriaLabel": "Tempo trascorso",
+        "connectionStateConnected": "Connessione attiva",
+        "connectionStateReconnecting": "Riconnessione in corso",
+        "connectionStateFailed": "Connessione persa"
       },
       "turnIndicator": {
         "currentTurnAriaLabel": "Turno {current} di {total}",

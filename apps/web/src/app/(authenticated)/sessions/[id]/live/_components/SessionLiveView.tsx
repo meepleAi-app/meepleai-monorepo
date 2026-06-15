@@ -80,6 +80,7 @@ import {
 import { useSession } from '@/hooks/queries/useActiveSessions';
 import { useTranslation } from '@/hooks/useTranslation';
 import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
+import { mapConnectionState } from '@/lib/session-live/map-connection-state';
 import { hasRequiredRole } from '@/lib/session-live/participant-role';
 import {
   deriveSessionLiveUiState,
@@ -97,6 +98,7 @@ import {
   VISUAL_TEST_FIXTURE_SESSION_PAUSED,
   type LiveSessionFixture,
 } from '@/lib/session-live/session-live-visual-test-fixture';
+import { useElapsedTime } from '@/lib/session-live/use-elapsed-time';
 import { useSessionLiveStream } from '@/lib/session-live/use-session-live-stream';
 
 // ─── Lazy dialogs (orchestrator-side lazy import per Task 3 spec) ──────────────
@@ -576,8 +578,19 @@ export function SessionLiveView(): ReactElement {
       resumeCta: t('pages.sessionLive.topBar.resumeCta'),
       endgameCta: t('pages.sessionLive.topBar.endgameCta'),
       exitAriaLabel: t('pages.sessionLive.topBar.exitAriaLabel'),
+      // G4 — Issue #2355 wiring
+      elapsedTimeAriaLabel: t('pages.sessionLive.topBar.elapsedTimeAriaLabel'),
+      connectionStateAriaLabels: {
+        connected: t('pages.sessionLive.topBar.connectionStateConnected'),
+        reconnecting: t('pages.sessionLive.topBar.connectionStateReconnecting'),
+        failed: t('pages.sessionLive.topBar.connectionStateFailed'),
+      },
     };
   }, [t, activeSession?.currentTurn, activeSession?.totalTurns, activeSession?.name]);
+
+  // G4 — Issue #2355: live elapsed time + connection pip wiring
+  const elapsedMs = useElapsedTime(sessionQuery.data?.startedAt);
+  const connectionPipState = mapConnectionState(liveStream.connectionState);
 
   const turnIndicatorLabels = useMemo<TurnIndicatorLabels>(
     (): TurnIndicatorLabels => ({
@@ -1014,6 +1027,8 @@ export function SessionLiveView(): ReactElement {
         viewerRole={activeSession.viewerRole}
         onExit={handleExit}
         labels={topBarLabels}
+        elapsedMs={elapsedMs}
+        connectionState={connectionPipState}
       />
 
       {/* ConnectionLostBanner — SSE non-healthy states */}

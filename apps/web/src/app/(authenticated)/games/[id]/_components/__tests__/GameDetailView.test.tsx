@@ -98,6 +98,39 @@ vi.mock('@/hooks/queries/useGameAgents', () => ({
   useGameAgents: (opts: { gameId: string | null; enabled?: boolean }) => useGameAgentsSpy(opts),
 }));
 
+// #2309 — Documents tab uses lazy useSharedGameDetail. Default: empty kbs list,
+// not loading. Tests focused on Documents-tab behaviour can override per-test
+// via `sharedGameDetailState.kbs = [...]` below.
+const sharedGameDetailState: {
+  kbs: ReadonlyArray<{
+    id: string;
+    language: string;
+    totalChunks: number;
+    indexedAt: string;
+  }>;
+} = { kbs: [] };
+
+const useSharedGameDetailSpy = vi.fn();
+vi.mock('@/hooks/useSharedGameDetail', () => ({
+  useSharedGameDetail: (args: { id: string; enabled?: boolean }) => {
+    useSharedGameDetailSpy(args);
+    if (args.enabled === false) {
+      return { data: undefined, isLoading: false, isFetching: false, isError: false };
+    }
+    return {
+      data: { kbs: sharedGameDetailState.kbs },
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+    };
+  },
+}));
+
+const trackEventSpy = vi.fn();
+vi.mock('@/lib/analytics/track-event', () => ({
+  trackEvent: (...args: unknown[]) => trackEventSpy(...args),
+}));
+
 // Issue #1466 — Leaderboard hook mock (Stats tab). Default empty/success; tests
 // focused on FSM/Phase 0.5 do not care about leaderboard data.
 vi.mock('@/lib/domain-hooks/useGameLeaderboard', () => ({
@@ -388,6 +421,11 @@ function resetAll() {
   // Reset fixture flags
   mockIsVisualTestBuild = false;
   mockFixtureData = null;
+
+  // #2309 — Reset shared-game-detail mock state + spies
+  sharedGameDetailState.kbs = [];
+  useSharedGameDetailSpy.mockClear();
+  trackEventSpy.mockClear();
 }
 
 describe('GameDetailView — FSM integration tests (Phase 0.5 contract)', () => {
@@ -939,6 +977,99 @@ describe('GameDetailView — FSM integration tests (Phase 0.5 contract)', () => 
     renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
 
     expect(document.querySelector('[data-slot="game-detail-house-rules-list"]')).toBeNull();
+  });
+
+  // ─── #2309 — Documents tab wiring (lazy useSharedGameDetail) ──────────────
+
+  it('#2309 DEC-B: does NOT fetch SharedGameDetail when default tab=info', () => {
+    detailMockState.data = makeDetail();
+    detailMockState.isSuccess = true;
+    useLibraryGameDetailSpy.mockReturnValue(detailMockState);
+
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
+
+    // Default tab is 'info'; lazy gate must NOT fetch.
+    expect(useSharedGameDetailSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ id: VALID_GAME_ID, enabled: false })
+    );
+  });
+
+  it('#2309 DEC-B: fetches SharedGameDetail when user clicks Documents tab', async () => {
+    detailMockState.data = makeDetail();
+    detailMockState.isSuccess = true;
+    useLibraryGameDetailSpy.mockReturnValue(detailMockState);
+
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
+
+    const docsTabButton = document.getElementById('game-detail-tab-documents');
+    expect(docsTabButton).not.toBeNull();
+    act(() => {
+      fireEvent.click(docsTabButton as HTMLElement);
+    });
+
+    // Post-click the hook re-renders with enabled=true.
+    expect(useSharedGameDetailSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ id: VALID_GAME_ID, enabled: true })
+    );
+  });
+
+  it('#2309 DEC-A: maps PublishedKbPreview to GameDetailKbDocEntry on Documents tab', () => {
+    detailMockState.data = makeDetail();
+    detailMockState.isSuccess = true;
+    useLibraryGameDetailSpy.mockReturnValue(detailMockState);
+    sharedGameDetailState.kbs = [
+      {
+        id: 'kb-azul-ita',
+        language: 'it',
+        totalChunks: 42,
+        indexedAt: '2026-01-15T00:00:00Z',
+      },
+    ];
+
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
+    const docsTabButton = document.getElementById('game-detail-tab-documents');
+    act(() => {
+      fireEvent.click(docsTabButton as HTMLElement);
+    });
+
+    // The list component renders the title we mapped (`KB IT`).
+    expect(document.body.textContent).toContain('KB IT');
+  });
+
+  it('#2309 DEC-C: fires telemetry when kbStatus=ready but kbs[] empty (Documents tab open)', async () => {
+    detailMockState.data = makeDetail(); // kbStatus default likely undefined; override:
+    detailMockState.data = { ...detailMockState.data!, kbStatus: 'ready' };
+    detailMockState.isSuccess = true;
+    useLibraryGameDetailSpy.mockReturnValue(detailMockState);
+    sharedGameDetailState.kbs = []; // empty list — DEC-C edge
+
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
+    const docsTabButton = document.getElementById('game-detail-tab-documents');
+    act(() => {
+      fireEvent.click(docsTabButton as HTMLElement);
+    });
+
+    expect(trackEventSpy).toHaveBeenCalledWith('documents_tab_empty_when_kb_ready', {
+      gameId: VALID_GAME_ID,
+    });
+  });
+
+  it('#2309 DEC-C: does NOT fire telemetry when kbStatus=indexing (transient state, not a real gap)', () => {
+    detailMockState.data = { ...makeDetail(), kbStatus: 'indexing' };
+    detailMockState.isSuccess = true;
+    useLibraryGameDetailSpy.mockReturnValue(detailMockState);
+    sharedGameDetailState.kbs = [];
+
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
+    const docsTabButton = document.getElementById('game-detail-tab-documents');
+    act(() => {
+      fireEvent.click(docsTabButton as HTMLElement);
+    });
+
+    expect(trackEventSpy).not.toHaveBeenCalledWith(
+      'documents_tab_empty_when_kb_ready',
+      expect.anything()
+    );
   });
 
   // ─── Issue #1471 — Chat preview in Agents panel regression guard ─────────

@@ -172,6 +172,52 @@ public sealed class GetKbChunksHandlerTests
         result.NextCursor.Should().BeNull();
     }
 
+    /// <summary>
+    /// #2311 M1.3 — verifies that <c>TextChunkEntity.UsageCount</c> is projected verbatim
+    /// as <c>KbChunkSummaryDto.UsedInChats</c>. DEC-D2 start-from-0: zero is the baseline,
+    /// arbitrary value after increment must round-trip unchanged.
+    /// </summary>
+    [Fact]
+    public async Task GetKbChunks_ProjectsUsageCountAsUsedInChats()
+    {
+        // Arrange: seed a document with a single chunk that already has UsageCount=5.
+        var docId = Guid.NewGuid();
+        _dbContext.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = docId,
+            FileName = "usage-count-test.pdf",
+            ProcessingState = "Ready",
+            UploadedAt = DateTime.UtcNow,
+            Language = "en",
+            DocumentCategory = "Rulebook",
+            UploadedByUserId = Guid.NewGuid(),
+            FilePath = "/tmp/usage.pdf",
+            IsPublic = true
+        });
+        _dbContext.TextChunks.Add(new TextChunkEntity
+        {
+            Id = Guid.NewGuid(),
+            PdfDocumentId = docId,
+            Content = "Content for usage count projection test",
+            ChunkIndex = 0,
+            PageNumber = 1,
+            CharacterCount = 40,
+            ElementType = "NarrativeText",
+            Level = 1,
+            UsageCount = 5
+        });
+        await _dbContext.SaveChangesAsync();
+
+        // Act.
+        var result = await _handler.Handle(
+            new GetKbChunksQuery(docId, Guid.NewGuid(), null, 50, UserIsAdmin: false),
+            CancellationToken.None);
+
+        // Assert: UsedInChats mirrors the entity's UsageCount verbatim.
+        result.Items.Should().HaveCount(1);
+        result.Items[0].UsedInChats.Should().Be(5);
+    }
+
     private async Task<Guid> SeedDocumentWithChunksAsync(int chunkCount)
     {
         var docId = Guid.NewGuid();

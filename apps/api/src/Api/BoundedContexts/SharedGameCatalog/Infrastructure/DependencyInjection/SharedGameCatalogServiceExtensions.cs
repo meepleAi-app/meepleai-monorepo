@@ -64,6 +64,7 @@ internal static class SharedGameCatalogServiceExtensions
         services.AddScoped<IContributorRepository, ContributorRepository>(); // Issue #2735: Contributor stats endpoints
         services.AddScoped<IGameAnalyticsEventRepository, GameAnalyticsEventRepository>(); // Issue #3918: Trending analytics
         services.AddScoped<ISharedGameTranslationRepository, SharedGameTranslationRepository>(); // Issue #2339: Shared game non-EN translations
+        services.AddScoped<IGameTitleResolver, GameTitleResolver>(); // Issue #2339: Batch translation enricher for list queries
 
         // Register domain services
         services.AddScoped<DocumentVersioningService>(); // Issue #2391 Sprint 1

@@ -3240,9 +3240,12 @@
       },
       "rightColumn": {
         "tabsAriaLabel": "Pannelli sessione",
+        "tabScore": "Score",
+        "tabTurn": "Turni",
+        "tabWidget": "Widget",
+        "tabNotes": "Note",
         "tabTools": "Strumenti",
-        "tabChat": "Chat",
-        "tabNotes": "Note"
+        "tabChat": "Chat"
       },
       "tools": {
         "title": "Strumenti",

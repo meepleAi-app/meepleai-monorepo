@@ -3133,9 +3133,12 @@
       },
       "rightColumn": {
         "tabsAriaLabel": "Session panels",
+        "tabScore": "Score",
+        "tabTurn": "Turn",
+        "tabWidget": "Widget",
+        "tabNotes": "Notes",
         "tabTools": "Tools",
-        "tabChat": "Chat",
-        "tabNotes": "Notes"
+        "tabChat": "Chat"
       },
       "tools": {
         "title": "Tools",

@@ -8,6 +8,7 @@ using Api.Infrastructure.Entities.UserNotifications;
 using Api.Observability;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.UserNotifications.Infrastructure.Persistence;
@@ -103,6 +104,39 @@ internal class NotificationRepository : RepositoryBase, INotificationRepository
         // Broadcast to connected SSE clients (Issue #5005).
         // Fires before UnitOfWork.SaveChangesAsync — matches metric recording pattern.
         _broadcaster.Publish(notification.UserId, MapToDto(notification));
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> AddAndCommitAsync(Notification notification, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(notification);
+        CollectDomainEvents(notification);
+
+        var notificationEntity = MapToPersistence(notification);
+        await DbContext.Set<NotificationEntity>().AddAsync(notificationEntity, cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateException ex) when (CounterTableIdempotency.IsUniqueViolation(ex))
+        {
+            // Race-window: concurrent caller already inserted a row with the same
+            // (user_id, source_event_id) UNIQUE pair (issue #2383). Detach the
+            // unsaved entity so it isn't retried on a later SaveChangesAsync,
+            // and signal the caller (dispatcher) to skip channel queue items —
+            // the in-app row exists already, just under the other caller's CorrelationId.
+            DbContext.Entry(notificationEntity).State = EntityState.Detached;
+            return false;
+        }
+
+        // Side-effects fire only after the row is durably persisted so a lost
+        // race doesn't leave a phantom metric/SSE broadcast for a notification
+        // that was never committed.
+        MeepleAiMetrics.RecordNotificationCreated(notification.Type.Value, notification.Severity.Value);
+        _broadcaster.Publish(notification.UserId, MapToDto(notification));
+
+        return true;
     }
 
     public async Task UpdateAsync(Notification notification, CancellationToken cancellationToken = default)

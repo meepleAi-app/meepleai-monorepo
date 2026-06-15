@@ -3,6 +3,16 @@
 > **Preambolo obbligatorio**: leggi `admin-mockups/briefs/_common.md` prima di iniziare.
 > Questo brief introduce **SP7 Game Night & Agent Builder**, scope nuovo per attivare le user story P1 dormant `US-31` (game nights), `US-33` (agent browser/builder), `US-41` (notifications). Riferimento: [`docs/_archive/roadmap/user-stories-tracking.md`](../../.docs-archive/roadmap/user-stories-tracking.md).
 
+> **Update 2026-06-15 (umbrella #2342, Tier 1 filename alignment)**: il mockup Wave 1 A è
+> `sp7-game-night-new.{html,jsx}` (filesystem canonical), aggiornato in tutto il brief dal precedente
+> nome `sp7-game-night-create` mai presente su disco. Vedi spec doc
+> [`docs/for-developers/specs/2026-06-14-mockup-us-coverage-map.md`](../../docs/for-developers/specs/2026-06-14-mockup-us-coverage-map.md)
+> §3.5 per il context completo (filename inconsistency gap novel).
+>
+> **Disposizioni Tier 1 pendenti** (decision required):
+> - `sp7-game-night-edit.{html,jsx}` (Wave 1 mockup C) NON esiste sul filesystem — disposition decision in #2344 (Option A dropped scope / B commission / C edit via drawer).
+> - `sp7-game-night-join-public.jsx` orphan JSX senza HTML twin — disposition decision in #2345 (Option A ship HTML twin / B remove / C re-classify component-mock).
+
 ## Stato programma
 
 | SP | Stato | Audience | Mockup |
@@ -51,7 +61,7 @@ Già documentato in [SP6 Capitolo 2](./SP6-libro-game.md#capitolo-2--iter-1-dogf
 
 | # | File | Route | US | Pattern primario |
 |---|------|-------|------|------------------|
-| **A** | `sp7-game-night-create.{html,jsx}` | `/game-nights/new` | US-31 | Multistep wizard 4 step (mobile) / split-form (desktop) |
+| **A** | `sp7-game-night-new.{html,jsx}` | `/game-nights/new` | US-31 | Multistep wizard 4 step (mobile) / split-form (desktop) |
 | **B** | `sp7-game-night-detail-rsvp.{html,jsx}` | `/game-nights/[id]` | US-31 | Hub detail + RSVP + game voting |
 | **C** | `sp7-game-night-edit.{html,jsx}` | `/game-nights/[id]/edit` | US-31 | Form edit + cancel/reschedule states |
 | **D** | `sp7-agent-proposals-list.{html,jsx}` | `/editor/agent-proposals` | US-33 | Grid + filters + status badge |
@@ -194,9 +204,9 @@ grep -E "hsl\([0-9]+,?\s*89%,\s*48%\)|hsla\([0-9]+,?\s*89%" \
 
 # WAVE 1 — Game Night Lifecycle (US-31)
 
-## A — Game Night Create (`sp7-game-night-create`)
+## A — Game Night Create (`sp7-game-night-new`)
 
-**File**: `sp7-game-night-create.{html,jsx}`
+**File**: `sp7-game-night-new.{html,jsx}`
 **Route**: `/game-nights/new`
 **Persona**: Marco (host) sul desktop a casa, pianifica con calma. Mobile fallback per scheduling al volo.
 **Pattern desktop**: split-form 12-col (left form 8-col, right preview RSVP-card live 4-col)
@@ -396,7 +406,7 @@ US-31: G31.4 (host edit), G31.8 (cancel + notify), G31.9 (reschedule conflicts).
 
 # WAVE 1+ — Estensione issue #487 (game-night runtime)
 
-Tre mockup aggiunti 2026-05-18 per chiudere lo scope residuo della issue [#487](https://github.com/meepleAi-app/meepleai-monorepo/issues/487) (`[Design v1 · B3] Mockup Game Nights`). Gli screen #1-#3 del brief originale sono già coperti da `sp4-game-nights-index` (list desktop+mobile) e `sp7-game-night-create` (planning wizard). I 4 screen residui (#4 Night Live, #5 Transition, #6 Summary, #7 Diary widget) sono distribuiti in 3 file SP7, con il Diary widget embedded come sub-component esportato dentro `sp7-game-night-live.jsx`.
+Tre mockup aggiunti 2026-05-18 per chiudere lo scope residuo della issue [#487](https://github.com/meepleAi-app/meepleai-monorepo/issues/487) (`[Design v1 · B3] Mockup Game Nights`). Gli screen #1-#3 del brief originale sono già coperti da `sp4-game-nights-index` (list desktop+mobile) e `sp7-game-night-new` (planning wizard). I 4 screen residui (#4 Night Live, #5 Transition, #6 Summary, #7 Diary widget) sono distribuiti in 3 file SP7, con il Diary widget embedded come sub-component esportato dentro `sp7-game-night-live.jsx`.
 
 ## K — Game Night Live Hub (`sp7-game-night-live`)
 
@@ -986,7 +996,7 @@ Buon lavoro. SP7 attiva 3 user story P1 dormant — post-merge si passa allo spr
 
 | Wave | Mockup | Stato | Note |
 |------|--------|-------|------|
-| 1 | A `sp7-game-night-create` | ⏳ pending | First della wave |
+| 1 | A `sp7-game-night-new` | ⏳ pending | First della wave |
 | 1 | B `sp7-game-night-detail-rsvp` | ⏳ pending | After A |
 | 1 | C `sp7-game-night-edit` | ⏳ pending | After B |
 | 1+ | K `sp7-game-night-live` | ⏳ pending | Issue #487 — central hub durante serata, embed Diary widget (#7) |

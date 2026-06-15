@@ -3162,6 +3162,12 @@
         "latencyAriaLabel": "Latency {ms}ms",
         "agentNameAriaLabel": "Agent name {name}"
       },
+      "mobile": {
+        "openSheetCta": "Open panel",
+        "closeSheetAriaLabel": "Close panel",
+        "drawerTitle": "Session tools",
+        "tabsAriaLabel": "Tool tabs"
+      },
       "notes": {
         "title": "Notes",
         "inputAriaLabel": "Write a note",

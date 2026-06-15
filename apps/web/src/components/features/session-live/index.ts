@@ -62,8 +62,13 @@ export { MobileBody } from '@/components/features/session-live/MobileBody';
 export type {
   MobileBodyLabels,
   MobileBodyProps,
-  MobileTab,
 } from '@/components/features/session-live/MobileBody';
+
+export { MobileBottomSheetDrawer } from '@/components/features/session-live/MobileBottomSheetDrawer';
+export type {
+  MobileBottomSheetDrawerLabels,
+  MobileBottomSheetDrawerProps,
+} from '@/components/features/session-live/MobileBottomSheetDrawer';
 
 export { PlayerRosterLive } from '@/components/features/session-live/PlayerRosterLive';
 export type {

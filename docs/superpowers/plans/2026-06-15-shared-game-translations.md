@@ -116,6 +116,193 @@ tests/Api.Tests/Integration/SharedGameCatalog/
 
 ---
 
+## Task 0: Bootstrap test infrastructure
+
+> **Background (code-reviewer finding C3, 2026-06-15)**: `tests/Api.Tests/` contiene solo `Infrastructure/Seeders/` (6 file unit). Niente `PostgresContainerFixture`, niente `ApiTestFixture`, niente `SeedHelper`. Task 0 crea questo foundation prima dei test d'integrazione (Tasks 6, 14, 15).
+
+**Files:**
+- Create: `tests/Api.Tests/Integration/Fixtures/PostgresContainerFixture.cs`
+- Create: `tests/Api.Tests/Integration/Fixtures/ApiTestFixture.cs`
+- Create: `tests/Api.Tests/Integration/Fixtures/SeedHelper.cs`
+- Modify: `tests/Api.Tests/Api.Tests.csproj` (add NuGet deps if missing)
+
+- [ ] **Step 0.1: Verify NuGet packages in `Api.Tests.csproj`**
+
+Run: `cat tests/Api.Tests/Api.Tests.csproj`
+Required PackageReferences (add if missing):
+```xml
+<PackageReference Include="Testcontainers.PostgreSql" Version="3.10.0" />
+<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.0" />
+<PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
+```
+
+- [ ] **Step 0.2: Create `PostgresContainerFixture` (Testcontainers Postgres + DI scope)**
+
+```csharp
+// tests/Api.Tests/Integration/Fixtures/PostgresContainerFixture.cs
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Api.Infrastructure;
+using Testcontainers.PostgreSql;
+using Xunit;
+
+namespace Api.Tests.Integration.Fixtures;
+
+public sealed class PostgresContainerFixture : IAsyncLifetime
+{
+    private PostgreSqlContainer? _container;
+    private IServiceProvider? _root;
+
+    public string ConnectionString => _container!.GetConnectionString();
+
+    public async Task InitializeAsync()
+    {
+        _container = new PostgreSqlBuilder()
+            .WithImage("postgres:16")
+            .WithDatabase("meepleai_test")
+            .WithUsername("meepleai")
+            .WithPassword("test")
+            .Build();
+
+        await _container.StartAsync();
+
+        var services = new ServiceCollection();
+        services.AddDbContext<MeepleAiDbContext>(o => o.UseNpgsql(ConnectionString));
+        services.AddScoped<ISharedGameTranslationRepository, SharedGameTranslationRepository>();
+        // Register clock, current user stubs, other needed services
+        _root = services.BuildServiceProvider();
+
+        // Apply migrations
+        await using var scope = _root.CreateAsyncScope();
+        var ctx = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        await ctx.Database.MigrateAsync();
+    }
+
+    public IServiceScope CreateScope() => _root!.CreateScope();
+
+    public Task DisposeAsync() => _container!.DisposeAsync().AsTask();
+}
+```
+
+- [ ] **Step 0.3: Create `SeedHelper` static class**
+
+```csharp
+// tests/Api.Tests/Integration/Fixtures/SeedHelper.cs
+using Api.Infrastructure;
+using Api.Infrastructure.Entities.SharedGameCatalog;
+
+namespace Api.Tests.Integration.Fixtures;
+
+public static class SeedHelper
+{
+    public static async Task<Guid> CreateGameAsync(MeepleAiDbContext ctx, string title)
+    {
+        var game = new SharedGameEntity
+        {
+            Id = Guid.NewGuid(),
+            Title = title,
+            YearPublished = 2020,
+            Description = "Test game seeded for translation tests",
+            MinPlayers = 2,
+            MaxPlayers = 4,
+            PlayingTimeMinutes = 60,
+            MinAge = 10,
+            Status = 0,           // adapt to actual GameStatus enum
+            GameDataStatus = 0,   // adapt to actual GameDataStatus enum
+            HasUploadedPdf = false,
+            CreatedBy = Guid.NewGuid(),
+            CreatedAt = DateTimeOffset.UtcNow,
+            IsDeleted = false,
+            IsRagPublic = false
+        };
+        await ctx.SharedGames.AddAsync(game);
+        await ctx.SaveChangesAsync();
+        return game.Id;
+    }
+}
+```
+
+- [ ] **Step 0.4: Create `ApiTestFixture` (WebApplicationFactory for HTTP tests)**
+
+```csharp
+// tests/Api.Tests/Integration/Fixtures/ApiTestFixture.cs
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Api.Infrastructure;
+using Testcontainers.PostgreSql;
+using Xunit;
+
+namespace Api.Tests.Integration.Fixtures;
+
+public sealed class ApiTestFixture : WebApplicationFactory<Program>, IAsyncLifetime
+{
+    private PostgreSqlContainer? _container;
+    public HttpClient HttpClient { get; private set; } = null!;
+
+    public async Task InitializeAsync()
+    {
+        _container = new PostgreSqlBuilder()
+            .WithImage("postgres:16")
+            .WithDatabase("meepleai_test_api")
+            .Build();
+        await _container.StartAsync();
+        HttpClient = CreateClient();
+
+        await using var scope = Services.CreateAsyncScope();
+        var ctx = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        await ctx.Database.MigrateAsync();
+    }
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        builder.ConfigureTestServices(services =>
+        {
+            services.RemoveAll<DbContextOptions<MeepleAiDbContext>>();
+            services.AddDbContext<MeepleAiDbContext>(o => o.UseNpgsql(_container!.GetConnectionString()));
+        });
+    }
+
+    public new async Task DisposeAsync()
+    {
+        await _container!.DisposeAsync();
+        await base.DisposeAsync();
+    }
+}
+```
+
+- [ ] **Step 0.5: Build + commit**
+
+```bash
+dotnet build tests/Api.Tests/Api.Tests.csproj
+git add tests/Api.Tests/Integration/Fixtures/ tests/Api.Tests/Api.Tests.csproj
+git commit -m "test(infra): bootstrap PostgresContainerFixture + ApiTestFixture + SeedHelper (#2339)"
+```
+
+---
+
+## Plan review findings (2026-06-15)
+
+**Pre-execution audit by feature-dev:code-reviewer**: 4 CRITICAL + 4 IMPORTANT + 3 MINOR.
+
+**CRITICAL findings (fixed inline)**:
+- **C1**: namespace `Api.` (not `Api.`) — find/replaced in plan + spec
+- **C2**: `ISharedGameRepository.ExistsAsync` doesn't exist → moved game-existence check from validator → handler (uses `GetByIdAsync` + `NotFoundException`)
+- **C3**: test fixtures missing → added Task 0 for `PostgresContainerFixture` + `ApiTestFixture` + `SeedHelper`
+- **C4**: xmin reflection trick → added `internal void SetXminForConcurrencyCheck(uint)` on `SharedGameTranslation` (Task 3), no reflection
+
+**IMPORTANT findings (notes for implementer, not blocking)**:
+- **I1**: `SharedGameDto` has 24+ params positional → adding `Translations` at the end is additive but breaks mappers. Task 7 must `grep -rn "new SharedGameDto("` to enumerate call sites and update each in same commit.
+- **I2**: Repo `UpdateAsync` Attach+Modified pattern: avoid double-tracking by ensuring `GetByGameIdAndLocaleAsync` uses `AsNoTracking()` and handlers don't reload entity within same scope between fetch/update. Already documented in Task 6.
+- **I3**: EF generates `CREATE UNIQUE INDEX ... WHERE NOT is_deleted` instead of `CONSTRAINT ... UNIQUE NULLS NOT DISTINCT`. Semanticamente equivalente per il caso d'uso. Task 5 Step 5.2 verifica SQL.
+- **I4**: `TranslationSourceMapper` deve essere creato in Application (NON Infrastructure) PRIMA di Task 8 (resolver lo importa). Task 9 lo aggiorna implicitamente.
+
+**MINOR findings**:
+- M3: Locale normalization check robustness — `normalized.Length == 5 && normalized[2] == '-'` (già nel plan).
+
+---
+
 ## Task 1: Locale value object
 
 **Files:**
@@ -127,11 +314,11 @@ tests/Api.Tests/Integration/SharedGameCatalog/
 ```csharp
 // tests/Api.Tests/Unit/SharedGameCatalog/Domain/LocaleTests.cs
 using FluentAssertions;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Exceptions;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+using Api.BoundedContexts.SharedGameCatalog.Application.Exceptions;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Xunit;
 
-namespace MeepleAi.Api.Tests.Unit.SharedGameCatalog.Domain;
+namespace Api.Tests.Unit.SharedGameCatalog.Domain;
 
 [Trait("Category", "Unit")]
 [Trait("BoundedContext", "SharedGameCatalog")]
@@ -202,7 +389,7 @@ Expected: FAIL with `CS0234` (Locale and InvalidLocaleException namespaces missi
 
 ```csharp
 // apps/api/src/Api/BoundedContexts/SharedGameCatalog/Application/Exceptions/InvalidLocaleException.cs
-namespace MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Exceptions;
+namespace Api.BoundedContexts.SharedGameCatalog.Application.Exceptions;
 
 public sealed class InvalidLocaleException : ArgumentException
 {
@@ -215,9 +402,9 @@ public sealed class InvalidLocaleException : ArgumentException
 ```csharp
 // apps/api/src/Api/BoundedContexts/SharedGameCatalog/Domain/ValueObjects/Locale.cs
 using System.Text.RegularExpressions;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Exceptions;
+using Api.BoundedContexts.SharedGameCatalog.Application.Exceptions;
 
-namespace MeepleAi.Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+namespace Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 
 public sealed record Locale
 {
@@ -284,7 +471,7 @@ No tests for enum (trivial). Exceptions test indirectly via handler tests.
 
 ```csharp
 // apps/api/src/Api/BoundedContexts/SharedGameCatalog/Domain/Enums/TranslationSource.cs
-namespace MeepleAi.Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
+namespace Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 
 public enum TranslationSource
 {
@@ -308,9 +495,9 @@ Adapt namespace based on Step 2.2 finding.
 
 ```csharp
 // apps/api/src/Api/BoundedContexts/SharedGameCatalog/Application/Exceptions/TranslationNotFoundException.cs
-using MeepleAi.Api.Infrastructure.Exceptions;  // adjust per Step 2.2
+using Api.Infrastructure.Exceptions;  // adjust per Step 2.2
 
-namespace MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Exceptions;
+namespace Api.BoundedContexts.SharedGameCatalog.Application.Exceptions;
 
 public sealed class TranslationNotFoundException : NotFoundException
 {
@@ -323,9 +510,9 @@ public sealed class TranslationNotFoundException : NotFoundException
 
 ```csharp
 // apps/api/src/Api/BoundedContexts/SharedGameCatalog/Application/Exceptions/TranslationAlreadyExistsException.cs
-using MeepleAi.Api.Infrastructure.Exceptions;  // adjust per Step 2.2
+using Api.Infrastructure.Exceptions;  // adjust per Step 2.2
 
-namespace MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Exceptions;
+namespace Api.BoundedContexts.SharedGameCatalog.Application.Exceptions;
 
 public sealed class TranslationAlreadyExistsException : ConflictException
 {
@@ -360,13 +547,13 @@ git commit -m "feat(catalog): add TranslationSource enum + Translation exception
 ```csharp
 // tests/Api.Tests/Unit/SharedGameCatalog/Domain/SharedGameTranslationTests.cs
 using FluentAssertions;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Exceptions;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+using Api.BoundedContexts.SharedGameCatalog.Application.Exceptions;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Xunit;
 
-namespace MeepleAi.Api.Tests.Unit.SharedGameCatalog.Domain;
+namespace Api.Tests.Unit.SharedGameCatalog.Domain;
 
 [Trait("Category", "Unit")]
 [Trait("BoundedContext", "SharedGameCatalog")]
@@ -516,11 +703,11 @@ Expected: FAIL, type not found.
 
 ```csharp
 // apps/api/src/Api/BoundedContexts/SharedGameCatalog/Domain/Entities/SharedGameTranslation.cs
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Exceptions;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+using Api.BoundedContexts.SharedGameCatalog.Application.Exceptions;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 
-namespace MeepleAi.Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
+namespace Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 
 public sealed class SharedGameTranslation
 {
@@ -627,6 +814,13 @@ public sealed class SharedGameTranslation
         UpdatedAt = now;
         UpdatedBy = restoredBy;
     }
+
+    /// <summary>
+    /// Sets xmin received from client (e.g. via PUT body) for optimistic concurrency
+    /// check by EF Core ConcurrencyToken. Internal: only handlers should call.
+    /// Resolves code-reviewer finding C4 (avoid reflection trick).
+    /// </summary>
+    internal void SetXminForConcurrencyCheck(uint xmin) => Xmin = xmin;
 }
 ```
 
@@ -666,7 +860,7 @@ Expected: Reference template for entity (constructor, properties pattern).
 
 ```csharp
 // apps/api/src/Api/Infrastructure/Entities/SharedGameCatalog/SharedGameTranslationEntity.cs
-namespace MeepleAi.Api.Infrastructure.Entities.SharedGameCatalog;
+namespace Api.Infrastructure.Entities.SharedGameCatalog;
 
 /// <summary>
 /// EF Core entity for `shared_game_translations` table.
@@ -702,11 +896,11 @@ public class SharedGameTranslationEntity
 
 ```csharp
 // apps/api/src/Api/Infrastructure/EntityConfigurations/SharedGameCatalog/SharedGameTranslationEntityConfiguration.cs
-using MeepleAi.Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace MeepleAi.Api.Infrastructure.EntityConfigurations.SharedGameCatalog;
+namespace Api.Infrastructure.EntityConfigurations.SharedGameCatalog;
 
 public sealed class SharedGameTranslationEntityConfiguration
     : IEntityTypeConfiguration<SharedGameTranslationEntity>
@@ -892,9 +1086,9 @@ git commit -m "feat(catalog): EF migration AddSharedGameTranslations (#2339)"
 
 ```csharp
 // apps/api/src/Api/BoundedContexts/SharedGameCatalog/Application/Repositories/ISharedGameTranslationRepository.cs
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 
-namespace MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Repositories;
+namespace Api.BoundedContexts.SharedGameCatalog.Application.Repositories;
 
 public interface ISharedGameTranslationRepository
 {
@@ -921,15 +1115,15 @@ public interface ISharedGameTranslationRepository
 ```csharp
 // tests/Api.Tests/Integration/SharedGameCatalog/SharedGameTranslationRepositoryIntegrationTests.cs
 using FluentAssertions;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Repositories;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
-using MeepleAi.Api.Tests.Integration.Fixtures; // Postgres Testcontainers fixture
+using Api.BoundedContexts.SharedGameCatalog.Application.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+using Api.Tests.Integration.Fixtures; // Postgres Testcontainers fixture
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
-namespace MeepleAi.Api.Tests.Integration.SharedGameCatalog;
+namespace Api.Tests.Integration.SharedGameCatalog;
 
 [Trait("Category", "Integration")]
 [Trait("BoundedContext", "SharedGameCatalog")]
@@ -1078,14 +1272,14 @@ Expected: FAIL (type not found OR DI not registered).
 
 ```csharp
 // apps/api/src/Api/Infrastructure/Repositories/SharedGameTranslationRepository.cs
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Repositories;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
-using MeepleAi.Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.BoundedContexts.SharedGameCatalog.Application.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Microsoft.EntityFrameworkCore;
 
-namespace MeepleAi.Api.Infrastructure.Repositories;
+namespace Api.Infrastructure.Repositories;
 
 public sealed class SharedGameTranslationRepository(MeepleAiDbContext ctx)
     : ISharedGameTranslationRepository
@@ -1268,7 +1462,7 @@ git commit -m "feat(catalog): add SharedGameTranslationRepository + integration 
 
 ```csharp
 // apps/api/src/Api/BoundedContexts/SharedGameCatalog/Application/SharedGameTranslationDto.cs
-namespace MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application;
+namespace Api.BoundedContexts.SharedGameCatalog.Application;
 
 public record SharedGameTranslationDto(
     string Locale,
@@ -1281,7 +1475,7 @@ public record SharedGameTranslationDto(
 
 ```csharp
 // apps/api/src/Api/BoundedContexts/SharedGameCatalog/Application/SharedGameTranslationDetailDto.cs
-namespace MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application;
+namespace Api.BoundedContexts.SharedGameCatalog.Application;
 
 public record SharedGameTranslationDetailDto(
     Guid Id,
@@ -1347,7 +1541,7 @@ git commit -m "feat(catalog): add Translation DTOs + extend SharedGameDto.Transl
 
 ```csharp
 // apps/api/src/Api/BoundedContexts/SharedGameCatalog/Application/Services/IGameTitleResolver.cs
-namespace MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Services;
+namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
 
 public interface IGameTitleResolver
 {
@@ -1362,16 +1556,16 @@ public interface IGameTitleResolver
 ```csharp
 // tests/Api.Tests/Unit/SharedGameCatalog/Application/GameTitleResolverTests.cs
 using FluentAssertions;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Repositories;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Services;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+using Api.BoundedContexts.SharedGameCatalog.Application;
+using Api.BoundedContexts.SharedGameCatalog.Application.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Moq;
 using Xunit;
 
-namespace MeepleAi.Api.Tests.Unit.SharedGameCatalog.Application;
+namespace Api.Tests.Unit.SharedGameCatalog.Application;
 
 [Trait("Category", "Unit")]
 [Trait("BoundedContext", "SharedGameCatalog")]
@@ -1460,9 +1654,9 @@ Expected: FAIL, type missing.
 
 ```csharp
 // apps/api/src/Api/BoundedContexts/SharedGameCatalog/Application/Services/GameTitleResolver.cs
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Application.Repositories;
 
-namespace MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Services;
+namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
 
 public sealed class GameTitleResolver(ISharedGameTranslationRepository repo)
     : IGameTitleResolver
@@ -1535,7 +1729,7 @@ git commit -m "feat(catalog): add IGameTitleResolver + GameTitleResolver (#2339)
 // apps/api/src/Api/BoundedContexts/SharedGameCatalog/Application/Commands/AddGameTranslation/AddGameTranslationCommand.cs
 using MediatR;
 
-namespace MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Commands.AddGameTranslation;
+namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.AddGameTranslation;
 
 public sealed record AddGameTranslationCommand(
     Guid GameId,
@@ -1551,28 +1745,29 @@ public sealed record AddGameTranslationCommand(
 // tests/Api.Tests/Unit/SharedGameCatalog/Application/AddGameTranslationCommandValidatorTests.cs
 using FluentAssertions;
 using FluentValidation.TestHelper;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Commands.AddGameTranslation;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Application.Commands.AddGameTranslation;
+using Api.BoundedContexts.SharedGameCatalog.Application.Repositories;
 using Moq;
 using Xunit;
 
-namespace MeepleAi.Api.Tests.Unit.SharedGameCatalog.Application;
+namespace Api.Tests.Unit.SharedGameCatalog.Application;
 
 [Trait("Category", "Unit")]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public class AddGameTranslationCommandValidatorTests
 {
     private readonly Mock<ISharedGameTranslationRepository> _transRepo = new();
-    private readonly Mock<ISharedGameRepository> _gameRepo = new();
     private readonly AddGameTranslationCommandValidator _sut;
 
     public AddGameTranslationCommandValidatorTests()
     {
-        _gameRepo.Setup(r => r.ExistsAsync(It.IsAny<Guid>(), default)).ReturnsAsync(true);
         _transRepo.Setup(r => r.ExistsActiveAsync(It.IsAny<Guid>(), It.IsAny<string>(), default))
                   .ReturnsAsync(false);
-        _sut = new AddGameTranslationCommandValidator(_transRepo.Object, _gameRepo.Object);
+        _sut = new AddGameTranslationCommandValidator(_transRepo.Object);
     }
+    // NOTE (DEC-C2 2026-06-15): game-existence check moved from validator → handler.
+    // ISharedGameRepository doesn't expose ExistsByIdAsync(Guid). Handler loads via
+    // GetByIdAsync + throws GameNotFoundException if null. Test in handler tests.
 
     [Fact]
     public async Task Valid_NoErrors()
@@ -1606,15 +1801,8 @@ public class AddGameTranslationCommandValidatorTests
         result.ShouldHaveValidationErrorFor(c => c.Source);
     }
 
-    [Fact]
-    public async Task GameNotExists_404Hint()
-    {
-        _gameRepo.Setup(r => r.ExistsAsync(It.IsAny<Guid>(), default)).ReturnsAsync(false);
-        var cmd = new AddGameTranslationCommand(Guid.NewGuid(), "it", "title", null, "manual");
-        var result = await _sut.TestValidateAsync(cmd);
-        result.ShouldHaveValidationErrorFor(c => c.GameId)
-              .WithErrorMessage("*not found*");
-    }
+    // DEC-C2: GameNotExists test moved to handler tests (Task 9 Step 9.6).
+    // Validator only checks input shape, handler enforces FK existence.
 
     [Fact]
     public async Task DuplicateLocale_409Hint()
@@ -1638,26 +1826,23 @@ Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~AddGameTranslatio
 ```csharp
 // apps/api/src/Api/BoundedContexts/SharedGameCatalog/Application/Commands/AddGameTranslation/AddGameTranslationCommandValidator.cs
 using FluentValidation;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Exceptions;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Repositories;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Services;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+using Api.BoundedContexts.SharedGameCatalog.Application.Exceptions;
+using Api.BoundedContexts.SharedGameCatalog.Application.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 
-namespace MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Commands.AddGameTranslation;
+namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.AddGameTranslation;
 
 public sealed class AddGameTranslationCommandValidator
     : AbstractValidator<AddGameTranslationCommand>
 {
     public AddGameTranslationCommandValidator(
-        ISharedGameTranslationRepository translationRepo,
-        ISharedGameRepository gameRepo)
+        ISharedGameTranslationRepository translationRepo)
     {
-        RuleFor(c => c.GameId)
-            .NotEmpty()
-            .Cascade(CascadeMode.Stop)
-            .MustAsync(async (id, ct) => await gameRepo.ExistsAsync(id, ct))
-            .WithMessage("Game {PropertyValue} not found");
+        // DEC-C2: Game-existence check moved to handler (ISharedGameRepository
+        // doesn't expose ExistsByIdAsync). Validator only checks input shape.
+        RuleFor(c => c.GameId).NotEmpty();
 
         RuleFor(c => c.Locale)
             .NotEmpty()
@@ -1716,17 +1901,17 @@ Expected: 6 tests pass.
 ```csharp
 // tests/Api.Tests/Unit/SharedGameCatalog/Application/AddGameTranslationCommandHandlerTests.cs
 using FluentAssertions;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Commands.AddGameTranslation;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Exceptions;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Repositories;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
-using MeepleAi.Api.Infrastructure.Auth;     // adapt to actual ICurrentUserService location
-using MeepleAi.Api.Infrastructure.Time;     // adapt to actual IClock location
+using Api.BoundedContexts.SharedGameCatalog.Application.Commands.AddGameTranslation;
+using Api.BoundedContexts.SharedGameCatalog.Application.Exceptions;
+using Api.BoundedContexts.SharedGameCatalog.Application.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
+using Api.Infrastructure.Auth;     // adapt to actual ICurrentUserService location
+using Api.Infrastructure.Time;     // adapt to actual IClock location
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
 
-namespace MeepleAi.Api.Tests.Unit.SharedGameCatalog.Application;
+namespace Api.Tests.Unit.SharedGameCatalog.Application;
 
 [Trait("Category", "Unit")]
 [Trait("BoundedContext", "SharedGameCatalog")]
@@ -1779,20 +1964,21 @@ Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~AddGameTranslatio
 ```csharp
 // apps/api/src/Api/BoundedContexts/SharedGameCatalog/Application/Commands/AddGameTranslation/AddGameTranslationCommandHandler.cs
 using MediatR;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Exceptions;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Repositories;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Services;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
-using MeepleAi.Api.Infrastructure.Auth;
-using MeepleAi.Api.Infrastructure.Time;
-using MeepleAi.Api.Infrastructure;  // IUnitOfWork
+using Api.BoundedContexts.SharedGameCatalog.Application.Exceptions;
+using Api.BoundedContexts.SharedGameCatalog.Application.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+using Api.Infrastructure.Auth;
+using Api.Infrastructure.Time;
+using Api.Infrastructure;  // IUnitOfWork
 using Microsoft.EntityFrameworkCore;
 
-namespace MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Commands.AddGameTranslation;
+namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.AddGameTranslation;
 
 public sealed class AddGameTranslationCommandHandler(
     ISharedGameTranslationRepository repo,
+    ISharedGameRepository gameRepo,                    // DEC-C2: added for existence check
     IUnitOfWork uow,
     ICurrentUserService currentUser,
     IClock clock)
@@ -1800,6 +1986,11 @@ public sealed class AddGameTranslationCommandHandler(
 {
     public async Task<Guid> Handle(AddGameTranslationCommand cmd, CancellationToken ct)
     {
+        // DEC-C2: game-existence check in handler (validator only checks input shape)
+        // Use generic NotFoundException (per CLAUDE.md pitfall #2568) — handler layer maps to 404
+        var game = await gameRepo.GetByIdAsync(cmd.GameId, ct)
+            ?? throw new NotFoundException($"Game {cmd.GameId} not found");
+
         var locale = Locale.Create(cmd.Locale);
         TranslationSourceMapper.TryFromString(cmd.Source, out var source);
         var t = SharedGameTranslation.Create(
@@ -1891,8 +2082,8 @@ public sealed class UpdateGameTranslationCommandHandler(
         // (EF's HasConcurrencyToken on Xmin will throw DbUpdateConcurrencyException on save)
         existing.UpdateTitle(cmd.Title, user.UserId, clock.UtcNow);
         existing.UpdateDescription(cmd.Description, user.UserId, clock.UtcNow);
-        // Manually set Xmin so EF compares it
-        typeof(SharedGameTranslation).GetProperty("Xmin")!.SetValue(existing, cmd.Xmin);
+        // Set xmin from client request for EF concurrency check (added in Task 3 per code-reviewer C4)
+        existing.SetXminForConcurrencyCheck(cmd.Xmin);
 
         await repo.UpdateAsync(existing, ct);
         await uow.SaveChangesAsync(ct); // throws DbUpdateConcurrencyException if xmin mismatch
@@ -1901,7 +2092,7 @@ public sealed class UpdateGameTranslationCommandHandler(
 }
 ```
 
-NOTE on `typeof().GetProperty().SetValue(existing, cmd.Xmin)`: the cleaner alternative is to add a public `SetXminForConcurrencyCheck(uint)` internal method on the entity, called only by handlers. Decide during implementation — TDD will surface.
+**DEC-C4**: usa `existing.SetXminForConcurrencyCheck(cmd.Xmin)` (internal method aggiunto a `SharedGameTranslation` in Task 3) — NO reflection.
 
 - [ ] **Step 10.2: Tests, run, verify pass, commit**
 
@@ -1939,17 +2130,13 @@ public sealed class DeleteGameTranslationCommandHandler(
             ?? throw new TranslationNotFoundException(cmd.GameId, locale.Value);
 
         existing.SoftDelete(user.UserId, clock.UtcNow);
-        // Set Xmin for concurrency
-        SetXmin(existing, cmd.Xmin);
+        // Set xmin via internal method from Task 3 (DEC-C4)
+        existing.SetXminForConcurrencyCheck(cmd.Xmin);
 
         await repo.UpdateAsync(existing, ct);
         await uow.SaveChangesAsync(ct);
         return Unit.Value;
     }
-
-    private static void SetXmin(SharedGameTranslation t, uint xmin) =>
-        typeof(SharedGameTranslation).GetProperty(nameof(SharedGameTranslation.Xmin))!
-            .SetValue(t, xmin);
 }
 ```
 
@@ -1987,6 +2174,8 @@ public sealed class GetGameTranslationsQueryHandler(ISharedGameTranslationReposi
 
 public sealed record GetGameTranslationByLocaleQuery(Guid GameId, string Locale)
     : IRequest<SharedGameTranslationDetailDto?>;
+// DEC-M2 (2026-06-15 plan review): spec §6.5 dichiarava `IRequest<SharedGameTranslationDetailDto>`
+// non-nullable. Allineato a nullable: GET by locale può ritornare null (404 mapped da endpoint).
 
 public sealed class GetGameTranslationByLocaleQueryHandler(ISharedGameTranslationRepository repo)
     : IRequestHandler<GetGameTranslationByLocaleQuery, SharedGameTranslationDetailDto?>
@@ -2072,13 +2261,13 @@ git commit -m "feat(catalog): wire IGameTitleResolver in 4 query handlers (#2339
 ```csharp
 // apps/api/src/Api/Routing/SharedGameTranslationEndpoints.cs
 using MediatR;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Commands.AddGameTranslation;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Commands.UpdateGameTranslation;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Commands.DeleteGameTranslation;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetGameTranslations;
-using MeepleAi.Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetGameTranslationByLocale;
+using Api.BoundedContexts.SharedGameCatalog.Application.Commands.AddGameTranslation;
+using Api.BoundedContexts.SharedGameCatalog.Application.Commands.UpdateGameTranslation;
+using Api.BoundedContexts.SharedGameCatalog.Application.Commands.DeleteGameTranslation;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetGameTranslations;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetGameTranslationByLocale;
 
-namespace MeepleAi.Api.Routing;
+namespace Api.Routing;
 
 public record AddTranslationRequest(string Locale, string Title, string? Description, string Source);
 public record UpdateTranslationRequest(string Title, string? Description, uint Xmin);

@@ -107,7 +107,7 @@ CREATE INDEX ix_translations_source            ON shared_game_translations(sourc
 **Entity** `SharedGameTranslation` come aggregate root separato:
 
 ```csharp
-namespace MeepleAi.Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
+namespace Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 
 public sealed class SharedGameTranslation
 {
@@ -205,7 +205,7 @@ public sealed class SharedGameTranslation
 **Value Object** `Locale`:
 
 ```csharp
-namespace MeepleAi.Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+namespace Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 
 public sealed record Locale
 {

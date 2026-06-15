@@ -118,7 +118,11 @@ tests/Api.Tests/Integration/SharedGameCatalog/
 
 ## Task 0: Bootstrap test infrastructure
 
-> **Background (code-reviewer finding C3, 2026-06-15)**: `tests/Api.Tests/` contiene solo `Infrastructure/Seeders/` (6 file unit). Niente `PostgresContainerFixture`, niente `ApiTestFixture`, niente `SeedHelper`. Task 0 crea questo foundation prima dei test d'integrazione (Tasks 6, 14, 15).
+> **DEFERRED post-execution (2026-06-15 Wave 1)**: l'implementer ha scoperto che `apps/api/tests/Api.Tests/Infrastructure/SharedTestcontainersFixture.cs` esiste già (Testcontainers Postgres+Redis, `CreateIsolatedDatabaseAsync`, `[Collection("Integration-GroupC")]` pattern). Task 0 originale duplicherebbe codice esistente.
+>
+> **Mitigazione**: Wave 2 (Task 6) aggiunge SOLO un thin `SharedGameTranslationSeedHelper` extending `SeedHelper` esistente — NON parallel fixture stack. Reuse `SharedTestcontainersFixture` come base per `SharedGameTranslationRepositoryIntegrationTests`.
+>
+> **Original (code-reviewer finding C3, 2026-06-15)**: `tests/Api.Tests/` contiene solo `Infrastructure/Seeders/` (6 file unit). Niente `PostgresContainerFixture`, niente `ApiTestFixture`, niente `SeedHelper`. Task 0 originale crea questo foundation prima dei test d'integrazione (Tasks 6, 14, 15).
 
 **Files:**
 - Create: `tests/Api.Tests/Integration/Fixtures/PostgresContainerFixture.cs`

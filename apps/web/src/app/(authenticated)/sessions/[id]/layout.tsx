@@ -55,15 +55,23 @@ export default function SessionDetailLayout({ children, params }: SessionLayoutP
 
   const sessionName = activeSession?.gameName ?? 'Sessione';
 
+  // G1 #2374 sess.46r — R-3 mitigation: suppress topbar tab strip on /live route.
+  // SessionLiveView mounts its own RightColumnTabs (Score/Turni/Widget/Note) in the
+  // RIGHT 40% column — keeping the parent miniNav above would create duplicate
+  // tablist navigation. Other session subroutes (/tools, /chat, /notes, /) still
+  // get the full 4-tab strip.
+  const isLiveRoute = pathname?.endsWith('/live') ?? false;
   useMiniNavConfig({
     breadcrumb: `Sessioni · ${sessionName}`,
-    tabs: [
-      { id: 'scores', label: 'Punteggi', href: `/sessions/${id}` },
-      { id: 'tools', label: 'Strumenti', href: `/sessions/${id}/tools` },
-      { id: 'chat', label: 'Chat', href: `/sessions/${id}/chat` },
-      { id: 'notes', label: 'Note', href: `/sessions/${id}/notes` },
-    ],
-    activeTabId: deriveActiveTab(),
+    tabs: isLiveRoute
+      ? []
+      : [
+          { id: 'scores', label: 'Punteggi', href: `/sessions/${id}` },
+          { id: 'tools', label: 'Strumenti', href: `/sessions/${id}/tools` },
+          { id: 'chat', label: 'Chat', href: `/sessions/${id}/chat` },
+          { id: 'notes', label: 'Note', href: `/sessions/${id}/notes` },
+        ],
+    activeTabId: isLiveRoute ? '' : deriveActiveTab(),
   });
 
   // Derive scoring context from store (same source as page.tsx for consistency)

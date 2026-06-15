@@ -100,8 +100,8 @@ Discovery automatica (Grep repo-wide) ha trovato **22 identifier univoci di tipo
 | US-8 Games hub multi-tab | Marco | `sp4-games-index.html` | `sp4-discover.html` (Discover default tab) | asse-D P2 spec | ✅ SHIPPED sess.36 (#2270 baseline cleanup) |
 | US-9 Game detail tabs | Marco | `sp4-game-detail.html` | 5 sub-tab `.html` (#2148: rules/reviews/strategies/chat/faqs) | DS-17-13 sp4-content design | ⚠ tabs canonical fixed in ADR-061 |
 | US-10 Library hybrid hub | Marco | `sp4-library-desktop.html` | `sp4-library-mobile.html` (forward-refactor) | DS-17-12 sp4-catalog design | ✅ Wave B.3 shipped |
-| US-13 GameNight create wizard | Marco | `sp7-game-night-new.html` ⚠ (filename brief mismatch) | — | SP7 brief A | 🚫 NOT IMPLEMENTED (brief ready, FE TODO) |
-| US-15 GameNight detail + RSVP | Marco/Davide | `sp7-game-night-detail-rsvp.html` | `sp7-game-night-edit.html` | SP7 brief B+C | 🚫 NOT IMPLEMENTED |
+| US-13 GameNight create wizard | Marco | `sp7-game-night-new.html` ✅ (filename brief aligned via PR #2351) | — | SP7 brief A | 🚫 NOT IMPLEMENTED (brief ready, FE TODO) |
+| US-15 GameNight detail + RSVP | Marco/Davide | `sp7-game-night-detail-rsvp.html` | `sp7-game-night-edit.html` (disposition #2344) | SP7 brief B+C | 🚫 NOT IMPLEMENTED |
 | US-25 Notifications inbox | Marco | `notifications.html` | (component `sp7-notifications-*.html` to ship) | SP7 brief I+J | ⚠ partial (preferences shipped, hub TODO) |
 | US-26 Profile + achievements | Marco | `sp5-profile-settings.html` | `sp4-player-detail.html` (self-view reuse) | sp5-profile-settings spec + #492 closure | ⚠ achievement detail sheet missing (audit 2026-05-22 §P0) |
 | US-27 AI agent chat | Marco/Aaron | `chat-fullscreen.html` | `sp4-game-chat-tab.html` (composite), `sp7-library-game-agent.html` (game-scoped) | DS-17 Phase B audit | ⚠ scope splittato, chat full-screen desktop residue (audit 2026-05-22 §P0 #491) |
@@ -1255,14 +1255,14 @@ And SearchPill (asse-B shipped) inline
 
 ```gherkin
 Given mockup file system path `admin-mockups/design_files/sp7-game-night-new.html`
-And brief `admin-mockups/briefs/SP7-game-night-agent-builder.md` lo chiama `sp7-game-night-create`
-When grep doc per filename "sp7-game-night-new" runs
+And brief `admin-mockups/briefs/SP7-game-night-agent-builder.md` lo chiamava `sp7-game-night-create` (stale)
+When grep doc per filename "sp7-game-night-new" runs (pre-PR #2351)
 Then Zero match (mockup classificato ORFANO erroneamente)
 ```
 
-**AC**: (1) audit script che diffs filesystem vs brief filename refs; (2) rename mockup → `sp7-game-night-create.html` (brief è source of truth per nuovo design); (3) update MOCKUPS_INDEX.md; (4) update v2-migration-matrix.md; (5) CI check pre-merge.
+**AC**: (1) ✅ DONE — PR #2351 ha aggiornato brief SP7 (`sp7-game-night-create` → `sp7-game-night-new`, filesystem canonical confermato); (2) ✅ DONE — MOCKUPS_INDEX.md già coerente (riga 198); (3) ✅ DONE — v2-migration-matrix.md coerente; (4) cleanup residui 10 file refs stale (PR #XXXX); (5) audit script + CI check pre-merge per prevenire futuri filename drift (Tier 6 future work).
 
-**Action**: open issue B-series "rename sp7-game-night-new → sp7-game-night-create + audit script".
+**Action**: ✅ closed via PR #2351 + cleanup PR follow-up. Filesystem canonical: `sp7-game-night-new.html`.
 
 ---
 
@@ -1451,6 +1451,7 @@ Il documento è **PROPOSED** e pronto per:
 |---|---|---|---|
 | 2026-06-14 | v1.0 | Claude Opus 4.7 (sess. /sc:spec-panel socratic) | Initial proposal post 4-agent parallel discovery + spec-panel synthesis 6 esperti (Cockburn · Wiegers · Adzic · Crispin · Fowler · Nygard) |
 | 2026-06-14 | v1.1 | Claude Opus 4.7 (sess. review) | Adversarial review fixes — C-1 (added `sp4-session-codenames-live.html` to §2.3, expanded "8-15" range to explicit 8-16, renumbered 17-19), C-2 (corrected US-GAP-* count 18→17 in 5 locations + Crispin "90 stati" → "85 stati"), M-1 (added SP7 transition component-mock row + sp7-game-night-edit planned note), M-2 (added #2311 issue ref to §3.3 sp4-kb-detail), M-3 (added DEC-4 locking Fowler tension opt-b — US-GAP-SESS-* parent doppio US-INT-4+4c), M-4 (clarified "22 identifier" breakdown adding sub-Gherkin embedded row), mn-2 (renamed §2.2 "Top 10 FORTE" → "Top 10 per coverage mix FORTE+LIGHT"). Fowler synthesis "23 US in 1 file" → "22 US". |
+| 2026-06-15 | v1.2 | Claude Opus 4.7 (sess. /sc:spec-panel critique umbrella #2342) | Post-merge critique fixes — CRIT-3 resolution: (1) §1.2 riga 104 — `sp7-game-night-new.html` filename brief mismatch → filename brief aligned via PR #2351; (2) §1.2 riga 105 — `sp7-game-night-edit.html` → annotato disposition #2344 pending; (3) §4b US-GAP-FILENAME-RENAME AC direzione invertita → corretta a "filesystem canonical, PR #2351 closed action"; (4) cleanup 10 file residui `sp7-game-night-create` stale refs in admin-mockups (.html `<script src>`, .jsx headers, .fidelity.json fixtures_path, design_handoff/* doc refs, MANIFEST.json). Companion umbrella v2.0 critique covers CRIT-1/2/4 + MAJ-1/2/3/4/5 (vedi umbrella #2342 body v2). |
 
 ---
 

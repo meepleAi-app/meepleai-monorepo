@@ -354,6 +354,23 @@ jobs:
             audits/2026-06-09-mockup-annotation-coverage.md
           retention-days: 14
 
+      # Issue #2151 — BGG user-side copy gate (mockup + FE source, whitelist-incremental).
+      # Mirror of the DS-17-2 lint:tokens:mockups pattern (#2070). Baseline locked to
+      # the current inventory; a NEW BGG reference fails the gate. Reduce the baseline
+      # opportunistically as cleanup PRs land. See ADR-059 §2.
+      - name: BGG mockup + FE copy gate (#2151)
+        run: pnpm lint:bgg-mockups --strict --max-baseline 325
+
+      - name: Upload BGG mockup violations report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: bgg-mockup-violations-${{ github.run_number }}
+          path: |
+            audits/2026-06-14-bgg-mockup-violations.json
+            audits/2026-06-14-bgg-mockup-violations.md
+          retention-days: 14
+
       # DS-17-8-v2 (mockup-to-app fidelity, 2026-06-10):
       # Non-blocking Storybook snapshot scaffolding per Phase 2 pilot stories.
       # Phase 2 ships scaffolding only (config + specs + scripts); baseline

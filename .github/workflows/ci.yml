@@ -333,6 +333,10 @@ jobs:
         run: pnpm mockup-annotations:audit --denominator mappable --threshold 80
         # Note: script resolves REPO_ROOT from __dirname; runs from apps/web (job default).
 
+      # Issue #2123 — BGG ToS compliance gate
+      - name: BGG ToS compliance gate (#2123)
+        run: pnpm lint:bgg
+
       - name: Upload mockup annotation coverage report
         if: always()
         uses: actions/upload-artifact@v7
@@ -773,6 +777,18 @@ jobs:
           CI: true
         # Note: Coverage requirement removed - test isolation makes 85% threshold impractical
         # Coverage is still measured and reported to Codecov for monitoring
+
+      - name: Install ruamel.yaml for codemod tests
+        run: pip install 'ruamel.yaml>=0.19'
+        working-directory: ${{ github.workspace }}
+
+      - name: Run BGG manifest scrub codemod tests (#2123)
+        run: python -m pytest scripts/tests/test_scrub_bgg_manifest.py -v
+        working-directory: ${{ github.workspace }}
+
+      - name: Run Wikidata QID bootstrap tests (#2123)
+        run: python -m pytest scripts/tests/test_bootstrap_wikidata_qid.py -v
+        working-directory: ${{ github.workspace }}
 
       - name: Upload Python Coverage
         if: always()

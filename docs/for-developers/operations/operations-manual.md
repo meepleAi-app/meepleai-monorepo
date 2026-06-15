@@ -26,6 +26,9 @@
 16. [Storage Services](#16-storage-services)
 17. [Incident Response](#17-incident-response)
 18. [Maintenance & Disaster Recovery](#18-maintenance--disaster-recovery)
+19. [Catalog Seed Pipeline (#1903)](#19-catalog-seed-pipeline-1903)
+20. [Catalog Covers — BGG ToS Compliance (#2123)](#20-catalog-covers--bgg-tos-compliance-2123)
+21. [Self-Hosted Runner Recovery](#21-self-hosted-runner-recovery)
 
 ---
 
@@ -2777,6 +2780,125 @@ Wikidata, etc.) and fall back to the placeholder.
 
 Either failure blocks merge. Bypassing requires an explicit lift comment from
 @DegrassiAaron AND a follow-up issue tracking the regression.
+
+---
+
+## 21. Self-Hosted Runner Recovery
+
+### Background
+
+A GitHub Actions self-hosted runner (`meepleai-staging`, ARM64, Hetzner CX31)
+runs deploy + nightly workflows. Going offline → workflow runs queue
+indefinitely with no surface alert from GitHub. Issue #2019 (2026-06-08)
+exposed this: the runner was OOM-killed during `pnpm install`, sat down
+for 4h25min before a maintainer noticed.
+
+### Failure mode: OOM kill
+
+The CX31 has 8GB RAM + 4GB swap. Concurrent Docker workload (postgres,
+embedding, reranker, n8n) reserves ~3GB. A `pnpm install` spike pushes
+the runner past the available memory budget; the kernel OOM-killer
+picks the runner over the (much larger) Docker containers because the
+runner unit has no `MemoryMax` cap and no negative `OOMScoreAdjust`.
+
+journal signature:
+
+```
+actions.runner.<owner>-<repo>.<runner>.service: A process of this unit has been killed by the OOM killer.
+actions.runner.*.service: Failed with result 'oom-kill'.
+```
+
+### Mitigation: systemd override
+
+The override at `infra/runner/systemd-overrides/10-memory-limits.conf`
+caps the runner at 3G via cgroup `memory.max` and deprioritizes it as
+an OOM target. When the cap is approached, systemd kills the runner
+cleanly and `Restart=on-failure RestartSec=30s` brings it back online
+automatically within 30 seconds.
+
+```ini
+[Service]
+MemoryMax=3G
+OOMScoreAdjust=-500
+Restart=on-failure
+RestartSec=30s
+```
+
+### Install procedure
+
+Run on the staging host as root (this is reproducible from the repo,
+no manual transcription):
+
+```bash
+ssh meepleai-staging
+sudo bash /opt/meepleai/repo/infra/runner/apply-memory-overrides.sh
+```
+
+The script:
+
+1. Auto-discovers the `actions.runner.*.service` unit name.
+2. Installs the drop-in at
+   `/etc/systemd/system/<unit>.d/10-memory-limits.conf`.
+3. Runs `systemctl daemon-reload + restart <unit>`.
+4. Verifies `MemoryMax=3221225472` (= 3G), `OOMScoreAdjust=-500`,
+   `Restart=on-failure`. Exits non-zero if any property differs.
+
+Idempotent — safe to re-run after a runner reinstall.
+
+### Verify
+
+```bash
+systemctl show <runner-service> -p MemoryMax,OOMScoreAdjust,Restart,RestartSec
+```
+
+Expected:
+
+```
+MemoryMax=3221225472
+OOMScoreAdjust=-500
+Restart=on-failure
+RestartSec=30s
+```
+
+### Recovery from an offline runner
+
+If the alert `RunnerOffline` (Prometheus, 10m threshold) or
+`RunnerOfflineCritical` (30m) fires:
+
+```bash
+# 1. Inspect
+ssh meepleai-staging
+sudo systemctl status actions.runner.*
+
+# 2. Check OOM history (the failure signature that triggered #2019)
+sudo journalctl -u actions.runner.* --since '1 hour ago' | grep -i oom
+
+# 3. Restart (auto-restart should have engaged; this is a manual fallback)
+sudo systemctl restart actions.runner.*
+
+# 4. If repeated kills despite override: check Docker workload
+docker stats --no-stream
+# Consider capping memory on heaviest containers in compose.staging.yml
+```
+
+### Monitoring
+
+| Alert | Severity | Threshold | Source |
+|---|---|---|---|
+| `RunnerOffline` | warning | offline > 10m | `up{job="github_runner_local"} == 0` |
+| `RunnerOfflineCritical` | critical | offline > 30m | same expr, longer `for:` |
+| `RunnerMemoryNearLimit` | warning | mem.current / MemoryMax > 0.8 for 5m | cgroup memory |
+
+Rules: `infra/prometheus/alerts/runner-availability.yml`
+Companion script: `infra/runner/monitor.sh` (textfile collector emits the
+`up{}` gauge from `systemctl is-active <unit>`).
+
+### Refs
+
+- Issue: [#2019](https://github.com/meepleAi-app/meepleai-monorepo/issues/2019)
+- Companion infra: [#1990](https://github.com/meepleAi-app/meepleai-monorepo/issues/1990) (Phase B soak — incident context)
+- Setup script: `infra/runner/setup-runner.sh`
+- Health monitor: `infra/runner/monitor.sh`
 
 ---
 

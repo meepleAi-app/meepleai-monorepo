@@ -256,6 +256,7 @@ public class ParseAndRecordScoreCommandHandlerTests
             SessionCode: "ABC123",
             GameId: null,
             GameName: "Test Game",
+            GameSlug: "test-game",
             CreatedByUserId: Guid.NewGuid(),
             Status: LiveSessionStatus.InProgress,
             Visibility: PlayRecordVisibility.Private,

@@ -374,6 +374,10 @@ Companion: [gap report demo Claude Design](./docs/for-developers/audits/2026-06-
 
 **Asse D follow-up P3 implementation** (umbrella #1895 sub-issue #1899 follow-up): `/onboarding` 3-step generic wizard refactor usando `WizardModal` asse-B (replaces legacy `OnboardingTourClient` 5-step page-flow). Riusa `InterestsStep` + `FirstGameStep` esistenti (Issue #132) come step 1 e 2; step 3 `InviteFriendComingSoonStep` placeholder (feature deferred a sub-issue futura). BGG legal constraint (#1903 ADR): user-side BGG access bloccato per ToS compliance — `FirstGameStep` usa catalog interno (`api.games.getAll`) NON `useSearchBggGames` (admin-only). Invited-user `OnboardingWizard` 5-step token-based (`/accept-invite`) NON toccato. **Stato shipped 2026-06-05 sessione 37**: `OnboardingGenericWizard` orchestrator (gate `validate` su `interestsCompleted` / `firstGameCompleted` flag interno) + `InviteFriendComingSoonStep` skip-only placeholder + `/onboarding/page.tsx` mounts new wizard + deleted deprecated `OnboardingTourClient.tsx` + relativi test. 13 unit test nuovi (9 wizard + 4 placeholder), 91 component test invariati 0 regression. E2E skeleton in `apps/web/e2e/asse-d-p3-onboarding-wizard.spec.ts`.
 
+### Session live shell (epic #2354)
+
+- **G1 layout — Issue #2374**: SessionLiveView desktop refactored 2026-06-15 to 2-col 60/40 grid (LEFT chat+log, RIGHT polymorphic tabs Score/Turn/Widget/Notes). ChatAgentPanel primitive shipped as the LEFT slot; G3 (#2375) will add accordion always-visible semantics. Legacy URL `?tab=tools|chat|notes` back-compat preserved via `parseLiveTab` alias map (tools→widget, chat→score, notes→notes). Mobile bottom-sheet drawer (T9, in-progress) follows in the same PR per spec-panel DEC-4. Plan: [`docs/superpowers/plans/2026-06-15-issue-2374-session-live-g1-3-col-layout.md`](./docs/superpowers/plans/2026-06-15-issue-2374-session-live-g1-3-col-layout.md).
+
 ### Known Pitfalls (Issues)
 
 | Issue | Rule |

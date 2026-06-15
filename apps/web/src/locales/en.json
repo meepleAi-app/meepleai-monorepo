@@ -3160,7 +3160,7 @@
         "title": "ChatAgent",
         "onlineLabel": "Online",
         "latencyAriaLabel": "Latency {ms}ms",
-        "agentNameAriaLabel": "Agent name"
+        "agentNameAriaLabel": "Agent name {name}"
       },
       "notes": {
         "title": "Notes",

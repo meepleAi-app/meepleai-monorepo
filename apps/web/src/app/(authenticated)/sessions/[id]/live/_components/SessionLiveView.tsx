@@ -40,8 +40,23 @@
  * **Subroutes preserved**:
  *   `/sessions/[id]` (D.3 summary) and `/sessions/[id]/diary/*` are UNTOUCHED.
  *
+ * **G1 #2374 (2026-06-15)**:
+ *   Refactored from 3-col fixed-width layout (LEFT 280px / CENTER flex / RIGHT 340px)
+ *   to a 2-col 60/40 grid (LEFT minmax(0,3fr) / RIGHT minmax(0,2fr)).
+ *   - LEFT (60%) = ChatAgentPanel (new primitive, always visible) + ActionLogTimeline stacked.
+ *   - RIGHT (40%) = RightColumnTabs polymorphic with keys: Score | Turn | Widget | Notes.
+ *     - Score tab → LiveScoringPanel (G5 will swap for polymorphic dispatcher).
+ *     - Turn tab → TurnIndicator + PlayerRosterLive (moved out of the deprecated LEFT sidebar).
+ *     - Widget tab → SessionToolsRail (relabelled from "Tools" per mockup).
+ *     - Notes tab → LiveSessionNotes (unchanged).
+ *   Legacy URL `?tab=tools|chat|notes` back-compat preserved via `parseLiveTab` alias map
+ *   (tools→widget, chat→score, notes→notes). Token discipline: raw HSL backgrounds replaced
+ *   with semantic `bg-background`/`bg-card`. Mobile bottom-sheet drawer (T9) follows in the
+ *   same PR per spec-panel DEC-4.
+ *
  * Pattern blueprint: Wave D.1 SessionsLibraryView + Wave C.1 AgentDetailView.
  * Wave D.2 Interactions sub-PR — Issue #750
+ * G1 layout refactor — Issue #2374
  */
 
 'use client';

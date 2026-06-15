@@ -13,6 +13,7 @@ import {
   type EntityFilter,
   type RowItemBase,
 } from '@/components/features/discover';
+import { resolveCardHref } from '@/components/features/discover/resolveCardHref';
 import { HubLayout } from '@/components/layout/HubLayout';
 import { useCatalogTrending } from '@/hooks/queries/useCatalogTrending';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -182,14 +183,23 @@ export function DiscoverHub({ pathnameOverride }: DiscoverHubProps = {}) {
     [entity, updateUrl]
   );
 
-  // ── Telemetry: card click + disabled-row impression ───────────────────────
-  const handleCardClick = useCallback((rowId: string, item: RowItemBase) => {
-    trackEvent('discover_card_clicked', {
-      row: rowId,
-      entityId: item.id,
-      entityType: rowId,
-    });
-  }, []);
+  // ── Card click: telemetry + navigation (#2085 F2/F3) ──────────────────────
+  // Order matters: track FIRST so the event fires even if the user cancels
+  // navigation (middle-click, ctrl-click → opens in new tab via the router's
+  // own handling). Navigation is best-effort: unknown rowIds resolve to null
+  // and we silently skip the push (telemetry already captured the click).
+  const handleCardClick = useCallback(
+    (rowId: string, item: RowItemBase) => {
+      trackEvent('discover_card_clicked', {
+        row: rowId,
+        entityId: item.id,
+        entityType: rowId,
+      });
+      const href = resolveCardHref(rowId, item);
+      if (href) router.push(href);
+    },
+    [router]
+  );
 
   const handleDisabledRowVisible = useCallback((rowId: string) => {
     trackEvent('discover_disabled_row_visible', { row: rowId });

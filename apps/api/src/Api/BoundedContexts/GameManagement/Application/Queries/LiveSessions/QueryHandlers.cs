@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Application.Services;
 
 namespace Api.BoundedContexts.GameManagement.Application.Queries.LiveSessions;
 
@@ -40,6 +41,7 @@ internal class GetLiveSessionQueryHandler : IQueryHandler<GetLiveSessionQuery, L
             session.SessionCode,
             session.GameId,
             session.GameName,
+            Slugifier.Slugify(session.GameName),
             session.CreatedByUserId,
             session.Status,
             session.Visibility,
@@ -141,6 +143,7 @@ internal class GetUserActiveSessionsQueryHandler : IQueryHandler<GetUserActiveSe
             s.Id,
             s.SessionCode,
             s.GameName,
+            Slugifier.Slugify(s.GameName),
             s.Status,
             s.PlayerCount,
             s.CurrentTurnIndex,

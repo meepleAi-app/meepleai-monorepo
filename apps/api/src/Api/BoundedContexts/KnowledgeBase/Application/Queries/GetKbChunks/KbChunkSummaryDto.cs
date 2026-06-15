@@ -29,5 +29,9 @@ internal sealed record KbChunkSummaryDto(
     IReadOnlyList<string> HeadingPath,
     string Snippet,
     int? PageNumber,
-    string VectorId
+    string VectorId,
+    // #2311 BE-1 — denormalized counter of distinct assistant messages that have cited
+    // this chunk (start-from-0 per DEC-D2). Surfaced verbatim from
+    // <see cref="Api.Infrastructure.Entities.TextChunkEntity.UsageCount"/>.
+    int UsedInChats
 );

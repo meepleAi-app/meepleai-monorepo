@@ -40,4 +40,15 @@ internal sealed record ChunkCitation(
     /// with all existing call sites that create ChunkCitation without a game context.
     /// </summary>
     public Guid? GameId { get; init; }
+
+    /// <summary>
+    /// #2311 BE-1 — zero-based chunk position inside the source PDF. Combined with
+    /// <see cref="DocumentId"/> it uniquely identifies the underlying TextChunk row
+    /// (unique index <c>ix_text_chunks_pdf_chunk_index</c>), enabling the DEC-D2
+    /// usage_count increment hook to resolve the chunk without an extra `ChunkId`
+    /// roundtrip. Null on legacy JSON deserialization (older citations persisted
+    /// before this field landed) — the increment hook treats absent values as a
+    /// best-effort no-op.
+    /// </summary>
+    public int? ChunkIndex { get; init; }
 }

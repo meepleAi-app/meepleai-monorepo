@@ -168,6 +168,163 @@ test.describe('Session live — accessibility @a11y', () => {
     }
   });
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // G1 #2374 — Desktop 60/40 layout + new tab keys (sess.46r)
+  // ─────────────────────────────────────────────────────────────────────────────
+  //
+  // T6 contract assertions per plan §4 T6:
+  //   - 60/40 grid emits data-layout="2col-60-40"; LEFT + RIGHT landmarks present
+  //   - RightColumnTabs has 4 tabs (score/turn/widget/notes) after refactor
+  //   - LEFT column keyboard-traversable: ChatAgentPanel → ActionLogTimeline → RightColumnTabs
+  //   - R-3 mitigation lock: only ONE tablist above-the-fold (parent miniNav
+  //     suppressed on /live route — see sessions/[id]/layout.tsx L63 `isLiveRoute`)
+  //
+  // Viewport is forced to 1280×720 so DesktopBody renders (lg+ breakpoint).
+
+  test('G1 desktop 60/40 layout — DesktopBody emits data-layout="2col-60-40" with both column landmarks', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await gotoSessionLive(page, '?fixture=host');
+
+    // Desktop body must be present + carry the 2-zone grid marker.
+    const desktopBody = page.locator('[data-slot="desktop-body"]');
+    await expect(desktopBody).toBeVisible();
+    await expect(desktopBody).toHaveAttribute('data-layout', '2col-60-40');
+
+    // LEFT column = <main> landmark (DesktopBody renders <main> in the 2-zone path).
+    // We scope to desktop body to avoid collisions with the rest of the page.
+    const mainLandmark = desktopBody.locator('main');
+    await expect(mainLandmark).toBeVisible();
+
+    // RIGHT column = <aside> landmark (DesktopBody renders <aside> for the tabs).
+    const asideLandmark = desktopBody.locator('aside');
+    await expect(asideLandmark).toBeVisible();
+  });
+
+  test('G1 RightColumnTabs — 4 tab buttons (score/turn/widget/notes) in mockup order', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await gotoSessionLive(page, '?fixture=host');
+
+    const tabs = page.locator('[data-slot="right-column-tabs"] [role="tab"]');
+    await expect(tabs).toHaveCount(4);
+
+    // Order assertion: Score → Turni/Turn → Widget → Note/Notes (mockup canonical).
+    // Locale is 'it' by default — see jsdoc viewport note above. We accept both
+    // it/en strings to keep the test resilient if the harness flips locales.
+    const labels = await tabs.allTextContents();
+    expect(labels[0]).toMatch(/^Score$/);
+    expect(labels[1]).toMatch(/^Turn[i]?$/);
+    expect(labels[2]).toMatch(/^Widget$/);
+    expect(labels[3]).toMatch(/^Note[s]?$/);
+
+    // First tab (score) is the default-selected per parseLiveTab fallback.
+    await expect(tabs.nth(0)).toHaveAttribute('aria-selected', 'true');
+    await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'false');
+    await expect(tabs.nth(2)).toHaveAttribute('aria-selected', 'false');
+    await expect(tabs.nth(3)).toHaveAttribute('aria-selected', 'false');
+  });
+
+  test('G1 keyboard traversal — Tab order reaches LEFT column (chat) before RIGHT column tabs', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await gotoSessionLive(page, '?fixture=host');
+
+    // Wait for the LEFT-column primitives to mount.
+    await expect(page.locator('[data-slot="chat-agent-panel"]')).toBeVisible();
+    await expect(page.locator('[data-slot="action-log-timeline"]')).toBeVisible();
+    await expect(page.locator('[data-slot="right-column-tabs"]')).toBeVisible();
+
+    // Walk focus through the document and collect the *highest* data-slot
+    // ancestor seen for each step (LEFT-column-side OR RIGHT-column-side).
+    // We classify each focused element into one of:
+    //   - 'left'   when it sits inside ChatAgentPanel or ActionLogTimeline
+    //     (note: LiveAgentChat input is inside ChatAgentPanel and has its
+    //     own data-slot="live-agent-chat", so `closest('[data-slot]')` may
+    //     return the inner slot — we walk all ancestor slots and check
+    //     membership in the LEFT set).
+    //   - 'right'  when it sits inside RightColumnTabs.
+    //   - null     for anything else (topbar chrome, dev-tools widgets, etc.).
+    //
+    // The DOM contract: LEFT (`<main>` of DesktopBody) precedes RIGHT
+    // (`<aside>`) — so the FIRST 'left' index must be ≤ the FIRST 'right'
+    // index in the Tab walk after we enter the body region.
+    const LEFT_SLOTS = new Set(['chat-agent-panel', 'live-agent-chat', 'action-log-timeline']);
+    const RIGHT_SLOTS = new Set(['right-column-tabs']);
+
+    let firstLeftIdx = -1;
+    let firstRightIdx = -1;
+
+    // 60 Tab presses is enough to cycle past the topbar nav + skip-link +
+    // user menu + search button without timing out.
+    for (let i = 0; i < 60; i++) {
+      await page.keyboard.press('Tab');
+      const slotChain = await page.evaluate(() => {
+        const active = document.activeElement;
+        if (!active || active === document.body) return [];
+        const chain: string[] = [];
+        let el: Element | null = active;
+        while (el !== null) {
+          const slot = el.getAttribute('data-slot');
+          if (slot) chain.push(slot);
+          el = el.parentElement;
+        }
+        return chain;
+      });
+
+      const isLeft = slotChain.some(s => LEFT_SLOTS.has(s));
+      const isRight = slotChain.some(s => RIGHT_SLOTS.has(s));
+      if (isLeft && firstLeftIdx === -1) firstLeftIdx = i;
+      if (isRight && firstRightIdx === -1) firstRightIdx = i;
+
+      // Stop once we've seen both — the ordering is locked.
+      if (firstLeftIdx !== -1 && firstRightIdx !== -1) break;
+    }
+
+    // We must reach the LEFT column at some point — if ChatAgentPanel +
+    // ActionLogTimeline together produce zero focusables (defensive guard),
+    // the test would fail here and that's a real regression worth catching.
+    expect(firstLeftIdx).toBeGreaterThanOrEqual(0);
+
+    // RIGHT column tabs must be reachable AFTER the LEFT column. This is the
+    // R-3 + Asse B contract: tablist sits after the main column in the Tab
+    // ring, not before it.
+    expect(firstRightIdx).toBeGreaterThan(firstLeftIdx);
+  });
+
+  test('G1 R-3 mitigation — only ONE tablist above-the-fold on /live route (parent miniNav suppressed)', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await gotoSessionLive(page, '?fixture=host');
+
+    // Parent layout (sessions/[id]/layout.tsx L63-75) sets `tabs: []` when
+    // pathname endsWith('/live'), so the topbar mini-nav has zero entries on
+    // this route. The ONLY tablist that should render is RightColumnTabs.
+    //
+    // Above-the-fold check: viewport is 1280×720, RightColumnTabs sits well
+    // within. We use Playwright's role locator to query [role="tablist"] then
+    // filter to ones intersecting the visible viewport via boundingBox().
+    const tablists = page.locator('[role="tablist"]');
+    const total = await tablists.count();
+
+    // Walk each tablist; keep only those whose top is within the visible
+    // viewport (< 720px). This isolates "above-the-fold" from any tablist
+    // that may exist further down the page (e.g. a footer or a hidden panel).
+    let aboveFold = 0;
+    for (let i = 0; i < total; i++) {
+      const box = await tablists.nth(i).boundingBox();
+      if (box != null && box.y < 720 && box.height > 0) {
+        aboveFold += 1;
+      }
+    }
+
+    expect(aboveFold).toBe(1);
+  });
+
   // ── WAI-ARIA tablist structure: mobile bottom-nav ───────────────────────────
 
   test('WAI-ARIA tablist: mobile bottom-nav tabs have correct role + aria-selected + tabindex', async ({

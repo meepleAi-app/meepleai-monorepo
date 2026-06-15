@@ -6,6 +6,14 @@
  * Interactions sub-PR wires Player+Host score delta handlers.
  *
  * Gate C: DIVERGES from MeepleCard — live score panel, not a card.
+ *
+ * @deprecated since #2373 T7 — SessionLiveView now wires
+ *   `ScoringPanelRenderer` (G5a polymorphic dispatcher) from
+ *   `@/components/features/session-live/scoring`. This component is
+ *   retained for the barrel-export contract during the migration window
+ *   tracked by follow-up issue #2389 (useLiveSessionStore.scoringType
+ *   migration). Remove this symbol + its test suite once #2389 lands
+ *   and no consumer references it (grep `LiveScoringPanel`).
  */
 
 import type { ReactElement } from 'react';

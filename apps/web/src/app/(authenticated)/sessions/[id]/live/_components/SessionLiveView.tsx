@@ -56,17 +56,16 @@ import {
   PlayerRosterLive,
   TurnIndicator,
   type ActionLogTimelineLabels,
-  type LiveScoringPanelLabels,
-  type LiveScoringPanelScoreEntry,
   type LiveTopBarLabels,
   type MobileBodyLabels,
   type MobileTab,
   type PlayerRosterLiveLabels,
   type TurnIndicatorLabels,
 } from '@/components/features/session-live';
-// Issue #2373 T7: G5a polymorphic renderer (replaces LiveScoringPanel in this view).
-// LiveScoringPanel import retained above for the barrel export contract; it is no
-// longer instantiated here. A follow-up will mark it @deprecated.
+// Issue #2373 T7 + T10: G5a polymorphic renderer (replaces deprecated LiveScoringPanel).
+// LiveScoringPanel is barrel-exported for non-orchestrator consumers but is no longer
+// instantiated here. Follow-up #2389 tracks the LiveScoringPanel removal + i18n catalog
+// completion + useLiveSessionStore.scoringType migration.
 import {
   ConnectionLostBanner,
   LiveAgentChat,
@@ -631,25 +630,9 @@ export function SessionLiveView(): ReactElement {
     };
   }, [t, intl.messages, activeSession?.players.length]);
 
-  const scoringLabels = useMemo<LiveScoringPanelLabels>(
-    (): LiveScoringPanelLabels => ({
-      title: t('pages.sessionLive.scoring.title'),
-      scoreLabelTemplate:
-        (intl.messages['pages.sessionLive.scoring.scoreLabel'] as string) ?? 'Punteggio: {score}',
-      winnerLabel: t('pages.sessionLive.scoring.winnerLabel'),
-      myScoreLabel: t('pages.sessionLive.scoring.myScoreLabel'),
-      incrementAriaLabelTemplate:
-        (intl.messages['pages.sessionLive.scoring.incrementAriaLabel'] as string) ??
-        'Aumenta punteggio di {playerName}',
-      decrementAriaLabelTemplate:
-        (intl.messages['pages.sessionLive.scoring.decrementAriaLabel'] as string) ??
-        'Diminuisci punteggio di {playerName}',
-      scoreInputAriaLabelTemplate:
-        (intl.messages['pages.sessionLive.scoring.scoreInputAriaLabel'] as string) ??
-        'Inserisci punteggio per {playerName}',
-    }),
-    [t, intl.messages]
-  );
+  // Issue #2373 T10: removed legacy `scoringLabels` memo (LiveScoringPanelLabels
+  // is no longer instantiated here). Follow-up #2389 will rewire i18n keys
+  // for the non-Points variants of ScoringPanelRenderer.
 
   /**
    * Issue #2373 T7: ScoringPanelRenderer labels.
@@ -798,7 +781,21 @@ export function SessionLiveView(): ReactElement {
 
   // ── Derived data for components ───────────────────────────────────────────
 
-  const scores = useMemo<ReadonlyArray<LiveScoringPanelScoreEntry>>(() => {
+  /**
+   * Final-scores projection for `EndgameDialog` (lazy-loaded). Mirrors the
+   * `LiveScoringPanelScoreEntry` shape (legacy compat). Issue #2373 T7
+   * stopped routing this through `<LiveScoringPanel>` but the dialog still
+   * consumes the same projection — follow-up #2389 will replace it with a
+   * polymorphic `EndgameSummary` reading from the future store-shape.
+   */
+  const scores = useMemo<
+    ReadonlyArray<{
+      readonly playerId: string;
+      readonly playerName: string;
+      readonly score: number;
+      readonly isWinner: boolean;
+    }>
+  >(() => {
     if (activeSession == null) return [];
     return activeSession.players.map(p => ({
       playerId: p.id,

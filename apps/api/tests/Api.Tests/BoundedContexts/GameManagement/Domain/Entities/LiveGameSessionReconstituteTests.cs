@@ -50,7 +50,7 @@ public class LiveGameSessionReconstituteTests
             agentMode: AgentSessionMode.None,
             chatSessionId: null,
             turnAdvancePolicy: TurnAdvancePolicy.Manual,
-            rowVersion: new byte[] { 1, 2, 3, 4 },
+            xmin: 42u,
             players: Array.Empty<LiveSessionPlayer>(),
             teams: Array.Empty<LiveSessionTeam>(),
             turnOrder: Array.Empty<Guid>(),
@@ -67,6 +67,7 @@ public class LiveGameSessionReconstituteTests
         session.CurrentPhaseIndex.Should().Be(1);
         session.PhaseNames.Should().BeEquivalentTo(new[] { "Setup", "Action", "End" });
         session.Notes.Should().Be("first turn ok");
+        session.Xmin.Should().Be(42u);
         session.DomainEvents.Should().BeEmpty("Reconstitute MUST NOT raise events");
     }
 }

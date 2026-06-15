@@ -298,7 +298,10 @@ internal sealed class CrossGameStreamQaQueryHandler : IStreamingQueryHandler<Cro
             IsPublic: false)
         {
             GameId = r.GameId,
-            FullText = r.Content
+            FullText = r.Content,
+            // #2311 BE-1 — propagate ChunkIndex for the IncrementChunkUsageCountsCommand
+            // resolver. Cross-game results carry it directly from the multi-game search service.
+            ChunkIndex = r.ChunkIndex,
         }).ToList();
     }
 

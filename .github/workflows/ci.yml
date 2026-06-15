@@ -277,6 +277,13 @@ jobs:
         run: pnpm lint
         # Note: package.json lint script has --max-warnings=15 for security false positives
 
+      # DS-17 Phase 1 (mockup state naming, #2071): hard gate on the
+      # canonical `<base>-state-NN-<label>.{html,jsx}` pattern. Cheap (regex
+      # over admin-mockups/**/*.{html,jsx} only) — runs before the heavier
+      # token/annotation/BGG scans below.
+      - name: Mockup state-variant naming gate (#2071)
+        run: pnpm lint:mockup-state-naming
+
       # DS-2 (token canonicalization, 2026-05-12):
       # Non-blocking inventory of `local/no-hardcoded-color-utility` violations.
       # Produces audits/2026-05-12-token-violations.{json,md} for cluster
@@ -333,6 +340,10 @@ jobs:
         run: pnpm mockup-annotations:audit --denominator mappable --threshold 80
         # Note: script resolves REPO_ROOT from __dirname; runs from apps/web (job default).
 
+      # Issue #2123 — BGG ToS compliance gate
+      - name: BGG ToS compliance gate (#2123)
+        run: pnpm lint:bgg
+
       - name: Upload mockup annotation coverage report
         if: always()
         uses: actions/upload-artifact@v7
@@ -341,6 +352,23 @@ jobs:
           path: |
             audits/2026-06-09-mockup-annotation-coverage.json
             audits/2026-06-09-mockup-annotation-coverage.md
+          retention-days: 14
+
+      # Issue #2151 — BGG user-side copy gate (mockup + FE source, whitelist-incremental).
+      # Mirror of the DS-17-2 lint:tokens:mockups pattern (#2070). Baseline locked to
+      # the current inventory; a NEW BGG reference fails the gate. Reduce the baseline
+      # opportunistically as cleanup PRs land. See ADR-059 §2.
+      - name: BGG mockup + FE copy gate (#2151)
+        run: pnpm lint:bgg-mockups --strict --max-baseline 325
+
+      - name: Upload BGG mockup violations report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: bgg-mockup-violations-${{ github.run_number }}
+          path: |
+            audits/2026-06-14-bgg-mockup-violations.json
+            audits/2026-06-14-bgg-mockup-violations.md
           retention-days: 14
 
       # DS-17-8-v2 (mockup-to-app fidelity, 2026-06-10):
@@ -773,6 +801,18 @@ jobs:
           CI: true
         # Note: Coverage requirement removed - test isolation makes 85% threshold impractical
         # Coverage is still measured and reported to Codecov for monitoring
+
+      - name: Install ruamel.yaml for codemod tests
+        run: pip install 'ruamel.yaml>=0.19'
+        working-directory: ${{ github.workspace }}
+
+      - name: Run BGG manifest scrub codemod tests (#2123)
+        run: python -m pytest scripts/tests/test_scrub_bgg_manifest.py -v
+        working-directory: ${{ github.workspace }}
+
+      - name: Run Wikidata QID bootstrap tests (#2123)
+        run: python -m pytest scripts/tests/test_bootstrap_wikidata_qid.py -v
+        working-directory: ${{ github.workspace }}
 
       - name: Upload Python Coverage
         if: always()

@@ -4,6 +4,8 @@ import { ChevronDown, Menu } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import { LiveSessionPill } from '@/components/layout/AppNav/LiveSessionPill';
+import { SearchPill } from '@/components/layout/AppNav/SearchPill';
 import { UserMenuDropdown } from '@/components/layout/UserMenuDropdown';
 import { BrandMark } from '@/components/ui/brand';
 import {
@@ -123,6 +125,17 @@ export function AppTopBar({ adminMode, onMenuClick, className }: AppTopBarProps)
       )}
 
       <div className="flex-1" />
+
+      {/* Issue #2320 — D5 search slot trigger. Click dispatches a window
+          event that the CommandPalette host in `providers.tsx` listens for.
+          Keyboard shortcut (Cmd/Ctrl+K) is wired in `useGlobalKeyboardShortcuts`
+          and opens the same modal. Visible in both user and admin shells. */}
+      <SearchPill />
+
+      {/* Issue #2150 — runtime backfill of nav-chrome primitive D5: surfaces a
+          chip when a live session is active, with a Resume CTA. Hidden when
+          `useLiveSessionStore.sessionId === null` or `status === 'Completed'`. */}
+      {!adminMode && <LiveSessionPill />}
 
       <UserMenuDropdown variant="pill" />
     </header>

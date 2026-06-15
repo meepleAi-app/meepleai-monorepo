@@ -5437,13 +5437,6 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("name");
 
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea")
-                        .HasColumnName("row_version");
-
                     b.Property<DateTime?>("ScheduledDate")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("scheduled_date");
@@ -5456,6 +5449,12 @@ namespace Api.Infrastructure.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
+
+                    b.Property<uint>("Xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id");
 
@@ -5913,13 +5912,6 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("jsonb")
                         .HasColumnName("phase_names_json");
 
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea")
-                        .HasColumnName("row_version");
-
                     b.Property<string>("ScoringConfigJson")
                         .IsRequired()
                         .HasColumnType("jsonb")
@@ -5971,6 +5963,12 @@ namespace Api.Infrastructure.Migrations
                     b.Property<int>("Visibility")
                         .HasColumnType("integer")
                         .HasColumnName("visibility");
+
+                    b.Property<uint>("Xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id");
 
@@ -12076,13 +12074,6 @@ namespace Api.Infrastructure.Migrations
                         .HasDefaultValue("")
                         .HasColumnName("resources_notes");
 
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea")
-                        .HasColumnName("row_version");
-
                     b.Property<Guid>("SharedGameId")
                         .HasColumnType("uuid")
                         .HasColumnName("shared_game_id");
@@ -12126,6 +12117,12 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasDefaultValue("")
                         .HasColumnName("victory_notes");
+
+                    b.Property<uint>("Xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id");
 
@@ -13832,6 +13829,12 @@ namespace Api.Infrastructure.Migrations
 
                     b.Property<Guid?>("SharedGameId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("UsageCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("usage_count");
 
                     b.HasKey("Id");
 

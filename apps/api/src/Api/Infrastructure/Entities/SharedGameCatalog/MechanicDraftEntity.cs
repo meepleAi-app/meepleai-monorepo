@@ -38,7 +38,11 @@ public class MechanicDraftEntity
 
     public int TotalTokensUsed { get; set; }
     public decimal EstimatedCostUsd { get; set; }
-    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+
+    // Optimistic concurrency via PostgreSQL's xmin system column (Issue #2306).
+    // Replaces the silently-disabled byte[] RowVersion (no trigger populated it).
+    // Server-owned: Postgres assigns xmin = transaction-id-of-last-write per row.
+    public uint Xmin { get; set; }
 
     // Navigation properties
     public SharedGameEntity SharedGame { get; set; } = default!;

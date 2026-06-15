@@ -16,6 +16,7 @@
 
 import type { ReactElement } from 'react';
 
+import { formatElapsedTime } from '@/lib/session-live/format-elapsed-time';
 import type { ParticipantRole } from '@/lib/session-live/participant-role';
 
 // ─── Labels ───────────────────────────────────────────────────────────────────
@@ -31,9 +32,19 @@ export interface LiveTopBarLabels {
   readonly resumeCta: string;
   readonly endgameCta: string;
   readonly exitAriaLabel: string;
+  /** G4 (Issue #2352) — aria-label for the elapsed-time chip. Required when elapsedMs is provided. */
+  readonly elapsedTimeAriaLabel?: string;
+  /** G4 (Issue #2352) — aria-label per connection-state pip. Required when connectionState is provided. */
+  readonly connectionStateAriaLabels?: {
+    readonly connected: string;
+    readonly reconnecting: string;
+    readonly failed: string;
+  };
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
+
+export type LiveTopBarConnectionState = 'connected' | 'reconnecting' | 'failed';
 
 export interface LiveTopBarProps {
   readonly sessionName: string;
@@ -44,9 +55,27 @@ export interface LiveTopBarProps {
   readonly onEndgame?: () => void;
   readonly onExit: () => void;
   readonly labels: LiveTopBarLabels;
+  /**
+   * G4 (Issue #2352) — live elapsed time in ms since session start.
+   * Omit to hide the timer chip (default behavior pre-G4).
+   */
+  readonly elapsedMs?: number;
+  /**
+   * G4 (Issue #2352) — SSE connection state.
+   * Omit to hide the inline pip (default behavior pre-G4; the standalone
+   * `ConnectionLostBanner` remains the actionable surface for `failed`).
+   */
+  readonly connectionState?: LiveTopBarConnectionState;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
+
+// G4 — pip color tokens per connection state (entity colors).
+const PIP_COLOR: Record<LiveTopBarConnectionState, string> = {
+  connected: 'bg-emerald-400',
+  reconnecting: 'bg-amber-400',
+  failed: 'bg-destructive',
+};
 
 export function LiveTopBar({
   sessionName,
@@ -57,11 +86,22 @@ export function LiveTopBar({
   onEndgame,
   onExit,
   labels,
+  elapsedMs,
+  connectionState,
 }: LiveTopBarProps): ReactElement {
   const isHost = viewerRole === 'Host';
   const isPaused = status === 'Paused';
 
   const statusLabel = isPaused ? labels.statusPaused : labels.statusInProgress;
+
+  // G4 — derive timer + pip render state (defensive: only render if both prop + label provided).
+  const showTimer = elapsedMs != null;
+  const elapsedFormatted = showTimer ? formatElapsedTime(elapsedMs) : null;
+  const showPip = connectionState != null;
+  const pipAriaLabel =
+    showPip && labels.connectionStateAriaLabels
+      ? labels.connectionStateAriaLabels[connectionState]
+      : undefined;
 
   return (
     <header
@@ -89,6 +129,32 @@ export function LiveTopBar({
           <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
             {labels.turnLabelResolved}
           </span>
+        )}
+
+        {/* G4 — live elapsed-time chip (monospace HH:MM:SS) */}
+        {showTimer && (
+          <span
+            data-slot="session-live-top-bar-timer"
+            aria-label={labels.elapsedTimeAriaLabel}
+            className="hidden shrink-0 rounded-md bg-card/60 px-2 py-0.5 font-mono text-xs
+              tabular-nums text-foreground/90 sm:inline"
+          >
+            {elapsedFormatted}
+          </span>
+        )}
+
+        {/* G4 — connection-state pip (3px circle, entity colors) */}
+        {showPip && (
+          <span
+            data-slot="session-live-top-bar-connection-pip"
+            data-connection-state={connectionState}
+            role="status"
+            aria-label={pipAriaLabel}
+            className={[
+              'inline-block h-2 w-2 shrink-0 rounded-full',
+              PIP_COLOR[connectionState],
+            ].join(' ')}
+          />
         )}
       </div>
 

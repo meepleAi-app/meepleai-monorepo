@@ -66,11 +66,9 @@ internal static class LiveGameSessionMapper
             Notes = domain.Notes,
             AgentMode = (int)domain.AgentMode,
             ChatSessionId = domain.ChatSessionId,
-            // RowVersion is ValueGeneratedOnAddOrUpdate backed by a Postgres trigger
-            // (see migration LiveSessionRowVersionTrigger, Issue #2097).
-            // On INSERT: pass Array.Empty<byte>() — the trigger overwrites it with clock_timestamp().
-            // On UPDATE: pass the stale token from Domain so EF can enforce optimistic concurrency.
-            RowVersion = domain.RowVersion.Length > 0 ? domain.RowVersion : Array.Empty<byte>()
+            // Xmin is Postgres-system-owned (Issue #2305); EF round-trips it via xid mapping.
+            // Mapper passes the current domain value back so EF emits WHERE xmin = @original.
+            Xmin = domain.Xmin
         };
 
         // Child collections — relational tables, not jsonb.
@@ -265,7 +263,7 @@ internal static class LiveGameSessionMapper
             agentMode: (AgentSessionMode)entity.AgentMode,
             chatSessionId: entity.ChatSessionId,
             turnAdvancePolicy: (TurnAdvancePolicy)entity.TurnAdvancePolicy,
-            rowVersion: entity.RowVersion,
+            xmin: entity.Xmin,
             players: players,
             teams: teams,
             turnOrder: turnOrder,

@@ -1,9 +1,11 @@
 /**
  * HubGameCard — public catalog card variant for `/hub/games` (#1166).
  * Pure presentational. Cover gradient + entity chip + title + rating + publisher.
- * Click → /hub/games/[id] (which forwards to the canonical detail at
- * /shared-games/[id]). Issue #2043 Bug 3: was previously linking to a
- * non-existent /games/[id] route, producing 404 on every card click.
+ *
+ * Click → `/games/[id]` (canonical authenticated game detail). Previously
+ * linked at `/hub/games/[id]` (#2043 Bug 3 workaround); Issue #2153 retires
+ * the `/hub/*` namespace, so the card now points at the canonical detail
+ * route directly and skips the redirect hop.
  */
 'use client';
 
@@ -30,7 +32,7 @@ export function HubGameCard({ game, onClick }: HubGameCardProps) {
   const showImage = !shouldUsePlaceholder(coverSrc);
   return (
     <Link
-      href={`/hub/games/${game.id}`}
+      href={`/games/${game.id}`}
       data-slot="hub-game-card"
       onClick={() => onClick?.(game.id)}
       className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/25"

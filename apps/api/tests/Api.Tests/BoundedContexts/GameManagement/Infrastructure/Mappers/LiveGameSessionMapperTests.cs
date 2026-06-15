@@ -56,7 +56,7 @@ public class LiveGameSessionMapperTests
     }
 
     [Fact]
-    public void ToEntity_PreservesRowVersion_ForOptimisticConcurrency()
+    public void ToEntity_PreservesXmin_ForOptimisticConcurrency()
     {
         var session = LiveGameSession.Create(
             id: Guid.NewGuid(),
@@ -65,7 +65,10 @@ public class LiveGameSessionMapperTests
 
         var entity = LiveGameSessionMapper.ToEntity(session);
 
-        entity.RowVersion.Should().NotBeNull(
-            "EF needs a non-null RowVersion to evaluate concurrency token equality on UPDATE");
+        // Xmin is server-owned (Postgres assigns on INSERT/UPDATE). For a fresh domain
+        // aggregate the value is 0; EF will overwrite it after SaveChangesAsync. The
+        // contract here is that the mapper round-trips whatever value the domain currently
+        // holds — not that the value is non-zero at this point.
+        entity.Xmin.Should().Be(session.Xmin);
     }
 }

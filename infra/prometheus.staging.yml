@@ -21,6 +21,8 @@ alerting:
 
 rule_files:
   - '/etc/prometheus/prometheus-rules.yml'
+  # Issue #2019 — self-hosted GitHub Actions runner availability alerts.
+  - '/etc/prometheus/runner-availability.yml'
 
 scrape_configs:
   - job_name: 'prometheus'

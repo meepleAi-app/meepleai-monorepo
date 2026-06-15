@@ -22,14 +22,15 @@
       1024,
       1440
     ],
-    "designer_approved_by": "",
-    "designer_approved_on": "",
+    "designer_approved_by": "user@meepleAi (self-waiver P250, single-person team)",
+    "designer_approved_on": "2026-06-14",
     "story_path": "apps/web/src/app/(authenticated)/knowledge-base/[id]/page.stories.tsx",
-    "fixtures_path": "",
+    "fixtures_path": "apps/web/src/app/(authenticated)/knowledge-base/[id]/page.stories.tsx",
     "design_intent": "forward-refactor",
     "viewports": [
       "desktop"
     ],
-    "obsolete_tracking_issue": "#2223"
+    "obsolete_tracking_issue": "#2311",
+    "ds17_phase_c_iteration_pr": "#2311 FE-4"
   }
 }

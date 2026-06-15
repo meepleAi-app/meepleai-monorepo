@@ -22,6 +22,23 @@
 > The two are equivalent: HTML for browser preview, JSX for codebase clone. The index lists the
 > HTML file as canonical when both exist.
 
+> **State variants (DS-17 Phase 1, #2071)**: a mockup that ships multiple states uses the
+> `<base>-state-NN-<label>.{html,jsx}` pattern with a fixed `NN` slot per state. See the
+> dedicated section ["State variants"](./README.md#state-variants-2071-ds-17-phase-1)
+> in `README.md` for the canonical table. Quick reference:
+>
+> | Suffix | State |
+> |---|---|
+> | _(none — bare `<base>.html`)_ | `01-default` |
+> | `-state-02-empty` | empty / zero-data |
+> | `-state-03-loading` | skeleton / loading |
+> | `-state-04-error` | error / failure |
+> | `-state-05-sse` | live stream (opt-in) |
+> | `-state-06-offline` | offline / PWA fallback (opt-in) |
+>
+> Enforcement: `pnpm lint:mockup-state-naming` fails CI when a `*-state-*` file violates
+> the pattern (missing `NN`, unknown label, or `NN` outside the catalog).
+
 ## Dev fixtures (design system, prototype, tokens)
 
 | File | Type | Note |
@@ -74,10 +91,15 @@
 | `sp4-discover.html` | page-mock | `/discover` |
 | `sp4-game-chat-tab.html` | component-mock | Chat tab embedded in `/library/[gameId]/agent`, `/games/[id]` |
 | `sp4-game-detail.html` | page-mock | `/games/[id]`, `/library/[gameId]`, `/private-games/[id]` |
+| `sp4-game-detail-tab-rules.html` | sub-tab placeholder (#2148) | `/games/[id]/rules` — AI placeholder, designer review required |
+| `sp4-game-detail-tab-reviews.html` | sub-tab placeholder (#2148) | `/games/[id]/reviews` — friend-first M1 variant, designer review required |
+| `sp4-game-detail-tab-strategies.html` | sub-tab placeholder (#2148) | `/games/[id]/strategies` — AI placeholder, designer review required |
+| `sp4-game-detail-tab-chat.html` | sub-tab placeholder (#2148) | `/games/[id]/chat` — standalone (was partial via composite), designer review required |
+| `sp4-game-detail-tab-faqs.html` | sub-tab placeholder (#2148) | `/games/[id]/faqs` — game-scoped variant of public FAQ, designer review required |
 | `sp4-game-nights-index.html` | page-mock | `/game-nights` |
 | `sp4-games-index.html` | page-mock | `/games` |
 | `sp4-kb-detail.html` | page-mock | `/knowledge-base/[id]` (deferred — G4 v3 pivot) |
-| `sp4-kb-globale.html` | page-mock | `/knowledge-base/global` |
+| `sp4-kb-global.html` | page-mock | `/knowledge-base/global` |
 | `sp4-kb-hub.html` | page-mock | `/knowledge-base` |
 | `sp4-library-desktop.html` | page-mock | `/library` (Wave B.3 done) |
 | `sp4-library-mobile.html` | page-mock | `/library` (mobile <768px variant, SP8 brief 2026-05-30, IA semplificata 3 tab + overflow) |
@@ -165,18 +187,15 @@
 > (persona Aaron, IA consolidata post #871). Vedi audit
 > `docs/for-developers/audits/2026-06-08-mockup-portfolio-review.md` Cluster B/C/E.
 
-| File | Type | Mapped routes |
-|------|------|---------------|
-| `sp6-libro-game-index.html` | page-mock | `/gamebook` (lista manuali Sara) |
-| `sp6-libro-game-photo-upload.html` | page-mock | `/gamebook/upload` (wizard 3-step camera) |
-| `sp6-libro-game-quota-credits.jsx` | component-mock | `/gamebook/checkout` (full checkout flow Sara, 4-step modal — distinto dall'overlay Aaron `librogame-runthrough-quota-credits.html`) |
-| `sp6-libro-game-resume-state.html` | page-mock | `/library/[gameId]/play` (resume picker SP6 variant — duplicato di `librogame-runthrough-resume-picker.html`, cleanup pending Cluster A audit 2026-06-08) |
+_The `sp6-libro-game-*` family was retired by #2152 (#2025 cleanup completion).
+Canonical equivalents live under `librogame-runthrough-*` (Aaron Iter 1 cluster
+below) and the `/gamebook` family pages render directly from those._
 
 ## SP7 — Game nights
 
 | File | Type | Mapped routes |
 |------|------|---------------|
-| `sp7-game-night-create.html` | page-mock | `/game-nights/new` |
+| `sp7-game-night-new.html` | page-mock | `/game-nights/new` |
 | `sp7-game-night-detail-rsvp.html` | page-mock | `/game-nights/[id]`, `/game-nights/[id]/edit` |
 | `sp7-game-night-live.html` | page-mock | `/game-nights/[id]/live` (issue #487 screen #4+#7) |
 | `sp7-game-night-transition.html` | component-mock | Modal opened from `/game-nights/[id]/live` (issue #487 screen #5) |
@@ -193,9 +212,9 @@
 | File | Type | Mapped routes |
 |------|------|---------------|
 | `librogame-game-night-storyboard.html` | page-mock | `/game-nights/[id]` (storyboard variant — was `nanolith-game-night-storyboard.html` pre-rename post-IA consolidation #871, sync inline 2026-06-08 #2025) |
-| `nanolith-nav-bottom-mobile.html` | component-mock | Mobile bottom-nav primitive (global) |
-| `nanolith-nav-chat-panel.html` | component-mock | Chat slide-over panel (used globally via `useChatPanel`) |
-| `nanolith-nav-topbar.html` | component-mock | Top-bar primitive (global) |
+| `primitive-nav-bottom-mobile.html` | component-mock | Mobile bottom-nav primitive (global, was `nanolith-nav-bottom-mobile.html` pre-#2152) |
+| `primitive-nav-chat-panel.html` | component-mock | Chat slide-over panel (used globally via `useChatPanel`, was `nanolith-nav-chat-panel.html` pre-#2152) |
+| `primitive-nav-topbar.html` | component-mock | Top-bar primitive (global, was `nanolith-nav-topbar.html` pre-#2152) |
 | `librogame-runthrough-encounter-cheatsheet.html` | page-mock | `/library/[gameId]/play/[campaignId]/encounter` (gap-coverage 2026-05-12, PR #1056) |
 | `librogame-runthrough-error-states.html` | component-mock | Trasversale: chat (N1/N2) · translate (N3) · encounter — stream-timeout / OCR-fail / LLM-503 / segmentation-fail (PR #1056) |
 | `librogame-runthrough-game-detail.html` | page-mock | `/library/[gameId]` (libro variant, PR #1037) |

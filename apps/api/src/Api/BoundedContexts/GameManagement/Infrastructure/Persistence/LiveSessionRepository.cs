@@ -148,14 +148,14 @@ internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionReposi
         var snapshotRoundScores = snapshot.RoundScores.ToList();
         var snapshotTurnRecords = snapshot.TurnRecords.ToList();
 
-        // ── Root entity: use Entry-based update so EF uses OriginalValues.RowVersion ──────
+        // ── Root entity: use Entry-based update so EF uses OriginalValues.Xmin (xmin concurrency token) ──────
         var trackedRoot = DbContext.ChangeTracker.Entries<LiveGameSessionEntity>()
             .FirstOrDefault(e => e.Entity.Id == session.Id)?.Entity;
 
         if (trackedRoot == null)
         {
             // Not in cache: attach snapshot as disconnected entity and let EF generate
-            // a standard UPDATE WHERE id=... AND row_version=@original.
+            // a standard UPDATE WHERE id=... AND xmin=@original.
             snapshot.Players.Clear();
             snapshot.Teams.Clear();
             snapshot.RoundScores.Clear();

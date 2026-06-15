@@ -138,3 +138,33 @@ These mockups carry user-side BGG surfaces forbidden per #1903 ADR. Phase B init
 | Naming consistency | 5.0/10 |
 | Route architecture | 6.0/10 |
 | **Overall structural** | **5.5/10** |
+
+## Nav-chrome D7 chat-panel — deprecated (#2321, 2026-06-14)
+
+Decision locked in #2150 (Hybrid pragmatico backfill): the D7 chat-panel
+primitive (`primitive-nav-chat-panel.html`, was `nanolith-nav-chat-panel.html`
+pre-#2317) is **deprecated**. No demand evidence + no runtime backfill planned.
+The corresponding `useChatPanel` runtime hook stays untouched; the primitive
+itself is retired from the design system canonical set.
+
+- [x] **#2321 — `primitive-nav-chat-panel.fidelity.json` `design_intent` flipped to `forward-refactor-obsolete`** with `obsolete_tracking_issue: "#2321"`. Designer review queue entry below tracks final approval.
+- [ ] Designer sign-off on the deprecation (this checkbox is a paper trail — the runtime decision is already shipped via #2150).
+
+## US-9 sub-tab coverage — AI placeholder stubs (#2148, 2026-06-14)
+
+5 game-detail sub-tabs were shipped without designer-validated mockup
+coverage (PRD f3 #1929 game-detail rebuild). To unblock US-9 conformity
+testing in the short term, AI-generated low-fidelity placeholders were
+committed under `design_intent: "forward-refactor"`. **Designer review is
+required** to pin acceptance values, polish typography, add state variants
+(loading / empty / error), and graduate each to `design_intent: "current"`.
+
+- [ ] **#2148 — `sp4-game-detail-tab-rules.{html,jsx}`** — `/games/[id]/rules`. Sections: setup, turn flow, victory conditions, with PDF citations. Floating "Ask Agent" CTA.
+- [ ] **#2148 — `sp4-game-detail-tab-reviews.{html,jsx}`** — `/games/[id]/reviews`. Friend-first commentary M1 variant — friends section above community per gap report. Avatar + rating + helpful-meta.
+- [ ] **#2148 — `sp4-game-detail-tab-strategies.{html,jsx}`** — `/games/[id]/strategies`. Community-shared strategy cards with difficulty pill + view/like counters.
+- [ ] **#2148 — `sp4-game-detail-tab-chat.{html,jsx}`** — `/games/[id]/chat`. Standalone (replaces partial coverage via `sp4-game-chat-tab.html` composite). User/agent message bubbles + citation footer + composer.
+- [ ] **#2148 — `sp4-game-detail-tab-faqs.{html,jsx}`** — `/games/[id]/faqs`. Game-scoped variant of public `sp3-faq-enhanced.html`. Collapsible `<details>` cards with view/helpful counters.
+
+Once a designer reviews each pair, flip the corresponding `fidelity.json`
+`design_intent` from `forward-refactor` to `current` (and set
+`designer_approved_by` + `designer_approved_on`) to mark the row done.

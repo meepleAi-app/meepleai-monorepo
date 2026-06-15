@@ -135,9 +135,14 @@ internal sealed class LiveGameSessionEntityConfiguration : IEntityTypeConfigurat
 
         // --- Concurrency Token ---
 
-        builder.Property(e => e.RowVersion)
-            .HasColumnName("row_version")
-            .IsRowVersion();
+        // Optimistic concurrency via PostgreSQL's xmin system column (Issue #2305).
+        // Replaces the legacy bytea row_version + ef_update_row_version() trigger.
+        // Server-owned, collision-safe (xmin = unique transaction id per row UPDATE).
+        builder.Property(e => e.Xmin)
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
 
         // --- Indexes ---
 

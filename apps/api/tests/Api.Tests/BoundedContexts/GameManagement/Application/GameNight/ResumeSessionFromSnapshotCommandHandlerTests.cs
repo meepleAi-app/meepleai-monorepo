@@ -108,7 +108,7 @@ public sealed class ResumeSessionFromSnapshotCommandHandlerTests
                 UpdatedAt = DateTime.UtcNow,
                 AgentMode = (int)AgentSessionMode.None,
                 ScoringConfigJson = "{}",
-                RowVersion = new byte[] { 1 }
+                Xmin = 1u
             });
             _dbContext.SaveChanges();
         }

@@ -71,7 +71,7 @@ public sealed class StartImprovvisataSessionCommandHandlerTests
                     UpdatedAt = session.UpdatedAt,
                     AgentMode = (int)session.AgentMode,
                     ScoringConfigJson = "{}",
-                    RowVersion = Array.Empty<byte>()
+                    Xmin = 0u
                 });
                 return Task.CompletedTask;
             });

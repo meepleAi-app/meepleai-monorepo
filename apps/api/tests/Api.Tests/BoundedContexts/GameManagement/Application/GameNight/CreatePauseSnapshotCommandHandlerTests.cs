@@ -116,7 +116,7 @@ public sealed class CreatePauseSnapshotCommandHandlerTests
                 UpdatedAt = DateTime.UtcNow,
                 AgentMode = (int)AgentSessionMode.None,
                 ScoringConfigJson = "{}",
-                RowVersion = new byte[] { 1 }
+                Xmin = 1u
             });
             _dbContext.SaveChanges();
         }
@@ -298,7 +298,7 @@ public sealed class CreatePauseSnapshotCommandHandlerTests
             UpdatedAt = DateTime.UtcNow,
             AgentMode = (int)AgentSessionMode.Assistant,
             ScoringConfigJson = "{}",
-            RowVersion = new byte[] { 1 }
+            Xmin = 1u
         });
         await _dbContext.SaveChangesAsync();
 

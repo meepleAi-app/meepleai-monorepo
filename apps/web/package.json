@@ -55,6 +55,8 @@
     "audit-mockups:create-issues": "node scripts/audit-mockups/create-tracking-issues.mjs",
     "audit-mockups:cluster-queue": "node scripts/audit-mockups/generate-cluster-review-queue.mjs",
     "lint:bgg": "node scripts/lint-bgg.mjs",
+    "lint:bgg-mockups": "node scripts/lint-bgg-mockups.mjs",
+    "lint:mockup-state-naming": "node scripts/validate-state-naming.mjs",
     "lint:fidelity": "node scripts/mockup-annotations/validate-fidelity.mjs --all",
     "mockup-annotations:inject": "node scripts/mockup-annotations/inject-annotations.mjs",
     "mockup-annotations:audit": "node scripts/mockup-annotations/audit-coverage.mjs",

@@ -347,8 +347,13 @@ public class WikimediaCommonsClientTests
     }
 
     [Fact]
-    public async Task FetchLicenseAsync_HttpCancellation_RethrowsOperationCanceledException()
+    public async Task FetchLicenseAsync_CallerCancellation_RethrowsOperationCanceledException()
     {
+        // Issue #2157: real caller cancellation MUST propagate so the batch
+        // handler can abort. We assert this by using a CancellationTokenSource
+        // that IS cancelled — the client's `when (ct.IsCancellationRequested)`
+        // guard rethrows, while HttpClient.Timeout leaks (next test) are
+        // mapped to NotAvailable so the batch can continue with the next game.
         var handler = new Mock<HttpMessageHandler>();
         handler.Protected()
             .Setup<Task<HttpResponseMessage>>("SendAsync",
@@ -358,8 +363,39 @@ public class WikimediaCommonsClientTests
 
         var client = CreateClient(handler.Object);
 
-        await client.Invoking(c => c.FetchLicenseAsync("Cover.jpg", CancellationToken.None))
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await client.Invoking(c => c.FetchLicenseAsync("Cover.jpg", cts.Token))
             .Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task FetchLicenseAsync_HttpClientTimeout_ReturnsNotAvailable_DoesNotRethrow()
+    {
+        // Issue #2157: HttpClient.Timeout firing raises TaskCanceledException
+        // (subclass of OperationCanceledException) WITHOUT cancelling the
+        // caller token. The client MUST distinguish this from a real caller
+        // cancel and map it to NotAvailable so the batch handler can continue
+        // with the next game instead of aborting the entire batch.
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ThrowsAsync(new TaskCanceledException("HttpClient timeout simulation"));
+
+        var client = CreateClient(handler.Object);
+
+        using var callerCts = new CancellationTokenSource();
+        // callerCts is NOT cancelled — the TaskCanceledException originates from
+        // HttpClient.Timeout, not the caller's token.
+        var result = await client.FetchLicenseAsync("Cover.jpg", callerCts.Token);
+
+        result.Should().Be(CommonsLicenseResult.NotAvailable(),
+            "HttpClient.Timeout is mapped to NotAvailable so the batch continues with the next game");
+        callerCts.IsCancellationRequested.Should().BeFalse(
+            "sanity check: caller token was never cancelled in this scenario");
     }
 
     [Fact]
@@ -590,8 +626,11 @@ public class WikimediaCommonsClientTests
     }
 
     [Fact]
-    public async Task FetchImageBytesAsync_Cancellation_RethrowsOperationCanceledException()
+    public async Task FetchImageBytesAsync_CallerCancellation_RethrowsOperationCanceledException()
     {
+        // Issue #2157: real caller cancellation MUST propagate. Asserted via
+        // a CancellationTokenSource that IS cancelled so the
+        // `when (ct.IsCancellationRequested)` guard rethrows.
         var handler = new Mock<HttpMessageHandler>();
         handler.Protected()
             .Setup<Task<HttpResponseMessage>>("SendAsync",
@@ -601,8 +640,37 @@ public class WikimediaCommonsClientTests
 
         var client = CreateClient(handler.Object);
 
-        await client.Invoking(c => c.FetchImageBytesAsync("Cover.jpg", CancellationToken.None))
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await client.Invoking(c => c.FetchImageBytesAsync("Cover.jpg", cts.Token))
             .Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task FetchImageBytesAsync_HttpClientTimeout_ReturnsNull_DoesNotRethrow()
+    {
+        // Issue #2157: HttpClient.Timeout firing raises TaskCanceledException
+        // (subclass of OperationCanceledException) WITHOUT cancelling the
+        // caller token. The client MUST distinguish this from a real caller
+        // cancel and map it to null so the batch handler can continue with
+        // the next game instead of aborting the entire batch.
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ThrowsAsync(new TaskCanceledException("HttpClient timeout simulation"));
+
+        var client = CreateClient(handler.Object);
+
+        using var callerCts = new CancellationTokenSource();
+        var result = await client.FetchImageBytesAsync("Cover.jpg", callerCts.Token);
+
+        result.Should().BeNull(
+            "HttpClient.Timeout is mapped to null so the batch continues with the next game");
+        callerCts.IsCancellationRequested.Should().BeFalse(
+            "sanity check: caller token was never cancelled in this scenario");
     }
 
     [Fact]

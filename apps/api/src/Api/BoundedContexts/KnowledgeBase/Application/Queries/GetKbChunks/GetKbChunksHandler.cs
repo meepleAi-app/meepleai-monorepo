@@ -161,7 +161,8 @@ internal sealed class GetKbChunksHandler : IQueryHandler<GetKbChunksQuery, KbChu
                 c.Id,
                 c.PageNumber,
                 c.ChunkIndex,
-                c.Content
+                c.Content,
+                c.UsageCount
             })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -190,7 +191,8 @@ internal sealed class GetKbChunksHandler : IQueryHandler<GetKbChunksQuery, KbChu
             HeadingPath: headingPaths.TryGetValue(r.Id, out var path) ? path : Array.Empty<string>(),
             Snippet: TruncateSnippet(r.Content),
             PageNumber: r.PageNumber,
-            VectorId: r.Id.ToString("N")
+            VectorId: r.Id.ToString("N"),
+            UsedInChats: r.UsageCount
         )).ToList();
 
         return new KbChunksListResponse(items, nextCursor, totalCount);

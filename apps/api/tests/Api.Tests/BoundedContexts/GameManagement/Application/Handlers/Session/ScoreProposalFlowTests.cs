@@ -90,7 +90,7 @@ public sealed class ScoreProposalFlowTests
             Visibility = 0,
             AgentMode = 0,
             ScoringConfigJson = "{}",
-            RowVersion = new byte[] { 1 }
+            Xmin = 1u
         });
 
         _dbContext.SessionParticipants.Add(new SessionParticipantEntity

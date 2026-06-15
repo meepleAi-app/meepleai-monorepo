@@ -33,7 +33,7 @@ public class SlugifierTests
     [Theory]
     [InlineData("Café Royal", "cafe-royal")]
     [InlineData("Pingüino", "pinguino")]
-    [InlineData("Über Bahn", "ber-bahn")]
+    [InlineData("Über Bahn", "uber-bahn")]
     public void Slugify_DiacriticsAndAccents_StripsToAscii(string input, string expected)
     {
         var result = Slugifier.Slugify(input);

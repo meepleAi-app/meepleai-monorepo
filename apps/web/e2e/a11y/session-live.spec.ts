@@ -325,9 +325,18 @@ test.describe('Session live — accessibility @a11y', () => {
     expect(aboveFold).toBe(1);
   });
 
-  // ── WAI-ARIA tablist structure: mobile bottom-nav ───────────────────────────
+  // ── WAI-ARIA: mobile bottom-sheet drawer (G1 #2374 T9 sess.46r) ────────────
+  //
+  // T9 refactored MobileBody from a 4-tab bottom-nav (Foundation #746) to the
+  // mockup canonical bottom-sheet pattern: main = full-width ChatAgentPanel +
+  // ActionLogTimeline; floating action button opens MobileBottomSheetDrawer
+  // hosting the 4 polymorphic tabs (Score/Turn/Widget/Notes) — same content
+  // as desktop RIGHT. The old `[data-slot="mobile-body-tab"]` surface no
+  // longer exists; tabs now live inside `[data-slot="mobile-bottom-sheet"]`.
+  //
+  // Reference mockup: admin-mockups/design_files/sp4-session-skeleton-parts.jsx L266-286.
 
-  test('WAI-ARIA tablist: mobile bottom-nav tabs have correct role + aria-selected + tabindex', async ({
+  test('WAI-ARIA: mobile main column renders ChatAgentPanel + ActionLogTimeline (no bottom-nav)', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 375, height: 812 });
@@ -335,34 +344,69 @@ test.describe('Session live — accessibility @a11y', () => {
     // MobileBody is hidden on desktop (lg:hidden) — use mobile viewport.
     await expect(page.locator('[data-slot="mobile-body"]')).toBeVisible();
 
-    // Confirm tablist role on the container.
-    const tablist = page.locator('[data-slot="mobile-body"] [role="tablist"]');
+    // Mockup canonical: main column is full-width = ChatAgentPanel + ActionLogTimeline.
+    const mobileBody = page.locator('[data-slot="mobile-body"]');
+    await expect(mobileBody.locator('[data-slot="chat-agent-panel"]')).toBeVisible();
+    await expect(mobileBody.locator('[data-slot="action-log-timeline"]')).toBeVisible();
+
+    // Legacy bottom-nav surface MUST NOT exist (T9 deletion).
+    await expect(page.locator('[data-slot="mobile-body-tab"]')).toHaveCount(0);
+  });
+
+  test('WAI-ARIA: mobile FAB opens bottom-sheet drawer with 4 polymorphic tabs', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await gotoSessionLive(page);
+    await expect(page.locator('[data-slot="mobile-body"]')).toBeVisible();
+
+    // Floating action button is the entry point to the drawer.
+    const fab = page.locator('[data-slot="mobile-body-open-sheet"]');
+    await expect(fab).toBeVisible();
+    await fab.click();
+
+    // Drawer mounts with role="dialog" + aria-modal (Radix Dialog default).
+    const drawer = page.locator('[data-slot="mobile-bottom-sheet"]');
+    await expect(drawer).toBeVisible();
+    await expect(drawer).toHaveAttribute('role', 'dialog');
+    await expect(drawer).toHaveAttribute('aria-modal', 'true');
+
+    // Tab strip = role="tablist" with 4 tabs: Score / Turn / Widget / Notes.
+    const tablist = drawer.locator('[role="tablist"]');
     await expect(tablist).toBeVisible();
     await expect(tablist).toHaveAttribute('aria-orientation', 'horizontal');
 
-    // 4 tabs: score (default active) | log | tools | chat.
-    const tabs = page.locator('[data-slot="mobile-body-tab"]');
+    const tabs = drawer.locator('[role="tab"]');
     await expect(tabs).toHaveCount(4);
 
-    // First tab ('score') is active by default: aria-selected="true" + tabIndex=0.
-    const scoreTab = page.locator('[data-slot="mobile-body-tab"][data-tab="score"]');
-    await expect(scoreTab).toHaveAttribute('role', 'tab');
-    await expect(scoreTab).toHaveAttribute('aria-selected', 'true');
+    // Default active tab = score (1st in order).
+    await expect(tabs.nth(0)).toHaveAttribute('aria-selected', 'true');
+    await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'false');
+    await expect(tabs.nth(2)).toHaveAttribute('aria-selected', 'false');
+    await expect(tabs.nth(3)).toHaveAttribute('aria-selected', 'false');
+  });
 
-    // Remaining tabs are inactive: aria-selected="false" + tabIndex=-1 (roving tabindex).
-    const logTab = page.locator('[data-slot="mobile-body-tab"][data-tab="log"]');
-    const toolsTab = page.locator('[data-slot="mobile-body-tab"][data-tab="tools"]');
-    const chatTab = page.locator('[data-slot="mobile-body-tab"][data-tab="chat"]');
+  test('axe-core: no WCAG 2.1 AA violations on mobile bottom-sheet open state', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    // Skip animation timing (consistent with PauseOverlay/EndgameDialog axe scans).
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await gotoSessionLive(page, '?msheet=open');
+    await expect(page.locator('[data-slot="mobile-bottom-sheet"]')).toBeVisible();
 
-    await expect(logTab).toHaveAttribute('aria-selected', 'false');
-    await expect(toolsTab).toHaveAttribute('aria-selected', 'false');
-    await expect(chatTab).toHaveAttribute('aria-selected', 'false');
+    const results = await new AxeBuilder({ page })
+      .withTags(WCAG_TAGS)
+      .exclude('#webpack-dev-server-client-overlay')
+      .analyze();
 
-    // NOTE: ArrowKey keyboard cycling is NOT wired in the Foundation sub-PR
-    // (MobileBody has no onKeyDown handler — Interactions sub-PR adds
-    // useTablistKeyboardNav). This test verifies the WAI-ARIA DOM structure
-    // contract only; keyboard cycling behaviour is tested in the Interactions
-    // sub-PR E2E specs.
+    if (results.violations.length > 0) {
+      const summary = results.violations
+        .map(v => `[${v.impact}] ${v.id}: ${v.help} (${v.nodes.length} nodes)`)
+        .join('\n');
+      console.log('axe violations (mobile-bottom-sheet):\n' + summary);
+    }
+    expect(results.violations).toEqual([]);
   });
 
   // ─────────────────────────────────────────────────────────────────────────────

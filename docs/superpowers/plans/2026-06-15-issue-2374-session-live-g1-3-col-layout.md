@@ -122,8 +122,10 @@ export interface ChatAgentPanelProps {
 - ChatAgentPanel header uses `bg-entity-agent/10` + `text-entity-agent`.
 - Active tab uses `border-entity-session` per mockup `eHsl(t.entity)` mapping: Score→session, Turn→player, Widget→toolkit, Notes→kb.
 
-### D-5 Mobile fallback (deferred but scoped)
-G1 only adds the desktop 60/40. Mobile (`MobileBody`) keeps current bottom-nav. The mockup's bottom-sheet drawer pattern (parts.jsx L266–286) is **out of scope** here.
+### D-5 Mobile fallback (revised 2026-06-15 sess.46r — INCLUDED via T9)
+~~G1 only adds the desktop 60/40. Mobile (`MobileBody`) keeps current bottom-nav. The mockup's bottom-sheet drawer pattern (parts.jsx L266–286) is **out of scope** here.~~
+
+**Revised**: Per spec-panel critique (sess.46r) the mockup's bottom-sheet drawer pattern is canonical (DEC-4 user-locked). G1 ships full mobile parity via **T9** (new task, see §4). Mobile = main full-width (ChatAgentPanel + ActionLogTimeline) + floating action button → bottom-sheet drawer (Score/Turn/Widget/Note tabs). Effort impact: +2.5 days (subtotal 4.75d → 7.25d).
 
 ### D-6 Polymorphic Score/Turn renderers
 G1 introduces the **tab plumbing** (Score/Turn/Widget/Notes), not the polymorphic renderer interiors:
@@ -247,12 +249,44 @@ Per CLAUDE.md L302: "Visual Gate REMOVED 2026-05-20 — replacement = manual des
 
 **Effort:** 0.25 day.
 
-### Sequencing
-T1 → T2 (parallel-safe) → T3 → T5 → T4 → T6 → T7 → T8.
-T1 and T2 are independent; T3 must precede T4 (T4 imports `ChatAgentPanel`); T6 needs T4 deployed; T7 captures the final state.
+### T9 — Mobile bottom-sheet drawer (added 2026-06-15 sess.46r per spec-panel DEC-4)
+**Test changes** (`__tests__/MobileBody.test.tsx`):
+1. Rename current tab-based assertions to drawer-based (`bottomSheetOpen` / `bottomSheetTab`).
+2. New test: `default mobile renders ChatAgentPanel + ActionLogTimeline full-width`.
+3. New test: `tapping floating action button opens bottom-sheet drawer with Score/Turn/Widget/Note tabs`.
+4. New test: `bottom-sheet drawer is keyboard-traversable + has focus trap`.
+5. New test: `swipe-down gesture closes drawer (touch handler)`.
+6. New test: `?mtab=turn opens drawer pre-selected to Turn tab (URL SSOT preserved)`.
+7. New test: `axe AA 0 violations on default and drawer-open states`.
 
-### Commits / PR strategy
-One PR per task is overkill at 4-6 day total; **single feature branch** `feature/issue-2374-session-live-g1-3col-layout` with **8 logical commits**:
+**New primitive** (`components/features/session-live/MobileBottomSheetDrawer.tsx`):
+- Wraps Radix UI `Sheet` (already in `components/ui/sheet`) or vaul-style drag handle.
+- Props: `open: boolean`, `onOpenChange: (open: boolean) => void`, `activeTab: LiveTab`, `onTabChange: (tab: LiveTab) => void`, `children: ReactNode`.
+- Header: drag handle (visual cue) + close button. Tab strip directly below.
+- Content area: dispatches active tab to passed children (render-prop pattern OR slotted children matching mockup parts.jsx L266-286).
+- data-slot=`mobile-bottom-sheet`.
+
+**Impl** (`MobileBody.tsx`):
+- DELETE bottom-nav (4 tabs) layout.
+- Main area = `ChatAgentPanel` + `ActionLogTimeline` stacked (mirror desktop LEFT 60%).
+- Floating action button bottom-right opens `MobileBottomSheetDrawer` with `LiveTab` tabs.
+- Mobile `mtab` URL SSOT preserved: legacy `?mtab=score|log|tools|chat` → `?mtab=score|turn|widget|notes` (same back-compat map as desktop, log absorbed into ActionLogTimeline always-visible).
+- Refactor `parseMobileTab` to new `LiveTab` union (reuses desktop's).
+- E2E `apps/web/e2e/session-live-mobile.spec.ts` (new): 375×667 viewport — default render, drawer open, tab switch, swipe close.
+
+**Impl** (`SessionLiveView.tsx`):
+- L820–868 `mobileContent` switch: rewrite — main column always = ChatAgentPanel + ActionLogTimeline; drawer content = same switch as `desktopRightColumn`.
+- Wire `mobileBottomSheetOpen` state (URL SSOT `?msheet=open|closed`, default closed).
+- Reuse desktop's `desktopRightColumn` switch logic (DRY).
+
+**Effort:** 2.5 days (1.5d primitive + tests, 1d SessionLiveView wiring + E2E).
+
+### Sequencing (revised 2026-06-15 sess.46r)
+T1 → T2 (parallel-safe) → T3 → T5 → T4 → T6 → T7 → T8 → T9.
+T1 and T2 are independent; T3 must precede T4 (T4 imports `ChatAgentPanel`); T6 needs T4 deployed; T7 captures the final state; **T9 added at the end because it reuses T3 `ChatAgentPanel` + T4 `desktopRightColumn` switch logic + T1 `LiveTab` union**.
+
+### Commits / PR strategy (revised)
+**Single feature branch** `feature/issue-2374-3col-layout` with **9-10 logical commits**:
 1. `test(session-live): T1 RightColumnTabs new tab keys (score/turn/widget/notes)`
 2. `feat(session-live): T1 update RightColumnTabs tab keys`
 3. `test(session-live): T2 DesktopBody 60/40 grid contract`
@@ -260,7 +294,9 @@ One PR per task is overkill at 4-6 day total; **single feature branch** `feature
 5. `test(session-live): T3 ChatAgentPanel primitive`
 6. `feat(session-live): T3 ChatAgentPanel primitive`
 7. `feat(session-live): T4 refactor SessionLiveView to 60/40 + new tabs (with back-compat)`
-8. `feat(i18n): T5 polymorphic tab keys + chatAgent labels` + `test(e2e): T6 a11y + JSDoc T8`
+8. `feat(i18n): T5 polymorphic tab keys + chatAgent labels`
+9. `test(e2e): T6 a11y desktop + JSDoc T8`
+10. `feat(session-live): T9 mobile bottom-sheet drawer refactor`
 
 ## §5 Primitive contract for #2375 G3 (HARD DEP downstream)
 
@@ -309,12 +345,9 @@ export interface ChatAgentPanelProps {
 **Risk:** Existing bookmarks + deep links to `?tab=chat` would 404-render the wrong panel.
 **Mitigation:** `parseLiveTab` legacy alias map (D-2). Add explicit Vitest test (T4.3) to lock the mapping. Watch for breakage in `apps/web/e2e/a11y/session-live.spec.ts`.
 
-### R-2 (HIGH) — Mobile layout drift
-**Risk:** Mockup defines a bottom-sheet drawer for RIGHT on mobile; current `MobileBody` uses bottom-nav with 4 tabs. Refactor LEFT/RIGHT semantics on desktop must NOT regress mobile.
-**Mitigation:**
-- Keep `MobileBody` untouched in G1.
-- `SessionLiveView` continues to pass `mobileContent` independent of desktop changes.
-- Note in PR description: bottom-sheet drawer parity is **deferred** to a follow-up G-issue (open after G1 merge).
+### R-2 (HIGH → RESOLVED 2026-06-15 sess.46r) — Mobile layout drift
+**Risk:** Mockup defines a bottom-sheet drawer for RIGHT on mobile; current `MobileBody` uses bottom-nav with 4 tabs.
+**Mitigation (revised)**: Implemented in **T9** (new task). Mobile gets a bottom-sheet drawer primitive matching mockup parts.jsx L266–286. Old bottom-nav DELETED. URL SSOT `?mtab=` preserved with same back-compat alias map as desktop (`tools→widget`, `chat→score`, `log` absorbed). E2E mobile viewport tests added (`session-live-mobile.spec.ts`). Risk closed.
 
 ### R-3 (HIGH) — Asse B `useMiniNavConfig` collision
 **Risk:** Parent layout (`sessions/[id]/layout.tsx` L58) registers a top-level tab bar on the Asse B mini-nav slot. The new RIGHT-column tabs sit ABOVE the same surface, which the user may experience as duplicate navigation on the `/live` route.
@@ -341,11 +374,11 @@ export interface ChatAgentPanelProps {
 **Risk:** Issue body claims `apps/web/src/components/features/session-live/scoring/PolymorphicScoreEditor.tsx`; actual location is `apps/web/src/components/sessions/PolymorphicScoreEditor.tsx`.
 **Mitigation:** Surface in PR description; not blocking for G1. Open follow-up `chore: move PolymorphicScoreEditor under features/session-live`.
 
-### R-8 (LOW) — Fidelity meta has `viewports: ["desktop"]`
+### R-8 (LOW → RESOLVED 2026-06-15 sess.46r) — Fidelity meta has `viewports: ["desktop"]`
 **Risk:** Mockup spec is desktop-only; mobile layout has no canonical reference image.
-**Mitigation:** Note in PR description that mobile is unchanged; designer reviews desktop only against `sp4-session-skeleton-live.html`.
+**Mitigation (revised)**: T9 references mockup `sp4-session-skeleton-parts.jsx` L266-286 (`MobileBottomSheet` primitive) as canonical for mobile. Update fidelity meta `viewports: ["desktop", "mobile"]` in T9 alongside the implementation. Designer reviews both viewports in T7.
 
-## §7 Effort estimate breakdown
+## §7 Effort estimate breakdown (revised 2026-06-15 sess.46r)
 
 | Task | Description | Effort |
 |---|---|---|
@@ -357,15 +390,30 @@ export interface ChatAgentPanelProps {
 | T6 | Playwright a11y refresh | 0.5 d |
 | T7 | Visual baseline + designer review prep | 0.25 d |
 | T8 | JSDoc + ADR breadcrumb | 0.25 d |
-| **Subtotal** | | **4.75 d** |
-| Buffer (15%) | Risk R-1, R-3 mitigation refinement | 0.75 d |
-| **Total** | | **~5.5 days** |
+| T9 | **Mobile bottom-sheet drawer (NEW)** | **2.5 d** |
+| **Subtotal** | | **7.25 d** |
+| Buffer (15%) | Risk R-1, R-3 + T9 integration | 1.0 d |
+| **Total** | | **~8.25 days** |
 
-Falls within issue estimate of 4–6 days.
+Exceeds original issue estimate of 4–6 days. Revised effort matches spec-panel critique DEC-4 (mockup mobile parity in-scope). Issue body to be updated post-merge.
 
 ## Critical Files for Implementation
 - `apps/web/src/app/(authenticated)/sessions/[id]/live/_components/SessionLiveView.tsx`
 - `apps/web/src/components/features/session-live/DesktopBody.tsx`
 - `apps/web/src/components/features/session-live/RightColumnTabs.tsx`
-- `apps/web/src/components/features/session-live/ChatAgentPanel.tsx` (NEW)
+- `apps/web/src/components/features/session-live/MobileBody.tsx` (T9 refactor)
+- `apps/web/src/components/features/session-live/ChatAgentPanel.tsx` (NEW T3)
+- `apps/web/src/components/features/session-live/MobileBottomSheetDrawer.tsx` (NEW T9)
 - `apps/web/src/components/features/session-live/index.ts` (barrel update)
+- `apps/web/e2e/session-live-mobile.spec.ts` (NEW T9)
+
+## §8 Spec-panel critique log (2026-06-15 sess.46r)
+
+Plan revised post `/sc:spec-panel "lavora 2374"` user invocation. Expert panel: Wiegers, Fowler, Adzic, Nygard, Cockburn. Identified 8 ambiguità; lockate 4 BLOCKING/HIGH via AskUserQuestion:
+
+- **DEC-1** (Q1): Layout = 2-col 60/40 (mockup authoritative) — title "3-col" was legacy, body conferma 60/40.
+- **DEC-2** (Q2): G1 scope = layout + **full reuse esistente** (LiveScoringPanel/TurnIndicator/SessionToolsRail wired in tabs); G3/G5 polymorphic refactor separate.
+- **DEC-3** (Q3): TurnIndicator+PlayerRosterLive → inside RIGHT 'Turni' tab (D-6 already had this).
+- **DEC-4** (Q4): Mobile fallback = **bottom-sheet drawer (mockup)** — required T9 addition + effort revision +2.5d.
+
+Plan otherwise validated: D-1/D-2/D-3/D-4/D-6 unchanged. Tasks T1-T8 unchanged. Effort 5.5d → 8.25d.

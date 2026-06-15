@@ -51,7 +51,6 @@ import { useIntl } from 'react-intl';
 import {
   ActionLogTimeline,
   DesktopBody,
-  LiveScoringPanel,
   LiveTopBar,
   MobileBody,
   PlayerRosterLive,
@@ -65,6 +64,9 @@ import {
   type PlayerRosterLiveLabels,
   type TurnIndicatorLabels,
 } from '@/components/features/session-live';
+// Issue #2373 T7: G5a polymorphic renderer (replaces LiveScoringPanel in this view).
+// LiveScoringPanel import retained above for the barrel export contract; it is no
+// longer instantiated here. A follow-up will mark it @deprecated.
 import {
   ConnectionLostBanner,
   LiveAgentChat,
@@ -77,6 +79,11 @@ import {
   type RightColumnTabsLabels,
   type SessionToolsRailLabels,
 } from '@/components/features/session-live';
+import {
+  ScoringPanelRenderer,
+  type ScoringPanelData,
+  type ScoringPanelRendererLabels,
+} from '@/components/features/session-live/scoring';
 import { useSession } from '@/hooks/queries/useActiveSessions';
 import { useTranslation } from '@/hooks/useTranslation';
 import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
@@ -644,6 +651,63 @@ export function SessionLiveView(): ReactElement {
     [t, intl.messages]
   );
 
+  /**
+   * Issue #2373 T7: ScoringPanelRenderer labels.
+   *
+   * Reuses the existing `pages.sessionLive.scoring.*` i18n keys for the
+   * Points variant (the only variant actively populated by `scoringPanelData`
+   * below). Non-Points variants ship inline Italian fallbacks; a follow-up
+   * issue (T10) tracks moving them to the i18n catalog once
+   * `useLiveSessionStore` carries a polymorphic `scoringType`.
+   */
+  const scoringPanelLabels = useMemo<ScoringPanelRendererLabels>(
+    (): ScoringPanelRendererLabels => ({
+      empty: {
+        title: t('pages.sessionLive.scoring.title'),
+        message:
+          (intl.messages['pages.sessionLive.scoring.emptyMessage'] as string) ??
+          'I punteggi appariranno qui appena la partita inizia',
+        trophyAriaLabel:
+          (intl.messages['pages.sessionLive.scoring.trophyAriaLabel'] as string) ?? 'Trofeo',
+      },
+      points: {
+        title: t('pages.sessionLive.scoring.title'),
+        emptyMessage:
+          (intl.messages['pages.sessionLive.scoring.emptyMessage'] as string) ?? 'Nessun punteggio',
+        leaderAriaSuffix:
+          (intl.messages['pages.sessionLive.scoring.leaderAriaSuffix'] as string) ?? 'leader',
+        categoriesTitle:
+          (intl.messages['pages.sessionLive.scoring.categoriesTitle'] as string) ?? 'Categorie',
+        turnDeltaPrefix: '+',
+      },
+      ranking: {
+        title: 'Classifica',
+        emptyMessage: 'Nessuna classifica',
+        leaderAriaSuffix: 'vincitore',
+        rankAriaLabelTemplate: 'Posizione {rank}',
+        trophyAriaLabel: 'Trofeo',
+      },
+      binaryWin: {
+        title: 'Esito collettivo',
+        emptyMessage: 'Nessun esito',
+        categoriesTitle: 'Condizioni',
+        weightWinLabel: 'vince',
+        weightLoseLabel: 'perde',
+        weightNeutralLabel: 'neutro',
+        meterAriaLabelTemplate: 'Progresso {value} su {max}',
+      },
+      objectives: {
+        title: 'Obiettivi',
+        emptyMessage: 'Nessun obiettivo',
+        completedCounterTemplate: '{done}/{total} completati',
+        doneAriaLabel: 'Completato',
+        pendingAriaLabel: 'Da completare',
+        progressAriaLabelTemplate: 'Progresso {value}',
+      },
+    }),
+    [t, intl.messages]
+  );
+
   const actionLogLabels = useMemo<ActionLogTimelineLabels>(
     (): ActionLogTimelineLabels => ({
       title: t('pages.sessionLive.actionLog.title'),
@@ -742,6 +806,29 @@ export function SessionLiveView(): ReactElement {
       score: p.score,
       isWinner: false,
     }));
+  }, [activeSession]);
+
+  /**
+   * Issue #2373 T7: project `LiveSessionFixture` → `PointsPanelData` for the
+   * G5a renderer. Default `scoringType: 'Points'` per plan §3 D4 (orchestrator
+   * fallback while `useLiveSessionStore.scoringType` migration is pending).
+   *
+   * Spectators (role 'Spectator') are excluded from the player list so the
+   * leaderboard mirrors the current LiveScoringPanel behavior; they continue
+   * to see the read-side panel via the role gate.
+   */
+  const scoringPanelData = useMemo<ScoringPanelData | null>(() => {
+    if (activeSession == null) return null;
+    return {
+      scoringType: 'Points',
+      players: activeSession.players
+        .filter(p => p.role !== 'Spectator')
+        .map(p => ({
+          id: p.id,
+          displayName: p.name,
+          score: p.score,
+        })),
+    };
   }, [activeSession]);
 
   const isMyTurn = useMemo<boolean>(() => {
@@ -845,19 +932,20 @@ export function SessionLiveView(): ReactElement {
       case 'score':
       default:
         return (
-          <LiveScoringPanel
-            scores={scores}
+          <ScoringPanelRenderer
+            data={scoringPanelData}
             viewerRole={activeSession.viewerRole}
             viewerId={activeSession.viewerId}
-            labels={scoringLabels}
+            sessionId={activeSession.id}
+            labels={scoringPanelLabels}
           />
         );
     }
   }, [
     mobileTab,
     activeSession,
-    scores,
-    scoringLabels,
+    scoringPanelData,
+    scoringPanelLabels,
     actionLogLabels,
     chatMessages,
     chatLabels,
@@ -970,11 +1058,12 @@ export function SessionLiveView(): ReactElement {
 
   const desktopCenterColumn = (
     <div className="flex flex-col gap-6">
-      <LiveScoringPanel
-        scores={scores}
+      <ScoringPanelRenderer
+        data={scoringPanelData}
         viewerRole={activeSession.viewerRole}
         viewerId={activeSession.viewerId}
-        labels={scoringLabels}
+        sessionId={activeSession.id}
+        labels={scoringPanelLabels}
       />
       <ActionLogTimeline entries={activeSession.actionLog} labels={actionLogLabels} />
     </div>

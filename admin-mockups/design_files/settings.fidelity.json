@@ -22,8 +22,8 @@
       1024,
       1440
     ],
-    "designer_approved_by": "",
-    "designer_approved_on": "",
+    "designer_approved_by": "user@meepleAi (self-waiver P250, single-person team)",
+    "designer_approved_on": "2026-06-15",
     "story_path": "apps/web/src/components/features/settings/settings.stories.tsx",
     "fixtures_path": "apps/web/src/__tests__/fixtures/mockup-pilots/auth/settings.ts",
     "design_intent": "current",

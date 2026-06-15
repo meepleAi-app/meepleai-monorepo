@@ -57,7 +57,11 @@ public sealed record SharedGameDto(
     bool IsTopRated = false,
     bool IsNew = false,
     // Issue #1852 (Gap A): cover URL resolved via L4 → L2 priority; null when no cover available or storage unavailable.
-    string? CoverUrl = null);
+    string? CoverUrl = null,
+    // Issue #2339 (sub-PR 1/3): non-EN translations; null defaults treated as empty by FE consumers.
+    // Enriched by GameTitleResolver in list query handlers; raw list handlers may emit null when
+    // the resolver is not on the pipeline (e.g. admin endpoints that don't surface translations).
+    IReadOnlyList<SharedGameTranslationDto>? Translations = null);
 
 /// <summary>
 /// Data transfer object for game rules.

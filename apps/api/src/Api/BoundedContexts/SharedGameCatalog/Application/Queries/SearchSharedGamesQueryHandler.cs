@@ -47,6 +47,7 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
     private readonly IBlobStorageService _blobStorage;
     private readonly HybridCache _cache;
     private readonly ILogger<SearchSharedGamesQueryHandler> _logger;
+    private readonly IGameTitleResolver _titleResolver;
     private readonly decimal _topRatedThreshold;
     private readonly int _newWindowDays;
 
@@ -55,13 +56,15 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
         IBlobStorageService blobStorage,
         HybridCache cache,
         IConfiguration configuration,
-        ILogger<SearchSharedGamesQueryHandler> logger)
+        ILogger<SearchSharedGamesQueryHandler> logger,
+        IGameTitleResolver titleResolver)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _blobStorage = blobStorage ?? throw new ArgumentNullException(nameof(blobStorage));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         ArgumentNullException.ThrowIfNull(configuration);
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _titleResolver = titleResolver ?? throw new ArgumentNullException(nameof(titleResolver));
 
         // Issue #593: top-rated threshold is runtime-tunable via IConfiguration.
         // Resolved once at construction (handler is a transient/scoped service per
@@ -444,14 +447,24 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
                 CoverUrl: coverUrl));
         }
 
+        // Issue #2339 (Wave 4 Task 13 — DEC-WIRING): enrich SharedGameDto.Translations
+        // for the page. Batch one round-trip via IGameTitleResolver.GetByGameIdsAsync.
+        // Enrichment lives inside ExecuteSearchAsync so cached payloads include the
+        // translations — invalidation is governed by the `search-games` cache tag and
+        // the 1h L2 TTL, both acceptable given translations are admin-curated and
+        // change rarely.
+        var enriched = await _titleResolver
+            .EnrichAsync(games, cancellationToken)
+            .ConfigureAwait(false);
+
         _logger.LogInformation(
             "Search completed: Found {Count} games (Total: {Total}) for page {Page}",
-            games.Count,
+            enriched.Count,
             total,
             query.PageNumber);
 
         return new PagedResult<SharedGameDto>(
-            Items: games,
+            Items: enriched,
             Total: total,
             Page: query.PageNumber,
             PageSize: query.PageSize);
@@ -479,7 +492,10 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
         //   v3 = Issue #593 chip filters: HasToolkit / HasAgent / IsTopRated (Commit 2)
         //   v4 = Issue #593 NewThisWeekCount + ContributorsCount + IsNew + sort options
         //        "Contrib" / "New" (Commit 1b — projection shape changed)
-        var keyComponents = $"v4|{searchTerm}|{categoryIds}|{mechanicIds}|{query.MinPlayers}|{query.MaxPlayers}|{query.MaxPlayingTime}|{query.MinComplexity}|{query.MaxComplexity}|{statusStr}|{query.PageNumber}|{query.PageSize}|{query.SortBy}|{query.SortDescending}|{query.HasKnowledgeBase?.ToString() ?? "null"}|{query.HasToolkit?.ToString() ?? "null"}|{query.HasAgent?.ToString() ?? "null"}|{query.IsTopRated?.ToString() ?? "null"}|{query.IsNew?.ToString() ?? "null"}";
+        //   v5 = Issue #2339 (Wave 4 Task 13 — DEC-WIRING) SharedGameDto.Translations
+        //        enrichment via IGameTitleResolver — cached payloads now carry
+        //        per-game translation lists alongside the existing aggregates.
+        var keyComponents = $"v5|{searchTerm}|{categoryIds}|{mechanicIds}|{query.MinPlayers}|{query.MaxPlayers}|{query.MaxPlayingTime}|{query.MinComplexity}|{query.MaxComplexity}|{statusStr}|{query.PageNumber}|{query.PageSize}|{query.SortBy}|{query.SortDescending}|{query.HasKnowledgeBase?.ToString() ?? "null"}|{query.HasToolkit?.ToString() ?? "null"}|{query.HasAgent?.ToString() ?? "null"}|{query.IsTopRated?.ToString() ?? "null"}|{query.IsNew?.ToString() ?? "null"}";
 
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(keyComponents)));
 

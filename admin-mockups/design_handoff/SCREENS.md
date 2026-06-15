@@ -31,7 +31,7 @@ Dashboard aggrega contatori cross-entity. Endpoint backend deve restituire:
 |---|------|-------|---------------------|----------|
 | 02 | `sp4-game-nights-index` | `/game-nights` | `GET /api/game-nights?from=&to=` | P0 |
 | 03 | `sp4-game-nights-index` (drawer) | `/game-nights?day=2026-03-22` | (stessa, filtered per day) | P0 |
-| 04 | `sp7-game-night-create` | `/game-nights/new` | `POST /api/game-nights` | P0 |
+| 04 | `sp7-game-night-new` | `/game-nights/new` | `POST /api/game-nights` | P0 |
 | 05 | `sp7-game-night-detail-rsvp` (host) | `/game-nights/[id]` | `GET /api/game-nights/{id}` | P0 |
 | 06 | `sp7-game-night-detail-rsvp` (invited) | (stessa, ruolo diverso) | `PATCH /api/game-nights/{id}/rsvp` | P0 |
 | 07 | `sp7-game-night-transition` | `/game-nights/[id]/transition` | (modal, no nuovo endpoint) | P1 |

@@ -41,9 +41,16 @@ export type {
 
 export { LiveTopBar } from '@/components/features/session-live/LiveTopBar';
 export type {
+  LiveTopBarConnectionState,
   LiveTopBarLabels,
   LiveTopBarProps,
 } from '@/components/features/session-live/LiveTopBar';
+
+export { SessionStateRenderer } from '@/components/features/session-live/SessionStateRenderer';
+export type {
+  SessionLiveState,
+  SessionStateRendererProps,
+} from '@/components/features/session-live/SessionStateRenderer';
 
 export { MobileBody } from '@/components/features/session-live/MobileBody';
 export type {

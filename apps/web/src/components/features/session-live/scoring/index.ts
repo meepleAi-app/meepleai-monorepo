@@ -20,3 +20,20 @@ export type {
 } from './types';
 
 export { SCORING_VARIANT_LABELS } from './types';
+
+export { PointsPanel, type PointsPanelLabels, type PointsPanelProps } from './variants/PointsPanel';
+export {
+  RankingPanel,
+  type RankingPanelLabels,
+  type RankingPanelProps,
+} from './variants/RankingPanel';
+export {
+  BinaryWinPanel,
+  type BinaryWinPanelLabels,
+  type BinaryWinPanelProps,
+} from './variants/BinaryWinPanel';
+export {
+  ObjectivesPanel,
+  type ObjectivesPanelLabels,
+  type ObjectivesPanelProps,
+} from './variants/ObjectivesPanel';

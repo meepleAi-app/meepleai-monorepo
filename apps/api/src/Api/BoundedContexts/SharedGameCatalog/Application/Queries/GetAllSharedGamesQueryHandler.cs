@@ -18,15 +18,18 @@ internal sealed class GetAllSharedGamesQueryHandler : IRequestHandler<GetAllShar
     private readonly MeepleAiDbContext _context;
     private readonly IBlobStorageService _blobStorage;
     private readonly ILogger<GetAllSharedGamesQueryHandler> _logger;
+    private readonly IGameTitleResolver _titleResolver;
 
     public GetAllSharedGamesQueryHandler(
         MeepleAiDbContext context,
         IBlobStorageService blobStorage,
-        ILogger<GetAllSharedGamesQueryHandler> logger)
+        ILogger<GetAllSharedGamesQueryHandler> logger,
+        IGameTitleResolver titleResolver)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _blobStorage = blobStorage ?? throw new ArgumentNullException(nameof(blobStorage));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _titleResolver = titleResolver ?? throw new ArgumentNullException(nameof(titleResolver));
     }
 
     public async Task<PagedResult<SharedGameDto>> Handle(GetAllSharedGamesQuery query, CancellationToken cancellationToken)
@@ -114,14 +117,20 @@ internal sealed class GetAllSharedGamesQueryHandler : IRequestHandler<GetAllShar
                 CoverUrl: coverUrl));
         }
 
+        // Issue #2339 (Wave 4 Task 13 — DEC-WIRING): enrich SharedGameDto.Translations
+        // for the page. Batch one round-trip via IGameTitleResolver.GetByGameIdsAsync.
+        var enriched = await _titleResolver
+            .EnrichAsync(games, cancellationToken)
+            .ConfigureAwait(false);
+
         _logger.LogInformation(
             "Retrieved {Count} games (Total: {Total}) for page {Page}",
-            games.Count,
+            enriched.Count,
             total,
             query.PageNumber);
 
         return new PagedResult<SharedGameDto>(
-            Items: games,
+            Items: enriched,
             Total: total,
             Page: query.PageNumber,
             PageSize: query.PageSize);

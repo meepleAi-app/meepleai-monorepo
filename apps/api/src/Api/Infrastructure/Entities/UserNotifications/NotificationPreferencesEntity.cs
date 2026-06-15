@@ -24,6 +24,11 @@ public class NotificationPreferencesEntity
     public bool EmailOnGameNightReminder { get; set; } = true;
     public bool PushOnGameNightReminder { get; set; } = true;
 
+    // Quiet hours - ADR-076 (#2383 follow-up)
+    public string TimeZone { get; set; } = "UTC";
+    public TimeOnly? QuietHoursStart { get; set; }
+    public TimeOnly? QuietHoursEnd { get; set; }
+
     // Slack - Issue #slack-notification-system
     public bool SlackEnabled { get; set; } = true;
     public bool SlackOnDocumentReady { get; set; } = true;

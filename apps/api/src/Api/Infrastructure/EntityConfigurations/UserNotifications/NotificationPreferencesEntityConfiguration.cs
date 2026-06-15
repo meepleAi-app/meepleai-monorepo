@@ -25,6 +25,19 @@ internal class NotificationPreferencesEntityConfiguration : IEntityTypeConfigura
         builder.Property(e => e.InAppOnDocumentFailed).IsRequired().HasDefaultValue(true);
         builder.Property(e => e.InAppOnRetryAvailable).IsRequired().HasDefaultValue(true);
 
+        // Quiet hours - ADR-076 (#2383)
+        builder.Property(e => e.TimeZone)
+            .HasColumnName("time_zone")
+            .IsRequired()
+            .HasMaxLength(64)
+            .HasDefaultValue("UTC");
+        builder.Property(e => e.QuietHoursStart)
+            .HasColumnName("quiet_hours_start")
+            .HasColumnType("time");
+        builder.Property(e => e.QuietHoursEnd)
+            .HasColumnName("quiet_hours_end")
+            .HasColumnType("time");
+
         // Slack notification preferences
         builder.Property(e => e.SlackEnabled).IsRequired().HasDefaultValue(true);
         builder.Property(e => e.SlackOnDocumentReady).IsRequired().HasDefaultValue(true);

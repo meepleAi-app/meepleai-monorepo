@@ -13,9 +13,11 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetGameTrans
 /// <remarks>
 /// Read-side, no domain mutation. The raw locale string is normalised through
 /// <see cref="Locale.Create"/> so caller variants ("EN", "en-gb", " it ") all
-/// hit the same canonical row. Locale validation errors surface as
-/// <see cref="Application.Exceptions.InvalidLocaleException"/>, mapped to 400
-/// by the global exception middleware.
+/// hit the same canonical row. Locale validation runs upstream via
+/// <see cref="GetGameTranslationByLocaleQueryValidator"/> (FluentValidation →
+/// HTTP 422 with "Invalid ISO 639-1 locale"); the <c>Locale.Create</c> call
+/// here is defense-in-depth for direct <c>IMediator.Send</c> paths that may
+/// bypass <c>ValidationBehavior</c>.
 /// </remarks>
 internal sealed class GetGameTranslationByLocaleQueryHandler
     : IRequestHandler<GetGameTranslationByLocaleQuery, SharedGameTranslationDetailDto?>

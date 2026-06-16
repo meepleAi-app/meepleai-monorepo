@@ -21,26 +21,19 @@ internal static class SharedGameTranslationProjections
     /// <see cref="GameTitleResolver"/> when enriching <c>SharedGameDto</c>
     /// rows. Excludes audit + concurrency fields.
     /// </summary>
-    public static SharedGameTranslationDto ToDto(SharedGameTranslation t)
-    {
-        ArgumentNullException.ThrowIfNull(t);
-
-        return new SharedGameTranslationDto(
+    public static SharedGameTranslationDto ToDto(SharedGameTranslation t) =>
+        new(
             Locale: t.Locale.Value,
             Title: t.Title,
             Description: t.Description,
             Source: TranslationSourceMapper.ToPersistedString(t.Source));
-    }
 
     /// <summary>
     /// Full projection used by admin translation endpoints. Includes audit
     /// fields and the <c>Xmin</c> optimistic concurrency token.
     /// </summary>
-    public static SharedGameTranslationDetailDto ToDetailDto(SharedGameTranslation t)
-    {
-        ArgumentNullException.ThrowIfNull(t);
-
-        return new SharedGameTranslationDetailDto(
+    public static SharedGameTranslationDetailDto ToDetailDto(SharedGameTranslation t) =>
+        new SharedGameTranslationDetailDto(
             Id: t.Id,
             GameId: t.SharedGameId,
             Locale: t.Locale.Value,
@@ -52,5 +45,4 @@ internal static class SharedGameTranslationProjections
             UpdatedAt: t.UpdatedAt,
             UpdatedBy: t.UpdatedBy,
             Xmin: t.Xmin);
-    }
 }

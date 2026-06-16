@@ -1,4 +1,3 @@
-using Api.BoundedContexts.SharedGameCatalog.Application.Exceptions;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
@@ -54,19 +53,9 @@ public sealed class AddGameTranslationCommandValidator
             .WithMessage("Invalid source — must be one of: manual | auto-openrouter | community");
     }
 
-    private static string NormalizeLocale(string raw)
-    {
-        try
-        {
-            return Locale.Create(raw).Value;
-        }
-        catch (InvalidLocaleException)
-        {
-            // BeValidLocale will already have surfaced the invalid-locale error;
-            // returning raw avoids a NullReferenceException in the cascade.
-            return raw;
-        }
-    }
+    // BeValidLocale (via Cascade(CascadeMode.Stop)) guarantees this is only called
+    // on a Locale.Create-accepting string, so the constructor cannot throw.
+    private static string NormalizeLocale(string raw) => Locale.Create(raw).Value;
 
     private static bool BeValidSource(string source) =>
         TranslationSourceMapper.TryFromPersistedString(source, out _);

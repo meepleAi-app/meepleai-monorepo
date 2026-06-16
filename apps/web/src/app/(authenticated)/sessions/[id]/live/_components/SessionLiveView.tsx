@@ -81,7 +81,7 @@ import {
   LiveTopBar,
   MobileBody,
   PlayerRosterLive,
-  TurnIndicator,
+  TurnIndicatorRenderer,
   type ActionLogTimelineLabels,
   type ChatAgentPanelLabels,
   type LiveScoringPanelLabels,
@@ -89,7 +89,7 @@ import {
   type LiveTopBarLabels,
   type MobileBodyLabels,
   type PlayerRosterLiveLabels,
-  type TurnIndicatorLabels,
+  type TurnIndicatorRendererLabels,
 } from '@/components/features/session-live';
 import {
   ConnectionLostBanner,
@@ -123,6 +123,7 @@ import {
   VISUAL_TEST_FIXTURE_SESSION_PAUSED,
   type LiveSessionFixture,
 } from '@/lib/session-live/session-live-visual-test-fixture';
+import type { TurnState, PlayerInfo as TurnPlayerInfo } from '@/lib/session-live/turn-state';
 import { useElapsedTime } from '@/lib/session-live/use-elapsed-time';
 import { useSessionLiveStream } from '@/lib/session-live/use-session-live-stream';
 import { useToolkitRendererStore } from '@/lib/stores/toolkit-renderer-store';
@@ -666,18 +667,47 @@ export function SessionLiveView(): ReactElement {
   const elapsedMs = useElapsedTime(sessionQuery.data?.startedAt);
   const connectionPipState = mapConnectionState(liveStream.connectionState);
 
-  const turnIndicatorLabels = useMemo<TurnIndicatorLabels>(
-    (): TurnIndicatorLabels => ({
-      currentTurnAriaLabel:
-        (intl.messages['pages.sessionLive.turnIndicator.currentTurnAriaLabel'] as string) ??
-        'Turno {current} di {total}',
-      activePlayerLabel:
-        (intl.messages['pages.sessionLive.turnIndicator.activePlayerLabel'] as string) ??
-        '{playerName}',
+  // G5b #2378 — TurnIndicatorRenderer labels + fixture state memos.
+  // Real TurnState wiring deferred to #2389; synthesise RoundRobin from activeSession fields.
+  const turnRendererLabels = useMemo<TurnIndicatorRendererLabels>(
+    (): TurnIndicatorRendererLabels => ({
+      roundRobinHeading: t('pages.sessionLive.turnIndicator.roundRobinHeading'),
+      sequentialHeading: t('pages.sessionLive.turnIndicator.sequentialHeading'),
+      simultaneousHeading: t('pages.sessionLive.turnIndicator.simultaneousHeading'),
+      realtimeHeading: t('pages.sessionLive.turnIndicator.realtimeHeading'),
+      noneHeading: t('pages.sessionLive.turnIndicator.noneHeading'),
+      customHeading: t('pages.sessionLive.turnIndicator.customHeading'),
+      firstPlayerTokenHeading: t('pages.sessionLive.turnIndicator.firstPlayerTokenHeading'),
+      unknownTitle: t('pages.sessionLive.turnIndicator.unknownTitle'),
+      unknownBody: t('pages.sessionLive.turnIndicator.unknownBody'),
       yourTurnLabel: t('pages.sessionLive.turnIndicator.yourTurnLabel'),
       waitingLabel: t('pages.sessionLive.turnIndicator.waitingLabel'),
+      roundCountTemplate:
+        (intl.messages['pages.sessionLive.turnIndicator.roundCountTemplate'] as string) ??
+        'Round {current} di {total}',
+      playOrderHeading: t('pages.sessionLive.turnIndicator.playOrderHeading'),
+      firstPlayerTokenHolderTemplate:
+        (intl.messages[
+          'pages.sessionLive.turnIndicator.firstPlayerTokenHolderTemplate'
+        ] as string) ?? 'Token primo giocatore: {playerName}',
     }),
     [t, intl.messages]
+  );
+
+  const turnRendererState = useMemo<TurnState>(
+    (): TurnState => ({
+      type: 'RoundRobin',
+      round: activeSession?.currentTurn ?? 0,
+      totalRounds: activeSession?.totalTurns ?? 0,
+      activePlayerId: activeSession?.activePlayerId ?? '',
+      playOrder: activeSession?.players.map(p => p.id) ?? [],
+    }),
+    [activeSession]
+  );
+
+  const turnRendererPlayers = useMemo<ReadonlyArray<TurnPlayerInfo>>(
+    () => activeSession?.players.map(p => ({ id: p.id, name: p.name })) ?? [],
+    [activeSession]
   );
 
   const rosterLabels = useMemo<PlayerRosterLiveLabels>((): PlayerRosterLiveLabels => {
@@ -891,20 +921,6 @@ export function SessionLiveView(): ReactElement {
     }));
   }, [activeSession]);
 
-  const isMyTurn = useMemo<boolean>(() => {
-    if (activeSession == null) return false;
-    return (
-      activeSession.viewerRole === 'Player' &&
-      activeSession.activePlayerId === activeSession.viewerId
-    );
-  }, [activeSession]);
-
-  const activePlayerName = useMemo<string>(() => {
-    if (activeSession == null) return '';
-    const active = activeSession.players.find(p => p.id === activeSession.activePlayerId);
-    return active?.name ?? '';
-  }, [activeSession]);
-
   // ── G5c #2376: Zustand toolkit renderer store ─────────────────────────────
   // Store starts empty; real hydration via useQuery(['toolkit', sessionId]) is a
   // follow-up PR that wires GET /api/v1/toolkits/{toolkitId}/widgets.
@@ -1011,12 +1027,12 @@ export function SessionLiveView(): ReactElement {
       case 'turn':
         return (
           <div className="flex flex-col gap-4 p-3">
-            <TurnIndicator
-              current={activeSession.currentTurn}
-              total={activeSession.totalTurns}
-              activePlayerName={activePlayerName}
-              isMyTurn={isMyTurn}
-              labels={turnIndicatorLabels}
+            <TurnIndicatorRenderer
+              state={turnRendererState}
+              players={turnRendererPlayers}
+              viewerId={activeSession.viewerId}
+              compact
+              labels={turnRendererLabels}
             />
             <PlayerRosterLive
               players={activeSession.players}
@@ -1063,9 +1079,9 @@ export function SessionLiveView(): ReactElement {
     activeSession,
     scores,
     scoringLabels,
-    activePlayerName,
-    isMyTurn,
-    turnIndicatorLabels,
+    turnRendererState,
+    turnRendererPlayers,
+    turnRendererLabels,
     rosterLabels,
     toolkitWidgets,
     toolkitOpenId,
@@ -1197,12 +1213,11 @@ export function SessionLiveView(): ReactElement {
       )}
       {tab === 'turn' && (
         <div className="flex flex-col gap-4 p-3">
-          <TurnIndicator
-            current={activeSession.currentTurn}
-            total={activeSession.totalTurns}
-            activePlayerName={activePlayerName}
-            isMyTurn={isMyTurn}
-            labels={turnIndicatorLabels}
+          <TurnIndicatorRenderer
+            state={turnRendererState}
+            players={turnRendererPlayers}
+            viewerId={activeSession.viewerId}
+            labels={turnRendererLabels}
           />
           <PlayerRosterLive
             players={activeSession.players}

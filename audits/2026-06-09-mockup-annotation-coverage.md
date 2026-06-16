@@ -2,12 +2,12 @@
 
 | Field | Value |
 |---|---|
-| **Date** | 2026-06-09 |
+| **Date** | 2026-06-16 |
 | **Generator** | `pnpm mockup-annotations:audit` (DS-17-1) |
 | **Spec** | [`2026-06-09-mockup-to-app-drift-spec-panel-review.md`](../docs/superpowers/specs/2026-06-09-mockup-to-app-drift-spec-panel-review.md) |
 | **Marker** | `MOCKUP-ANNOTATION` |
 | **Denominator** | `mappable` |
-| **Coverage** | 100% — 68 / 68 |
+| **Coverage** | 100% — 70 / 70 |
 | **Status** | threshold met (≥ 80%) |
 
 ## Uncovered routes

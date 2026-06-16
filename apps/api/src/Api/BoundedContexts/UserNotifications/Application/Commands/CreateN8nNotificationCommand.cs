@@ -48,7 +48,11 @@ internal sealed class CreateN8nNotificationCommandHandler : ICommandHandler<Crea
             link: request.Link
         );
 
-        await _notificationRepository.AddAsync(notification, cancellationToken).ConfigureAwait(false);
+        // Issue #2392: AddAndCommitAsync commits the row first, then publishes the
+        // metric + SSE broadcast — the previous AddAsync path fired side-effects
+        // pre-save, risking a phantom broadcast if the n8n webhook caller's outer
+        // pipeline rolled back the transaction.
+        await _notificationRepository.AddAndCommitAsync(notification, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "n8n webhook: notification created for user {UserId}, type={Type}",

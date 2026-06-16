@@ -175,6 +175,71 @@ public sealed class NotificationRepositoryAddAndCommitIntegrationTests : IAsyncL
             "the UNIQUE index has 'WHERE source_event_id IS NOT NULL', so null-id rows are unconstrained");
     }
 
+    // ────────────────────────────────────────────────────────────────────
+    // AddBatchAndCommitAsync — issue #2392 (phantom-broadcast follow-up)
+    // ────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task AddBatchAndCommitAsync_PersistsAllRowsAndPublishesPostSave()
+    {
+        // Arrange — three notifications (different users, no source event id)
+        // mirror the loop callers (admin fan-out, achievement evaluation, etc.)
+        // that previously used `AddAsync` + external `SaveChangesAsync`.
+        var broadcasterMock = new Mock<IUserNotificationBroadcaster>();
+        var repo = BuildRepositoryWithBroadcaster(broadcasterMock.Object);
+
+        var batch = new[]
+        {
+            BuildNotification(Guid.NewGuid(), sourceEventId: null),
+            BuildNotification(Guid.NewGuid(), sourceEventId: null),
+            BuildNotification(Guid.NewGuid(), sourceEventId: null),
+        };
+
+        // Act
+        var persisted = await repo.AddBatchAndCommitAsync(batch, TestCancellationToken);
+
+        // Assert — all rows persisted, broadcaster invoked exactly once per row
+        persisted.Should().Be(3);
+
+        var rowsCommitted = await _dbContext!.Set<NotificationEntity>()
+            .AsNoTracking()
+            .CountAsync(TestCancellationToken);
+        rowsCommitted.Should().Be(3);
+
+        broadcasterMock.Verify(
+            b => b.Publish(It.IsAny<Guid>(), It.IsAny<Api.BoundedContexts.UserNotifications.Application.DTOs.NotificationDto>()),
+            Times.Exactly(3),
+            "POST-save side-effects must fire once per persisted row");
+    }
+
+    [Fact]
+    public async Task AddBatchAndCommitAsync_EmptyEnumerable_IsNoOp()
+    {
+        var broadcasterMock = new Mock<IUserNotificationBroadcaster>();
+        var repo = BuildRepositoryWithBroadcaster(broadcasterMock.Object);
+
+        var persisted = await repo.AddBatchAndCommitAsync(Array.Empty<Notification>(), TestCancellationToken);
+
+        persisted.Should().Be(0);
+        broadcasterMock.Verify(
+            b => b.Publish(It.IsAny<Guid>(), It.IsAny<Api.BoundedContexts.UserNotifications.Application.DTOs.NotificationDto>()),
+            Times.Never,
+            "empty batch must not invoke side-effects");
+    }
+
+    private INotificationRepository BuildRepositoryWithBroadcaster(IUserNotificationBroadcaster broadcaster)
+    {
+        // Override the default no-op broadcaster registration with a caller-supplied
+        // Mock so per-test assertions on Publish() are possible.
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
+        services.AddScoped(_ => broadcaster);
+        services.AddScoped<INotificationRepository, NotificationRepository>();
+
+        var sp = services.BuildServiceProvider();
+        _dbContext = sp.GetRequiredService<MeepleAiDbContext>();
+        return sp.GetRequiredService<INotificationRepository>();
+    }
+
     private static Notification BuildNotification(Guid userId, Guid? sourceEventId)
     {
         return new Notification(

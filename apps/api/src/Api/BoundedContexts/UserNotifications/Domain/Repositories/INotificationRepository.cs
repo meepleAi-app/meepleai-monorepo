@@ -58,4 +58,29 @@ internal interface INotificationRepository : IRepository<Notification, Guid>
     /// (dedup-by-race — the in-app row exists, just under the other caller).
     /// </returns>
     Task<bool> AddAndCommitAsync(Notification notification, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Batch add-and-commit for fan-out notification callers (admin alerts,
+    /// achievement unlocks, scheduled jobs that emit one row per user). Issue
+    /// #2392 (phantom-broadcast follow-up): tracks every <paramref name="notifications"/>
+    /// row, calls a single <c>SaveChangesAsync</c>, then fires side-effects
+    /// (metric + SSE broadcast) AFTER the durable commit. Replaces the
+    /// <c>foreach { AddAsync } + SaveChanges</c> pattern in 6 loop callers.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Caller preconditions</b>:</para>
+    /// <list type="bullet">
+    ///   <item>Notifications MUST NOT set <c>SourceEventId</c>. The partial
+    ///   UNIQUE index <c>UX_notifications_user_source_event_id</c> only
+    ///   applies to non-null source event ids; one duplicate would roll back
+    ///   the ENTIRE batch with no graceful dedup. Use <see cref="AddAndCommitAsync"/>
+    ///   for dedup-guarded inserts.</item>
+    ///   <item>Notification ids MUST be unique within the batch (callers use
+    ///   <c>Guid.NewGuid()</c> per row). A duplicate id throws
+    ///   <c>InvalidOperationException</c> from the EF change tracker.</item>
+    /// </list>
+    /// <para>Any <c>DbUpdateException</c> rolls back the entire batch.</para>
+    /// </remarks>
+    /// <returns>Number of rows persisted (0 when input is empty).</returns>
+    Task<int> AddBatchAndCommitAsync(IEnumerable<Notification> notifications, CancellationToken cancellationToken = default);
 }

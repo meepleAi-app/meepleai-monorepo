@@ -85,10 +85,11 @@ internal sealed class StaleShareRequestWarningJob : IJob
             var oldestDays = staleRequests
                 .Max(r => (DateTime.UtcNow - r.CreatedAt).Days);
 
-            // Create high-priority notification for each admin
-            foreach (var adminId in admins)
-            {
-                var warning = new Notification(
+            // Issue #2392: batch-commit admin notifications so the metric + SSE
+            // broadcast fire AFTER the rows are durably persisted (previously
+            // foreach-AddAsync + manual SaveChanges → phantom broadcast risk).
+            var notifications = admins
+                .Select(adminId => new Notification(
                     id: Guid.NewGuid(),
                     userId: adminId,
                     type: NotificationType.AdminStaleShareRequests,
@@ -101,12 +102,12 @@ internal sealed class StaleShareRequestWarningJob : IJob
                         staleCount = staleRequests.Count,
                         oldestDays,
                         thresholdDays = staleDays
-                    }));
+                    })))
+                .ToList();
 
-                await _notificationRepository.AddAsync(warning, context.CancellationToken).ConfigureAwait(false);
-            }
-
-            await _dbContext.SaveChangesAsync(context.CancellationToken).ConfigureAwait(false);
+            await _notificationRepository
+                .AddBatchAndCommitAsync(notifications, context.CancellationToken)
+                .ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Stale share request warning job completed: StaleCount={StaleCount}, OldestDays={OldestDays}, AdminsNotified={AdminCount}",

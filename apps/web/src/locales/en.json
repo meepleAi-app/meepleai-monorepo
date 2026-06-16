@@ -3154,13 +3154,17 @@
         "sendAriaLabel": "Send message",
         "visibilityPrivate": "Private",
         "visibilityShared": "Shared",
-        "emptyMessage": "No messages yet."
+        "emptyMessage": "No messages yet.",
+        "newMessagesToast": "{count, plural, one {# new message} other {# new messages}}",
+        "newMessagesToastAriaLabel": "New messages available — click to scroll to bottom"
       },
       "chatAgent": {
         "title": "ChatAgent",
         "onlineLabel": "Online",
         "latencyAriaLabel": "Latency {ms}ms",
-        "agentNameAriaLabel": "Agent name {name}"
+        "agentNameAriaLabel": "Agent name {name}",
+        "collapsedAriaLabel": "ChatAgent collapsed — click to expand",
+        "expandedAriaLabel": "ChatAgent expanded — click to collapse"
       },
       "mobile": {
         "openSheetCta": "Open panel",

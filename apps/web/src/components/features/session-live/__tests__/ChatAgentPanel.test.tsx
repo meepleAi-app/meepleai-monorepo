@@ -14,13 +14,28 @@
  */
 
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { IntlProvider } from 'react-intl';
 
 import type { ChatAgentPanelLabels, ChatAgentPanelProps } from '../ChatAgentPanel';
 import { ChatAgentPanel } from '../ChatAgentPanel';
 import type { ChatMessage, LiveAgentChatLabels } from '../LiveAgentChat';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
+
+// i18n messages needed by LiveAgentChat's useIntl call (toast ICU plural)
+const INTL_MESSAGES = {
+  'pages.sessionLive.chat.newMessagesToast':
+    '{count, plural, one {# nuovo messaggio} other {# nuovi messaggi}}',
+};
+
+function wrapIntl(ui: React.ReactElement) {
+  return render(
+    <IntlProvider locale="it" messages={INTL_MESSAGES}>
+      {ui}
+    </IntlProvider>
+  );
+}
 
 const CHAT_PANEL_LABELS: LiveAgentChatLabels = {
   title: 'Chat AI',
@@ -29,6 +44,7 @@ const CHAT_PANEL_LABELS: LiveAgentChatLabels = {
   visibilityPrivate: 'Privato',
   visibilityShared: 'Condiviso',
   emptyMessage: 'Nessun messaggio',
+  newMessagesToastAriaLabel: 'Nuovi messaggi — clic per scorrere',
 };
 
 const LABELS: ChatAgentPanelLabels = {
@@ -64,9 +80,29 @@ function renderPanel(overrides: Partial<ChatAgentPanelProps> = {}) {
     onHeaderClick,
     ...overrides,
   };
-  const result = render(<ChatAgentPanel {...props} />);
+  const result = wrapIntl(<ChatAgentPanel {...props} />);
   return { ...result, onSendMessage, onHeaderClick };
 }
+
+// ─── Shared IntersectionObserver stub (mirrors LiveAgentChat.test.tsx) ────────
+
+beforeEach(() => {
+  vi.stubGlobal(
+    'IntersectionObserver',
+    vi.fn(function (this: unknown, cb: IntersectionObserverCallback) {
+      return {
+        callback: cb,
+        observe: vi.fn(),
+        disconnect: vi.fn(),
+      } as unknown as IntersectionObserver;
+    })
+  );
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  sessionStorage.clear();
+});
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
@@ -135,7 +171,7 @@ describe('ChatAgentPanel — header interactions', () => {
 
   it('header is a <div> (not <button>) when onHeaderClick is undefined', () => {
     // Override default fixture by explicitly passing onHeaderClick=undefined
-    const { container } = render(
+    const { container } = wrapIntl(
       <ChatAgentPanel
         messages={[]}
         viewerRole="Player"

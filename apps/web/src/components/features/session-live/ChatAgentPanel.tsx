@@ -15,6 +15,8 @@
  *   - header is a <button> (a11y) when onHeaderClick provided, else <div>
  *   - body unmounts when collapsed=true (no hidden focus traps)
  *   - no SSE state inside the primitive (parent owns the stream)
+ *   - sessionId is forwarded transparently to LiveAgentChat;
+ *     it does NOT change the panel's data-slot/collapsed/header semantics.
  *
  * Token discipline (§3 D-4):
  *   - semantic tokens: bg-card / text-foreground / text-muted-foreground /
@@ -52,6 +54,9 @@ export interface ChatAgentPanelLabels {
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 export interface ChatAgentPanelProps {
+  /** #2375 G3 — forwarded to LiveAgentChat for sessionStorage draft persistence.
+   *  Optional: when omitted or null, draft persistence is disabled (no-op). */
+  readonly sessionId?: string | null;
   readonly messages: ReadonlyArray<ChatMessage>;
   readonly viewerRole: ParticipantRole;
   readonly viewerId: string;
@@ -75,6 +80,7 @@ export interface ChatAgentPanelProps {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ChatAgentPanel({
+  sessionId,
   messages,
   viewerRole,
   viewerId,
@@ -174,6 +180,7 @@ export function ChatAgentPanel({
       {!collapsed && (
         <div className="flex min-h-0 flex-1 flex-col p-3">
           <LiveAgentChat
+            sessionId={sessionId ?? null}
             messages={messages}
             viewerRole={viewerRole}
             viewerId={viewerId}

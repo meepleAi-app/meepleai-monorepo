@@ -93,17 +93,17 @@ internal class GenerateToolkitFromKbHandler
                 if (cached is not null)
                 {
                     _logger.LogInformation("AiToolkit cache HIT for game {GameId}", command.GameId);
-                    MeepleAiMetrics.RecordAiToolkitCacheHit(command.GameId);
+                    MeepleAiMetrics.RecordAiToolkitCacheHit();
                     return JsonSerializer.Deserialize<AiToolkitSuggestionDto>(cached.SuggestionJson, CacheJsonOptions)!;
                 }
-                MeepleAiMetrics.RecordAiToolkitCacheMiss(command.GameId);
+                MeepleAiMetrics.RecordAiToolkitCacheMiss();
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _logger.LogWarning(ex,
                     "AiToolkit cache GET failed for game {GameId}; falling back to LLM",
                     command.GameId);
-                MeepleAiMetrics.RecordAiToolkitCacheMiss(command.GameId);
+                MeepleAiMetrics.RecordAiToolkitCacheMiss();
             }
         }
 
@@ -216,6 +216,18 @@ internal class GenerateToolkitFromKbHandler
 
         // ADR-069 (#2383): Cache write-back. Errors are swallowed — the caller
         // must receive the generated result even when the cache layer is unavailable.
+        //
+        // PR #2409 open question #2 resolution (transaction safety, brainstorm 2026-06-16):
+        // The SaveChangesAsync call below commits the cache entry. This handler is a pure
+        // read+generate flow: it does not stage any other writes to the UoW prior to this
+        // point, so the SaveChangesAsync commits ONLY the cache entry — no risk of
+        // committing partial outer-transaction state.
+        //
+        // INVARIANT: do NOT add any AddAsync / UpdateAsync calls earlier in this Handle
+        // method without also moving the cache write-back into a separate transaction
+        // (or refactoring to a domain-event-driven write-back). Adding new writes earlier
+        // would cause the SaveChangesAsync here to commit them too, breaking the
+        // "cache failure doesn't affect business state" guarantee.
         if (_cacheRepository is not null)
         {
             try

@@ -166,9 +166,24 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionLive.a11y.viewLabel': 'Vista sessione live',
   // Interactions sub-PR labels
   'pages.sessionLive.rightColumn.tabsAriaLabel': 'Pannelli sessione',
+  // G1 #2374 sess.46r canonical tab keys
+  'pages.sessionLive.rightColumn.tabScore': 'Score',
+  'pages.sessionLive.rightColumn.tabTurn': 'Turni',
+  'pages.sessionLive.rightColumn.tabWidget': 'Widget',
+  'pages.sessionLive.rightColumn.tabNotes': 'Note',
+  // Back-compat (legacy keys for older callers — not used by SessionLiveView post-T4)
   'pages.sessionLive.rightColumn.tabTools': 'Strumenti',
   'pages.sessionLive.rightColumn.tabChat': 'Chat',
-  'pages.sessionLive.rightColumn.tabNotes': 'Note',
+  // ChatAgentPanel labels (G1 #2374 T3 — composite header)
+  'pages.sessionLive.chatAgent.title': 'ChatAgent',
+  'pages.sessionLive.chatAgent.agentNameAriaLabel': 'Nome agente {name}',
+  'pages.sessionLive.chatAgent.onlineLabel': 'Online',
+  'pages.sessionLive.chatAgent.latencyAriaLabel': 'Latenza {ms}ms',
+  // MobileBody bottom-sheet labels (G1 #2374 T9 — sess.46r)
+  'pages.sessionLive.mobile.openSheetCta': 'Apri pannello',
+  'pages.sessionLive.mobile.closeSheetAriaLabel': 'Chiudi pannello',
+  'pages.sessionLive.mobile.drawerTitle': 'Strumenti sessione',
+  'pages.sessionLive.mobile.tabsAriaLabel': 'Tab strumenti',
   'pages.sessionLive.tools.title': 'Strumenti',
   'pages.sessionLive.tools.toolDiceLabel': 'Dado',
   'pages.sessionLive.tools.toolTimerLabel': 'Timer',
@@ -395,32 +410,77 @@ describe('SessionLiveView (Wave D.2 Foundation)', () => {
     expect(routerPush).toHaveBeenCalledWith('/sessions/session-abc-123');
   });
 
-  // ─── 3.8: URL state — tab changes ──────────────────────────────────────
+  // ─── 3.8: URL state — mobile bottom-sheet (G1 #2374 T9 sess.46r) ────────
 
-  it('mobile tab change to "log" calls router.replace with ?mtab=log', () => {
+  it('mobile renders mainContent = ChatAgentPanel + ActionLogTimeline (full-width, no bottom-nav)', () => {
     const { container } = renderWithIntl(<SessionLiveView />);
-    const logTab = container.querySelector(
-      '[data-slot="mobile-body-tab"][data-tab="log"]'
-    ) as HTMLButtonElement;
-    expect(logTab).toBeInTheDocument();
-    fireEvent.click(logTab);
-    expect(routerReplace).toHaveBeenCalled();
-    const callArg = routerReplace.mock.calls[0]?.[0] as string;
-    expect(callArg).toContain('mtab=log');
+    // Main column should contain ChatAgentPanel + ActionLogTimeline (mirrors desktop LEFT)
+    const mobileBody = container.querySelector('[data-slot="mobile-body"]');
+    expect(mobileBody).toBeInTheDocument();
+    expect(mobileBody?.querySelector('[data-slot="chat-agent-panel"]')).not.toBeNull();
+    expect(mobileBody?.querySelector('[data-slot="action-log-timeline"]')).not.toBeNull();
+    // NO legacy bottom-nav tabs
+    expect(container.querySelector('[data-slot="mobile-body-tab"]')).toBeNull();
   });
 
-  it('mobile tab "score" (default) removes ?mtab param when already on log', () => {
-    searchParamsMap['mtab'] = 'log';
+  it('FAB tap calls router.replace with ?msheet=open', () => {
     const { container } = renderWithIntl(<SessionLiveView />);
-    const scoreTab = container.querySelector(
-      '[data-slot="mobile-body-tab"][data-tab="score"]'
+    const fab = container.querySelector(
+      '[data-slot="mobile-body-open-sheet"]'
     ) as HTMLButtonElement;
-    expect(scoreTab).toBeInTheDocument();
-    fireEvent.click(scoreTab);
+    expect(fab).toBeInTheDocument();
+    fireEvent.click(fab);
     expect(routerReplace).toHaveBeenCalled();
     const callArg = routerReplace.mock.calls[0]?.[0] as string;
-    // Default tab 'score' should NOT have mtab in URL
-    expect(callArg).not.toContain('mtab=score');
+    expect(callArg).toContain('msheet=open');
+  });
+
+  it('?msheet=open mounts MobileBottomSheetDrawer with active tab content', () => {
+    searchParamsMap['msheet'] = 'open';
+    renderWithIntl(<SessionLiveView />);
+    // Drawer portals to document.body, so query document directly.
+    expect(document.querySelector('[data-slot="mobile-bottom-sheet"]')).not.toBeNull();
+  });
+
+  it('?mtab=turn pre-selects Turn tab in the drawer when sheet is open', () => {
+    searchParamsMap['msheet'] = 'open';
+    searchParamsMap['mtab'] = 'turn';
+    renderWithIntl(<SessionLiveView />);
+    // Drawer has 4 tabs; the 2nd (index 1) is Turn — aria-selected="true".
+    const drawerTabs = document.querySelectorAll('[data-slot="mobile-bottom-sheet"] [role="tab"]');
+    expect(drawerTabs).toHaveLength(4);
+    expect(drawerTabs[1]).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('?mtab=tools legacy maps to widget (back-compat)', () => {
+    // Legacy URL bookmark must not 404 — parseMobileTab('tools') → 'widget'.
+    searchParamsMap['msheet'] = 'open';
+    searchParamsMap['mtab'] = 'tools';
+    renderWithIntl(<SessionLiveView />);
+    const drawerTabs = document.querySelectorAll('[data-slot="mobile-bottom-sheet"] [role="tab"]');
+    // widget = 3rd tab (index 2)
+    expect(drawerTabs[2]).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('?mtab=chat legacy maps to score (chat is always-visible in main column)', () => {
+    searchParamsMap['msheet'] = 'open';
+    searchParamsMap['mtab'] = 'chat';
+    renderWithIntl(<SessionLiveView />);
+    const drawerTabs = document.querySelectorAll('[data-slot="mobile-bottom-sheet"] [role="tab"]');
+    // score = 1st tab (index 0)
+    expect(drawerTabs[0]).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('drawer tab click calls router.replace with ?mtab= (non-default)', () => {
+    searchParamsMap['msheet'] = 'open';
+    renderWithIntl(<SessionLiveView />);
+    const turnTab = document.querySelectorAll(
+      '[data-slot="mobile-bottom-sheet"] [role="tab"]'
+    )[1] as HTMLButtonElement;
+    fireEvent.click(turnTab);
+    expect(routerReplace).toHaveBeenCalled();
+    const callArg = routerReplace.mock.calls[0]?.[0] as string;
+    expect(callArg).toContain('mtab=turn');
   });
 
   // ─── 3.9: ?state= URL override ────────────────────────────────────────
@@ -595,27 +655,36 @@ describe('SessionLiveView (Wave D.2 Interactions — Task 3)', () => {
     }
   });
 
-  // ─── T3.2: RightColumnTabs — desktop tab routing ───────────────────────
+  // ─── T3.2: RightColumnTabs — desktop tab routing (G1 #2374 sess.46r) ───
+  // Tab keys refactored: 'tools'|'chat'|'notes' → 'score'|'turn'|'widget'|'notes'
+  // Back-compat aliases (R-1): legacy ?tab=tools → 'widget', ?tab=chat → 'score'
 
   it('T3.2a: RightColumnTabs is mounted in default shell', () => {
     const { container } = renderWithIntl(<SessionLiveView />);
     expect(container.querySelector('[data-slot="right-column-tabs"]')).toBeInTheDocument();
   });
 
-  it('T3.2b: ?tab=tools shows RightColumnTabs with activeTab=tools (default)', () => {
+  it('T3.2b: default ?tab shows RightColumnTabs with activeTab=score (new default)', () => {
     const { container } = renderWithIntl(<SessionLiveView />);
     const tabs = container.querySelector('[data-slot="right-column-tabs"]');
-    expect(tabs).toHaveAttribute('data-active-tab', 'tools');
+    expect(tabs).toHaveAttribute('data-active-tab', 'score');
   });
 
-  it('T3.2c: ?tab=chat shows RightColumnTabs with activeTab=chat', () => {
-    searchParamsMap['tab'] = 'chat';
+  it('T3.2c: ?tab=turn shows RightColumnTabs with activeTab=turn', () => {
+    searchParamsMap['tab'] = 'turn';
     const { container } = renderWithIntl(<SessionLiveView />);
     const tabs = container.querySelector('[data-slot="right-column-tabs"]');
-    expect(tabs).toHaveAttribute('data-active-tab', 'chat');
+    expect(tabs).toHaveAttribute('data-active-tab', 'turn');
   });
 
-  it('T3.2d: ?tab=notes shows RightColumnTabs with activeTab=notes', () => {
+  it('T3.2d: ?tab=widget shows RightColumnTabs with activeTab=widget', () => {
+    searchParamsMap['tab'] = 'widget';
+    const { container } = renderWithIntl(<SessionLiveView />);
+    const tabs = container.querySelector('[data-slot="right-column-tabs"]');
+    expect(tabs).toHaveAttribute('data-active-tab', 'widget');
+  });
+
+  it('T3.2d2: ?tab=notes shows RightColumnTabs with activeTab=notes', () => {
     searchParamsMap['tab'] = 'notes';
     const { container } = renderWithIntl(<SessionLiveView />);
     const tabs = container.querySelector('[data-slot="right-column-tabs"]');
@@ -624,31 +693,119 @@ describe('SessionLiveView (Wave D.2 Interactions — Task 3)', () => {
 
   it('T3.2e: clicking a desktop tab calls router.replace with ?tab= param', () => {
     const { container } = renderWithIntl(<SessionLiveView />);
-    // Find the chat tab button inside RightColumnTabs
-    const chatTabBtn = container.querySelector(
+    // Find a non-active tab button inside RightColumnTabs
+    const nextTabBtn = container.querySelector(
       '[data-slot="right-column-tabs"] [role="tab"][aria-selected="false"]'
     ) as HTMLButtonElement;
-    expect(chatTabBtn).toBeInTheDocument();
-    fireEvent.click(chatTabBtn);
+    expect(nextTabBtn).toBeInTheDocument();
+    fireEvent.click(nextTabBtn);
     expect(routerReplace).toHaveBeenCalled();
   });
 
-  // ─── T3.3: Mobile tab routing — Interactions panels ────────────────────
+  // ─── T4.x: Back-compat URL aliases (R-1 mitigation) ──────────────────────
 
-  it('T3.3a: ?mtab=chat shows LiveAgentChat in mobile content', () => {
-    searchParamsMap['mtab'] = 'chat';
+  it('T4.1: legacy ?tab=tools is treated as widget (back-compat alias)', () => {
+    searchParamsMap['tab'] = 'tools';
     const { container } = renderWithIntl(<SessionLiveView />);
-    expect(container.querySelector('[data-slot="live-agent-chat"]')).toBeInTheDocument();
+    const tabs = container.querySelector('[data-slot="right-column-tabs"]');
+    expect(tabs).toHaveAttribute('data-active-tab', 'widget');
   });
 
-  it('T3.3b: ?mtab=tools shows SessionToolsRail in mobile content (Player role)', () => {
-    // Default fixture role is Player, so tools rail is visible
-    searchParamsMap['mtab'] = 'tools';
+  it('T4.2: legacy ?tab=chat falls back to score (chat is no longer a tab)', () => {
+    searchParamsMap['tab'] = 'chat';
     const { container } = renderWithIntl(<SessionLiveView />);
-    // SessionToolsRail renders for Player/Host, returns null for Spectator
-    // In default fixture (IS_VISUAL_TEST_BUILD=false), viewerRole=Player from proxy
-    const rail = container.querySelector('[data-slot="session-tools-rail"]');
-    // May or may not render depending on role resolution; assert no crash
+    const tabs = container.querySelector('[data-slot="right-column-tabs"]');
+    expect(tabs).toHaveAttribute('data-active-tab', 'score');
+  });
+
+  it('T4.3: unknown ?tab value falls back to score (default)', () => {
+    searchParamsMap['tab'] = 'bogus-tab';
+    const { container } = renderWithIntl(<SessionLiveView />);
+    const tabs = container.querySelector('[data-slot="right-column-tabs"]');
+    expect(tabs).toHaveAttribute('data-active-tab', 'score');
+  });
+
+  it('T4.4: tab change to "score" (default) omits ?tab from URL (clean bookmark)', () => {
+    searchParamsMap['tab'] = 'widget';
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // Click the score tab (which is at index 0, currently non-active)
+    const scoreTabBtn = container.querySelector(
+      '[data-slot="right-column-tabs"] [role="tab"]:nth-of-type(1)'
+    ) as HTMLButtonElement;
+    expect(scoreTabBtn).toBeInTheDocument();
+    fireEvent.click(scoreTabBtn);
+    expect(routerReplace).toHaveBeenCalled();
+    const callArg = routerReplace.mock.calls[0]?.[0] as string;
+    // Default tab 'score' should NOT have tab in URL
+    expect(callArg).not.toContain('tab=score');
+  });
+
+  // ─── T4.5: 60/40 layout contract ─────────────────────────────────────────
+
+  it('T4.5: default-state root container has data-layout="2col-60-40"', () => {
+    const { container } = renderWithIntl(<SessionLiveView />);
+    const root = container.querySelector('[data-slot="session-live-view"]');
+    expect(root).toBeInTheDocument();
+    expect(root).toHaveAttribute('data-layout', '2col-60-40');
+  });
+
+  it('T4.6: Cell 5 desktop renders ChatAgentPanel in LEFT mainColumn', () => {
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // ChatAgentPanel data-slot stable per §5 frozen contract for #2375 G3
+    expect(container.querySelector('[data-slot="chat-agent-panel"]')).toBeInTheDocument();
+  });
+
+  it('T4.7: Cell 5 desktop renders ActionLogTimeline stacked in LEFT mainColumn', () => {
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // ActionLogTimeline is rendered alongside ChatAgentPanel in mainColumn
+    expect(container.querySelector('[data-slot="action-log-timeline"]')).toBeInTheDocument();
+  });
+
+  it('T4.8: RIGHT tab=turn renders TurnIndicator + PlayerRosterLive', () => {
+    searchParamsMap['tab'] = 'turn';
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // TurnIndicator + PlayerRosterLive moved from LEFT sidebar to RIGHT 'turn' tab (D-6)
+    expect(container.querySelector('[data-slot="turn-indicator"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-slot="player-roster-live"]')).toBeInTheDocument();
+  });
+
+  it('T4.9: RIGHT tab=widget renders SessionToolsRail (legacy tools renamed)', () => {
+    searchParamsMap['tab'] = 'widget';
+    const { container } = renderWithIntl(<SessionLiveView />);
+    expect(container.querySelector('[data-slot="session-tools-rail"]')).toBeInTheDocument();
+  });
+
+  it('T4.10: RIGHT tab=notes renders LiveSessionNotes', () => {
+    searchParamsMap['tab'] = 'notes';
+    const { container } = renderWithIntl(<SessionLiveView />);
+    expect(container.querySelector('[data-slot="live-session-notes"]')).toBeInTheDocument();
+  });
+
+  it('T4.11: RIGHT tab=score renders LiveScoringPanel', () => {
+    // ?tab default → 'score'
+    const { container } = renderWithIntl(<SessionLiveView />);
+    expect(container.querySelector('[data-slot="live-scoring-panel"]')).toBeInTheDocument();
+  });
+
+  // ─── T3.3: Mobile drawer tab routing — Interactions panels (T9 sess.46r) ─
+
+  it('T3.3a: chat is always-visible in mobile main column (no longer a drawer tab)', () => {
+    // Post-T9: chat lives in the main column (ChatAgentPanel), not the drawer.
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // LiveAgentChat is mounted as the body of ChatAgentPanel inside MobileBody main column.
+    const mobileBody = container.querySelector('[data-slot="mobile-body"]');
+    expect(mobileBody?.querySelector('[data-slot="live-agent-chat"]')).not.toBeNull();
+  });
+
+  it('T3.3b: ?msheet=open + ?mtab=widget mounts SessionToolsRail in drawer (Player role)', () => {
+    // Default fixture role is Player, so tools rail is visible inside the drawer.
+    searchParamsMap['msheet'] = 'open';
+    searchParamsMap['mtab'] = 'widget';
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // Drawer mounted with SessionToolsRail inside.
+    expect(document.querySelector('[data-slot="mobile-bottom-sheet"]')).not.toBeNull();
+    // Whether SessionToolsRail renders depends on viewer role (Player/Host yes, Spectator no).
+    // Assert no crash + drawer mounted with widget tab selected.
     expect(container.querySelector('[data-slot="session-live-view"]')).toBeInTheDocument();
   });
 

@@ -3240,9 +3240,12 @@
       },
       "rightColumn": {
         "tabsAriaLabel": "Pannelli sessione",
+        "tabScore": "Score",
+        "tabTurn": "Turni",
+        "tabWidget": "Widget",
+        "tabNotes": "Note",
         "tabTools": "Strumenti",
-        "tabChat": "Chat",
-        "tabNotes": "Note"
+        "tabChat": "Chat"
       },
       "tools": {
         "title": "Strumenti",
@@ -3259,6 +3262,18 @@
         "visibilityPrivate": "Privato",
         "visibilityShared": "Condiviso",
         "emptyMessage": "Nessun messaggio ancora."
+      },
+      "chatAgent": {
+        "title": "ChatAgent",
+        "onlineLabel": "Online",
+        "latencyAriaLabel": "Latenza {ms}ms",
+        "agentNameAriaLabel": "Nome agente {name}"
+      },
+      "mobile": {
+        "openSheetCta": "Apri pannello",
+        "closeSheetAriaLabel": "Chiudi pannello",
+        "drawerTitle": "Strumenti sessione",
+        "tabsAriaLabel": "Tab strumenti"
       },
       "notes": {
         "title": "Note",

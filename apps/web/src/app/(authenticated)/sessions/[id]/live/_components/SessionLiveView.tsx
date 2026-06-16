@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * SessionLiveView — Wave D.2 Interactions sub-PR (Issue #750).
  *
@@ -10,16 +9,27 @@
  *   - RightColumnTabs mounted (desktop right column) with tab URL SSOT
  *   - PauseOverlay / EndgameDialog lazy-loaded, mounted from ?dialog= URL param
  *   - ConnectionLostBanner shown for reconnecting/degraded-polling/failed states
- *   - Mobile tab routing extended: chat → LiveAgentChat, tools → SessionToolsRail
- *   - Desktop right column: tools → SessionToolsRail, chat → LiveAgentChat, notes → LiveSessionNotes
+ *   - Mobile bottom-sheet (G1 #2374 T9 sess.46r): full-width main = ChatAgentPanel + ActionLogTimeline;
+ *     floating action button opens MobileBottomSheetDrawer (Score/Turn/Widget/Notes — same content as
+ *     desktop RIGHT). URL SSOT: ?msheet=open|closed + ?mtab=score|turn|widget|notes.
+ *   - Desktop right column (G1 #2374): score → LiveScoringPanel, turn → TurnIndicator+PlayerRosterLive,
+ *     widget → SessionToolsRail, notes → LiveSessionNotes. ChatAgentPanel now lives in LEFT mainColumn.
  *   - Write actions: handleScoreUpdate (optimistic UI), handleToolExecute,
  *     handleSendMessage, handleAddNote, handleResume, handlePause, handleEndgame
  *   - 403 handling: score rollback + toast "Permesso negato"
  *   - 429 handling: connectionState='failed' shown as ConnectionLostBanner kind='failed'
  *
  * **URL state SSOT** (no useState mirrors):
- *   ?tab=tools|chat|notes (default 'tools')   — desktop right-column tab
- *   ?mtab=score|log|tools|chat (default 'score') — mobile bottom nav tab
+ *   ?tab=score|turn|widget|notes (default 'score') — desktop right-column tab.
+ *     Back-compat aliases (G1 #2374 sess.46r, R-1):
+ *       legacy ?tab=tools  → 'widget'
+ *       legacy ?tab=chat   → 'score' (chat is no longer a tab; lives in LEFT mainColumn)
+ *   ?mtab=score|turn|widget|notes (default 'score') — mobile bottom-sheet active tab.
+ *     Back-compat aliases (T9 sess.46r, R-1 mirror of desktop ?tab):
+ *       legacy ?mtab=tools  → 'widget'
+ *       legacy ?mtab=chat   → 'score' (chat is always-visible in main column)
+ *       legacy ?mtab=log    → 'score' (log is always-visible in main column)
+ *   ?msheet=open|closed (default 'closed') — mobile bottom-sheet drawer state.
  *   ?dialog=pause|endgame                      — dialog state
  *   ?fixture=spectator|host|paused             — fixture variant (visual baselines)
  *   ?state=loading|not-found                   — override gated by STATE_OVERRIDE_ENABLED
@@ -37,8 +47,23 @@
  * **Subroutes preserved**:
  *   `/sessions/[id]` (D.3 summary) and `/sessions/[id]/diary/*` are UNTOUCHED.
  *
+ * **G1 #2374 (2026-06-15)**:
+ *   Refactored from 3-col fixed-width layout (LEFT 280px / CENTER flex / RIGHT 340px)
+ *   to a 2-col 60/40 grid (LEFT minmax(0,3fr) / RIGHT minmax(0,2fr)).
+ *   - LEFT (60%) = ChatAgentPanel (new primitive, always visible) + ActionLogTimeline stacked.
+ *   - RIGHT (40%) = RightColumnTabs polymorphic with keys: Score | Turn | Widget | Notes.
+ *     - Score tab → LiveScoringPanel (G5 will swap for polymorphic dispatcher).
+ *     - Turn tab → TurnIndicator + PlayerRosterLive (moved out of the deprecated LEFT sidebar).
+ *     - Widget tab → SessionToolsRail (relabelled from "Tools" per mockup).
+ *     - Notes tab → LiveSessionNotes (unchanged).
+ *   Legacy URL `?tab=tools|chat|notes` back-compat preserved via `parseLiveTab` alias map
+ *   (tools→widget, chat→score, notes→notes). Token discipline: raw HSL backgrounds replaced
+ *   with semantic `bg-background`/`bg-card`. Mobile bottom-sheet drawer (T9) follows in the
+ *   same PR per spec-panel DEC-4.
+ *
  * Pattern blueprint: Wave D.1 SessionsLibraryView + Wave C.1 AgentDetailView.
  * Wave D.2 Interactions sub-PR — Issue #750
+ * G1 layout refactor — Issue #2374
  */
 
 'use client';
@@ -50,6 +75,7 @@ import { useIntl } from 'react-intl';
 
 import {
   ActionLogTimeline,
+  ChatAgentPanel,
   DesktopBody,
   LiveScoringPanel,
   LiveTopBar,
@@ -57,17 +83,16 @@ import {
   PlayerRosterLive,
   TurnIndicator,
   type ActionLogTimelineLabels,
+  type ChatAgentPanelLabels,
   type LiveScoringPanelLabels,
   type LiveScoringPanelScoreEntry,
   type LiveTopBarLabels,
   type MobileBodyLabels,
-  type MobileTab,
   type PlayerRosterLiveLabels,
   type TurnIndicatorLabels,
 } from '@/components/features/session-live';
 import {
   ConnectionLostBanner,
-  LiveAgentChat,
   LiveSessionNotes,
   RightColumnTabs,
   SessionToolsRail,
@@ -131,17 +156,35 @@ function resolveFixtureVariant(variantParam: string | null): LiveSessionFixture 
 }
 
 // ─── Desktop live tab types ───────────────────────────────────────────────────
+// G1 #2374 sess.46r — renamed to mockup canonical 'score' | 'turn' | 'widget' | 'notes'.
+// parseLiveTab implements back-compat alias map per plan §3 D-2 (R-1 mitigation):
+//   - legacy ?tab=tools  → 'widget'  (SessionToolsRail = widget semantic)
+//   - legacy ?tab=chat   → 'score'   (chat is no longer a tab; live in LEFT mainColumn)
+//   - legacy/missing     → 'score'   (new default)
 
-type LiveTab = 'tools' | 'chat' | 'notes';
+type LiveTab = 'score' | 'turn' | 'widget' | 'notes';
 
 function parseLiveTab(raw: string | null): LiveTab {
-  if (raw === 'chat' || raw === 'notes') return raw;
-  return 'tools'; // default
+  if (raw === 'turn' || raw === 'widget' || raw === 'notes' || raw === 'score') return raw;
+  // Back-compat aliases (R-1): legacy URL bookmarks must not 404.
+  if (raw === 'tools') return 'widget';
+  if (raw === 'chat') return 'score';
+  return 'score'; // default
 }
 
-function parseMobileTab(raw: string | null): MobileTab {
-  if (raw === 'log' || raw === 'tools' || raw === 'chat') return raw;
-  return 'score'; // default
+// G1 #2374 T9 sess.46r — mobile drawer uses the same LiveTab union as desktop.
+// Legacy ?mtab=tools  → 'widget' (same back-compat as desktop ?tab)
+// Legacy ?mtab=chat   → 'score'  (chat always-visible in main column)
+// Legacy ?mtab=log    → 'score'  (log always-visible in main column)
+function parseMobileTab(raw: string | null): LiveTab {
+  if (raw === 'turn' || raw === 'widget' || raw === 'notes' || raw === 'score') return raw;
+  if (raw === 'tools') return 'widget';
+  if (raw === 'chat' || raw === 'log') return 'score';
+  return 'score';
+}
+
+function parseMobileSheetOpen(raw: string | null): boolean {
+  return raw === 'open';
 }
 
 // ─── Skeleton shell components ────────────────────────────────────────────────
@@ -187,14 +230,14 @@ function ErrorShell({
       data-slot="session-live-error"
       className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center"
     >
-      <p className="text-lg font-semibold text-slate-200">{title}</p>
+      <p className="text-lg font-semibold text-foreground">{title}</p>
       <p className="text-sm text-muted-foreground">{description}</p>
       <button
         type="button"
         onClick={onRetry}
         data-slot="session-live-error-retry"
-        className="rounded-lg bg-[hsl(240,60%,45%)] px-6 py-2 text-sm font-semibold text-white
-          hover:bg-[hsl(240,60%,38%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(240,60%,72%)]"
+        className="rounded-lg bg-primary px-6 py-2 text-sm font-semibold text-primary-foreground
+          hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {ctaRetry}
       </button>
@@ -218,14 +261,14 @@ function NotFoundShell({
       data-slot="session-live-not-found"
       className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center"
     >
-      <p className="text-lg font-semibold text-slate-200">{title}</p>
+      <p className="text-lg font-semibold text-foreground">{title}</p>
       <p className="text-sm text-muted-foreground">{description}</p>
       <button
         type="button"
         onClick={onBack}
         data-slot="session-live-not-found-cta"
-        className="rounded-lg bg-[hsl(240,60%,45%)] px-6 py-2 text-sm font-semibold text-white
-          hover:bg-[hsl(240,60%,38%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(240,60%,72%)]"
+        className="rounded-lg bg-primary px-6 py-2 text-sm font-semibold text-primary-foreground
+          hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {ctaBack}
       </button>
@@ -249,6 +292,7 @@ export function SessionLiveView(): ReactElement {
   // ── URL state SSOT ────────────────────────────────────────────────────────
   const tab = parseLiveTab(searchParams.get('tab'));
   const mobileTab = parseMobileTab(searchParams.get('mtab'));
+  const mobileSheetOpen = parseMobileSheetOpen(searchParams.get('msheet'));
   const fixtureVariantParam = searchParams.get('fixture');
 
   // State override hatch (dev/visual-test builds only)
@@ -366,16 +410,27 @@ export function SessionLiveView(): ReactElement {
 
   const handleTabChange = useCallback(
     (next: LiveTab) => {
-      const val = next === 'tools' ? null : next;
+      // G1 #2374 sess.46r — default 'score' is omitted from URL (clean bookmark surface).
+      const val = next === 'score' ? null : next;
       router.replace(`${pathname}${buildQuery({ tab: val })}`, { scroll: false });
     },
     [router, pathname, buildQuery]
   );
 
   const handleMobileTabChange = useCallback(
-    (next: MobileTab) => {
+    (next: LiveTab) => {
+      // Default 'score' is omitted from URL (clean bookmark surface).
       const val = next === 'score' ? null : next;
       router.replace(`${pathname}${buildQuery({ mtab: val })}`, { scroll: false });
+    },
+    [router, pathname, buildQuery]
+  );
+
+  const handleMobileSheetOpenChange = useCallback(
+    (open: boolean) => {
+      // Default 'closed' is omitted from URL (clean bookmark surface).
+      const val = open ? 'open' : null;
+      router.replace(`${pathname}${buildQuery({ msheet: val })}`, { scroll: false });
     },
     [router, pathname, buildQuery]
   );
@@ -659,13 +714,17 @@ export function SessionLiveView(): ReactElement {
     [t]
   );
 
+  // G1 #2374 T9 sess.46r — bottom-sheet labels (replaces legacy bottom-nav labels).
   const mobileBodyLabels = useMemo<MobileBodyLabels>(
     (): MobileBodyLabels => ({
-      tabScore: t('pages.sessionLive.scoring.title'),
-      tabLog: t('pages.sessionLive.actionLog.title'),
-      tabTools: t('pages.sessionLive.rightColumn.tabTools'),
-      tabChat: t('pages.sessionLive.rightColumn.tabChat'),
-      bottomNavAriaLabel: t('pages.sessionLive.a11y.viewLabel'),
+      openSheetCta: t('pages.sessionLive.mobile.openSheetCta'),
+      closeSheetAriaLabel: t('pages.sessionLive.mobile.closeSheetAriaLabel'),
+      drawerTitle: t('pages.sessionLive.mobile.drawerTitle'),
+      tabsAriaLabel: t('pages.sessionLive.mobile.tabsAriaLabel'),
+      tabScore: t('pages.sessionLive.rightColumn.tabScore'),
+      tabTurn: t('pages.sessionLive.rightColumn.tabTurn'),
+      tabWidget: t('pages.sessionLive.rightColumn.tabWidget'),
+      tabNotes: t('pages.sessionLive.rightColumn.tabNotes'),
     }),
     [t]
   );
@@ -687,8 +746,9 @@ export function SessionLiveView(): ReactElement {
   const rightColumnTabsLabels = useMemo<RightColumnTabsLabels>(
     (): RightColumnTabsLabels => ({
       tabsAriaLabel: t('pages.sessionLive.rightColumn.tabsAriaLabel'),
-      tabTools: t('pages.sessionLive.rightColumn.tabTools'),
-      tabChat: t('pages.sessionLive.rightColumn.tabChat'),
+      tabScore: t('pages.sessionLive.rightColumn.tabScore'),
+      tabTurn: t('pages.sessionLive.rightColumn.tabTurn'),
+      tabWidget: t('pages.sessionLive.rightColumn.tabWidget'),
       tabNotes: t('pages.sessionLive.rightColumn.tabNotes'),
     }),
     [t]
@@ -718,6 +778,18 @@ export function SessionLiveView(): ReactElement {
       emptyMessage: t('pages.sessionLive.chat.emptyMessage'),
     }),
     [t]
+  );
+
+  // G1 #2374 sess.46r — ChatAgentPanel composite labels (Gate A: ICU resolved here).
+  const chatAgentLabels = useMemo<ChatAgentPanelLabels>(
+    (): ChatAgentPanelLabels => ({
+      title: t('pages.sessionLive.chatAgent.title'),
+      agentNameAriaLabel: t('pages.sessionLive.chatAgent.agentNameAriaLabel', { name: 'MeepleAI' }),
+      onlineLabel: t('pages.sessionLive.chatAgent.onlineLabel'),
+      latencyAriaLabel: t('pages.sessionLive.chatAgent.latencyAriaLabel', { ms: 42 }),
+      chatPanelLabels: chatLabels,
+    }),
+    [t, chatLabels]
   );
 
   const notesLabels = useMemo<LiveSessionNotesLabels>(
@@ -816,30 +888,71 @@ export function SessionLiveView(): ReactElement {
     return null;
   }, [activeSession]);
 
-  // Mobile content selection based on active tab.
+  // ── Mobile main content (G1 #2374 T9 sess.46r) ───────────────────────────
+  // Full-width LEFT-equivalent: ChatAgentPanel + ActionLogTimeline stacked.
+  // Mirrors the desktop LEFT 60% column (see desktopMainColumn below).
   // MUST be declared BEFORE any early return per react-hooks/rules-of-hooks.
-  const mobileContent = useMemo<React.ReactNode>(() => {
+  const mobileMainContent = useMemo<React.ReactNode>(() => {
+    if (activeSession == null) return null;
+    return (
+      <div className="flex flex-col gap-3">
+        <ChatAgentPanel
+          messages={chatMessages}
+          viewerRole={activeSession.viewerRole}
+          viewerId={activeSession.viewerId}
+          onSendMessage={handleSendMessage}
+          agentName="MeepleAI"
+          agentEmoji="🤖"
+          latencyMs={42}
+          labels={chatAgentLabels}
+          compact
+        />
+        <ActionLogTimeline entries={activeSession.actionLog} labels={actionLogLabels} compact />
+      </div>
+    );
+  }, [activeSession, chatMessages, handleSendMessage, chatAgentLabels, actionLogLabels]);
+
+  // ── Mobile bottom-sheet content (G1 #2374 T9 sess.46r) ───────────────────
+  // Same switch as desktopRightColumn (DRY): score / turn / widget / notes.
+  // Hosted inside MobileBottomSheetDrawer via MobileBody.sheetContent prop.
+  const mobileSheetContent = useMemo<React.ReactNode>(() => {
     if (activeSession == null) return null;
     switch (mobileTab) {
-      case 'log':
-        return <ActionLogTimeline entries={activeSession.actionLog} labels={actionLogLabels} />;
-      case 'chat':
+      case 'turn':
         return (
-          <LiveAgentChat
-            messages={chatMessages}
-            viewerRole={activeSession.viewerRole}
-            viewerId={activeSession.viewerId}
-            onSendMessage={handleSendMessage}
-            labels={chatLabels}
-          />
+          <div className="flex flex-col gap-4 p-3">
+            <TurnIndicator
+              current={activeSession.currentTurn}
+              total={activeSession.totalTurns}
+              activePlayerName={activePlayerName}
+              isMyTurn={isMyTurn}
+              labels={turnIndicatorLabels}
+            />
+            <PlayerRosterLive
+              players={activeSession.players}
+              viewerId={activeSession.viewerId}
+              viewerRole={activeSession.viewerRole}
+              labels={rosterLabels}
+            />
+          </div>
         );
-      case 'tools':
+      case 'widget':
         return (
           <SessionToolsRail
             tools={toolsList}
             viewerRole={activeSession.viewerRole}
             onToolExecute={handleToolExecute}
             labels={toolsRailLabels}
+          />
+        );
+      case 'notes':
+        return (
+          <LiveSessionNotes
+            notes={noteEntries}
+            viewerRole={activeSession.viewerRole}
+            viewerId={activeSession.viewerId}
+            onAddNote={handleAddNote}
+            labels={notesLabels}
           />
         );
       case 'score':
@@ -858,13 +971,16 @@ export function SessionLiveView(): ReactElement {
     activeSession,
     scores,
     scoringLabels,
-    actionLogLabels,
-    chatMessages,
-    chatLabels,
-    handleSendMessage,
+    activePlayerName,
+    isMyTurn,
+    turnIndicatorLabels,
+    rosterLabels,
     toolsList,
     toolsRailLabels,
     handleToolExecute,
+    noteEntries,
+    handleAddNote,
+    notesLabels,
   ]);
 
   // ── ConnectionLostBanner — shown for non-healthy SSE states ──────────────
@@ -883,7 +999,7 @@ export function SessionLiveView(): ReactElement {
         data-slot="session-live-view"
         data-ui-state="loading"
         data-theme="dark"
-        className="flex flex-col min-h-screen bg-[hsl(240,40%,8%)]"
+        className="flex flex-col min-h-screen bg-background"
       >
         <LoadingShell ariaLabel={t('pages.sessionLive.loading.ariaLabel')} />
       </div>
@@ -897,7 +1013,7 @@ export function SessionLiveView(): ReactElement {
         data-slot="session-live-view"
         data-ui-state="error"
         data-theme="dark"
-        className="flex flex-col min-h-screen bg-[hsl(240,40%,8%)]"
+        className="flex flex-col min-h-screen bg-background"
       >
         <ErrorShell
           title={t('pages.sessionLive.error.title')}
@@ -916,7 +1032,7 @@ export function SessionLiveView(): ReactElement {
         data-slot="session-live-view"
         data-ui-state="not-found"
         data-theme="dark"
-        className="flex flex-col min-h-screen bg-[hsl(240,40%,8%)]"
+        className="flex flex-col min-h-screen bg-background"
       >
         <NotFoundShell
           title={t('pages.sessionLive.notFound.title')}
@@ -936,7 +1052,7 @@ export function SessionLiveView(): ReactElement {
         data-slot="session-live-view"
         data-ui-state="loading"
         data-theme="dark"
-        className="flex flex-col min-h-screen bg-[hsl(240,40%,8%)]"
+        className="flex flex-col min-h-screen bg-background"
       >
         <LoadingShell ariaLabel={t('pages.sessionLive.loading.ariaLabel')} />
       </div>
@@ -945,59 +1061,65 @@ export function SessionLiveView(): ReactElement {
 
   // ── Default content ───────────────────────────────────────────────────────
   // (mobileContent declared before early returns per react-hooks/rules-of-hooks)
+  //
+  // G1 #2374 sess.46r — Desktop refactor from 3-zone (LEFT sidebar + CENTER
+  // column + RIGHT tabs) to 2-zone 60/40 grid (LEFT mainColumn + RIGHT tabs).
+  // TurnIndicator + PlayerRosterLive moved to RIGHT 'turn' tab (D-6).
+  // LEFT mainColumn stacks ChatAgentPanel (Issue #2375 G3 §5 contract) on top
+  // of ActionLogTimeline — mirrors mockup `sp4-session-skeleton-live.jsx`.
 
-  const desktopLeftSidebar = (
-    <div className="flex flex-col gap-0 divide-y divide-slate-100">
-      <div className="p-4">
-        <TurnIndicator
-          current={activeSession.currentTurn}
-          total={activeSession.totalTurns}
-          activePlayerName={activePlayerName}
-          isMyTurn={isMyTurn}
-          labels={turnIndicatorLabels}
-        />
-      </div>
-      <div className="p-4">
-        <PlayerRosterLive
-          players={activeSession.players}
-          viewerId={activeSession.viewerId}
-          viewerRole={activeSession.viewerRole}
-          labels={rosterLabels}
-        />
-      </div>
-    </div>
-  );
-
-  const desktopCenterColumn = (
-    <div className="flex flex-col gap-6">
-      <LiveScoringPanel
-        scores={scores}
+  const desktopMainColumn = (
+    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-3">
+      <ChatAgentPanel
+        messages={chatMessages}
         viewerRole={activeSession.viewerRole}
         viewerId={activeSession.viewerId}
-        labels={scoringLabels}
+        onSendMessage={handleSendMessage}
+        agentName="MeepleAI"
+        agentEmoji="🤖"
+        latencyMs={42}
+        labels={chatAgentLabels}
       />
       <ActionLogTimeline entries={activeSession.actionLog} labels={actionLogLabels} />
     </div>
   );
 
-  // Desktop right column: RightColumnTabs with tab content
+  // Desktop right column: RightColumnTabs with tab content.
+  // Tab keys: 'score' | 'turn' | 'widget' | 'notes' (G1 §3 D-2).
+  // G5 (#2373) will polymorphic-replace LiveScoringPanel; G1 reuses existing renderers (D-6).
   const desktopRightColumn = (
     <RightColumnTabs activeTab={tab} onTabChange={handleTabChange} labels={rightColumnTabsLabels}>
-      {tab === 'tools' && (
+      {tab === 'score' && (
+        <LiveScoringPanel
+          scores={scores}
+          viewerRole={activeSession.viewerRole}
+          viewerId={activeSession.viewerId}
+          labels={scoringLabels}
+        />
+      )}
+      {tab === 'turn' && (
+        <div className="flex flex-col gap-4 p-3">
+          <TurnIndicator
+            current={activeSession.currentTurn}
+            total={activeSession.totalTurns}
+            activePlayerName={activePlayerName}
+            isMyTurn={isMyTurn}
+            labels={turnIndicatorLabels}
+          />
+          <PlayerRosterLive
+            players={activeSession.players}
+            viewerId={activeSession.viewerId}
+            viewerRole={activeSession.viewerRole}
+            labels={rosterLabels}
+          />
+        </div>
+      )}
+      {tab === 'widget' && (
         <SessionToolsRail
           tools={toolsList}
           viewerRole={activeSession.viewerRole}
           onToolExecute={handleToolExecute}
           labels={toolsRailLabels}
-        />
-      )}
-      {tab === 'chat' && (
-        <LiveAgentChat
-          messages={chatMessages}
-          viewerRole={activeSession.viewerRole}
-          viewerId={activeSession.viewerId}
-          onSendMessage={handleSendMessage}
-          labels={chatLabels}
         />
       )}
       {tab === 'notes' && (
@@ -1016,8 +1138,9 @@ export function SessionLiveView(): ReactElement {
     <div
       data-slot="session-live-view"
       data-ui-state="default"
+      data-layout="2col-60-40"
       data-theme="dark"
-      className="flex flex-col h-screen overflow-hidden bg-[hsl(240,40%,8%)] text-slate-100"
+      className="flex flex-col h-screen overflow-hidden bg-background text-foreground"
       aria-label={t('pages.sessionLive.a11y.viewLabel')}
     >
       {/* Sticky top bar */}
@@ -1052,18 +1175,17 @@ export function SessionLiveView(): ReactElement {
         </div>
       )}
 
-      {/* Desktop 3-column layout (lg+) */}
-      <DesktopBody
-        leftSidebar={desktopLeftSidebar}
-        centerColumn={desktopCenterColumn}
-        rightColumn={desktopRightColumn}
-      />
+      {/* Desktop 2-zone 60/40 layout (lg+) — G1 #2374 */}
+      <DesktopBody mainColumn={desktopMainColumn} rightColumn={desktopRightColumn} />
 
-      {/* Mobile single-column with bottom nav (< lg) */}
+      {/* Mobile bottom-sheet pattern (< lg) — G1 #2374 T9 sess.46r */}
       <MobileBody
-        activeTab={mobileTab}
-        onTabChange={handleMobileTabChange}
-        content={mobileContent}
+        mainContent={mobileMainContent}
+        sheetOpen={mobileSheetOpen}
+        onSheetOpenChange={handleMobileSheetOpenChange}
+        sheetActiveTab={mobileTab}
+        onSheetTabChange={handleMobileTabChange}
+        sheetContent={mobileSheetContent}
         labels={mobileBodyLabels}
       />
 

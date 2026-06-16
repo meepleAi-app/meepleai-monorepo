@@ -3133,9 +3133,12 @@
       },
       "rightColumn": {
         "tabsAriaLabel": "Session panels",
+        "tabScore": "Score",
+        "tabTurn": "Turn",
+        "tabWidget": "Widget",
+        "tabNotes": "Notes",
         "tabTools": "Tools",
-        "tabChat": "Chat",
-        "tabNotes": "Notes"
+        "tabChat": "Chat"
       },
       "tools": {
         "title": "Tools",
@@ -3152,6 +3155,18 @@
         "visibilityPrivate": "Private",
         "visibilityShared": "Shared",
         "emptyMessage": "No messages yet."
+      },
+      "chatAgent": {
+        "title": "ChatAgent",
+        "onlineLabel": "Online",
+        "latencyAriaLabel": "Latency {ms}ms",
+        "agentNameAriaLabel": "Agent name {name}"
+      },
+      "mobile": {
+        "openSheetCta": "Open panel",
+        "closeSheetAriaLabel": "Close panel",
+        "drawerTitle": "Session tools",
+        "tabsAriaLabel": "Tool tabs"
       },
       "notes": {
         "title": "Notes",

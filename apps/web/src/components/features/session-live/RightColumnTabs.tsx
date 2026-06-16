@@ -1,12 +1,18 @@
 'use client';
 
 /**
- * RightColumnTabs — Wave D.2 Interactions sub-PR (Issue #750).
+ * RightColumnTabs — Issue #2374 G1 3-col layout (Task T1, sess.46r).
  *
- * Desktop right-column tab switcher (Tools / Chat / Notes).
+ * Desktop right-column tab switcher (Score / Turni / Widget / Note).
  * Uses useTablistKeyboardNav (Wave A.6 PR #623) for WAI-ARIA tablist contract.
  *
- * Tab keys: 'tools' | 'chat' | 'notes' (LiveTab type from session-live-state.ts).
+ * Tab keys: 'score' | 'turn' | 'widget' | 'notes' (polymorphic dispatcher
+ * matching mockup `sp4-session-skeleton-live.jsx`).
+ *
+ * Migration history:
+ *   - Issue #750 (Wave D.2): initial 3-tab keys 'tools' | 'chat' | 'notes'.
+ *   - Issue #2374 (sess.46r): renamed to mockup canonical 'score' | 'turn' |
+ *     'widget' | 'notes' per plan §3 D-2.
  *
  * A11y:
  *   - role="tablist" aria-orientation="horizontal"
@@ -28,16 +34,17 @@ import { useTablistKeyboardNav } from '@/hooks/useTablistKeyboardNav';
 
 // ─── Tab types ────────────────────────────────────────────────────────────────
 
-export type LiveTab = 'tools' | 'chat' | 'notes';
+export type LiveTab = 'score' | 'turn' | 'widget' | 'notes';
 
-const ORDERED_TABS: ReadonlyArray<LiveTab> = ['tools', 'chat', 'notes'];
+const ORDERED_TABS: ReadonlyArray<LiveTab> = ['score', 'turn', 'widget', 'notes'];
 
 // ─── Labels ───────────────────────────────────────────────────────────────────
 
 export interface RightColumnTabsLabels {
   readonly tabsAriaLabel: string;
-  readonly tabTools: string;
-  readonly tabChat: string;
+  readonly tabScore: string;
+  readonly tabTurn: string;
+  readonly tabWidget: string;
   readonly tabNotes: string;
 }
 
@@ -65,11 +72,12 @@ export function RightColumnTabs({
 
   const tabLabels: Record<LiveTab, string> = useMemo(
     () => ({
-      tools: labels.tabTools,
-      chat: labels.tabChat,
+      score: labels.tabScore,
+      turn: labels.tabTurn,
+      widget: labels.tabWidget,
       notes: labels.tabNotes,
     }),
-    [labels.tabTools, labels.tabChat, labels.tabNotes]
+    [labels.tabScore, labels.tabTurn, labels.tabWidget, labels.tabNotes]
   );
 
   const { tabRefs, handleKeyDown } = useTablistKeyboardNav<LiveTab>({

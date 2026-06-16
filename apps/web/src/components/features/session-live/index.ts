@@ -29,6 +29,12 @@ export type {
   ActionLogTimelineProps,
 } from '@/components/features/session-live/ActionLogTimeline';
 
+export { ChatAgentPanel } from '@/components/features/session-live/ChatAgentPanel';
+export type {
+  ChatAgentPanelLabels,
+  ChatAgentPanelProps,
+} from '@/components/features/session-live/ChatAgentPanel';
+
 export { DesktopBody } from '@/components/features/session-live/DesktopBody';
 export type { DesktopBodyProps } from '@/components/features/session-live/DesktopBody';
 
@@ -56,8 +62,13 @@ export { MobileBody } from '@/components/features/session-live/MobileBody';
 export type {
   MobileBodyLabels,
   MobileBodyProps,
-  MobileTab,
 } from '@/components/features/session-live/MobileBody';
+
+export { MobileBottomSheetDrawer } from '@/components/features/session-live/MobileBottomSheetDrawer';
+export type {
+  MobileBottomSheetDrawerLabels,
+  MobileBottomSheetDrawerProps,
+} from '@/components/features/session-live/MobileBottomSheetDrawer';
 
 export { PlayerRosterLive } from '@/components/features/session-live/PlayerRosterLive';
 export type {

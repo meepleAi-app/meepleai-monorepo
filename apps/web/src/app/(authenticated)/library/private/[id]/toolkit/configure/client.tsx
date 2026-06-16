@@ -224,9 +224,7 @@ function CreateToolkitPanel({
 
   return (
     <div className="flex flex-col items-center justify-center h-64 gap-4 text-center">
-      <p className="text-muted-foreground text-sm">
-        Nessun toolkit configurato per questo gioco.
-      </p>
+      <p className="text-muted-foreground text-sm">Nessun toolkit configurato per questo gioco.</p>
       <form onSubmit={e => void handleSubmit(e)} className="flex gap-2 w-full max-w-sm">
         <Input
           placeholder="Nome toolkit (es. Catan Toolkit)"
@@ -878,9 +876,7 @@ function UserToolkitConfiguratorContent({ privateGameId }: { privateGameId: stri
         <Button variant="ghost" size="sm" onClick={handleBack} aria-label="Torna ai miei giochi">
           <ChevronLeft className="w-4 h-4" />I miei giochi
         </Button>
-        <h1 className="text-xl font-bold text-foreground">
-          Toolkit Configurator
-        </h1>
+        <h1 className="text-xl font-bold text-foreground">Toolkit Configurator</h1>
         {toolkit && (
           <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-muted dark:bg-card text-muted-foreground">
             v{toolkit.version}
@@ -978,16 +974,11 @@ function UserToolkitConfiguratorContent({ privateGameId }: { privateGameId: stri
             disabled={isSaving}
             onToggle={v => void handleToggle('overridesDiceSet', v)}
           />
-          <p className="text-xs text-muted-foreground pt-2">
-            La Lavagna non è mai disattivabile.
-          </p>
+          <p className="text-xs text-muted-foreground pt-2">La Lavagna non è mai disattivabile.</p>
         </section>
 
         {/* RIGHT: Extra tools */}
-        <section
-          aria-label="Tool extra"
-          className="rounded-lg border border-border p-4 space-y-4"
-        >
+        <section aria-label="Tool extra" className="rounded-lg border border-border p-4 space-y-4">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Tool Extra
           </h2>

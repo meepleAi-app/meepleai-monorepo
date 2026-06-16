@@ -3298,6 +3298,51 @@
         "winnerLabel": "Vincitore",
         "acknowledgeCta": "Ho capito",
         "viewSummaryCta": "Vedi riepilogo"
+      },
+      "toolkitRenderer": {
+        "title": "Strumenti",
+        "emptyTitle": "Nessun widget attivo",
+        "emptyBody": "Abilita i widget dal toolkit per usarli durante la sessione.",
+        "unknownTitle": "Widget non supportato",
+        "unknownBody": "Aggiorna l'app per supportare questo tipo di widget.",
+        "expandAriaTemplate": "Espandi widget {name}",
+        "collapseAriaTemplate": "Collassa widget {name}",
+        "randomGenerator": {
+          "heading": "Generatore",
+          "rollLabel": "Genera",
+          "lastLabel": "Ultimo"
+        },
+        "turnManager": {
+          "heading": "Gestore turni",
+          "prevLabel": "Prec",
+          "nextLabel": "Succ",
+          "turnOfLabel": "Turno di",
+          "phaseLabel": "Fase"
+        },
+        "scoreTracker": {
+          "heading": "Punteggio",
+          "incrementAriaTemplate": "Aumenta punteggio {name}",
+          "decrementAriaTemplate": "Diminuisci punteggio {name}"
+        },
+        "resourceManager": {
+          "heading": "Risorse",
+          "sharedHeading": "Risorse condivise",
+          "incrementAriaTemplate": "Aumenta {label}",
+          "decrementAriaTemplate": "Diminuisci {label}"
+        },
+        "noteManager": {
+          "heading": "Note",
+          "inputAriaLabel": "Scrivi una nota condivisa",
+          "savingLabel": "Salvataggio…",
+          "savedLabel": "Salvato"
+        },
+        "whiteboard": {
+          "heading": "Lavagna",
+          "toolPenLabel": "Penna",
+          "toolEraserLabel": "Gomma",
+          "toolCircleLabel": "Cerchio",
+          "placeholderLabel": "Area disegno condivisa"
+        }
       }
     },
     "sessionSummary": {

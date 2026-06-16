@@ -95,12 +95,12 @@ import {
   ConnectionLostBanner,
   LiveSessionNotes,
   RightColumnTabs,
-  SessionToolsRail,
+  ToolkitRenderer,
   type ConnectionLostBannerLabels,
   type LiveAgentChatLabels,
   type LiveSessionNotesLabels,
   type RightColumnTabsLabels,
-  type SessionToolsRailLabels,
+  type ToolkitRendererLabels,
 } from '@/components/features/session-live';
 import { useSession } from '@/hooks/queries/useActiveSessions';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -125,6 +125,7 @@ import {
 } from '@/lib/session-live/session-live-visual-test-fixture';
 import { useElapsedTime } from '@/lib/session-live/use-elapsed-time';
 import { useSessionLiveStream } from '@/lib/session-live/use-session-live-stream';
+import { useToolkitRendererStore } from '@/lib/stores/toolkit-renderer-store';
 
 // ─── Lazy dialogs (orchestrator-side lazy import per Task 3 spec) ──────────────
 
@@ -578,24 +579,6 @@ export function SessionLiveView(): ReactElement {
   );
   void _handleScoreUpdate;
 
-  const handleToolExecute = useCallback(
-    async (toolId: string): Promise<void> => {
-      if (sessionId == null) return;
-      if (activeSession == null) return;
-      if (!hasRequiredRole(activeSession.viewerRole, 'Player')) return;
-
-      try {
-        await fetch(`/api/v1/game-sessions/${sessionId}/tools/${toolId}/execute`, {
-          method: 'POST',
-          credentials: 'include',
-        });
-      } catch {
-        // Fail silently — SSE event confirms or not
-      }
-    },
-    [sessionId, activeSession]
-  );
-
   const handleSendMessage = useCallback(
     async (content: string, visibility: 'private' | 'shared'): Promise<void> => {
       if (sessionId == null) return;
@@ -790,16 +773,71 @@ export function SessionLiveView(): ReactElement {
     [t]
   );
 
-  const toolsRailLabels = useMemo<SessionToolsRailLabels>(
-    (): SessionToolsRailLabels => ({
-      title: t('pages.sessionLive.tools.title'),
-      toolDiceLabel: t('pages.sessionLive.tools.toolDiceLabel'),
-      toolTimerLabel: t('pages.sessionLive.tools.toolTimerLabel'),
-      toolCardLabel: t('pages.sessionLive.tools.toolCardLabel'),
-      executeAriaTemplate:
-        (intl.messages['pages.sessionLive.tools.executeAriaTemplate'] as string) ??
-        'Esegui {toolName}',
-      disabledSpectatorTooltip: t('pages.sessionLive.tools.disabledSpectatorTooltip'),
+  // G5c #2376 — ToolkitRenderer labels (all 6 widget sub-namespaces).
+  // Gate A: aria templates that use ICU-like {name}/{label} placeholders are
+  // pulled from intl.messages directly (they are not ICU plural — just runtime
+  // string-replace in each widget component) to avoid double-escaping.
+  const toolkitRendererLabels = useMemo<ToolkitRendererLabels>(
+    (): ToolkitRendererLabels => ({
+      title: t('pages.sessionLive.toolkitRenderer.title'),
+      emptyTitle: t('pages.sessionLive.toolkitRenderer.emptyTitle'),
+      emptyBody: t('pages.sessionLive.toolkitRenderer.emptyBody'),
+      unknownTitle: t('pages.sessionLive.toolkitRenderer.unknownTitle'),
+      unknownBody: t('pages.sessionLive.toolkitRenderer.unknownBody'),
+      expandAriaTemplate:
+        (intl.messages['pages.sessionLive.toolkitRenderer.expandAriaTemplate'] as string) ??
+        'Espandi widget {name}',
+      collapseAriaTemplate:
+        (intl.messages['pages.sessionLive.toolkitRenderer.collapseAriaTemplate'] as string) ??
+        'Collassa widget {name}',
+      randomGenerator: {
+        heading: t('pages.sessionLive.toolkitRenderer.randomGenerator.heading'),
+        rollLabel: t('pages.sessionLive.toolkitRenderer.randomGenerator.rollLabel'),
+        lastLabel: t('pages.sessionLive.toolkitRenderer.randomGenerator.lastLabel'),
+      },
+      turnManager: {
+        heading: t('pages.sessionLive.toolkitRenderer.turnManager.heading'),
+        prevLabel: t('pages.sessionLive.toolkitRenderer.turnManager.prevLabel'),
+        nextLabel: t('pages.sessionLive.toolkitRenderer.turnManager.nextLabel'),
+        turnOfLabel: t('pages.sessionLive.toolkitRenderer.turnManager.turnOfLabel'),
+        phaseLabel: t('pages.sessionLive.toolkitRenderer.turnManager.phaseLabel'),
+      },
+      scoreTracker: {
+        heading: t('pages.sessionLive.toolkitRenderer.scoreTracker.heading'),
+        incrementAriaTemplate:
+          (intl.messages[
+            'pages.sessionLive.toolkitRenderer.scoreTracker.incrementAriaTemplate'
+          ] as string) ?? 'Aumenta punteggio {name}',
+        decrementAriaTemplate:
+          (intl.messages[
+            'pages.sessionLive.toolkitRenderer.scoreTracker.decrementAriaTemplate'
+          ] as string) ?? 'Diminuisci punteggio {name}',
+      },
+      resourceManager: {
+        heading: t('pages.sessionLive.toolkitRenderer.resourceManager.heading'),
+        sharedHeading: t('pages.sessionLive.toolkitRenderer.resourceManager.sharedHeading'),
+        incrementAriaTemplate:
+          (intl.messages[
+            'pages.sessionLive.toolkitRenderer.resourceManager.incrementAriaTemplate'
+          ] as string) ?? 'Aumenta {label}',
+        decrementAriaTemplate:
+          (intl.messages[
+            'pages.sessionLive.toolkitRenderer.resourceManager.decrementAriaTemplate'
+          ] as string) ?? 'Diminuisci {label}',
+      },
+      noteManager: {
+        heading: t('pages.sessionLive.toolkitRenderer.noteManager.heading'),
+        inputAriaLabel: t('pages.sessionLive.toolkitRenderer.noteManager.inputAriaLabel'),
+        savingLabel: t('pages.sessionLive.toolkitRenderer.noteManager.savingLabel'),
+        savedLabel: t('pages.sessionLive.toolkitRenderer.noteManager.savedLabel'),
+      },
+      whiteboard: {
+        heading: t('pages.sessionLive.toolkitRenderer.whiteboard.heading'),
+        toolPenLabel: t('pages.sessionLive.toolkitRenderer.whiteboard.toolPenLabel'),
+        toolEraserLabel: t('pages.sessionLive.toolkitRenderer.whiteboard.toolEraserLabel'),
+        toolCircleLabel: t('pages.sessionLive.toolkitRenderer.whiteboard.toolCircleLabel'),
+        placeholderLabel: t('pages.sessionLive.toolkitRenderer.whiteboard.placeholderLabel'),
+      },
     }),
     [t, intl.messages]
   );
@@ -867,15 +905,18 @@ export function SessionLiveView(): ReactElement {
     return active?.name ?? '';
   }, [activeSession]);
 
-  // ── Default tools list ────────────────────────────────────────────────────
-  // Foundation: standard 3 tools. Real tools come from session DTO in future.
-  const toolsList = useMemo(
-    () => [
-      { id: 'dice', name: toolsRailLabels.toolDiceLabel, icon: 'dice' as const },
-      { id: 'timer', name: toolsRailLabels.toolTimerLabel, icon: 'timer' as const },
-      { id: 'card', name: toolsRailLabels.toolCardLabel, icon: 'card' as const },
-    ],
-    [toolsRailLabels]
+  // ── G5c #2376: Zustand toolkit renderer store ─────────────────────────────
+  // Store starts empty; real hydration via useQuery(['toolkit', sessionId]) is a
+  // follow-up PR that wires GET /api/v1/toolkits/{toolkitId}/widgets.
+  const toolkitWidgets = useToolkitRendererStore(s => s.widgets);
+  const toolkitOpenId = useToolkitRendererStore(s => s.openWidgetId);
+  const setToolkitOpen = useToolkitRendererStore(s => s.setOpenWidget);
+  const updateToolkitConfig = useToolkitRendererStore(s => s.updateWidgetConfig);
+
+  // Map active session players for ScoreTracker widget
+  const toolkitPlayers = useMemo(
+    () => activeSession?.players.map(p => ({ id: p.id, name: p.name })) ?? [],
+    [activeSession]
   );
 
   // ── Chat messages from SSE events ────────────────────────────────────────
@@ -987,11 +1028,13 @@ export function SessionLiveView(): ReactElement {
         );
       case 'widget':
         return (
-          <SessionToolsRail
-            tools={toolsList}
-            viewerRole={activeSession.viewerRole}
-            onToolExecute={handleToolExecute}
-            labels={toolsRailLabels}
+          <ToolkitRenderer
+            widgets={toolkitWidgets}
+            openWidgetId={toolkitOpenId}
+            onOpenWidgetChange={setToolkitOpen}
+            onWidgetConfigChange={(id, cfg) => void updateToolkitConfig(id, cfg)}
+            players={toolkitPlayers}
+            labels={toolkitRendererLabels}
           />
         );
       case 'notes':
@@ -1024,9 +1067,12 @@ export function SessionLiveView(): ReactElement {
     isMyTurn,
     turnIndicatorLabels,
     rosterLabels,
-    toolsList,
-    toolsRailLabels,
-    handleToolExecute,
+    toolkitWidgets,
+    toolkitOpenId,
+    setToolkitOpen,
+    updateToolkitConfig,
+    toolkitPlayers,
+    toolkitRendererLabels,
     noteEntries,
     handleAddNote,
     notesLabels,
@@ -1167,11 +1213,13 @@ export function SessionLiveView(): ReactElement {
         </div>
       )}
       {tab === 'widget' && (
-        <SessionToolsRail
-          tools={toolsList}
-          viewerRole={activeSession.viewerRole}
-          onToolExecute={handleToolExecute}
-          labels={toolsRailLabels}
+        <ToolkitRenderer
+          widgets={toolkitWidgets}
+          openWidgetId={toolkitOpenId}
+          onOpenWidgetChange={setToolkitOpen}
+          onWidgetConfigChange={(id, cfg) => void updateToolkitConfig(id, cfg)}
+          players={toolkitPlayers}
+          labels={toolkitRendererLabels}
         />
       )}
       {tab === 'notes' && (

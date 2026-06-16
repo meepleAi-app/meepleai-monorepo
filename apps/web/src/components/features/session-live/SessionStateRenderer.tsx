@@ -1,20 +1,26 @@
 /**
  * SessionStateRenderer — G7 polymorphic discriminated-union primitive.
  *
- * Renders one of 5 canonical session-live states (per spec
+ * Renders one of 4 canonical panel-local session-live states (per spec
  * `2026-06-14-issue-2281-session-skeleton-g2-g4-g7-scope.md` §G7):
  *
- *   - default        → children passthrough (no wrapper)
- *   - empty          → existing `EmptyState` component
- *   - loading        → minimal inline skeleton
- *   - error          → minimal inline error banner + retry CTA
- *   - sse-disconnect → existing `ConnectionLostBanner` kind='failed'
+ *   - default → children passthrough (no wrapper)
+ *   - empty   → existing `EmptyState` component
+ *   - loading → minimal inline skeleton
+ *   - error   → minimal inline error banner + retry CTA
  *
- * Exhaustiveness is enforced by TypeScript: adding a 6th state requires
+ * SSE connection lost is **NOT** a panel state — per ADR-071 follow-up (#2383),
+ * the SSE disconnect banner is rendered at orchestrator level (see
+ * `SessionLiveView.tsx` `showConnectionBanner` flag + `ConnectionLostBanner`
+ * page-level mount). Splitting the banner across panels would multiply sources
+ * of truth for `ConnectionLostBannerLabels` (label prop drilling).
+ *
+ * Exhaustiveness is enforced by TypeScript: adding a 5th state requires
  * a code change AND a type change (the `assertNever` default catches drift).
  *
  * @see docs/superpowers/specs/2026-06-14-issue-2281-session-skeleton-g2-g4-g7-scope.md §G7
- * @see Issue #2356 (G7 primitive), parent #2342 (umbrella)
+ * @see docs/for-claude/architecture/adr/adr-071-live-session-5-state-fsm.md (Option B)
+ * @see Issue #2356 (G7 primitive), #2383 (ADR-071 refactor), parent #2342 (umbrella)
  */
 
 import type { ReactElement, ReactNode } from 'react';
@@ -22,8 +28,6 @@ import type { ReactElement, ReactNode } from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 
 import { EmptyState } from '@/components/empty-state/EmptyState';
-
-import { ConnectionLostBanner, type ConnectionLostBannerLabels } from './ConnectionLostBanner';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -42,8 +46,7 @@ export type SessionLiveState =
       onRetry: () => void;
       errorTitle: string;
       retryLabel: string;
-    }
-  | { kind: 'sse-disconnect'; connectionLabels: ConnectionLostBannerLabels };
+    };
 
 export interface SessionStateRendererProps {
   readonly state: SessionLiveState;
@@ -110,13 +113,6 @@ export function SessionStateRenderer({ state }: SessionStateRendererProps): Reac
             <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
             {state.retryLabel}
           </button>
-        </div>
-      );
-
-    case 'sse-disconnect':
-      return (
-        <div data-slot="session-state-sse-disconnect">
-          <ConnectionLostBanner kind="failed" labels={state.connectionLabels} />
         </div>
       );
 

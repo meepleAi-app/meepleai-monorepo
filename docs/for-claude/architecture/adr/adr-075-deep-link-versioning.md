@@ -191,3 +191,24 @@ Formalise a policy: **only notification deep link paths that are embedded in out
 - `GameNightPublishedNotificationHandler` (example handler with inline deep link path)
 - Memory: `route-group-audience-not-feature.md` (audience vs feature routing discipline)
 - Issue #897 (route consolidation precedent — `frontend-dev`/`backend-dev` retirement)
+
+---
+
+## Update 2026-06-16 — drift-detection mitigation (brainstorm #2383)
+
+Per the 2026-06-16 brainstorm session on umbrella [#2383](https://github.com/meepleAi-app/meepleai-monorepo/issues/2383), the drift risk between the future BE `NotificationRoutes` C# class and FE `notification-routes` TypeScript module is addressed in two phases:
+
+**Short-term (lands now)**: auto-discovery lint script in CI.
+- Path: `scripts/lint-cross-lang-constants.sh`
+- Convention: globs `apps/api/src/Api/**/Constants/*Routes.cs` (BE) and `apps/web/src/lib/constants/*-routes.ts` (FE). Pairs files by name (PascalCase ↔ kebab-case) and hash-compares the string-key sets.
+- Behaviour: **no-op** until the first BE/FE pair lands (zero matches → exit 0). Fails fast on key drift once the pair exists. Wired into `ci.yml` after the BGG ToS compliance gate.
+- Effort: ~30 minutes (script + CI step).
+
+**Long-term (deferred, tracked separately)**: JSON single-source-of-truth + codegen.
+- Source: `infra/contracts/notification-routes.json` (single canonical schema).
+- Codegen: `quicktype.io` step in the build pipeline emits both `NotificationRoutes.cs` and `notification-routes.ts` from the JSON.
+- Effort: ~3 days, triggered when the cross-language constants surface grows to 3+ pairs OR drift incidents are observed in production.
+
+The short-term lint is sufficient for the foreseeable future given the slow growth of cross-language constants in the codebase. The long-term codegen is an availability fallback if/when the count of pairs makes manual sync error-prone.
+
+Brainstorm session output: `docs/superpowers/specs/2026-06-16-adr-069-toolkit-suggestion-cache-design.md` (companion spec from the same session, captures the ADR-069 follow-up).

@@ -5,6 +5,9 @@
  * A11y: role="progressbar" aria-valuenow/min/max per spec §5.2.
  *
  * Gate C: DIVERGES from MeepleCard — live turn progress, not a card.
+ *
+ * Note: `data-slot` was removed in #2378 G5b — the parent
+ * `TurnIndicatorRenderer` owns the `data-slot="turn-indicator"` selector now.
  */
 
 import type { ReactElement } from 'react';
@@ -48,10 +51,7 @@ export function TurnIndicator({
   const playerDisplay = labels.activePlayerLabel.replace('{playerName}', activePlayerName);
 
   return (
-    <div
-      data-slot="turn-indicator"
-      className={compact ? 'flex flex-col gap-1' : 'flex flex-col gap-2'}
-    >
+    <div className={compact ? 'flex flex-col gap-1' : 'flex flex-col gap-2'}>
       {/* Turn counter */}
       <div className="flex items-center justify-between gap-2">
         <span

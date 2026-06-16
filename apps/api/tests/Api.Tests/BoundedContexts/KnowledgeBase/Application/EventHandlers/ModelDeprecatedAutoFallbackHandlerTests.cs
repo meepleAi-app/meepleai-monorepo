@@ -47,9 +47,9 @@ public sealed class ModelDeprecatedAutoFallbackHandlerTests : IDisposable
         _notificationRepoMock = new Mock<INotificationRepository>();
 
         _notificationRepoMock
-            .Setup(r => r.AddAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()))
-            .Callback<Notification, CancellationToken>((n, _) => _capturedNotifications.Add(n))
-            .Returns(Task.CompletedTask);
+            .Setup(r => r.AddBatchAndCommitAsync(It.IsAny<IEnumerable<Notification>>(), It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<Notification>, CancellationToken>((ns, _) => _capturedNotifications.AddRange(ns))
+            .ReturnsAsync((IEnumerable<Notification> ns, CancellationToken _) => ns.Count());
 
         _handler = new ModelDeprecatedAutoFallbackHandler(
             _dbContext,

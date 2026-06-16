@@ -68,9 +68,18 @@ internal interface INotificationRepository : IRepository<Notification, Guid>
     /// <c>foreach { AddAsync } + SaveChanges</c> pattern in 6 loop callers.
     /// </summary>
     /// <remarks>
-    /// No 23505 race-window catch — batch callers don't set
-    /// <c>SourceEventId</c>, so the partial UNIQUE index doesn't apply.
-    /// Any <c>DbUpdateException</c> rolls back the entire batch.
+    /// <para><b>Caller preconditions</b>:</para>
+    /// <list type="bullet">
+    ///   <item>Notifications MUST NOT set <c>SourceEventId</c>. The partial
+    ///   UNIQUE index <c>UX_notifications_user_source_event_id</c> only
+    ///   applies to non-null source event ids; one duplicate would roll back
+    ///   the ENTIRE batch with no graceful dedup. Use <see cref="AddAndCommitAsync"/>
+    ///   for dedup-guarded inserts.</item>
+    ///   <item>Notification ids MUST be unique within the batch (callers use
+    ///   <c>Guid.NewGuid()</c> per row). A duplicate id throws
+    ///   <c>InvalidOperationException</c> from the EF change tracker.</item>
+    /// </list>
+    /// <para>Any <c>DbUpdateException</c> rolls back the entire batch.</para>
     /// </remarks>
     /// <returns>Number of rows persisted (0 when input is empty).</returns>
     Task<int> AddBatchAndCommitAsync(IEnumerable<Notification> notifications, CancellationToken cancellationToken = default);

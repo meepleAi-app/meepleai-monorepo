@@ -54,7 +54,11 @@ internal sealed class GameSessionTerminatedEventHandler : DomainEventHandlerBase
                 // then fires the metric + SSE broadcast. The main GameSession transaction
                 // is already committed by the time this MediatR handler runs (Hybrid /
                 // OutboxOnly dispatch — see MeepleAiDbContext.SaveChangesAsyncCore step 5),
-                // so a separate notification commit can't orphan the parent.
+                // so a separate notification commit can't orphan the parent. Note: under
+                // Hybrid mode the handler still shares the request-scoped DbContext, so
+                // upstream tracked-but-unsaved entities would commit alongside the
+                // notification — callers in the pipeline are expected to flush their own
+                // mutations before raising the GameSessionTerminatedEvent.
                 await _notificationRepository.AddAndCommitAsync(notification, cancellationToken)
                     .ConfigureAwait(false);
 

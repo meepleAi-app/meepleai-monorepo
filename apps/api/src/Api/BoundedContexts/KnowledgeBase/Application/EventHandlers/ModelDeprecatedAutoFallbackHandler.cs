@@ -129,10 +129,12 @@ internal sealed class ModelDeprecatedAutoFallbackHandler
                     }).ToArray(),
                 });
 
-                // Issue #2392: commit mapping + log changes first, then commit the
-                // notification batch separately so the metric/SSE side-effects fire
-                // AFTER the rows are durably stored (previously AddAsync + manual save
-                // broadcast pre-commit, risking phantom frames on SaveChanges failure).
+                // Issue #2392: belt-and-braces SaveChanges after the per-iteration
+                // LogChangeAsync flushes inside the foreach above (each LogChangeAsync
+                // commits its own row), then commit the notification batch separately
+                // so the metric/SSE side-effects fire AFTER the rows are durably
+                // stored. Previously AddAsync + manual save broadcast pre-commit,
+                // risking phantom frames on SaveChanges failure.
                 await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
                 var notifications = adminIds

@@ -90,6 +90,8 @@ internal sealed class AchievementEvaluationJob : IJob
             await _unitOfWork.SaveChangesAsync(context.CancellationToken).ConfigureAwait(false);
 
             // Step 2: commit notifications and fire post-save side-effects.
+            // Notification count matches new-unlock count by construction
+            // (one Notification queued per newly-unlocked achievement, lines below).
             var totalUnlocks = await _notificationRepository
                 .AddBatchAndCommitAsync(pendingNotifications, context.CancellationToken)
                 .ConfigureAwait(false);
@@ -117,7 +119,7 @@ internal sealed class AchievementEvaluationJob : IJob
 #pragma warning restore CA1031
     }
 
-    private async Task<int> EvaluateUserAchievementsAsync(
+    private async Task EvaluateUserAchievementsAsync(
         Guid userId,
         IReadOnlyList<Domain.Entities.Achievement> achievements,
         List<Notification> pendingNotifications,
@@ -127,7 +129,6 @@ internal sealed class AchievementEvaluationJob : IJob
             .GetByUserIdAsync(userId, cancellationToken).ConfigureAwait(false);
 
         var userAchievementMap = userAchievements.ToDictionary(ua => ua.AchievementId);
-        var unlockCount = 0;
 
         foreach (var achievement in achievements)
         {
@@ -150,7 +151,6 @@ internal sealed class AchievementEvaluationJob : IJob
                     _logger.LogInformation(
                         "Achievement unlocked: {Code} for user {UserId} (+{Points} pts)",
                         achievement.Code, userId, achievement.Points);
-                    unlockCount++;
                 }
             }
             else
@@ -166,12 +166,9 @@ internal sealed class AchievementEvaluationJob : IJob
                     _logger.LogInformation(
                         "Achievement unlocked: {Code} for user {UserId} (+{Points} pts)",
                         achievement.Code, userId, achievement.Points);
-                    unlockCount++;
                 }
             }
         }
-
-        return unlockCount;
     }
 
     private static Notification BuildAchievementNotification(

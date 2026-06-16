@@ -7,12 +7,12 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetGameTrans
 /// Validator for <see cref="GetGameTranslationByLocaleQuery"/>. Issue #2379 (F5).
 /// </summary>
 /// <remarks>
-/// Without this validator the handler's call to <c>Locale.Create(query.Locale)</c>
-/// throws <c>InvalidLocaleException</c> (an <c>ArgumentException</c>), which the
-/// global exception middleware maps to HTTP 400 with the generic
-/// "Invalid request parameters" body — losing the locale-specific detail. Routing
-/// the check through FluentValidation surfaces the more informative
-/// "Invalid ISO 639-1 locale" message via HTTP 422.
+/// Issue #2399 update: the handler now calls <c>Locale.TryCreate</c> and
+/// degrades gracefully to <c>null</c> on bypass (mapped to HTTP 404 by the
+/// endpoint, same shape as "no row matches"). Routing the locale check
+/// through FluentValidation here surfaces the more informative
+/// "Invalid ISO 639-1 locale" message via HTTP 422 instead of the
+/// indistinguishable 404, so callers can tell "bad input" from "missing row".
 /// </remarks>
 public sealed class GetGameTranslationByLocaleQueryValidator
     : AbstractValidator<GetGameTranslationByLocaleQuery>

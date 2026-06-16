@@ -53,12 +53,14 @@ public sealed class AddGameTranslationCommandValidator
             .WithMessage("Invalid source — must be one of: manual | auto-openrouter | community");
     }
 
-    // BeValidLocale (via Cascade(CascadeMode.Stop)) guarantees this is only called
-    // on a TryCreate-accepting string. Issue #2399 — TryCreate consolidates the
-    // exception-free parser; if BeValidLocale fired Stop, we never reach the
-    // fallback branch below.
-    private static string NormalizeLocale(string raw) =>
-        Locale.TryCreate(raw, out var locale) ? locale.Value : raw;
+    // BeValidLocale (via Cascade(CascadeMode.Stop)) guarantees this is only
+    // called on a TryCreate-accepting string. If a future refactor reorders
+    // the rules or drops Cascade.Stop, we WANT the failure to be loud at the
+    // validator boundary (InvalidLocaleException → middleware 400) rather
+    // than silently feeding un-normalised input to ExistsActiveAsync which
+    // would do a case-sensitive miss and let the command proceed until the
+    // DB unique-constraint surface as 5xx. Issue #2399 PR #2414 code-review.
+    private static string NormalizeLocale(string raw) => Locale.Create(raw).Value;
 
     private static bool BeValidSource(string source) =>
         TranslationSourceMapper.TryFromPersistedString(source, out _);

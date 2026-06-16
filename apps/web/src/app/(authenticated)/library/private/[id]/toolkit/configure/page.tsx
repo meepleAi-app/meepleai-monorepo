@@ -7,10 +7,13 @@ export const metadata: Metadata = {
 };
 
 interface Props {
-  params: Promise<{ privateGameId: string }>;
+  params: Promise<{ id: string }>;
 }
 
 export default async function UserToolkitConfiguratorPage({ params }: Props) {
-  const { privateGameId } = await params;
+  // URL slug is the canonical `[id]` per the codebase-wide convention (issue #2316).
+  // Aliased to `privateGameId` here to preserve the semantic prop name across
+  // UserToolkitConfiguratorClient + downstream hooks (Option B / Wiegers).
+  const { id: privateGameId } = await params;
   return <UserToolkitConfiguratorClient privateGameId={privateGameId} />;
 }

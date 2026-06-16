@@ -3261,13 +3261,17 @@
         "sendAriaLabel": "Invia messaggio",
         "visibilityPrivate": "Privato",
         "visibilityShared": "Condiviso",
-        "emptyMessage": "Nessun messaggio ancora."
+        "emptyMessage": "Nessun messaggio ancora.",
+        "newMessagesToast": "{count, plural, one {# nuovo messaggio} other {# nuovi messaggi}}",
+        "newMessagesToastAriaLabel": "Nuovi messaggi disponibili — clic per scorrere in fondo"
       },
       "chatAgent": {
         "title": "ChatAgent",
         "onlineLabel": "Online",
         "latencyAriaLabel": "Latenza {ms}ms",
-        "agentNameAriaLabel": "Nome agente {name}"
+        "agentNameAriaLabel": "Nome agente {name}",
+        "collapsedAriaLabel": "ChatAgent collassato — clic per espandere",
+        "expandedAriaLabel": "ChatAgent espanso — clic per collassare"
       },
       "mobile": {
         "openSheetCta": "Apri pannello",

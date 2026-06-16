@@ -354,6 +354,7 @@ builder.Services.AddMediatR(cfg =>
     cfg.AddOpenBehavior(typeof(Api.BoundedContexts.SessionTracking.Application.Behaviors.ValidatePlayerRoleBehavior<,>)); // Issue #4765: Role validation
     cfg.AddOpenBehavior(typeof(Api.BoundedContexts.KbQuality.Application.Behaviors.EvalRateLimitBehavior<,>)); // Issue #1675: KB quality eval sliding rate limit (registered BEFORE cost cap)
     cfg.AddOpenBehavior(typeof(Api.BoundedContexts.KbQuality.Application.Behaviors.EvalCostCapBehavior<,>)); // Issue #1675: KB quality eval cost cap (D-H, A1)
+    cfg.AddOpenBehavior(typeof(Api.BoundedContexts.UserNotifications.Application.Behaviors.NotificationDedupePipelineBehavior<,>)); // #2383 (ADR-068/072): swallow 23505 on UX_notifications_user_source_event_id (race-safe idempotent dispatch)
     var mediatrLicenseKey = Environment.GetEnvironmentVariable("MEDIATR_LICENSE_KEY");
     if (!string.IsNullOrWhiteSpace(mediatrLicenseKey))
         cfg.LicenseKey = mediatrLicenseKey;

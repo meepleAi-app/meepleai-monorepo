@@ -52,6 +52,13 @@ public class GameNightEventEntity
     [Column("reminder_1h_sent_at")]
     public DateTimeOffset? Reminder1hSentAt { get; set; }
 
+    // RSVP deadline — ADR-074 (#2383 follow-up)
+    [Column("rsvp_deadline")]
+    public DateTimeOffset? RsvpDeadline { get; set; }
+
+    [Column("rsvp_closed_at")]
+    public DateTimeOffset? RsvpClosedAt { get; set; }
+
     [Required]
     [Column("created_at")]
     public DateTimeOffset CreatedAt { get; set; }

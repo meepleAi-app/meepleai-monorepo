@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using Api.BoundedContexts.SharedGameCatalog.Application.Exceptions;
 
@@ -23,11 +24,46 @@ public sealed record Locale
         Value = value;
     }
 
+    /// <summary>
+    /// Throwing constructor. Use <see cref="TryCreate"/> when the caller wants
+    /// to avoid exception-as-control-flow (FluentValidation predicates, batch
+    /// imports). Issue #2399.
+    /// </summary>
+    /// <exception cref="InvalidLocaleException">
+    /// Thrown when <paramref name="raw"/> is null, empty, whitespace, or does
+    /// not match the canonical ISO 639-1 (+ optional 3166-1 region) shape.
+    /// </exception>
     public static Locale Create(string raw)
     {
+        if (TryCreate(raw, out var locale))
+        {
+            return locale;
+        }
+
         if (string.IsNullOrWhiteSpace(raw))
         {
             throw new InvalidLocaleException("Locale cannot be empty");
+        }
+
+        throw new InvalidLocaleException($"Invalid ISO 639-1 locale: {raw}");
+    }
+
+    /// <summary>
+    /// Non-throwing parse. Returns <c>true</c> with the normalised value when
+    /// <paramref name="raw"/> matches the canonical ISO 639-1 (+ optional
+    /// 3166-1 region) shape, otherwise <c>false</c> with <paramref name="value"/>
+    /// set to <c>null</c>. Issue #2399 — replaces the
+    /// <c>try { Create(...); } catch { … }</c> pattern in
+    /// <see cref="Api.BoundedContexts.SharedGameCatalog.Application.Services.SharedTranslationValidationRules.BeValidLocale"/>
+    /// and other parser callers so the happy path costs zero exception
+    /// allocations.
+    /// </summary>
+    public static bool TryCreate(string? raw, [NotNullWhen(true)] out Locale? value)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            value = null;
+            return false;
         }
 
         var trimmed = raw.Trim();
@@ -43,10 +79,12 @@ public sealed record Locale
 
         if (!IsoFormat.IsMatch(normalized))
         {
-            throw new InvalidLocaleException($"Invalid ISO 639-1 locale: {raw}");
+            value = null;
+            return false;
         }
 
-        return new Locale(normalized);
+        value = new Locale(normalized);
+        return true;
     }
 
     /// <summary>

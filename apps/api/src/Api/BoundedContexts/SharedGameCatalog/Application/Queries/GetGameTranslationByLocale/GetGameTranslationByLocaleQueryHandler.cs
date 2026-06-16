@@ -12,12 +12,13 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetGameTrans
 /// </summary>
 /// <remarks>
 /// Read-side, no domain mutation. The raw locale string is normalised through
-/// <see cref="Locale.Create"/> so caller variants ("EN", "en-gb", " it ") all
-/// hit the same canonical row. Locale validation runs upstream via
+/// <see cref="Locale.TryCreate"/> so caller variants ("EN", "en-gb", " it ")
+/// all hit the same canonical row. Locale validation runs upstream via
 /// <see cref="GetGameTranslationByLocaleQueryValidator"/> (FluentValidation →
-/// HTTP 422 with "Invalid ISO 639-1 locale"); the <c>Locale.Create</c> call
-/// here is defense-in-depth for direct <c>IMediator.Send</c> paths that may
-/// bypass <c>ValidationBehavior</c>.
+/// HTTP 422 with "Invalid ISO 639-1 locale"). Issue #2399: handler trusts the
+/// validator and degrades gracefully via <c>TryCreate</c> if a direct
+/// <c>IMediator.Send</c> bypasses <c>ValidationBehavior</c> (returns null
+/// instead of throwing — same shape as a missing translation row).
 /// </remarks>
 internal sealed class GetGameTranslationByLocaleQueryHandler
     : IRequestHandler<GetGameTranslationByLocaleQuery, SharedGameTranslationDetailDto?>
@@ -36,7 +37,14 @@ internal sealed class GetGameTranslationByLocaleQueryHandler
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var locale = Locale.Create(query.Locale);
+        // Issue #2399: validator already rejected invalid locales with 422.
+        // TryCreate keeps the handler exception-free even if ValidationBehavior
+        // is bypassed (defense-in-depth) — returns null, same shape as the
+        // "no row matches" path below, so the endpoint maps it to HTTP 404.
+        if (!Locale.TryCreate(query.Locale, out var locale))
+        {
+            return null;
+        }
 
         var translation = await _translationRepo
             .GetByGameIdAndLocaleAsync(query.GameId, locale.Value, cancellationToken)

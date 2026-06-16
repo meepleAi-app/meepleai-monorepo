@@ -1,4 +1,3 @@
-using Api.BoundedContexts.SharedGameCatalog.Application.Exceptions;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
@@ -12,26 +11,10 @@ internal static class SharedTranslationValidationRules
 {
     /// <summary>
     /// Returns <c>true</c> when <paramref name="raw"/> parses as a normalised
-    /// ISO 639-1 locale (optionally with an ISO 3166-1 regional suffix). Wraps
-    /// <see cref="Locale.Create(string)"/> to translate
-    /// <see cref="InvalidLocaleException"/> into a boolean rule predicate
-    /// suitable for <c>RuleFor(x => x.Locale).Must(BeValidLocale)</c>.
+    /// ISO 639-1 locale (optionally with an ISO 3166-1 regional suffix). Delegates
+    /// to <see cref="Locale.TryCreate"/> so the happy path stays exception-free
+    /// (issue #2399 — drops the previous try/catch <c>Create</c> wrapper).
+    /// Suitable for <c>RuleFor(x => x.Locale).Must(BeValidLocale)</c>.
     /// </summary>
-    public static bool BeValidLocale(string? raw)
-    {
-        if (raw is null)
-        {
-            return false;
-        }
-
-        try
-        {
-            Locale.Create(raw);
-            return true;
-        }
-        catch (InvalidLocaleException)
-        {
-            return false;
-        }
-    }
+    public static bool BeValidLocale(string? raw) => Locale.TryCreate(raw, out _);
 }

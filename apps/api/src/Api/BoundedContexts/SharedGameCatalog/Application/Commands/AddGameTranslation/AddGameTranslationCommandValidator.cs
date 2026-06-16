@@ -54,8 +54,11 @@ public sealed class AddGameTranslationCommandValidator
     }
 
     // BeValidLocale (via Cascade(CascadeMode.Stop)) guarantees this is only called
-    // on a Locale.Create-accepting string, so the constructor cannot throw.
-    private static string NormalizeLocale(string raw) => Locale.Create(raw).Value;
+    // on a TryCreate-accepting string. Issue #2399 — TryCreate consolidates the
+    // exception-free parser; if BeValidLocale fired Stop, we never reach the
+    // fallback branch below.
+    private static string NormalizeLocale(string raw) =>
+        Locale.TryCreate(raw, out var locale) ? locale.Value : raw;
 
     private static bool BeValidSource(string source) =>
         TranslationSourceMapper.TryFromPersistedString(source, out _);

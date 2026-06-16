@@ -22,8 +22,8 @@
 import { useCallback, useEffect, useState, type RefObject } from 'react';
 
 export interface UseScrollAnchorOptions {
-  readonly containerRef: RefObject<HTMLElement>;
-  readonly bottomRef: RefObject<HTMLElement>;
+  readonly containerRef: RefObject<HTMLElement | null>;
+  readonly bottomRef: RefObject<HTMLElement | null>;
   /** Trigger to keep observer reactive (e.g. messages.length). */
   readonly trigger: unknown;
 }

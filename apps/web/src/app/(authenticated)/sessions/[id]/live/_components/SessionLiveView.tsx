@@ -776,6 +776,7 @@ export function SessionLiveView(): ReactElement {
       visibilityPrivate: t('pages.sessionLive.chat.visibilityPrivate'),
       visibilityShared: t('pages.sessionLive.chat.visibilityShared'),
       emptyMessage: t('pages.sessionLive.chat.emptyMessage'),
+      newMessagesToastAriaLabel: t('pages.sessionLive.chat.newMessagesToastAriaLabel'),
     }),
     [t]
   );

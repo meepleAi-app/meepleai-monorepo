@@ -2,24 +2,32 @@
 
 /**
  * LiveAgentChat — Wave D.2 Interactions sub-PR (Issue #750).
- *
- * Chat panel with messages list and send form.
+ * Extended by Issue #2375 G3 with sessionStorage draft + smart auto-scroll.
  *
  * Role variants:
  *   Spectator: visibility forced 'shared' (no private toggle visible)
  *   Player+Host: both visibility options (private/shared toggle)
  *
+ * #2375 G3:
+ *   - sessionId prop → useChatDraft persists input across collapse/expand cycles
+ *   - useScrollAnchor → smart auto-scroll: auto when at bottom, toast when scrolled up
+ *   - data-at-bottom attribute reflects current anchor state (E2E selector)
+ *
  * Gate C: DIVERGES from MeepleCard — live chat panel, not a card pattern.
  *
  * data-slot="live-agent-chat" — required by unit tests.
  * data-viewer-role={viewerRole} — role variant assertion in unit tests.
+ * data-at-bottom={isAtBottom ? 'true' : 'false'} — #2375 G3 scroll anchor state.
  */
 
-import { type ReactElement, useState, useRef, useEffect } from 'react';
+import { type ReactElement, useEffect, useRef, useState, type RefObject } from 'react';
 
 import { Send } from 'lucide-react';
+import { useIntl } from 'react-intl';
 
 import type { ParticipantRole } from '@/lib/session-live/participant-role';
+import { useChatDraft } from '@/lib/session-live/use-chat-draft';
+import { useScrollAnchor } from '@/lib/session-live/use-scroll-anchor';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -41,11 +49,15 @@ export interface LiveAgentChatLabels {
   readonly visibilityPrivate: string;
   readonly visibilityShared: string;
   readonly emptyMessage: string;
+  /** #2375 G3: aria-label on the "N nuovi messaggi" toast button. */
+  readonly newMessagesToastAriaLabel: string;
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 export interface LiveAgentChatProps {
+  /** #2375 G3: sessionId used as sessionStorage key for draft persistence. */
+  readonly sessionId: string | null;
   readonly messages: ReadonlyArray<ChatMessage>;
   readonly viewerRole: ParticipantRole;
   readonly viewerId: string;
@@ -58,6 +70,7 @@ export interface LiveAgentChatProps {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function LiveAgentChat({
+  sessionId,
   messages,
   viewerRole,
   viewerId,
@@ -66,31 +79,74 @@ export function LiveAgentChat({
   labels,
   className,
 }: LiveAgentChatProps): ReactElement {
-  const [inputValue, setInputValue] = useState('');
+  const intl = useIntl();
+  const { draft, setDraft, clearDraft } = useChatDraft({ sessionId });
+
   // Spectator forced to 'shared'; Player+Host can toggle
   const [visibility, setVisibility] = useState<'private' | 'shared'>('shared');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  const { isAtBottom, scrollToBottom } = useScrollAnchor({
+    // Cast: HTMLDivElement extends HTMLElement; hook only reads .current via null guard.
+    containerRef: containerRef as RefObject<HTMLElement | null>,
+    bottomRef: bottomRef as RefObject<HTMLElement | null>,
+    trigger: messages.length,
+  });
+
+  // Track new arrivals while scrolled up to display "N nuovi messaggi" toast.
+  const [newMessageCount, setNewMessageCount] = useState<number>(0);
+  const prevMessageCountRef = useRef<number>(messages.length);
+
+  useEffect(() => {
+    const prev = prevMessageCountRef.current;
+    const next = messages.length;
+    if (next > prev) {
+      if (isAtBottom) {
+        scrollToBottom();
+        setNewMessageCount(0);
+      } else {
+        setNewMessageCount(c => c + (next - prev));
+      }
+    }
+    prevMessageCountRef.current = next;
+  }, [messages.length, isAtBottom, scrollToBottom]);
+
+  // C1 fix: reset counter when user manually scrolls to bottom (isAtBottom flips true
+  // without a new message arrival — the counter-increment branch above is not taken,
+  // so we need a dedicated effect to clear the stale count).
+  useEffect(() => {
+    if (isAtBottom) {
+      setNewMessageCount(0);
+    }
+  }, [isAtBottom]);
 
   const isSpectator = viewerRole === 'Spectator';
 
-  // Auto-scroll to bottom on new messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.length]);
+  const toastLabel = intl.formatMessage(
+    { id: 'pages.sessionLive.chat.newMessagesToast' },
+    { count: newMessageCount }
+  );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault();
-    const trimmed = inputValue.trim();
+    const trimmed = draft.trim();
     if (!trimmed) return;
-    // Spectator always sends as shared
     onSendMessage(trimmed, isSpectator ? 'shared' : visibility);
-    setInputValue('');
+    clearDraft();
+  };
+
+  const handleToastClick = (): void => {
+    scrollToBottom();
+    setNewMessageCount(0);
   };
 
   return (
     <section
       data-slot="live-agent-chat"
       data-viewer-role={viewerRole}
+      data-at-bottom={isAtBottom ? 'true' : 'false'}
       aria-label={labels.title}
       className={`flex flex-col ${compact ? 'gap-2' : 'gap-3'} ${className ?? ''}`}
     >
@@ -100,7 +156,8 @@ export function LiveAgentChat({
 
       {/* Messages list */}
       <div
-        className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto"
+        ref={containerRef}
+        className="relative flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto"
         aria-live="polite"
         aria-atomic="false"
         aria-relevant="additions"
@@ -120,9 +177,9 @@ export function LiveAgentChat({
               >
                 {!isOwn && <span className="text-xs text-muted-foreground">{msg.senderName}</span>}
                 <div
-                  className={`max-w-[85%] rounded-lg px-3 py-1.5 text-sm ${
-                    isOwn ? 'bg-card text-foreground' : 'bg-card text-foreground'
-                  } ${isPrivate ? 'border border-amber-700/40' : ''}`}
+                  className={`max-w-[85%] rounded-lg px-3 py-1.5 text-sm bg-card text-foreground ${
+                    isPrivate ? 'border border-amber-700/40' : ''
+                  }`}
                 >
                   {msg.content}
                   {isPrivate && (
@@ -135,7 +192,25 @@ export function LiveAgentChat({
             );
           })
         )}
-        <div ref={messagesEndRef} />
+        <div ref={bottomRef} aria-hidden="true" data-slot="chat-bottom-sentinel" />
+
+        {/* #2375 G3 — "N nuovi messaggi" pill, shown when scrolled up + new arrivals */}
+        {!isAtBottom && newMessageCount > 0 && (
+          <div className="sticky bottom-2 flex justify-center">
+            <button
+              type="button"
+              onClick={handleToastClick}
+              aria-label={labels.newMessagesToastAriaLabel}
+              data-slot="chat-new-messages-toast"
+              className="rounded-full border border-entity-agent/40 bg-entity-agent/15
+                px-3 py-1 text-xs font-semibold text-entity-agent shadow-sm
+                hover:bg-entity-agent/25 focus-visible:outline-none
+                focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {toastLabel}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Send form */}
@@ -173,8 +248,8 @@ export function LiveAgentChat({
         <div className="flex gap-2">
           <input
             type="text"
-            value={inputValue}
-            onChange={e => setInputValue(e.target.value)}
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
             aria-label={labels.inputAriaLabel}
             placeholder={labels.inputAriaLabel}
             className="min-w-0 flex-1 rounded-lg border border-border/60 bg-card
@@ -184,7 +259,7 @@ export function LiveAgentChat({
           <button
             type="submit"
             aria-label={labels.sendAriaLabel}
-            disabled={!inputValue.trim()}
+            disabled={!draft.trim()}
             className="flex shrink-0 items-center justify-center rounded-lg border
               border-border/60 bg-card px-3 py-2 text-foreground
               transition-colors hover:bg-muted

@@ -6,28 +6,22 @@
  * - empty: delegates to EmptyState (title + description + action)
  * - loading: skeleton with aria-live polite + aria-label
  * - error: inline banner with title + message + retry CTA
- * - sse-disconnect: delegates to ConnectionLostBanner kind='failed'
  * - exhaustiveness: assertNever throws on unknown kind (runtime defense)
  *
+ * Note: `sse-disconnect` was removed from the discriminated union per ADR-071
+ * follow-up (#2383). The SSE disconnect banner is now rendered at orchestrator
+ * level (`SessionLiveView.tsx` `showConnectionBanner` flag), not as a panel
+ * state — eliminates `ConnectionLostBannerLabels` prop drilling.
+ *
  * @see docs/superpowers/specs/2026-06-14-issue-2281-session-skeleton-g2-g4-g7-scope.md §G7
+ * @see docs/for-claude/architecture/adr/adr-071-live-session-5-state-fsm.md (Option B)
  */
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ConnectionLostBannerLabels } from '../ConnectionLostBanner';
 import { SessionStateRenderer, type SessionLiveState } from '../SessionStateRenderer';
-
-// ─── Fixtures ─────────────────────────────────────────────────────────────────
-
-const CONNECTION_LABELS: ConnectionLostBannerLabels = {
-  retryCountResolved: 'Tentativo 1/5',
-  reconnecting: 'Riconnessione in corso',
-  degradedPolling: 'Aggiornamenti ogni 5s',
-  failed: 'Connessione persa',
-  manualRetryLabel: 'Riprova',
-};
 
 // ─── default ──────────────────────────────────────────────────────────────────
 
@@ -122,23 +116,6 @@ describe('SessionStateRenderer — error', () => {
     const button = screen.getByRole('button', { name: /Riprova/ });
     await userEvent.click(button);
     expect(onRetry).toHaveBeenCalledTimes(1);
-  });
-});
-
-// ─── sse-disconnect ───────────────────────────────────────────────────────────
-
-describe('SessionStateRenderer — sse-disconnect', () => {
-  it('delegates to ConnectionLostBanner kind="failed"', () => {
-    const state: SessionLiveState = {
-      kind: 'sse-disconnect',
-      connectionLabels: CONNECTION_LABELS,
-    };
-    render(<SessionStateRenderer state={state} />);
-    expect(document.querySelector('[data-slot="session-state-sse-disconnect"]')).not.toBeNull();
-    expect(document.querySelector('[data-slot="connection-lost-banner"]')).not.toBeNull();
-    expect(
-      document.querySelector('[data-slot="connection-lost-banner"]')?.getAttribute('data-kind')
-    ).toBe('failed');
   });
 });
 

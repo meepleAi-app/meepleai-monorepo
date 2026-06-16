@@ -3075,7 +3075,19 @@
         "currentTurnAriaLabel": "Turn {current} of {total}",
         "activePlayerLabel": "{playerName}",
         "yourTurnLabel": "Your turn",
-        "waitingLabel": "Wait for your turn"
+        "waitingLabel": "Wait for your turn",
+        "roundRobinHeading": "Active turn",
+        "sequentialHeading": "Phases",
+        "simultaneousHeading": "All players act",
+        "realtimeHeading": "Real time",
+        "noneHeading": "Free play",
+        "customHeading": "Custom sequence",
+        "firstPlayerTokenHeading": "First player token",
+        "unknownTitle": "Unsupported turn type",
+        "unknownBody": "Update the app to support this mode.",
+        "roundCountTemplate": "Round {current} of {total}",
+        "playOrderHeading": "Play order",
+        "firstPlayerTokenHolderTemplate": "First player token: {playerName}"
       },
       "roster": {
         "title": "Players",

@@ -139,3 +139,11 @@ export type {
   ToolkitRendererLabels,
   ToolkitRendererProps,
 } from '@/components/features/session-live/toolkit-renderer/ToolkitRenderer';
+
+// ─── Turn Indicator Renderer sub-PR (Issue #2378 G5b) ─────────────────────────
+
+export { TurnIndicatorRenderer } from '@/components/features/session-live/turn-indicator-renderer/TurnIndicatorRenderer';
+export type {
+  TurnIndicatorRendererLabels,
+  TurnIndicatorRendererProps,
+} from '@/components/features/session-live/turn-indicator-renderer/TurnIndicatorRenderer';

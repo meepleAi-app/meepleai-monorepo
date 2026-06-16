@@ -3182,7 +3182,19 @@
         "currentTurnAriaLabel": "Turno {current} di {total}",
         "activePlayerLabel": "{playerName}",
         "yourTurnLabel": "Il tuo turno",
-        "waitingLabel": "Aspetta il tuo turno"
+        "waitingLabel": "Aspetta il tuo turno",
+        "roundRobinHeading": "Turno attivo",
+        "sequentialHeading": "Fasi",
+        "simultaneousHeading": "Tutti giocano",
+        "realtimeHeading": "Tempo reale",
+        "noneHeading": "Gioco libero",
+        "customHeading": "Sequenza custom",
+        "firstPlayerTokenHeading": "Token primo giocatore",
+        "unknownTitle": "Tipo di turno non supportato",
+        "unknownBody": "Aggiorna l'app per supportare questa modalità.",
+        "roundCountTemplate": "Round {current} di {total}",
+        "playOrderHeading": "Ordine di gioco",
+        "firstPlayerTokenHolderTemplate": "Token primo giocatore: {playerName}"
       },
       "roster": {
         "title": "Giocatori",

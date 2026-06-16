@@ -101,7 +101,7 @@ Discovery automatica (Grep repo-wide) ha trovato **22 identifier univoci di tipo
 | US-9 Game detail tabs | Marco | `sp4-game-detail.html` | 5 sub-tab `.html` (#2148: rules/reviews/strategies/chat/faqs) | DS-17-13 sp4-content design | ⚠ tabs canonical fixed in ADR-061 |
 | US-10 Library hybrid hub | Marco | `sp4-library-desktop.html` | `sp4-library-mobile.html` (forward-refactor) | DS-17-12 sp4-catalog design | ✅ Wave B.3 shipped |
 | US-13 GameNight create wizard | Marco | `sp7-game-night-new.html` ✅ (filename brief aligned via PR #2351) | — | SP7 brief A | 🚫 NOT IMPLEMENTED (brief ready, FE TODO) |
-| US-15 GameNight detail + RSVP | Marco/Davide | `sp7-game-night-detail-rsvp.html` | `sp7-game-night-edit.html` (disposition #2344) | SP7 brief B+C | 🚫 NOT IMPLEMENTED |
+| US-15 GameNight detail + RSVP | Marco/Davide | `sp7-game-night-detail-rsvp.html` | edit is a drawer overlay (no separate mockup — ratified Option C in #2344) | SP7 brief B+C | 🚫 NOT IMPLEMENTED |
 | US-25 Notifications inbox | Marco | `notifications.html` | (component `sp7-notifications-*.html` to ship) | SP7 brief I+J | ⚠ partial (preferences shipped, hub TODO) |
 | US-26 Profile + achievements | Marco | `sp5-profile-settings.html` | `sp4-player-detail.html` (self-view reuse) | sp5-profile-settings spec + #492 closure | ⚠ achievement detail sheet missing (audit 2026-05-22 §P0) |
 | US-27 AI agent chat | Marco/Aaron | `chat-fullscreen.html` | `sp4-game-chat-tab.html` (composite), `sp7-library-game-agent.html` (game-scoped) | DS-17 Phase B audit | ⚠ scope splittato, chat full-screen desktop residue (audit 2026-05-22 §P0 #491) |
@@ -262,6 +262,9 @@ Legenda colonne:
 >
 > **Nota su `sp7-game-night-edit.html`**: documentato nel brief SP7 Wave 1 mockup C
 > (`sp7-game-night-edit.{html,jsx}`) ma **non presente nel filesystem post-DS-17 Phase B audit**.
+>
+> **DISPOSITION 2026-06-16 (#2344 closed)**: ratificata **Option C — drawer overlay**.
+> Edit non è un mockup separato; vive come drawer triggered da `sp7-game-night-detail-rsvp` via deep link `?action=edit`. Vedi **ADR-079** per il pattern canonico.
 > Le funzionalità di edit risultano consolidate sotto `/game-nights/[id]` (route `[id]/edit` mappa
 > al detail-rsvp page-mock per MOCKUPS_INDEX.md). US-INT-3 cita questo file come "Refs planned" non
 > ancora committato. **Vedi sub-spec US-INT-3c per scope finale.**
@@ -626,7 +629,7 @@ And Roster riceve in-app notif "Serata terminata — vedi riepilogo"
 
 - **US-INT-3a — GameNight create wizard** (SP7-A) — P1 · L (5-7gg) · NEW route create
 - **US-INT-3b — GameNight detail + RSVP** (SP7-B) — P1 · L (5-7gg) · invariante max 1 live
-- **US-INT-3c — GameNight edit + reschedule** (SP7-C) — P2 · M (3gg)
+- **US-INT-3c — GameNight edit + reschedule** (SP7-C) — P2 · M (3gg) · **ratified Option C drawer overlay** (#2344 closed 2026-06-16, see ADR-079) — no standalone `sp7-game-night-edit` mockup commission; edit lives as drawer triggered from `sp7-game-night-detail-rsvp` via `?action=edit` deep link
 - **US-INT-3d — GameNight live hub** (SP7-K, #487) — P1 · L (5-7gg) · 3-pane + diary
 - **US-INT-3e — GameNight transition modal** (SP7-L, #487) — P2 · S (2gg)
 - **US-INT-3f — GameNight summary** (SP7-M, #487) — P1 · M (4gg) · share + archive

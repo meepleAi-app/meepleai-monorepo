@@ -66,7 +66,9 @@ internal sealed class NotificationDedupePipelineBehavior<TRequest, TResponse>
         {
             return await next().ConfigureAwait(false);
         }
-        catch (DbUpdateException ex) when (IsNotificationDedupViolation(ex))
+        catch (DbUpdateException ex) when (
+            ex.InnerException is PostgresException pe
+            && IsNotificationDedupViolation(pe.SqlState, pe.ConstraintName))
         {
             _logger.LogInformation(
                 ex,
@@ -79,11 +81,13 @@ internal sealed class NotificationDedupePipelineBehavior<TRequest, TResponse>
     }
 
     /// <summary>
-    /// Returns true if the <see cref="DbUpdateException"/> wraps a PostgreSQL
-    /// <c>unique_violation</c> (SQLSTATE 23505) on the notification dedup constraint.
-    /// Every other constraint or SQLSTATE is treated as a real bug and re-thrown.
+    /// Returns true if the given PostgreSQL error metadata identifies the notification
+    /// dedup unique-violation (SQLSTATE 23505 + matching constraint name).
+    /// Extracted as a separate predicate to allow unit testing without constructing a
+    /// real <see cref="PostgresException"/> (its internal <c>ConstraintName</c> field is
+    /// not publicly settable in Npgsql 10.x).
     /// </summary>
-    private static bool IsNotificationDedupViolation(DbUpdateException ex) =>
-        ex.InnerException is PostgresException { SqlState: "23505" } pe
-        && string.Equals(pe.ConstraintName, NotificationDedupConstraintName, StringComparison.Ordinal);
+    internal static bool IsNotificationDedupViolation(string? sqlState, string? constraintName) =>
+        string.Equals(sqlState, "23505", StringComparison.Ordinal)
+        && string.Equals(constraintName, NotificationDedupConstraintName, StringComparison.Ordinal);
 }

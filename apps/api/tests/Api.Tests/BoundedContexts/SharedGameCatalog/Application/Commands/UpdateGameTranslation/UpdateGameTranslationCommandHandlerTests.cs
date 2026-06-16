@@ -4,6 +4,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+using Api.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +16,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Commands.Updat
 /// <summary>
 /// Unit tests for <see cref="UpdateGameTranslationCommandHandler"/>.
 /// Issue #2339 — sub-PR 1/3 Wave 3 (Task 10).
+/// Issue #2372 — added cache-invalidation guards (Wave 5 blocker fix).
 /// </summary>
 [Trait("Category", "Unit")]
 [Trait("BoundedContext", "SharedGameCatalog")]
@@ -25,14 +27,31 @@ public sealed class UpdateGameTranslationCommandHandlerTests
 
     private readonly Mock<ISharedGameTranslationRepository> _translationRepo = new();
     private readonly Mock<IUnitOfWork> _uow = new();
+    private readonly Mock<IHybridCacheService> _cache = new();
+    private readonly Mock<ICacheInvalidationRetryPolicy> _retryPolicy = new();
     private readonly TimeProvider _clock;
     private readonly UpdateGameTranslationCommandHandler _sut;
 
     public UpdateGameTranslationCommandHandlerTests()
     {
         _clock = new FakeTimeProvider(SampleNow);
+
+        // Identity passthrough: invoke the operation delegate inline so the unit test
+        // can verify the inner _cache.RemoveByTagAcrossReplicasAsync calls.
+        _retryPolicy
+            .Setup(p => p.ExecuteAsync(
+                It.IsAny<Func<CancellationToken, ValueTask>>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Returns((Func<CancellationToken, ValueTask> op, string _, CancellationToken ct) =>
+                op(ct).AsTask());
+
         _sut = new UpdateGameTranslationCommandHandler(
-            _translationRepo.Object, _uow.Object, _clock);
+            _translationRepo.Object,
+            _uow.Object,
+            _cache.Object,
+            _retryPolicy.Object,
+            _clock);
     }
 
     [Fact]
@@ -150,6 +169,95 @@ public sealed class UpdateGameTranslationCommandHandlerTests
             r => r.UpdateAsync(It.IsAny<SharedGameTranslation>(), It.IsAny<CancellationToken>()),
             Times.Never);
         _uow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // ---------------------------------------------------------------------
+    // Issue #2372 — cache invalidation regression guards (see Add handler
+    // tests for full rationale).
+    // ---------------------------------------------------------------------
+
+    [Fact]
+    public async Task Handle_HappyPath_InvalidatesSearchGamesAndDetailTags()
+    {
+        var gameId = Guid.NewGuid();
+        var actor = Guid.NewGuid();
+        var existing = MakeActiveTranslation(gameId, "it", "Vecchio titolo");
+
+        _translationRepo
+            .Setup(r => r.GetByGameIdAndLocaleAsync(gameId, "it", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existing);
+        _uow.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
+        var cmd = new UpdateGameTranslationCommand(
+            GameId: gameId,
+            Locale: "it",
+            Title: "Nuovo titolo",
+            Description: null,
+            Xmin: 1u,
+            ActorUserId: actor);
+
+        await _sut.Handle(cmd, CancellationToken.None);
+
+        _cache.Verify(
+            c => c.RemoveByTagAcrossReplicasAsync("search-games", It.IsAny<CancellationToken>()),
+            Times.Once);
+        _cache.Verify(
+            c => c.RemoveByTagAcrossReplicasAsync($"shared-game:{gameId}", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_TranslationNotFound_DoesNotInvalidateCache()
+    {
+        var gameId = Guid.NewGuid();
+        _translationRepo
+            .Setup(r => r.GetByGameIdAndLocaleAsync(gameId, "it", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SharedGameTranslation?)null);
+
+        var cmd = new UpdateGameTranslationCommand(
+            GameId: gameId,
+            Locale: "it",
+            Title: "Foo",
+            Description: null,
+            Xmin: 1u,
+            ActorUserId: Guid.NewGuid());
+
+        var act = async () => await _sut.Handle(cmd, CancellationToken.None);
+        await act.Should().ThrowAsync<TranslationNotFoundException>();
+
+        _cache.Verify(
+            c => c.RemoveByTagAcrossReplicasAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_ConcurrentEdit_DoesNotInvalidateCache()
+    {
+        var gameId = Guid.NewGuid();
+        var existing = MakeActiveTranslation(gameId, "it", "title");
+
+        _translationRepo
+            .Setup(r => r.GetByGameIdAndLocaleAsync(gameId, "it", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existing);
+        _uow.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateConcurrencyException(
+                "Database operation expected to affect 1 row(s) but actually affected 0 row(s)."));
+
+        var cmd = new UpdateGameTranslationCommand(
+            GameId: gameId,
+            Locale: "it",
+            Title: "stale title",
+            Description: null,
+            Xmin: 1u,
+            ActorUserId: Guid.NewGuid());
+
+        var act = async () => await _sut.Handle(cmd, CancellationToken.None);
+        await act.Should().ThrowAsync<DbUpdateConcurrencyException>();
+
+        _cache.Verify(
+            c => c.RemoveByTagAcrossReplicasAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     private static SharedGameTranslation MakeActiveTranslation(

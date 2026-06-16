@@ -4,6 +4,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
+using Api.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +13,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.AddGameTran
 
 /// <summary>
 /// Handler for <see cref="AddGameTranslationCommand"/>. Issue #2339 — sub-PR 1/3.
+/// Issue #2372 — closes the cache-invalidation gap so Wave 5 endpoints can ship.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -27,6 +29,15 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.AddGameTran
 /// <see cref="DbUpdateException"/> referencing the constraint name and we rethrow as
 /// <see cref="TranslationAlreadyExistsException"/> (409).
 /// </para>
+/// <para>
+/// After a successful save, the handler invalidates the two HybridCache tags that wrap
+/// <see cref="SharedGameCatalog.Application.Queries.SearchSharedGamesQueryHandler"/> and
+/// <see cref="SharedGameCatalog.Application.Queries.GetSharedGameByIdQueryHandler"/> so
+/// the read-model stops serving stale <c>SharedGameDto.Translations</c> payloads for up
+/// to 60 minutes (L2 TTL). Tag fan-out across replicas follows the ADR-062 contract
+/// (Pub/Sub + retry policy). Invalidation runs only on the GREEN path: NotFound and
+/// unique-constraint violations short-circuit before the invalidation block.
+/// </para>
 /// </remarks>
 internal sealed class AddGameTranslationCommandHandler
     : IRequestHandler<AddGameTranslationCommand, Guid>
@@ -36,22 +47,30 @@ internal sealed class AddGameTranslationCommandHandler
     private readonly ISharedGameTranslationRepository _translationRepo;
     private readonly ISharedGameRepository _gameRepo;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IHybridCacheService _cache;
+    private readonly ICacheInvalidationRetryPolicy _retryPolicy;
     private readonly TimeProvider _clock;
 
     public AddGameTranslationCommandHandler(
         ISharedGameTranslationRepository translationRepo,
         ISharedGameRepository gameRepo,
         IUnitOfWork unitOfWork,
+        IHybridCacheService cache,
+        ICacheInvalidationRetryPolicy retryPolicy,
         TimeProvider clock)
     {
         ArgumentNullException.ThrowIfNull(translationRepo);
         ArgumentNullException.ThrowIfNull(gameRepo);
         ArgumentNullException.ThrowIfNull(unitOfWork);
+        ArgumentNullException.ThrowIfNull(cache);
+        ArgumentNullException.ThrowIfNull(retryPolicy);
         ArgumentNullException.ThrowIfNull(clock);
 
         _translationRepo = translationRepo;
         _gameRepo = gameRepo;
         _unitOfWork = unitOfWork;
+        _cache = cache;
+        _retryPolicy = retryPolicy;
         _clock = clock;
     }
 
@@ -97,7 +116,27 @@ internal sealed class AddGameTranslationCommandHandler
             throw new TranslationAlreadyExistsException(cmd.GameId, locale.Value);
         }
 
+        // Issue #2372: invalidate catalog read-model on the GREEN path only.
+        await InvalidateCatalogCacheAsync(cmd.GameId, cancellationToken).ConfigureAwait(false);
+
         return translation.Id;
+    }
+
+    private async Task InvalidateCatalogCacheAsync(Guid sharedGameId, CancellationToken ct)
+    {
+        // Mirrors VectorDocumentIndexedForKbFlagHandler invalidation pattern (ADR-062):
+        // "search-games" evicts SearchSharedGamesQueryHandler cache, "shared-game:{id}"
+        // evicts GetSharedGameByIdQueryHandler cache. The retry policy guards against
+        // transient Redis Pub/Sub failures and bounds wall-time to ~4s worst case.
+        await _retryPolicy.ExecuteAsync(
+            token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync("search-games", token)),
+            "shared-games.list",
+            ct).ConfigureAwait(false);
+
+        await _retryPolicy.ExecuteAsync(
+            token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync($"shared-game:{sharedGameId}", token)),
+            "shared-games.detail",
+            ct).ConfigureAwait(false);
     }
 
     private static bool IsUniqueLocaleViolation(DbUpdateException ex)

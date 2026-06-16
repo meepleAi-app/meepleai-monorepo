@@ -219,3 +219,26 @@ The shared `auto-issue-dedup` action is consumed by each monitor workflow indepe
 - CLAUDE.md § Active Freezes (existing P1 conditions: BGG asset ban, token canonicalization)
 - `ci.yml` — `.github/workflows/ci.yml` (reference for `concurrency` group pattern used across CI)
 - Issue #1071 (WS-E.2b false-positive handler), issue #843 (dev-auto-revert ADR-055)
+
+---
+
+## Update 2026-06-16 — concurrency group convention (brainstorm #2383)
+
+Per the 2026-06-16 brainstorm session on umbrella [#2383](https://github.com/meepleAi-app/meepleai-monorepo/issues/2383), the operational rate-limit concern (>16 monitor workflows running simultaneously approach the GH Issues Search API 1k req/h cap) is addressed with an **advisory documentation convention** rather than a CI gate:
+
+**Convention (advisory)**: every `.github/workflows/*-monitor.yml` (or any workflow that calls the GH Issues Search API on a cron / repeated trigger) MUST declare a `concurrency` block to serialize concurrent runs:
+
+```yaml
+concurrency:
+  group: monitor-<type>-${{ github.ref }}
+  cancel-in-progress: false  # let earlier monitor finish before next starts
+```
+
+**Why advisory, not CI-enforced**:
+- Low frequency of new monitor workflows (1-2 per month based on `.github/workflows/` history).
+- Cost of building + maintaining a workflow-file lint gate exceeds the value at current scale.
+- If >1 rate-limit incident is observed in production (e.g. `meepleai_gh_api_rate_limited_total` counter spikes), escalate to a lint script that greps for `concurrency:` blocks in `*-monitor.yml` files and fails CI if missing.
+
+**Documentation location**: CLAUDE.md § Known Pitfalls (Issues) table — high-visibility for both human contributors and Claude when authoring new workflow files.
+
+Brainstorm session output: companion to `docs/superpowers/specs/2026-06-16-adr-069-toolkit-suggestion-cache-design.md` (same session, parallel ADR follow-ups).

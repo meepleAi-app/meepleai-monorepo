@@ -8,7 +8,7 @@ import type { AiTurnTemplateSuggestion } from '@/lib/api/schemas/toolkit.schemas
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export interface TurnIndicatorRendererProps {
+export interface ToolkitAiTurnPreviewRendererProps {
   /** TurnTemplate from the toolkit. Null if no turn structure is configured. */
   template: AiTurnTemplateSuggestion | null;
   /** Current round (1-indexed). Optional. */
@@ -312,7 +312,7 @@ const LAYOUT_REGISTRY: Readonly<Record<string, LayoutFn>> = Object.freeze({
  *
  * Unknown TurnOrderType falls back to Custom layout.
  */
-export function TurnIndicatorRenderer({
+export function ToolkitAiTurnPreviewRenderer({
   template,
   currentRound,
   currentTurn,
@@ -320,7 +320,7 @@ export function TurnIndicatorRenderer({
   activePlayer,
   players,
   'data-testid': testId,
-}: TurnIndicatorRendererProps) {
+}: ToolkitAiTurnPreviewRendererProps) {
   if (!template) {
     return <TurnEmpty testId={testId} />;
   }

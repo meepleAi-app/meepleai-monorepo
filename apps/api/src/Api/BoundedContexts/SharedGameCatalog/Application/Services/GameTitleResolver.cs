@@ -37,7 +37,7 @@ internal sealed class GameTitleResolver : IGameTitleResolver
         foreach (var game in games)
         {
             var translations = translationsByGame.TryGetValue(game.Id, out var ts)
-                ? ts.Select(ToDto).ToList()
+                ? ts.Select(SharedGameTranslationProjections.ToDto).ToList()
                 : new List<SharedGameTranslationDto>(0);
 
             // `with` produces a shallow-cloned record preserving all other fields.
@@ -46,11 +46,4 @@ internal sealed class GameTitleResolver : IGameTitleResolver
 
         return enriched;
     }
-
-    private static SharedGameTranslationDto ToDto(SharedGameTranslation t) =>
-        new(
-            Locale: t.Locale.Value,
-            Title: t.Title,
-            Description: t.Description,
-            Source: TranslationSourceMapper.ToPersistedString(t.Source));
 }

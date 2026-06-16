@@ -40,7 +40,7 @@ public sealed class SharedGameTranslation
     /// <summary>
     /// PostgreSQL <c>xmin</c> system column projected as an optimistic concurrency token.
     /// Read-only outside the persistence layer; admin write paths call
-    /// <see cref="SetXminForConcurrencyCheck"/> with the client-supplied value before
+    /// <see cref="SetXmin"/> with the client-supplied value before
     /// saving so EF Core can detect lost updates (ADR-060 / DEC-C4).
     /// </summary>
     public uint Xmin { get; private set; }
@@ -167,7 +167,7 @@ public sealed class SharedGameTranslation
     /// <c>InternalsVisibleTo("Api.Tests")</c>) should invoke it. Resolves plan review
     /// finding C4 (avoid reflection trick).
     /// </summary>
-    internal void SetXminForConcurrencyCheck(uint xmin) => Xmin = xmin;
+    internal void SetXmin(uint xmin) => Xmin = xmin;
 
     /// <summary>
     /// Rebuilds an aggregate from already-persisted state. Bypasses

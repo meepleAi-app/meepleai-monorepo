@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetGameTrans
 /// </summary>
 /// <remarks>
 /// Read-side, no domain mutation — pure projection through
-/// <see cref="SharedGameTranslationMapper.ToDetailDto"/>. Endpoint integration
+/// <see cref="SharedGameTranslationProjections.ToDetailDto"/>. Endpoint integration
 /// tests in Wave 5 (Task 14) cover the happy-path + empty-list cases; no
 /// dedicated unit tests for this trivial handler per plan Task 12.
 /// </remarks>
@@ -36,6 +36,6 @@ internal sealed class GetGameTranslationsQueryHandler
             .GetByGameIdAsync(query.GameId, cancellationToken)
             .ConfigureAwait(false);
 
-        return translations.Select(SharedGameTranslationMapper.ToDetailDto).ToList();
+        return translations.Select(SharedGameTranslationProjections.ToDetailDto).ToList();
     }
 }

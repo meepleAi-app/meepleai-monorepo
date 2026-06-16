@@ -52,7 +52,7 @@ internal sealed class InvalidateToolkitSuggestionCacheOnKbDocIndexedHandler
         try
         {
             await _cacheRepo.DeleteByGameIdAsync(gameId, cancellationToken).ConfigureAwait(false);
-            MeepleAiMetrics.RecordAiToolkitCacheInvalidated(gameId);
+            MeepleAiMetrics.RecordAiToolkitCacheInvalidated();
             _logger.LogInformation(
                 "Invalidated AiToolkit cache for game {GameId} post-KB-doc-index (file: {FileName})",
                 gameId, notification.FileName);

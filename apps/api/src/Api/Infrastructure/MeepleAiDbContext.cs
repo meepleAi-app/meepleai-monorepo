@@ -98,6 +98,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<LiveGameSessionEntity> LiveGameSessions => Set<LiveGameSessionEntity>(); // ISSUE-4750: Live game sessions
     public DbSet<GameToolkitEntity> GameToolkits => Set<GameToolkitEntity>(); // ISSUE-4753: Game toolkit configs
     public DbSet<ToolkitVersionEntity> ToolkitVersions => Set<ToolkitVersionEntity>(); // ISSUE-822: Phase 5 marketplace version history
+    public DbSet<AiToolkitSuggestionCacheEntity> AiToolkitSuggestionCache => Set<AiToolkitSuggestionCacheEntity>(); // ADR-069 follow-up (#2383): cache-aside for toolkit suggestions
     public DbSet<BoundedContexts.GameToolkit.Domain.Entities.Toolkit> Toolkits => Set<BoundedContexts.GameToolkit.Domain.Entities.Toolkit>(); // ISSUE-5144: Epic B — user toolkit dashboard
     public DbSet<BoundedContexts.SessionTracking.Domain.Entities.ToolkitSessionState> ToolkitSessionStates => Set<BoundedContexts.SessionTracking.Domain.Entities.ToolkitSessionState>(); // ISSUE-5148: Epic B5 — toolkit session state
     public DbSet<BoundedContexts.SessionTracking.Domain.Entities.GamebookCampaignSession> GamebookCampaignSessions => Set<BoundedContexts.SessionTracking.Domain.Entities.GamebookCampaignSession>(); // Iter 1.A — Libro Game gamebook campaigns

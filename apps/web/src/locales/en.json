@@ -3191,6 +3191,51 @@
         "winnerLabel": "Winner",
         "acknowledgeCta": "Got it",
         "viewSummaryCta": "View summary"
+      },
+      "toolkitRenderer": {
+        "title": "Tools",
+        "emptyTitle": "No active widgets",
+        "emptyBody": "Enable widgets from the toolkit to use them during the session.",
+        "unknownTitle": "Unsupported widget",
+        "unknownBody": "Update the app to support this widget type.",
+        "expandAriaTemplate": "Expand widget {name}",
+        "collapseAriaTemplate": "Collapse widget {name}",
+        "randomGenerator": {
+          "heading": "Generator",
+          "rollLabel": "Roll",
+          "lastLabel": "Last"
+        },
+        "turnManager": {
+          "heading": "Turn manager",
+          "prevLabel": "Prev",
+          "nextLabel": "Next",
+          "turnOfLabel": "Turn of",
+          "phaseLabel": "Phase"
+        },
+        "scoreTracker": {
+          "heading": "Score",
+          "incrementAriaTemplate": "Increment {name} score",
+          "decrementAriaTemplate": "Decrement {name} score"
+        },
+        "resourceManager": {
+          "heading": "Resources",
+          "sharedHeading": "Shared resources",
+          "incrementAriaTemplate": "Increment {label}",
+          "decrementAriaTemplate": "Decrement {label}"
+        },
+        "noteManager": {
+          "heading": "Notes",
+          "inputAriaLabel": "Write a shared note",
+          "savingLabel": "Saving…",
+          "savedLabel": "Saved"
+        },
+        "whiteboard": {
+          "heading": "Whiteboard",
+          "toolPenLabel": "Pen",
+          "toolEraserLabel": "Eraser",
+          "toolCircleLabel": "Circle",
+          "placeholderLabel": "Shared drawing area"
+        }
       }
     },
     "sessionSummary": {

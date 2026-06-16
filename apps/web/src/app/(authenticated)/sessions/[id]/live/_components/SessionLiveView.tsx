@@ -77,15 +77,12 @@ import {
   ActionLogTimeline,
   ChatAgentPanel,
   DesktopBody,
-  LiveScoringPanel,
   LiveTopBar,
   MobileBody,
   PlayerRosterLive,
   TurnIndicatorRenderer,
   type ActionLogTimelineLabels,
   type ChatAgentPanelLabels,
-  type LiveScoringPanelLabels,
-  type LiveScoringPanelScoreEntry,
   type LiveTopBarLabels,
   type MobileBodyLabels,
   type PlayerRosterLiveLabels,
@@ -95,11 +92,14 @@ import {
   ConnectionLostBanner,
   LiveSessionNotes,
   RightColumnTabs,
+  ScoringPanelRenderer,
   ToolkitRenderer,
   type ConnectionLostBannerLabels,
   type LiveAgentChatLabels,
   type LiveSessionNotesLabels,
   type RightColumnTabsLabels,
+  type ScoringPanelData,
+  type ScoringPanelRendererLabels,
   type ToolkitRendererLabels,
 } from '@/components/features/session-live';
 import { useSession } from '@/hooks/queries/useActiveSessions';
@@ -728,22 +728,51 @@ export function SessionLiveView(): ReactElement {
     };
   }, [t, intl.messages, activeSession?.players.length]);
 
-  const scoringLabels = useMemo<LiveScoringPanelLabels>(
-    (): LiveScoringPanelLabels => ({
-      title: t('pages.sessionLive.scoring.title'),
-      scoreLabelTemplate:
-        (intl.messages['pages.sessionLive.scoring.scoreLabel'] as string) ?? 'Punteggio: {score}',
-      winnerLabel: t('pages.sessionLive.scoring.winnerLabel'),
-      myScoreLabel: t('pages.sessionLive.scoring.myScoreLabel'),
-      incrementAriaLabelTemplate:
-        (intl.messages['pages.sessionLive.scoring.incrementAriaLabel'] as string) ??
-        'Aumenta punteggio di {playerName}',
-      decrementAriaLabelTemplate:
-        (intl.messages['pages.sessionLive.scoring.decrementAriaLabel'] as string) ??
-        'Diminuisci punteggio di {playerName}',
-      scoreInputAriaLabelTemplate:
-        (intl.messages['pages.sessionLive.scoring.scoreInputAriaLabel'] as string) ??
-        'Inserisci punteggio per {playerName}',
+  // G5a #2375: ScoringPanelRenderer labels (polymorphic Points/Ranking/BinaryWin/Objectives).
+  const scoringPanelLabels = useMemo<ScoringPanelRendererLabels>(
+    (): ScoringPanelRendererLabels => ({
+      points: {
+        heading: t('pages.sessionLive.scoring.title'),
+        scoreAriaTemplate:
+          (intl.messages['pages.sessionLive.scoring.scoreAriaTemplate'] as string) ??
+          'Punteggio di {name}',
+        leaderBadgeLabel:
+          (intl.messages['pages.sessionLive.scoring.leaderBadgeLabel'] as string) ?? 'in testa',
+      },
+      ranking: {
+        heading:
+          (intl.messages['pages.sessionLive.scoring.rankingHeading'] as string) ?? 'Posizioni',
+        rankAriaTemplate:
+          (intl.messages['pages.sessionLive.scoring.rankAriaTemplate'] as string) ??
+          'Posizione di {name}',
+        firstPlaceBadgeLabel:
+          (intl.messages['pages.sessionLive.scoring.firstPlaceBadgeLabel'] as string) ??
+          'primo posto',
+      },
+      binaryWin: {
+        heading: (intl.messages['pages.sessionLive.scoring.binaryWinHeading'] as string) ?? 'Esito',
+        inProgressLabel:
+          (intl.messages['pages.sessionLive.scoring.binaryWinInProgress'] as string) ??
+          'Partita in corso',
+        winLabel: (intl.messages['pages.sessionLive.scoring.winLabel'] as string) ?? 'Vince',
+        loseLabel: (intl.messages['pages.sessionLive.scoring.loseLabel'] as string) ?? 'Perde',
+        outcomeAriaTemplate:
+          (intl.messages['pages.sessionLive.scoring.outcomeAriaTemplate'] as string) ??
+          '{name}: {result}',
+      },
+      objectives: {
+        heading:
+          (intl.messages['pages.sessionLive.scoring.objectivesHeading'] as string) ?? 'Obiettivi',
+        completedAriaTemplate:
+          (intl.messages['pages.sessionLive.scoring.completedAriaTemplate'] as string) ??
+          'Completati da {name}',
+        doneAriaTemplate:
+          (intl.messages['pages.sessionLive.scoring.doneAriaTemplate'] as string) ??
+          '{label} (completato)',
+        pendingAriaTemplate:
+          (intl.messages['pages.sessionLive.scoring.pendingAriaTemplate'] as string) ??
+          '{label} (non completato)',
+      },
     }),
     [t, intl.messages]
   );
@@ -911,14 +940,22 @@ export function SessionLiveView(): ReactElement {
 
   // ── Derived data for components ───────────────────────────────────────────
 
-  const scores = useMemo<ReadonlyArray<LiveScoringPanelScoreEntry>>(() => {
-    if (activeSession == null) return [];
-    return activeSession.players.map(p => ({
-      playerId: p.id,
-      playerName: p.name,
-      score: p.score,
-      isWinner: false,
-    }));
+  // G5a #2375 + #2389 follow-up: Adapter maps LiveSessionDto.players to ScoringPanelData
+  // discriminated union. Currently hardcoded to 'Points' variant (foundation proxy);
+  // when `scoringType` arrives on LiveSessionDto (#2389), the kind will derive from it
+  // and populate the appropriate ScoringPanelData shape.
+  const scoringPanelData = useMemo<ScoringPanelData>(() => {
+    if (activeSession == null) {
+      return { kind: 'Points', players: [] };
+    }
+    return {
+      kind: 'Points',
+      players: activeSession.players.map(p => ({
+        id: p.id,
+        displayName: p.name,
+        score: p.score,
+      })),
+    };
   }, [activeSession]);
 
   // ── G5c #2376: Zustand toolkit renderer store ─────────────────────────────
@@ -1066,19 +1103,18 @@ export function SessionLiveView(): ReactElement {
       case 'score':
       default:
         return (
-          <LiveScoringPanel
-            scores={scores}
-            viewerRole={activeSession.viewerRole}
-            viewerId={activeSession.viewerId}
-            labels={scoringLabels}
+          <ScoringPanelRenderer
+            data={scoringPanelData}
+            labels={scoringPanelLabels}
+            className="p-2"
           />
         );
     }
   }, [
     mobileTab,
     activeSession,
-    scores,
-    scoringLabels,
+    scoringPanelData,
+    scoringPanelLabels,
     turnRendererState,
     turnRendererPlayers,
     turnRendererLabels,
@@ -1200,16 +1236,11 @@ export function SessionLiveView(): ReactElement {
 
   // Desktop right column: RightColumnTabs with tab content.
   // Tab keys: 'score' | 'turn' | 'widget' | 'notes' (G1 §3 D-2).
-  // G5 (#2373) will polymorphic-replace LiveScoringPanel; G1 reuses existing renderers (D-6).
+  // G5a (#2375): ScoringPanelRenderer replaces hardcoded LiveScoringPanel Points-only view.
   const desktopRightColumn = (
     <RightColumnTabs activeTab={tab} onTabChange={handleTabChange} labels={rightColumnTabsLabels}>
       {tab === 'score' && (
-        <LiveScoringPanel
-          scores={scores}
-          viewerRole={activeSession.viewerRole}
-          viewerId={activeSession.viewerId}
-          labels={scoringLabels}
-        />
+        <ScoringPanelRenderer data={scoringPanelData} labels={scoringPanelLabels} className="p-3" />
       )}
       {tab === 'turn' && (
         <div className="flex flex-col gap-4 p-3">
@@ -1330,10 +1361,10 @@ export function SessionLiveView(): ReactElement {
       {dialogState === 'endgame' && (
         <Suspense fallback={null}>
           <EndgameDialog
-            finalScores={scores.map(s => ({
-              playerName: s.playerName,
-              score: s.score,
-              isWinner: s.isWinner,
+            finalScores={activeSession.players.map(p => ({
+              playerName: p.name,
+              score: p.score,
+              isWinner: false,
             }))}
             endedAt={endgameEvent?.endedAt ?? '—'}
             endedBy={endgameEvent?.endedBy ?? '—'}

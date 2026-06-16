@@ -1,5 +1,9 @@
 /**
- * ScoringPanelRenderer tests (issue #1749 B19-4a).
+ * ToolkitAiScoringPreviewRenderer tests (issue #1749 B19-4a).
+ *
+ * Renamed in #2418 from `ScoringPanelRenderer` to disambiguate from
+ * the (future) live-runtime polymorphic renderer under `features/session-live/`
+ * (G5a #2373).
  *
  * Covers all 4 ScoreType variants + null template + Categories[] vs legacy
  * Dimensions[] back-compat + inline scoreboard rendering.
@@ -10,7 +14,7 @@ import React from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
-import { ScoringPanelRenderer } from '../ScoringPanelRenderer';
+import { ToolkitAiScoringPreviewRenderer } from '../ToolkitAiScoringPreviewRenderer';
 import type {
   AiScoringTemplateSuggestion,
   AiScoringCategorySuggestion,
@@ -67,23 +71,23 @@ const CODENAMES_OBJECTIVES: AiScoringTemplateSuggestion = {
   scoreType: 'Objectives',
 };
 
-describe('ScoringPanelRenderer', () => {
+describe('ToolkitAiScoringPreviewRenderer', () => {
   describe('empty / null template', () => {
     it('renders empty state when template is null', () => {
-      render(<ScoringPanelRenderer template={null} />);
+      render(<ToolkitAiScoringPreviewRenderer template={null} />);
       expect(screen.getByTestId('scoring-panel-empty')).toBeInTheDocument();
       expect(screen.getByText(/no scoring template/i)).toBeInTheDocument();
     });
 
     it('respects custom data-testid in empty state', () => {
-      render(<ScoringPanelRenderer template={null} data-testid="custom-id" />);
+      render(<ToolkitAiScoringPreviewRenderer template={null} data-testid="custom-id" />);
       expect(screen.getByTestId('custom-id')).toBeInTheDocument();
     });
   });
 
   describe('Points layout (Wingspan v3 categories)', () => {
     it('renders all 4 categories with their computation icons', () => {
-      render(<ScoringPanelRenderer template={WINGSPAN_TEMPLATE} />);
+      render(<ToolkitAiScoringPreviewRenderer template={WINGSPAN_TEMPLATE} />);
       expect(screen.getByTestId('scoring-categories')).toBeInTheDocument();
       WINGSPAN_CATEGORIES.forEach(c => {
         expect(screen.getByTestId(`scoring-category-${c.id}`)).toBeInTheDocument();
@@ -92,7 +96,7 @@ describe('ScoringPanelRenderer', () => {
     });
 
     it('exposes computation type via data attribute for testability', () => {
-      render(<ScoringPanelRenderer template={WINGSPAN_TEMPLATE} />);
+      render(<ToolkitAiScoringPreviewRenderer template={WINGSPAN_TEMPLATE} />);
       expect(screen.getByTestId('scoring-category-birds')).toHaveAttribute(
         'data-computation',
         'Sum'
@@ -108,7 +112,7 @@ describe('ScoringPanelRenderer', () => {
     });
 
     it('shows description when category has one', () => {
-      render(<ScoringPanelRenderer template={WINGSPAN_TEMPLATE} />);
+      render(<ToolkitAiScoringPreviewRenderer template={WINGSPAN_TEMPLATE} />);
       expect(screen.getByText('5/2/1')).toBeInTheDocument();
     });
 
@@ -120,7 +124,7 @@ describe('ScoringPanelRenderer', () => {
           { id: 'normal', label: 'Normal cat', computation: 'Sum', weight: 1 },
         ],
       };
-      render(<ScoringPanelRenderer template={customWeight} />);
+      render(<ToolkitAiScoringPreviewRenderer template={customWeight} />);
       expect(screen.getByText('×2')).toBeInTheDocument();
       expect(screen.queryByText('×1')).not.toBeInTheDocument();
     });
@@ -128,7 +132,7 @@ describe('ScoringPanelRenderer', () => {
 
   describe('Points layout (legacy dimensions only)', () => {
     it('falls back to legacy dimensions chip list when no categories', () => {
-      render(<ScoringPanelRenderer template={LEGACY_TEMPLATE} />);
+      render(<ToolkitAiScoringPreviewRenderer template={LEGACY_TEMPLATE} />);
       expect(screen.getByTestId('scoring-dimensions-legacy')).toBeInTheDocument();
       expect(screen.queryByTestId('scoring-categories')).not.toBeInTheDocument();
       LEGACY_TEMPLATE.dimensions.forEach(d => {
@@ -141,7 +145,11 @@ describe('ScoringPanelRenderer', () => {
     it('renders ranked list with rank pills when scores provided', () => {
       const scores = { p1: 12, p2: 8, p3: 15 };
       render(
-        <ScoringPanelRenderer template={CATAN_RANKING} scores={scores} players={PLAYERS as never} />
+        <ToolkitAiScoringPreviewRenderer
+          template={CATAN_RANKING}
+          scores={scores}
+          players={PLAYERS as never}
+        />
       );
       const ranking = screen.getByTestId('scoring-ranking');
       expect(ranking).toBeInTheDocument();
@@ -154,14 +162,20 @@ describe('ScoringPanelRenderer', () => {
     });
 
     it('shows placeholder when no scores recorded yet', () => {
-      render(<ScoringPanelRenderer template={CATAN_RANKING} players={PLAYERS as never} />);
+      render(
+        <ToolkitAiScoringPreviewRenderer template={CATAN_RANKING} players={PLAYERS as never} />
+      );
       expect(screen.getByTestId('scoring-ranking-empty')).toBeInTheDocument();
     });
 
     it('handles missing player scores as 0', () => {
       const scores = { p1: 10 };
       render(
-        <ScoringPanelRenderer template={CATAN_RANKING} scores={scores} players={PLAYERS as never} />
+        <ToolkitAiScoringPreviewRenderer
+          template={CATAN_RANKING}
+          scores={scores}
+          players={PLAYERS as never}
+        />
       );
       const ranking = screen.getByTestId('scoring-ranking');
       // p2 and p3 missing → both 0, p1 wins
@@ -171,20 +185,20 @@ describe('ScoringPanelRenderer', () => {
 
   describe('BinaryWin layout', () => {
     it('renders collective outcome indicator', () => {
-      render(<ScoringPanelRenderer template={PALEO_BINARY} />);
+      render(<ToolkitAiScoringPreviewRenderer template={PALEO_BINARY} />);
       expect(screen.getByTestId('scoring-binary-win')).toBeInTheDocument();
       expect(screen.getByText(/win\/lose tracked at game end/i)).toBeInTheDocument();
     });
 
     it('changes message when scores present', () => {
-      render(<ScoringPanelRenderer template={PALEO_BINARY} scores={{ result: 1 }} />);
+      render(<ToolkitAiScoringPreviewRenderer template={PALEO_BINARY} scores={{ result: 1 }} />);
       expect(screen.getByText(/outcome recorded/i)).toBeInTheDocument();
     });
   });
 
   describe('Objectives layout', () => {
     it('renders each dimension as a checkable row', () => {
-      render(<ScoringPanelRenderer template={CODENAMES_OBJECTIVES} />);
+      render(<ToolkitAiScoringPreviewRenderer template={CODENAMES_OBJECTIVES} />);
       expect(screen.getByTestId('scoring-objectives')).toBeInTheDocument();
       CODENAMES_OBJECTIVES.dimensions.forEach(d => {
         expect(screen.getByText(d)).toBeInTheDocument();
@@ -196,7 +210,7 @@ describe('ScoringPanelRenderer', () => {
     it('renders inline scoreboard when scores+players provided', () => {
       const scores = { p1: 25, p2: 18, p3: 22 };
       render(
-        <ScoringPanelRenderer
+        <ToolkitAiScoringPreviewRenderer
           template={WINGSPAN_TEMPLATE}
           scores={scores}
           players={PLAYERS as never}
@@ -212,7 +226,9 @@ describe('ScoringPanelRenderer', () => {
     });
 
     it('skips inline scoreboard when only players provided without scores', () => {
-      render(<ScoringPanelRenderer template={WINGSPAN_TEMPLATE} players={PLAYERS as never} />);
+      render(
+        <ToolkitAiScoringPreviewRenderer template={WINGSPAN_TEMPLATE} players={PLAYERS as never} />
+      );
       expect(screen.queryByTestId('scoring-inline-scoreboard')).not.toBeInTheDocument();
     });
   });
@@ -223,7 +239,7 @@ describe('ScoringPanelRenderer', () => {
         ...LEGACY_TEMPLATE,
         scoreType: 'TotallyMadeUp',
       };
-      const { container } = render(<ScoringPanelRenderer template={unknown} />);
+      const { container } = render(<ToolkitAiScoringPreviewRenderer template={unknown} />);
       // Should not crash, should render legacy dimensions
       expect(screen.getByTestId('scoring-dimensions-legacy')).toBeInTheDocument();
       // Section data attribute reflects the (unknown) score type for debugging

@@ -11,7 +11,7 @@ import type {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export interface ScoringPanelRendererProps {
+export interface ToolkitAiScoringPreviewRendererProps {
   /** ScoringTemplate from the toolkit. Null if no scoring is configured. */
   template: AiScoringTemplateSuggestion | null;
   /** Optional per-player score values (id → score). When provided, renders read-only mini-scoreboard inline. */
@@ -264,12 +264,12 @@ function InlineScoreboard({
  *
  * Unknown ScoreType falls back to Points layout for graceful degradation.
  */
-export function ScoringPanelRenderer({
+export function ToolkitAiScoringPreviewRenderer({
   template,
   scores,
   players,
   'data-testid': testId,
-}: ScoringPanelRendererProps) {
+}: ToolkitAiScoringPreviewRendererProps) {
   if (!template) {
     return <ScoringEmpty testId={testId} />;
   }

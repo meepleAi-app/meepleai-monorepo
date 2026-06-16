@@ -66,4 +66,56 @@ public sealed class LocaleTests
     {
         Locale.Create("it").ToString().Should().Be("it");
     }
+
+    // ─── TryCreate (non-throwing — issue #2399) ──────────────────────────────
+
+    [Theory]
+    [InlineData("it", "it")]
+    [InlineData("EN", "en")]
+    [InlineData("  fr  ", "fr")]
+    [InlineData("en-GB", "en-GB")]
+    [InlineData("EN-gb", "en-GB")]
+    public void TryCreate_AcceptsAndNormalizesIso(string raw, string expected)
+    {
+        var success = Locale.TryCreate(raw, out var locale);
+
+        success.Should().BeTrue();
+        locale.Should().NotBeNull();
+        locale!.Value.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("english")]
+    [InlineData("1234")]
+    [InlineData("e")]
+    [InlineData("en-G")]
+    [InlineData("en-GBR")]
+    public void TryCreate_RejectsMalformedAndNullWithoutThrowing(string? raw)
+    {
+        var success = Locale.TryCreate(raw, out var locale);
+
+        success.Should().BeFalse();
+        locale.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("it")]
+    [InlineData("en-GB")]
+    [InlineData("EN-gb")]
+    [InlineData("  fr  ")]
+    public void Create_AndTryCreate_YieldEqualLocalesForValidInput(string raw)
+    {
+        // Parity check: Create (throwing) and TryCreate (non-throwing) must
+        // agree on every input shape — same normalisation, same equality.
+        // Issue #2399.
+        var thrown = Locale.Create(raw);
+        var success = Locale.TryCreate(raw, out var tryCreated);
+
+        success.Should().BeTrue();
+        tryCreated.Should().NotBeNull();
+        tryCreated!.Should().Be(thrown);
+    }
 }

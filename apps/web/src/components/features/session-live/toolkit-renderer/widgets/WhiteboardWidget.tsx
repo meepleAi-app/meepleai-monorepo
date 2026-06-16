@@ -20,10 +20,10 @@ interface Props {
 // onConfigChange wired but currently unused — toolkit save is a no-op in MVP.
 
 export function WhiteboardWidget({
-  widget,
+  widget: _widget,
   collapsed,
   onHeaderClick,
-  onConfigChange,
+  onConfigChange: _onConfigChange,
   labels,
 }: Props): ReactElement {
   const headerAria = (collapsed ? labels.expandAriaTemplate : labels.collapseAriaTemplate).replace(

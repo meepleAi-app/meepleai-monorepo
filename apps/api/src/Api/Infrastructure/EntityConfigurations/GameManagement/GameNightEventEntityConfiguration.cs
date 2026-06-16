@@ -26,6 +26,11 @@ internal class GameNightEventEntityConfiguration : IEntityTypeConfiguration<Game
         builder.Property(e => e.Status).HasColumnName("status").HasMaxLength(20).IsRequired();
         builder.Property(e => e.Reminder24hSentAt).HasColumnName("reminder_24h_sent_at");
         builder.Property(e => e.Reminder1hSentAt).HasColumnName("reminder_1h_sent_at");
+
+        // RSVP deadline — ADR-074 (#2383)
+        builder.Property(e => e.RsvpDeadline).HasColumnName("rsvp_deadline");
+        builder.Property(e => e.RsvpClosedAt).HasColumnName("rsvp_closed_at");
+
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
         builder.Property(e => e.UpdatedAt).HasColumnName("updated_at");
 

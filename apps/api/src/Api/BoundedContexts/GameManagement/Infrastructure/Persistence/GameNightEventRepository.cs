@@ -209,6 +209,8 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             Status = domain.Status.ToString(),
             Reminder24hSentAt = domain.Reminder24hSentAt,
             Reminder1hSentAt = domain.Reminder1hSentAt,
+            RsvpDeadline = domain.RsvpDeadline,
+            RsvpClosedAt = domain.RsvpClosedAt,
             CreatedAt = domain.CreatedAt,
             UpdatedAt = domain.UpdatedAt
         };
@@ -284,6 +286,12 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
 
         var reminder1hProp = typeof(GameNightEvent).GetProperty(nameof(GameNightEvent.Reminder1hSentAt));
         reminder1hProp?.SetValue(evt, entity.Reminder1hSentAt);
+
+        var rsvpDeadlineProp = typeof(GameNightEvent).GetProperty(nameof(GameNightEvent.RsvpDeadline));
+        rsvpDeadlineProp?.SetValue(evt, entity.RsvpDeadline);
+
+        var rsvpClosedAtProp = typeof(GameNightEvent).GetProperty(nameof(GameNightEvent.RsvpClosedAt));
+        rsvpClosedAtProp?.SetValue(evt, entity.RsvpClosedAt);
 
         // Restore RSVPs
         var rsvps = entity.Rsvps.Select(r => GameNightRsvp.Reconstitute(

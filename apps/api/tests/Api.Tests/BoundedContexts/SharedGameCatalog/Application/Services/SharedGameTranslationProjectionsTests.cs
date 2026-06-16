@@ -50,6 +50,32 @@ public sealed class SharedGameTranslationProjectionsTests
     };
 
     [Fact]
+    public void AllowLists_DoNotReferenceRemovedAggregateFields()
+    {
+        // Reverse-direction drift-guard (PR #2412 code-review C2): if a field is
+        // REMOVED from SharedGameTranslation (e.g. soft-delete dropped in favour
+        // of an external AuditTrail) but stays in AuditAndBookkeepingFields or
+        // DetailOnlyFields, the other tests still pass silently — the allow-list
+        // would quietly carry dead names and could mask a real drift if a new
+        // property happens to reuse the dead name. This test fails the moment
+        // an allow-list entry stops corresponding to a real aggregate property.
+        var aggregateFields = typeof(SharedGameTranslation)
+            .GetProperties()
+            .Select(p => p.Name)
+            .ToHashSet(StringComparer.Ordinal);
+
+        var allowListed = AuditAndBookkeepingFields
+            .Concat(DetailOnlyFields)
+            .ToHashSet(StringComparer.Ordinal);
+
+        var orphans = allowListed.Except(aggregateFields, StringComparer.Ordinal).ToList();
+        orphans.Should().BeEmpty(
+            "every allow-list entry MUST correspond to an actual aggregate property — " +
+            "remove orphan(s) {0} or restore the missing property",
+            string.Join(", ", orphans));
+    }
+
+    [Fact]
     public void SharedGameTranslationProjections_ConsolidatesBothMappers()
     {
         // Sanity: confirm both projection methods are reachable via the

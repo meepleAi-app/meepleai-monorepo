@@ -344,6 +344,17 @@ jobs:
       - name: BGG ToS compliance gate (#2123)
         run: pnpm lint:bgg
 
+      # ADR-075 short-term (#2383 brainstorm 2026-06-16):
+      # Cross-language constants drift detection. Auto-discovers paired files
+      # under `apps/api/src/Api/**/Constants/*Routes.cs` and
+      # `apps/web/src/lib/constants/*-routes.ts` (PascalCase ↔ kebab-case).
+      # No-op until the first BE/FE constants pair lands; fails fast on key
+      # mismatch when it does. Long-term: replaced by JSON single-source-of-truth
+      # codegen step (tracked separately).
+      - name: Cross-language constants drift (ADR-075)
+        run: bash scripts/lint-cross-lang-constants.sh
+        working-directory: ${{ github.workspace }}
+
       - name: Upload mockup annotation coverage report
         if: always()
         uses: actions/upload-artifact@v7

@@ -1,5 +1,4 @@
-using Api.BoundedContexts.SharedGameCatalog.Application.Exceptions;
-using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using FluentValidation;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.DeleteGameTranslation;
@@ -30,23 +29,10 @@ public sealed class DeleteGameTranslationCommandValidator
         RuleFor(c => c.Locale)
             .Cascade(CascadeMode.Stop)
             .NotEmpty()
-            .Must(BeValidLocale).WithMessage("Invalid ISO 639-1 locale");
+            .Must(SharedTranslationValidationRules.BeValidLocale).WithMessage("Invalid ISO 639-1 locale");
 
         RuleFor(c => c.Xmin)
             .GreaterThan(0u)
             .WithMessage("Xmin required for optimistic concurrency check");
-    }
-
-    private static bool BeValidLocale(string raw)
-    {
-        try
-        {
-            Locale.Create(raw);
-            return true;
-        }
-        catch (InvalidLocaleException)
-        {
-            return false;
-        }
     }
 }

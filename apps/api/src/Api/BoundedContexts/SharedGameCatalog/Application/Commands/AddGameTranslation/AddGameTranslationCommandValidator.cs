@@ -37,7 +37,7 @@ public sealed class AddGameTranslationCommandValidator
         RuleFor(c => c.Locale)
             .Cascade(CascadeMode.Stop)
             .NotEmpty()
-            .Must(BeValidLocale).WithMessage("Invalid ISO 639-1 locale")
+            .Must(SharedTranslationValidationRules.BeValidLocale).WithMessage("Invalid ISO 639-1 locale")
             .MustAsync(async (cmd, locale, ct) =>
                 !await translationRepository
                     .ExistsActiveAsync(cmd.GameId, NormalizeLocale(locale), ct)
@@ -52,19 +52,6 @@ public sealed class AddGameTranslationCommandValidator
             .NotEmpty()
             .Must(BeValidSource)
             .WithMessage("Invalid source — must be one of: manual | auto-openrouter | community");
-    }
-
-    private static bool BeValidLocale(string raw)
-    {
-        try
-        {
-            Locale.Create(raw);
-            return true;
-        }
-        catch (InvalidLocaleException)
-        {
-            return false;
-        }
     }
 
     private static string NormalizeLocale(string raw)

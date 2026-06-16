@@ -18,7 +18,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.UpdateGameT
 /// </para>
 /// <para>
 /// Per DEC-C4 the client-supplied <c>xmin</c> is pushed onto the aggregate via
-/// <see cref="Domain.Entities.SharedGameTranslation.SetXminForConcurrencyCheck"/>
+/// <see cref="Domain.Entities.SharedGameTranslation.SetXmin"/>
 /// before <c>SaveChangesAsync</c>. EF compares the stored value against the row's
 /// current <c>xmin</c> and raises
 /// <see cref="Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException"/> on
@@ -65,7 +65,7 @@ internal sealed class UpdateGameTranslationCommandHandler
         existing.UpdateDescription(cmd.Description, cmd.ActorUserId, now);
 
         // DEC-C4: push client-supplied xmin so EF can run the concurrency check.
-        existing.SetXminForConcurrencyCheck(cmd.Xmin);
+        existing.SetXmin(cmd.Xmin);
 
         await _translationRepo.UpdateAsync(existing, cancellationToken).ConfigureAwait(false);
         // DbUpdateConcurrencyException bubbles up — caught by global exception middleware

@@ -42,6 +42,6 @@ internal sealed class GetGameTranslationByLocaleQueryHandler
 
         return translation is null
             ? null
-            : SharedGameTranslationMapper.ToDetailDto(translation);
+            : SharedGameTranslationProjections.ToDetailDto(translation);
     }
 }

@@ -144,10 +144,10 @@ public sealed class SharedGameTranslationTests
     }
 
     [Fact]
-    public void SetXminForConcurrencyCheck_AssignsXmin()
+    public void SetXmin_AssignsXmin()
     {
         var t = NewActiveTranslation();
-        t.SetXminForConcurrencyCheck(42u);
+        t.SetXmin(42u);
         t.Xmin.Should().Be(42u);
     }
 

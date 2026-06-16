@@ -131,3 +131,11 @@ export type {
   SessionToolsRailLabels,
   SessionToolsRailProps,
 } from '@/components/features/session-live/SessionToolsRail';
+
+// ─── G5c #2376 ToolkitRenderer ────────────────────────────────────────────────
+
+export { ToolkitRenderer } from '@/components/features/session-live/toolkit-renderer/ToolkitRenderer';
+export type {
+  ToolkitRendererLabels,
+  ToolkitRendererProps,
+} from '@/components/features/session-live/toolkit-renderer/ToolkitRenderer';

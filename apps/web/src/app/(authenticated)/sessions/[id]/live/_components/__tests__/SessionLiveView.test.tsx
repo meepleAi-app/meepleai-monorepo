@@ -18,7 +18,7 @@
  *   - useSessionLiveStream NOT called in IS_VISUAL_TEST_BUILD mode
  *   - Dialog state from URL: ?dialog=pause mounts PauseOverlay, ?dialog=endgame mounts EndgameDialog
  *   - ConnectionLostBanner renders for reconnecting / degraded-polling / failed states
- *   - Mobile tab routing: chat tab renders LiveAgentChat, tools tab renders SessionToolsRail
+ *   - Mobile tab routing: chat tab renders LiveAgentChat, tools/widget tab renders ToolkitRenderer (G5c #2376)
  *   - Desktop right column: RightColumnTabs mounted with correct activeTab
  *   - Desktop tab change calls router.replace with ?tab= param
  *   - Optimistic score update via liveStream events
@@ -769,10 +769,12 @@ describe('SessionLiveView (Wave D.2 Interactions — Task 3)', () => {
     expect(container.querySelector('[data-slot="player-roster-live"]')).toBeInTheDocument();
   });
 
-  it('T4.9: RIGHT tab=widget renders SessionToolsRail (legacy tools renamed)', () => {
+  it('T4.9: RIGHT tab=widget renders ToolkitRenderer (G5c #2376, replaces SessionToolsRail)', () => {
     searchParamsMap['tab'] = 'widget';
     const { container } = renderWithIntl(<SessionLiveView />);
-    expect(container.querySelector('[data-slot="session-tools-rail"]')).toBeInTheDocument();
+    // G5c swap: ToolkitRenderer replaces SessionToolsRail in the 'widget' tab.
+    // Empty store → empty state renders the region with data-empty="true".
+    expect(container.querySelector('[data-slot="toolkit-renderer"]')).toBeInTheDocument();
   });
 
   it('T4.10: RIGHT tab=notes renders LiveSessionNotes', () => {
@@ -797,14 +799,14 @@ describe('SessionLiveView (Wave D.2 Interactions — Task 3)', () => {
     expect(mobileBody?.querySelector('[data-slot="live-agent-chat"]')).not.toBeNull();
   });
 
-  it('T3.3b: ?msheet=open + ?mtab=widget mounts SessionToolsRail in drawer (Player role)', () => {
-    // Default fixture role is Player, so tools rail is visible inside the drawer.
+  it('T3.3b: ?msheet=open + ?mtab=widget mounts ToolkitRenderer in drawer (G5c #2376)', () => {
+    // G5c swap: ToolkitRenderer replaces SessionToolsRail in the mobile 'widget' tab.
     searchParamsMap['msheet'] = 'open';
     searchParamsMap['mtab'] = 'widget';
     const { container } = renderWithIntl(<SessionLiveView />);
-    // Drawer mounted with SessionToolsRail inside.
+    // Drawer mounted with ToolkitRenderer inside (empty store → data-empty="true").
     expect(document.querySelector('[data-slot="mobile-bottom-sheet"]')).not.toBeNull();
-    // Whether SessionToolsRail renders depends on viewer role (Player/Host yes, Spectator no).
+    expect(document.querySelector('[data-slot="toolkit-renderer"]')).not.toBeNull();
     // Assert no crash + drawer mounted with widget tab selected.
     expect(container.querySelector('[data-slot="session-live-view"]')).toBeInTheDocument();
   });

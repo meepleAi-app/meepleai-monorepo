@@ -105,15 +105,55 @@ internal class NotificationRepository : RepositoryBase, INotificationRepository
         // Fires before UnitOfWork.SaveChangesAsync — matches metric recording pattern.
         //
         // Phantom-broadcast risk (acknowledged): if the caller's external
-        // SaveChangesAsync subsequently throws (e.g. FK violation on a sibling
-        // entity, deadlock, late constraint check), the metric is already
-        // counted and the SSE frame has already shipped for a notification
-        // that was never durably stored. Affects the 12 non-dispatcher callers
-        // (Hangfire jobs + command handlers + non-dispatcher event handlers).
-        // The dispatcher path (#2383) routes through AddAndCommitAsync below,
-        // which emits these side-effects only after a successful save. A
-        // follow-up will migrate the remaining callers; see #2383 umbrella.
+        // SaveChangesAsync subsequently throws (FK violation on a sibling entity,
+        // deadlock, late constraint check), the metric is already counted and
+        // the SSE frame has already shipped for a notification that was never
+        // durably stored. Issue #2392 migrated 9 of 10 callers to
+        // <see cref="AddAndCommitAsync"/> (single-row) / <see cref="AddBatchAndCommitAsync"/>
+        // (fan-out batch). The one remaining call site —
+        // <c>SlackNotificationProcessorJob.HandleTokenRevocationAsync</c> — keeps
+        // <c>AddAsync</c> on purpose: its outer save deactivates the Slack
+        // connection AND inserts the notification atomically, and splitting
+        // them would create a worse failure mode (deactivated connection with
+        // no user notification) than the residual phantom risk. New callers
+        // SHOULD prefer the AddAndCommit variants.
         _broadcaster.Publish(notification.UserId, MapToDto(notification));
+    }
+
+    /// <inheritdoc />
+    public async Task<int> AddBatchAndCommitAsync(IEnumerable<Notification> notifications, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(notifications);
+
+        var list = notifications.ToList();
+        if (list.Count == 0)
+        {
+            return 0;
+        }
+
+        foreach (var n in list)
+        {
+            CollectDomainEvents(n);
+            var entity = MapToPersistence(n);
+            await DbContext.Set<NotificationEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
+        }
+
+        // Single SaveChangesAsync for the whole batch — preserves atomicity
+        // (all rows persist together or none do via Postgres transaction).
+        // Any DbUpdateException bubbles up unchanged; side-effects below
+        // are skipped, so no phantom broadcast / metric fires.
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // POST-save side-effects (issue #2392): once persisted, fire the
+        // metric counter and SSE frame for each row. Iteration order matches
+        // the input list so callers can reason about per-row notification.
+        foreach (var n in list)
+        {
+            MeepleAiMetrics.RecordNotificationCreated(n.Type.Value, n.Severity.Value);
+            _broadcaster.Publish(n.UserId, MapToDto(n));
+        }
+
+        return list.Count;
     }
 
     /// <inheritdoc />

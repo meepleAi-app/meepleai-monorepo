@@ -6,7 +6,6 @@ using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
-using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.UserLibrary.Application.Commands;
 
@@ -18,18 +17,15 @@ internal class SendLoanReminderCommandHandler : ICommandHandler<SendLoanReminder
 {
     private readonly IUserLibraryRepository _libraryRepository;
     private readonly INotificationRepository _notificationRepository;
-    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<SendLoanReminderCommandHandler> _logger;
 
     public SendLoanReminderCommandHandler(
         IUserLibraryRepository libraryRepository,
         INotificationRepository notificationRepository,
-        IUnitOfWork unitOfWork,
         ILogger<SendLoanReminderCommandHandler> logger)
     {
         _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
         _notificationRepository = notificationRepository ?? throw new ArgumentNullException(nameof(notificationRepository));
-        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -82,8 +78,10 @@ internal class SendLoanReminderCommandHandler : ICommandHandler<SendLoanReminder
             metadata: $"{{\"gameId\":\"{command.GameId}\",\"type\":\"loan-reminder\"}}"
         );
 
-        await _notificationRepository.AddAsync(notification, cancellationToken).ConfigureAwait(false);
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        // Issue #2392: AddAndCommitAsync commits + fires post-save side-effects in
+        // one step, replacing the previous AddAsync + external SaveChangesAsync pair
+        // (which broadcast/recorded the metric BEFORE the row was durably stored).
+        await _notificationRepository.AddAndCommitAsync(notification, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("Sent loan reminder for game {GameId} to user {UserId}",
             command.GameId, command.UserId);

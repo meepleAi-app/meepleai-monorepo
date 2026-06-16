@@ -129,9 +129,14 @@ internal sealed class ModelDeprecatedAutoFallbackHandler
                     }).ToArray(),
                 });
 
-                foreach (var adminId in adminIds)
-                {
-                    var n = new Notification(
+                // Issue #2392: commit mapping + log changes first, then commit the
+                // notification batch separately so the metric/SSE side-effects fire
+                // AFTER the rows are durably stored (previously AddAsync + manual save
+                // broadcast pre-commit, risking phantom frames on SaveChanges failure).
+                await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+                var notifications = adminIds
+                    .Select(adminId => new Notification(
                         id: Guid.NewGuid(),
                         userId: adminId,
                         type: NotificationType.AdminModelStatusChanged,
@@ -139,13 +144,16 @@ internal sealed class ModelDeprecatedAutoFallbackHandler
                         title: title,
                         message: message,
                         link: "/admin/agents/strategy",
-                        metadata: metadata);
+                        metadata: metadata))
+                    .ToList();
 
-                    await _notificationRepository.AddAsync(n, cancellationToken).ConfigureAwait(false);
-                }
+                await _notificationRepository.AddBatchAndCommitAsync(notifications, cancellationToken).ConfigureAwait(false);
             }
-
-            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            else
+            {
+                // No admins to notify, but the mapping + log changes still need to commit.
+                await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
 
             _logger.LogInformation(
                 "ModelDeprecatedAutoFallback: switched {Count} strategies for {ModelId}, notified {AdminCount} admins",

@@ -58,4 +58,20 @@ internal interface INotificationRepository : IRepository<Notification, Guid>
     /// (dedup-by-race — the in-app row exists, just under the other caller).
     /// </returns>
     Task<bool> AddAndCommitAsync(Notification notification, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Batch add-and-commit for fan-out notification callers (admin alerts,
+    /// achievement unlocks, scheduled jobs that emit one row per user). Issue
+    /// #2392 (phantom-broadcast follow-up): tracks every <paramref name="notifications"/>
+    /// row, calls a single <c>SaveChangesAsync</c>, then fires side-effects
+    /// (metric + SSE broadcast) AFTER the durable commit. Replaces the
+    /// <c>foreach { AddAsync } + SaveChanges</c> pattern in 6 loop callers.
+    /// </summary>
+    /// <remarks>
+    /// No 23505 race-window catch — batch callers don't set
+    /// <c>SourceEventId</c>, so the partial UNIQUE index doesn't apply.
+    /// Any <c>DbUpdateException</c> rolls back the entire batch.
+    /// </remarks>
+    /// <returns>Number of rows persisted (0 when input is empty).</returns>
+    Task<int> AddBatchAndCommitAsync(IEnumerable<Notification> notifications, CancellationToken cancellationToken = default);
 }

@@ -75,17 +75,24 @@ internal sealed class AchievementEvaluationJob : IJob
             _logger.LogInformation("Evaluating {AchievementCount} achievements for {UserCount} users",
                 achievements.Count, userIds.Count);
 
-            var totalUnlocks = 0;
+            // Issue #2392: accumulate unlocks-side notifications outside the loop so
+            // we can commit them via AddBatchAndCommitAsync (POST-save metric + SSE),
+            // separated from the achievement aggregate save below.
+            var pendingNotifications = new List<Notification>();
 
             foreach (var userId in userIds)
             {
-                var unlocks = await EvaluateUserAchievementsAsync(
-                    userId, achievements, context.CancellationToken).ConfigureAwait(false);
-
-                totalUnlocks += unlocks;
+                await EvaluateUserAchievementsAsync(
+                    userId, achievements, pendingNotifications, context.CancellationToken).ConfigureAwait(false);
             }
 
+            // Step 1: commit achievement aggregate state via the unit of work.
             await _unitOfWork.SaveChangesAsync(context.CancellationToken).ConfigureAwait(false);
+
+            // Step 2: commit notifications and fire post-save side-effects.
+            var totalUnlocks = await _notificationRepository
+                .AddBatchAndCommitAsync(pendingNotifications, context.CancellationToken)
+                .ConfigureAwait(false);
 
             // Invalidate cache for affected users
             await _cache.RemoveByTagAsync("achievements", context.CancellationToken).ConfigureAwait(false);
@@ -113,6 +120,7 @@ internal sealed class AchievementEvaluationJob : IJob
     private async Task<int> EvaluateUserAchievementsAsync(
         Guid userId,
         IReadOnlyList<Domain.Entities.Achievement> achievements,
+        List<Notification> pendingNotifications,
         CancellationToken cancellationToken)
     {
         var userAchievements = await _userAchievementRepository
@@ -138,7 +146,10 @@ internal sealed class AchievementEvaluationJob : IJob
 
                 if (newlyUnlocked)
                 {
-                    await SendAchievementNotificationAsync(userId, achievement, cancellationToken).ConfigureAwait(false);
+                    pendingNotifications.Add(BuildAchievementNotification(userId, achievement));
+                    _logger.LogInformation(
+                        "Achievement unlocked: {Code} for user {UserId} (+{Points} pts)",
+                        achievement.Code, userId, achievement.Points);
                     unlockCount++;
                 }
             }
@@ -151,7 +162,10 @@ internal sealed class AchievementEvaluationJob : IJob
 
                 if (newlyUnlocked)
                 {
-                    await SendAchievementNotificationAsync(userId, achievement, cancellationToken).ConfigureAwait(false);
+                    pendingNotifications.Add(BuildAchievementNotification(userId, achievement));
+                    _logger.LogInformation(
+                        "Achievement unlocked: {Code} for user {UserId} (+{Points} pts)",
+                        achievement.Code, userId, achievement.Points);
                     unlockCount++;
                 }
             }
@@ -160,12 +174,11 @@ internal sealed class AchievementEvaluationJob : IJob
         return unlockCount;
     }
 
-    private async Task SendAchievementNotificationAsync(
+    private static Notification BuildAchievementNotification(
         Guid userId,
-        Domain.Entities.Achievement achievement,
-        CancellationToken cancellationToken)
+        Domain.Entities.Achievement achievement)
     {
-        var notification = new Notification(
+        return new Notification(
             id: Guid.NewGuid(),
             userId: userId,
             type: NotificationType.FromString("achievement_unlocked"),
@@ -180,11 +193,5 @@ internal sealed class AchievementEvaluationJob : IJob
                 points = achievement.Points,
                 rarity = achievement.Rarity.ToString()
             }));
-
-        await _notificationRepository.AddAsync(notification, cancellationToken).ConfigureAwait(false);
-
-        _logger.LogInformation(
-            "Achievement unlocked: {Code} for user {UserId} (+{Points} pts)",
-            achievement.Code, userId, achievement.Points);
     }
 }

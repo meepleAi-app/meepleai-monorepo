@@ -187,6 +187,11 @@ function parseMobileSheetOpen(raw: string | null): boolean {
   return raw === 'open';
 }
 
+// G3 #2375 — shared accordion FSM URL parser
+function parseCollapsed(raw: string | null): boolean {
+  return raw === 'collapsed';
+}
+
 // ─── Skeleton shell components ────────────────────────────────────────────────
 // Foundation: simple inline skeletons — no external component dependency.
 
@@ -293,6 +298,8 @@ export function SessionLiveView(): ReactElement {
   const tab = parseLiveTab(searchParams.get('tab'));
   const mobileTab = parseMobileTab(searchParams.get('mtab'));
   const mobileSheetOpen = parseMobileSheetOpen(searchParams.get('msheet'));
+  const chatCollapsed = parseCollapsed(searchParams.get('chat'));
+  const mobileChatCollapsed = parseCollapsed(searchParams.get('mchat'));
   const fixtureVariantParam = searchParams.get('fixture');
 
   // State override hatch (dev/visual-test builds only)
@@ -433,6 +440,35 @@ export function SessionLiveView(): ReactElement {
       router.replace(`${pathname}${buildQuery({ msheet: val })}`, { scroll: false });
     },
     [router, pathname, buildQuery]
+  );
+
+  // G3 #2375 — accordion FSM handlers (DEC-1: ?chat desktop, ?mchat mobile, separate params).
+  // Default expanded (param omitted) per DEC-4 / mockup canonical.
+  const handleChatCollapsedChange = useCallback(
+    (collapsed: boolean) => {
+      const val = collapsed ? 'collapsed' : null;
+      router.replace(`${pathname}${buildQuery({ chat: val })}`, { scroll: false });
+    },
+    [router, pathname, buildQuery]
+  );
+
+  const handleMobileChatCollapsedChange = useCallback(
+    (collapsed: boolean) => {
+      const val = collapsed ? 'collapsed' : null;
+      router.replace(`${pathname}${buildQuery({ mchat: val })}`, { scroll: false });
+    },
+    [router, pathname, buildQuery]
+  );
+
+  // G3 #2375 — stable header-click handlers (avoids new closure every render).
+  const handleChatHeaderClick = useCallback(
+    () => handleChatCollapsedChange(!chatCollapsed),
+    [handleChatCollapsedChange, chatCollapsed]
+  );
+
+  const handleMobileChatHeaderClick = useCallback(
+    () => handleMobileChatCollapsedChange(!mobileChatCollapsed),
+    [handleMobileChatCollapsedChange, mobileChatCollapsed]
   );
 
   /** Dialog dismiss/open handler — updates ?dialog= URL param.
@@ -898,6 +934,7 @@ export function SessionLiveView(): ReactElement {
     return (
       <div className="flex flex-col gap-3">
         <ChatAgentPanel
+          sessionId={sessionId}
           messages={chatMessages}
           viewerRole={activeSession.viewerRole}
           viewerId={activeSession.viewerId}
@@ -905,13 +942,24 @@ export function SessionLiveView(): ReactElement {
           agentName="MeepleAI"
           agentEmoji="🤖"
           latencyMs={42}
+          collapsed={mobileChatCollapsed}
+          onHeaderClick={handleMobileChatHeaderClick}
           labels={chatAgentLabels}
           compact
         />
         <ActionLogTimeline entries={activeSession.actionLog} labels={actionLogLabels} compact />
       </div>
     );
-  }, [activeSession, chatMessages, handleSendMessage, chatAgentLabels, actionLogLabels]);
+  }, [
+    activeSession,
+    sessionId,
+    chatMessages,
+    handleSendMessage,
+    chatAgentLabels,
+    actionLogLabels,
+    mobileChatCollapsed,
+    handleMobileChatHeaderClick,
+  ]);
 
   // ── Mobile bottom-sheet content (G1 #2374 T9 sess.46r) ───────────────────
   // Same switch as desktopRightColumn (DRY): score / turn / widget / notes.
@@ -1072,6 +1120,7 @@ export function SessionLiveView(): ReactElement {
   const desktopMainColumn = (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-3">
       <ChatAgentPanel
+        sessionId={sessionId}
         messages={chatMessages}
         viewerRole={activeSession.viewerRole}
         viewerId={activeSession.viewerId}
@@ -1079,6 +1128,8 @@ export function SessionLiveView(): ReactElement {
         agentName="MeepleAI"
         agentEmoji="🤖"
         latencyMs={42}
+        collapsed={chatCollapsed}
+        onHeaderClick={handleChatHeaderClick}
         labels={chatAgentLabels}
       />
       <ActionLogTimeline entries={activeSession.actionLog} labels={actionLogLabels} />

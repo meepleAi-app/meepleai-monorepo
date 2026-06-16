@@ -951,3 +951,97 @@ describe('SessionLiveView (Wave D.2 Interactions — Task 3)', () => {
     expect(() => renderWithIntl(<SessionLiveView />)).not.toThrow();
   });
 });
+
+// ─── #2375 G3 — accordion FSM URL SSOT ──────────────────────────────────────
+
+describe('SessionLiveView (#2375 G3 — accordion FSM URL SSOT)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
+    mockParamsId = 'session-abc-123';
+    IS_VISUAL_TEST_BUILD_MOCK = false;
+    useSessionMock.mockReturnValue({
+      data: MOCK_SESSION_DTO,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
+  });
+
+  it('G3-1: renders ChatAgentPanel expanded by default (no ?chat param)', () => {
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // Desktop ChatAgentPanel — no ?chat param → data-collapsed attribute absent (expanded).
+    const desktopBody = container.querySelector('[data-slot="desktop-body"]');
+    expect(desktopBody).toBeInTheDocument();
+    const panels = desktopBody?.querySelectorAll('[data-slot="chat-agent-panel"]');
+    expect(panels).toBeTruthy();
+    expect(panels!.length).toBeGreaterThanOrEqual(1);
+    // No data-collapsed="true" when expanded (attribute is absent per ChatAgentPanel contract).
+    expect(panels![0]).not.toHaveAttribute('data-collapsed', 'true');
+  });
+
+  it('G3-2: ?chat=collapsed → desktop ChatAgentPanel has data-collapsed="true"', () => {
+    searchParamsMap['chat'] = 'collapsed';
+    const { container } = renderWithIntl(<SessionLiveView />);
+    const desktopBody = container.querySelector('[data-slot="desktop-body"]');
+    expect(desktopBody).toBeInTheDocument();
+    const panels = desktopBody?.querySelectorAll('[data-slot="chat-agent-panel"]');
+    expect(panels).toBeTruthy();
+    expect(panels![0]).toHaveAttribute('data-collapsed', 'true');
+  });
+
+  it('G3-3: ?mchat=collapsed → mobile ChatAgentPanel has data-collapsed="true"', () => {
+    searchParamsMap['mchat'] = 'collapsed';
+    const { container } = renderWithIntl(<SessionLiveView />);
+    const mobileBody = container.querySelector('[data-slot="mobile-body"]');
+    expect(mobileBody).toBeInTheDocument();
+    const panels = mobileBody?.querySelectorAll('[data-slot="chat-agent-panel"]');
+    expect(panels).toBeTruthy();
+    expect(panels!.length).toBeGreaterThanOrEqual(1);
+    expect(panels![0]).toHaveAttribute('data-collapsed', 'true');
+  });
+
+  it('G3-4: ?chat=collapsed&mchat=collapsed → both desktop and mobile ChatAgentPanel collapsed', () => {
+    searchParamsMap['chat'] = 'collapsed';
+    searchParamsMap['mchat'] = 'collapsed';
+    const { container } = renderWithIntl(<SessionLiveView />);
+    const desktopBody = container.querySelector('[data-slot="desktop-body"]');
+    const mobileBody = container.querySelector('[data-slot="mobile-body"]');
+    const desktopPanels = desktopBody?.querySelectorAll('[data-slot="chat-agent-panel"]');
+    const mobilePanels = mobileBody?.querySelectorAll('[data-slot="chat-agent-panel"]');
+    expect(desktopPanels![0]).toHaveAttribute('data-collapsed', 'true');
+    expect(mobilePanels![0]).toHaveAttribute('data-collapsed', 'true');
+  });
+
+  it('G3-5: clicking desktop ChatAgentPanel header calls router.replace with ?chat=collapsed', () => {
+    const { container } = renderWithIntl(<SessionLiveView />);
+    const desktopBody = container.querySelector('[data-slot="desktop-body"]');
+    // Header is a <button> (a11y) when onHeaderClick is provided (§5 contract).
+    const headerBtn = desktopBody?.querySelector(
+      '[data-slot="chat-agent-panel"] button[aria-expanded]'
+    ) as HTMLButtonElement | null;
+    expect(headerBtn).not.toBeNull();
+    fireEvent.click(headerBtn!);
+    expect(routerReplace).toHaveBeenCalled();
+    const callArg = routerReplace.mock.calls[0]?.[0] as string;
+    expect(callArg).toContain('chat=collapsed');
+  });
+
+  it('G3-6: clicking header when ?chat=collapsed calls router.replace WITHOUT chat param (toggle expand)', () => {
+    searchParamsMap['chat'] = 'collapsed';
+    const { container } = renderWithIntl(<SessionLiveView />);
+    const desktopBody = container.querySelector('[data-slot="desktop-body"]');
+    const headerBtn = desktopBody?.querySelector(
+      '[data-slot="chat-agent-panel"] button[aria-expanded]'
+    ) as HTMLButtonElement | null;
+    expect(headerBtn).not.toBeNull();
+    fireEvent.click(headerBtn!);
+    expect(routerReplace).toHaveBeenCalled();
+    const callArg = routerReplace.mock.calls[0]?.[0] as string;
+    // When expanding, 'chat' param is removed (null → deleted from query string).
+    expect(callArg).not.toContain('chat=collapsed');
+  });
+});

@@ -70,6 +70,8 @@ public class GetActiveSessionQueryHandler : IRequestHandler<GetActiveSessionQuer
             Location = session.Location,
             Status = session.Status,
             FinalizedAt = session.FinalizedAt,
+            ScoringType = session.ScoringType,
+            ScoreData = session.ScoreData,
             Participants = participants,
             Scores = scores
         };

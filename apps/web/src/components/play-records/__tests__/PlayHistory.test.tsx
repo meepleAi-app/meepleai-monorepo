@@ -36,10 +36,21 @@ vi.mock('@/lib/stores/play-records-store', () => ({
   selectHasActiveFilters: (state: any) => false,
 }));
 
-// Mock next/navigation
+// Mock next/navigation with hoisted state for useSearchParams + useRouter
+const { searchParamsMap, routerReplace, routerPush } = vi.hoisted(() => ({
+  searchParamsMap: {} as Record<string, string>,
+  routerReplace: vi.fn(),
+  routerPush: vi.fn(),
+}));
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
-    push: vi.fn(),
+    push: routerPush,
+    replace: routerReplace,
+  }),
+  useSearchParams: () => ({
+    get: (key: string) => searchParamsMap[key] ?? null,
+    toString: () => new URLSearchParams(searchParamsMap).toString(),
   }),
 }));
 
@@ -129,6 +140,10 @@ describe('PlayHistory Integration', () => {
 
   beforeEach(() => {
     queryClient.clear();
+    // Reset navigation mocks for each test
+    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
+    routerReplace.mockClear();
+    routerPush.mockClear();
   });
 
   it('renders hero with stats', () => {

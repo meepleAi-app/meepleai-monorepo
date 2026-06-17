@@ -12,6 +12,7 @@ import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 import { PlayHistory, parseStatusParam } from '../PlayHistory';
 import { playRecordsIndexMessages } from '@/__tests__/fixtures/i18n-test-messages';
 import { usePlayHistory, playRecordsKeys } from '@/lib/domain-hooks/usePlayRecords';
+import type { PlayRecordStatus } from '@/lib/api/schemas/play-records.schemas';
 
 vi.mock('@/hooks/useTranslation', () => ({
   useTranslation: () => ({
@@ -346,6 +347,108 @@ describe('URL → store sync (deep-link mount)', () => {
 
     // Assert: setFilter NOT called (no-op when URL == store)
     expect(setFilterSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('store → URL sync (chip click)', () => {
+  it('calls router.replace with ?status=InProgress when filter changes from "all"', async () => {
+    // We simulate the store transition by spying on setFilter and re-rendering
+    // with new state. Since the existing module mock has filters.status='all'
+    // statically, we cover this transition via the dynamic doMock pattern.
+
+    let currentStatus: PlayRecordStatus | 'all' = 'all';
+    const setFilterMock = vi.fn((_field, value) => {
+      currentStatus = value;
+    });
+
+    vi.resetModules();
+    vi.doMock('@/lib/stores/play-records-store', () => ({
+      usePlayRecordsStore: (selector: (state: any) => any) => {
+        const state = {
+          filters: { gameId: undefined, status: currentStatus },
+          sortBy: 'recent' as const,
+          setFilter: setFilterMock,
+          resetFilters: vi.fn(),
+          setSortBy: vi.fn(),
+        };
+        return selector(state);
+      },
+      selectFilters: (state: any) => state.filters,
+      selectHasActiveFilters: (state: any) => false,
+    }));
+
+    const { PlayHistory: PatchedPlayHistory } = await import('../PlayHistory');
+
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <PatchedPlayHistory />
+      </QueryClientProvider>
+    );
+
+    // Simulate store change: currentStatus becomes 'InProgress' externally
+    currentStatus = 'InProgress';
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <PatchedPlayHistory />
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      expect(routerReplace).toHaveBeenCalled();
+      const allCalls = routerReplace.mock.calls.map(c => c[0] as string);
+      const callArg = allCalls[allCalls.length - 1];
+      expect(callArg).toContain('status=InProgress');
+    });
+  });
+
+  it('calls router.replace without status param when filter is "all"', async () => {
+    let currentStatus: PlayRecordStatus | 'all' = 'Completed';
+    const setFilterMock = vi.fn((_field, value) => {
+      currentStatus = value;
+    });
+
+    vi.resetModules();
+    vi.doMock('@/lib/stores/play-records-store', () => ({
+      usePlayRecordsStore: (selector: (state: any) => any) => {
+        const state = {
+          filters: { gameId: undefined, status: currentStatus },
+          sortBy: 'recent' as const,
+          setFilter: setFilterMock,
+          resetFilters: vi.fn(),
+          setSortBy: vi.fn(),
+        };
+        return selector(state);
+      },
+      selectFilters: (state: any) => state.filters,
+      selectHasActiveFilters: (state: any) => false,
+    }));
+
+    const { PlayHistory: PatchedPlayHistory } = await import('../PlayHistory');
+
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <PatchedPlayHistory />
+      </QueryClientProvider>
+    );
+
+    // Reset back to 'all'
+    currentStatus = 'all';
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <PatchedPlayHistory />
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      expect(routerReplace).toHaveBeenCalled();
+      const allCalls = routerReplace.mock.calls.map(c => c[0] as string);
+      // The last call should NOT contain status=
+      expect(allCalls[allCalls.length - 1]).not.toContain('status=');
+    });
   });
 });
 

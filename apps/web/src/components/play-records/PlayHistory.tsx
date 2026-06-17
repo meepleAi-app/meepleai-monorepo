@@ -77,6 +77,18 @@ export function PlayHistory({ gameId: propGameId, limit }: PlayHistoryProps) {
     }
   }, [searchParams, filters.status, setFilter]);
 
+  // ── DEC-2 #2347: store → URL sync (chip click → shareable URL) ───────────
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams?.toString() ?? '');
+    if (filters.status === 'all') {
+      params.delete('status');
+    } else {
+      params.set('status', filters.status);
+    }
+    const queryString = params.toString();
+    router.replace(queryString ? `?${queryString}` : '/play-records', { scroll: false });
+  }, [filters.status, router, searchParams]);
+
   // Reset pagina quando cambiano i filtri
   useEffect(() => {
     setCurrentPage(1);

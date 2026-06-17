@@ -10,9 +10,17 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
+import type { ScoreDataByType, ScoreType } from '@/components/sessions/score-strategies/types';
+
 export interface PlayerInfo {
   id: string;
   name: string;
+  /**
+   * Optional user-facing label (#2389 Block A). Adapters should prefer
+   * `displayName ?? name` when rendering rosters. Becomes required once all
+   * SignalR/REST adapters populate it consistently (Block A finalization).
+   */
+  displayName?: string;
   isHost: boolean;
   isOnline: boolean;
 }
@@ -48,7 +56,10 @@ interface LiveSessionState {
   currentTurn: number;
   currentPhase: string | null;
   players: PlayerInfo[];
+  /** @deprecated #2389 Block A — derive from `scoreData` when `scoringType === 'Points'`. */
   scores: Record<string, number>;
+  scoringType: ScoreType | null;
+  scoreData: ScoreDataByType[ScoreType] | null;
   pendingProposals: ScoreProposal[];
   disputes: RuleDispute[];
   isConnected: boolean;
@@ -57,6 +68,10 @@ interface LiveSessionState {
 
   // Actions
   setSession: (data: Partial<LiveSessionState>) => void;
+  setScoringConfig: <T extends ScoreType>(args: {
+    scoringType: T;
+    scoreData: ScoreDataByType[T];
+  }) => void;
   updateScore: (playerName: string, score: number) => void;
   addProposal: (proposal: ScoreProposal) => void;
   resolveProposal: (proposalId: string, accepted: boolean) => void;
@@ -69,6 +84,7 @@ interface LiveSessionState {
 const initialState: Omit<
   LiveSessionState,
   | 'setSession'
+  | 'setScoringConfig'
   | 'updateScore'
   | 'addProposal'
   | 'resolveProposal'
@@ -84,6 +100,8 @@ const initialState: Omit<
   currentPhase: null,
   players: [],
   scores: {},
+  scoringType: null,
+  scoreData: null,
   pendingProposals: [],
   disputes: [],
   isConnected: false,
@@ -97,6 +115,9 @@ export const useLiveSessionStore = create<LiveSessionState>()(
       ...initialState,
 
       setSession: data => set(data as Partial<LiveSessionState>, false, 'setSession'),
+
+      setScoringConfig: ({ scoringType, scoreData }) =>
+        set({ scoringType, scoreData }, false, 'setScoringConfig'),
 
       updateScore: (playerName, score) =>
         set(

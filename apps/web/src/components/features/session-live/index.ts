@@ -147,3 +147,18 @@ export type {
   TurnIndicatorRendererLabels,
   TurnIndicatorRendererProps,
 } from '@/components/features/session-live/turn-indicator-renderer/TurnIndicatorRenderer';
+
+// ─── Scoring Panel Renderer sub-PR (Issue #2375 G5a / wire-up #2421) ──────────
+
+export { ScoringPanelRenderer } from '@/components/features/session-live/scoring/ScoringPanelRenderer';
+export type {
+  ScoringPanelData,
+  ScoringPanelRendererLabels,
+  ScoringPanelRendererProps,
+  ScoringPlayerEntry,
+  PointsScoringData,
+  RankingScoringData,
+  BinaryWinScoringData,
+  ObjectivesScoringData,
+  ObjectiveScoringItem,
+} from '@/components/features/session-live/scoring/ScoringPanelRenderer';

@@ -9,9 +9,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 
-import { PlayHistory } from '../PlayHistory';
+import { PlayHistory, parseStatusParam } from '../PlayHistory';
 import { playRecordsIndexMessages } from '@/__tests__/fixtures/i18n-test-messages';
 import { usePlayHistory, playRecordsKeys } from '@/lib/domain-hooks/usePlayRecords';
+import type { PlayRecordStatus } from '@/lib/api/schemas/play-records.schemas';
 
 vi.mock('@/hooks/useTranslation', () => ({
   useTranslation: () => ({
@@ -36,10 +37,21 @@ vi.mock('@/lib/stores/play-records-store', () => ({
   selectHasActiveFilters: (state: any) => false,
 }));
 
-// Mock next/navigation
+// Mock next/navigation with hoisted state for useSearchParams + useRouter
+const { searchParamsMap, routerReplace, routerPush } = vi.hoisted(() => ({
+  searchParamsMap: {} as Record<string, string>,
+  routerReplace: vi.fn(),
+  routerPush: vi.fn(),
+}));
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
-    push: vi.fn(),
+    push: routerPush,
+    replace: routerReplace,
+  }),
+  useSearchParams: () => ({
+    get: (key: string) => searchParamsMap[key] ?? null,
+    toString: () => new URLSearchParams(searchParamsMap).toString(),
   }),
 }));
 
@@ -129,6 +141,10 @@ describe('PlayHistory Integration', () => {
 
   beforeEach(() => {
     queryClient.clear();
+    // Reset navigation mocks for each test
+    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
+    routerReplace.mockClear();
+    routerPush.mockClear();
   });
 
   it('renders hero with stats', () => {
@@ -254,4 +270,211 @@ describe('PlayHistory Integration', () => {
     const radiogroup = screen.getByRole('radiogroup', { name: /Vista/i });
     expect(radiogroup).toBeInTheDocument();
   });
+});
+
+describe('URL → store sync (deep-link mount)', () => {
+  it('sets filter status from ?status= on mount', async () => {
+    // Arrange: simulate URL deep-link
+    searchParamsMap['status'] = 'Completed';
+
+    // Need to inspect what setFilter receives — re-mock store to capture calls
+    const setFilterSpy = vi.fn();
+    vi.resetModules();
+    vi.doMock('@/lib/stores/play-records-store', () => ({
+      usePlayRecordsStore: (selector: (state: any) => any) => {
+        const state = {
+          filters: { gameId: undefined, status: 'all' as const },
+          sortBy: 'recent' as const,
+          setFilter: setFilterSpy,
+          resetFilters: vi.fn(),
+          setSortBy: vi.fn(),
+        };
+        return selector(state);
+      },
+      selectFilters: (state: any) => state.filters,
+      selectHasActiveFilters: (state: any) => false,
+    }));
+
+    // Re-import the component with the patched mock
+    const { PlayHistory: PatchedPlayHistory } = await import('../PlayHistory');
+
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <PatchedPlayHistory />
+      </QueryClientProvider>
+    );
+
+    // Assert: setFilter called with ('status', 'Completed')
+    await waitFor(() => {
+      expect(setFilterSpy).toHaveBeenCalledWith('status', 'Completed');
+    });
+  });
+
+  it('does NOT call setFilter when URL status matches current store state', async () => {
+    searchParamsMap['status'] = 'all'; // matches default store filters.status = 'all'
+
+    const setFilterSpy = vi.fn();
+    vi.resetModules();
+    vi.doMock('@/lib/stores/play-records-store', () => ({
+      usePlayRecordsStore: (selector: (state: any) => any) => {
+        const state = {
+          filters: { gameId: undefined, status: 'all' as const },
+          sortBy: 'recent' as const,
+          setFilter: setFilterSpy,
+          resetFilters: vi.fn(),
+          setSortBy: vi.fn(),
+        };
+        return selector(state);
+      },
+      selectFilters: (state: any) => state.filters,
+      selectHasActiveFilters: (state: any) => false,
+    }));
+
+    const { PlayHistory: PatchedPlayHistory } = await import('../PlayHistory');
+
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <PatchedPlayHistory />
+      </QueryClientProvider>
+    );
+
+    // Wait a tick to allow effects to run
+    await new Promise(r => setTimeout(r, 50));
+
+    // Assert: setFilter NOT called (no-op when URL == store)
+    expect(setFilterSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('store → URL sync (chip click)', () => {
+  it('calls router.replace with ?status=InProgress when filter changes from "all"', async () => {
+    // We simulate the store transition by spying on setFilter and re-rendering
+    // with new state. Since the existing module mock has filters.status='all'
+    // statically, we cover this transition via the dynamic doMock pattern.
+
+    let currentStatus: PlayRecordStatus | 'all' = 'all';
+    const setFilterMock = vi.fn((_field, value) => {
+      currentStatus = value;
+    });
+
+    vi.resetModules();
+    vi.doMock('@/lib/stores/play-records-store', () => ({
+      usePlayRecordsStore: (selector: (state: any) => any) => {
+        const state = {
+          filters: { gameId: undefined, status: currentStatus },
+          sortBy: 'recent' as const,
+          setFilter: setFilterMock,
+          resetFilters: vi.fn(),
+          setSortBy: vi.fn(),
+        };
+        return selector(state);
+      },
+      selectFilters: (state: any) => state.filters,
+      selectHasActiveFilters: (state: any) => false,
+    }));
+
+    const { PlayHistory: PatchedPlayHistory } = await import('../PlayHistory');
+
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <PatchedPlayHistory />
+      </QueryClientProvider>
+    );
+
+    // Simulate store change: currentStatus becomes 'InProgress' externally
+    currentStatus = 'InProgress';
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <PatchedPlayHistory />
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      expect(routerReplace).toHaveBeenCalled();
+      const allCalls = routerReplace.mock.calls.map(c => c[0] as string);
+      const callArg = allCalls[allCalls.length - 1];
+      expect(callArg).toContain('status=InProgress');
+    });
+  });
+
+  it('calls router.replace without status param when filter is "all"', async () => {
+    let currentStatus: PlayRecordStatus | 'all' = 'Completed';
+    const setFilterMock = vi.fn((_field, value) => {
+      currentStatus = value;
+    });
+
+    vi.resetModules();
+    vi.doMock('@/lib/stores/play-records-store', () => ({
+      usePlayRecordsStore: (selector: (state: any) => any) => {
+        const state = {
+          filters: { gameId: undefined, status: currentStatus },
+          sortBy: 'recent' as const,
+          setFilter: setFilterMock,
+          resetFilters: vi.fn(),
+          setSortBy: vi.fn(),
+        };
+        return selector(state);
+      },
+      selectFilters: (state: any) => state.filters,
+      selectHasActiveFilters: (state: any) => false,
+    }));
+
+    const { PlayHistory: PatchedPlayHistory } = await import('../PlayHistory');
+
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <PatchedPlayHistory />
+      </QueryClientProvider>
+    );
+
+    // Reset back to 'all'
+    currentStatus = 'all';
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <PatchedPlayHistory />
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      expect(routerReplace).toHaveBeenCalled();
+      const allCalls = routerReplace.mock.calls.map(c => c[0] as string);
+      // The last call should NOT contain status=
+      expect(allCalls[allCalls.length - 1]).not.toContain('status=');
+    });
+  });
+});
+
+describe('parseStatusParam (URL allowlist validation)', () => {
+  it('returns "all" when param is null', () => {
+    const result = parseStatusParam(null);
+    expect(result).toBe('all');
+  });
+
+  it('returns "all" when param is invalid', () => {
+    const result = parseStatusParam('foo-bar');
+    expect(result).toBe('all');
+  });
+
+  it('returns "all" when param is "Archived" (not exposed as chip)', () => {
+    // Archived exists in PlayRecordStatus enum but is NOT a chip option
+    // → URL validation must reject it to keep UX coherent.
+    const result = parseStatusParam('Archived');
+    expect(result).toBe('all');
+  });
+
+  it.each(['all', 'InProgress', 'Completed', 'Planned'])(
+    'returns "%s" when param matches a chip-exposed status',
+    status => {
+      const result = parseStatusParam(status);
+      expect(result).toBe(status);
+    }
+  );
 });

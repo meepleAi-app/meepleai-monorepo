@@ -15,7 +15,9 @@
 import { useEffect, useState } from 'react';
 
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 
+import type { PlayRecordStatus } from '@/lib/api/schemas/play-records.schemas';
 import { usePlayHistory } from '@/lib/domain-hooks/usePlayRecords';
 import {
   usePlayRecordsStore,
@@ -27,6 +29,22 @@ import { RecordCardGrid } from './index/RecordCardGrid';
 import { RecordCardList } from './index/RecordCardList';
 import { RecordFilters } from './index/RecordFilters';
 import { RecordsHero } from './index/RecordsHero';
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+const VALID_STATUS_PARAMS = new Set<string>(['all', 'InProgress', 'Completed', 'Planned']);
+
+/**
+ * Parse the `?status=` URL param against the chip-exposed allowlist.
+ * `Archived` exists in `PlayRecordStatus` enum but is intentionally NOT a chip
+ * option — direct URL navigation to `?status=Archived` falls back to `all`
+ * silently to keep UX coherent with visible filter chips.
+ */
+export function parseStatusParam(param: string | null): PlayRecordStatus | 'all' {
+  if (param === null) return 'all';
+  if (!VALID_STATUS_PARAMS.has(param)) return 'all';
+  return param as PlayRecordStatus | 'all';
+}
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -47,6 +65,29 @@ export function PlayHistory({ gameId: propGameId, limit }: PlayHistoryProps) {
 
   const setFilter = usePlayRecordsStore(state => state.setFilter);
   const resetFilters = usePlayRecordsStore(state => state.resetFilters);
+
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // ── DEC-2 #2347: URL → store sync (deep-link entry point) ────────────────
+  useEffect(() => {
+    const urlStatus = parseStatusParam(searchParams?.get('status') ?? null);
+    if (urlStatus !== filters.status) {
+      setFilter('status', urlStatus);
+    }
+  }, [searchParams, filters.status, setFilter]);
+
+  // ── DEC-2 #2347: store → URL sync (chip click → shareable URL) ───────────
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams?.toString() ?? '');
+    if (filters.status === 'all') {
+      params.delete('status');
+    } else {
+      params.set('status', filters.status);
+    }
+    const queryString = params.toString();
+    router.replace(queryString ? `?${queryString}` : '/play-records', { scroll: false });
+  }, [filters.status, router, searchParams]);
 
   // Reset pagina quando cambiano i filtri
   useEffect(() => {

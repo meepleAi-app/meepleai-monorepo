@@ -1,14 +1,17 @@
 /**
  * session-live component barrel export — Wave D.2 (Issues #746 + #750).
  *
- * Foundation scope (7 components + 2 layout shells):
+ * Foundation scope (6 components + 2 layout shells):
  *   - LiveTopBar: sticky header with role-based CTAs
  *   - TurnIndicator: progress bar + active player display
  *   - PlayerRosterLive: participant list with online status
- *   - LiveScoringPanel: read-only scoreboard (Interactions sub-PR adds write)
  *   - ActionLogTimeline: append-only event log
  *   - DesktopBody: 3-column layout shell (lg+)
  *   - MobileBody: bottom-nav tab layout (< lg)
+ *
+ * (Read-only scoring lives in `./scoring/ScoringPanelRenderer` — the legacy
+ * Points-only `LiveScoringPanel` was removed by #2421 when SessionLiveView
+ * adopted the polymorphic G5a renderer shipped via PR #2419.)
  *
  * Interactions sub-PR (Issue #750) adds:
  *   - SessionToolsRail: tool grid (Player+Host only)
@@ -37,13 +40,6 @@ export type {
 
 export { DesktopBody } from '@/components/features/session-live/DesktopBody';
 export type { DesktopBodyProps } from '@/components/features/session-live/DesktopBody';
-
-export { LiveScoringPanel } from '@/components/features/session-live/LiveScoringPanel';
-export type {
-  LiveScoringPanelLabels,
-  LiveScoringPanelProps,
-  LiveScoringPanelScoreEntry,
-} from '@/components/features/session-live/LiveScoringPanel';
 
 export { LiveTopBar } from '@/components/features/session-live/LiveTopBar';
 export type {

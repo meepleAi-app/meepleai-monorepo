@@ -783,10 +783,13 @@ describe('SessionLiveView (Wave D.2 Interactions — Task 3)', () => {
     expect(container.querySelector('[data-slot="live-session-notes"]')).toBeInTheDocument();
   });
 
-  it('T4.11: RIGHT tab=score renders LiveScoringPanel', () => {
-    // ?tab default → 'score'
+  it('T4.11: RIGHT tab=score renders ScoringPanelRenderer (#2421 wire-up)', () => {
+    // ?tab default → 'score'. Post-#2421 the desktop right column mounts
+    // the polymorphic ScoringPanelRenderer (PR #2419) instead of the legacy
+    // LiveScoringPanel. The renderer wraps its variant in a div with
+    // data-slot="scoring-panel-renderer".
     const { container } = renderWithIntl(<SessionLiveView />);
-    expect(container.querySelector('[data-slot="live-scoring-panel"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-slot="scoring-panel-renderer"]')).toBeInTheDocument();
   });
 
   // ─── T3.3: Mobile drawer tab routing — Interactions panels (T9 sess.46r) ─

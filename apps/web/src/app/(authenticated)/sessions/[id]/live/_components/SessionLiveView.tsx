@@ -12,7 +12,7 @@
  *   - Mobile bottom-sheet (G1 #2374 T9 sess.46r): full-width main = ChatAgentPanel + ActionLogTimeline;
  *     floating action button opens MobileBottomSheetDrawer (Score/Turn/Widget/Notes — same content as
  *     desktop RIGHT). URL SSOT: ?msheet=open|closed + ?mtab=score|turn|widget|notes.
- *   - Desktop right column (G1 #2374): score → LiveScoringPanel, turn → TurnIndicator+PlayerRosterLive,
+ *   - Desktop right column (G1 #2374): score → ScoringPanelRenderer (G5a, #2421), turn → TurnIndicator+PlayerRosterLive,
  *     widget → SessionToolsRail, notes → LiveSessionNotes. ChatAgentPanel now lives in LEFT mainColumn.
  *   - Write actions: handleScoreUpdate (optimistic UI), handleToolExecute,
  *     handleSendMessage, handleAddNote, handleResume, handlePause, handleEndgame
@@ -52,7 +52,7 @@
  *   to a 2-col 60/40 grid (LEFT minmax(0,3fr) / RIGHT minmax(0,2fr)).
  *   - LEFT (60%) = ChatAgentPanel (new primitive, always visible) + ActionLogTimeline stacked.
  *   - RIGHT (40%) = RightColumnTabs polymorphic with keys: Score | Turn | Widget | Notes.
- *     - Score tab → LiveScoringPanel (G5 will swap for polymorphic dispatcher).
+ *     - Score tab → ScoringPanelRenderer (G5a polymorphic dispatcher; wired via #2421 on the PR #2419 primitive).
  *     - Turn tab → TurnIndicator + PlayerRosterLive (moved out of the deprecated LEFT sidebar).
  *     - Widget tab → SessionToolsRail (relabelled from "Tools" per mockup).
  *     - Notes tab → LiveSessionNotes (unchanged).
@@ -77,15 +77,12 @@ import {
   ActionLogTimeline,
   ChatAgentPanel,
   DesktopBody,
-  LiveScoringPanel,
   LiveTopBar,
   MobileBody,
   PlayerRosterLive,
   TurnIndicatorRenderer,
   type ActionLogTimelineLabels,
   type ChatAgentPanelLabels,
-  type LiveScoringPanelLabels,
-  type LiveScoringPanelScoreEntry,
   type LiveTopBarLabels,
   type MobileBodyLabels,
   type PlayerRosterLiveLabels,
@@ -102,6 +99,11 @@ import {
   type RightColumnTabsLabels,
   type ToolkitRendererLabels,
 } from '@/components/features/session-live';
+import {
+  ScoringPanelRenderer,
+  type ScoringPanelData,
+  type ScoringPanelRendererLabels,
+} from '@/components/features/session-live/scoring';
 import { useSession } from '@/hooks/queries/useActiveSessions';
 import { useTranslation } from '@/hooks/useTranslation';
 import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
@@ -500,9 +502,11 @@ export function SessionLiveView(): ReactElement {
 
   /**
    * Optimistic score update with 403 rollback.
-   * Reserved for future score input UI in LiveScoringPanel — wired in v2 polish.
-   * Kept as `_handleScoreUpdate` to preserve callsite documentation while ESLint
-   * recognizes intentional non-usage in current sub-PR.
+   * Reserved for the host write path on the ScoringPanelRenderer (#2421);
+   * the polymorphic editor wiring lands in #2389 part 2 via
+   * `useUpdateSessionScores`. Kept as `_handleScoreUpdate` to preserve
+   * callsite documentation while ESLint recognizes intentional non-usage
+   * in the current sub-PR.
    */
   const _handleScoreUpdate = useCallback(
     async (playerId: string, newScore: number): Promise<void> => {
@@ -728,22 +732,68 @@ export function SessionLiveView(): ReactElement {
     };
   }, [t, intl.messages, activeSession?.players.length]);
 
-  const scoringLabels = useMemo<LiveScoringPanelLabels>(
-    (): LiveScoringPanelLabels => ({
-      title: t('pages.sessionLive.scoring.title'),
-      scoreLabelTemplate:
-        (intl.messages['pages.sessionLive.scoring.scoreLabel'] as string) ?? 'Punteggio: {score}',
-      winnerLabel: t('pages.sessionLive.scoring.winnerLabel'),
-      myScoreLabel: t('pages.sessionLive.scoring.myScoreLabel'),
-      incrementAriaLabelTemplate:
-        (intl.messages['pages.sessionLive.scoring.incrementAriaLabel'] as string) ??
-        'Aumenta punteggio di {playerName}',
-      decrementAriaLabelTemplate:
-        (intl.messages['pages.sessionLive.scoring.decrementAriaLabel'] as string) ??
-        'Diminuisci punteggio di {playerName}',
-      scoreInputAriaLabelTemplate:
-        (intl.messages['pages.sessionLive.scoring.scoreInputAriaLabel'] as string) ??
-        'Inserisci punteggio per {playerName}',
+  /**
+   * Issue #2421 wire-up: ScoringPanelRenderer labels (PR #2419 shipped the
+   * primitive with a per-variant labels contract).
+   *
+   * Only the `title` key is read via `t()` (already in the i18n catalog from
+   * the legacy LiveScoringPanel); everything else uses direct
+   * `intl.messages[...]` lookup with an inline Italian fallback. This avoids
+   * MissingTranslationError noise for keys that have not yet been added to
+   * `locales/{it,en}.json` — those keys move into the catalog in #2389 part 3
+   * (cleanup) along with English translations and the `scoringType` selector
+   * wire-up. Until then, the runtime renders the Italian fallback strings
+   * (same pattern used by the legacy LiveScoringPanel block above).
+   */
+  const scoringPanelLabels = useMemo<ScoringPanelRendererLabels>(
+    (): ScoringPanelRendererLabels => ({
+      points: {
+        heading: t('pages.sessionLive.scoring.title'),
+        scoreAriaTemplate:
+          (intl.messages['pages.sessionLive.scoring.points.scoreAriaTemplate'] as string) ??
+          'Punteggio di {name}',
+        leaderBadgeLabel:
+          (intl.messages['pages.sessionLive.scoring.points.leaderBadgeLabel'] as string) ??
+          'vincitore',
+      },
+      ranking: {
+        heading:
+          (intl.messages['pages.sessionLive.scoring.ranking.heading'] as string) ?? 'Classifica',
+        rankAriaTemplate:
+          (intl.messages['pages.sessionLive.scoring.ranking.rankAriaTemplate'] as string) ??
+          'Posizione di {name}',
+        firstPlaceBadgeLabel:
+          (intl.messages['pages.sessionLive.scoring.ranking.firstPlaceBadgeLabel'] as string) ??
+          'primo posto',
+      },
+      binaryWin: {
+        heading:
+          (intl.messages['pages.sessionLive.scoring.binaryWin.heading'] as string) ??
+          'Esito collettivo',
+        inProgressLabel:
+          (intl.messages['pages.sessionLive.scoring.binaryWin.inProgressLabel'] as string) ??
+          'Partita in corso',
+        winLabel:
+          (intl.messages['pages.sessionLive.scoring.binaryWin.winLabel'] as string) ?? 'vince',
+        loseLabel:
+          (intl.messages['pages.sessionLive.scoring.binaryWin.loseLabel'] as string) ?? 'perde',
+        outcomeAriaTemplate:
+          (intl.messages['pages.sessionLive.scoring.binaryWin.outcomeAriaTemplate'] as string) ??
+          '{name}: {result}',
+      },
+      objectives: {
+        heading:
+          (intl.messages['pages.sessionLive.scoring.objectives.heading'] as string) ?? 'Obiettivi',
+        completedAriaTemplate:
+          (intl.messages['pages.sessionLive.scoring.objectives.completedAriaTemplate'] as string) ??
+          'Obiettivi completati da {name}',
+        doneAriaTemplate:
+          (intl.messages['pages.sessionLive.scoring.objectives.doneAriaTemplate'] as string) ??
+          '{label} (completato)',
+        pendingAriaTemplate:
+          (intl.messages['pages.sessionLive.scoring.objectives.pendingAriaTemplate'] as string) ??
+          '{label} (non completato)',
+      },
     }),
     [t, intl.messages]
   );
@@ -911,14 +961,30 @@ export function SessionLiveView(): ReactElement {
 
   // ── Derived data for components ───────────────────────────────────────────
 
-  const scores = useMemo<ReadonlyArray<LiveScoringPanelScoreEntry>>(() => {
-    if (activeSession == null) return [];
-    return activeSession.players.map(p => ({
-      playerId: p.id,
-      playerName: p.name,
-      score: p.score,
-      isWinner: false,
-    }));
+  /**
+   * Issue #2421 wire-up: project `LiveSessionFixture` → `PointsScoringData`
+   * for the G5a renderer (PR #2419 shipped the primitive with a `kind`-tagged
+   * discriminated union over Points/Ranking/BinaryWin/Objectives).
+   *
+   * Default `kind: 'Points'` until `useLiveSessionStore` carries a polymorphic
+   * `scoringType` selector — tracked in #2389 part 1 (Block A). Spectators
+   * are excluded so the leaderboard mirrors the legacy LiveScoringPanel.
+   *
+   * Returns `null` when the session is not loaded yet; the orchestrator skips
+   * mounting `<ScoringPanelRenderer>` in that case.
+   */
+  const scoringPanelData = useMemo<ScoringPanelData | null>(() => {
+    if (activeSession == null) return null;
+    return {
+      kind: 'Points',
+      players: activeSession.players
+        .filter(p => p.role !== 'Spectator')
+        .map(p => ({
+          id: p.id,
+          displayName: p.name,
+          score: p.score,
+        })),
+    };
   }, [activeSession]);
 
   // ── G5c #2376: Zustand toolkit renderer store ─────────────────────────────
@@ -1065,20 +1131,15 @@ export function SessionLiveView(): ReactElement {
         );
       case 'score':
       default:
-        return (
-          <LiveScoringPanel
-            scores={scores}
-            viewerRole={activeSession.viewerRole}
-            viewerId={activeSession.viewerId}
-            labels={scoringLabels}
-          />
+        return scoringPanelData == null ? null : (
+          <ScoringPanelRenderer data={scoringPanelData} labels={scoringPanelLabels} />
         );
     }
   }, [
     mobileTab,
     activeSession,
-    scores,
-    scoringLabels,
+    scoringPanelData,
+    scoringPanelLabels,
     turnRendererState,
     turnRendererPlayers,
     turnRendererLabels,
@@ -1200,16 +1261,14 @@ export function SessionLiveView(): ReactElement {
 
   // Desktop right column: RightColumnTabs with tab content.
   // Tab keys: 'score' | 'turn' | 'widget' | 'notes' (G1 §3 D-2).
-  // G5 (#2373) will polymorphic-replace LiveScoringPanel; G1 reuses existing renderers (D-6).
+  // Score tab: polymorphic ScoringPanelRenderer (G5a #2375 shipped via PR #2419;
+  // wired here via #2421). The `scoringType` selector lives in
+  // useLiveSessionStore as of #2389 part 1 — for now the orchestrator
+  // synthesises a `Points` payload from the active session players.
   const desktopRightColumn = (
     <RightColumnTabs activeTab={tab} onTabChange={handleTabChange} labels={rightColumnTabsLabels}>
-      {tab === 'score' && (
-        <LiveScoringPanel
-          scores={scores}
-          viewerRole={activeSession.viewerRole}
-          viewerId={activeSession.viewerId}
-          labels={scoringLabels}
-        />
+      {tab === 'score' && scoringPanelData != null && (
+        <ScoringPanelRenderer data={scoringPanelData} labels={scoringPanelLabels} />
       )}
       {tab === 'turn' && (
         <div className="flex flex-col gap-4 p-3">
@@ -1330,11 +1389,20 @@ export function SessionLiveView(): ReactElement {
       {dialogState === 'endgame' && (
         <Suspense fallback={null}>
           <EndgameDialog
-            finalScores={scores.map(s => ({
-              playerName: s.playerName,
-              score: s.score,
-              isWinner: s.isWinner,
-            }))}
+            finalScores={
+              // Issue #2421 wire-up: derive EndgameDialog final scores from the
+              // active session players (post-LiveScoringPanel removal). EndgameDialog
+              // still expects a Points-flavoured `{ playerName, score, isWinner }`
+              // shape; when `useLiveSessionStore` gains a polymorphic `scoringType`
+              // (#2389 part 1), this projection moves to a tagged adapter selector.
+              activeSession?.players
+                .filter(p => p.role !== 'Spectator')
+                .map(p => ({
+                  playerName: p.name,
+                  score: p.score,
+                  isWinner: false,
+                })) ?? []
+            }
             endedAt={endgameEvent?.endedAt ?? '—'}
             endedBy={endgameEvent?.endedBy ?? '—'}
             onAcknowledge={() => handleDialogChange('none')}

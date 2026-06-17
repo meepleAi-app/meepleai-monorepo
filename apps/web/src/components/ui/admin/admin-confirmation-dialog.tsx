@@ -12,7 +12,7 @@
  * - WCAG 2.1 AA compliant
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 import { AlertTriangle, ShieldAlert } from 'lucide-react';
 
@@ -100,6 +100,23 @@ export function AdminConfirmationDialog({
   const requiredPhrase = confirmPhrase ?? 'CONFIRM';
   const isConfirmDisabled = isLevel2 && typedConfirmation !== requiredPhrase;
 
+  // PR #2428 — Guard `setIsSubmitting(false)` in `handleConfirm`'s `finally`
+  // against the post-unmount race. The typical flow is:
+  //   1. await onConfirm()  // host may setState that flips `isOpen` to false
+  //   2. onClose()           // host's onOpenChange unmounts the Dialog tree
+  //   3. finally { setIsSubmitting(false) }  // ← would fire on torn-down node
+  // React 19's dispatchSetState eagerly resolves update priority via `window`,
+  // and jsdom may have cleared `window` by the time the finally runs, surfacing
+  // as `ReferenceError: window is not defined`. The canonical fix is a mount
+  // sentinel that short-circuits the late setState.
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   // Reset typed confirmation and submission state when dialog opens
   useEffect(() => {
     if (isOpen) {
@@ -115,7 +132,9 @@ export function AdminConfirmationDialog({
       await onConfirm();
       onClose();
     } finally {
-      setIsSubmitting(false);
+      if (isMountedRef.current) {
+        setIsSubmitting(false);
+      }
     }
   };
 

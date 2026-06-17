@@ -45,6 +45,20 @@ export type {
   LiveScoringPanelScoreEntry,
 } from '@/components/features/session-live/LiveScoringPanel';
 
+// ─── G5a #2375 ScoringPanelRenderer (polymorphic, replaces LiveScoringPanel) ──
+export { ScoringPanelRenderer } from '@/components/features/session-live/scoring/ScoringPanelRenderer';
+export type {
+  BinaryWinScoringData,
+  ObjectiveScoringItem,
+  ObjectivesScoringData,
+  PointsScoringData,
+  RankingScoringData,
+  ScoringPanelData,
+  ScoringPanelRendererLabels,
+  ScoringPanelRendererProps,
+  ScoringPlayerEntry,
+} from '@/components/features/session-live/scoring/ScoringPanelRenderer';
+
 export { LiveTopBar } from '@/components/features/session-live/LiveTopBar';
 export type {
   LiveTopBarConnectionState,

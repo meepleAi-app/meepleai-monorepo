@@ -783,10 +783,10 @@ describe('SessionLiveView (Wave D.2 Interactions — Task 3)', () => {
     expect(container.querySelector('[data-slot="live-session-notes"]')).toBeInTheDocument();
   });
 
-  it('T4.11: RIGHT tab=score renders LiveScoringPanel', () => {
-    // ?tab default → 'score'
+  it('T4.11: RIGHT tab=score renders ScoringPanelRenderer (G5a #2375)', () => {
+    // ?tab default → 'score'. ScoringPanelRenderer replaces LiveScoringPanel (#2421 wire-up).
     const { container } = renderWithIntl(<SessionLiveView />);
-    expect(container.querySelector('[data-slot="live-scoring-panel"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-slot="scoring-panel-renderer"]')).toBeInTheDocument();
   });
 
   // ─── T3.3: Mobile drawer tab routing — Interactions panels (T9 sess.46r) ─

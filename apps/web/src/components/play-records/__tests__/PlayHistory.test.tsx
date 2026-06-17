@@ -9,7 +9,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 
-import { PlayHistory } from '../PlayHistory';
+import { PlayHistory, parseStatusParam } from '../PlayHistory';
 import { playRecordsIndexMessages } from '@/__tests__/fixtures/i18n-test-messages';
 import { usePlayHistory, playRecordsKeys } from '@/lib/domain-hooks/usePlayRecords';
 
@@ -254,4 +254,31 @@ describe('PlayHistory Integration', () => {
     const radiogroup = screen.getByRole('radiogroup', { name: /Vista/i });
     expect(radiogroup).toBeInTheDocument();
   });
+});
+
+describe('parseStatusParam (URL allowlist validation)', () => {
+  it('returns "all" when param is null', () => {
+    const result = parseStatusParam(null);
+    expect(result).toBe('all');
+  });
+
+  it('returns "all" when param is invalid', () => {
+    const result = parseStatusParam('foo-bar');
+    expect(result).toBe('all');
+  });
+
+  it('returns "all" when param is "Archived" (not exposed as chip)', () => {
+    // Archived exists in PlayRecordStatus enum but is NOT a chip option
+    // → URL validation must reject it to keep UX coherent.
+    const result = parseStatusParam('Archived');
+    expect(result).toBe('all');
+  });
+
+  it.each(['all', 'InProgress', 'Completed', 'Planned'])(
+    'returns "%s" when param matches a chip-exposed status',
+    status => {
+      const result = parseStatusParam(status);
+      expect(result).toBe(status);
+    }
+  );
 });

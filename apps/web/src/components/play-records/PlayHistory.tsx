@@ -16,6 +16,7 @@ import { useEffect, useState } from 'react';
 
 import Link from 'next/link';
 
+import type { PlayRecordStatus } from '@/lib/api/schemas/play-records.schemas';
 import { usePlayHistory } from '@/lib/domain-hooks/usePlayRecords';
 import {
   usePlayRecordsStore,
@@ -27,6 +28,22 @@ import { RecordCardGrid } from './index/RecordCardGrid';
 import { RecordCardList } from './index/RecordCardList';
 import { RecordFilters } from './index/RecordFilters';
 import { RecordsHero } from './index/RecordsHero';
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+const VALID_STATUS_PARAMS = new Set<string>(['all', 'InProgress', 'Completed', 'Planned']);
+
+/**
+ * Parse the `?status=` URL param against the chip-exposed allowlist.
+ * `Archived` exists in `PlayRecordStatus` enum but is intentionally NOT a chip
+ * option — direct URL navigation to `?status=Archived` falls back to `all`
+ * silently to keep UX coherent with visible filter chips.
+ */
+export function parseStatusParam(param: string | null): PlayRecordStatus | 'all' {
+  if (param === null) return 'all';
+  if (!VALID_STATUS_PARAMS.has(param)) return 'all';
+  return param as PlayRecordStatus | 'all';
+}
 
 // ── Component ────────────────────────────────────────────────────────────────
 

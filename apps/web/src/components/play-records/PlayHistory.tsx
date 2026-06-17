@@ -15,6 +15,7 @@
 import { useEffect, useState } from 'react';
 
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import type { PlayRecordStatus } from '@/lib/api/schemas/play-records.schemas';
 import { usePlayHistory } from '@/lib/domain-hooks/usePlayRecords';
@@ -64,6 +65,17 @@ export function PlayHistory({ gameId: propGameId, limit }: PlayHistoryProps) {
 
   const setFilter = usePlayRecordsStore(state => state.setFilter);
   const resetFilters = usePlayRecordsStore(state => state.resetFilters);
+
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // ── DEC-2 #2347: URL → store sync (deep-link entry point) ────────────────
+  useEffect(() => {
+    const urlStatus = parseStatusParam(searchParams?.get('status') ?? null);
+    if (urlStatus !== filters.status) {
+      setFilter('status', urlStatus);
+    }
+  }, [searchParams, filters.status, setFilter]);
 
   // Reset pagina quando cambiano i filtri
   useEffect(() => {

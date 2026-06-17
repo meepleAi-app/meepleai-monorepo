@@ -271,6 +271,84 @@ describe('PlayHistory Integration', () => {
   });
 });
 
+describe('URL → store sync (deep-link mount)', () => {
+  it('sets filter status from ?status= on mount', async () => {
+    // Arrange: simulate URL deep-link
+    searchParamsMap['status'] = 'Completed';
+
+    // Need to inspect what setFilter receives — re-mock store to capture calls
+    const setFilterSpy = vi.fn();
+    vi.resetModules();
+    vi.doMock('@/lib/stores/play-records-store', () => ({
+      usePlayRecordsStore: (selector: (state: any) => any) => {
+        const state = {
+          filters: { gameId: undefined, status: 'all' as const },
+          sortBy: 'recent' as const,
+          setFilter: setFilterSpy,
+          resetFilters: vi.fn(),
+          setSortBy: vi.fn(),
+        };
+        return selector(state);
+      },
+      selectFilters: (state: any) => state.filters,
+      selectHasActiveFilters: (state: any) => false,
+    }));
+
+    // Re-import the component with the patched mock
+    const { PlayHistory: PatchedPlayHistory } = await import('../PlayHistory');
+
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <PatchedPlayHistory />
+      </QueryClientProvider>
+    );
+
+    // Assert: setFilter called with ('status', 'Completed')
+    await waitFor(() => {
+      expect(setFilterSpy).toHaveBeenCalledWith('status', 'Completed');
+    });
+  });
+
+  it('does NOT call setFilter when URL status matches current store state', async () => {
+    searchParamsMap['status'] = 'all'; // matches default store filters.status = 'all'
+
+    const setFilterSpy = vi.fn();
+    vi.resetModules();
+    vi.doMock('@/lib/stores/play-records-store', () => ({
+      usePlayRecordsStore: (selector: (state: any) => any) => {
+        const state = {
+          filters: { gameId: undefined, status: 'all' as const },
+          sortBy: 'recent' as const,
+          setFilter: setFilterSpy,
+          resetFilters: vi.fn(),
+          setSortBy: vi.fn(),
+        };
+        return selector(state);
+      },
+      selectFilters: (state: any) => state.filters,
+      selectHasActiveFilters: (state: any) => false,
+    }));
+
+    const { PlayHistory: PatchedPlayHistory } = await import('../PlayHistory');
+
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <PatchedPlayHistory />
+      </QueryClientProvider>
+    );
+
+    // Wait a tick to allow effects to run
+    await new Promise(r => setTimeout(r, 50));
+
+    // Assert: setFilter NOT called (no-op when URL == store)
+    expect(setFilterSpy).not.toHaveBeenCalled();
+  });
+});
+
 describe('parseStatusParam (URL allowlist validation)', () => {
   it('returns "all" when param is null', () => {
     const result = parseStatusParam(null);

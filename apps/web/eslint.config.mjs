@@ -26,6 +26,10 @@ import noBggHost from "./eslint-rules/no-bgg-host.js";
 // Game detail orphan routes guard — ADR-061 removed
 // /games/[id]/{reviews,strategies,chat}; restoration requires a follow-up ADR.
 import noGameDetailOrphanRoutes from "./eslint-rules/no-game-detail-orphan-routes.js";
+// Session live store scores deprecation guard — Issue #2389 Block A.7
+// Forbids direct reads of `useLiveSessionStore(s => s.scores)`; consumers
+// must use `useSessionScores()` from @/lib/domain-hooks/useSessionScores.
+import noStoreScoresDirect from "./eslint-rules/no-store-scores-direct.js";
 
 export default [
   {
@@ -113,6 +117,8 @@ export default [
           "no-bgg-host": noBggHost,
           // ADR-061 — game detail orphan routes removed; re-scaffolding requires a follow-up ADR.
           "no-game-detail-orphan-routes": noGameDetailOrphanRoutes,
+          // Issue #2389 Block A.7 — useLiveSessionStore.scores is deprecated; use useSessionScores() instead.
+          "no-store-scores-direct": noStoreScoresDirect,
         },
       },
     },
@@ -277,6 +283,12 @@ export default [
       // ADR-061 — /games/[id]/{reviews,strategies,chat} were removed; restoration
       // requires a follow-up ADR superseding ADR-061 (not gap-fix scaffolding).
       "local/no-game-detail-orphan-routes": "error",
+      // Issue #2389 Block A.7 — `useLiveSessionStore(s => s.scores)` is the legacy
+      // store-level read; new consumers must use `useSessionScores()` from
+      // @/lib/domain-hooks/useSessionScores. Severity is `warn` so the legacy
+      // call in ScoreBoard.tsx surfaces without breaking CI; Block C will
+      // migrate ScoreBoard, promote to `error`, then remove the store field.
+      "local/no-store-scores-direct": "warn",
     },
     settings: {
       react: {

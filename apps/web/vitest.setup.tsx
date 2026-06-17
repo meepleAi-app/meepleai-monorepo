@@ -618,6 +618,14 @@ beforeAll(() => {
     ) {
       return;
     }
+    // Suppress @formatjs/intl MissingTranslationError noise from test fixtures.
+    // Test MESSAGES dictionaries deliberately cover only a subset of i18n keys;
+    // every uncovered t(...) call produces a MissingTranslationError that, when
+    // formatted by Vitest's console.error wrapper, triggers a V8 RangeError
+    // ("Invalid string length") — see issue #2421. Suppress here.
+    if (args[0] instanceof Error && args[0].constructor.name === 'MissingTranslationError') {
+      return;
+    }
     originalError.call(console, ...args);
   };
 });

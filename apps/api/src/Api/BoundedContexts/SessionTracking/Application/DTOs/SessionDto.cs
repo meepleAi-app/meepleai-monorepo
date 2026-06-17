@@ -13,6 +13,18 @@ public record SessionDto
     public DateTime? FinalizedAt { get; init; }
     public List<ParticipantDto> Participants { get; init; } = [];
     public List<ScoreEntryDto> Scores { get; init; } = [];
+
+    /// <summary>
+    /// Polymorphic scoring discriminator (mirrors <see cref="Api.BoundedContexts.SessionTracking.Domain.Enums.ScoreType"/>).
+    /// Null when the session has not been configured yet.
+    /// </summary>
+    public string? ScoringType { get; init; }
+
+    /// <summary>
+    /// Per-variant scoring payload as raw JSON (PointsScoreData, BinaryWinScoreData,
+    /// ObjectivesScoreData, or RankingScoreData). FE deserialises via Zod schema.
+    /// </summary>
+    public string? ScoreData { get; init; }
 }
 
 public record ParticipantDto

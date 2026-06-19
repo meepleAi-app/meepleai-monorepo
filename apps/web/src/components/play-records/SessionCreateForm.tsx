@@ -56,9 +56,20 @@ export interface SessionCreateFormProps {
    * location editable (Step 2). The gate is driven entirely by `mode`.
    */
   mode?: 'create' | 'edit';
+  /**
+   * #2349 AC-4.2: pre-fill the form when editing or deep-linking. Spread into
+   * react-hook-form `defaultValues` on mount (the parent gates mounting until
+   * the source record is loaded, so no reset effect is needed).
+   */
+  initialValues?: Partial<SessionCreateFormData>;
+  /**
+   * #2349 AC-4.2: pre-fill the (local-state) player roster. Display-only under
+   * the edit K5 gate; the edit submit path only sends sessionDate/notes/location.
+   */
+  initialPlayers?: PlayerEntry[];
 }
 
-interface PlayerEntry {
+export interface PlayerEntry {
   id: string;
   name: string;
   score: string;
@@ -623,6 +634,8 @@ export function SessionCreateForm({
   onCancel,
   isSubmitting = false,
   mode = 'create',
+  initialValues,
+  initialPlayers,
 }: SessionCreateFormProps) {
   const { t: tRaw } = useTranslation();
   const ns = mode === 'edit' ? 'playRecords.edit' : 'playRecords.new';
@@ -635,7 +648,7 @@ export function SessionCreateForm({
   const currentStep = sessionCreation.currentStep; // 0-indexed
 
   // Local player state (Step 3)
-  const [players, setPlayers] = useState<PlayerEntry[]>([]);
+  const [players, setPlayers] = useState<PlayerEntry[]>(() => initialPlayers ?? []);
   const [newPlayerName, setNewPlayerName] = useState('');
 
   const form = useForm<SessionCreateFormData>({
@@ -649,6 +662,7 @@ export function SessionCreateForm({
       scoringDimensions: [],
       notes: '',
       location: '',
+      ...initialValues,
     },
   });
 

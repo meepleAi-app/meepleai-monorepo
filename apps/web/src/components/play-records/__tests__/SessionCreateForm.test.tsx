@@ -427,6 +427,30 @@ describe('SessionCreateForm — wizard 3-step', () => {
     });
   });
 
+  // ── AC-4.2: initialValues / initialPlayers prefill ─────────────────────────
+  describe('AC-4.2: prefill props', () => {
+    it('prefills editable fields from initialValues (edit mode)', () => {
+      // Navigate to Step 2 (Quando) where location and notes live
+      mockCurrentStep = 1;
+      render(
+        <SessionCreateForm
+          {...defaultProps}
+          mode="edit"
+          initialValues={{
+            gameType: 'catalog',
+            gameName: 'Wingspan',
+            sessionDate: new Date('2026-05-17T20:00:00.000Z'),
+            notes: 'Great match',
+            location: 'Padova',
+          }}
+        />,
+        { wrapper: createWrapper() }
+      );
+      expect(screen.getByDisplayValue('Padova')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Great match')).toBeInTheDocument();
+    });
+  });
+
   // ── Loading / rendering guard ───────────────────────────────────────────────
   describe('Rendering', () => {
     it('renders without crashing on step 0', () => {

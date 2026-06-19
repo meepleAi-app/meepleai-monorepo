@@ -60,6 +60,7 @@ internal static class PlayRecordEndpoints
             .Produces(404)
             .Produces(409)
             .Produces(401)
+            .Produces(StatusCodes.Status403Forbidden)
             .WithTags("PlayRecords")
             .WithSummary("Complete play record")
             .WithDescription("Completes a play record with optional manual duration.");
@@ -69,6 +70,7 @@ internal static class PlayRecordEndpoints
             .Produces(204)
             .Produces(404)
             .Produces(401)
+            .Produces(StatusCodes.Status403Forbidden)
             .WithTags("PlayRecords")
             .WithSummary("Update play record details")
             .WithDescription("Updates play record details. Allowed even after completion.");
@@ -79,6 +81,7 @@ internal static class PlayRecordEndpoints
             .Produces<PlayRecordDto>(200)
             .Produces(404)
             .Produces(401)
+            .Produces(StatusCodes.Status403Forbidden)
             .WithTags("PlayRecords")
             .WithSummary("Get play record by ID")
             .WithDescription("Retrieves full details of a play record including players and scores.");
@@ -162,9 +165,10 @@ internal static class PlayRecordEndpoints
         Guid recordId,
         [FromBody] CompleteRecordRequest? request,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var command = new CompletePlayRecordCommand(recordId, request?.ManualDuration);
+        var command = new CompletePlayRecordCommand(recordId, httpContext.User.GetUserId(), request?.ManualDuration);
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }
@@ -173,9 +177,10 @@ internal static class PlayRecordEndpoints
         Guid recordId,
         [FromBody] UpdateRecordRequest request,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var command = new UpdatePlayRecordCommand(recordId, request.SessionDate, request.Notes, request.Location);
+        var command = new UpdatePlayRecordCommand(recordId, httpContext.User.GetUserId(), request.SessionDate, request.Notes, request.Location);
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }
@@ -187,9 +192,10 @@ internal static class PlayRecordEndpoints
     private static async Task<IResult> HandleGetPlayRecord(
         Guid recordId,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var query = new GetPlayRecordQuery(recordId);
+        var query = new GetPlayRecordQuery(recordId, httpContext.User.GetUserId());
         var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }

@@ -101,13 +101,11 @@ import {
   ConnectionLostBanner,
   LiveSessionNotes,
   RightColumnTabs,
-  ScoringPanelRenderer,
   ToolkitRenderer,
   type ConnectionLostBannerLabels,
   type LiveAgentChatLabels,
   type LiveSessionNotesLabels,
   type RightColumnTabsLabels,
-  type ScoringPanelData,
   type ScoringPanelRendererLabels,
   type ToolkitRendererLabels,
 } from '@/components/features/session-live';
@@ -116,9 +114,7 @@ import { useSession } from '@/hooks/queries/useActiveSessions';
 import { useTranslation } from '@/hooks/useTranslation';
 import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
 import { mapConnectionState } from '@/lib/session-live/map-connection-state';
-import { MVP_OBJECTIVES_CATALOGUE } from '@/lib/session-live/mvp-objectives-catalogue';
 import { hasRequiredRole } from '@/lib/session-live/participant-role';
-import { mapScoreDataToPanelData } from '@/lib/session-live/score-data-to-panel-data';
 import {
   deriveSessionLiveUiState,
   deriveSessionLiveDialogState,
@@ -140,6 +136,8 @@ import { useElapsedTime } from '@/lib/session-live/use-elapsed-time';
 import { useSessionLiveStream } from '@/lib/session-live/use-session-live-stream';
 import { useLiveSessionStore } from '@/lib/stores/live-session-store';
 import { useToolkitRendererStore } from '@/lib/stores/toolkit-renderer-store';
+
+import { ScoreTabContent } from './ScoreTabContent';
 
 // ─── Lazy dialogs (orchestrator-side lazy import per Task 3 spec) ──────────────
 
@@ -952,18 +950,20 @@ export function SessionLiveView(): ReactElement {
   );
 
   // ── Derived data for components ───────────────────────────────────────────
+  //
+  // #2430 Block B+: Block B's polymorphic scoring logic (selectors, memo,
+  // a11y placeholder) MOVED to ScoreTabContent. SessionLiveView keeps only
+  // the REST hydration useEffect because it depends on sessionQuery.data
+  // (which lives at this level via useSession). The store-write side-effect
+  // is forwarded to ScoreTabContent via the shared useLiveSessionStore.
 
-  // #2389 Block B: polymorphic scoring selectors from the live-session store.
-  // scoringType + scoreData are populated by SignalR (ScoringConfigured event)
-  // and/or REST hydration (useEffect below). null until either fires.
-  const scoringType = useLiveSessionStore(s => s.scoringType);
-  const scoreData = useLiveSessionStore(s => s.scoreData);
   const setScoringConfig = useLiveSessionStore(s => s.setScoringConfig);
 
-  // #2389 Block B: REST hydration with race guard + observability.
-  // Pre-populate the store from sessionQuery.data on initial mount so the
-  // renderer paints in ~300ms instead of waiting for the SignalR handshake.
-  // Skip if SignalR already populated to avoid stale REST overwriting fresh state.
+  // #2389 Block B + #2430 Block B+: REST hydration with race guard +
+  // observability. Pre-populate the store from sessionQuery.data on initial
+  // mount so the renderer paints in ~300ms instead of waiting for SignalR.
+  // Skip if SignalR already populated to avoid stale REST overwriting fresh
+  // state.
   useEffect(() => {
     const dto = sessionQuery.data;
     if (dto?.scoringType == null || dto.scoreData == null) return;
@@ -982,18 +982,6 @@ export function SessionLiveView(): ReactElement {
       });
     }
   }, [sessionQuery.data, setScoringConfig]);
-
-  // G5a #2375 + #2389 Block B: adapter wires polymorphic scoreData (from store)
-  // to ScoringPanelData (renderer discriminated union). Returns null when
-  // scoringType is null (no SignalR delivery + no REST hydration). Callers MUST
-  // gate the renderer on null and render the a11y placeholder instead.
-  const scoringPanelData = useMemo<ScoringPanelData | null>(
-    () =>
-      mapScoreDataToPanelData(scoringType, scoreData, activeSession?.players ?? [], {
-        availableObjectives: MVP_OBJECTIVES_CATALOGUE,
-      }),
-    [scoringType, scoreData, activeSession?.players]
-  );
 
   // ── G5c #2376: Zustand toolkit renderer store ─────────────────────────────
   // Store starts empty; real hydration via useQuery(['toolkit', sessionId]) is a
@@ -1139,28 +1127,21 @@ export function SessionLiveView(): ReactElement {
         );
       case 'score':
       default:
-        return scoringPanelData != null ? (
-          <ScoringPanelRenderer
-            data={scoringPanelData}
+        return (
+          <ScoreTabContent
+            sessionId={sessionId ?? ''}
+            viewerRole={activeSession.viewerRole}
+            viewerId={activeSession.viewerId}
+            players={activeSession.players}
             labels={scoringPanelLabels}
             className="p-2"
           />
-        ) : (
-          <div
-            role="status"
-            aria-live="polite"
-            data-slot="scoring-panel-empty"
-            className="p-2 text-xs text-muted-foreground"
-          >
-            {t('pages.sessionLive.scoring.loadingLabel')}
-          </div>
         );
     }
   }, [
     mobileTab,
     activeSession,
-    scoringPanelData,
-    t,
+    sessionId,
     scoringPanelLabels,
     turnRendererState,
     turnRendererPlayers,
@@ -1286,23 +1267,16 @@ export function SessionLiveView(): ReactElement {
   // G5a (#2375): ScoringPanelRenderer replaces hardcoded LiveScoringPanel Points-only view.
   const desktopRightColumn = (
     <RightColumnTabs activeTab={tab} onTabChange={handleTabChange} labels={rightColumnTabsLabels}>
-      {tab === 'score' &&
-        (scoringPanelData != null ? (
-          <ScoringPanelRenderer
-            data={scoringPanelData}
-            labels={scoringPanelLabels}
-            className="p-3"
-          />
-        ) : (
-          <div
-            role="status"
-            aria-live="polite"
-            data-slot="scoring-panel-empty"
-            className="p-3 text-xs text-muted-foreground"
-          >
-            {t('pages.sessionLive.scoring.loadingLabel')}
-          </div>
-        ))}
+      {tab === 'score' && (
+        <ScoreTabContent
+          sessionId={sessionId ?? ''}
+          viewerRole={activeSession.viewerRole}
+          viewerId={activeSession.viewerId}
+          players={activeSession.players}
+          labels={scoringPanelLabels}
+          className="p-3"
+        />
+      )}
       {tab === 'turn' && (
         <div className="flex flex-col gap-4 p-3">
           <TurnIndicatorRenderer

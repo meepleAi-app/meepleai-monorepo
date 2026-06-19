@@ -90,6 +90,32 @@ vi.mock('@/lib/session-live/use-session-live-stream', () => ({
   useSessionLiveStream: (args: unknown) => useSessionLiveStreamMock(args),
 }));
 
+// ─── useUpdateSessionScores mock (#2430 Block B+: avoid QueryClientProvider) ──
+
+vi.mock('@/hooks/use-update-session-scores', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/use-update-session-scores')>(
+    '@/hooks/use-update-session-scores'
+  );
+  return {
+    ...actual,
+    useUpdateSessionScores: () => ({
+      mutate: vi.fn(),
+      isPending: false,
+    }),
+  };
+});
+
+// ─── sonner mock (#2430 Block B+: ScoreTabContent toasts) ─────────────────
+
+vi.mock('sonner', () => ({
+  toast: {
+    error: vi.fn(),
+    warning: vi.fn(),
+    success: vi.fn(),
+    dismiss: vi.fn(),
+  },
+}));
+
 // ─── visual-test-fixture mock ─────────────────────────────────────────────
 
 let IS_VISUAL_TEST_BUILD_MOCK = false;
@@ -1259,5 +1285,31 @@ describe('SessionLiveView — Block B (#2389) scoring wire-up', () => {
       });
     });
     expect(document.querySelector('[data-slot="scoring-panel-objectives"]')).not.toBeNull();
+  });
+
+  // ── #2430 Block B+ smoke: ScoreTabContent mount ──────────────────────────
+
+  it('mounts ScoreTabContent inside score tab (any state)', () => {
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // ScoreTabContent has no unique top-level data-slot; probe via children:
+    // it renders either the placeholder (when scoringType=null) or a renderer.
+    const hasMount =
+      container.querySelector('[data-slot="polymorphic-score-editor"]') ||
+      container.querySelector('[data-slot="scoring-panel-points"]') ||
+      container.querySelector('[data-slot="scoring-panel-empty"]');
+    expect(hasMount).not.toBeNull();
+  });
+
+  it('renders ScoringPanelRenderer (not editor) when viewerRole=Player', () => {
+    // Default fixture viewerRole is 'Player'.
+    act(() => {
+      useLiveSessionStore.getState().setScoringConfig({
+        scoringType: 'Points',
+        scoreData: { scores: [{ playerId: 'player-001', points: 10 }] },
+      });
+    });
+    const { container } = renderWithIntl(<SessionLiveView />);
+    expect(container.querySelector('[data-slot="polymorphic-score-editor"]')).toBeNull();
+    expect(container.querySelector('[data-slot="scoring-panel-points"]')).not.toBeNull();
   });
 });

@@ -36,6 +36,8 @@ import type { ReactElement } from 'react';
 
 import type { GameSessionDto } from '@/lib/api/schemas/games.schemas';
 import type { UseSessionLiveStreamResult } from '@/lib/session-live/use-session-live-stream';
+import { useLiveSessionStore } from '@/lib/stores/live-session-store';
+import type { ScoreDataByType } from '@/components/sessions/score-strategies/types';
 
 // ─── next/navigation mocks ────────────────────────────────────────────────
 
@@ -140,6 +142,7 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionLive.scoring.scoreInputAriaLabel': 'Inserisci punteggio per {playerName}',
   'pages.sessionLive.scoring.playerCount':
     '{count, plural, =0 {Nessun giocatore} =1 {1 giocatore} other {# giocatori}}',
+  'pages.sessionLive.scoring.loadingLabel': 'Caricamento punteggi…',
   'pages.sessionLive.actionLog.title': 'Eventi',
   'pages.sessionLive.actionLog.emptyLabel': 'Nessun evento ancora.',
   'pages.sessionLive.actionLog.typeScore': 'Punteggio',
@@ -241,6 +244,14 @@ const MOCK_SESSION_DTO: GameSessionDto = {
 // ─── Import under test ─────────────────────────────────────────────────────
 
 import { SessionLiveView } from '../SessionLiveView';
+
+// Block B #2389: reset the polymorphic scoring slice between tests at file
+// scope so no test bleeds stale scoringType/scoreData/players into the next.
+// Use the store's reset() action (which sets the full initial state) instead
+// of setState({...partial}) — Zustand setState merges by default.
+beforeEach(() => {
+  useLiveSessionStore.getState().reset();
+});
 
 describe('SessionLiveView (Wave D.2 Foundation)', () => {
   beforeEach(() => {
@@ -785,6 +796,12 @@ describe('SessionLiveView (Wave D.2 Interactions — Task 3)', () => {
 
   it('T4.11: RIGHT tab=score renders ScoringPanelRenderer (G5a #2375)', () => {
     // ?tab default → 'score'. ScoringPanelRenderer replaces LiveScoringPanel (#2421 wire-up).
+    // #2389 Block B: renderer is now gated on scoringType != null — seed the store
+    // first so the renderer mounts instead of the a11y placeholder.
+    useLiveSessionStore.getState().setScoringConfig({
+      scoringType: 'Points',
+      scoreData: { scores: [] },
+    });
     const { container } = renderWithIntl(<SessionLiveView />);
     expect(container.querySelector('[data-slot="scoring-panel-renderer"]')).toBeInTheDocument();
   });
@@ -1045,5 +1062,202 @@ describe('SessionLiveView (#2375 G3 — accordion FSM URL SSOT)', () => {
     const callArg = routerReplace.mock.calls[0]?.[0] as string;
     // When expanding, 'chat' param is removed (null → deleted from query string).
     expect(callArg).not.toContain('chat=collapsed');
+  });
+});
+
+// ─── Block B (#2389) scoring wire-up tests ────────────────────────────────────
+
+describe('SessionLiveView — Block B (#2389) scoring wire-up', () => {
+  beforeEach(() => {
+    // Default useSession + useSessionLiveStream returns for these tests.
+    useSessionMock.mockReturnValue({
+      data: MOCK_SESSION_DTO,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
+  });
+
+  // ── REST hydration (5) ──────────────────────────────────────────────────────
+
+  it('calls setScoringConfig when DTO carries scoringType+scoreData', () => {
+    const dtoWithConfig: GameSessionDto = {
+      ...MOCK_SESSION_DTO,
+      scoringType: 'Points',
+      scoreData: JSON.stringify({
+        scores: [{ playerId: 'player-001', points: 10 }],
+      }),
+    };
+    useSessionMock.mockReturnValue({
+      data: dtoWithConfig,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    renderWithIntl(<SessionLiveView />);
+
+    expect(useLiveSessionStore.getState().scoringType).toBe('Points');
+    expect(useLiveSessionStore.getState().scoreData).toEqual({
+      scores: [{ playerId: 'player-001', points: 10 }],
+    });
+  });
+
+  it('logs console.warn on malformed scoreData JSON', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const dtoMalformed: GameSessionDto = {
+      ...MOCK_SESSION_DTO,
+      scoringType: 'Points',
+      scoreData: 'not-valid-json',
+    };
+    useSessionMock.mockReturnValue({
+      data: dtoMalformed,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    renderWithIntl(<SessionLiveView />);
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('[#2389]'),
+      expect.objectContaining({ sessionId: MOCK_SESSION_DTO.id })
+    );
+    expect(useLiveSessionStore.getState().scoringType).toBeNull();
+    warnSpy.mockRestore();
+  });
+
+  it('does not call setScoringConfig when DTO has no scoringType (legacy session)', () => {
+    // MOCK_SESSION_DTO has no scoringType/scoreData by default.
+    renderWithIntl(<SessionLiveView />);
+    expect(useLiveSessionStore.getState().scoringType).toBeNull();
+    expect(useLiveSessionStore.getState().scoreData).toBeNull();
+  });
+
+  it('does not overwrite SignalR-hydrated store on later REST resolve (race guard)', () => {
+    // SignalR hydrates first.
+    act(() => {
+      useLiveSessionStore.setState({
+        scoringType: 'Points',
+        scoreData: {
+          scores: [{ playerId: 'player-001', points: 99 }],
+        } as ScoreDataByType['Points'],
+      });
+    });
+
+    // REST resolves with stale snapshot.
+    const dtoStale: GameSessionDto = {
+      ...MOCK_SESSION_DTO,
+      scoringType: 'Points',
+      scoreData: JSON.stringify({
+        scores: [{ playerId: 'player-001', points: 0 }],
+      }),
+    };
+    useSessionMock.mockReturnValue({
+      data: dtoStale,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    renderWithIntl(<SessionLiveView />);
+
+    // SignalR data wins; REST does NOT overwrite.
+    expect(useLiveSessionStore.getState().scoreData).toEqual({
+      scores: [{ playerId: 'player-001', points: 99 }],
+    });
+  });
+
+  it('does not call setScoringConfig when scoringType present but scoreData null', () => {
+    const dtoPartial: GameSessionDto = {
+      ...MOCK_SESSION_DTO,
+      scoringType: 'Points',
+      scoreData: null,
+    };
+    useSessionMock.mockReturnValue({
+      data: dtoPartial,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    renderWithIntl(<SessionLiveView />);
+    expect(useLiveSessionStore.getState().scoringType).toBeNull();
+  });
+
+  // ── Null gate + a11y placeholder (2) ────────────────────────────────────────
+
+  it('renders aria-live placeholder when scoringType is null', () => {
+    // Default beforeEach leaves store null; no DTO config either.
+    renderWithIntl(<SessionLiveView />);
+
+    const placeholder = document.querySelector('[data-slot="scoring-panel-empty"]');
+    expect(placeholder).not.toBeNull();
+    expect(placeholder?.getAttribute('role')).toBe('status');
+    expect(placeholder?.getAttribute('aria-live')).toBe('polite');
+  });
+
+  it('placeholder shows the localized loading label text', () => {
+    renderWithIntl(<SessionLiveView />);
+    expect(screen.getByText('Caricamento punteggi…')).toBeInTheDocument();
+  });
+
+  // ── Variant mount via setScoringConfig action (4) ───────────────────────────
+
+  it('mounts Points renderer when scoringType=Points', () => {
+    renderWithIntl(<SessionLiveView />);
+    act(() => {
+      useLiveSessionStore.getState().setScoringConfig({
+        scoringType: 'Points',
+        scoreData: { scores: [{ playerId: 'player-001', points: 10 }] },
+      });
+    });
+    expect(document.querySelector('[data-slot="scoring-panel-points"]')).not.toBeNull();
+  });
+
+  it('mounts BinaryWin renderer when scoringType=BinaryWin', () => {
+    renderWithIntl(<SessionLiveView />);
+    act(() => {
+      useLiveSessionStore.getState().setScoringConfig({
+        scoringType: 'BinaryWin',
+        scoreData: { results: [{ playerId: 'player-001', isWinner: true }] },
+      });
+    });
+    expect(document.querySelector('[data-slot="scoring-panel-binary-win"]')).not.toBeNull();
+  });
+
+  it('mounts Ranking renderer when scoringType=Ranking', () => {
+    renderWithIntl(<SessionLiveView />);
+    act(() => {
+      useLiveSessionStore.getState().setScoringConfig({
+        scoringType: 'Ranking',
+        scoreData: { positions: [{ playerId: 'player-001', position: 1 }] },
+      });
+    });
+    expect(document.querySelector('[data-slot="scoring-panel-ranking"]')).not.toBeNull();
+  });
+
+  it('mounts Objectives renderer when scoringType=Objectives', () => {
+    renderWithIntl(<SessionLiveView />);
+    act(() => {
+      useLiveSessionStore.getState().setScoringConfig({
+        scoringType: 'Objectives',
+        scoreData: {
+          completedByPlayer: [{ playerId: 'player-001', objectives: [] }],
+        },
+      });
+    });
+    expect(document.querySelector('[data-slot="scoring-panel-objectives"]')).not.toBeNull();
   });
 });

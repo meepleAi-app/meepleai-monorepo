@@ -21,6 +21,7 @@ import {
   UpdateSessionScoresError,
   useUpdateSessionScores,
 } from '@/hooks/use-update-session-scores';
+import { MVP_OBJECTIVES_CATALOGUE } from '@/lib/session-live/mvp-objectives-catalogue';
 import { useLiveSessionStore } from '@/lib/stores/live-session-store';
 
 /**
@@ -60,23 +61,6 @@ function useDebouncedCallback<TArgs extends readonly unknown[]>(
 interface LiveSessionScoresPageProps {
   params: Promise<{ sessionId: string }>;
 }
-
-/**
- * MVP fallback objectives catalogue.
- *
- * The full game-catalogue wiring (Toolkit / SessionDetail) is out of scope for
- * P1; once available, replace this constant with a selector on
- * `useLiveSessionStore` (or a TanStack Query against the game detail endpoint).
- *
- * TODO(#1899-followup): wire real catalogue via live-session-store extension.
- */
-const MVP_OBJECTIVES_CATALOGUE: readonly string[] = [
-  'Vittoria',
-  'Sopravvivenza',
-  'Tesoro',
-  'Boss',
-  'Quest',
-];
 
 export default function LiveSessionScoresPage({ params }: LiveSessionScoresPageProps) {
   const { sessionId } = use(params);

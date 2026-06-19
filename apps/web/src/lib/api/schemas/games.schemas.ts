@@ -106,6 +106,10 @@ export const GameSessionDtoSchema = z.object({
   winnerName: z.string().nullable(),
   notes: z.string().nullable(),
   durationMinutes: z.number().int().nonnegative(),
+  // #2389 Block B: polymorphic scoring config exposed by Block A BE evolution.
+  // Both fields are nullable strings (scoreData is a JSON-encoded payload).
+  scoringType: z.string().nullable().optional(),
+  scoreData: z.string().nullable().optional(),
 });
 
 export type GameSessionDto = z.infer<typeof GameSessionDtoSchema>;

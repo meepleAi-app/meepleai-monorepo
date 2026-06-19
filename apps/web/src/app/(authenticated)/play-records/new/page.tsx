@@ -12,12 +12,19 @@
  *
  * Multi-step wizard for creating new play records.
  * Issue #3892: Play Records Frontend UI
+ *
+ * #2348: Reads ?gameNightId= from URL and prefills the form via
+ * useGameNightPrefill (date/location/game/roster from completed GameNight).
+ * Next.js 16 requires useSearchParams under <Suspense> — inner content
+ * component reads params; default export wraps it.
  */
 
 'use client';
 
+import { Suspense } from 'react';
+
 import { ArrowLeft } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { FormPageContainer } from '@/components/layout/PageContainer';
@@ -25,12 +32,16 @@ import { SessionCreateForm } from '@/components/play-records/SessionCreateForm';
 import { Button } from '@/components/ui/primitives/button';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { SessionCreateForm as SessionFormData } from '@/lib/api/schemas/play-records.schemas';
+import { useGameNightPrefill } from '@/lib/domain-hooks/useGameNightPrefill';
 import { useCreatePlayRecord } from '@/lib/domain-hooks/usePlayRecords';
 
-export default function NewPlayRecordPage() {
+function NewPlayRecordContent() {
   const router = useRouter();
   const { t } = useTranslation();
   const createRecord = useCreatePlayRecord();
+  const searchParams = useSearchParams();
+  const gameNightId = searchParams.get('gameNightId');
+  const { prefill, isLoading } = useGameNightPrefill(gameNightId);
 
   const handleSubmit = async (data: SessionFormData) => {
     try {
@@ -61,6 +72,18 @@ export default function NewPlayRecordPage() {
     router.push('/play-records');
   };
 
+  // While the GameNight prefill is loading, show a skeleton.
+  // Only shown when a gameNightId is present (backward-compat: no-op when absent).
+  if (gameNightId && isLoading) {
+    return (
+      <FormPageContainer className="p-6 space-y-4">
+        <div className="h-8 bg-muted animate-pulse rounded w-48" />
+        <div className="h-12 bg-muted animate-pulse rounded" />
+        <div className="h-32 bg-muted animate-pulse rounded" />
+      </FormPageContainer>
+    );
+  }
+
   return (
     <FormPageContainer className="p-6 space-y-6">
       {/* Header */}
@@ -79,12 +102,28 @@ export default function NewPlayRecordPage() {
         </div>
       </div>
 
-      {/* Form */}
+      {/* Form — prefill?.initialValues/initialPlayers are undefined when no gameNightId */}
       <SessionCreateForm
+        initialValues={prefill?.initialValues}
+        initialPlayers={prefill?.initialPlayers}
         onSubmit={handleSubmit}
         onCancel={handleCancel}
         isSubmitting={createRecord.isPending}
       />
     </FormPageContainer>
+  );
+}
+
+export default function NewPlayRecordPage() {
+  return (
+    <Suspense
+      fallback={
+        <FormPageContainer className="p-6">
+          <div className="h-8 bg-muted animate-pulse rounded w-48" />
+        </FormPageContainer>
+      }
+    >
+      <NewPlayRecordContent />
+    </Suspense>
   );
 }

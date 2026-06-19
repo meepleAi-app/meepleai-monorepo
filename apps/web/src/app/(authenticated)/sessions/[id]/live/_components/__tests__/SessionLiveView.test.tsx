@@ -796,6 +796,12 @@ describe('SessionLiveView (Wave D.2 Interactions — Task 3)', () => {
 
   it('T4.11: RIGHT tab=score renders ScoringPanelRenderer (G5a #2375)', () => {
     // ?tab default → 'score'. ScoringPanelRenderer replaces LiveScoringPanel (#2421 wire-up).
+    // #2389 Block B: renderer is now gated on scoringType != null — seed the store
+    // first so the renderer mounts instead of the a11y placeholder.
+    useLiveSessionStore.getState().setScoringConfig({
+      scoringType: 'Points',
+      scoreData: { scores: [] },
+    });
     const { container } = renderWithIntl(<SessionLiveView />);
     expect(container.querySelector('[data-slot="scoring-panel-renderer"]')).toBeInTheDocument();
   });

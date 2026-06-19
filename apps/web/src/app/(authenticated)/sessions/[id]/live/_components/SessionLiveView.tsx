@@ -1131,7 +1131,6 @@ export function SessionLiveView(): ReactElement {
           <ScoreTabContent
             sessionId={sessionId ?? ''}
             viewerRole={activeSession.viewerRole}
-            viewerId={activeSession.viewerId}
             players={activeSession.players}
             labels={scoringPanelLabels}
             className="p-2"
@@ -1271,7 +1270,6 @@ export function SessionLiveView(): ReactElement {
         <ScoreTabContent
           sessionId={sessionId ?? ''}
           viewerRole={activeSession.viewerRole}
-          viewerId={activeSession.viewerId}
           players={activeSession.players}
           labels={scoringPanelLabels}
           className="p-3"

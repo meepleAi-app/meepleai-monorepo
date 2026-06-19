@@ -16,7 +16,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 
-import { useIntl } from 'react-intl';
 import { toast } from 'sonner';
 
 import {
@@ -75,7 +74,6 @@ function mapMutationError(err: unknown): ScoredError {
 export interface ScoreTabContentProps {
   readonly sessionId: string;
   readonly viewerRole: 'Host' | 'Player' | 'Spectator';
-  readonly viewerId: string;
   readonly players: ReadonlyArray<{
     readonly id: string;
     readonly name: string;
@@ -90,7 +88,6 @@ export interface ScoreTabContentProps {
 export function ScoreTabContent(props: ScoreTabContentProps): ReactElement {
   const { sessionId, viewerRole, players, labels, className } = props;
   const { t } = useTranslation();
-  const intl = useIntl();
 
   // Store selectors
   const scoringType = useLiveSessionStore(s => s.scoringType);
@@ -101,12 +98,13 @@ export function ScoreTabContent(props: ScoreTabContentProps): ReactElement {
   // Mutation hook
   const mutation = useUpdateSessionScores();
 
-  // Refs (unmount safety + retry payload).
+  // Refs (unmount safety).
   // isMountedRef alone is sufficient to guard against post-unmount setState;
   // the host-transfer mid-mutation case is covered by the flush effect's
   // [viewerRole, flush] deps which fires cleanup on role change.
+  // The retry button captures the payload via closure (handleMutationError's
+  // second arg), so no lastPayloadRef is needed.
   const isMountedRef = useRef(true);
-  const lastPayloadRef = useRef<UpdateSessionScoresPayload | null>(null);
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -165,22 +163,19 @@ export function ScoreTabContent(props: ScoreTabContentProps): ReactElement {
         case 'rate-limited': {
           const deadline = Date.now() + RATE_LIMIT_WINDOW_MS;
           setRateLimitedUntil(deadline);
-          const tpl = intl.messages['pages.sessionLive.scoring.rateLimitedToast'] as
-            | string
-            | undefined;
           toast.warning(
-            tpl?.replace('{seconds}', String(RATE_LIMIT_WINDOW_MS / 1000)) ?? 'Rate limited',
+            t('pages.sessionLive.scoring.rateLimitedToast', {
+              seconds: RATE_LIMIT_WINDOW_MS / 1000,
+            }),
             { id: 'score-429' }
           );
           break;
         }
         case 'validation': {
-          const tpl = intl.messages['pages.sessionLive.scoring.validationFailedTemplate'] as
-            | string
-            | undefined;
           toast.error(
-            tpl?.replace('{message}', JSON.stringify(scored.details ?? scored.message)) ??
-              'Validation failed',
+            t('pages.sessionLive.scoring.validationFailedTemplate', {
+              message: JSON.stringify(scored.details ?? scored.message),
+            }),
             { id: 'score-400' }
           );
           break;
@@ -219,7 +214,10 @@ export function ScoreTabContent(props: ScoreTabContentProps): ReactElement {
     },
     // `mutation.mutate` is referentially stable across renders (TanStack Query
     // guarantee), so we depend on the method, not the whole mutation object.
-    [t, intl.messages, mutation, setRateLimitedUntil]
+    // Whole `mutation` would change identity on pending/idle flips, forcing
+    // handleMutationError → submitMutation → debouncedSubmit recreation
+    // mid-edit and potentially dropping in-flight debounced calls.
+    [t, mutation.mutate, setRateLimitedUntil]
   );
 
   // Debounced mutation dispatch.
@@ -228,7 +226,6 @@ export function ScoreTabContent(props: ScoreTabContentProps): ReactElement {
   // merges per-mutate callbacks with hook-level ones (both fire).
   const submitMutation = useCallback(
     (payload: UpdateSessionScoresPayload) => {
-      lastPayloadRef.current = payload;
       mutation.mutate(payload, {
         onSuccess: () => {
           if (!isMountedRef.current) return;
@@ -237,7 +234,7 @@ export function ScoreTabContent(props: ScoreTabContentProps): ReactElement {
         onError: err => handleMutationError(err, payload),
       });
     },
-    [mutation, handleMutationError]
+    [mutation.mutate, handleMutationError]
   );
 
   const [debouncedSubmit, flush] = useDebouncedCallback(submitMutation, 500);
@@ -274,9 +271,6 @@ export function ScoreTabContent(props: ScoreTabContentProps): ReactElement {
   const hostEditing = viewerRole === 'Host' && scoringType !== null;
 
   if (hostEditing && scoringType !== null) {
-    const rateLimitTpl = intl.messages['pages.sessionLive.scoring.rateLimitedTemplate'] as
-      | string
-      | undefined;
     return (
       <div className={className}>
         <PolymorphicScoreEditor
@@ -294,8 +288,9 @@ export function ScoreTabContent(props: ScoreTabContentProps): ReactElement {
             data-slot="score-rate-limit-countdown"
             className="mt-1 text-xs text-amber-500"
           >
-            {rateLimitTpl?.replace('{seconds}', String(rateLimitRemainingSec)) ??
-              `Rate limited, retry in ${rateLimitRemainingSec}s`}
+            {t('pages.sessionLive.scoring.rateLimitedTemplate', {
+              seconds: rateLimitRemainingSec,
+            })}
           </div>
         )}
       </div>

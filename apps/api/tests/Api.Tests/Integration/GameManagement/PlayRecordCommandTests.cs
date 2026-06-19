@@ -412,6 +412,74 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
 
     #endregion
 
+    #region DeletePlayRecordCommand Tests
+
+    [Fact]
+    public async Task DeletePlayRecordCommand_AsCreator_SoftDeletesAndHidesRecord()
+    {
+        // Arrange
+        var creatorId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
+
+        // Act
+        await SendInScopeAsync(new DeletePlayRecordCommand(recordId, creatorId));
+
+        // Assert — hidden by query filter, but persisted with is_deleted=true
+        using var scope = ServiceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var visible = await db.PlayRecords
+            .FirstOrDefaultAsync(r => r.Id == recordId, TestCancellationToken);
+        visible.Should().BeNull("the soft-delete query filter must hide the record");
+
+        var raw = await db.PlayRecords
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(r => r.Id == recordId, TestCancellationToken);
+        raw.Should().NotBeNull();
+        raw!.IsDeleted.Should().BeTrue();
+        raw.DeletedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task DeletePlayRecordCommand_UserIsNotCreator_ThrowsForbiddenException()
+    {
+        // Arrange — record created by user A, delete attempted by user B
+        var creatorId = await SeedTestUserAsync();
+        var otherUserId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
+        var command = new DeletePlayRecordCommand(recordId, otherUserId);
+
+        // Act & Assert
+        var act = () => SendInScopeAsync(command);
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
+    [Fact]
+    public async Task DeletePlayRecordCommand_NonExistentRecord_ThrowsNotFoundException()
+    {
+        // Arrange
+        var command = new DeletePlayRecordCommand(Guid.NewGuid(), Guid.NewGuid());
+
+        // Act & Assert
+        var act = () => SendInScopeAsync(command);
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task DeletePlayRecordCommand_AlreadyDeleted_ThrowsNotFoundException()
+    {
+        // Arrange — a second delete resolves to NotFound because the query filter hides the row
+        var creatorId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
+        await SendInScopeAsync(new DeletePlayRecordCommand(recordId, creatorId));
+
+        // Act & Assert
+        var act = () => SendInScopeAsync(new DeletePlayRecordCommand(recordId, creatorId));
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    #endregion
+
     #region Helper Methods
 
     /// <summary>

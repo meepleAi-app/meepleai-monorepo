@@ -243,6 +243,8 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
         SetPrivateProperty(record, nameof(PlayRecord.Location), entity.Location);
         SetPrivateProperty(record, nameof(PlayRecord.CreatedAt), entity.CreatedAt);
         SetPrivateProperty(record, nameof(PlayRecord.UpdatedAt), entity.UpdatedAt);
+        SetPrivateProperty(record, nameof(PlayRecord.IsDeleted), entity.IsDeleted);
+        SetPrivateProperty(record, nameof(PlayRecord.DeletedAt), entity.DeletedAt);
 
         // Restore players and scores with original IDs (no domain events)
         foreach (var playerEntity in entity.Players)
@@ -282,7 +284,9 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
             Location = record.Location,
             CreatedAt = record.CreatedAt,
             UpdatedAt = record.UpdatedAt,
-            SourceEventId = record.SourceEventId
+            SourceEventId = record.SourceEventId,
+            IsDeleted = record.IsDeleted,
+            DeletedAt = record.DeletedAt
         };
 
         // Serialize scoring config

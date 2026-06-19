@@ -38,6 +38,10 @@ public class PlayRecordEntity
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
+    // Soft Delete (issue #2439)
+    public bool IsDeleted { get; set; }
+    public DateTime? DeletedAt { get; set; }
+
     /// <summary>
     /// Optional source domain event id used to dedupe at the DB level (issue #1938 / CF-2).
     /// UNIQUE partial — only when not null.

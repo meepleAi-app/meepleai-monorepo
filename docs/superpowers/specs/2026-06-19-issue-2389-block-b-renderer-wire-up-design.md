@@ -28,7 +28,7 @@ This document defines the Block B scope, design decisions, and implementation co
 4. Gate the renderer mount on `scoringPanelData != null` with an accessible `aria-live` placeholder (not empty fragment).
 5. Hoist `MVP_OBJECTIVES_CATALOGUE` from `scores/page.tsx` to a shared lib module for editor + adapter co-consumption.
 6. Ship i18n key `pages.sessionLive.scoring.loadingLabel` (Italian default).
-7. Add unit tests for the adapter (~14 cases) and integration tests for `SessionLiveView` (+11 cases: 5 hydration including race-ordering, 2 null gate + a11y, 4 variant mount via action).
+7. Add unit tests for the adapter (~16 cases incl. empty-players edge) and integration tests for `SessionLiveView` (+11 cases: 5 hydration including race-ordering, 2 null gate + a11y, 4 variant mount via action).
 
 **Out-of-scope (documented gaps)**:
 - `useUpdateSessionScores` mutation wire — `ScoringPanelRenderer` is read-only by design. Editor mutation belongs to `PolymorphicScoreEditor` swap, deferred to Block B+ follow-up.
@@ -106,7 +106,7 @@ Real game-level catalogue wiring is deferred to a follow-up issue; the MVP const
 |--------|------|----------|
 | NEW | `apps/web/src/lib/session-live/mvp-objectives-catalogue.ts` | ~10 |
 | NEW | `apps/web/src/lib/session-live/score-data-to-panel-data.ts` | ~90 |
-| NEW | `apps/web/src/lib/session-live/score-data-to-panel-data.test.ts` | ~180 (14 test) |
+| NEW | `apps/web/src/lib/session-live/score-data-to-panel-data.test.ts` | ~225 (16 test) |
 | MOD | `apps/web/src/app/(authenticated)/sessions/[id]/live/_components/SessionLiveView.tsx` | ~50 lines (replace memo + add useEffect with race guard + selectors + 2× a11y placeholder + use `t('...loadingLabel')`) |
 | MOD | `apps/web/src/app/(authenticated)/sessions/[id]/live/_components/SessionLiveView.test.tsx` | ~180 (+10 test, includes race-ordering + a11y) |
 | MOD | `apps/web/src/app/(authenticated)/sessions/live/[sessionId]/scores/page.tsx` | ~3 lines (import path + remove inline constant) |
@@ -245,7 +245,7 @@ export function mapScoreDataToPanelData(
 
 ### Unit tests: `score-data-to-panel-data.test.ts`
 
-14 cases organized in 4 groups:
+16 cases organized in 6 groups:
 
 | Group | Cases | Notes |
 |-------|-------|-------|
@@ -254,6 +254,7 @@ export function mapScoreDataToPanelData(
 | displayName fallback | 1 | undefined displayName → name |
 | Missing player padding | 4 | One per variant: defaults applied |
 | Objectives catalogue edge | 2 | Empty catalogue, done=true when any completed |
+| Empty players list | 2 | Points + Ranking return empty players[] (no invalid position=0 from `players.length` default when both arrays empty) |
 
 ### Integration tests: `SessionLiveView.test.tsx` extension
 
@@ -371,7 +372,7 @@ Tracked as separate issues to be filed after Block B merge:
 ## Acceptance criteria (Block B specific)
 
 **Functional**:
-- [ ] `score-data-to-panel-data.ts` adapter shipped with 14 passing unit tests.
+- [ ] `score-data-to-panel-data.ts` adapter shipped with 16 passing unit tests.
 - [ ] Adapter documents and tests padding defaults per variant: Points→0, Ranking→players.length, BinaryWin→false, Objectives→[].
 - [ ] `SessionLiveView.tsx` consumes adapter via `useMemo`; hardcoded `kind: 'Points'` removed.
 - [ ] REST hydration `useEffect` pre-populates store from `sessionQuery.data` when `scoringType`+`scoreData` present.

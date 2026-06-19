@@ -24,7 +24,7 @@
 |------|----------------|-----|
 | `apps/web/src/lib/session-live/mvp-objectives-catalogue.ts` | Single export `MVP_OBJECTIVES_CATALOGUE: readonly string[]` — placeholder shared by editor + renderer until real game-level catalogue ships. | ~10 |
 | `apps/web/src/lib/session-live/score-data-to-panel-data.ts` | Pure function `mapScoreDataToPanelData()` — narrows polymorphic `scoreData` (editor shape) to `ScoringPanelData` (renderer shape) per variant. Returns `null` on null inputs. | ~95 |
-| `apps/web/src/lib/session-live/__tests__/score-data-to-panel-data.test.ts` | 14 Vitest cases: null gates (3), happy path per variant (4), displayName fallback (1), missing-player padding (4), Objectives catalogue edge (2). | ~200 |
+| `apps/web/src/lib/session-live/__tests__/score-data-to-panel-data.test.ts` | 16 Vitest cases: null gates (3), happy path per variant (4), displayName fallback (1), missing-player padding (4), Objectives catalogue edge (2), empty players list (2). | ~225 |
 
 **MODIFIED files:**
 
@@ -435,12 +435,26 @@ describe('mapScoreDataToPanelData — Objectives catalogue edges', () => {
     });
   });
 });
+
+// ─── Empty players list edge ─────────────────────────────────────────────────
+
+describe('mapScoreDataToPanelData — empty players list', () => {
+  it('returns empty players array when players list is empty (Points)', () => {
+    const result = mapScoreDataToPanelData('Points', { scores: [] }, []);
+    expect(result).toEqual({ kind: 'Points', players: [] });
+  });
+
+  it('returns empty players array when players list is empty (Ranking) without invalid position=0', () => {
+    const result = mapScoreDataToPanelData('Ranking', { positions: [] }, []);
+    expect(result).toEqual({ kind: 'Ranking', players: [] });
+  });
+});
 ```
 
 - [ ] **Step 3.2: Run tests to confirm they fail RED**
 
 Run: `cd apps/web && pnpm test score-data-to-panel-data 2>&1 | tail -20`
-Expected: all 14 tests FAIL with import error "Cannot find module '@/lib/session-live/score-data-to-panel-data'".
+Expected: all 16 tests FAIL with import error "Cannot find module '@/lib/session-live/score-data-to-panel-data'".
 
 - [ ] **Step 3.3: Commit the RED tests**
 
@@ -448,9 +462,10 @@ Expected: all 14 tests FAIL with import error "Cannot find module '@/lib/session
 git add apps/web/src/lib/session-live/__tests__/score-data-to-panel-data.test.ts
 git commit -m "test(session-live): #2389 Block B T3 adapter unit test scaffold (RED)
 
-14 Vitest cases for mapScoreDataToPanelData:
+16 Vitest cases for mapScoreDataToPanelData:
   3 null gates + 4 happy-path variants + 1 displayName fallback +
-  4 missing-player padding + 2 Objectives catalogue edges.
+  4 missing-player padding + 2 Objectives catalogue edges +
+  2 empty-players-list edges (Points + Ranking).
 
 All RED until T4 implements the adapter pure function.
 
@@ -599,7 +614,7 @@ function assertNever(value: never): never {
 - [ ] **Step 4.2: Run tests to confirm all 14 GREEN**
 
 Run: `cd apps/web && pnpm test score-data-to-panel-data 2>&1 | tail -20`
-Expected: 14 / 14 PASS.
+Expected: 16 / 16 PASS.
 
 - [ ] **Step 4.3: Run typecheck**
 
@@ -624,7 +639,7 @@ Pure function mapScoreDataToPanelData() narrows polymorphic ScoreDataByType
   becomes { id: label, label, done: anyCompleted }.
 - assertNever exhaustiveness guard.
 
-14 / 14 unit tests pass.
+16 / 16 unit tests pass.
 
 Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 ```
@@ -662,13 +677,14 @@ import type { ScoreDataByType } from '@/components/sessions/score-strategies/typ
 Find the existing top-level `beforeEach` (search the file for `beforeEach(`). If there is one before the existing `describe(...)` blocks, append to it. If each `describe(...)` block has its own `beforeEach`, add a single setup-file-level reset at the top of the file just before the first `describe`:
 
 ```typescript
-// Block B #2389: reset polymorphic scoring slice between tests.
+// Block B #2389: reset the polymorphic scoring slice between tests.
+// Use the store's reset() action (which sets the full initial state) instead
+// of setState({...partial}) — Zustand's setState merges by default, so a
+// partial reset would leave stale fields (e.g. sessionId, players) from a
+// prior test. reset() replaces the entire slice with initialState — see
+// live-session-store.ts:177 for the action definition.
 beforeEach(() => {
-  useLiveSessionStore.setState({
-    scoringType: null,
-    scoreData: null,
-    scores: {},
-  });
+  useLiveSessionStore.getState().reset();
 });
 ```
 
@@ -922,7 +938,13 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 
 Open `apps/web/src/app/(authenticated)/sessions/[id]/live/_components/SessionLiveView.tsx`.
 
-Find the existing `useCallback, useMemo, useRef, useState, lazy, Suspense` import on line 71 and extend it with `useEffect`:
+Find the existing React import on line 71. The exact current line reads:
+
+```typescript
+import { useCallback, useMemo, useRef, useState, lazy, Suspense, type ReactElement } from 'react';
+```
+
+Replace it with the same names plus `useEffect` (preserve `type ReactElement` at the end):
 
 ```typescript
 import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense, type ReactElement } from 'react';
@@ -1034,6 +1056,8 @@ Replace with:
 ```
 
 - [ ] **Step 6.6: Update mobile drawer score case with a11y placeholder**
+
+The mobile drawer score case lives inside the `mobileSheetContent` `useMemo` (the dependency array is around line 1113-1131). The new `t('pages.sessionLive.scoring.loadingLabel')` call introduces a dependency on the `t` helper. Verify the dependency array already contains `t` — it should (the existing `actionLogLabels`/`notesLabels` memos use it). If `t` is missing, append it to the deps array. Otherwise `react-hooks/exhaustive-deps` will fail at T8 lint.
 
 Find the mobile drawer switch case on lines 1103-1112:
 
@@ -1161,7 +1185,7 @@ Place it in the same logical position (after the last existing scoring entry in 
 - [ ] **Step 7.3: Run typecheck + tests**
 
 Run: `cd apps/web && pnpm typecheck && pnpm test SessionLiveView 2>&1 | tail -10`
-Expected: 0 type errors. 77+ tests green. (The test file already has the key in its `MESSAGES` map per T5 step 5.1.)
+Expected: 0 type errors. 78+ tests green (67 existing + 11 new). (The test file already has the key in its `MESSAGES` map per T5 step 5.1.)
 
 - [ ] **Step 7.4: Commit the i18n change**
 
@@ -1231,6 +1255,8 @@ Open `CLAUDE.md` at the repo root. Find the section `### Session live shell (epi
 - [ ] **Step 9.2: File the 4 follow-up issues on GitHub**
 
 Run each `gh issue create` command separately. Use the GitHub CLI bound to the current repo.
+
+**⚠ Shell**: the heredoc syntax `$(cat <<'EOF' ... EOF)` is Bash-only. On Windows, run these in **Git Bash** (via the Bash tool) — NOT PowerShell. Alternatively, write the body to a temp file and use `gh issue create --body-file body.md`.
 
 **Issue 1 — Block B+ editor swap:**
 
@@ -1429,7 +1455,7 @@ Plan: `docs/superpowers/plans/2026-06-19-issue-2389-block-b-renderer-wire-up.md`
 
 - **NEW** `apps/web/src/lib/session-live/score-data-to-panel-data.ts` — pure adapter.
 - **NEW** `apps/web/src/lib/session-live/mvp-objectives-catalogue.ts` — hoisted placeholder.
-- **NEW** `apps/web/src/lib/session-live/__tests__/score-data-to-panel-data.test.ts` — 14 unit tests.
+- **NEW** `apps/web/src/lib/session-live/__tests__/score-data-to-panel-data.test.ts` — 16 unit tests.
 - **MOD** `apps/web/src/app/(authenticated)/sessions/[id]/live/_components/SessionLiveView.tsx` — 3 store selectors + REST hydration `useEffect` (race guard + `console.warn`) + polymorphic memo + 2 a11y placeholder mount sites.
 - **MOD** `apps/web/src/app/(authenticated)/sessions/[id]/live/_components/__tests__/SessionLiveView.test.tsx` — +10 tests (5 hydration + 2 a11y + 4 variant mount via `setScoringConfig` action).
 - **MOD** `apps/web/src/lib/api/schemas/games.schemas.ts` — add `scoringType` + `scoreData` to `GameSessionDtoSchema` (catch-up Block A BE evolution).
@@ -1456,13 +1482,13 @@ Plan: `docs/superpowers/plans/2026-06-19-issue-2389-block-b-renderer-wire-up.md`
 
 ## Tests
 
-- 14 unit tests for the adapter (4 variants + 3 null gates + 1 displayName fallback + 4 padding + 2 catalogue edges).
+- 16 unit tests for the adapter (4 variants + 3 null gates + 1 displayName fallback + 4 padding + 2 catalogue edges + 2 empty players).
 - 11 integration tests for `SessionLiveView` (5 hydration including race-ordering + 2 a11y + 4 variant mount).
 - 67+ existing `SessionLiveView.test.tsx` cases pass without modification.
 
 ## Test plan
 
-- [x] `pnpm test score-data-to-panel-data` → 14 / 14 green
+- [x] `pnpm test score-data-to-panel-data` → 16 / 16 green
 - [x] `pnpm test SessionLiveView` → 78+ / 78+ green
 - [x] `pnpm typecheck` → 0 errors
 - [x] `pnpm lint` → 0 new errors (existing `warn`-level `local/no-store-scores-direct` not affected)

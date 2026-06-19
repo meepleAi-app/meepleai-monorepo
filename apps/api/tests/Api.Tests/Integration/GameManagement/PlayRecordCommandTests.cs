@@ -174,9 +174,10 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
     public async Task AddPlayerToRecordCommand_RegisteredUser_AddsSuccessfully()
     {
         // Arrange
-        var recordId = await CreateTestRecordAsync();
+        var creatorId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
         var userId = await SeedTestUserAsync(); // FK constraint: record_players.UserId references users
-        var command = new AddPlayerToRecordCommand(recordId, userId, "Alice");
+        var command = new AddPlayerToRecordCommand(recordId, creatorId, userId, "Alice");
 
         // Act
         await SendInScopeAsync(command);
@@ -197,8 +198,9 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
     public async Task AddPlayerToRecordCommand_Guest_AddsSuccessfully()
     {
         // Arrange
-        var recordId = await CreateTestRecordAsync();
-        var command = new AddPlayerToRecordCommand(recordId, null, "Bob");
+        var creatorId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
+        var command = new AddPlayerToRecordCommand(recordId, creatorId, null, "Bob");
 
         // Act
         await SendInScopeAsync(command);
@@ -215,6 +217,20 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
         players[0].DisplayName.Should().Be("Bob");
     }
 
+    [Fact]
+    public async Task AddPlayerToRecordCommand_UserIsNotCreator_ThrowsForbiddenException()
+    {
+        // Arrange — record created by user A, add-player attempted by user B
+        var creatorId = await SeedTestUserAsync();
+        var otherUserId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
+        var command = new AddPlayerToRecordCommand(recordId, otherUserId, null, "Hijack");
+
+        // Act & Assert
+        var act = () => SendInScopeAsync(command);
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
     #endregion
 
     #region RecordScoreCommand Tests
@@ -223,10 +239,11 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
     public async Task RecordScoreCommand_ValidScore_RecordsSuccessfully()
     {
         // Arrange
-        var recordId = await CreateTestRecordAsync();
-        var playerId = await AddTestPlayerAsync(recordId);
+        var creatorId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
+        var playerId = await AddTestPlayerAsync(recordId, creatorId);
 
-        var command = new RecordScoreCommand(recordId, playerId, "points", 42, "pts");
+        var command = new RecordScoreCommand(recordId, creatorId, playerId, "points", 42, "pts");
 
         // Act
         await SendInScopeAsync(command);
@@ -243,6 +260,21 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
         scores[0].Value.Should().Be(42);
     }
 
+    [Fact]
+    public async Task RecordScoreCommand_UserIsNotCreator_ThrowsForbiddenException()
+    {
+        // Arrange — record created by user A, score attempted by user B
+        var creatorId = await SeedTestUserAsync();
+        var otherUserId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
+        var playerId = await AddTestPlayerAsync(recordId, creatorId);
+        var command = new RecordScoreCommand(recordId, otherUserId, playerId, "points", 99);
+
+        // Act & Assert
+        var act = () => SendInScopeAsync(command);
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
     #endregion
 
     #region StartPlayRecordCommand Tests
@@ -251,8 +283,9 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
     public async Task StartPlayRecordCommand_PlannedRecord_StartsSuccessfully()
     {
         // Arrange
-        var recordId = await CreateTestRecordAsync();
-        var command = new StartPlayRecordCommand(recordId);
+        var creatorId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
+        var command = new StartPlayRecordCommand(recordId, creatorId);
 
         // Act
         await SendInScopeAsync(command);
@@ -270,14 +303,29 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
     public async Task StartPlayRecordCommand_NonPlannedRecord_ThrowsConflictException()
     {
         // Arrange
-        var recordId = await CreateTestRecordAsync();
-        var startCommand = new StartPlayRecordCommand(recordId);
+        var creatorId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
+        var startCommand = new StartPlayRecordCommand(recordId, creatorId);
 
         await SendInScopeAsync(startCommand);
 
         // Act & Assert
         var act = () => SendInScopeAsync(startCommand);
         await act.Should().ThrowAsync<ConflictException>();
+    }
+
+    [Fact]
+    public async Task StartPlayRecordCommand_UserIsNotCreator_ThrowsForbiddenException()
+    {
+        // Arrange — record created by user A, start attempted by user B
+        var creatorId = await SeedTestUserAsync();
+        var otherUserId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
+        var command = new StartPlayRecordCommand(recordId, otherUserId);
+
+        // Act & Assert
+        var act = () => SendInScopeAsync(command);
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 
     #endregion
@@ -458,10 +506,10 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
         return await SendInScopeAsync(command);
     }
 
-    private async Task<Guid> AddTestPlayerAsync(Guid recordId)
+    private async Task<Guid> AddTestPlayerAsync(Guid recordId, Guid callerUserId)
     {
         var playerUserId = await SeedTestUserAsync(); // FK constraint: record_players.UserId references users
-        var command = new AddPlayerToRecordCommand(recordId, playerUserId, "TestPlayer");
+        var command = new AddPlayerToRecordCommand(recordId, callerUserId, playerUserId, "TestPlayer");
         await SendInScopeAsync(command);
 
         using var scope = ServiceProvider.CreateScope();

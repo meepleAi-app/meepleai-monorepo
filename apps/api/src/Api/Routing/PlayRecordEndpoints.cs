@@ -31,6 +31,7 @@ internal static class PlayRecordEndpoints
             .Produces(204)
             .Produces(404)
             .Produces(401)
+            .Produces(StatusCodes.Status403Forbidden)
             .WithTags("PlayRecords")
             .WithSummary("Add player to play record")
             .WithDescription("Adds a registered user or guest player to a play record.");
@@ -40,6 +41,7 @@ internal static class PlayRecordEndpoints
             .Produces(204)
             .Produces(404)
             .Produces(401)
+            .Produces(StatusCodes.Status403Forbidden)
             .WithTags("PlayRecords")
             .WithSummary("Record a score")
             .WithDescription("Records a score for a player in a play record. Supports multi-dimensional scoring.");
@@ -50,6 +52,7 @@ internal static class PlayRecordEndpoints
             .Produces(404)
             .Produces(409)
             .Produces(401)
+            .Produces(StatusCodes.Status403Forbidden)
             .WithTags("PlayRecords")
             .WithSummary("Start play record")
             .WithDescription("Marks a play record as in-progress.");
@@ -133,9 +136,10 @@ internal static class PlayRecordEndpoints
         Guid recordId,
         [FromBody] AddPlayerRequest request,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var command = new AddPlayerToRecordCommand(recordId, request.UserId, request.DisplayName);
+        var command = new AddPlayerToRecordCommand(recordId, httpContext.User.GetUserId(), request.UserId, request.DisplayName);
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }
@@ -144,9 +148,10 @@ internal static class PlayRecordEndpoints
         Guid recordId,
         [FromBody] RecordScoreRequest request,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var command = new RecordScoreCommand(recordId, request.PlayerId, request.Dimension, request.Value, request.Unit);
+        var command = new RecordScoreCommand(recordId, httpContext.User.GetUserId(), request.PlayerId, request.Dimension, request.Value, request.Unit);
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }
@@ -154,9 +159,10 @@ internal static class PlayRecordEndpoints
     private static async Task<IResult> HandleStartRecord(
         Guid recordId,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var command = new StartPlayRecordCommand(recordId);
+        var command = new StartPlayRecordCommand(recordId, httpContext.User.GetUserId());
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }

@@ -78,6 +78,16 @@ internal static class PlayRecordEndpoints
             .WithSummary("Update play record details")
             .WithDescription("Updates play record details. Allowed even after completion.");
 
+        group.MapDelete("/play-records/{recordId}", HandleDeleteRecord)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(404)
+            .Produces(401)
+            .Produces(StatusCodes.Status403Forbidden)
+            .WithTags("PlayRecords")
+            .WithSummary("Delete play record")
+            .WithDescription("Soft-deletes a play record. Creator-only.");
+
         // Queries
         group.MapGet("/play-records/{recordId}", HandleGetPlayRecord)
             .RequireAuthenticatedUser()
@@ -129,7 +139,7 @@ internal static class PlayRecordEndpoints
             request.DimensionUnits);
 
         var recordId = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
-        return Results.Created($"/api/v1/game-management/play-records/{recordId}", recordId);
+        return Results.Created($"/api/v1/play-records/{recordId}", recordId);
     }
 
     private static async Task<IResult> HandleAddPlayer(
@@ -187,6 +197,17 @@ internal static class PlayRecordEndpoints
         CancellationToken cancellationToken)
     {
         var command = new UpdatePlayRecordCommand(recordId, httpContext.User.GetUserId(), request.SessionDate, request.Notes, request.Location);
+        await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleDeleteRecord(
+        Guid recordId,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var command = new DeletePlayRecordCommand(recordId, httpContext.User.GetUserId());
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }

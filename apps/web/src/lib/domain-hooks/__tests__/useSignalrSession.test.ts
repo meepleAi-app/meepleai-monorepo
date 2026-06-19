@@ -197,3 +197,87 @@ describe('useSignalRSession', () => {
     expect(mockStop).toHaveBeenCalled();
   });
 });
+
+// ──────────────────────────────────────────────────────────
+// Block A #2389 — ScoringConfigured consumer
+// ──────────────────────────────────────────────────────────
+
+describe('useSignalRSession — Block A #2389 ScoringConfigured', () => {
+  const sessionId = 'session-123';
+
+  beforeEach(() => {
+    useLiveSessionStore.getState().reset();
+    vi.clearAllMocks();
+    mockStart.mockResolvedValue(undefined);
+    mockStop.mockResolvedValue(undefined);
+    mockInvoke.mockResolvedValue(undefined);
+    mockConnection.state = 'Connected';
+  });
+
+  /**
+   * Helper: locate the handler registered for a given hub event name.
+   * Mirrors the way tests in this file inspect `mockOn` after the hook mounts.
+   */
+  function getRegisteredHandler(eventName: string): ((payload: unknown) => void) | undefined {
+    const call = mockOn.mock.calls.find(c => c[0] === eventName);
+    return call?.[1] as ((payload: unknown) => void) | undefined;
+  }
+
+  it('calls store.setScoringConfig when receiving ScoringConfigured event', async () => {
+    const { unmount } = renderHook(() => useSignalRSession(sessionId));
+
+    await act(async () => {
+      await new Promise(r => setTimeout(r, 0));
+    });
+
+    const handler = getRegisteredHandler('ScoringConfigured');
+    expect(handler).toBeDefined();
+
+    const payload = {
+      sessionId,
+      scoringType: 'Points' as const,
+      scoreData: JSON.stringify({ scores: [{ playerId: 'p1', points: 3 }] }),
+    };
+
+    act(() => {
+      handler!(payload);
+    });
+
+    const state = useLiveSessionStore.getState();
+    expect(state.scoringType).toBe('Points');
+    expect(state.scoreData).toEqual({ scores: [{ playerId: 'p1', points: 3 }] });
+
+    unmount();
+  });
+
+  it('does not crash and leaves store untouched when scoreData is malformed JSON', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const { unmount } = renderHook(() => useSignalRSession(sessionId));
+
+    await act(async () => {
+      await new Promise(r => setTimeout(r, 0));
+    });
+
+    const handler = getRegisteredHandler('ScoringConfigured');
+    expect(handler).toBeDefined();
+
+    const badPayload = {
+      sessionId,
+      scoringType: 'Points' as const,
+      scoreData: '{not valid json',
+    };
+
+    act(() => {
+      handler!(badPayload);
+    });
+
+    const state = useLiveSessionStore.getState();
+    expect(state.scoringType).toBeNull();
+    expect(state.scoreData).toBeNull();
+    expect(warnSpy).toHaveBeenCalled();
+
+    warnSpy.mockRestore();
+    unmount();
+  });
+});

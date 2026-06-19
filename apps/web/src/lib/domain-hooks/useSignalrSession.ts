@@ -20,6 +20,7 @@ import {
   LogLevel,
 } from '@microsoft/signalr';
 
+import type { ScoreDataByType, ScoreType } from '@/components/sessions/score-strategies/types';
 import { logger } from '@/lib/logger';
 import {
   useLiveSessionStore,
@@ -48,6 +49,13 @@ interface ProposeScorePayload {
   playerName: string;
   delta: number;
   timestamp: number;
+}
+
+interface ScoringConfiguredPayload {
+  sessionId: string;
+  scoringType: ScoreType;
+  /** JSON-stringified `ScoreDataByType[scoringType]` (BE serializes the column verbatim). */
+  scoreData: string;
 }
 
 // -------- Hook return type --------
@@ -128,6 +136,21 @@ export function useSignalRSession(sessionId: string | null): UseSignalRSessionRe
         timestamp: data.timestamp,
       };
       store.getState().addProposal(proposal);
+    });
+
+    // #2389 Block A — polymorphic scoring config broadcast.
+    // BE serializes the raw column (string); we parse defensively so a malformed
+    // payload from a future server version doesn't crash the hub.
+    conn.on('ScoringConfigured', (data: ScoringConfiguredPayload) => {
+      try {
+        const parsed = JSON.parse(data.scoreData) as ScoreDataByType[ScoreType];
+        store.getState().setScoringConfig({
+          scoringType: data.scoringType,
+          scoreData: parsed,
+        });
+      } catch (err) {
+        console.warn('[useSignalRSession] failed to parse ScoringConfigured payload', err);
+      }
     });
 
     // ---- Connection lifecycle ----

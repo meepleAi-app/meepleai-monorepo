@@ -310,6 +310,21 @@ public class GameStateHub : Hub
     }
 
     /// <summary>
+    /// Broadcast that the scoring configuration (type + payload shape) has been
+    /// updated for a session. Sent on every <c>SetScores</c> aggregate mutation
+    /// so live clients can re-sync their polymorphic store (#2389 part 1).
+    /// </summary>
+    public async Task BroadcastScoringConfigured(string sessionId, object payload)
+    {
+        await Clients.Group(GetSessionGroup(sessionId))
+            .SendAsync("ScoringConfigured", payload).ConfigureAwait(false);
+
+        _logger.LogDebug(
+            "ScoringConfigured broadcast for session {SessionId}",
+            sessionId);
+    }
+
+    /// <summary>
     /// Client signals that the app was backgrounded on a mobile device.
     /// Publishes an <see cref="AppBackgroundedEvent"/> for the auto-save pipeline.
     /// Silently ignores invalid session IDs.

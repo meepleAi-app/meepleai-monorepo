@@ -42,6 +42,10 @@ internal sealed class PlayRecord : AggregateRoot<Guid>
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
+    // Soft Delete (issue #2439 — mirrors GameBook.SoftDelete pattern)
+    public bool IsDeleted { get; private set; }
+    public DateTime? DeletedAt { get; private set; }
+
     /// <summary>
     /// Optional source domain event id used to dedupe at the DB level (issue #1938 / CF-2).
     /// When set, the UNIQUE partial index <c>UX_play_records_source_event_id</c> guards
@@ -338,6 +342,20 @@ internal sealed class PlayRecord : AggregateRoot<Guid>
 
         Status = PlayRecordStatus.Archived;
         UpdatedAt = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+    }
+
+    /// <summary>
+    /// Soft-deletes the record. Idempotent at the persistence layer because the
+    /// EF query filter hides deleted rows (a second delete resolves to NotFound).
+    /// </summary>
+    public void SoftDelete(TimeProvider? timeProvider = null)
+    {
+        var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+        IsDeleted = true;
+        DeletedAt = now;
+        UpdatedAt = now;
+
+        AddDomainEvent(new PlayRecordDeletedEvent(Id, CreatedByUserId));
     }
 
     /// <summary>

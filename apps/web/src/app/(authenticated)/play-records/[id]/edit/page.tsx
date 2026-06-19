@@ -156,6 +156,22 @@ export default function EditPlayRecordPage() {
   }
 
   // AC-4.1: Layout identical to `new` using SessionCreateForm with mode='edit'
+  // #2349 AC-4.2: map the loaded record into the form's initial shape.
+  const initialValues: Partial<SessionCreateFormData> = {
+    gameType: record.gameId ? 'catalog' : 'freeform',
+    gameId: record.gameId ?? undefined,
+    gameName: record.gameName,
+    sessionDate: new Date(record.sessionDate),
+    visibility: record.visibility,
+    notes: record.notes ?? '',
+    location: record.location ?? '',
+  };
+  const initialPlayers = record.players.map(p => ({
+    id: p.id,
+    name: p.displayName,
+    score: String(p.totalScore ?? p.scores.find(s => s.dimension === 'points')?.value ?? ''),
+  }));
+
   return (
     <div role="main" aria-label={t('playRecords.edit.a11y.formLabel')}>
       {/* AC-4.4: Banner inline sopra form */}
@@ -169,6 +185,8 @@ export default function EditPlayRecordPage() {
       {/* AC-4.1: SessionCreateForm with mode='edit' + editable fields whitelist */}
       <SessionCreateForm
         mode="edit"
+        initialValues={initialValues}
+        initialPlayers={initialPlayers}
         onSubmit={handleSubmit}
         onCancel={handleCancel}
         isSubmitting={updateMutation.isPending}

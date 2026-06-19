@@ -89,6 +89,33 @@ describe('useGameNightPrefill', () => {
     expect(result.current.prefill!.initialPlayers[0]).toMatchObject({ name: 'Marco' });
   });
 
+  it('falls back to freeform when game fetch fails', async () => {
+    // Override only the games.getById mock to reject for this test
+    const { api } = await import('@/lib/api');
+    vi.mocked(api.games.getById).mockRejectedValueOnce(new Error('network error'));
+
+    const queryClient = createTestQueryClient();
+    const { result } = renderHook(() => useGameNightPrefill('gn-1'), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    // Wait until the gamenight data has settled (prefill becomes non-null)
+    await waitFor(() => expect(result.current.prefill).not.toBeNull());
+
+    // Game fetch failed → fall back to freeform with no gameId
+    expect(result.current.prefill!.initialValues.gameType).toBe('freeform');
+    expect(result.current.prefill!.initialValues.gameId).toBeUndefined();
+    expect(result.current.prefill!.initialValues.gameName).toBe('');
+
+    // The gamenight-level fields and RSVP roster still map correctly
+    expect(result.current.prefill!.initialValues.location).toBe('Padova');
+    expect(result.current.prefill!.initialPlayers).toHaveLength(1);
+    expect(result.current.prefill!.initialPlayers[0]).toMatchObject({ name: 'Marco' });
+
+    // isError is false — only the gamenight fetch gates it
+    expect(result.current.isError).toBe(false);
+  });
+
   it('is inert when gameNightId is null', () => {
     const queryClient = createTestQueryClient();
     const { result } = renderHook(() => useGameNightPrefill(null), {

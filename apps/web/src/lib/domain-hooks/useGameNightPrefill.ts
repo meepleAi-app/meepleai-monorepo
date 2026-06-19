@@ -46,11 +46,17 @@ export function useGameNightPrefill(gameNightId: string | null) {
     enabled && (nightQ.isLoading || rsvpsQ.isLoading || (!!firstGameId && gameQ.isLoading));
   const isError = enabled && nightQ.isError;
 
+  // Only treat the game as successfully loaded when the data is actually
+  // present. If the fetch errored or was never triggered (no firstGameId),
+  // we fall back to freeform so the user can enter a name manually rather
+  // than surfacing a broken catalog state with an empty game name.
+  const hasGame = !!gameQ.data;
+
   const prefill: GameNightPrefill | null = nightQ.data
     ? {
         initialValues: {
-          gameType: firstGameId ? 'catalog' : 'freeform',
-          gameId: firstGameId ?? undefined,
+          gameType: hasGame ? 'catalog' : 'freeform',
+          gameId: hasGame ? firstGameId : undefined,
           // api.games.getById returns Game which has a `title` field
           gameName: gameQ.data?.title ?? '',
           sessionDate: new Date(nightQ.data.scheduledAt),

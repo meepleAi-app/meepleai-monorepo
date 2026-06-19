@@ -3,7 +3,7 @@
 **Date**: 2026-06-19
 **Branch**: `feature/issue-2389-block-b-renderer-wire-up`
 **Parent**: `main-dev`
-**Effort**: ~6-8h focused (1 day)
+**Effort**: ~7-9h focused (1 day) — includes spec-panel post-review fixes
 **Author**: Aaron Degrassi
 **Status**: Design approved — proceeding to implementation plan
 
@@ -15,7 +15,7 @@ Issue [#2389](https://github.com/meepleAi-app/meepleai-monorepo/issues/2389) is 
 
 - **Block A** (PR [#2428](https://github.com/meepleAi-app/meepleai-monorepo/pull/2428), merged 2026-06-17): store contract evolution + SignalR `ScoringConfigured` event + `useSessionScores` hook extension + `setScoringConfig` action + ESLint rule `local/no-store-scores-direct` (warn). No consumer wire-up.
 - **Block B** (this design): wire the polymorphic store selector into `SessionLiveView`'s read-only `ScoringPanelRenderer`, replacing the hardcoded `kind: 'Points'` adapter shipped by PR #2423 (G5a closure).
-- **Block C** (+14gg later): delete deprecated `scores: Record<string, number>` field + sweep all direct `state.scores` reads + i18n catalog completion.
+- **Block C** (+14 days after Block B merge to `main-dev`): delete deprecated `scores: Record<string, number>` field + sweep all direct `state.scores` reads + i18n catalog completion + ESLint rule promotion from `warn` to `error`. The 14-day buffer lets production telemetry confirm zero `scores` direct-read regressions before the field is removed.
 
 This document defines the Block B scope, design decisions, and implementation contract. The implementation plan is published separately at `docs/superpowers/plans/2026-06-19-issue-2389-block-b-renderer-wire-up.md` (per skill `superpowers:writing-plans`).
 
@@ -24,10 +24,11 @@ This document defines the Block B scope, design decisions, and implementation co
 **In-scope**:
 1. Wire polymorphic `scoringType` + `scoreData` from the live-session store into `SessionLiveView`'s `scoringPanelData` memo.
 2. Replace the hardcoded `kind: 'Points'` adapter (lines 947-959 of `SessionLiveView.tsx`) with a pure-function adapter handling all 4 `ScoreType` variants.
-3. Add a REST hydration `useEffect` that pre-populates `scoringType`/`scoreData` from `sessionQuery.data` on initial mount, closing the ~1-2s SignalR handshake gap.
-4. Gate the renderer mount on `scoringPanelData != null` (strict null gate per AC #2 of #2389).
+3. Add a REST hydration `useEffect` (with race guard + `console.warn` observability) that pre-populates `scoringType`/`scoreData` from `sessionQuery.data` on initial mount, closing the ~1-2s SignalR handshake gap.
+4. Gate the renderer mount on `scoringPanelData != null` with an accessible `aria-live` placeholder (not empty fragment).
 5. Hoist `MVP_OBJECTIVES_CATALOGUE` from `scores/page.tsx` to a shared lib module for editor + adapter co-consumption.
-6. Add unit tests for the adapter (~14 cases) and integration tests for `SessionLiveView` (+8 cases).
+6. Ship i18n key `pages.sessionLive.scoring.loadingLabel` (Italian default).
+7. Add unit tests for the adapter (~14 cases) and integration tests for `SessionLiveView` (+10 cases: 5 hydration including race-ordering, 2 null gate + a11y, 4 variant mount via action).
 
 **Out-of-scope (documented gaps)**:
 - `useUpdateSessionScores` mutation wire — `ScoringPanelRenderer` is read-only by design. Editor mutation belongs to `PolymorphicScoreEditor` swap, deferred to Block B+ follow-up.
@@ -59,15 +60,35 @@ Alternatives rejected:
 - Hoisting into `useSessionScores` hook would couple the hook to a renderer-specific shape.
 - Inline `useMemo` in `SessionLiveView` would inflate the orchestrator (already 1384 lines) with 4 switch cases and make testing harder.
 
-### DEC-3 — Null gate: REST hydration + strict null
+### DEC-3 — Null gate: REST hydration + strict null + a11y placeholder
 
-The strict null gate per AC #2 ("renderer non renderizza quando scoringType null") is correct, but only acceptable if the null window is short. Today the store's `scoringType` is populated only by `useSignalrSession` (SignalR `ScoringConfigured` event), which fires after the WebSocket handshake completes (~1-2s post-mount). Without mitigation, every session-live open shows an empty score tab for 1-2s.
+The strict null gate per AC #2 ("renderer non renderizza quando scoringType null") is correct, but only acceptable if (a) the null window is short and (b) the empty state is accessible. Today the store's `scoringType` is populated only by `useSignalrSession` (SignalR `ScoringConfigured` event), which fires after the WebSocket handshake completes (~1-2s post-mount). Without mitigation, every session-live open shows an empty score tab for 1-2s with no screen-reader announcement.
 
-**Mitigation**: a `useEffect` in `SessionLiveView` reads `sessionQuery.data?.scoringType` and `sessionQuery.data?.scoreData` (already exposed by Block A's BE evolution) and calls `setScoringConfig` to pre-populate the store. This closes the gap from ~1-2s to ~200-500ms (REST request latency).
+**Mitigation 1 — REST hydration**: a `useEffect` in `SessionLiveView` reads `sessionQuery.data?.scoringType` and `sessionQuery.data?.scoreData` (already exposed by Block A's BE evolution) and calls `setScoringConfig` to pre-populate the store. This closes the gap from ~1-2s to ~200-500ms (REST request latency).
 
-Subsequent SignalR `ScoringConfigured` pushes overwrite the REST-hydrated state — SignalR remains the authoritative live-update channel.
+**Mitigation 2 — race-ordering guard (post-spec-panel)**: REST and SignalR are independent channels with no ordering guarantee. If SignalR connects first and delivers a fresher `ScoringConfigured` before REST resolves, the naive `setScoringConfig(REST)` would overwrite SignalR with stale config — wrong direction. The `useEffect` therefore guards via a non-reactive store read:
 
-JSON.parse failure (malformed `scoreData` string) is silently swallowed; SignalR will deliver canonical state. No user-visible error.
+```typescript
+if (useLiveSessionStore.getState().scoringType != null) return;
+```
+
+REST hydration only runs when the store is virgin (initial mount). After that, SignalR is the exclusive write channel. This keeps the `setScoringConfig` action semantics unchanged (Block A frozen) while preventing the race.
+
+**Mitigation 3 — observability on malformed JSON (post-spec-panel)**: `JSON.parse(dto.scoreData)` failure is caught locally. Silent swallow is operationally opaque; if SignalR also fails (broken socket, BE down), the user sees empty forever with no dev-side signal. The catch logs a structured `console.warn` for browser devtools visibility and future Sentry breadcrumb pickup:
+
+```typescript
+} catch (err) {
+  console.warn('[#2389] malformed scoreData JSON, will rely on SignalR', {
+    sessionId: dto.id,
+    scoreDataLength: dto.scoreData?.length ?? 0,
+    err,
+  });
+}
+```
+
+**Mitigation 4 — a11y placeholder (post-spec-panel)**: when `scoringPanelData === null`, the score tab renders an `aria-live="polite"` placeholder ("Caricamento punteggi…") instead of an empty fragment. This announces the loading state to screen readers and removes the visual blank flash. Empty placeholder is applied both in desktop right column and mobile drawer score case. Uses i18n key `pages.sessionLive.scoring.loadingLabel` (new).
+
+Subsequent SignalR `ScoringConfigured` pushes are the exclusive authoritative channel post-hydration — they always overwrite store state via `setScoringConfig`.
 
 ### DEC-4 — Objectives catalogue: hoist MVP_OBJECTIVES_CATALOGUE
 
@@ -86,11 +107,12 @@ Real game-level catalogue wiring is deferred to a follow-up issue; the MVP const
 | NEW | `apps/web/src/lib/session-live/mvp-objectives-catalogue.ts` | ~10 |
 | NEW | `apps/web/src/lib/session-live/score-data-to-panel-data.ts` | ~90 |
 | NEW | `apps/web/src/lib/session-live/score-data-to-panel-data.test.ts` | ~180 (14 test) |
-| MOD | `apps/web/src/app/(authenticated)/sessions/[id]/live/_components/SessionLiveView.tsx` | ~30 lines (replace memo + add useEffect + selectors) |
-| MOD | `apps/web/src/app/(authenticated)/sessions/[id]/live/_components/SessionLiveView.test.tsx` | ~140 (+8 test) |
+| MOD | `apps/web/src/app/(authenticated)/sessions/[id]/live/_components/SessionLiveView.tsx` | ~50 lines (replace memo + add useEffect with race guard + selectors + 2× a11y placeholder + use `t('...loadingLabel')`) |
+| MOD | `apps/web/src/app/(authenticated)/sessions/[id]/live/_components/SessionLiveView.test.tsx` | ~180 (+10 test, includes race-ordering + a11y) |
 | MOD | `apps/web/src/app/(authenticated)/sessions/live/[sessionId]/scores/page.tsx` | ~3 lines (import path + remove inline constant) |
+| MOD | `apps/web/locales/<lang>/pages.json` (or i18n catalog location) | ~1 line (key `pages.sessionLive.scoring.loadingLabel`) |
 
-Total: ~3 new files, 3 modified files, ~450 lines net (mostly test code).
+Total: ~3 new files, 4 modified files, ~520 lines net (mostly test code).
 
 ### Adapter contract
 
@@ -140,14 +162,23 @@ export function mapScoreDataToPanelData(
    useEffect(() => {
      const dto = sessionQuery.data;
      if (dto?.scoringType == null || dto.scoreData == null) return;
+     // Race guard: SignalR may have hydrated first.
+     // Don't overwrite live state with potentially-stale REST snapshot.
+     if (useLiveSessionStore.getState().scoringType != null) return;
      try {
        const parsed = JSON.parse(dto.scoreData) as ScoreDataByType[ScoreType];
        setScoringConfig({
          scoringType: dto.scoringType as ScoreType,
          scoreData: parsed,
        });
-     } catch {
-       // Malformed JSON: skip. SignalR will deliver canonical state.
+     } catch (err) {
+       // Observability: malformed JSON is rare but operationally opaque.
+       // SignalR will deliver canonical state if the channel is healthy.
+       console.warn('[#2389] malformed scoreData JSON, will rely on SignalR', {
+         sessionId: dto.id,
+         scoreDataLength: dto.scoreData?.length ?? 0,
+         err,
+       });
      }
    }, [sessionQuery.data, setScoringConfig]);
    ```
@@ -168,8 +199,19 @@ export function mapScoreDataToPanelData(
 
 5. Gate renderer mount in desktop right column (line 1242-1244):
    ```typescript
-   {tab === 'score' && scoringPanelData != null && (
-     <ScoringPanelRenderer data={scoringPanelData} labels={scoringPanelLabels} className="p-3" />
+   {tab === 'score' && (
+     scoringPanelData != null ? (
+       <ScoringPanelRenderer data={scoringPanelData} labels={scoringPanelLabels} className="p-3" />
+     ) : (
+       <div
+         role="status"
+         aria-live="polite"
+         data-slot="scoring-panel-empty"
+         className="p-3 text-xs text-muted-foreground"
+       >
+         {t('pages.sessionLive.scoring.loadingLabel')}
+       </div>
+     )
    )}
    ```
 
@@ -179,8 +221,19 @@ export function mapScoreDataToPanelData(
    default:
      return scoringPanelData != null ? (
        <ScoringPanelRenderer data={scoringPanelData} labels={scoringPanelLabels} className="p-2" />
-     ) : null;
+     ) : (
+       <div
+         role="status"
+         aria-live="polite"
+         data-slot="scoring-panel-empty"
+         className="p-2 text-xs text-muted-foreground"
+       >
+         {t('pages.sessionLive.scoring.loadingLabel')}
+       </div>
+     );
    ```
+
+7. Add i18n key `pages.sessionLive.scoring.loadingLabel` to the labels resource bundle (default Italian: "Caricamento punteggi…"). Hoist label into `scoringPanelLabels` is unnecessary because the placeholder lives in SessionLiveView, not inside `ScoringPanelRenderer`.
 
 ### Backward compatibility
 
@@ -204,24 +257,71 @@ export function mapScoreDataToPanelData(
 
 ### Integration tests: `SessionLiveView.test.tsx` extension
 
-8 new cases, additive to existing 67+:
+10 new cases (8 original + 2 post-spec-panel), additive to existing 67+:
 
 | Group | Cases | Notes |
 |-------|-------|-------|
-| REST hydration | 3 | DTO with config / malformed JSON / legacy session no config |
-| Null gate | 1 | scoringType null → empty score tab |
-| Variant mount | 4 | Per-ScoreType: assert `data-slot="scoring-panel-{kind}"` mounted |
+| REST hydration | 5 | DTO with config / malformed JSON (asserts `console.warn`) / legacy session no config / **race-ordering: SignalR hydrated first, REST is no-op** / **DTO partial: scoringType set but scoreData null** |
+| Null gate + a11y | 2 | scoringType null → `data-slot="scoring-panel-empty"` rendered with `role="status"` `aria-live="polite"` / loading label text from i18n key |
+| Variant mount | 4 | Per-ScoreType: assert `data-slot="scoring-panel-{kind}"` mounted via `act(() => store.setScoringConfig({...}))` (use the action, not `setState` shortcut, for fidelity) |
 
-Mock pattern for variant tests:
+Mock pattern for variant tests (use the action, not `setState`, for fidelity to the real SignalR flow):
 ```typescript
-useLiveSessionStore.setState({
-  scoringType: 'Points',
-  scoreData: { scores: [{ playerId: 'p1', points: 10 }] },
+import { act } from '@testing-library/react';
+import { useLiveSessionStore } from '@/lib/stores/live-session-store';
+
+it('mounts Points renderer when scoringType=Points', () => {
+  render(<SessionLiveView />);
+  act(() => {
+    useLiveSessionStore.getState().setScoringConfig({
+      scoringType: 'Points',
+      scoreData: { scores: [{ playerId: 'p1', points: 10 }] },
+    });
+  });
+  expect(
+    document.querySelector('[data-slot="scoring-panel-points"]')
+  ).toBeInTheDocument();
 });
-render(<SessionLiveView />);
-expect(
-  screen.getByTestId('scoring-panel-renderer').querySelector('[data-slot="scoring-panel-points"]')
-).toBeInTheDocument();
+```
+
+Mock pattern for race-ordering test:
+```typescript
+it('does not overwrite SignalR-hydrated store on later REST resolve', async () => {
+  // SignalR hydrates first
+  act(() => {
+    useLiveSessionStore.getState().setScoringConfig({
+      scoringType: 'Points',
+      scoreData: { scores: [{ playerId: 'p1', points: 99 }] },
+    });
+  });
+  // Mock REST resolves with stale snapshot
+  mockUseSession.mockReturnValue({
+    data: { id: 's1', scoringType: 'Points', scoreData: '{"scores":[{"playerId":"p1","points":0}]}' },
+    isSuccess: true,
+  });
+  render(<SessionLiveView />);
+  // Assert: store retains SignalR data, NOT REST data
+  expect(useLiveSessionStore.getState().scoreData).toEqual({
+    scores: [{ playerId: 'p1', points: 99 }],
+  });
+});
+```
+
+Mock pattern for malformed JSON test:
+```typescript
+it('logs console.warn on malformed scoreData JSON', async () => {
+  const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  mockUseSession.mockReturnValue({
+    data: { id: 's1', scoringType: 'Points', scoreData: 'not-valid-json' },
+    isSuccess: true,
+  });
+  render(<SessionLiveView />);
+  expect(warnSpy).toHaveBeenCalledWith(
+    expect.stringContaining('[#2389]'),
+    expect.objectContaining({ sessionId: 's1' })
+  );
+  warnSpy.mockRestore();
+});
 ```
 
 ### Regression
@@ -240,11 +340,12 @@ High-level sequence:
 | T1 | PREP | Hoist `MVP_OBJECTIVES_CATALOGUE` to lib module |
 | T2 | RED | Adapter test scaffold (14 RED tests) |
 | T3 | GREEN | Adapter pure function implementation |
-| T4 | RED | SessionLiveView wire test scaffold (8 RED) |
-| T5 | GREEN | Wire REST hydration + adapter |
-| T6 | QA | typecheck + lint sweep |
-| T7 | DOC | CLAUDE.md + tracking issues filed |
-| T8 | PR | Push + open PR to main-dev |
+| T4 | RED | SessionLiveView wire test scaffold (10 RED, includes race-ordering + a11y) |
+| T5 | GREEN | Wire REST hydration (with race guard + `console.warn`) + adapter + a11y placeholder |
+| T6 | DOC | i18n key for loading label + Italian default |
+| T7 | QA | typecheck + lint sweep |
+| T8 | DOC | CLAUDE.md update + file 4 tracking follow-up issues on GitHub |
+| T9 | PR | Push + open PR to main-dev |
 
 ## Follow-up
 
@@ -259,21 +360,34 @@ Tracked as separate issues to be filed after Block B merge:
 
 | Risk | Likelihood | Mitigation |
 |------|-----------|------------|
-| REST hydration race with SignalR `ScoringConfigured` | Low | SignalR overwrites unconditionally; semantically convergent. |
-| `JSON.parse(scoreData)` malformed | Low | try/catch swallows; SignalR delivers canonical state. |
+| REST hydration race with SignalR `ScoringConfigured` | Low | `useLiveSessionStore.getState().scoringType != null` guard in `useEffect` skips hydration if SignalR already populated (DEC-3 Mitigation 2). |
+| `JSON.parse(scoreData)` malformed → opaque failure | Low | `console.warn` with sessionId + length + err for browser devtools visibility; SignalR delivers canonical state (DEC-3 Mitigation 3). |
+| Empty score tab has no screen-reader announcement | Medium | `role="status" aria-live="polite"` placeholder with loading label (DEC-3 Mitigation 4). |
 | ESLint rule `local/no-store-scores-direct` flags new direct selectors | None | Rule only targets `s.scores` reads, not `s.scoringType` / `s.scoreData`. |
-| `activeSession.players` vs store `players` divergence affects adapter output | Low | Block A explicitly accepts this divergence during deprecation window. |
-| Existing 67+ tests regress on `useLiveSessionStore` state pollution | Medium | Add `beforeEach` reset to default null state in `SessionLiveView.test.tsx`. |
+| `activeSession.players` vs store `players` divergence affects adapter output | Low | `activeSession.players` is master list (REST+SSE composed) — Block C consolidates onto store source-of-truth. |
+| Existing 67+ tests regress on `useLiveSessionStore` state pollution | Medium | Add `beforeEach` reset to default null state in `SessionLiveView.test.tsx` (T4 scaffold responsibility). |
+| Adapter signature `options.availableObjectives` evolves to support real catalogue | Low | Optional parameter is forward-compat; current MVP_OBJECTIVES_CATALOGUE stays as default until real catalogue wires (follow-up #3). |
 
 ## Acceptance criteria (Block B specific)
 
+**Functional**:
 - [ ] `score-data-to-panel-data.ts` adapter shipped with 14 passing unit tests.
+- [ ] Adapter documents and tests padding defaults per variant: Points→0, Ranking→players.length, BinaryWin→false, Objectives→[].
 - [ ] `SessionLiveView.tsx` consumes adapter via `useMemo`; hardcoded `kind: 'Points'` removed.
 - [ ] REST hydration `useEffect` pre-populates store from `sessionQuery.data` when `scoringType`+`scoreData` present.
-- [ ] Both desktop right column and mobile drawer gate renderer on `scoringPanelData != null`.
+- [ ] REST hydration guards via `useLiveSessionStore.getState().scoringType != null` race check (does not overwrite SignalR).
+- [ ] `JSON.parse(scoreData)` catch path emits structured `console.warn` with sessionId + length + err.
+- [ ] Score tab `null` state renders accessible placeholder (`role="status" aria-live="polite"` with loading label), not empty fragment.
+- [ ] Both desktop right column and mobile drawer apply the same null gate + placeholder.
 - [ ] `MVP_OBJECTIVES_CATALOGUE` hoisted to `lib/session-live/`; editor (`scores/page.tsx`) import updated.
+- [ ] New i18n key `pages.sessionLive.scoring.loadingLabel` shipped (Italian default).
+
+**Tests**:
 - [ ] All 67+ existing `SessionLiveView.test.tsx` cases pass.
-- [ ] 8 new `SessionLiveView.test.tsx` cases pass (3 hydration + 1 null gate + 4 variant mount).
+- [ ] 10 new `SessionLiveView.test.tsx` cases pass (5 hydration including race-ordering + DTO partial + 2 null gate / a11y + 4 variant mount via action).
+
+**Definition of Done** (process):
 - [ ] `pnpm typecheck` and `pnpm lint` clean (no new errors or warnings).
 - [ ] PR opened to `main-dev` with title `feat(session-live): #2389 Block B — scoringType selector wire-up`.
-- [ ] Follow-up issues filed for Block B+ editor swap, EndgameDialog adapter, real Objectives catalogue.
+- [ ] 4 follow-up tracking issues filed before PR opens (Block B+ editor swap, EndgameDialog adapter, real Objectives catalogue, legacy participant score endpoint deprecation).
+- [ ] CLAUDE.md updated with "Session live shell (epic #2354) → #2389 Block B" entry.

@@ -217,6 +217,7 @@ export function ScoreTabContent(props: ScoreTabContentProps): ReactElement {
     // Whole `mutation` would change identity on pending/idle flips, forcing
     // handleMutationError → submitMutation → debouncedSubmit recreation
     // mid-edit and potentially dropping in-flight debounced calls.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mutation.mutate is stable per TanStack Query v5
     [t, mutation.mutate, setRateLimitedUntil]
   );
 
@@ -234,6 +235,7 @@ export function ScoreTabContent(props: ScoreTabContentProps): ReactElement {
         onError: err => handleMutationError(err, payload),
       });
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mutation.mutate is stable per TanStack Query v5
     [mutation.mutate, handleMutationError]
   );
 

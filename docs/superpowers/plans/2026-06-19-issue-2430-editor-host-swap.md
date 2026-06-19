@@ -298,6 +298,14 @@ Also remove `useEffect`, `useRef` from the React import on line 15 if they are n
 import { useDebouncedCallback } from '@/lib/session-live/use-debounced-callback';
 ```
 
+**Verify atomicity** (B1 from plan review): apply all three edits (delete inline, add import, update callsite) in the same session before saving. After deleting the inline definition, confirm zero residue:
+
+```bash
+grep -c 'function useDebouncedCallback' "apps/web/src/app/(authenticated)/sessions/live/[sessionId]/scores/page.tsx"
+```
+
+Expected output: `0`. If non-zero, the inline helper was not fully deleted — keep editing until it returns 0.
+
 **Update** the callsite. Find:
 
 ```typescript
@@ -544,6 +552,11 @@ vi.mock('sonner', () => ({
     error: (msg: string, opts?: unknown) => toastErrorMock(msg, opts),
     warning: (msg: string, opts?: unknown) => toastWarningMock(msg, opts),
     success: (msg: string, opts?: unknown) => toastSuccessMock(msg, opts),
+    // future-proof: T7 doesn't use dismiss today, but adding it as a no-op
+    // prevents "toast.dismiss is not a function" if a later iteration adds
+    // explicit toast dismissal (e.g. clear forbidden toast when role
+    // re-evaluates).
+    dismiss: vi.fn(),
   },
 }));
 
@@ -1382,13 +1395,15 @@ export function ScoreTabContent(props: ScoreTabContentProps): ReactElement {
   // Mutation
   const mutation = useUpdateSessionScores();
 
-  // Refs (unmount safety + retry payload + role tracking)
+  // Refs (unmount safety + retry payload).
+  // Note: `isMountedRef` is sufficient to guard against post-unmount setState
+  // (includes the host-transfer mid-mutation case — when role flips Host →
+  // Player, the editor branch unmounts via parent reconciliation, the flush
+  // effect (below) fires with viewerRole dep change, and `isMountedRef`
+  // ensures the resulting 403 error handler skips toast/setState.
+  // No `viewerRoleRef` needed — earlier draft had one as dead code.
   const isMountedRef = useRef(true);
   const lastPayloadRef = useRef<UpdateSessionScoresPayload | null>(null);
-  const viewerRoleRef = useRef(viewerRole);
-  useEffect(() => {
-    viewerRoleRef.current = viewerRole;
-  });
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -1488,10 +1503,16 @@ export function ScoreTabContent(props: ScoreTabContentProps): ReactElement {
           break;
       }
     },
-    [t, intl.messages, mutation, setRateLimitedUntil]
+    // `mutation.mutate` is referentially stable across renders (TanStack Query
+    // guarantee), so depending on it instead of the whole `mutation` object
+    // avoids re-creating handleMutationError on every isPending flip.
+    [t, intl.messages, mutation.mutate, setRateLimitedUntil]
   );
 
-  // Debounced mutation dispatch
+  // Debounced mutation dispatch.
+  // Note: hook-level `useUpdateSessionScores.onSuccess` invalidates queries;
+  // the inline `onSuccess` below ADDS the local-override clear — both fire
+  // (TanStack Query v5 merges callbacks rather than replacing).
   const submitMutation = useCallback(
     (payload: UpdateSessionScoresPayload) => {
       lastPayloadRef.current = payload;
@@ -1503,17 +1524,22 @@ export function ScoreTabContent(props: ScoreTabContentProps): ReactElement {
         onError: err => handleMutationError(err, payload),
       });
     },
-    [mutation, handleMutationError]
+    [mutation.mutate, handleMutationError]
   );
 
   const [debouncedSubmit, flush] = useDebouncedCallback(submitMutation, 500);
 
-  // Flush-on-unmount (DEC-4)
+  // Flush-on-unmount + flush-on-role-change (DEC-4).
+  // Dep array includes `viewerRole` so the cleanup ALSO fires when the
+  // component stays mounted but reconciles between editor/renderer branches
+  // (e.g., host transfer mid-edit). Without `viewerRole` in deps, the cleanup
+  // would only fire on full unmount, leaving the pending debounce orphaned
+  // during in-tree role transitions.
   useEffect(() => {
     return () => {
       flush();
     };
-  }, [flush]);
+  }, [viewerRole, flush]);
 
   // onChange handler for the editor: optimistic UI + debounced submit
   const handleScoreChange = useCallback(
@@ -1601,6 +1627,8 @@ If some tests fail, fix the implementation, NOT the tests. Common causes:
 - `data-disabled` attribute on the mock editor not flipping → check `disabled` prop wiring
 - 429 countdown setRateLimitedUntil missing → check error matrix
 - Retry button onClick not re-invoking mutate → check `mutation.mutate(payload, ...)` in retry action
+
+**Exception**: if a test assertion uses a wrong string literal (e.g., `'score-4xx'` vs `'score-5xx'` as toast `id`, or a typo in an i18n key), the test assertion is at fault. Fix the test, not the implementation. The rule is "fix the side that diverges from the spec" — usually the impl, occasionally a typo in the test.
 
 - [ ] **Step 7.4: Commit**
 

@@ -9,6 +9,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.PlayRecords;
 /// </summary>
 internal record UpdatePlayRecordCommand(
     Guid RecordId,
+    Guid UserId,
     DateTime? SessionDate = null,
     string? Notes = null,
     string? Location = null

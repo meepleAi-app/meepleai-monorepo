@@ -1,4 +1,5 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.PlayRecords;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
@@ -15,15 +16,18 @@ internal class UpdatePlayRecordCommandHandler : ICommandHandler<UpdatePlayRecord
     private readonly IPlayRecordRepository _recordRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _timeProvider;
+    private readonly PlayRecordPermissionChecker _permissionChecker;
 
     public UpdatePlayRecordCommandHandler(
         IPlayRecordRepository recordRepository,
         IUnitOfWork unitOfWork,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        PlayRecordPermissionChecker permissionChecker)
     {
         _recordRepository = recordRepository ?? throw new ArgumentNullException(nameof(recordRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _permissionChecker = permissionChecker ?? throw new ArgumentNullException(nameof(permissionChecker));
     }
 
     public async Task Handle(UpdatePlayRecordCommand command, CancellationToken cancellationToken)
@@ -33,6 +37,11 @@ internal class UpdatePlayRecordCommandHandler : ICommandHandler<UpdatePlayRecord
         var record = await _recordRepository.GetByIdAsync(command.RecordId, cancellationToken)
             .ConfigureAwait(false)
             ?? throw new NotFoundException("PlayRecord", command.RecordId.ToString());
+
+        if (!await _permissionChecker.CanEditAsync(command.UserId, command.RecordId, cancellationToken).ConfigureAwait(false))
+        {
+            throw new ForbiddenException("You do not have permission to edit this play record.");
+        }
 
         record.UpdateDetails(
             command.SessionDate,

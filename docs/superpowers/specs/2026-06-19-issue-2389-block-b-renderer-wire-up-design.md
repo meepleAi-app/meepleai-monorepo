@@ -28,7 +28,7 @@ This document defines the Block B scope, design decisions, and implementation co
 4. Gate the renderer mount on `scoringPanelData != null` with an accessible `aria-live` placeholder (not empty fragment).
 5. Hoist `MVP_OBJECTIVES_CATALOGUE` from `scores/page.tsx` to a shared lib module for editor + adapter co-consumption.
 6. Ship i18n key `pages.sessionLive.scoring.loadingLabel` (Italian default).
-7. Add unit tests for the adapter (~14 cases) and integration tests for `SessionLiveView` (+10 cases: 5 hydration including race-ordering, 2 null gate + a11y, 4 variant mount via action).
+7. Add unit tests for the adapter (~14 cases) and integration tests for `SessionLiveView` (+11 cases: 5 hydration including race-ordering, 2 null gate + a11y, 4 variant mount via action).
 
 **Out-of-scope (documented gaps)**:
 - `useUpdateSessionScores` mutation wire — `ScoringPanelRenderer` is read-only by design. Editor mutation belongs to `PolymorphicScoreEditor` swap, deferred to Block B+ follow-up.
@@ -257,7 +257,7 @@ export function mapScoreDataToPanelData(
 
 ### Integration tests: `SessionLiveView.test.tsx` extension
 
-10 new cases (8 original + 2 post-spec-panel), additive to existing 67+:
+11 new cases (5 + 2 + 4), additive to existing 67+ (total green: 78+):
 
 | Group | Cases | Notes |
 |-------|-------|-------|
@@ -384,7 +384,7 @@ Tracked as separate issues to be filed after Block B merge:
 
 **Tests**:
 - [ ] All 67+ existing `SessionLiveView.test.tsx` cases pass.
-- [ ] 10 new `SessionLiveView.test.tsx` cases pass (5 hydration including race-ordering + DTO partial + 2 null gate / a11y + 4 variant mount via action).
+- [ ] 11 new `SessionLiveView.test.tsx` cases pass (5 hydration including race-ordering + DTO partial + 2 null gate / a11y + 4 variant mount via action).
 
 **Definition of Done** (process):
 - [ ] `pnpm typecheck` and `pnpm lint` clean (no new errors or warnings).

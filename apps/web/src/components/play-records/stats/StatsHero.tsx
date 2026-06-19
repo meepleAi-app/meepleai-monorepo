@@ -89,7 +89,10 @@ export function StatsHero({ stats }: StatsHeroProps) {
   const isEmpty = stats.totalSessions === 0;
 
   return (
-    <header className="border-b border-border bg-gradient-to-r from-entity-session/8 via-entity-game/5 to-entity-toolkit/6 px-4 py-6 md:px-8 md:py-8">
+    <section
+      aria-label={t('playRecords.stats.badge.statistics')}
+      className="border-b border-border bg-gradient-to-r from-entity-session/8 via-entity-game/5 to-entity-toolkit/6 px-4 py-6 md:px-8 md:py-8"
+    >
       {/* Subtitle badge */}
       <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-entity-session/25 bg-entity-session/12 px-3 py-1.5">
         <span aria-hidden="true">🎯</span>
@@ -140,6 +143,6 @@ export function StatsHero({ stats }: StatsHeroProps) {
           entity="player"
         />
       </div>
-    </header>
+    </section>
   );
 }

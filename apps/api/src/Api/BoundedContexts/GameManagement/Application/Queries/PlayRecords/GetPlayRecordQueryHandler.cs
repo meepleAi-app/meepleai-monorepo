@@ -35,6 +35,12 @@ internal class GetPlayRecordQueryHandler : IQueryHandler<GetPlayRecordQuery, Pla
         if (entity == null)
             throw new NotFoundException("PlayRecord", query.RecordId.ToString());
 
+        if (entity.CreatedByUserId != query.UserId
+            && !entity.Players.Any(p => p.UserId == query.UserId))
+        {
+            throw new ForbiddenException("You do not have permission to view this play record.");
+        }
+
         // Deserialize outside expression tree to avoid optional parameter issues
         var scoringConfig = System.Text.Json.JsonSerializer.Deserialize<SessionScoringConfigDto>(entity.ScoringConfigJson)
             ?? new SessionScoringConfigDto(new List<string>(), new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));

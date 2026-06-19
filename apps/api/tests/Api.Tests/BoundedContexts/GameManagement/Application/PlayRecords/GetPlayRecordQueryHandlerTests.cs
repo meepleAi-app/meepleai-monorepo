@@ -49,7 +49,7 @@ public class GetPlayRecordQueryHandlerTests : IDisposable
         _context.PlayRecords.Add(entity);
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        var query = new GetPlayRecordQuery(recordId);
+        var query = new GetPlayRecordQuery(recordId, entity.CreatedByUserId);
 
         // Act
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
@@ -75,7 +75,7 @@ public class GetPlayRecordQueryHandlerTests : IDisposable
         _context.PlayRecords.Add(entity);
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        var query = new GetPlayRecordQuery(recordId);
+        var query = new GetPlayRecordQuery(recordId, entity.CreatedByUserId);
 
         // Act
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
@@ -103,7 +103,7 @@ public class GetPlayRecordQueryHandlerTests : IDisposable
         _context.PlayRecords.Add(entity);
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        var query = new GetPlayRecordQuery(recordId);
+        var query = new GetPlayRecordQuery(recordId, entity.CreatedByUserId);
 
         // Act
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
@@ -128,7 +128,7 @@ public class GetPlayRecordQueryHandlerTests : IDisposable
         _context.PlayRecords.Add(entity);
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        var query = new GetPlayRecordQuery(recordId);
+        var query = new GetPlayRecordQuery(recordId, entity.CreatedByUserId);
 
         // Act
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
@@ -153,7 +153,7 @@ public class GetPlayRecordQueryHandlerTests : IDisposable
         _context.PlayRecords.Add(entity);
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        var query = new GetPlayRecordQuery(recordId);
+        var query = new GetPlayRecordQuery(recordId, entity.CreatedByUserId);
 
         // Act
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
@@ -177,7 +177,7 @@ public class GetPlayRecordQueryHandlerTests : IDisposable
         _context.PlayRecords.Add(entity);
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        var query = new GetPlayRecordQuery(recordId);
+        var query = new GetPlayRecordQuery(recordId, entity.CreatedByUserId);
 
         // Act
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
@@ -190,11 +190,52 @@ public class GetPlayRecordQueryHandlerTests : IDisposable
     public async Task Handle_RecordNotFound_ThrowsNotFoundException()
     {
         // Arrange
-        var query = new GetPlayRecordQuery(Guid.NewGuid());
+        var query = new GetPlayRecordQuery(Guid.NewGuid(), Guid.NewGuid());
 
         // Act & Assert
         var act = () => _handler.Handle(query, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task Handle_UserIsNeitherCreatorNorPlayer_ThrowsForbiddenException()
+    {
+        // Arrange — record owned by someone else, requester is not a player
+        var ownerId = Guid.NewGuid();
+        var requesterId = Guid.NewGuid();
+        var record = MakePlayRecord(Guid.NewGuid());
+        record.CreatedByUserId = ownerId;
+        _context.PlayRecords.Add(record);
+        await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var query = new GetPlayRecordQuery(record.Id, requesterId);
+
+        // Act & Assert
+        var act = () => _handler.Handle(query, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
+    [Fact]
+    public async Task Handle_UserIsAPlayer_ReturnsRecord()
+    {
+        // Arrange — requester is linked as a player (not the creator)
+        var requesterId = Guid.NewGuid();
+        var record = MakePlayRecord(Guid.NewGuid());
+        record.CreatedByUserId = Guid.NewGuid();
+        var player = MakePlayer(Guid.NewGuid(), record.Id, ("points", 10));
+        player.UserId = requesterId;
+        record.Players.Add(player);
+        _context.PlayRecords.Add(record);
+        await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var query = new GetPlayRecordQuery(record.Id, requesterId);
+
+        // Act
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Id.Should().Be(record.Id);
     }
 
     #region Test Helpers

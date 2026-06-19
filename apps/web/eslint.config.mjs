@@ -288,7 +288,7 @@ export default [
       // @/lib/domain-hooks/useSessionScores. Severity is `warn` so the legacy
       // call in ScoreBoard.tsx surfaces without breaking CI; Block C will
       // migrate ScoreBoard, promote to `error`, then remove the store field.
-      "local/no-store-scores-direct": "warn",
+      "local/no-store-scores-direct": "error",
     },
     settings: {
       react: {

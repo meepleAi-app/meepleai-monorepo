@@ -56,8 +56,6 @@ interface LiveSessionState {
   currentTurn: number;
   currentPhase: string | null;
   players: PlayerInfo[];
-  /** @deprecated #2389 Block A — derive from `scoreData` when `scoringType === 'Points'`. */
-  scores: Record<string, number>;
   scoringType: ScoreType | null;
   scoreData: ScoreDataByType[ScoreType] | null;
   /**
@@ -82,7 +80,6 @@ interface LiveSessionState {
     scoreData: ScoreDataByType[T];
   }) => void;
   setRateLimitedUntil: (ts: number | null) => void;
-  updateScore: (playerName: string, score: number) => void;
   addProposal: (proposal: ScoreProposal) => void;
   resolveProposal: (proposalId: string, accepted: boolean) => void;
   addDispute: (dispute: RuleDispute) => void;
@@ -96,7 +93,6 @@ const initialState: Omit<
   | 'setSession'
   | 'setScoringConfig'
   | 'setRateLimitedUntil'
-  | 'updateScore'
   | 'addProposal'
   | 'resolveProposal'
   | 'addDispute'
@@ -110,7 +106,6 @@ const initialState: Omit<
   currentTurn: 1,
   currentPhase: null,
   players: [],
-  scores: {},
   scoringType: null,
   scoreData: null,
   rateLimitedUntil: null,
@@ -133,15 +128,6 @@ export const useLiveSessionStore = create<LiveSessionState>()(
 
       setRateLimitedUntil: ts => set({ rateLimitedUntil: ts }, false, 'setRateLimitedUntil'),
 
-      updateScore: (playerName, score) =>
-        set(
-          state => ({
-            scores: { ...state.scores, [playerName]: score },
-          }),
-          false,
-          'updateScore'
-        ),
-
       addProposal: proposal =>
         set(
           state => ({
@@ -151,25 +137,20 @@ export const useLiveSessionStore = create<LiveSessionState>()(
           'addProposal'
         ),
 
-      resolveProposal: (proposalId, accepted) => {
+      /**
+       * Removes a proposal from the pending queue. The `accepted` flag is
+       * preserved on the signature for SignalR adapter compatibility, but
+       * Block C (#2389) no longer mutates a legacy `scores` map here —
+       * actual score application lives in the polymorphic `scoreData`
+       * pipeline (see `PolymorphicScoreEditor` + `UpdateSessionScoresCommand`).
+       */
+      resolveProposal: (proposalId, _accepted) => {
         const proposal = get().pendingProposals.find(p => p.id === proposalId);
         if (!proposal) return;
-
         set(
-          state => {
-            const pendingProposals = state.pendingProposals.filter(p => p.id !== proposalId);
-            if (!accepted) {
-              return { pendingProposals };
-            }
-            const currentScore = state.scores[proposal.playerName] ?? 0;
-            return {
-              pendingProposals,
-              scores: {
-                ...state.scores,
-                [proposal.playerName]: currentScore + proposal.delta,
-              },
-            };
-          },
+          state => ({
+            pendingProposals: state.pendingProposals.filter(p => p.id !== proposalId),
+          }),
           false,
           'resolveProposal'
         );

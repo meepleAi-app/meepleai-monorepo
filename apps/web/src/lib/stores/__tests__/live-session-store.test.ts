@@ -49,4 +49,43 @@ describe('useLiveSessionStore — Block A #2389 contract evolution', () => {
     useLiveSessionStore.getState().setRateLimitedUntil(null);
     expect(useLiveSessionStore.getState().rateLimitedUntil).toBeNull();
   });
+
+  // Block C cleanup (#2389): legacy `scores` map + `updateScore` action removed.
+  it('exposes no legacy `scores` field on the store', () => {
+    expect((useLiveSessionStore.getState() as Record<string, unknown>).scores).toBeUndefined();
+  });
+
+  it('exposes no `updateScore` action on the store', () => {
+    expect((useLiveSessionStore.getState() as Record<string, unknown>).updateScore).toBeUndefined();
+  });
+
+  it('resolveProposal removes the proposal without touching any scores field', () => {
+    const store = useLiveSessionStore.getState();
+    store.addProposal({ id: 'pr1', playerName: 'Alice', delta: 5, timestamp: Date.now() });
+    store.addProposal({ id: 'pr2', playerName: 'Bob', delta: 3, timestamp: Date.now() });
+
+    expect(useLiveSessionStore.getState().pendingProposals).toHaveLength(2);
+
+    // Resolve accepted=true — must NOT throw even though there is no `scores` map any more
+    useLiveSessionStore.getState().resolveProposal('pr1', true);
+    expect(useLiveSessionStore.getState().pendingProposals).toEqual([
+      expect.objectContaining({ id: 'pr2' }),
+    ]);
+    expect((useLiveSessionStore.getState() as Record<string, unknown>).scores).toBeUndefined();
+
+    // Resolve accepted=false — also must not regress
+    useLiveSessionStore.getState().resolveProposal('pr2', false);
+    expect(useLiveSessionStore.getState().pendingProposals).toEqual([]);
+  });
+
+  it('resolveProposal is a no-op when the proposalId is unknown', () => {
+    useLiveSessionStore.getState().addProposal({
+      id: 'pr1',
+      playerName: 'Alice',
+      delta: 5,
+      timestamp: Date.now(),
+    });
+    useLiveSessionStore.getState().resolveProposal('unknown-id', true);
+    expect(useLiveSessionStore.getState().pendingProposals).toHaveLength(1);
+  });
 });

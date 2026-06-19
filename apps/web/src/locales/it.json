@@ -3222,7 +3222,44 @@
         "validationFailedTemplate": "Validazione fallita: {message}",
         "serverErrorToast": "Errore server, riprova",
         "networkErrorToast": "Connessione persa, riprova",
-        "retryCta": "Riprova"
+        "retryCta": "Riprova",
+        "scoreAriaTemplate": "Punteggio di {name}",
+        "rankAriaTemplate": "Posizione di {name}",
+        "firstPlaceBadgeLabel": "primo posto",
+        "outcomeAriaTemplate": "{name}: {result}",
+        "completedAriaTemplate": "Completati da {name}",
+        "doneAriaTemplate": "{label} (completato)",
+        "pendingAriaTemplate": "{label} (non completato)",
+        "points": {
+          "title": "Punteggi",
+          "leaderLabel": "in testa",
+          "columns": {
+            "player": "Giocatore",
+            "score": "Punteggio"
+          }
+        },
+        "ranking": {
+          "title": "Posizioni",
+          "columns": {
+            "rank": "Posizione",
+            "player": "Giocatore",
+            "score": "Punteggio"
+          }
+        },
+        "binaryWin": {
+          "title": "Esito",
+          "winLabel": "Vince",
+          "loseLabel": "Perde",
+          "pendingLabel": "Partita in corso"
+        },
+        "objectives": {
+          "title": "Obiettivi",
+          "completedLabel": "Completato",
+          "pendingLabel": "In attesa",
+          "columns": {
+            "player": "Giocatore"
+          }
+        }
       },
       "actionLog": {
         "title": "Eventi",

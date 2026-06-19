@@ -740,49 +740,43 @@ export function SessionLiveView(): ReactElement {
   }, [t, intl.messages, activeSession?.players.length]);
 
   // G5a #2375: ScoringPanelRenderer labels (polymorphic Points/Ranking/BinaryWin/Objectives).
+  // Block C #2389 T6 — migrate to nested catalog keys; inline italian fallbacks removed.
+  // Aria templates still use `intl.messages[...]` direct access (not `t()`) because they
+  // contain `{name}`/`{label}` placeholders that are runtime string-replaced downstream;
+  // ICU `t()` would consume those braces. Aria-template catalog keys are not yet bundled
+  // (follow-up tracked: see T6 report).
   const scoringPanelLabels = useMemo<ScoringPanelRendererLabels>(
     (): ScoringPanelRendererLabels => ({
       points: {
-        heading: t('pages.sessionLive.scoring.title'),
-        scoreAriaTemplate:
-          (intl.messages['pages.sessionLive.scoring.scoreAriaTemplate'] as string) ??
-          'Punteggio di {name}',
-        leaderBadgeLabel:
-          (intl.messages['pages.sessionLive.scoring.leaderBadgeLabel'] as string) ?? 'in testa',
+        heading: t('pages.sessionLive.scoring.points.title'),
+        scoreAriaTemplate: intl.messages['pages.sessionLive.scoring.scoreAriaTemplate'] as string,
+        leaderBadgeLabel: t('pages.sessionLive.scoring.points.leaderLabel'),
       },
       ranking: {
-        heading:
-          (intl.messages['pages.sessionLive.scoring.rankingHeading'] as string) ?? 'Posizioni',
-        rankAriaTemplate:
-          (intl.messages['pages.sessionLive.scoring.rankAriaTemplate'] as string) ??
-          'Posizione di {name}',
-        firstPlaceBadgeLabel:
-          (intl.messages['pages.sessionLive.scoring.firstPlaceBadgeLabel'] as string) ??
-          'primo posto',
+        heading: t('pages.sessionLive.scoring.ranking.title'),
+        rankAriaTemplate: intl.messages['pages.sessionLive.scoring.rankAriaTemplate'] as string,
+        firstPlaceBadgeLabel: intl.messages[
+          'pages.sessionLive.scoring.firstPlaceBadgeLabel'
+        ] as string,
       },
       binaryWin: {
-        heading: (intl.messages['pages.sessionLive.scoring.binaryWinHeading'] as string) ?? 'Esito',
-        inProgressLabel:
-          (intl.messages['pages.sessionLive.scoring.binaryWinInProgress'] as string) ??
-          'Partita in corso',
-        winLabel: (intl.messages['pages.sessionLive.scoring.winLabel'] as string) ?? 'Vince',
-        loseLabel: (intl.messages['pages.sessionLive.scoring.loseLabel'] as string) ?? 'Perde',
-        outcomeAriaTemplate:
-          (intl.messages['pages.sessionLive.scoring.outcomeAriaTemplate'] as string) ??
-          '{name}: {result}',
+        heading: t('pages.sessionLive.scoring.binaryWin.title'),
+        inProgressLabel: t('pages.sessionLive.scoring.binaryWin.pendingLabel'),
+        winLabel: t('pages.sessionLive.scoring.binaryWin.winLabel'),
+        loseLabel: t('pages.sessionLive.scoring.binaryWin.loseLabel'),
+        outcomeAriaTemplate: intl.messages[
+          'pages.sessionLive.scoring.outcomeAriaTemplate'
+        ] as string,
       },
       objectives: {
-        heading:
-          (intl.messages['pages.sessionLive.scoring.objectivesHeading'] as string) ?? 'Obiettivi',
-        completedAriaTemplate:
-          (intl.messages['pages.sessionLive.scoring.completedAriaTemplate'] as string) ??
-          'Completati da {name}',
-        doneAriaTemplate:
-          (intl.messages['pages.sessionLive.scoring.doneAriaTemplate'] as string) ??
-          '{label} (completato)',
-        pendingAriaTemplate:
-          (intl.messages['pages.sessionLive.scoring.pendingAriaTemplate'] as string) ??
-          '{label} (non completato)',
+        heading: t('pages.sessionLive.scoring.objectives.title'),
+        completedAriaTemplate: intl.messages[
+          'pages.sessionLive.scoring.completedAriaTemplate'
+        ] as string,
+        doneAriaTemplate: intl.messages['pages.sessionLive.scoring.doneAriaTemplate'] as string,
+        pendingAriaTemplate: intl.messages[
+          'pages.sessionLive.scoring.pendingAriaTemplate'
+        ] as string,
       },
     }),
     [t, intl.messages]

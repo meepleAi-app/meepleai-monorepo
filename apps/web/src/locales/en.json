@@ -3108,7 +3108,14 @@
         "decrementAriaLabel": "Decrease {playerName}'s score",
         "scoreInputAriaLabel": "Enter score for {playerName}",
         "playerCount": "{count, plural, =0 {No players} =1 {1 player} other {# players}}",
-        "loadingLabel": "Loading scores…"
+        "loadingLabel": "Loading scores…",
+        "forbiddenToast": "Permission denied: only the host can edit scores",
+        "rateLimitedTemplate": "Rate limit reached, retry in {seconds}s",
+        "rateLimitedToast": "You updated scores too quickly. Wait {seconds}s.",
+        "validationFailedTemplate": "Validation failed: {message}",
+        "serverErrorToast": "Server error, retry",
+        "networkErrorToast": "Connection lost, retry",
+        "retryCta": "Retry"
       },
       "actionLog": {
         "title": "Events",

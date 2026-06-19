@@ -75,6 +75,8 @@ Rationale: Nygard's anti-raffica argument. Without the disable + countdown, a us
 
 Backoff: fixed 30 seconds. If the BE returns a `Retry-After` header, future iterations can honor it; for MVP a fixed window matches the BE's current rate limiter policy.
 
+**Persistence**: the 30-second deadline is stored in `useLiveSessionStore` as a new field `rateLimitedUntil: number | null` (timestamp in ms, or `null` when not rate-limited). This survives `ScoreTabContent` unmount/remount caused by tab change (e.g., user switches `?tab=score` → `?tab=notes` → back), so the countdown continues across the gap. Field is cleared by either (a) setting from the 429 handler (`Date.now() + 30000`), (b) explicit clear on remount when `Date.now() >= rateLimitedUntil`, or (c) `store.reset()` (test isolation). New store action: `setRateLimitedUntil(ts: number | null)`. No new SignalR event — this is pure client-side state.
+
 ### DEC-6 — Network/5xx error: toast + retry button
 
 On `fetch` failure (`TypeError`, `AbortError`) or 5xx response, show a sticky toast (non-auto-dismiss) with a "Riprova" button that re-invokes the mutation with the last payload. Input stays enabled — the user can keep typing while the retry happens.
@@ -91,6 +93,7 @@ Rationale: explicit affordance without over-engineering. No retry queue with exp
 | NEW | `apps/web/src/app/(authenticated)/sessions/[id]/live/_components/__tests__/ScoreTabContent.test.tsx` | ~520 (28 test cases) |
 | NEW | `apps/web/src/lib/session-live/use-debounced-callback.ts` | ~50 |
 | NEW | `apps/web/src/lib/session-live/__tests__/use-debounced-callback.test.ts` | ~80 (5 test cases) |
+| MOD | `apps/web/src/lib/stores/live-session-store.ts` | ~+8 (add `rateLimitedUntil: number \| null` field + `setRateLimitedUntil` action; extend `initialState`) |
 | MOD | `apps/web/src/app/(authenticated)/sessions/[id]/live/_components/SessionLiveView.tsx` | ~−80 LOC (remove Block B logic) + ~+30 LOC (2 mount points of `<ScoreTabContent />`) |
 | MOD | `apps/web/src/app/(authenticated)/sessions/[id]/live/_components/__tests__/SessionLiveView.test.tsx` | ~−40 LOC (migrate 2 a11y placeholder tests to ScoreTabContent.test.tsx) + ~+30 LOC (2 smoke tests for mount) |
 | MOD | `apps/web/src/app/(authenticated)/sessions/live/[sessionId]/scores/page.tsx` | ~−30 LOC (remove inline `useDebouncedCallback`) + ~+5 LOC (import from new lib + adapt callsite to tuple return) |
@@ -98,7 +101,7 @@ Rationale: explicit affordance without over-engineering. No retry queue with exp
 | MOD | `apps/web/src/locales/en.json` | ~+7 lines (English translations) |
 | MOD | `CLAUDE.md` | ~+1 line (Block B+ entry under "Session live shell (epic #2354)") |
 
-Total: 4 new files, 5 modified files, ~870 LOC net (heavy on test code).
+Total: 4 new files, 6 modified files, ~880 LOC net (heavy on test code).
 
 ### `ScoreTabContent` contract
 
@@ -122,16 +125,19 @@ export function ScoreTabContent(props: ScoreTabContentProps): React.ReactElement
 ```
 
 **Behavior contract**:
-- Reads `scoringType`, `scoreData`, `setScoringConfig` from `useLiveSessionStore` via direct selectors.
+- Reads `scoringType`, `scoreData`, `setScoringConfig`, `rateLimitedUntil`, `setRateLimitedUntil` from `useLiveSessionStore` via direct selectors.
 - Runs REST hydration `useEffect` ONLY on first mount (race guard via `getState().scoringType != null`).
 - Computes `scoringPanelData` via `mapScoreDataToPanelData` (read-only path).
 - Maintains `localScoreOverride: ScoreDataByType[ScoreType] | null` for optimistic UI during pending debounce.
-- Maintains `rateLimitDeadline: number | null` (timestamp). When set, editor `disabled={true}`. `useEffect` decrement counter; on reach 0, clears deadline.
+- Maintains `lastPayloadRef: useRef<UpdateSessionScoresPayload | null>(null)` — captures the last dispatched payload. Updated inside the debounced submit handler before `mutate(...)`. Used by the retry button (`mutation.mutate(lastPayloadRef.current!)` — `useMutation` exposes `mutate`, not `retry`, so the retry path is an explicit re-dispatch of the cached payload).
+- Maintains `isMountedRef: useRef<boolean>(true)` — set to `false` in `useEffect` cleanup. All `mutation.onSuccess` / `mutation.onError` handlers check `isMountedRef.current` before calling state setters or `sonner.toast.*`, preventing "state update on unmounted component" warnings when the user navigates away during a flush-on-unmount mutation in flight.
+- Maintains `viewerRoleRef: useRef<typeof viewerRole>(viewerRole)` updated each render — when the editor unmounts due to a host transfer (`viewerRole` changes Host → Player), the flush-on-unmount fires the mutation. The BE returns 403 because the caller is no longer the host. The error handler checks `isMountedRef.current` (false) and skips toast/setState — no UX blip.
+- Derived from store: `isRateLimited = rateLimitedUntil != null && Date.now() < rateLimitedUntil` — re-computed on render via a `useState`-backed tick or 1s `setInterval` (one per mounted ScoreTabContent; cleaned up on unmount). When `Date.now() >= rateLimitedUntil` the component calls `setRateLimitedUntil(null)` to clear the store field.
 - Mounts editor or renderer based on role:
-  - `viewerRole === 'Host'` AND `scoringType !== null` → `<PolymorphicScoreEditor>` with `onChange={handleScoreChange}`, `disabled={isRateLimited || mutation.isPending}`, `availableObjectives={MVP_OBJECTIVES_CATALOGUE}` (only consumed when `scoringType === 'Objectives'`).
+  - `viewerRole === 'Host'` AND `scoringType !== null` → `<PolymorphicScoreEditor>` with `onChange={handleScoreChange}`, `disabled={isRateLimited || mutation.isPending}`, `availableObjectives={MVP_OBJECTIVES_CATALOGUE}` (only consumed when `scoringType === 'Objectives'` — the `PolymorphicScoreEditor` throws if missing for that variant, so it is always passed regardless of current type, see NTH-2 in Risks).
   - Otherwise + `scoringPanelData !== null` → `<ScoringPanelRenderer>` (Block B path).
   - Otherwise → a11y placeholder (`role="status" aria-live="polite"` with `pages.sessionLive.scoring.loadingLabel`).
-- Toast handling via `sonner.toast.*` calls keyed by deterministic ID per error class (no stacking on rapid repeats).
+- Toast handling via `sonner.toast.*` calls keyed by deterministic ID per error class (`score-403` / `score-429` / `score-400` / `score-5xx` / `score-network`) — no stacking on rapid repeats.
 
 ### Data flow
 
@@ -156,6 +162,48 @@ User keystroke
 ScoreTabContent unmount:
   → useEffect cleanup: flush() invokes pending debouncedMutate immediately
 ```
+
+### `ScoreTabContent` error mapper
+
+The existing `UpdateSessionScoresError` (defined in `apps/web/src/hooks/use-update-session-scores.ts` line 47) has only 3 kinds: `'forbidden' | 'validation' | 'server'`. Block B+ needs 5 distinct UX paths (DEC-5 / DEC-6), so `ScoreTabContent` defines a **local normalized error type** and a mapper that runs INSIDE the `mutation.onError` handler. The hook itself is NOT modified (avoids breaking `scores/page.tsx` callsite and other future callers).
+
+```typescript
+// Local to ScoreTabContent.tsx (no shared module needed)
+type ScoredErrorKind =
+  | 'forbidden'      // 403 — host permission denied
+  | 'rate-limited'   // 429 — Retry-After or fixed 30s
+  | 'validation'     // 400 — body validation
+  | 'server'         // 5xx — server error, user can retry
+  | 'network';       // fetch failed (TypeError/AbortError)
+
+interface ScoredError {
+  readonly kind: ScoredErrorKind;
+  readonly status: number; // 0 for network errors
+  readonly message: string;
+  readonly details?: unknown;
+}
+
+function mapMutationError(err: unknown): ScoredError {
+  // err is what onError receives: UpdateSessionScoresError instance OR raw fetch-fail Error
+  if (err instanceof UpdateSessionScoresError) {
+    if (err.status === 429) {
+      return { kind: 'rate-limited', status: 429, message: err.message };
+    }
+    // 403 / 400 / 5xx map directly from existing kind
+    return { kind: err.kind, status: err.status, message: err.message, details: err.details };
+  }
+  // Raw Error (network failure — fetch throws TypeError / AbortError)
+  return {
+    kind: 'network',
+    status: 0,
+    message: err instanceof Error ? err.message : 'Network error',
+  };
+}
+```
+
+**Note on 429 detection**: `useUpdateSessionScores` (Asse D P1) currently routes 429 into `kind: 'server'` because it has no dedicated branch. The mapper checks `err.status === 429` to disambiguate. This works **today** because `UpdateSessionScoresError` carries `status: number`. No hook change required.
+
+**Implementation task placement**: defined as part of T6 (implement `ScoreTabContent`). The mapper lives at the top of the component file, alongside the local types. Tests in the Error handling group exercise all 5 kinds via different fixture errors thrown from a mocked `useUpdateSessionScores`.
 
 ### `useDebouncedCallback` hoisted contract
 
@@ -253,7 +301,7 @@ English mirror: "Permission denied: only the host can edit scores" / "Rate limit
 
 ### Unit/integration tests: `ScoreTabContent.test.tsx`
 
-28 cases organized in 6 groups:
+28 cases organized in 8 groups:
 
 | Group | Cases | Notes |
 |-------|-------|-------|
@@ -334,16 +382,17 @@ High-level sequence (preview):
 | Task | Type | Description |
 |------|------|-------------|
 | T1 | PREP | Verify sonner availability (already in deps ^2.0.7) — no install needed |
-| T2 | REFACT | Hoist `useDebouncedCallback` to `lib/session-live/use-debounced-callback.ts` with `flush()` tuple return; update `scores/page.tsx` callsite |
-| T3 | RED | `use-debounced-callback.test.ts` (5 tests RED) |
-| T4 | GREEN | Implement hoisted helper, all 5 tests GREEN |
-| T5 | RED | `ScoreTabContent.test.tsx` scaffold (28 tests RED, no impl yet) |
-| T6 | GREEN | Implement `ScoreTabContent` extracting Block B logic + role mount + Block B+ additions (mutation wire + debounce + optimistic UI + error matrix) |
-| T7 | REFACT | Update `SessionLiveView`: remove Block B logic, mount `<ScoreTabContent />` in 2 sites, migrate 2 a11y tests, add 2 smoke tests |
-| T8 | i18n | Add 7 new i18n keys to it.json + en.json |
-| T9 | QA | typecheck + lint sweep + targeted regression run (`pnpm test SessionLiveView score-data ScoreTabContent use-debounced`) |
-| T10 | DOC | Update CLAUDE.md "Session live shell (epic #2354)" with Block B+ entry |
-| T11 | PR | Push + open PR target `main-dev`, link #2430, follow-up issues already filed |
+| T2 | STORE | Extend `useLiveSessionStore` with `rateLimitedUntil: number \| null` + `setRateLimitedUntil` action; add to `initialState` and `reset()` |
+| T3 | REFACT | Hoist `useDebouncedCallback` to `lib/session-live/use-debounced-callback.ts` with `flush()` tuple return; update `scores/page.tsx` callsite |
+| T4 | RED | `use-debounced-callback.test.ts` (5 tests RED) |
+| T5 | GREEN | Implement hoisted helper, all 5 tests GREEN |
+| T6 | RED | `ScoreTabContent.test.tsx` scaffold (28 tests RED, no impl yet) |
+| T7 | GREEN | Implement `ScoreTabContent`: extract Block B logic + role mount + error mapper + isMountedRef + lastPayloadRef + viewerRoleRef + debounce + optimistic UI + error matrix |
+| T8 | REFACT | Update `SessionLiveView`: remove Block B logic, mount `<ScoreTabContent />` in 2 sites, migrate 2 a11y tests, add 2 smoke tests |
+| T9 | i18n | Add 7 new i18n keys to it.json + en.json |
+| T10 | QA | typecheck + lint sweep + targeted regression run (`pnpm test SessionLiveView score-data ScoreTabContent use-debounced live-session-store`) |
+| T11 | DOC | Update CLAUDE.md "Session live shell (epic #2354)" with Block B+ entry |
+| T12 | PR | Push + open PR target `main-dev`, link #2430, follow-up issues already filed |
 
 ## Follow-up
 
@@ -367,6 +416,11 @@ High-level sequence (preview):
 | Existing `scores/page.tsx` callsite breaks after debounce hoist | Low | T2 updates callsite to new tuple return; targeted test on the page or manual smoke verifies |
 | Toast dedup via sonner id fails if id collision with other usages in app | Low | Use deterministic id prefix `score-{status}` ensuring uniqueness |
 | ESLint rule `local/no-store-scores-direct` flags new selectors | None | Rule targets only `s.scores`, not `s.scoringType` / `s.scoreData` (verified in Block B) |
+| `scoringType` change mid-debounce (admin BE config push via SignalR) — debounced mutation fires with stale `scoringType` + new store-shape `scoreData` → 400 validation | Low | Accepted DEC-3 consequence (last-write-wins). 400 branch in error matrix surfaces toast. Future iteration: invalidate debounced payload on `scoringType` change. |
+| `PolymorphicScoreEditor` throws when `scoringType === 'Objectives'` and `availableObjectives` undefined (component contract, lines 99-103) | Low | Always pass `availableObjectives={MVP_OBJECTIVES_CATALOGUE}` regardless of current `scoringType` — cost is one unused prop on non-Objectives variants, no behavior impact. |
+| T9 lint sweep may surface pre-existing `border-[hsl(var(--c-danger))]` hardcoded color in `scores/page.tsx` failing `pnpm lint:tokens` (DS-15) | Low | Pre-existing issue not introduced by Block B+; T9 acceptance criterion only requires "no NEW errors/warnings vs `main-dev` baseline". |
+| Viewer-role transition Host → Player mid-edit (host transfer) | Med | `isMountedRef` + `viewerRoleRef` guards skip toast/setState on the 403 that the flush-on-unmount mutation will receive. Documented in ScoreTabContent contract. |
+| 30s rate-limit countdown lost if user navigates away from `SessionLiveView` entirely (not just tab change) | Low | `rateLimitedUntil` lives in store, but the store also `reset()`s on session change. User leaving the live route gives the BE rate limiter time to expire naturally before next session opens. Accept as known UX gap. |
 
 ## Acceptance criteria
 
@@ -375,7 +429,11 @@ High-level sequence (preview):
 - [ ] `viewerRole === 'Host'` mounts `PolymorphicScoreEditor`; other roles mount `ScoringPanelRenderer`; null `scoringType` shows a11y placeholder for all roles.
 - [ ] `useUpdateSessionScores` mutation wired via `onChange` callback, debounced 500ms trailing + flush-on-unmount.
 - [ ] Optimistic UI: `localScoreOverride` reflects user input until mutation success/error, then clears.
-- [ ] 403 → toast + freeze input; 429 → toast + disable + 30s countdown; 5xx/network → toast + retry button; 400 → toast with details, no disable.
+- [ ] Local `mapMutationError` normalizes hook + raw fetch errors into 5 kinds (`forbidden | rate-limited | validation | server | network`); 429 detected by `err.status === 429` from `UpdateSessionScoresError`; network detected by raw `TypeError` / `AbortError`.
+- [ ] `isMountedRef` guards skip toast/setState on `mutation.onSuccess` / `onError` after component unmount.
+- [ ] `lastPayloadRef` captures the most recent dispatched payload; retry button calls `mutation.mutate(lastPayloadRef.current)`.
+- [ ] `useLiveSessionStore` extended with `rateLimitedUntil: number | null` + `setRateLimitedUntil(ts)` action; `initialState` includes the field; `reset()` clears it.
+- [ ] 403 → toast + freeze input; 429 → toast + disable + 30s countdown (deadline in store survives tab change); 5xx/network → toast + retry button; 400 → toast with details, no disable.
 - [ ] `useDebouncedCallback` helper hoisted to `lib/session-live/`, returns `[fn, flush]` tuple, `scores/page.tsx` migrated.
 - [ ] 7 new i18n keys shipped in it.json + en.json.
 
@@ -385,6 +443,7 @@ High-level sequence (preview):
 - [ ] `SessionLiveView.test.tsx` → 79/79 green (67 untouched + 5 hydration + 4 variant + 1 G5a regression + 2 new smoke).
 - [ ] `score-data-to-panel-data.test.ts` → 16/16 green (untouched).
 - [ ] `PolymorphicScoreEditor.test.tsx` → all green (untouched).
+- [ ] `live-session-store.test.ts` (if exists) → `rateLimitedUntil` field initial / set / reset coverage. Otherwise verify via ScoreTabContent tests.
 
 **Definition of Done** (process):
 - [ ] `pnpm typecheck` and `pnpm lint` clean (no new errors or warnings).

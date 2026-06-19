@@ -3107,7 +3107,8 @@
         "incrementAriaLabel": "Increase {playerName}'s score",
         "decrementAriaLabel": "Decrease {playerName}'s score",
         "scoreInputAriaLabel": "Enter score for {playerName}",
-        "playerCount": "{count, plural, =0 {No players} =1 {1 player} other {# players}}"
+        "playerCount": "{count, plural, =0 {No players} =1 {1 player} other {# players}}",
+        "loadingLabel": "Loading scores…"
       },
       "actionLog": {
         "title": "Events",

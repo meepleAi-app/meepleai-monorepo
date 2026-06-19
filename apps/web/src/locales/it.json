@@ -3214,7 +3214,8 @@
         "incrementAriaLabel": "Aumenta punteggio di {playerName}",
         "decrementAriaLabel": "Diminuisci punteggio di {playerName}",
         "scoreInputAriaLabel": "Inserisci punteggio per {playerName}",
-        "playerCount": "{count, plural, =0 {Nessun giocatore} =1 {1 giocatore} other {# giocatori}}"
+        "playerCount": "{count, plural, =0 {Nessun giocatore} =1 {1 giocatore} other {# giocatori}}",
+        "loadingLabel": "Caricamento punteggi…"
       },
       "actionLog": {
         "title": "Eventi",

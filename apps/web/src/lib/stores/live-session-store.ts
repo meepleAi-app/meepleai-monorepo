@@ -60,6 +60,15 @@ interface LiveSessionState {
   scores: Record<string, number>;
   scoringType: ScoreType | null;
   scoreData: ScoreDataByType[ScoreType] | null;
+  /**
+   * Rate-limit deadline (Unix timestamp in ms). `null` when not rate-limited.
+   * Set by `ScoreTabContent` on 429 response (Date.now() + 30000).
+   * Persists across tab change (ScoreTabContent unmount/remount) so the
+   * countdown UI continues from the correct remaining time.
+   * Cleared on natural expiry, store reset(), or explicit setRateLimitedUntil(null).
+   * Issue #2430 Block B+.
+   */
+  rateLimitedUntil: number | null;
   pendingProposals: ScoreProposal[];
   disputes: RuleDispute[];
   isConnected: boolean;
@@ -72,6 +81,7 @@ interface LiveSessionState {
     scoringType: T;
     scoreData: ScoreDataByType[T];
   }) => void;
+  setRateLimitedUntil: (ts: number | null) => void;
   updateScore: (playerName: string, score: number) => void;
   addProposal: (proposal: ScoreProposal) => void;
   resolveProposal: (proposalId: string, accepted: boolean) => void;
@@ -85,6 +95,7 @@ const initialState: Omit<
   LiveSessionState,
   | 'setSession'
   | 'setScoringConfig'
+  | 'setRateLimitedUntil'
   | 'updateScore'
   | 'addProposal'
   | 'resolveProposal'
@@ -102,6 +113,7 @@ const initialState: Omit<
   scores: {},
   scoringType: null,
   scoreData: null,
+  rateLimitedUntil: null,
   pendingProposals: [],
   disputes: [],
   isConnected: false,
@@ -118,6 +130,8 @@ export const useLiveSessionStore = create<LiveSessionState>()(
 
       setScoringConfig: ({ scoringType, scoreData }) =>
         set({ scoringType, scoreData }, false, 'setScoringConfig'),
+
+      setRateLimitedUntil: ts => set({ rateLimitedUntil: ts }, false, 'setRateLimitedUntil'),
 
       updateScore: (playerName, score) =>
         set(

@@ -32,4 +32,21 @@ describe('useLiveSessionStore — Block A #2389 contract evolution', () => {
     });
     expect(useLiveSessionStore.getState().players[0]?.displayName).toBe('Aaron D.');
   });
+
+  // #2430 Block B+: rateLimitedUntil persistence
+  it('initial state — rateLimitedUntil is null', () => {
+    expect(useLiveSessionStore.getState().rateLimitedUntil).toBeNull();
+  });
+
+  it('setRateLimitedUntil writes a positive timestamp', () => {
+    const deadline = 1_700_000_000_000;
+    useLiveSessionStore.getState().setRateLimitedUntil(deadline);
+    expect(useLiveSessionStore.getState().rateLimitedUntil).toBe(deadline);
+  });
+
+  it('setRateLimitedUntil(null) clears the deadline', () => {
+    useLiveSessionStore.getState().setRateLimitedUntil(1_700_000_000_000);
+    useLiveSessionStore.getState().setRateLimitedUntil(null);
+    expect(useLiveSessionStore.getState().rateLimitedUntil).toBeNull();
+  });
 });

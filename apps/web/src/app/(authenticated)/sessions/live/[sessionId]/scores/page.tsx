@@ -12,7 +12,7 @@
 
 'use client';
 
-import { use, useCallback, useEffect, useRef } from 'react';
+import { use } from 'react';
 
 import { AutosaveIndicator } from '@/components/session/live/AutosaveIndicator';
 import { ScoreBoard } from '@/components/session/live/ScoreBoard';
@@ -22,41 +22,8 @@ import {
   useUpdateSessionScores,
 } from '@/hooks/use-update-session-scores';
 import { MVP_OBJECTIVES_CATALOGUE } from '@/lib/session-live/mvp-objectives-catalogue';
+import { useDebouncedCallback } from '@/lib/session-live/use-debounced-callback';
 import { useLiveSessionStore } from '@/lib/stores/live-session-store';
-
-/**
- * Generic debounced-callback helper. Inlined because `use-debounce` is not part
- * of the workspace and the existing `use-debounce` value-hook under
- * `entity-list-view/hooks` debounces *values*, not *callbacks*.
- */
-function useDebouncedCallback<TArgs extends readonly unknown[]>(
-  callback: (...args: TArgs) => void,
-  delay: number
-): (...args: TArgs) => void {
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const callbackRef = useRef(callback);
-
-  useEffect(() => {
-    callbackRef.current = callback;
-  }, [callback]);
-
-  useEffect(
-    () => () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    },
-    []
-  );
-
-  return useCallback(
-    (...args: TArgs) => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => {
-        callbackRef.current(...args);
-      }, delay);
-    },
-    [delay]
-  );
-}
 
 interface LiveSessionScoresPageProps {
   params: Promise<{ sessionId: string }>;
@@ -80,7 +47,7 @@ export default function LiveSessionScoresPage({ params }: LiveSessionScoresPageP
   const isHost = players.find(p => p.isHost)?.isHost ?? false;
   const mutation = useUpdateSessionScores();
 
-  const debouncedSave = useDebouncedCallback((payload: ScoreChangePayload) => {
+  const [debouncedSave] = useDebouncedCallback((payload: ScoreChangePayload) => {
     mutation.mutate({
       sessionId,
       scoringType: payload.scoringType,

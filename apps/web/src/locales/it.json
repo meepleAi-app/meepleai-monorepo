@@ -3215,7 +3215,14 @@
         "decrementAriaLabel": "Diminuisci punteggio di {playerName}",
         "scoreInputAriaLabel": "Inserisci punteggio per {playerName}",
         "playerCount": "{count, plural, =0 {Nessun giocatore} =1 {1 giocatore} other {# giocatori}}",
-        "loadingLabel": "Caricamento punteggi…"
+        "loadingLabel": "Caricamento punteggi…",
+        "forbiddenToast": "Permesso negato: solo l'host può modificare i punteggi",
+        "rateLimitedTemplate": "Limite raggiunto, riprova tra {seconds}s",
+        "rateLimitedToast": "Hai aggiornato i punteggi troppo velocemente. Aspetta {seconds}s.",
+        "validationFailedTemplate": "Validazione fallita: {message}",
+        "serverErrorToast": "Errore server, riprova",
+        "networkErrorToast": "Connessione persa, riprova",
+        "retryCta": "Riprova"
       },
       "actionLog": {
         "title": "Eventi",

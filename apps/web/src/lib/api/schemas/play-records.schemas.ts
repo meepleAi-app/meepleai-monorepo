@@ -48,6 +48,19 @@ export type SessionPlayer = z.infer<typeof SessionPlayerSchema>;
 export const PlayRecordOutcomeTypeSchema = z.enum(['competitive', 'none']);
 export type PlayRecordOutcomeType = z.infer<typeof PlayRecordOutcomeTypeSchema>;
 
+// #2436 PR-C: photo attached to a play record (read path). url/thumbnailUrl are
+// presigned download URLs (or raw paths on local storage).
+export const PlayRecordPhotoSchema = z.object({
+  id: z.string().uuid(),
+  url: z.string(),
+  thumbnailUrl: z.string().nullable(),
+  ocrText: z.string().nullable(),
+  caption: z.string().nullable(),
+  uploadedByUserId: z.string().uuid(),
+  uploadedAt: z.string(),
+});
+export type PlayRecordPhoto = z.infer<typeof PlayRecordPhotoSchema>;
+
 // ========== DTOs ==========
 
 export const PlayRecordDtoSchema = z.object({
@@ -71,6 +84,8 @@ export const PlayRecordDtoSchema = z.object({
   // Optional during BE rollout; tighten once the BE ships the fields.
   winnerPlayerIds: z.array(z.string().uuid()).optional(),
   outcomeType: PlayRecordOutcomeTypeSchema.optional(),
+  // #2436 PR-C: photos exposed on read. Optional during BE rollout; tighten later.
+  photos: z.array(PlayRecordPhotoSchema).optional(),
 });
 export type PlayRecordDto = z.infer<typeof PlayRecordDtoSchema>;
 

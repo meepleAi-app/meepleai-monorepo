@@ -337,4 +337,63 @@ public sealed class PlayRecordPhotoUploadTests : IAsyncLifetime
             .CountAsync(p => p.PlayRecordId == recordId, TestCancellationToken);
         count.Should().Be(1);
     }
+
+    /// <summary>
+    /// Verifies that the xmin optimistic-concurrency token prevents a stale write from
+    /// succeeding. Load the same row into two separate domain aggregates, mutate+save the
+    /// first (advancing the row's xmin in Postgres), then attempt to save the second —
+    /// EF must throw <see cref="Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException"/>
+    /// because the second aggregate carries the old xmin value.
+    /// ADR-060 / #2436 PR-B / #2437-1.
+    /// </summary>
+    [Fact]
+    public async Task UpdateAsync_ConcurrentWrite_ThrowsDbUpdateConcurrencyException()
+    {
+        // Arrange — seed a record so we have a row with a known xmin.
+        var creatorId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
+
+        // Load scope 1 — aggregateA holds the initial xmin.
+        Api.BoundedContexts.GameManagement.Domain.Entities.PlayRecord aggregateA;
+        using (var scope = ServiceProvider.CreateScope())
+        {
+            var repo = scope.ServiceProvider.GetRequiredService<IPlayRecordRepository>();
+            aggregateA = (await repo.GetByIdAsync(recordId, TestCancellationToken))!;
+        }
+
+        // Load scope 2 — aggregateB also holds the same initial xmin.
+        Api.BoundedContexts.GameManagement.Domain.Entities.PlayRecord aggregateB;
+        using (var scope = ServiceProvider.CreateScope())
+        {
+            var repo = scope.ServiceProvider.GetRequiredService<IPlayRecordRepository>();
+            aggregateB = (await repo.GetByIdAsync(recordId, TestCancellationToken))!;
+        }
+
+        // Mutate + save aggregateA in its own scope → Postgres advances xmin for this row.
+        using (var scope = ServiceProvider.CreateScope())
+        {
+            var repo = scope.ServiceProvider.GetRequiredService<IPlayRecordRepository>();
+            var uow = scope.ServiceProvider.GetRequiredService<Api.SharedKernel.Infrastructure.Persistence.IUnitOfWork>();
+            aggregateA.UpdateDetails(notes: "first writer wins", timeProvider: _timeProvider);
+            await repo.UpdateAsync(aggregateA, TestCancellationToken);
+            await uow.SaveChangesAsync(TestCancellationToken);
+        }
+
+        // Act — attempt to save aggregateB (stale xmin) in a new scope.
+        // EF should throw DbUpdateConcurrencyException because the xmin it sends
+        // no longer matches the row's current xmin in Postgres.
+        var act = async () =>
+        {
+            using var scope = ServiceProvider.CreateScope();
+            var repo = scope.ServiceProvider.GetRequiredService<IPlayRecordRepository>();
+            var uow = scope.ServiceProvider.GetRequiredService<Api.SharedKernel.Infrastructure.Persistence.IUnitOfWork>();
+            aggregateB.UpdateDetails(notes: "second writer should lose", timeProvider: _timeProvider);
+            await repo.UpdateAsync(aggregateB, TestCancellationToken);
+            await uow.SaveChangesAsync(TestCancellationToken);
+        };
+
+        // Assert — the losing write must surface as a concurrency conflict (→ 409 via middleware).
+        await act.Should().ThrowAsync<Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException>(
+            "xmin mismatch means the row was already updated; EF must reject the stale write");
+    }
 }

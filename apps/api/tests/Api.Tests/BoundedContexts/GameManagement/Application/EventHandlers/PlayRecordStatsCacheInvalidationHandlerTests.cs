@@ -14,9 +14,13 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.EventHandlers;
 
 /// <summary>
 /// Unit tests for <see cref="PlayRecordStatsCacheInvalidationHandler"/> (#2438, PR-B).
-/// The handler evicts the per-user player-statistics cache tag when a record is Completed
-/// (the event that changes which Completed records exist for the user — see ADR-081).
-/// The Completed event carries no userId, so the handler resolves it from the record.
+/// The handler evicts the per-user player-statistics cache tag when a record's inclusion
+/// in the cached projection changes (see ADR-081):
+/// <list type="bullet">
+///   <item><description>Completed event — carries no userId, resolved via DB lookup.</description></item>
+///   <item><description>Deleted event (#2446) — carries <c>DeletedByUserId</c> directly,
+///     no DB lookup needed.</description></item>
+/// </list>
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "GameManagement")]
@@ -106,6 +110,82 @@ public sealed class PlayRecordStatsCacheInvalidationHandlerTests : IDisposable
         // Act
         var act = () => _handler.Handle(
             new PlayRecordCompletedEvent(recordId, TimeSpan.FromHours(1)),
+            TestContext.Current.CancellationToken);
+
+        // Assert — does not throw.
+        await act.Should().NotThrowAsync();
+    }
+
+    // ─── #2446: PlayRecordDeletedEvent trigger ────────────────────────────────
+    // The Deleted event carries DeletedByUserId directly, so the handler skips the DB
+    // lookup that Completed needs. Otherwise identical best-effort eviction semantics
+    // (ADR-081 deferred hook).
+
+    [Fact]
+    [Trait("Issue", "2446")]
+    public async Task Handle_Deleted_EvictsDeletedByUserStatsTag()
+    {
+        // Arrange — no record seed needed: DeletedByUserId is on the event.
+        var userId = Guid.NewGuid();
+        var recordId = Guid.NewGuid();
+
+        // Act
+        await _handler.Handle(
+            new PlayRecordDeletedEvent(recordId, userId),
+            TestContext.Current.CancellationToken);
+
+        // Assert — evicts the deleting user's tag.
+        _cache.Verify(
+            c => c.RemoveByTagAsync($"player-stats:{userId}", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    [Trait("Issue", "2446")]
+    public async Task Handle_Deleted_EmptyUserId_DoesNotEvict()
+    {
+        // Arrange — DeletedByUserId == Guid.Empty should be defended against, mirroring
+        // the Completed handler's "missing owner" guard (anonymous delete, seed script, etc.).
+        // Act
+        await _handler.Handle(
+            new PlayRecordDeletedEvent(Guid.NewGuid(), Guid.Empty),
+            TestContext.Current.CancellationToken);
+
+        // Assert — never evicts on an empty userId (avoids hitting a bogus cache key).
+        _cache.Verify(
+            c => c.RemoveByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    [Trait("Issue", "2446")]
+    public async Task Handle_Deleted_NullNotification_ThrowsArgumentNullException()
+    {
+        // Act
+        var act = () => _handler.Handle(
+            (PlayRecordDeletedEvent)null!,
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        await act.Should().ThrowAsync<ArgumentNullException>();
+    }
+
+    [Fact]
+    [Trait("Issue", "2446")]
+    public async Task Handle_Deleted_CacheThrows_IsSwallowed_BestEffort()
+    {
+        // Arrange — eviction is best-effort: a cache hiccup must NOT propagate into the
+        // DeletePlayRecordCommand that raised the event.
+        var userId = Guid.NewGuid();
+        var recordId = Guid.NewGuid();
+
+        _cache
+            .Setup(c => c.RemoveByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("redis down"));
+
+        // Act
+        var act = () => _handler.Handle(
+            new PlayRecordDeletedEvent(recordId, userId),
             TestContext.Current.CancellationToken);
 
         // Assert — does not throw.

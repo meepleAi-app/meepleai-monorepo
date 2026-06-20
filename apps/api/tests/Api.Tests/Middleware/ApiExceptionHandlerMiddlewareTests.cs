@@ -727,6 +727,44 @@ public class ApiExceptionHandlerMiddlewareTests
         errorResponse.RootElement.GetProperty("error").GetString().Should().Be("two_factor_unavailable");
     }
 
+    [Fact]
+    public async Task InvokeAsync_DbUpdateConcurrencyException_Returns409WithConcurrentEditBody()
+    {
+        // #2436 PR-B / #2437-1: concurrent write on the same row (xmin mismatch) → 409 Conflict
+        // with X-Warning-Code: concurrent-edit so the FE can render a "reload & retry" prompt.
+        // DbUpdateConcurrencyException has a constructor that takes just a message;
+        // the entries overload needs EF internals not exposed to test assemblies.
+        var exception = new Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException("Concurrency conflict");
+
+        var middleware = new ApiExceptionHandlerMiddleware(
+            next: (context) => throw exception,
+            _loggerMock.Object,
+            _environmentMock.Object);
+
+        _httpContext.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(_httpContext);
+
+        _httpContext.Response.StatusCode.Should().Be(409,
+            "a stale xmin token indicates the row was updated by a concurrent request");
+        _httpContext.Response.Headers["X-Warning-Code"].ToString().Should().Be("concurrent-edit",
+            "the FE uses this header to distinguish from other 409s and show a reload prompt");
+
+        _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
+        using var reader = new StreamReader(_httpContext.Response.Body);
+        var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
+        using var errorResponse = ParseErrorResponse(responseBody);
+
+        errorResponse.RootElement.GetProperty("error").GetString()
+            .Should().Be("concurrent_edit");
+        errorResponse.RootElement.GetProperty("message").GetString()
+            .Should().Contain("Reload and retry",
+                "the message should tell the client exactly what to do");
+        errorResponse.RootElement.GetProperty("correlationId").ValueKind
+            .Should().NotBe(System.Text.Json.JsonValueKind.Null,
+                "correlationId must be present so the client can report the incident");
+    }
+
     private static JsonDocument ParseErrorResponse(string responseBody)
     {
         return JsonDocument.Parse(responseBody);

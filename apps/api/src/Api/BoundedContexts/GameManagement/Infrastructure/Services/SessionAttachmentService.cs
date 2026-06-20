@@ -1,8 +1,8 @@
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Application.Validators;
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionAttachment;
+using Api.Helpers;
 using Api.Services.Pdf;
-using ImageMagick;
 
 namespace Api.BoundedContexts.GameManagement.Infrastructure.Services;
 
@@ -15,8 +15,6 @@ internal sealed class SessionAttachmentService : ISessionAttachmentService
     private readonly IBlobStorageService _blobStorage;
     private readonly ILogger<SessionAttachmentService> _logger;
 
-    private const int ThumbnailMaxDimension = 300;
-    private const int ThumbnailJpegQuality = 80;
     private const int DownloadUrlExpirySeconds = 3600; // 1 hour
 
     public SessionAttachmentService(
@@ -173,47 +171,13 @@ internal sealed class SessionAttachmentService : ISessionAttachmentService
         }
     }
 
-    internal static async Task<MemoryStream?> GenerateThumbnailAsync(Stream sourceStream, CancellationToken ct = default)
-    {
-        // ADR DEC-3d-1 (issue #2055 Phase G): Magick.NET 14.x replaces
-        // SixLabors.ImageSharp 3.x. The MagickImage constructor is synchronous;
-        // wrap in Task.Run so the public signature remains async.
-        using var image = await Task.Run(() => new MagickImage(sourceStream), ct).ConfigureAwait(false);
-
-        // Calculate new dimensions maintaining aspect ratio. Magick.NET 14.x
-        // exposes Width/Height as uint, so cast to int for the existing helper.
-        var (newWidth, newHeight) = CalculateThumbnailDimensions((int)image.Width, (int)image.Height);
-
-        image.Resize((uint)newWidth, (uint)newHeight);
-
-        image.Format = MagickFormat.Jpeg;
-        image.Quality = ThumbnailJpegQuality;
-
-        var outputStream = new MemoryStream();
-        await Task.Run(() => image.Write(outputStream), ct).ConfigureAwait(false);
-        outputStream.Position = 0;
-        return outputStream;
-    }
+    // Issue #2055 Phase G + #2436 PR-B: delegates to shared ImageThumbnailHelper
+    // (Magick.NET-Q8-AnyCPU 14.x, Apache 2.0, post DEC-3d-1 migration).
+    internal static Task<MemoryStream?> GenerateThumbnailAsync(Stream sourceStream, CancellationToken ct = default)
+        => ImageThumbnailHelper.GenerateThumbnailAsync(sourceStream, ct);
 
     internal static (int width, int height) CalculateThumbnailDimensions(int originalWidth, int originalHeight)
-    {
-        if (originalWidth <= ThumbnailMaxDimension && originalHeight <= ThumbnailMaxDimension)
-        {
-            return (originalWidth, originalHeight);
-        }
-
-        double ratio;
-        if (originalWidth >= originalHeight)
-        {
-            ratio = (double)ThumbnailMaxDimension / originalWidth;
-        }
-        else
-        {
-            ratio = (double)ThumbnailMaxDimension / originalHeight;
-        }
-
-        return (Math.Max(1, (int)(originalWidth * ratio)), Math.Max(1, (int)(originalHeight * ratio)));
-    }
+        => ImageThumbnailHelper.CalculateThumbnailDimensions(originalWidth, originalHeight);
 
     private static bool IsAllowedContentType(string contentType)
     {

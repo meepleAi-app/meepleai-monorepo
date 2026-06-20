@@ -88,6 +88,15 @@ internal static class PlayRecordEndpoints
             .WithSummary("Delete play record")
             .WithDescription("Soft-deletes a play record. Creator-only.");
 
+        group.MapPost("/play-records/{recordId:guid}/photos", HandleUploadPhoto)
+            .RequireAuthenticatedUser()
+            .DisableAntiforgery()
+            .Produces<PlayRecordPhotoUploadResult>(201)
+            .Produces(400).Produces(401).Produces(StatusCodes.Status403Forbidden).Produces(404)
+            .WithTags("PlayRecords")
+            .WithSummary("Upload a photo to a play record (creator-only, ≤5MB, opt-in OCR)")
+            .WithOpenApi();
+
         // Queries
         group.MapGet("/play-records/{recordId}", HandleGetPlayRecord)
             .RequireAuthenticatedUser()
@@ -210,6 +219,32 @@ internal static class PlayRecordEndpoints
         var command = new DeletePlayRecordCommand(recordId, httpContext.User.GetUserId());
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleUploadPhoto(
+        Guid recordId,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var form = await httpContext.Request.ReadFormAsync(cancellationToken).ConfigureAwait(false);
+        var file = form.Files.GetFile("file");
+        if (file is null || file.Length == 0)
+            return Results.BadRequest(new { error = "File is required" });
+
+        var extractScore = form.TryGetValue("extractScoreFromPhoto", out var raw)
+            && bool.TryParse(raw.ToString(), out var b) && b;
+        var caption = form.TryGetValue("caption", out var cap) ? cap.ToString() : null;
+
+        using var stream = file.OpenReadStream();
+        var command = new UploadPlayRecordPhotoCommand(
+            recordId, httpContext.User.GetUserId(), stream, file.Length, file.ContentType, extractScore, caption);
+
+        // Let exceptions propagate to ApiExceptionHandlerMiddleware for a consistent
+        // ProblemDetails envelope (ForbiddenException→403, NotFoundException→404,
+        // ValidationException→400) — matching every other handler in this file.
+        var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.Created($"/api/v1/play-records/{recordId}/photos/{result.PhotoId}", result);
     }
 
     #endregion

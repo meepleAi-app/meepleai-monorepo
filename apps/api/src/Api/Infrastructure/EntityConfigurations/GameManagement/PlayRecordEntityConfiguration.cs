@@ -82,6 +82,17 @@ internal class PlayRecordEntityConfiguration : IEntityTypeConfiguration<PlayReco
             .HasDatabaseName("UX_play_records_source_event_id")
             .HasFilter("source_event_id IS NOT NULL");
 
+        // Optimistic concurrency via PostgreSQL's xmin system column (ADR-060).
+        // xmin is a Postgres system column — EF maps it but does NOT create the column.
+        // ValueGeneratedOnAddOrUpdate tells EF the DB owns the value on every write.
+        // IsConcurrencyToken() makes EF include it in UPDATE … WHERE xmin = @p0.
+        // #2436 PR-B / #2437-1.
+        builder.Property(e => e.Xmin)
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
+
         // Relationships
         builder.HasMany(e => e.Players)
             .WithOne(p => p.PlayRecord)

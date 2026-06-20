@@ -1295,14 +1295,16 @@ And Matrix update reflect signoff
 ```gherkin
 Given pattern "5 stati canonici" (default/empty/loading/error/sse) definito in state-matrix.html
 When dev implementa nuova route
-Then DEVE coprire tutti 5 stati
-And Storybook story per ogni stato (post DS-17)
-And CI check via test snapshot per ogni stato
+Then DEVE coprire i 5 stati applicabili (sse = N/A per route senza data source SSE)
+And Storybook story per ogni stato applicabile (post DS-17)
+And review manuale + axe AA per ogni stato
 ```
 
-**AC**: (1) lint:storybook-states blocking; (2) PR template checklist; (3) dev-fixture state-matrix.html riusabile as reference; (4) per ogni state un Gherkin scenario nei test E2E; (5) axe AA per ogni stato.
+> **⚠ Declassamento DEC-A5 — 2026-06-19 (issue #2342).** Il gate CI `lint:storybook-states` **non esiste** in `apps/web/package.json` (gli unici script `lint:*` sono `lint:tokens`, `lint:tokens:mockups`, `lint:bgg`, `lint:bgg-mockups`, `lint:mockup-state-naming`, `lint:fidelity`) **e non è enforced in nessun workflow** `.github/workflows/`. Le sub-issue Tier 2 (#2347-#2350, epic #2346) che spuntavano "CI lint:storybook-states green" lo facevano contro un gate inesistente; il loro plan (`2026-06-19-issue-2346-...md`) già lo riconosceva come gate assente. DEC-A5 è quindi **declassato a review manuale, non CI-enforced**. Il gate automatico resta un futuro deliverable **non-blocking** se/quando costruito.
 
-**Action**: post DS-17 enforce via Storybook coverage gate.
+**AC** (post-declassamento): (1) ~~lint:storybook-states blocking~~ → **deferred** (gate CI non implementato; futuro deliverable non-blocking); (2) PR template checklist (storie 5 stati applicabili + axe + E2E) — review manuale; (3) dev-fixture state-matrix.html riusabile as reference; (4) per ogni stato applicabile un Gherkin scenario nei test E2E; (5) axe AA per ogni stato.
+
+**Action**: enforcement attuale = review manuale + PR checklist; il gate Storybook coverage automatico resta opzionale/futuro (non-blocking).
 
 ---
 

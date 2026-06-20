@@ -21,6 +21,14 @@ import type {
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 const BASE_URL = `${API_BASE}/api/v1/play-records`;
 
+export interface UploadPlayRecordPhotoResult {
+  photoId: string;
+  photoUrl: string;
+  thumbnailUrl: string | null;
+  ocrText: string | null;
+  wasDeduplicated: boolean;
+}
+
 /**
  * Play Records API Client
  */
@@ -112,6 +120,32 @@ export const playRecordsApi = {
       const error = await res.json().catch(() => ({ message: 'Failed to update record' }));
       throw new Error(error.message || 'Failed to update record');
     }
+  },
+
+  /**
+   * Upload a photo to an existing play record (multipart). #2436 PR-C.
+   * Raw fetch — httpClient does not support multipart FormData.
+   */
+  async uploadPhoto(
+    recordId: string,
+    file: Blob,
+    opts: { caption?: string; extractScoreFromPhoto?: boolean } = {}
+  ): Promise<UploadPlayRecordPhotoResult> {
+    const form = new FormData();
+    form.append('file', file, file instanceof File ? file.name : 'photo.jpg');
+    if (opts.extractScoreFromPhoto) form.append('extractScoreFromPhoto', 'true');
+    if (opts.caption) form.append('caption', opts.caption);
+
+    const res = await fetch(`${BASE_URL}/${recordId}/photos`, {
+      method: 'POST',
+      body: form,
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ message: 'Failed to upload photo' }));
+      throw new Error(error.error || error.message || 'Failed to upload photo');
+    }
+    return res.json();
   },
 
   // ========== Queries ==========

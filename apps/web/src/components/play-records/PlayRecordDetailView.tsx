@@ -30,7 +30,7 @@
 /* eslint-disable local/no-hardcoded-color-utility -- text-white / gradient covers intentionally use colored bg following .e-bg mockup pattern */
 'use client';
 
-import type { ReactElement } from 'react';
+import { useState, type ReactElement } from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -47,6 +47,8 @@ import { Classifica, type ClassificaRow } from './detail/Classifica';
 import { ConnectionBar } from './detail/ConnectionBar';
 import { KpiGrid } from './detail/KpiGrid';
 import { ScoreBreakdown, type ScoreBreakdownRow } from './detail/ScoreBreakdown';
+import { PlayRecordPhotoGallery } from './photos/PlayRecordPhotoGallery';
+import { PlayRecordPhotoUploadDialog } from './photos/PlayRecordPhotoUploadDialog';
 import {
   PlayRecordHeroPodium,
   type RankedScore,
@@ -223,6 +225,7 @@ export function PlayRecordDetailView({ recordId }: PlayRecordDetailViewProps): R
   const router = useRouter();
   const { data: currentUser } = useCurrentUser();
   const { data: record, isLoading, error } = usePlayRecord(recordId);
+  const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
 
   if (isLoading) {
     return <LoadingSkeleton />;
@@ -250,6 +253,7 @@ export function PlayRecordDetailView({ recordId }: PlayRecordDetailViewProps): R
 
   // ── Derive perspective ──────────────────────────────────────────────────────
   const currentUserId = currentUser?.id ?? null;
+  const isCreator = currentUserId !== null && currentUserId === record.createdByUserId;
   const perspective = derivePerspective({
     currentUserId,
     players: record.players,
@@ -341,6 +345,42 @@ export function PlayRecordDetailView({ recordId }: PlayRecordDetailViewProps): R
           avgScore={avgScore}
           spread={spread}
         />
+
+        {/* Photos — #2436 PR-C. The gallery renders its own <h2>; no section aria-label
+            to avoid a double screen-reader announcement of the same title. */}
+        <section className="flex flex-col gap-2">
+          {isCreator && (
+            <div className="flex">
+              <button
+                type="button"
+                onClick={() => setPhotoDialogOpen(true)}
+                className="ml-auto rounded-md border border-border px-3 py-1.5 text-sm font-bold text-foreground hover:bg-muted"
+              >
+                📷 {t('playRecords.photos.addButton')}
+              </button>
+            </div>
+          )}
+          <PlayRecordPhotoGallery
+            photos={record.photos ?? []}
+            labels={{
+              title: t('playRecords.photos.sectionTitle'),
+              emptyTitle: t('playRecords.photos.emptyTitle'),
+              emptyDescription: t('playRecords.photos.emptyDescription'),
+              photoAltFallback: t('playRecords.photos.photoAltFallback'),
+              ocrResultTitle: t('playRecords.photos.ocrResultTitle'),
+              prev: t('playRecords.photos.lightboxPrev'),
+              next: t('playRecords.photos.lightboxNext'),
+            }}
+          />
+        </section>
+
+        {isCreator && (
+          <PlayRecordPhotoUploadDialog
+            recordId={recordId}
+            open={photoDialogOpen}
+            onClose={() => setPhotoDialogOpen(false)}
+          />
+        )}
 
         {/* Classifica — AC-2.5 */}
         {clasificaRows.length > 0 && (

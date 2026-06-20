@@ -25,8 +25,6 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.PlayRecords;
 internal sealed class UploadPlayRecordPhotoCommandHandler
     : ICommandHandler<UploadPlayRecordPhotoCommand, PlayRecordPhotoUploadResult>
 {
-    private const int PresignExpirySeconds = 3600;
-
     private readonly IPlayRecordRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IBlobStorageService _blobStorage;
@@ -85,8 +83,11 @@ internal sealed class UploadPlayRecordPhotoCommandHandler
         var existing = record.Photos.FirstOrDefault(p => string.Equals(p.Sha256Hash, sha, StringComparison.Ordinal));
         if (existing != null)
         {
-            var existingUrl = await PresignAsync(existing.BlobUrl, cancellationToken).ConfigureAwait(false);
-            return new PlayRecordPhotoUploadResult(existing.Id, existingUrl, existing.ThumbnailUrl, existing.OcrText, WasDeduplicated: true);
+            var existingUrl = await PlayRecordPhotoUrlResolver.ResolveAsync(_blobStorage, existing.BlobUrl, PlayRecordPhotoUrlResolver.DefaultExpirySeconds).ConfigureAwait(false);
+            var existingThumb = existing.ThumbnailUrl is null
+                ? null
+                : await PlayRecordPhotoUrlResolver.ResolveAsync(_blobStorage, existing.ThumbnailUrl, PlayRecordPhotoUrlResolver.DefaultExpirySeconds).ConfigureAwait(false);
+            return new PlayRecordPhotoUploadResult(existing.Id, existingUrl, existingThumb, existing.OcrText, WasDeduplicated: true);
         }
 
         var photoId = Guid.NewGuid();
@@ -161,33 +162,11 @@ internal sealed class UploadPlayRecordPhotoCommandHandler
             throw;
         }
 
-        var url = await PresignAsync(stored.FilePath, cancellationToken).ConfigureAwait(false);
-        return new PlayRecordPhotoUploadResult(photoId, url, thumbUrl, ocrText, WasDeduplicated: false);
-    }
-
-    private async Task<string> PresignAsync(string blobPath, CancellationToken ct)
-    {
-        // blobPath is the stored FilePath. Mirror SessionAttachmentService.ParseBlobPath:
-        // fileId = substring before the first '_' in the file name.
-        // For local storage, GetPresignedDownloadUrlAsync returns null → fall back to raw path.
-        var fileName = Path.GetFileName(blobPath);
-        if (string.IsNullOrEmpty(fileName))
-            return blobPath;
-
-        var underscoreIndex = fileName.IndexOf('_', StringComparison.Ordinal);
-        if (underscoreIndex <= 0)
-            return blobPath;
-
-        var fileId = fileName[..underscoreIndex];
-        var directory = Path.GetDirectoryName(blobPath);
-        if (string.IsNullOrEmpty(directory))
-            return blobPath;
-
-        var folder = Path.GetFileName(directory);
-        if (string.IsNullOrEmpty(folder))
-            return blobPath;
-
-        var signed = await _blobStorage.GetPresignedDownloadUrlAsync(fileId, BlobCategory.PlayRecordPhoto, folder, PresignExpirySeconds).ConfigureAwait(false);
-        return signed ?? blobPath;
+        var url = await PlayRecordPhotoUrlResolver.ResolveAsync(_blobStorage, stored.FilePath, PlayRecordPhotoUrlResolver.DefaultExpirySeconds).ConfigureAwait(false);
+        // Presign the thumbnail for the response too (the entity keeps the raw FilePath above).
+        var thumbPresigned = thumbUrl is null
+            ? null
+            : await PlayRecordPhotoUrlResolver.ResolveAsync(_blobStorage, thumbUrl, PlayRecordPhotoUrlResolver.DefaultExpirySeconds).ConfigureAwait(false);
+        return new PlayRecordPhotoUploadResult(photoId, url, thumbPresigned, ocrText, WasDeduplicated: false);
     }
 }

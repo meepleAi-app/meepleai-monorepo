@@ -4290,6 +4290,31 @@
         "back": "← Indietro"
       }
     },
+    "photos": {
+      "sectionTitle": "Foto della partita",
+      "addButton": "Aggiungi foto",
+      "dialogTitle": "Carica foto",
+      "dialogDescription": "JPG, PNG, WebP o HEIC · max 5MB · fino a 10 foto.",
+      "selectLabel": "Seleziona foto",
+      "captionLabel": "Didascalia (opzionale)",
+      "captionPlaceholder": "Es. tabellone finale",
+      "extractScoreLabel": "Estrai il punteggio dalla foto (OCR)",
+      "ocrResultTitle": "Testo rilevato",
+      "uploadCta": "Carica",
+      "uploading": "Caricamento…",
+      "emptyTitle": "Nessuna foto",
+      "emptyDescription": "Carica una foto del tabellone o del tavolo.",
+      "photoAltFallback": "Foto della partita",
+      "dedupToast": "Questa foto è già presente.",
+      "uploadError": "Caricamento foto non riuscito.",
+      "tooLarge": "File troppo grande, massimo 5MB.",
+      "tooMany": "Massimo 10 foto per partita.",
+      "badFormat": "Formato non supportato. Usa JPG, PNG, WebP o HEIC.",
+      "heicFailed": "Conversione HEIC fallita. Riprova con JPEG o PNG.",
+      "lightboxClose": "Chiudi",
+      "lightboxPrev": "Precedente",
+      "lightboxNext": "Successiva"
+    },
     "kbGlobale": {
       "hero": {
         "placeholder": "Cerca nella knowledge base…",

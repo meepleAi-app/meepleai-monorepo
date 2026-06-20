@@ -105,6 +105,15 @@ const MESSAGES: Record<string, string> = {
   'playRecords.detail.notFound': 'Partita non trovata',
   'playRecords.detail.retry': 'Riprova',
   'playRecords.detail.backToList': 'Torna alle partite',
+  // #2436 PR-C photos
+  'playRecords.photos.sectionTitle': 'Foto della partita',
+  'playRecords.photos.addButton': 'Aggiungi foto',
+  'playRecords.photos.emptyTitle': 'Nessuna foto',
+  'playRecords.photos.emptyDescription': 'Carica una foto',
+  'playRecords.photos.photoAltFallback': 'Foto',
+  'playRecords.photos.ocrResultTitle': 'Testo',
+  'playRecords.photos.lightboxPrev': 'Prec',
+  'playRecords.photos.lightboxNext': 'Succ',
 };
 
 // ─── render helper ─────────────────────────────────────────────────────────────
@@ -355,6 +364,26 @@ describe('PlayRecordDetailView — variant matrix', () => {
         },
         { timeout: 5000 }
       );
+    });
+  });
+
+  // ── Photos (#2436 PR-C) ──────────────────────────────────────────────────────
+  describe('Photos — #2436 PR-C creator-only upload', () => {
+    it('shows the add-photo button for the record creator', async () => {
+      // FIXTURE_WON.createdByUserId === 'user-me' (the mocked current user)
+      renderView(FIXTURE_WON.id);
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /aggiungi foto/i })).toBeInTheDocument();
+      });
+    });
+
+    it('hides the add-photo button for non-creators (spectator)', async () => {
+      // FIXTURE_SPECTATOR.createdByUserId === 'u-other1' (not the current user)
+      renderView(FIXTURE_SPECTATOR.id);
+      await waitFor(() => {
+        expect(document.querySelector('[data-slot="play-record-hero-podium"]')).not.toBeNull();
+      });
+      expect(screen.queryByRole('button', { name: /aggiungi foto/i })).toBeNull();
     });
   });
 });

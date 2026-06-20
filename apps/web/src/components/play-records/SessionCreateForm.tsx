@@ -13,7 +13,7 @@
 
 'use client';
 
-import { useState, useId, useEffect, useRef } from 'react';
+import { useState, useId, useEffect, useRef, useMemo } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, ArrowRight, Check, Trophy, Users, X, Plus } from 'lucide-react';
@@ -676,20 +676,38 @@ export function SessionCreateForm({
   const userId = currentUser?.id ?? null;
 
   const watched = form.watch();
-  const draftState: PlayRecordDraftState = {
-    currentStep,
-    gameType: watched.gameType,
-    gameId: watched.gameId,
-    gameName: watched.gameName ?? '',
-    sessionDate: watched.sessionDate instanceof Date ? watched.sessionDate : new Date(),
-    visibility: watched.visibility,
-    enableScoring: watched.enableScoring ?? false,
-    scoringDimensions: watched.scoringDimensions ?? [],
-    dimensionUnits: watched.dimensionUnits ?? {},
-    notes: watched.notes,
-    location: watched.location,
-    players,
-  };
+  // Memoised so the hook's `signature` does not re-serialize on every render —
+  // only when an actual persisted field changes (the form re-renders per keystroke).
+  const draftState = useMemo<PlayRecordDraftState>(
+    () => ({
+      currentStep,
+      gameType: watched.gameType,
+      gameId: watched.gameId,
+      gameName: watched.gameName ?? '',
+      sessionDate: watched.sessionDate instanceof Date ? watched.sessionDate : new Date(),
+      visibility: watched.visibility,
+      enableScoring: watched.enableScoring ?? false,
+      scoringDimensions: watched.scoringDimensions ?? [],
+      dimensionUnits: watched.dimensionUnits ?? {},
+      notes: watched.notes,
+      location: watched.location,
+      players,
+    }),
+    [
+      currentStep,
+      watched.gameType,
+      watched.gameId,
+      watched.gameName,
+      watched.sessionDate,
+      watched.visibility,
+      watched.enableScoring,
+      watched.scoringDimensions,
+      watched.dimensionUnits,
+      watched.notes,
+      watched.location,
+      players,
+    ]
+  );
 
   const { initialDraft, clear, isPending, lastSavedAt } = usePlayRecordDraftPersist({
     userId,

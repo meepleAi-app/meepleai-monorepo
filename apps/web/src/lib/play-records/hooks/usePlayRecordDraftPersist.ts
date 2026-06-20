@@ -166,6 +166,7 @@ export function usePlayRecordDraftPersist({
     clear: () => {
       if (timer.current) clearTimeout(timer.current);
       setIsPending(false);
+      setLastSavedAt(null);
       if (userId) deleteDraft(userId);
     },
     isPending,

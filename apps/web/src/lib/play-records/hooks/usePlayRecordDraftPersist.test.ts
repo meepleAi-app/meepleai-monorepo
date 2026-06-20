@@ -116,6 +116,17 @@ describe('usePlayRecordDraftPersist', () => {
     expect(localStorage.getItem(KEY)).toBeNull();
   });
 
+  it('clear() resets lastSavedAt so the indicator hides again', () => {
+    const { result, rerender } = renderHook(props => usePlayRecordDraftPersist(props), {
+      initialProps: { userId: 'user-1' as string | null, state: baseState() },
+    });
+    rerender({ userId: 'user-1', state: baseState({ location: 'Roma' }) });
+    act(() => vi.advanceTimersByTime(800));
+    expect(result.current.lastSavedAt).not.toBeNull();
+    act(() => result.current.clear());
+    expect(result.current.lastSavedAt).toBeNull();
+  });
+
   it('is inert when userId is null (no read, no write)', () => {
     const { rerender } = renderHook(props => usePlayRecordDraftPersist(props), {
       initialProps: { userId: null as string | null, state: baseState() },

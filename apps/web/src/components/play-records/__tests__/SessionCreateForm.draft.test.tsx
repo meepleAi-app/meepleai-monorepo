@@ -111,6 +111,8 @@ describe('SessionCreateForm — draft persistence wiring', () => {
     vi.useFakeTimers();
     mockCurrentStep = 1;
     render(<SessionCreateForm {...props} />, { wrapper: wrapper() });
+    // AC-A1: pristine form must NOT persist before any edit (first-run skip).
+    expect(localStorage.getItem(KEY)).toBeNull();
     const location = screen.getByLabelText('playRecords.new.step2.locationLabel');
     fireEvent.change(location, { target: { value: 'Milano' } });
     act(() => vi.advanceTimersByTime(800));

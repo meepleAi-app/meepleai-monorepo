@@ -3967,6 +3967,19 @@
       "error": {
         "title": "Could not load statistics",
         "description": "A network error occurred. Check your connection and try again."
+      },
+      "trend": {
+        "title": "Win rate trend",
+        "empty": "Not enough data for a trend",
+        "month": "Month",
+        "winRate": "Win rate"
+      },
+      "range": {
+        "label": "Filter period",
+        "all": "All",
+        "30d": "30d",
+        "90d": "90d",
+        "12m": "12mo"
       }
     },
     "new": {

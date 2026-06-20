@@ -1,0 +1,21 @@
+{
+  "_comment": "Issue #2339 sub-PR 3/3 — IT seed translations for SP4 games. Generated 2026-06-20.",
+  "_source": "infra/scripts/seed-sp4/translations-research.md",
+  "_decision_rule": "translate when IT publisher uses an established IT title; retain canonical EN otherwise",
+  "translations": [
+    {
+      "gameSlug": "catan",
+      "locale": "it",
+      "title": "I Coloni di Catan",
+      "description": null,
+      "source": "manual"
+    },
+    {
+      "gameSlug": "pandemic",
+      "locale": "it",
+      "title": "Pandemia",
+      "description": null,
+      "source": "manual"
+    }
+  ]
+}

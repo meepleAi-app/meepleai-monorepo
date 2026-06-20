@@ -16,6 +16,7 @@
 #   20 games         ← 8 shared games + publish
 #   30 kb            ← 6 PDF uploads + indexing (slowest: 5-15min)
 #   40 agents        ← 5 agents (multi-login)
+#   45 translations  ← IT translations for SP4 games (Issue #2339 sub-PR 3/3)
 #   50 toolkits      ← 4 toolkits + tools (multi-login)
 #   60 library       ← per-user library entries
 #   70 sessions      ← 6 live sessions

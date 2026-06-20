@@ -220,6 +220,46 @@ References:
 - Plan: [`docs/superpowers/plans/2026-06-10-issue-2123-bgg-tos-compliance.md`](../../../superpowers/plans/2026-06-10-issue-2123-bgg-tos-compliance.md)
 - Operations runbook: [`docs/for-developers/operations/operations-manual.md`](../../../for-developers/operations/operations-manual.md) § Catalog covers — BGG ToS compliance
 
+## 6. Amendment 2026-06-20 — IT seed translations (issue #2339 sub-PR 3/3)
+
+### 6.1 Scope
+
+Sub-PR 3/3 of issue [#2339](https://github.com/meepleAi-app/meepleai-monorepo/issues/2339) introduces 2 IT-locale translation rows for the SP4 seed dataset (`Catan` → `I Coloni di Catan`, `Pandemic` → `Pandemia`). These rows are persisted in the `shared_game_translations` table shipped by sub-PR 1/3 (PR [#2370](https://github.com/meepleAi-app/meepleai-monorepo/pull/2370)) and are surfaced to the FE via the `useGameTitle()` hook shipped by sub-PR 2/3 (PR [#2449](https://github.com/meepleAi-app/meepleai-monorepo/pull/2449)).
+
+### 6.2 Legal posture for translation strings
+
+Game titles are **facts** (per ADR-059 § 1 reasoning). The IT translation of a foreign game title (e.g. `I Coloni di Catan` for `Catan`) is the **official IT trade name** chosen by the IT publisher (`dV Giochi`, `Asmodee Italia`, etc.) for the IT market. As such:
+
+- The IT title is **identifiable factual information** about the game, not creative content.
+- Storing the IT title alongside the canonical EN does **not** create derivative work — same legal status as storing publisher names or BGG IDs (already permitted by ADR-059 § 3).
+- No attribution is required for trade name re-use; trademarks remain the publishers' property and are referenced descriptively (not used as marks).
+
+### 6.3 Curation process
+
+The 2 IT translations were curated by `@badsworm` (IT native, board game collector) via cross-reference with:
+
+- IT publisher catalog pages (`dV Giochi`, `Asmodee Italia`)
+- BGG IT version pages
+- IT retail listings (verifying that the IT edition is currently sold under the localized title)
+
+The full audit trail is in [`infra/scripts/seed-sp4/translations-research.md`](../../../../infra/scripts/seed-sp4/translations-research.md), which documents the decision (`translate` vs `retain canonical EN`) for all 13 SP4 games.
+
+### 6.4 Source attribution
+
+Each persisted translation carries a `source` discriminator:
+
+- `manual` — admin-curated (the 2 SP4 seed entries, fully attributable to `@badsworm`'s review)
+- `auto-openrouter` — machine-translated via `OpenRouterTranslationService` (DeepSeek V3); NOT used in seed but available for future bulk imports
+- `community` — community-sourced (out of scope MVP, moderation workflow TBD)
+
+The `source` field is the audit primitive: any future Wikidata enrichment or community submission for translations would create a NEW row with the appropriate source, preserving the original `manual` row as the curated canonical IT title.
+
+### 6.5 BGG-compliance note
+
+Translation rows are stored entirely in our DB (no upstream sync to BGG). They are not subject to the BGG user-side asset ban (§ 5). The 2 seed translations originate from IT publisher catalogs, not BGG version pages.
+
+---
+
 ## References
 
 - Design spec: [`docs/superpowers/specs/2026-06-04-admin-catalog-seed-design.md`](../../../superpowers/specs/2026-06-04-admin-catalog-seed-design.md)

@@ -28,7 +28,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 /// the promotion ladder: if a second BC (e.g. PdfDocument cover thumbnails, Player avatars)
 /// needs Wikimedia Commons access, the adapter moves to <c>SharedKernel/ExternalServices/</c>
 /// while the consumer-owned port stays in the consuming BC. Direct cross-BC injection of
-/// this interface is rejected (Newman SN-001).
+/// this interface is rejected (see ADR-082 § "Anti-promotion rules", Option C rejected).
 /// </para>
 /// </remarks>
 internal interface IWikimediaCommonsClient

@@ -505,5 +505,5 @@ curl https://boardgamegeek.com/xmlapi2/thing?id=13
 
 ---
 
-**Last Updated**: 2026-02-16
+**Last Updated**: 2026-06-20
 **Maintainer**: MeepleAI Development Team

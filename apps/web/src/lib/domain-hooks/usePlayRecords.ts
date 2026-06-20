@@ -17,6 +17,14 @@ import type {
   UpdatePlayRecordRequest,
 } from '@/lib/api/schemas/play-records.schemas';
 
+// ========== Types ==========
+
+/**
+ * Optional date-range window for player statistics (#2438). Both bounds are
+ * ISO-8601 strings; either may be omitted to leave that side unbounded.
+ */
+export type StatsRange = { startDate?: string; endDate?: string };
+
 // ========== Query Keys ==========
 
 export const playRecordsKeys = {
@@ -25,7 +33,13 @@ export const playRecordsKeys = {
   list: (filters: Record<string, unknown>) => [...playRecordsKeys.lists(), filters] as const,
   details: () => [...playRecordsKeys.all, 'detail'] as const,
   detail: (id: string) => [...playRecordsKeys.details(), id] as const,
-  statistics: () => [...playRecordsKeys.all, 'statistics'] as const,
+  statistics: (range?: StatsRange) =>
+    [
+      ...playRecordsKeys.all,
+      'statistics',
+      range?.startDate ?? null,
+      range?.endDate ?? null,
+    ] as const,
 };
 
 // ========== Queries ==========
@@ -95,10 +109,10 @@ export function useInfinitePlayHistory(params: {
  * AC-5.9: staleTime 5 minutes (300000ms) — stats are relatively stable,
  * allows client-side cache reuse across navigations without refetch.
  */
-export function usePlayerStatistics() {
+export function usePlayerStatistics(range?: StatsRange) {
   return useQuery({
-    queryKey: playRecordsKeys.statistics(),
-    queryFn: () => playRecordsApi.getPlayerStatistics(),
+    queryKey: playRecordsKeys.statistics(range),
+    queryFn: () => playRecordsApi.getPlayerStatistics(range ?? {}),
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: false,
   });

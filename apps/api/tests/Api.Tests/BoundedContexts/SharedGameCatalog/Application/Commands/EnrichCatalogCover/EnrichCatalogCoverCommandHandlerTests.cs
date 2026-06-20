@@ -13,13 +13,10 @@ using Api.Middleware.Exceptions;
 using Api.Services.Pdf;
 using Api.SharedKernel.Infrastructure.Persistence;
 using FluentAssertions;
+using ImageMagick;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatalogCover;
@@ -307,8 +304,8 @@ public class EnrichCatalogCoverCommandHandlerTests
 
         harness.WikidataHandler.SparqlJson = BuildSparqlImageResponse(TestFilename);
         harness.CommonsHandler.LicenseJson = BuildImageInfoResponse("CC0");
-        // Corrupted image bytes → ImageSharp decode fails → WebpVariantGenerator
-        // throws ImageProcessingException
+        // Corrupted image bytes → Magick.NET decode fails → WebpVariantGenerator
+        // throws ImageProcessingException (DEC-3d-1, issue #2055 Phase G)
         harness.CommonsHandler.ImageBytes = new byte[] { 0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE };
 
         var result = await harness.Sut.Handle(
@@ -571,13 +568,15 @@ public class EnrichCatalogCoverCommandHandlerTests
 }}";
     }
 
-    private static async Task<byte[]> CreateSolidImagePngAsync(int width, int height)
+    private static Task<byte[]> CreateSolidImagePngAsync(int width, int height)
     {
-        using var image = new Image<Rgba32>(width, height);
-        image.Mutate(x => x.BackgroundColor(Color.SteelBlue));
+        // ADR DEC-3d-1 (issue #2055 Phase G): Magick.NET 14.x replaces ImageSharp.
+        // Solid steel-blue (#4682B4) preserved for parity with the prior fixture.
+        using var image = new MagickImage(new MagickColor("#4682B4"), (uint)width, (uint)height);
+        image.Format = MagickFormat.Png;
         using var ms = new MemoryStream();
-        await image.SaveAsync(ms, new PngEncoder());
-        return ms.ToArray();
+        image.Write(ms);
+        return Task.FromResult(ms.ToArray());
     }
 
     private sealed class WikidataSparqlHandler : HttpMessageHandler

@@ -2,8 +2,7 @@ using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Application.Validators;
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionAttachment;
 using Api.Services.Pdf;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
+using ImageMagick;
 
 namespace Api.BoundedContexts.GameManagement.Infrastructure.Services;
 
@@ -176,19 +175,22 @@ internal sealed class SessionAttachmentService : ISessionAttachmentService
 
     internal static async Task<MemoryStream?> GenerateThumbnailAsync(Stream sourceStream, CancellationToken ct = default)
     {
-        using var image = await Image.LoadAsync(sourceStream, ct).ConfigureAwait(false);
+        // ADR DEC-3d-1 (issue #2055 Phase G): Magick.NET 14.x replaces
+        // SixLabors.ImageSharp 3.x. The MagickImage constructor is synchronous;
+        // wrap in Task.Run so the public signature remains async.
+        using var image = await Task.Run(() => new MagickImage(sourceStream), ct).ConfigureAwait(false);
 
-        // Calculate new dimensions maintaining aspect ratio
-        var (newWidth, newHeight) = CalculateThumbnailDimensions(image.Width, image.Height);
+        // Calculate new dimensions maintaining aspect ratio. Magick.NET 14.x
+        // exposes Width/Height as uint, so cast to int for the existing helper.
+        var (newWidth, newHeight) = CalculateThumbnailDimensions((int)image.Width, (int)image.Height);
 
-        image.Mutate(ctx => ctx.Resize(newWidth, newHeight));
+        image.Resize((uint)newWidth, (uint)newHeight);
+
+        image.Format = MagickFormat.Jpeg;
+        image.Quality = ThumbnailJpegQuality;
 
         var outputStream = new MemoryStream();
-        var encoder = new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder
-        {
-            Quality = ThumbnailJpegQuality
-        };
-        await image.SaveAsync(outputStream, encoder, ct).ConfigureAwait(false);
+        await Task.Run(() => image.Write(outputStream), ct).ConfigureAwait(false);
         outputStream.Position = 0;
         return outputStream;
     }

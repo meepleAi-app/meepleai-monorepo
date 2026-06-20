@@ -9,15 +9,19 @@ namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Implementation choice (ADR DEC-3d, locked sess.46h post-spike): SixLabors.
-/// ImageSharp 3.x — managed C#, no native deps. The fully-managed runtime
-/// avoids the platform-specific shared-library headaches of SkiaSharp /
-/// Magick.NET on Linux Alpine container images.
+/// Implementation choice (ADR DEC-3d-1 LOCKED 2026-06-20, issue #2055 Phase G):
+/// Magick.NET-Q8-AnyCPU 14.x (Apache 2.0). Originally backed by SixLabors.ImageSharp
+/// 3.x (DEC-3d sess.46h post-spike); migrated because ImageSharp 3.x adopted the
+/// Six Labors Split License (commercial use requires a paid license, incompatible
+/// with MeepleAI's proprietary licensing) and 2.1.x is upstream EOL. Magick.NET
+/// ships native binaries (~70MB) but the container image already pulls
+/// Tesseract/Docnet, so the footprint impact is acceptable.
 /// </para>
 /// <para>
-/// Lifetime: register as a SINGLETON via DI. ImageSharp itself is thread-safe
-/// for the read-only encoder/decoder pipeline and the generator holds no
-/// per-call state — see DI registration in
+/// Lifetime: register as a SINGLETON via DI. Magick.NET's per-image instances
+/// are not thread-safe, but the generator constructs a fresh
+/// <see cref="ImageMagick.MagickImage"/> per call and never shares state across
+/// invocations — see DI registration in
 /// <c>SharedGameCatalogServiceExtensions.AddSharedGameCatalogContext</c>.
 /// </para>
 /// </remarks>
@@ -30,7 +34,7 @@ public interface IWebpVariantGenerator
     /// </summary>
     /// <param name="originalImage">
     /// Source image bytes. Auto-detected formats: PNG, JPEG, WebP, GIF, BMP,
-    /// TIFF (all supported decoders bundled by ImageSharp 3.1.12).
+    /// TIFF (all supported decoders bundled by Magick.NET 14.x).
     /// </param>
     /// <param name="width">Target width in pixels (must be &gt; 0).</param>
     /// <param name="height">Target height in pixels (must be &gt; 0).</param>

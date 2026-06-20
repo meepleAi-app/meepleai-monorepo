@@ -58,7 +58,12 @@ vi.mock('@/lib/stores/play-records-store', () => ({
     nextStep: mockNextStep,
     prevStep: mockPrevStep,
     resetSessionCreation: mockResetSessionCreation,
+    setSessionField: vi.fn(),
   }),
+}));
+
+vi.mock('@/hooks/queries/useCurrentUser', () => ({
+  useCurrentUser: () => ({ data: undefined }),
 }));
 
 // GameCombobox — simple stub

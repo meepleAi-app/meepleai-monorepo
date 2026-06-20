@@ -50,4 +50,5 @@ public class PlayRecordEntity
 
     // Navigation Properties
     public ICollection<RecordPlayerEntity> Players { get; set; } = new List<RecordPlayerEntity>();
+    public ICollection<PlayRecordPhotoEntity> Photos { get; set; } = new List<PlayRecordPhotoEntity>(); // #2436 PR-B
 }

@@ -11,8 +11,10 @@
 
 import Link from 'next/link';
 
+import { useTranslation } from '@/hooks/useTranslation';
 import type { SharedGame } from '@/lib/api/schemas/shared-games.schemas';
 import { shouldUsePlaceholder } from '@/lib/games/cover-utils';
+import { useGameTitle } from '@/lib/i18n/use-game-title';
 
 export interface HubGameCardProps {
   readonly game: SharedGame;
@@ -30,6 +32,15 @@ export function HubGameCard({ game, onClick }: HubGameCardProps) {
   // routes to the deterministic emoji fallback.
   const coverSrc = game.coverUrl ?? game.thumbnailUrl ?? '';
   const showImage = !shouldUsePlaceholder(coverSrc);
+
+  // Issue #2339 — viewer-locale title resolution. `game.title` (canonical EN)
+  // remains the source of truth for aria-label fallback per DEC-FE-9.
+  const { value: title, source } = useGameTitle(game);
+  const { t } = useTranslation();
+  const titleAriaLabel =
+    source === 'translation'
+      ? t('common.localizedFromEnglish', { localizedTitle: title, originalTitle: game.title })
+      : undefined;
   return (
     <Link
       href={`/games/${game.id}`}
@@ -57,8 +68,11 @@ export function HubGameCard({ game, onClick }: HubGameCardProps) {
         )}
       </div>
       <div className="flex flex-col gap-1 p-3">
-        <h3 className="line-clamp-1 font-bold font-[Quicksand] text-sm text-foreground">
-          {game.title}
+        <h3
+          className="line-clamp-1 font-bold font-[Quicksand] text-sm text-foreground"
+          aria-label={titleAriaLabel}
+        >
+          {title}
         </h3>
         <div className="font-mono text-[10px] text-muted-foreground">
           {formatYear(game.yearPublished)}

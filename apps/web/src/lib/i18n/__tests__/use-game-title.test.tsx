@@ -1,10 +1,18 @@
 // apps/web/src/lib/i18n/__tests__/use-game-title.test.tsx
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { render, renderHook } from '@testing-library/react';
+import { axe, toHaveNoViolations } from 'jest-axe';
+import { IntlProvider } from 'react-intl';
 
 import { useGameTitle } from '@/lib/i18n/use-game-title';
 import * as useUserLocaleModule from '@/hooks/useUserLocale';
+import { useTranslation } from '@/hooks/useTranslation';
 import type { SharedGame } from '@/lib/api/schemas/shared-games.schemas';
+
+import enMessages from '@/locales/en.json';
+import itMessages from '@/locales/it.json';
+
+expect.extend(toHaveNoViolations);
 
 const BASE_GAME: Pick<SharedGame, 'id' | 'title' | 'translations'> = {
   id: '00000000-0000-0000-0000-000000000001' as never,
@@ -132,5 +140,116 @@ describe('useGameTitle (matrix T1-T6)', () => {
     const first = result.current;
     rerender();
     expect(result.current).toBe(first);
+  });
+});
+
+// ─── A11y tests (A1/A2/A3) ──────────────────────────────────────────────────
+// DEC-FE-9: aria-label uses i18n key `common.localizedFromEnglish` via
+// react-intl, NOT a hardcoded EN string. Localized for both UI=en and UI=it.
+
+/**
+ * Flatten nested locale JSON to dot-notation keys for react-intl messages.
+ * `common.localizedFromEnglish` → flat["common.localizedFromEnglish"] = "..."
+ */
+function flatten(obj: Record<string, unknown>, prefix = ''): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (typeof value === 'string') {
+      result[path] = value;
+    } else if (value && typeof value === 'object') {
+      Object.assign(result, flatten(value as Record<string, unknown>, path));
+    }
+  }
+  return result;
+}
+
+const EN_FLAT = flatten(enMessages as Record<string, unknown>);
+const IT_FLAT = flatten(itMessages as Record<string, unknown>);
+
+function renderWithIntl(locale: 'en' | 'it', component: React.ReactElement) {
+  const messages = locale === 'en' ? EN_FLAT : IT_FLAT;
+  return render(
+    <IntlProvider locale={locale} messages={messages}>
+      {component}
+    </IntlProvider>
+  );
+}
+
+describe('useGameTitle a11y (axe AA + DEC-FE-9 i18n)', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function CardWithAriaLabel({ game }: { game: typeof BASE_GAME }) {
+    const { value, source } = useGameTitle(game);
+    const { t } = useTranslation();
+    const ariaLabel =
+      source === 'translation'
+        ? t('common.localizedFromEnglish', {
+            localizedTitle: value,
+            originalTitle: game.title,
+          })
+        : undefined;
+    return <h3 aria-label={ariaLabel}>{value}</h3>;
+  }
+
+  it('A1: localized title aria-label uses common.localizedFromEnglish key (UI=en)', async () => {
+    mockUserLocale('it');
+    const game = {
+      ...BASE_GAME,
+      translations: [
+        {
+          locale: 'it',
+          title: 'I Coloni di Catan',
+          description: null,
+          source: 'manual' as const,
+        },
+      ],
+    };
+
+    const { container } = renderWithIntl('en', <CardWithAriaLabel game={game} />);
+    const heading = container.querySelector('h3')!;
+    expect(heading.getAttribute('aria-label')).toContain('localized from English');
+    expect(heading.getAttribute('aria-label')).toContain('Catan');
+    expect(heading.getAttribute('aria-label')).toContain('I Coloni di Catan');
+
+    const axeResults = await axe(container);
+    expect(axeResults).toHaveNoViolations();
+  });
+
+  it('A2: canonical title rendered with no aria-label augmentation', async () => {
+    mockUserLocale('en');
+
+    const { container } = renderWithIntl('en', <CardWithAriaLabel game={BASE_GAME} />);
+    const heading = container.querySelector('h3')!;
+    expect(heading.getAttribute('aria-label')).toBeNull();
+
+    const axeResults = await axe(container);
+    expect(axeResults).toHaveNoViolations();
+  });
+
+  it('A3: localized title aria-label uses IT translation when UI locale=it', async () => {
+    mockUserLocale('it');
+    const game = {
+      ...BASE_GAME,
+      translations: [
+        {
+          locale: 'it',
+          title: 'I Coloni di Catan',
+          description: null,
+          source: 'manual' as const,
+        },
+      ],
+    };
+
+    const { container } = renderWithIntl('it', <CardWithAriaLabel game={game} />);
+    const heading = container.querySelector('h3')!;
+    expect(heading.getAttribute('aria-label')).toContain('tradotto da');
+    expect(heading.getAttribute('aria-label')).toContain('Catan');
+    expect(heading.getAttribute('aria-label')).toContain('I Coloni di Catan');
+
+    const axeResults = await axe(container);
+    expect(axeResults).toHaveNoViolations();
   });
 });

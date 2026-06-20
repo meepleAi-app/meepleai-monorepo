@@ -30,6 +30,8 @@ import noGameDetailOrphanRoutes from "./eslint-rules/no-game-detail-orphan-route
 // Forbids direct reads of `useLiveSessionStore(s => s.scores)`; consumers
 // must use `useSessionScores()` from @/lib/domain-hooks/useSessionScores.
 import noStoreScoresDirect from "./eslint-rules/no-store-scores-direct.js";
+// Issue #2339 sub-PR 2/3 — encourage useGameTitle() adoption (warn-only).
+import preferUseGameTitle from "./eslint-rules/prefer-use-game-title.js";
 
 export default [
   {
@@ -119,6 +121,8 @@ export default [
           "no-game-detail-orphan-routes": noGameDetailOrphanRoutes,
           // Issue #2389 Block A.7 — useLiveSessionStore.scores is deprecated; use useSessionScores() instead.
           "no-store-scores-direct": noStoreScoresDirect,
+          // Issue #2339 sub-PR 2/3 — encourage useGameTitle() adoption (warn-only per DEC-FE-8).
+          "prefer-use-game-title": preferUseGameTitle,
         },
       },
     },
@@ -289,6 +293,12 @@ export default [
       // call in ScoreBoard.tsx surfaces without breaking CI; Block C will
       // migrate ScoreBoard, promote to `error`, then remove the store field.
       "local/no-store-scores-direct": "warn",
+      // Issue #2339 sub-PR 2/3 — surfaces direct `game.title` JSX access that
+      // bypasses `useGameTitle()` locale + source priority resolution. WARN-only
+      // per DEC-FE-8 until 14gg of trajectory verde on main-dev; follow-up PR
+      // promotes to `error`. Allow-list: aria-label values (DEC-FE-9), test
+      // files, stories, lib/i18n/.
+      "local/prefer-use-game-title": "warn",
     },
     settings: {
       react: {

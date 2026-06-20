@@ -126,6 +126,7 @@ const FIXTURE_DETAIL: SharedGameDetail = {
   hasKnowledgeBase: true,
   isTopRated: true,
   isNew: false,
+  translations: [],
 };
 
 const FIXTURE_CONTRIBUTORS: readonly TopContributor[] = [

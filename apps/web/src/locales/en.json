@@ -357,6 +357,7 @@
     "filter": "Filter",
     "import": "Import",
     "loading": "Loading...",
+    "localizedFromEnglish": "{localizedTitle} (localized from English: {originalTitle})",
     "loginRequired": "Login required to continue.",
     "next": "Next",
     "no": "No",

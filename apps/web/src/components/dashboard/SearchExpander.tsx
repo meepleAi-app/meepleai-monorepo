@@ -13,8 +13,10 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Search, Loader2 } from 'lucide-react';
 
 import { useLibrary } from '@/hooks/queries/useLibrary';
+import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
 import type { SharedGame } from '@/lib/api/schemas/shared-games.schemas';
+import { useGameTitle } from '@/lib/i18n/use-game-title';
 
 // ========== Types ==========
 
@@ -33,6 +35,13 @@ export interface SearchExpanderProps {
 
 const DEBOUNCE_MS = 300;
 const PAGE_SIZE = 5;
+
+// ========== Helpers ==========
+
+function formatPlayers(min: number, max: number): string {
+  if (min === max) return `${min} giocatori`;
+  return `${min}-${max} giocatori`;
+}
 
 // ========== Component ==========
 
@@ -139,11 +148,6 @@ export function SearchExpander({
     isInLibrary: libraryGameIds.has(game.id),
   }));
 
-  const formatPlayers = (min: number, max: number) => {
-    if (min === max) return `${min} giocatori`;
-    return `${min}-${max} giocatori`;
-  };
-
   return (
     <div data-testid="search-expander" className="absolute inset-x-4 bottom-20 z-50">
       {/* Search Input */}
@@ -167,62 +171,100 @@ export function SearchExpander({
         {enrichedResults.length > 0 && (
           <div className="mt-2 space-y-1 max-h-[280px] overflow-y-auto">
             {enrichedResults.map(game => (
-              <div
+              <SearchResultRow
                 key={game.id}
-                className="flex items-center gap-3 p-2 rounded-xl hover:bg-card/40 transition-colors"
-              >
-                {/* Thumbnail */}
-                {game.thumbnailUrl && (
-                  <img
-                    src={game.thumbnailUrl}
-                    alt={game.title}
-                    className="h-10 w-10 rounded-lg object-cover flex-shrink-0"
-                  />
-                )}
-
-                {/* Game Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-foreground truncate">{game.title}</span>
-                    {game.isInLibrary && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 whitespace-nowrap">
-                        ✓ In libreria
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-xs text-muted-foreground">
-                    {formatPlayers(game.minPlayers, game.maxPlayers)}
-                  </span>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <button
-                    onClick={() => onViewGame(game.id)}
-                    className="px-2.5 py-1 text-xs font-medium rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
-                  >
-                    Vedi
-                  </button>
-                  <button
-                    onClick={() => onAskAboutGame(game)}
-                    className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-colors ${
-                      game.isInLibrary
-                        ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
-                        : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
-                    }`}
-                  >
-                    Chiedi
-                  </button>
-                </div>
-              </div>
+                game={game}
+                onViewGame={onViewGame}
+                onAskAboutGame={onAskAboutGame}
+              />
             ))}
           </div>
         )}
 
         {/* Empty state when searching with no results */}
         {query.trim() && !isSearching && results.length === 0 && (
-          <div className="mt-2 py-4 text-center text-xs text-muted-foreground">Nessun gioco trovato</div>
+          <div className="mt-2 py-4 text-center text-xs text-muted-foreground">
+            Nessun gioco trovato
+          </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ========== Subcomponents ==========
+
+interface SearchResultRowProps {
+  game: SharedGameSearchResult;
+  onViewGame: (gameId: string) => void;
+  onAskAboutGame: (game: SharedGameSearchResult) => void;
+}
+
+/**
+ * Single search result row. Extracted as a subcomponent because
+ * `useGameTitle` is a hook and cannot be called inside `.map()` callbacks
+ * (Rules of Hooks). Each row resolves the viewer-locale title independently.
+ *
+ * Issue #2339 — `game.title` (canonical EN) remains the source of truth for
+ * aria-label fallback per DEC-FE-9.
+ */
+function SearchResultRow({ game, onViewGame, onAskAboutGame }: SearchResultRowProps) {
+  const { value: title, source } = useGameTitle(game);
+  const { t } = useTranslation();
+  const titleAriaLabel =
+    source === 'translation'
+      ? t('common.localizedFromEnglish', { localizedTitle: title, originalTitle: game.title })
+      : undefined;
+
+  return (
+    <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-card/40 transition-colors">
+      {/* Thumbnail */}
+      {game.thumbnailUrl && (
+        <img
+          src={game.thumbnailUrl}
+          alt={title}
+          className="h-10 w-10 rounded-lg object-cover flex-shrink-0"
+        />
+      )}
+
+      {/* Game Info */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span
+            className="text-sm font-medium text-foreground truncate"
+            aria-label={titleAriaLabel}
+          >
+            {title}
+          </span>
+          {game.isInLibrary && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 whitespace-nowrap">
+              ✓ In libreria
+            </span>
+          )}
+        </div>
+        <span className="text-xs text-muted-foreground">
+          {formatPlayers(game.minPlayers, game.maxPlayers)}
+        </span>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex items-center gap-1.5 flex-shrink-0">
+        <button
+          onClick={() => onViewGame(game.id)}
+          className="px-2.5 py-1 text-xs font-medium rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
+        >
+          Vedi
+        </button>
+        <button
+          onClick={() => onAskAboutGame(game)}
+          className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-colors ${
+            game.isInLibrary
+              ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
+              : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+          }`}
+        >
+          Chiedi
+        </button>
       </div>
     </div>
   );

@@ -348,6 +348,7 @@
     "filter": "Filtra",
     "import": "Importa",
     "loading": "Caricamento...",
+    "localizedFromEnglish": "{localizedTitle} (tradotto da: {originalTitle})",
     "loginRequired": "Accesso richiesto per continuare.",
     "next": "Avanti",
     "no": "No",

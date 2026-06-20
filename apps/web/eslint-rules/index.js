@@ -16,9 +16,11 @@
 'use strict';
 
 const noStoreScoresDirect = require('./no-store-scores-direct.js');
+const preferUseGameTitle = require('./prefer-use-game-title.js');
 
 module.exports = {
   rules: {
     'no-store-scores-direct': noStoreScoresDirect,
+    'prefer-use-game-title': preferUseGameTitle,
   },
 };

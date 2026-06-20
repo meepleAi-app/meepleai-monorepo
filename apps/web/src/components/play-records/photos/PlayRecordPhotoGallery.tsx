@@ -13,7 +13,6 @@ export interface PlayRecordPhotoGalleryLabels {
   emptyDescription: string;
   photoAltFallback: string;
   ocrResultTitle: string;
-  close: string;
   prev: string;
   next: string;
 }
@@ -55,7 +54,7 @@ export function PlayRecordPhotoGallery({
         <span aria-hidden="true" className="text-3xl">
           📷
         </span>
-        <h3 className="font-display text-sm font-extrabold text-foreground">{labels.emptyTitle}</h3>
+        <h2 className="font-display text-sm font-extrabold text-foreground">{labels.emptyTitle}</h2>
         <p className="text-xs text-muted-foreground">{labels.emptyDescription}</p>
       </section>
     );
@@ -65,12 +64,12 @@ export function PlayRecordPhotoGallery({
 
   return (
     <section data-slot="play-record-photos" className={clsx('flex flex-col gap-2', className)}>
-      <h3 className="font-display text-base font-extrabold text-foreground">
+      <h2 className="font-display text-base font-extrabold text-foreground">
         <span aria-hidden="true" className="mr-1.5">
           📷
         </span>
         {labels.title}
-      </h3>
+      </h2>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {photos.map((p, i) => {
           const alt = p.caption ?? labels.photoAltFallback;

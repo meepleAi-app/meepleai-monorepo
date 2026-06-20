@@ -289,6 +289,9 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
                 photoEntity.UploadedAt);
         }
 
+        // Restore the xmin optimistic-concurrency token (ADR-060). #2436 PR-B / #2437-1.
+        record.SetXmin(entity.Xmin);
+
         return record;
     }
 
@@ -316,7 +319,8 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
             UpdatedAt = record.UpdatedAt,
             SourceEventId = record.SourceEventId,
             IsDeleted = record.IsDeleted,
-            DeletedAt = record.DeletedAt
+            DeletedAt = record.DeletedAt,
+            Xmin = record.Xmin  // round-trip for detached Update (ADR-060). #2436 PR-B / #2437-1.
         };
 
         // Serialize scoring config

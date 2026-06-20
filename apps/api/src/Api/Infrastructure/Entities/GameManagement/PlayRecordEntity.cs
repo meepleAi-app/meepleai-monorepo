@@ -48,6 +48,12 @@ public class PlayRecordEntity
     /// </summary>
     public Guid? SourceEventId { get; set; }
 
+    // Optimistic concurrency via PostgreSQL's xmin system column (ADR-060).
+    // Replaces the silently-disabled byte[] RowVersion (no trigger populated it).
+    // Server-owned: Postgres assigns xmin = transaction-id-of-last-write per row.
+    // #2436 PR-B / #2437-1.
+    public uint Xmin { get; set; }
+
     // Navigation Properties
     public ICollection<RecordPlayerEntity> Players { get; set; } = new List<RecordPlayerEntity>();
     public ICollection<PlayRecordPhotoEntity> Photos { get; set; } = new List<PlayRecordPhotoEntity>(); // #2436 PR-B

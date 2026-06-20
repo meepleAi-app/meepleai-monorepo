@@ -141,11 +141,10 @@ internal sealed class UploadPlayRecordPhotoCommandHandler
             }
         }
 
-        // NOTE (#2436 PR-B): the <=10-photo cap is enforced on the in-memory aggregate. PlayRecord
-        // has no optimistic-concurrency token yet, so two concurrent uploads to the same record can
-        // each pass the cap check and exceed it by 1-2. Proper fix = xmin optimistic concurrency on
-        // PlayRecord (issue #2437-1), which also wires the 409 conflict UI. Acceptable for MVP — the
-        // cap is a soft UX limit; the (PlayRecordId, Sha256Hash) unique index still blocks duplicates.
+        // The ≤10-photo cap is enforced on the in-memory aggregate. Concurrent upload races that
+        // both pass the cap check are blocked at SaveChanges via PlayRecord's xmin
+        // optimistic-concurrency token (ADR-060, #2436 PR-B / #2437-1): the losing write sees a
+        // stale xmin → DbUpdateConcurrencyException → global middleware → 409 concurrent-edit.
         record.AddPhoto(photoId, stored.FilePath, thumbUrl, command.FileSizeBytes, sha, ocrText, ocrConfidence, command.Caption, command.UserId, _timeProvider);
         try
         {

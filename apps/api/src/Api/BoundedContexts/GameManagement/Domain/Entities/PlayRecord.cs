@@ -46,6 +46,13 @@ internal sealed class PlayRecord : AggregateRoot<Guid>
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
+    /// <summary>Postgres xmin optimistic-concurrency token. Server-owned; the repository
+    /// round-trips it for detached Update (ADR-060). #2436 PR-B / #2437-1.</summary>
+    public uint Xmin { get; private set; }
+
+    /// <summary>Repository-only: restore the xmin token after loading from persistence.</summary>
+    internal void SetXmin(uint xmin) => Xmin = xmin;
+
     // Soft Delete (issue #2439 — mirrors GameBook.SoftDelete pattern)
     public bool IsDeleted { get; private set; }
     public DateTime? DeletedAt { get; private set; }

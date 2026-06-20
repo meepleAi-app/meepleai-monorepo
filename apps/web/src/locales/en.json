@@ -4033,6 +4033,10 @@
         "cancel": "Cancel",
         "draft": "Draft"
       },
+      "draft": {
+        "saving": "Saving…",
+        "saved": "Draft saved {time}"
+      },
       "success": {
         "toast": "Game recorded",
         "toastDescription": "The game has been recorded successfully"

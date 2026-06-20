@@ -62,46 +62,63 @@ vi.mock('@/lib/domain-hooks/usePlayRecords', () => ({
 // The real K5 gate is driven solely by `mode`: in edit mode, game (Step 1) and
 // players/scores (Step 3) become readonly; sessionDate/notes/location (Step 2)
 // always stay editable. The mock mirrors that contract.
+// #2349 AC-4.2: capturedFormProps lets individual tests assert on initialValues/initialPlayers.
+const capturedFormProps: { initialValues?: unknown; initialPlayers?: unknown } = {};
 vi.mock('@/components/play-records/SessionCreateForm', () => ({
-  SessionCreateForm: ({ mode, onSubmit, onCancel, isSubmitting }: any) => (
-    <form
-      data-testid="session-form"
-      onSubmit={e => {
-        e.preventDefault();
-        // Simulate form submission with partial data
-        onSubmit({
-          sessionDate: new Date().toISOString(),
-          notes: 'Test notes',
-          location: 'Test location',
-        });
-      }}
-    >
-      {/* Editable fields (Step 2) — never disabled */}
-      <input data-testid="sessionDate-field" type="datetime-local" />
-      <input data-testid="location-field" />
-      <textarea data-testid="notes-field" />
-      {/* Readonly fields (game / players / scores) — disabled in edit mode */}
-      <input data-testid="game-field" disabled={mode === 'edit'} aria-readonly={mode === 'edit'} />
-      <input
-        data-testid="players-field"
-        disabled={mode === 'edit'}
-        aria-readonly={mode === 'edit'}
-      />
-      <input
-        data-testid="scores-field"
-        disabled={mode === 'edit'}
-        aria-readonly={mode === 'edit'}
-      />
-      <button type="submit" disabled={isSubmitting}>
-        Save
-      </button>
-      {onCancel && (
-        <button type="button" onClick={onCancel}>
-          Cancel
+  SessionCreateForm: ({
+    mode,
+    onSubmit,
+    onCancel,
+    isSubmitting,
+    initialValues,
+    initialPlayers,
+  }: any) => {
+    capturedFormProps.initialValues = initialValues;
+    capturedFormProps.initialPlayers = initialPlayers;
+    return (
+      <form
+        data-testid="session-form"
+        onSubmit={e => {
+          e.preventDefault();
+          // Simulate form submission with partial data
+          onSubmit({
+            sessionDate: new Date().toISOString(),
+            notes: 'Test notes',
+            location: 'Test location',
+          });
+        }}
+      >
+        {/* Editable fields (Step 2) — never disabled */}
+        <input data-testid="sessionDate-field" type="datetime-local" />
+        <input data-testid="location-field" />
+        <textarea data-testid="notes-field" />
+        {/* Readonly fields (game / players / scores) — disabled in edit mode */}
+        <input
+          data-testid="game-field"
+          disabled={mode === 'edit'}
+          aria-readonly={mode === 'edit'}
+        />
+        <input
+          data-testid="players-field"
+          disabled={mode === 'edit'}
+          aria-readonly={mode === 'edit'}
+        />
+        <input
+          data-testid="scores-field"
+          disabled={mode === 'edit'}
+          aria-readonly={mode === 'edit'}
+        />
+        <button type="submit" disabled={isSubmitting}>
+          Save
         </button>
-      )}
-    </form>
-  ),
+        {onCancel && (
+          <button type="button" onClick={onCancel}>
+            Cancel
+          </button>
+        )}
+      </form>
+    );
+  },
 }));
 
 // EditGateBanner — mock the banner
@@ -134,21 +151,33 @@ vi.mock('sonner', () => ({
 
 // ─── Fixture ────────────────────────────────────────────────────────────────────
 
+// #2349 AC-4.2: fixture matches real PlayRecordDto shape (SessionPlayer has
+// id/userId/displayName/scores/totalScore — NOT name/score directly).
 const playRecordFixture = {
   id: 'record-123',
-  gameName: 'Catan',
+  gameName: 'Wingspan',
   gameId: 'game-456',
   sessionDate: new Date('2026-05-28T19:00:00Z').toISOString(),
-  notes: 'Great game!',
-  location: 'Home',
+  notes: 'gg',
+  location: 'Padova',
   players: [
-    { userId: 'user-1', name: 'Alice', score: 10 },
-    { userId: 'user-2', name: 'Bob', score: 8 },
+    {
+      id: 'player-uuid-1',
+      userId: 'user-1',
+      displayName: 'Alice',
+      scores: [{ dimension: 'points', value: 42, unit: null }],
+      totalScore: 42,
+    },
   ],
-  winner: 'user-1',
-  totalScore: 18,
-  status: 'Completed',
+  scoringConfig: { enabledDimensions: ['points'], dimensionUnits: {} },
+  visibility: 'Private' as const,
+  status: 'Completed' as const,
+  duration: null,
+  startTime: null,
+  endTime: null,
+  createdByUserId: 'user-1',
   createdAt: new Date('2026-05-28T20:00:00Z').toISOString(),
+  updatedAt: new Date('2026-05-28T20:00:00Z').toISOString(),
 };
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -156,6 +185,9 @@ const playRecordFixture = {
 describe('EditPlayRecordPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset captured form props for each test
+    capturedFormProps.initialValues = undefined;
+    capturedFormProps.initialPlayers = undefined;
     mockUsePlayRecord.mockReturnValue({
       data: playRecordFixture,
       isLoading: false,
@@ -176,7 +208,11 @@ describe('EditPlayRecordPage', () => {
     });
   });
 
-  it('AC-4.2: pre-fills form with loaded record data', async () => {
+  it('AC-4.2: passes mapped record values into SessionCreateForm as initialValues + initialPlayers', async () => {
+    // Reset captured props before this test
+    capturedFormProps.initialValues = undefined;
+    capturedFormProps.initialPlayers = undefined;
+
     const queryClient = new QueryClient();
     render(
       <QueryClientProvider client={queryClient}>
@@ -184,10 +220,18 @@ describe('EditPlayRecordPage', () => {
       </QueryClientProvider>
     );
 
-    await waitFor(() => {
-      // Form should be rendered with pre-filled values (verified by SessionCreateForm receiving initialValues)
-      expect(mockUsePlayRecord).toHaveBeenCalledWith('record-123');
+    await screen.findByTestId('session-form');
+
+    // Assert initialValues contains the mapped record fields
+    expect(capturedFormProps.initialValues).toMatchObject({
+      gameType: 'catalog',
+      gameName: 'Wingspan',
+      notes: 'gg',
+      location: 'Padova',
     });
+
+    // Assert initialPlayers is populated from record.players
+    expect(capturedFormProps.initialPlayers).toHaveLength(1);
   });
 
   it('AC-4.3: K5 gate – only sessionDate/notes/location editable; others readonly', async () => {

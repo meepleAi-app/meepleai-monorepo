@@ -7,6 +7,7 @@ using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Persistence;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 using Api.Infrastructure;
+using Api.Infrastructure.DomainEventOutbox;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SessionTracking;
 using Api.Infrastructure.Entities.SharedGameCatalog;
@@ -17,6 +18,7 @@ using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Moq;
 using Npgsql;
 using Xunit;
@@ -198,6 +200,16 @@ public sealed class FinalizeSessionSingleDispatchIntegrationTests : IAsyncLifeti
             .Setup(r => r.GetActiveByGameSessionAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.AgentSession>());
         services.AddScoped(_ => agentSessionRepoMock.Object);
+
+        // Force Hybrid dispatch mode so MediatR.Publish fires inline after SaveChangesAsync.
+        // The default IOptions<DomainEventOutboxOptions> binds Mode=OutboxOnly (steady-state
+        // post-T9 cutover), which queues events for the background DomainEventOutboxProcessor.
+        // The processor is NOT registered in this minimal integration setup; without an
+        // explicit override events would persist to domain_event_outbox without ever firing
+        // their MediatR handlers in the test. See SessionScoresUpdatedSignalRBroadcastIntegrationTests
+        // for the canonical pattern.
+        services.AddSingleton<IOptions<DomainEventOutboxOptions>>(
+            Options.Create(new DomainEventOutboxOptions { Mode = DomainEventDispatchMode.Hybrid }));
 
         if (interceptor is not null)
         {

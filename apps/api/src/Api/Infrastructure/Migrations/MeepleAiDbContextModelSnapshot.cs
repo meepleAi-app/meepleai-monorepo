@@ -6187,6 +6187,10 @@ namespace Api.Infrastructure.Migrations
                     b.Property<Guid>("CreatedByUserId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
                     b.Property<TimeSpan?>("Duration")
                         .HasColumnType("interval");
 
@@ -6203,6 +6207,12 @@ namespace Api.Infrastructure.Migrations
 
                     b.Property<Guid?>("GroupId")
                         .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_deleted");
 
                     b.Property<string>("Location")
                         .HasMaxLength(255)
@@ -6235,6 +6245,12 @@ namespace Api.Infrastructure.Migrations
                     b.Property<int>("Visibility")
                         .HasColumnType("integer");
 
+                    b.Property<uint>("Xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedByUserId")
@@ -6257,6 +6273,60 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("IX_PlayRecords_Status");
 
                     b.ToTable("play_records", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.PlayRecordPhotoEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BlobUrl")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<string>("Caption")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<long>("FileSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<double?>("OcrConfidence")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("OcrText")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("PlayRecordId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Sha256Hash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("ThumbnailUrl")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UploadedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlayRecordId")
+                        .HasDatabaseName("IX_play_record_photos_PlayRecordId");
+
+                    b.HasIndex("PlayRecordId", "Sha256Hash")
+                        .IsUnique()
+                        .HasDatabaseName("UX_play_record_photos_playrecord_sha256");
+
+                    b.ToTable("play_record_photos", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.RecordPlayerEntity", b =>
@@ -16877,6 +16947,17 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("Game");
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.PlayRecordPhotoEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.GameManagement.PlayRecordEntity", "PlayRecord")
+                        .WithMany("Photos")
+                        .HasForeignKey("PlayRecordId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PlayRecord");
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.RecordPlayerEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.GameManagement.PlayRecordEntity", "PlayRecord")
@@ -18384,6 +18465,8 @@ namespace Api.Infrastructure.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.PlayRecordEntity", b =>
                 {
+                    b.Navigation("Photos");
+
                     b.Navigation("Players");
                 });
 

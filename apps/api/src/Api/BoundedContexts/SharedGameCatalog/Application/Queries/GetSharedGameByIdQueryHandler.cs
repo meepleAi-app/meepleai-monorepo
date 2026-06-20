@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Infrastructure;
 using Api.Observability;
 using Api.Services;
@@ -435,6 +436,10 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
             hasKnowledgeBase,
             isTopRated,
             isNew,
-            CoverUrl: coverUrl);
+            CoverUrl: coverUrl,
+            // Issue #2055 Phase G AC-G6 — Wikidata cover attribution (HTML-stripped per DEC-G6-1).
+            WikidataCoverLicense: game.WikidataCoverLicense,
+            WikidataCoverAttribution: AttributionTextExtractor.Strip(game.WikidataCoverAttribution),
+            WikidataCoverSourceUrl: game.WikidataCoverSourceUrl);
     }
 }

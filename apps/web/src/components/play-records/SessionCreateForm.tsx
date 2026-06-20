@@ -13,7 +13,7 @@
 
 'use client';
 
-import { useState, useId } from 'react';
+import { useState, useId, useEffect, useRef, useMemo } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, ArrowRight, Check, Trophy, Users, X, Plus } from 'lucide-react';
@@ -33,15 +33,19 @@ import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/primitives/radio-group';
 import { Textarea } from '@/components/ui/primitives/textarea';
+import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { useTranslation } from '@/hooks/useTranslation';
 import {
   SessionCreateFormSchema,
   type SessionCreateForm as SessionCreateFormData,
 } from '@/lib/api/schemas/play-records.schemas';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
+import type { PlayRecordDraftState } from '@/lib/play-records/draft-types';
+import { usePlayRecordDraftPersist } from '@/lib/play-records/hooks/usePlayRecordDraftPersist';
 import { usePlayRecordsStore } from '@/lib/stores/play-records-store';
 import { cn } from '@/lib/utils';
 
+import { DraftAutosaveIndicator } from './DraftAutosaveIndicator';
 import { GameCombobox } from './GameCombobox';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -56,9 +60,20 @@ export interface SessionCreateFormProps {
    * location editable (Step 2). The gate is driven entirely by `mode`.
    */
   mode?: 'create' | 'edit';
+  /**
+   * #2349 AC-4.2: pre-fill the form when editing or deep-linking. Spread into
+   * react-hook-form `defaultValues` on mount (the parent gates mounting until
+   * the source record is loaded, so no reset effect is needed).
+   */
+  initialValues?: Partial<SessionCreateFormData>;
+  /**
+   * #2349 AC-4.2: pre-fill the (local-state) player roster. Display-only under
+   * the edit K5 gate; the edit submit path only sends sessionDate/notes/location.
+   */
+  initialPlayers?: PlayerEntry[];
 }
 
-interface PlayerEntry {
+export interface PlayerEntry {
   id: string;
   name: string;
   score: string;
@@ -623,6 +638,8 @@ export function SessionCreateForm({
   onCancel,
   isSubmitting = false,
   mode = 'create',
+  initialValues,
+  initialPlayers,
 }: SessionCreateFormProps) {
   const { t: tRaw } = useTranslation();
   const ns = mode === 'edit' ? 'playRecords.edit' : 'playRecords.new';
@@ -631,11 +648,12 @@ export function SessionCreateForm({
   const isMobile = useMediaQuery(MOBILE_BREAKPOINT);
   const formId = useId();
 
-  const { sessionCreation, nextStep, prevStep, resetSessionCreation } = usePlayRecordsStore();
+  const { sessionCreation, nextStep, prevStep, resetSessionCreation, setSessionField } =
+    usePlayRecordsStore();
   const currentStep = sessionCreation.currentStep; // 0-indexed
 
   // Local player state (Step 3)
-  const [players, setPlayers] = useState<PlayerEntry[]>([]);
+  const [players, setPlayers] = useState<PlayerEntry[]>(() => initialPlayers ?? []);
   const [newPlayerName, setNewPlayerName] = useState('');
 
   const form = useForm<SessionCreateFormData>({
@@ -649,8 +667,77 @@ export function SessionCreateForm({
       scoringDimensions: [],
       notes: '',
       location: '',
+      ...initialValues,
     },
   });
+
+  // ── Draft autosave (localStorage) — #2436 PR-A ─────────────────────────────
+  const { data: currentUser } = useCurrentUser();
+  const userId = currentUser?.id ?? null;
+
+  const watched = form.watch();
+  // Memoised so the hook's `signature` does not re-serialize on every render —
+  // only when an actual persisted field changes (the form re-renders per keystroke).
+  const draftState = useMemo<PlayRecordDraftState>(
+    () => ({
+      currentStep,
+      gameType: watched.gameType,
+      gameId: watched.gameId,
+      gameName: watched.gameName ?? '',
+      sessionDate: watched.sessionDate instanceof Date ? watched.sessionDate : new Date(),
+      visibility: watched.visibility,
+      enableScoring: watched.enableScoring ?? false,
+      scoringDimensions: watched.scoringDimensions ?? [],
+      dimensionUnits: watched.dimensionUnits ?? {},
+      notes: watched.notes,
+      location: watched.location,
+      players,
+    }),
+    [
+      currentStep,
+      watched.gameType,
+      watched.gameId,
+      watched.gameName,
+      watched.sessionDate,
+      watched.visibility,
+      watched.enableScoring,
+      watched.scoringDimensions,
+      watched.dimensionUnits,
+      watched.notes,
+      watched.location,
+      players,
+    ]
+  );
+
+  const { initialDraft, clear, isPending, lastSavedAt } = usePlayRecordDraftPersist({
+    userId,
+    state: draftState,
+    enabled: mode === 'create',
+  });
+
+  // AC-A3: restore the persisted draft once on mount, unless a gameNight
+  // prefill (initialValues) is present — the prefill takes precedence.
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current) return;
+    if (mode !== 'create' || initialValues || !initialDraft) return;
+    restoredRef.current = true;
+    form.reset({
+      gameType: initialDraft.gameType,
+      gameId: initialDraft.gameId,
+      gameName: initialDraft.gameName,
+      sessionDate: new Date(initialDraft.sessionDate),
+      visibility: initialDraft.visibility,
+      enableScoring: initialDraft.enableScoring,
+      scoringDimensions: initialDraft.scoringDimensions,
+      dimensionUnits: initialDraft.dimensionUnits,
+      notes: initialDraft.notes ?? '',
+      location: initialDraft.location ?? '',
+    });
+    setPlayers(initialDraft.players);
+    setSessionField('currentStep', initialDraft.currentStep);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-once restore
+  }, []);
 
   // ── Step field maps for validation ────────────────────────────────────────
   const STEP_FIELDS: Array<Array<keyof SessionCreateFormData>> = [
@@ -681,6 +768,7 @@ export function SessionCreateForm({
   };
 
   const handleCancel = () => {
+    clear();
     resetSessionCreation();
     form.reset();
     setPlayers([]);
@@ -690,6 +778,7 @@ export function SessionCreateForm({
 
   const handleFormSubmit = form.handleSubmit(data => {
     onSubmit(data);
+    clear();
     resetSessionCreation();
     form.reset();
     setPlayers([]);
@@ -737,7 +826,7 @@ export function SessionCreateForm({
   // ── Action bar ────────────────────────────────────────────────────────────
   const actionBar = (
     <div className="flex justify-between items-center pt-6 border-t border-border">
-      <div>
+      <div className="flex items-center gap-3">
         {currentStep > 0 && (
           <Button type="button" variant="outline" onClick={handlePrev} disabled={isSubmitting}>
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -748,6 +837,9 @@ export function SessionCreateForm({
           <Button type="button" variant="ghost" onClick={handleCancel} disabled={isSubmitting}>
             {t('actions.cancel')}
           </Button>
+        )}
+        {mode === 'create' && (
+          <DraftAutosaveIndicator isPending={isPending} lastSavedAt={lastSavedAt} />
         )}
       </div>
 

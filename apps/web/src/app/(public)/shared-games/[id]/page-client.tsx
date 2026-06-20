@@ -42,6 +42,7 @@ import { useSharedGameDetail } from '@/hooks/useSharedGameDetail';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useUrlHashState } from '@/hooks/useUrlHashState';
 import { type SharedGameDetail, type TopContributor } from '@/lib/api/shared-games';
+import { useGameTitle } from '@/lib/i18n/use-game-title';
 
 const VALID_TAB_KEYS: ReadonlySet<TabKey> = new Set(TAB_KEYS);
 
@@ -125,6 +126,13 @@ export function SharedGameDetailPageClient({
   // SSR seed guarantees `data` is defined on first paint, but TanStack Query
   // can briefly undefine it during refetch. Fall back to the SSR `detail` prop.
   const game: SharedGameDetail = data ?? detail;
+
+  // Issue #2339 — viewer-locale title resolution. The `Hero` primitive does
+  // not currently expose an `aria-label` slot, so the
+  // `common.localizedFromEnglish` hint cannot be wired here; the title text
+  // itself is the resolved viewer-locale value. Track follow-up in the
+  // ESLint warn-rule sweep (Task 7).
+  const { value: resolvedTitle } = useGameTitle(game);
 
   // Override `empty-tab` clears nested arrays so EmptyState renders unobstructed.
   const toolkits = stateOverride === 'empty-tab' ? [] : (game.toolkits ?? []);
@@ -330,7 +338,7 @@ export function SharedGameDetailPageClient({
     >
       <div className="mx-auto flex max-w-[1024px] flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
         <Hero
-          title={game.title}
+          title={resolvedTitle}
           coverUrl={game.imageUrl && game.imageUrl.length > 0 ? game.imageUrl : null}
           year={game.yearPublished > 0 ? game.yearPublished : null}
           minPlayers={game.minPlayers > 0 ? game.minPlayers : null}

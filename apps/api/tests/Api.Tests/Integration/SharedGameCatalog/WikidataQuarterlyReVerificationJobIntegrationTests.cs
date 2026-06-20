@@ -1,6 +1,8 @@
+using System.Diagnostics.Metrics;
 using Api.BoundedContexts.SharedGameCatalog.Application.Jobs;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Observability;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
@@ -128,6 +130,72 @@ public class WikidataQuarterlyReVerificationJobIntegrationTests : IAsyncLifetime
 
         first.Should().Be(1);
         second.Should().Be(0, "the first pass already set WikidataQidLastVerifiedAt = NULL");
+    }
+
+    [Fact]
+    public async Task RunOnceAsync_EmitsPrometheusCounter_OnNonZeroReset()
+    {
+        // Issue #2055 Phase G AC-G1 — metric must fire only when reset > 0.
+        SeedGame(qid: "Q1", lastVerifiedAt: FixedNow.AddDays(-120));
+        SeedGame(qid: "Q2", lastVerifiedAt: FixedNow.AddDays(-100));
+        await _dbContext!.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        long observed = 0;
+        using var listener = new MeterListener();
+        listener.InstrumentPublished = (instrument, l) =>
+        {
+            if (instrument.Name == "meepleai.wikidata.quarterly_reverification.reset.total")
+            {
+                l.EnableMeasurementEvents(instrument);
+            }
+        };
+        listener.SetMeasurementEventCallback<long>((_, measurement, _, _) =>
+        {
+            observed += measurement;
+        });
+        listener.Start();
+
+        var job = new WikidataQuarterlyReVerificationJob(
+            Mock.Of<IServiceProvider>(),
+            new FakeTimeProvider(new DateTimeOffset(FixedNow, TimeSpan.Zero)),
+            NullLogger<WikidataQuarterlyReVerificationJob>.Instance);
+
+        var reset = await job.RunOnceAsync(_dbContext, TestContext.Current.CancellationToken);
+
+        reset.Should().Be(2);
+        observed.Should().Be(2, "the counter MUST record the reset count exactly once");
+    }
+
+    [Fact]
+    public async Task RunOnceAsync_DoesNotEmitCounter_OnZeroReset()
+    {
+        SeedGame(qid: "Q1", lastVerifiedAt: FixedNow.AddDays(-10));
+        await _dbContext!.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        long observed = 0;
+        using var listener = new MeterListener();
+        listener.InstrumentPublished = (instrument, l) =>
+        {
+            if (instrument.Name == "meepleai.wikidata.quarterly_reverification.reset.total")
+            {
+                l.EnableMeasurementEvents(instrument);
+            }
+        };
+        listener.SetMeasurementEventCallback<long>((_, measurement, _, _) =>
+        {
+            observed += measurement;
+        });
+        listener.Start();
+
+        var job = new WikidataQuarterlyReVerificationJob(
+            Mock.Of<IServiceProvider>(),
+            new FakeTimeProvider(new DateTimeOffset(FixedNow, TimeSpan.Zero)),
+            NullLogger<WikidataQuarterlyReVerificationJob>.Instance);
+
+        var reset = await job.RunOnceAsync(_dbContext, TestContext.Current.CancellationToken);
+
+        reset.Should().Be(0);
+        observed.Should().Be(0, "zero-reset ticks MUST NOT emit the counter (avoids noise)");
     }
 
     private SharedGameEntity SeedGame(string? qid, DateTime? lastVerifiedAt)

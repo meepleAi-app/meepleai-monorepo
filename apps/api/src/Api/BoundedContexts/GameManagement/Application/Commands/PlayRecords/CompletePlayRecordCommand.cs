@@ -9,5 +9,6 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.PlayRecords;
 /// </summary>
 internal record CompletePlayRecordCommand(
     Guid RecordId,
+    Guid UserId,
     TimeSpan? ManualDuration = null
 ) : ICommand;

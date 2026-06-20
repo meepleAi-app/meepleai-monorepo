@@ -1,6 +1,7 @@
 using System.Globalization;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
+using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Models;
@@ -144,7 +145,11 @@ internal sealed class GetFilteredSharedGamesQueryHandler : IRequestHandler<GetFi
                 0,      // ContributorsCount
                 false,  // IsTopRated
                 false,  // IsNew
-                CoverUrl: coverUrl));
+                CoverUrl: coverUrl,
+                // Issue #2055 Phase G AC-G6 — Wikidata cover attribution (HTML-stripped per DEC-G6-1).
+                WikidataCoverLicense: g.WikidataCoverLicense,
+                WikidataCoverAttribution: AttributionTextExtractor.Strip(g.WikidataCoverAttribution),
+                WikidataCoverSourceUrl: g.WikidataCoverSourceUrl));
         }
 
         // Issue #2339 (Wave 4 Task 13 — DEC-WIRING): enrich SharedGameDto.Translations

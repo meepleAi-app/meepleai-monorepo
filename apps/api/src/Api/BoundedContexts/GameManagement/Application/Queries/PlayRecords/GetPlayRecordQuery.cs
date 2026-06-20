@@ -7,4 +7,4 @@ namespace Api.BoundedContexts.GameManagement.Application.Queries.PlayRecords;
 /// Query to retrieve full play record details.
 /// Issue #3890: CQRS queries for play records.
 /// </summary>
-internal record GetPlayRecordQuery(Guid RecordId) : IQuery<PlayRecordDto>;
+internal record GetPlayRecordQuery(Guid RecordId, Guid UserId) : IQuery<PlayRecordDto>;

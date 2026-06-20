@@ -1,6 +1,6 @@
 # ADR-067 — PlayRecord Photo Upload Pipeline
 
-**Status**: Proposed
+**Status**: Accepted (amended 2026-06-20)
 **Date**: 2026-06-15
 **Deciders**: @badsworm (pending ratification at PR review)
 **Tracking**: [#2363](https://github.com/meepleAi-app/meepleai-monorepo/issues/2363) Wave 1 — sub-issue [#2359](https://github.com/meepleAi-app/meepleai-monorepo/issues/2359)
@@ -22,7 +22,7 @@ The `BlobCategory` enum already has `SessionPhoto` for session-linked photos. Pl
 
 The `unstructured-service` (`apps/unstructured-service/`) is a FastAPI PDF extraction microservice. Its domain model (`domain/models.py`), main entry point, and API schemas are exclusively PDF-centric — there is no image endpoint, no vision inference path, and no OCR for photos. Re-using it for scoresheet OCR would require adding a new `/extract-image` endpoint that the service was not designed for.
 
-The `smoldocling-service` (`apps/smoldocling-service/`) similarly targets structured document parsing (DocLayNet-trained).
+The `smoldocling-service` (`apps/smoldocling-service/`) targets structured document parsing (DocLayNet-trained). **Amendment 2026-06-20**: the smoldocling service already exposes a `/api/v1/preprocess` endpoint that accepts image bytes and returns extracted text (`ExtractedText`) + confidence (`ConfidenceScore`). The .NET side already models this via `IPhotoPreprocessor` / `SmoldoclingPhotoPreprocessor`. The original context premise "no image endpoint exists" was incorrect at implementation time. See O-D below.
 
 The spec (US-INT-2, Cockburn step 5) describes photo upload with "OCR opzionale per scoresheet card; preview inline" and maps this to a "photo max 5MB; OCR opzionale" acceptance criterion. The spec explicitly calls out OCR as opt-in, not default.
 
@@ -86,15 +86,23 @@ A new `ocr-service` container running Tesseract (open source) or calling a cloud
 
 **Risks**: medium (infra cost, Tesseract quality variance).
 
-#### Option O-C — Opt-in OCR via Unstructured, deferred to Phase 2
+#### Option O-C — Opt-in OCR via Unstructured, deferred to Phase 2 *(superseded by O-D)*
 
 Accept the `extractScoreFromPhoto: bool` flag on the upload command, store the photo, but defer the actual OCR call to a future work item. Phase 1 always returns `ocrText: null` regardless of the flag. The `BlobCategory.PlayRecordPhoto` column on the entity reserves space for `OcrText`.
 
-**Pros**: unblocks US-INT-2b immediately (the flag is wired, the pipeline is ready, the inference is deferred). No new service needed for Phase 1. The spec says OCR is opt-in — defaulting to deferred satisfies the acceptance criterion for Phase 1.
+**Status**: superseded. At implementation time (2026-06-20), `IPhotoPreprocessor` / `SmoldoclingPhotoPreprocessor` was already present in the codebase and capable of image OCR. Deferral was unnecessary. O-D was selected instead.
 
-**Cons**: the OCR flag has no effect in Phase 1. Users who tick "extract score from photo" get no result. Must be clearly communicated in the UX.
+---
 
-**Risks**: low for Phase 1. The deferred implementation decision (Tesseract vs cloud) does not block the storage pipeline.
+#### Option O-D — Reuse smoldocling `/api/v1/preprocess` via `IPhotoPreprocessor` *(selected 2026-06-20)*
+
+Wire the existing `IPhotoPreprocessor` (implemented by `SmoldoclingPhotoPreprocessor`) inside `UploadPlayRecordPhotoCommandHandler`. When `ExtractScoreFromPhoto == true`, the handler calls `PreprocessAsync(bytes, ct)` after the blob upload and stores the returned `ExtractedText` → `OcrText` and `ConfidenceScore` → `OcrConfidence` on the `PlayRecordPhoto` entity. The call is **best-effort**: any exception is caught and logged as a warning, so a smoldocling failure does not fail the upload.
+
+**Pros**: zero new infrastructure — smoldocling was already deployed and already does image OCR via its VLM pipeline. `IPhotoPreprocessor` is the established abstraction (DI-registered, Moq-friendly in tests). OCR result is persisted synchronously during the upload, so the score extraction UX is immediate (no async job needed for the MVP path).
+
+**Cons**: latency of the upload endpoint increases by the smoldocling round-trip time when `ExtractScoreFromPhoto == true`. Acceptable because OCR is opt-in and infrequent.
+
+**Risks**: low. Best-effort wrapper means smoldocling downtime does not block uploads.
 
 ---
 
@@ -126,13 +134,21 @@ Rejected for Phase 1. Can be added later as `PhotoPerceptualHash` column alongsi
 
 ## Decision
 
-**Storage: Option P-A** — new `BlobCategory.PlayRecordPhoto` with key `play-record-photos/{playRecordId}/{photoId}-{sha256[:8]}.{ext}`.
+**Storage: Option P-A** — new `BlobCategory.PlayRecordPhoto` with key `play-record-photos/{playRecordId}/{photoId}_{sha256[:8]}.{ext}`.
 
-**OCR: Option O-C** — opt-in flag accepted, OCR execution deferred to Phase 2.
+**OCR: Option O-D** *(amended 2026-06-20; supersedes O-C)* — reuse `IPhotoPreprocessor` / smoldocling `/api/v1/preprocess`. When `ExtractScoreFromPhoto == true`, the handler calls `PreprocessAsync(bytes, ct)` after the blob store, populating `OcrText` and `OcrConfidence` on `PlayRecordPhoto`. The call is best-effort (exception caught + logged, upload never fails on OCR error).
 
-**Dedup: Option D-A** — SHA256 cryptographic hash, consistent with existing `PdfSeeder.ContentHash` pattern.
+**Dedup: Option D-A** — SHA256 cryptographic hash, consistent with existing `PdfSeeder.ContentHash` pattern. Additionally enforced at the database level via the `UX_play_record_photos_playrecord_sha256` unique index on `(PlayRecordId, Sha256Hash)`.
 
-Rationale: The `SessionAttachmentService` provides a complete prior art for the upload + thumbnail + pre-signed-URL pipeline; the PlayRecord photo pipeline reuses it nearly verbatim, substituting `BlobCategory.PlayRecordPhoto` and `play-record-{playRecordId:N}` as resource key. SHA256 dedup matches the existing pattern and is sufficient for MVP — the "same photo uploaded twice" scenario is the dominant real-world case. OCR deferred: Unstructured is PDF-only, a new Tesseract service is out of scope for US-INT-2, and the spec explicitly marks OCR as opt-in/optional. Deferring OCR execution to Phase 2 unblocks US-INT-2b without introducing new infra.
+Rationale: The `SessionAttachmentService` provides a complete prior art for the upload + thumbnail + pre-signed-URL pipeline; the PlayRecord photo pipeline reuses it nearly verbatim, substituting `BlobCategory.PlayRecordPhoto` and `play-record-{playRecordId:N}` as resource key. SHA256 dedup matches the existing pattern and is sufficient for MVP — the "same photo uploaded twice" scenario is the dominant real-world case. OCR via smoldocling was wired immediately (DEC-3): `IPhotoPreprocessor` was already registered in DI and the smoldocling service already exposed the required endpoint — deferral was unnecessary.
+
+**Implementation shipped (PR-B, 2026-06-20):**
+- `BlobCategory.PlayRecordPhoto` added to enum + `ToS3Folder()` case.
+- `PlayRecordPhoto` child entity on `PlayRecord` aggregate; `AddPhoto` (max 10 per record) + `RestorePhoto`; `PlayRecordPhotoUploadedEvent`.
+- Persistence: `play_record_photos` table (PascalCase EF columns, snake_case mapped), `UX_play_record_photos_playrecord_sha256` unique index, migration `20260620145331_AddPlayRecordPhotos`.
+- `UploadPlayRecordPhotoCommandHandler`: creator-guard → buffer → magic-byte validate → SHA256 dedup → `StoreAsync` → thumbnail (ImageSharp 300px/q80, best-effort) → OCR via `IPhotoPreprocessor` when `ExtractScoreFromPhoto=true` (best-effort) → `AddPhoto` → `UpdateAsync` → `SaveChangesAsync` → presign.
+- 5 MB server-side size limit enforced in `UploadPlayRecordPhotoCommandValidator`.
+- Endpoint: `POST /api/v1/play-records/{recordId}/photos` (multipart form, `file` + `extractScoreFromPhoto` + `caption`).
 
 ## Consequences
 
@@ -145,9 +161,9 @@ Rationale: The `SessionAttachmentService` provides a complete prior art for the 
 
 ### Negative
 
-- OCR opt-in flag in Phase 1 is a no-op — requires clear UX feedback ("Score extraction coming soon").
+- OCR when `ExtractScoreFromPhoto=true` adds latency to the upload response (smoldocling round-trip). Best-effort wrapper prevents upload failure but the result is unavailable if smoldocling is down.
 - SHA256 dedup misses near-duplicate photos (same scoresheet, slightly different crop). Acceptable for MVP.
-- A new `BlobCategory` enum value must be added to the `BlobCategoryExtensions.ToS3Folder()` switch — trivial but must not be forgotten (adding a `BlobCategory` without updating `ToS3Folder()` throws `ArgumentOutOfRangeException` at runtime).
+- A new `BlobCategory` enum value must be added to the `BlobCategoryExtensions.ToS3Folder()` switch — trivial but must not be forgotten (adding a `BlobCategory` without updating `ToS3Folder()` throws `ArgumentOutOfRangeException` at runtime). This has been done in PR-B.
 
 ### Trade-offs Accepted
 

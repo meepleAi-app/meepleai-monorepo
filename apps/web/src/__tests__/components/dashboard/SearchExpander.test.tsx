@@ -37,6 +37,23 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
+// Issue #2339 — SearchResultRow uses useTranslation for aria-label hint.
+// Mock to avoid IntlProvider dependency (test predates i18n wiring).
+vi.mock('@/hooks/useTranslation', () => ({
+  useTranslation: () => ({
+    t: (id: string, values?: Record<string, string>) =>
+      values
+        ? Object.entries(values).reduce((s, [k, v]) => s.replace(`{${k}}`, String(v)), id)
+        : id,
+  }),
+}));
+
+// Issue #2339 — useGameTitle calls useUserLocale internally; stub to return
+// a deterministic locale and skip the api.* fetch.
+vi.mock('@/hooks/useUserLocale', () => ({
+  useUserLocale: () => 'it',
+}));
+
 describe('SearchExpander', () => {
   const mockOnViewGame = vi.fn();
   const mockOnAskAboutGame = vi.fn<(game: SharedGameSearchResult) => void>();

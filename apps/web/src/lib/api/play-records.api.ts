@@ -159,10 +159,17 @@ export const playRecordsApi = {
   },
 
   /**
-   * Get player statistics across all games
+   * Get player statistics across all games. Optional date range narrows the
+   * window; the BE binds startDate/endDate case-insensitively (#2438).
    */
-  async getPlayerStatistics(): Promise<PlayerStatistics> {
-    const res = await fetch(`${BASE_URL}/statistics`);
+  async getPlayerStatistics(
+    params: { startDate?: string; endDate?: string } = {}
+  ): Promise<PlayerStatistics> {
+    const search = new URLSearchParams();
+    if (params.startDate) search.set('startDate', params.startDate);
+    if (params.endDate) search.set('endDate', params.endDate);
+    const qs = search.toString();
+    const res = await fetch(`${BASE_URL}/statistics${qs ? `?${qs}` : ''}`);
     if (!res.ok) {
       const error = await res.json().catch(() => ({ message: 'Failed to get statistics' }));
       throw new Error(error.message || 'Failed to get statistics');

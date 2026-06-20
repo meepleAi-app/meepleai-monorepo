@@ -1,6 +1,5 @@
 using Api.Services.Pdf;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Jpeg;
+using ImageMagick;
 
 namespace Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 
@@ -56,16 +55,24 @@ internal sealed class GamebookPhotoStorageService : IGamebookPhotoStorage
 
     /// <summary>
     /// Re-encodes the photo dropping EXIF metadata. Defense-in-depth — clients SHOULD strip first.
+    /// ADR DEC-3d-1 (issue #2055 Phase G): Magick.NET 14.x replaces ImageSharp.
+    /// <see cref="MagickImage.Strip"/> removes EXIF, IPTC, ICC, XMP, and 8BIM
+    /// profiles in a single call — equivalent to clearing each
+    /// <c>image.Metadata.*Profile</c> on the prior ImageSharp API.
     /// </summary>
     private static async Task<Stream> StripExifAsync(Stream input, string contentType, CancellationToken cancellationToken)
     {
-        using var image = await Image.LoadAsync(input, cancellationToken).ConfigureAwait(false);
-        image.Metadata.ExifProfile = null;
-        image.Metadata.IccProfile = null;
-        image.Metadata.IptcProfile = null;
-        image.Metadata.XmpProfile = null;
+        _ = contentType;
+        // MagickImage constructor is synchronous; wrap in Task.Run to keep the
+        // public async signature intact.
+        using var image = await Task.Run(() => new MagickImage(input), cancellationToken).ConfigureAwait(false);
+        image.Strip();
+
+        image.Format = MagickFormat.Jpeg;
+        image.Quality = 85;
+
         var output = new MemoryStream();
-        await image.SaveAsJpegAsync(output, new JpegEncoder { Quality = 85 }, cancellationToken).ConfigureAwait(false);
+        await Task.Run(() => image.Write(output), cancellationToken).ConfigureAwait(false);
         output.Position = 0;
         return output;
     }

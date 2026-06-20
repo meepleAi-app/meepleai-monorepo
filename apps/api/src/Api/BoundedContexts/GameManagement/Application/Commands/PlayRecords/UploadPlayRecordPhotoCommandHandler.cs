@@ -141,9 +141,26 @@ internal sealed class UploadPlayRecordPhotoCommandHandler
             }
         }
 
+        // NOTE (#2436 PR-B): the <=10-photo cap is enforced on the in-memory aggregate. PlayRecord
+        // has no optimistic-concurrency token yet, so two concurrent uploads to the same record can
+        // each pass the cap check and exceed it by 1-2. Proper fix = xmin optimistic concurrency on
+        // PlayRecord (issue #2437-1), which also wires the 409 conflict UI. Acceptable for MVP — the
+        // cap is a soft UX limit; the (PlayRecordId, Sha256Hash) unique index still blocks duplicates.
         record.AddPhoto(photoId, stored.FilePath, thumbUrl, command.FileSizeBytes, sha, ocrText, ocrConfidence, command.Caption, command.UserId, _timeProvider);
-        await _repository.UpdateAsync(record, cancellationToken).ConfigureAwait(false);
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _repository.UpdateAsync(record, cancellationToken).ConfigureAwait(false);
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // I2: surface orphaned blobs so they are reclaimable (store-then-save trade-off,
+            // consistent with SessionAttachmentService). Re-throw to the caller unchanged.
+            _logger.LogError(ex,
+                "Failed to persist play record photo {PhotoId}; orphaned blobs may remain: photo={PhotoPath} thumb={ThumbPath}",
+                photoId, stored.FilePath, thumbUrl);
+            throw;
+        }
 
         var url = await PresignAsync(stored.FilePath, cancellationToken).ConfigureAwait(false);
         return new PlayRecordPhotoUploadResult(photoId, url, thumbUrl, ocrText, WasDeduplicated: false);

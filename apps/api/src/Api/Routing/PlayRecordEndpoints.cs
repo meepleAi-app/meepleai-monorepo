@@ -3,7 +3,6 @@ using Api.BoundedContexts.GameManagement.Application.DTOs.PlayRecords;
 using Api.BoundedContexts.GameManagement.Application.Queries.PlayRecords;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Extensions;
-using Api.Middleware.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -241,13 +240,11 @@ internal static class PlayRecordEndpoints
         var command = new UploadPlayRecordPhotoCommand(
             recordId, httpContext.User.GetUserId(), stream, file.Length, file.ContentType, extractScore, caption);
 
-        try
-        {
-            var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
-            return Results.Created($"/api/v1/play-records/{recordId}/photos/{result.PhotoId}", result);
-        }
-        catch (ForbiddenException ex) { return Results.Json(new { error = ex.Message }, statusCode: 403); }
-        catch (NotFoundException ex) { return Results.NotFound(new { error = ex.Message }); }
+        // Let exceptions propagate to ApiExceptionHandlerMiddleware for a consistent
+        // ProblemDetails envelope (ForbiddenException→403, NotFoundException→404,
+        // ValidationException→400) — matching every other handler in this file.
+        var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.Created($"/api/v1/play-records/{recordId}/photos/{result.PhotoId}", result);
     }
 
     #endregion

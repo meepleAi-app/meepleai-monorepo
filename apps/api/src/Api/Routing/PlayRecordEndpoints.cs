@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Application.DTOs.PlayRecords;
 using Api.BoundedContexts.GameManagement.Application.Queries.PlayRecords;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Extensions;
+using Api.Middleware.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -87,6 +88,15 @@ internal static class PlayRecordEndpoints
             .WithTags("PlayRecords")
             .WithSummary("Delete play record")
             .WithDescription("Soft-deletes a play record. Creator-only.");
+
+        group.MapPost("/play-records/{recordId:guid}/photos", HandleUploadPhoto)
+            .RequireAuthenticatedUser()
+            .DisableAntiforgery()
+            .Produces<PlayRecordPhotoUploadResult>(201)
+            .Produces(400).Produces(401).Produces(StatusCodes.Status403Forbidden).Produces(404)
+            .WithTags("PlayRecords")
+            .WithSummary("Upload a photo to a play record (creator-only, ≤5MB, opt-in OCR)")
+            .WithOpenApi();
 
         // Queries
         group.MapGet("/play-records/{recordId}", HandleGetPlayRecord)
@@ -210,6 +220,34 @@ internal static class PlayRecordEndpoints
         var command = new DeletePlayRecordCommand(recordId, httpContext.User.GetUserId());
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleUploadPhoto(
+        Guid recordId,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var form = await httpContext.Request.ReadFormAsync(cancellationToken).ConfigureAwait(false);
+        var file = form.Files.GetFile("file");
+        if (file is null || file.Length == 0)
+            return Results.BadRequest(new { error = "File is required" });
+
+        var extractScore = form.TryGetValue("extractScoreFromPhoto", out var raw)
+            && bool.TryParse(raw.ToString(), out var b) && b;
+        var caption = form.TryGetValue("caption", out var cap) ? cap.ToString() : null;
+
+        using var stream = file.OpenReadStream();
+        var command = new UploadPlayRecordPhotoCommand(
+            recordId, httpContext.User.GetUserId(), stream, file.Length, file.ContentType, extractScore, caption);
+
+        try
+        {
+            var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+            return Results.Created($"/api/v1/play-records/{recordId}/photos/{result.PhotoId}", result);
+        }
+        catch (ForbiddenException ex) { return Results.Json(new { error = ex.Message }, statusCode: 403); }
+        catch (NotFoundException ex) { return Results.NotFound(new { error = ex.Message }); }
     }
 
     #endregion

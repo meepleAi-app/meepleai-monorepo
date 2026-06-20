@@ -11,7 +11,6 @@ const labels = {
   emptyDescription: 'Carica una foto',
   photoAltFallback: 'Foto',
   ocrResultTitle: 'Testo',
-  close: 'Chiudi',
   prev: 'Prec',
   next: 'Succ',
 };

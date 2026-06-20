@@ -115,6 +115,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
 import { mapConnectionState } from '@/lib/session-live/map-connection-state';
 import { hasRequiredRole } from '@/lib/session-live/participant-role';
+import { mapScoreDataToEndgameSummary } from '@/lib/session-live/score-data-to-endgame-summary';
 import {
   deriveSessionLiveUiState,
   deriveSessionLiveDialogState,
@@ -953,6 +954,12 @@ export function SessionLiveView(): ReactElement {
 
   const setScoringConfig = useLiveSessionStore(s => s.setScoringConfig);
 
+  // #2431: polymorphic endgame summary — selectors feed mapScoreDataToEndgameSummary
+  // below. Subscribed reactively so the EndgameDialog refreshes as scoreData
+  // changes (final-tick edits before the host acknowledges).
+  const endgameScoringType = useLiveSessionStore(s => s.scoringType);
+  const endgameScoreData = useLiveSessionStore(s => s.scoreData);
+
   // #2389 Block B + #2430 Block B+: REST hydration with race guard +
   // observability. Pre-populate the store from sessionQuery.data on initial
   // mount so the renderer paints in ~300ms instead of waiting for SignalR.
@@ -1388,11 +1395,19 @@ export function SessionLiveView(): ReactElement {
       {dialogState === 'endgame' && (
         <Suspense fallback={null}>
           <EndgameDialog
-            finalScores={activeSession.players.map(p => ({
-              playerName: p.name,
-              score: p.score,
-              isWinner: false,
-            }))}
+            finalScores={
+              endgameScoringType !== null && endgameScoreData !== null
+                ? mapScoreDataToEndgameSummary(
+                    endgameScoringType,
+                    endgameScoreData,
+                    activeSession.players
+                  )
+                : activeSession.players.map(p => ({
+                    playerName: p.name,
+                    score: p.score,
+                    isWinner: false,
+                  }))
+            }
             endedAt={endgameEvent?.endedAt ?? '—'}
             endedBy={endgameEvent?.endedBy ?? '—'}
             onAcknowledge={() => handleDialogChange('none')}

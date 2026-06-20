@@ -246,6 +246,7 @@ public class GetPlayRecordQueryHandlerTests : IDisposable
     }
 
     [Fact]
+    [Trait("Issue", "2436")]
     public async Task Handle_RecordWithPhotos_ReturnsPhotosOrderedByUploadedAt()
     {
         var recordId = Guid.NewGuid();

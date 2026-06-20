@@ -25,8 +25,6 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.PlayRecords;
 internal sealed class UploadPlayRecordPhotoCommandHandler
     : ICommandHandler<UploadPlayRecordPhotoCommand, PlayRecordPhotoUploadResult>
 {
-    private const int PresignExpirySeconds = 3600;
-
     private readonly IPlayRecordRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IBlobStorageService _blobStorage;
@@ -85,8 +83,11 @@ internal sealed class UploadPlayRecordPhotoCommandHandler
         var existing = record.Photos.FirstOrDefault(p => string.Equals(p.Sha256Hash, sha, StringComparison.Ordinal));
         if (existing != null)
         {
-            var existingUrl = await PlayRecordPhotoUrlResolver.ResolveAsync(_blobStorage, existing.BlobUrl, PresignExpirySeconds).ConfigureAwait(false);
-            return new PlayRecordPhotoUploadResult(existing.Id, existingUrl, existing.ThumbnailUrl, existing.OcrText, WasDeduplicated: true);
+            var existingUrl = await PlayRecordPhotoUrlResolver.ResolveAsync(_blobStorage, existing.BlobUrl, PlayRecordPhotoUrlResolver.DefaultExpirySeconds).ConfigureAwait(false);
+            var existingThumb = existing.ThumbnailUrl is null
+                ? null
+                : await PlayRecordPhotoUrlResolver.ResolveAsync(_blobStorage, existing.ThumbnailUrl, PlayRecordPhotoUrlResolver.DefaultExpirySeconds).ConfigureAwait(false);
+            return new PlayRecordPhotoUploadResult(existing.Id, existingUrl, existingThumb, existing.OcrText, WasDeduplicated: true);
         }
 
         var photoId = Guid.NewGuid();
@@ -161,7 +162,7 @@ internal sealed class UploadPlayRecordPhotoCommandHandler
             throw;
         }
 
-        var url = await PlayRecordPhotoUrlResolver.ResolveAsync(_blobStorage, stored.FilePath, PresignExpirySeconds).ConfigureAwait(false);
+        var url = await PlayRecordPhotoUrlResolver.ResolveAsync(_blobStorage, stored.FilePath, PlayRecordPhotoUrlResolver.DefaultExpirySeconds).ConfigureAwait(false);
         return new PlayRecordPhotoUploadResult(photoId, url, thumbUrl, ocrText, WasDeduplicated: false);
     }
 }

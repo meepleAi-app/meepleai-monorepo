@@ -13,6 +13,9 @@ namespace Api.BoundedContexts.GameManagement.Application.Services;
 /// </summary>
 internal static class PlayRecordPhotoUrlResolver
 {
+    /// <summary>Default presigned URL TTL (1 hour), shared by all call-sites.</summary>
+    internal const int DefaultExpirySeconds = 3600;
+
     public static async Task<string> ResolveAsync(
         IBlobStorageService blobStorage,
         string blobPath,

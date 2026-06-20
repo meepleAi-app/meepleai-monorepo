@@ -17,8 +17,6 @@ namespace Api.BoundedContexts.GameManagement.Application.Queries.PlayRecords;
 /// </summary>
 internal class GetPlayRecordQueryHandler : IQueryHandler<GetPlayRecordQuery, PlayRecordDto>
 {
-    private const int PresignExpirySeconds = 3600;
-
     private readonly MeepleAiDbContext _context;
     private readonly IBlobStorageService _blobStorage;
 
@@ -61,10 +59,10 @@ internal class GetPlayRecordQueryHandler : IQueryHandler<GetPlayRecordQuery, Pla
         var photos = new List<PlayRecordPhotoDto>(entity.Photos.Count);
         foreach (var p in entity.Photos.OrderBy(p => p.UploadedAt))
         {
-            var url = await PlayRecordPhotoUrlResolver.ResolveAsync(_blobStorage, p.BlobUrl, PresignExpirySeconds).ConfigureAwait(false);
+            var url = await PlayRecordPhotoUrlResolver.ResolveAsync(_blobStorage, p.BlobUrl, PlayRecordPhotoUrlResolver.DefaultExpirySeconds).ConfigureAwait(false);
             var thumb = p.ThumbnailUrl is null
                 ? null
-                : await PlayRecordPhotoUrlResolver.ResolveAsync(_blobStorage, p.ThumbnailUrl, PresignExpirySeconds).ConfigureAwait(false);
+                : await PlayRecordPhotoUrlResolver.ResolveAsync(_blobStorage, p.ThumbnailUrl, PlayRecordPhotoUrlResolver.DefaultExpirySeconds).ConfigureAwait(false);
             photos.Add(new PlayRecordPhotoDto(p.Id, url, thumb, p.OcrText, p.Caption, p.UploadedByUserId, p.UploadedAt));
         }
 

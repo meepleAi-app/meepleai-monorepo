@@ -29,6 +29,7 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
             .AsNoTracking()
             .Include(r => r.Players)
                 .ThenInclude(p => p.Scores)
+            .Include(r => r.Photos)
             .FirstOrDefaultAsync(r => r.Id == id, cancellationToken)
             .ConfigureAwait(false);
 
@@ -46,6 +47,7 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
             .AsNoTracking()
             .Include(r => r.Players)
                 .ThenInclude(p => p.Scores)
+            .Include(r => r.Photos)
             .OrderByDescending(r => r.SessionDate)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -68,6 +70,7 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
             .AsNoTracking()
             .Include(r => r.Players)
                 .ThenInclude(p => p.Scores)
+            .Include(r => r.Photos)
             .Where(r => r.CreatedByUserId == userId);
 
         if (gameId.HasValue)
@@ -92,6 +95,7 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
         var record = await DbContext.PlayRecords
             .AsNoTracking()
             .Include(r => r.Players)
+            .Include(r => r.Photos)
             .FirstOrDefaultAsync(r => r.Id == recordId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -154,6 +158,14 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
 
         var existingScoreIdSet = new HashSet<Guid>(existingScoreIds);
 
+        var existingPhotoIds = await DbContext.PlayRecordPhotos
+            .Where(p => p.PlayRecordId == record.Id)
+            .Select(p => p.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var existingPhotoIdSet = new HashSet<Guid>(existingPhotoIds);
+
         // Attach root entity as Modified
         DbContext.PlayRecords.Update(entity);
 
@@ -171,6 +183,14 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
                 {
                     DbContext.Entry(score).State = EntityState.Added;
                 }
+            }
+        }
+
+        foreach (var photo in entity.Photos)
+        {
+            if (!existingPhotoIdSet.Contains(photo.Id))
+            {
+                DbContext.Entry(photo).State = EntityState.Added;
             }
         }
     }
@@ -259,6 +279,16 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
             }
         }
 
+        // Restore photos with original IDs (no domain events) — #2436 PR-B
+        foreach (var photoEntity in entity.Photos)
+        {
+            record.RestorePhoto(
+                photoEntity.Id, photoEntity.BlobUrl, photoEntity.ThumbnailUrl,
+                photoEntity.FileSizeBytes, photoEntity.Sha256Hash, photoEntity.OcrText,
+                photoEntity.OcrConfidence, photoEntity.Caption, photoEntity.UploadedByUserId,
+                photoEntity.UploadedAt);
+        }
+
         return record;
     }
 
@@ -326,6 +356,25 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
             }
 
             entity.Players.Add(playerEntity);
+        }
+
+        // Map photos — #2436 PR-B
+        foreach (var photo in record.Photos)
+        {
+            entity.Photos.Add(new PlayRecordPhotoEntity
+            {
+                Id = photo.Id,
+                PlayRecordId = record.Id,
+                BlobUrl = photo.BlobUrl,
+                ThumbnailUrl = photo.ThumbnailUrl,
+                FileSizeBytes = photo.FileSizeBytes,
+                Sha256Hash = photo.Sha256Hash,
+                OcrText = photo.OcrText,
+                OcrConfidence = photo.OcrConfidence,
+                Caption = photo.Caption,
+                UploadedByUserId = photo.UploadedByUserId,
+                UploadedAt = photo.UploadedAt,
+            });
         }
 
         return entity;

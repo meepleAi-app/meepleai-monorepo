@@ -24,7 +24,7 @@ test.describe('useGameTitle E2E', () => {
   });
 
   test.skip(
-    ({}, testInfo) => !testInfo.project.metadata?.seedTranslations,
+    (_fixtures, testInfo) => !testInfo.project.metadata?.seedTranslations,
     'Requires sub-PR 3/3 seed translations to land first'
   );
 

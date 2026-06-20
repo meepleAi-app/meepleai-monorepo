@@ -4200,6 +4200,31 @@
         "back": "← Back"
       }
     },
+    "photos": {
+      "sectionTitle": "Game photos",
+      "addButton": "Add photo",
+      "dialogTitle": "Upload photo",
+      "dialogDescription": "JPG, PNG, WebP or HEIC · max 5MB · up to 10 photos.",
+      "selectLabel": "Select photo",
+      "captionLabel": "Caption (optional)",
+      "captionPlaceholder": "E.g. final board",
+      "extractScoreLabel": "Extract score from photo (OCR)",
+      "ocrResultTitle": "Detected text",
+      "uploadCta": "Upload",
+      "uploading": "Uploading…",
+      "emptyTitle": "No photos",
+      "emptyDescription": "Upload a photo of the board or the table.",
+      "photoAltFallback": "Game photo",
+      "dedupToast": "This photo is already attached.",
+      "uploadError": "Photo upload failed.",
+      "tooLarge": "File too large, max 5MB.",
+      "tooMany": "Max 10 photos per game.",
+      "badFormat": "Unsupported format. Use JPG, PNG, WebP or HEIC.",
+      "heicFailed": "HEIC conversion failed. Try JPEG or PNG.",
+      "lightboxClose": "Close",
+      "lightboxPrev": "Previous",
+      "lightboxNext": "Next"
+    },
     "kbGlobale": {
       "hero": {
         "placeholder": "Search across all games' KB…",

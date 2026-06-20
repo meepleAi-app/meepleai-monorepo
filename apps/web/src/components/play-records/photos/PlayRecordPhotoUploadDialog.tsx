@@ -113,7 +113,6 @@ export function PlayRecordPhotoUploadDialog({
             type="file"
             accept="image/jpeg,image/png,image/webp,image/heic"
             multiple
-            capture="environment"
             onChange={handleSelect}
             aria-label={t('playRecords.photos.selectLabel')}
             className="mt-1 block w-full"

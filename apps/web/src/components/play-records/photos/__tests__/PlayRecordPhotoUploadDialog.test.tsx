@@ -3,6 +3,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+import { toast } from 'sonner';
+
 import { playRecordsApi } from '@/lib/api/play-records.api';
 
 import { PlayRecordPhotoUploadDialog } from '../PlayRecordPhotoUploadDialog';
@@ -34,6 +36,15 @@ vi.mock('@/hooks/useTranslation', () => ({
   }),
 }));
 
+// ─── sonner mock ─────────────────────────────────────────────────────────────
+vi.mock('sonner', () => ({
+  toast: {
+    info: vi.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
 // ─── wrapper ──────────────────────────────────────────────────────────────────
 
 function wrap(node: ReactNode) {
@@ -42,7 +53,10 @@ function wrap(node: ReactNode) {
 }
 
 describe('PlayRecordPhotoUploadDialog', () => {
-  beforeEach(() => vi.restoreAllMocks());
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
+  });
 
   it('rejects files over 5MB', async () => {
     render(wrap(<PlayRecordPhotoUploadDialog recordId="r1" open onClose={() => {}} />));
@@ -76,5 +90,34 @@ describe('PlayRecordPhotoUploadDialog', () => {
         expect.objectContaining({ extractScoreFromPhoto: true })
       )
     );
+  });
+
+  it('>10 files triggers the tooMany error', async () => {
+    render(wrap(<PlayRecordPhotoUploadDialog recordId="r1" open onClose={() => {}} />));
+    const files = Array.from(
+      { length: 11 },
+      (_, i) => new File(['x'], `p${i}.jpg`, { type: 'image/jpeg' })
+    );
+    const input = screen.getByLabelText(/seleziona foto|select photo/i) as HTMLInputElement;
+    fireEvent.change(input, { target: { files } });
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/massimo 10|max 10/i);
+  });
+
+  it('wasDeduplicated shows an info toast', async () => {
+    vi.spyOn(playRecordsApi, 'uploadPhoto').mockResolvedValue({
+      photoId: 'p1',
+      photoUrl: 'u',
+      thumbnailUrl: null,
+      ocrText: null,
+      wasDeduplicated: true,
+    });
+    render(wrap(<PlayRecordPhotoUploadDialog recordId="r1" open onClose={() => {}} />));
+    const file = new File(['x'], 'dup.jpg', { type: 'image/jpeg' });
+    fireEvent.change(screen.getByLabelText(/seleziona foto|select photo/i), {
+      target: { files: [file] },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /carica|upload/i }));
+    await waitFor(() => expect(toast.info).toHaveBeenCalled());
   });
 });

@@ -28,6 +28,7 @@ import {
 import { SessionCreateForm } from '../SessionCreateForm';
 import { StatisticsView } from '../StatisticsView';
 import { PlayRecordDetailView } from '../PlayRecordDetailView';
+import { PlayRecordPhotoGallery } from '../photos/PlayRecordPhotoGallery';
 import { mockPlayerStatisticsEmpty } from '../../play-records/stats/__tests__/fixtures';
 
 expect.extend(toHaveNoViolations);
@@ -217,6 +218,49 @@ describe('play-records — axe AA gate', () => {
     const { container } = withQueryClientAndIntl(
       <PlayRecordDetailView recordId={FIXTURE_WON.id} />
     );
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('PlayRecordPhotoGallery (with photo) — no violations', async () => {
+    const labels = {
+      title: 'Foto',
+      emptyTitle: 'Nessuna foto',
+      emptyDescription: 'Carica una foto',
+      photoAltFallback: 'Foto',
+      ocrResultTitle: 'Testo',
+      prev: 'Prec',
+      next: 'Succ',
+    };
+    const { container } = render(
+      <PlayRecordPhotoGallery
+        photos={[
+          {
+            id: 'a',
+            url: 'http://x/a.webp',
+            thumbnailUrl: null,
+            ocrText: '42',
+            caption: 'board',
+            uploadedByUserId: 'u',
+            uploadedAt: '2026-06-20T10:00:00Z',
+          },
+        ]}
+        labels={labels}
+      />
+    );
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('PlayRecordPhotoGallery (empty) — no violations', async () => {
+    const labels = {
+      title: 'Foto',
+      emptyTitle: 'Nessuna foto',
+      emptyDescription: 'Carica una foto',
+      photoAltFallback: 'Foto',
+      ocrResultTitle: 'Testo',
+      prev: 'Prec',
+      next: 'Succ',
+    };
+    const { container } = render(<PlayRecordPhotoGallery photos={[]} labels={labels} />);
     expect(await axe(container)).toHaveNoViolations();
   });
 });

@@ -51,7 +51,10 @@ export function mapScoreDataToEndgameSummary(
         score: scoresByPlayer.get(p.id) ?? 0,
       }));
       const maxScore = enriched.length > 0 ? Math.max(...enriched.map(e => e.score)) : 0;
-      const winnerIndex = enriched.findIndex(e => e.score === maxScore);
+      // No winner when no one has scored (cold-start, mid-game before first
+      // point). Mirrors the Objectives guard — avoids auto-crowning the first
+      // player when the whole table is at zero.
+      const winnerIndex = maxScore > 0 ? enriched.findIndex(e => e.score === maxScore) : -1;
       return enriched.map((e, i) => ({
         ...e,
         isWinner: i === winnerIndex,
@@ -74,9 +77,13 @@ export function mapScoreDataToEndgameSummary(
       const lastPosition = players.length;
       return players.map(p => {
         const position = positionByPlayer.get(p.id) ?? lastPosition;
+        // Clamp the synthetic score to [1, players.length] to defend against
+        // out-of-range positions (BE bug, store desync). isWinner stays strict
+        // on `position === 1` so an off-by-one position 0 is NOT crowned.
+        const clamped = Math.max(1, Math.min(position, lastPosition));
         return {
           playerName: p.displayName ?? p.name,
-          score: players.length - position + 1,
+          score: lastPosition - clamped + 1,
           isWinner: position === 1,
         };
       });

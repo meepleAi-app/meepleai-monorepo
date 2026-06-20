@@ -92,6 +92,18 @@ describe('mapScoreDataToEndgameSummary — Points', () => {
       { playerName: 'Luca', score: 0, isWinner: false },
     ]);
   });
+
+  it('treats all-zero (no one scored) as no winner', () => {
+    const scoreData: ScoreDataByType['Points'] = {
+      scores: [
+        { playerId: 'p1', points: 0 },
+        { playerId: 'p2', points: 0 },
+        { playerId: 'p3', points: 0 },
+      ],
+    };
+    const result = mapScoreDataToEndgameSummary('Points', scoreData, PLAYERS);
+    expect(result.every(r => !r.isWinner)).toBe(true);
+  });
 });
 
 // ─── BinaryWin ────────────────────────────────────────────────────────────────
@@ -161,6 +173,24 @@ describe('mapScoreDataToEndgameSummary — Ranking', () => {
     const result = mapScoreDataToEndgameSummary('Ranking', scoreData, PLAYERS);
     expect(result[0]).toEqual({ playerName: 'Marco', score: 1, isWinner: false });
     expect(result[1]).toEqual({ playerName: 'Anna B.', score: 3, isWinner: true });
+    expect(result[2]).toEqual({ playerName: 'Luca', score: 1, isWinner: false });
+  });
+
+  it('clamps out-of-range positions to [1, N] without crowning (defensive)', () => {
+    // BE bug / store desync: position 0 (off-by-one) and position > N.
+    // The synthetic score must stay in [1, N]; isWinner stays strict on
+    // position === 1, so position 0 is NOT crowned.
+    const scoreData: ScoreDataByType['Ranking'] = {
+      positions: [
+        { playerId: 'p1', position: 0 }, // out-of-range low
+        { playerId: 'p2', position: 1 }, // real winner
+        { playerId: 'p3', position: 99 }, // out-of-range high
+      ],
+    };
+    const result = mapScoreDataToEndgameSummary('Ranking', scoreData, PLAYERS);
+    expect(result[0]).toEqual({ playerName: 'Marco', score: 3, isWinner: false }); // clamped to pos 1 → score 3, but NOT winner
+    expect(result[1]).toEqual({ playerName: 'Anna B.', score: 3, isWinner: true });
+    expect(result[2]).toEqual({ playerName: 'Luca', score: 1, isWinner: false }); // clamped to pos N
   });
 });
 

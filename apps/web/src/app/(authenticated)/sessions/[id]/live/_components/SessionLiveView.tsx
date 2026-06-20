@@ -1395,6 +1395,12 @@ export function SessionLiveView(): ReactElement {
       {dialogState === 'endgame' && (
         <Suspense fallback={null}>
           <EndgameDialog
+            // #2431: polymorphic path when scoringType + scoreData are loaded;
+            // otherwise the legacy `{ score, isWinner: false }` shape keeps the
+            // dialog renderable during cold-start.
+            // TODO(#2389 Block C cleanup): once the legacy `p.score` scalar is
+            // removed by the polymorphic migration, drop this fallback and
+            // either return [] or gate the dialog mount on scoringType !== null.
             finalScores={
               endgameScoringType !== null && endgameScoreData !== null
                 ? mapScoreDataToEndgameSummary(

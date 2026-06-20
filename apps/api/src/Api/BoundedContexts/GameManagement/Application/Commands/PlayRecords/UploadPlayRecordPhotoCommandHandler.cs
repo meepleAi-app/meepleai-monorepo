@@ -85,7 +85,7 @@ internal sealed class UploadPlayRecordPhotoCommandHandler
         var existing = record.Photos.FirstOrDefault(p => string.Equals(p.Sha256Hash, sha, StringComparison.Ordinal));
         if (existing != null)
         {
-            var existingUrl = await PresignAsync(existing.BlobUrl, cancellationToken).ConfigureAwait(false);
+            var existingUrl = await PlayRecordPhotoUrlResolver.ResolveAsync(_blobStorage, existing.BlobUrl, PresignExpirySeconds).ConfigureAwait(false);
             return new PlayRecordPhotoUploadResult(existing.Id, existingUrl, existing.ThumbnailUrl, existing.OcrText, WasDeduplicated: true);
         }
 
@@ -161,33 +161,7 @@ internal sealed class UploadPlayRecordPhotoCommandHandler
             throw;
         }
 
-        var url = await PresignAsync(stored.FilePath, cancellationToken).ConfigureAwait(false);
+        var url = await PlayRecordPhotoUrlResolver.ResolveAsync(_blobStorage, stored.FilePath, PresignExpirySeconds).ConfigureAwait(false);
         return new PlayRecordPhotoUploadResult(photoId, url, thumbUrl, ocrText, WasDeduplicated: false);
-    }
-
-    private async Task<string> PresignAsync(string blobPath, CancellationToken ct)
-    {
-        // blobPath is the stored FilePath. Mirror SessionAttachmentService.ParseBlobPath:
-        // fileId = substring before the first '_' in the file name.
-        // For local storage, GetPresignedDownloadUrlAsync returns null → fall back to raw path.
-        var fileName = Path.GetFileName(blobPath);
-        if (string.IsNullOrEmpty(fileName))
-            return blobPath;
-
-        var underscoreIndex = fileName.IndexOf('_', StringComparison.Ordinal);
-        if (underscoreIndex <= 0)
-            return blobPath;
-
-        var fileId = fileName[..underscoreIndex];
-        var directory = Path.GetDirectoryName(blobPath);
-        if (string.IsNullOrEmpty(directory))
-            return blobPath;
-
-        var folder = Path.GetFileName(directory);
-        if (string.IsNullOrEmpty(folder))
-            return blobPath;
-
-        var signed = await _blobStorage.GetPresignedDownloadUrlAsync(fileId, BlobCategory.PlayRecordPhoto, folder, PresignExpirySeconds).ConfigureAwait(false);
-        return signed ?? blobPath;
     }
 }

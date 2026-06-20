@@ -1,0 +1,43 @@
+using System;
+using System.IO;
+using System.Threading.Tasks;
+using Api.Services.Pdf;
+
+namespace Api.BoundedContexts.GameManagement.Application.Services;
+
+/// <summary>
+/// Resolves a stored PlayRecord photo blob path to a presigned download URL.
+/// Shared by the upload command handler (write path) and the get-record query
+/// handler (read path) so the FilePath→fileId/folder parsing lives in one place.
+/// #2436 PR-C. On local storage GetPresignedDownloadUrlAsync returns null → raw path.
+/// </summary>
+internal static class PlayRecordPhotoUrlResolver
+{
+    public static async Task<string> ResolveAsync(
+        IBlobStorageService blobStorage,
+        string blobPath,
+        int expirySeconds)
+    {
+        var fileName = Path.GetFileName(blobPath);
+        if (string.IsNullOrEmpty(fileName))
+            return blobPath;
+
+        var underscoreIndex = fileName.IndexOf('_', StringComparison.Ordinal);
+        if (underscoreIndex <= 0)
+            return blobPath;
+
+        var fileId = fileName[..underscoreIndex];
+        var directory = Path.GetDirectoryName(blobPath);
+        if (string.IsNullOrEmpty(directory))
+            return blobPath;
+
+        var folder = Path.GetFileName(directory);
+        if (string.IsNullOrEmpty(folder))
+            return blobPath;
+
+        var signed = await blobStorage
+            .GetPresignedDownloadUrlAsync(fileId, BlobCategory.PlayRecordPhoto, folder, expirySeconds)
+            .ConfigureAwait(false);
+        return signed ?? blobPath;
+    }
+}

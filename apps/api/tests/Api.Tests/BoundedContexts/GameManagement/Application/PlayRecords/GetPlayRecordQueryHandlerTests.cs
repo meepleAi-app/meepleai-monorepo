@@ -3,9 +3,11 @@ using Api.BoundedContexts.GameManagement.Application.Queries.PlayRecords;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.Middleware.Exceptions;
+using Api.Services.Pdf;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
+using Moq;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.PlayRecords;
@@ -22,12 +24,17 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.PlayRecords;
 public class GetPlayRecordQueryHandlerTests : IDisposable
 {
     private readonly MeepleAiDbContext _context;
+    private readonly Mock<IBlobStorageService> _blob;
     private readonly GetPlayRecordQueryHandler _handler;
 
     public GetPlayRecordQueryHandlerTests()
     {
         _context = TestDbContextFactory.CreateInMemoryDbContext();
-        _handler = new GetPlayRecordQueryHandler(_context);
+        _blob = new Mock<IBlobStorageService>();
+        _blob.Setup(b => b.GetPresignedDownloadUrlAsync(
+                It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<int?>()))
+            .ReturnsAsync((string?)null);
+        _handler = new GetPlayRecordQueryHandler(_context, _blob.Object);
     }
 
     public void Dispose() => _context.Dispose();
@@ -236,6 +243,44 @@ public class GetPlayRecordQueryHandlerTests : IDisposable
         // Assert
         result.Should().NotBeNull();
         result.Id.Should().Be(record.Id);
+    }
+
+    [Fact]
+    public async Task Handle_RecordWithPhotos_ReturnsPhotosOrderedByUploadedAt()
+    {
+        var recordId = Guid.NewGuid();
+        var uploaderId = Guid.NewGuid();
+        var entity = MakePlayRecord(recordId);
+        entity.Players = new List<RecordPlayerEntity> { MakePlayer(Guid.NewGuid(), recordId, ("wins", 1)) };
+        entity.Photos = new List<PlayRecordPhotoEntity>
+        {
+            new()
+            {
+                Id = Guid.NewGuid(), PlayRecordId = recordId,
+                BlobUrl = "play-record-photos/abc/photo1.webp", ThumbnailUrl = "play-record-photos/abc/thumb1.webp",
+                FileSizeBytes = 1234, Sha256Hash = "h1", OcrText = "42", Caption = "scoreboard",
+                UploadedByUserId = uploaderId, UploadedAt = new DateTime(2026, 6, 20, 10, 0, 0, DateTimeKind.Utc),
+            },
+            new()
+            {
+                Id = Guid.NewGuid(), PlayRecordId = recordId,
+                BlobUrl = "play-record-photos/abc/photo2.webp", ThumbnailUrl = null,
+                FileSizeBytes = 5678, Sha256Hash = "h2", OcrText = null, Caption = null,
+                UploadedByUserId = uploaderId, UploadedAt = new DateTime(2026, 6, 20, 9, 0, 0, DateTimeKind.Utc),
+            },
+        };
+        _context.PlayRecords.Add(entity);
+        await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var query = new GetPlayRecordQuery(recordId, entity.CreatedByUserId);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
+
+        result.Photos.Should().HaveCount(2);
+        result.Photos[0].Caption.Should().BeNull();
+        result.Photos[0].Url.Should().Be("play-record-photos/abc/photo2.webp");
+        result.Photos[1].Caption.Should().Be("scoreboard");
+        result.Photos[1].OcrText.Should().Be("42");
+        result.Photos[1].ThumbnailUrl.Should().Be("play-record-photos/abc/thumb1.webp");
     }
 
     #region Test Helpers

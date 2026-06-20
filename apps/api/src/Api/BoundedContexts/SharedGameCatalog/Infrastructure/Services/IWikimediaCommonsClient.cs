@@ -22,6 +22,14 @@ namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 ///   BEFORE every HTTP call.</item>
 /// </list>
 /// </para>
+/// <para>
+/// <b>Architectural boundary</b>: this port lives in <c>SharedGameCatalog/Infrastructure/Services/</c>
+/// (BC-internal). ADR-082 (External Media Enrichment: Ports/Adapters Layout) codifies
+/// the promotion ladder: if a second BC (e.g. PdfDocument cover thumbnails, Player avatars)
+/// needs Wikimedia Commons access, the adapter moves to <c>SharedKernel/ExternalServices/</c>
+/// while the consumer-owned port stays in the consuming BC. Direct cross-BC injection of
+/// this interface is rejected (Newman SN-001).
+/// </para>
 /// </remarks>
 internal interface IWikimediaCommonsClient
 {

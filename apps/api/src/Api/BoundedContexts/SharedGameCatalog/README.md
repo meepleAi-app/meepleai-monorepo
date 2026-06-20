@@ -342,8 +342,11 @@ psql -f ../../../docs/05-testing/shared-catalog-fts-performance-validation.sql
 - **ADR-016**: Bounded Context Separation (SharedGameCatalog vs GameManagement)
 - **ADR-018**: PostgreSQL FTS Technology Choice (vs Elasticsearch)
 - **ADR-019**: Two-Step Delete Workflow Governance
+- **ADR Wikidata 2026-06-09**: Wikidata enrichment architecture (DEC-3a..3j, L2 cover pipeline)
+- **ADR-059**: Catalog seed legal posture (license whitelist, BGG ToS compliance)
+- **ADR-082**: External Media Enrichment ports/adapters layout (Proposed — Phase G #2055). Codifies BC-internal port pattern for `IWikidataCoverEnrichmentRunner` + `IWikimediaCommonsClient` and the promotion ladder for future cross-BC adapter reuse.
 
-See: `docs/01-architecture/adr/`
+See: `docs/for-claude/architecture/adr/`
 
 ---
 

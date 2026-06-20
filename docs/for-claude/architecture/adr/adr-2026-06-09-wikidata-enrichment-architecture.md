@@ -167,3 +167,7 @@ Net-of-M0 effort: **~9 working days** (vs original spec estimate 5-7gg pre-spike
 - Spike summary: `docs/spikes/1823/spike-summary.md`
 - Plan: `docs/superpowers/plans/2026-06-09-large-medium-remaining-plan.md` § Phase 3
 - DEC-3 origin: sess.46f spec-panel + user-locked
+
+## Follow-up ADRs
+
+- [ADR-082](./adr-082-external-media-enrichment-ports.md) — External Media Enrichment ports/adapters layout (Proposed 2026-06-20, issue [#2055](https://github.com/meepleAi-app/meepleai-monorepo/issues/2055) Phase G). Formalizes the BC-internal port pattern for `IWikidataCoverEnrichmentRunner` + `IWikimediaCommonsClient` and rejects the `MediaEnrichment` shared-BC alternative. Closes Newman SN-001 gap from 2026-06-20 spec-panel.

@@ -4020,6 +4020,19 @@
       "error": {
         "title": "Impossibile caricare le statistiche",
         "description": "Si è verificato un errore di rete. Verifica la connessione e riprova."
+      },
+      "trend": {
+        "title": "Andamento win rate",
+        "empty": "Dati insufficienti per l'andamento",
+        "month": "Mese",
+        "winRate": "Win rate"
+      },
+      "range": {
+        "label": "Filtra periodo",
+        "all": "Tutto",
+        "30d": "30g",
+        "90d": "90g",
+        "12m": "12 mesi"
       }
     },
     "new": {

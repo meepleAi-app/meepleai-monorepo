@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Application.Queries.PlayRecords;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Infrastructure;
+using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,11 +18,19 @@ namespace Api.BoundedContexts.GameManagement.Application.Queries.PlayRecords;
 /// </summary>
 internal class GetPlayerStatisticsQueryHandler : IQueryHandler<GetPlayerStatisticsQuery, PlayerStatisticsDto>
 {
-    private readonly MeepleAiDbContext _context;
+    /// <summary>
+    /// #2438 (PR-B): server-side cache TTL for player statistics. Matches the FE React Query
+    /// staleTime and the GetGameLeaderboard precedent. See ADR-081.
+    /// </summary>
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
 
-    public GetPlayerStatisticsQueryHandler(MeepleAiDbContext context)
+    private readonly MeepleAiDbContext _context;
+    private readonly IHybridCacheService _cache;
+
+    public GetPlayerStatisticsQueryHandler(MeepleAiDbContext context, IHybridCacheService cache)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
     }
 
     public async Task<PlayerStatisticsDto> Handle(
@@ -30,6 +39,22 @@ internal class GetPlayerStatisticsQueryHandler : IQueryHandler<GetPlayerStatisti
     {
         ArgumentNullException.ThrowIfNull(query);
 
+        // #2438 (PR-B): cache per user + per date-range (Ticks → timezone-stable, serialization-safe),
+        // tagged per user so a single RemoveByTagAsync evicts every ranged entry at once (ADR-081).
+        var cacheKey = $"player-stats:{query.UserId}:{query.StartDate?.Ticks ?? 0}:{query.EndDate?.Ticks ?? 0}";
+
+        return await _cache.GetOrCreateAsync(
+            cacheKey,
+            ct => ComputeAsync(query, ct),
+            tags: [$"player-stats:{query.UserId}"],
+            expiration: CacheTtl,
+            ct: cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<PlayerStatisticsDto> ComputeAsync(
+        GetPlayerStatisticsQuery query,
+        CancellationToken cancellationToken)
+    {
         var recordsQuery = _context.PlayRecords
             .AsNoTracking()
             .Include(r => r.Players)

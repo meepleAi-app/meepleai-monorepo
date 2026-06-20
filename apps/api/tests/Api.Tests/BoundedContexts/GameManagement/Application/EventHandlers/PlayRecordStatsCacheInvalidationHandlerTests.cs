@@ -112,6 +112,65 @@ public sealed class PlayRecordStatsCacheInvalidationHandlerTests : IDisposable
         await act.Should().NotThrowAsync();
     }
 
+    // ─── #2446: PlayRecordDeletedEvent trigger ────────────────────────────────
+    // The Deleted event carries DeletedByUserId directly, so the handler skips the DB
+    // lookup that Completed needs. Otherwise identical best-effort eviction semantics
+    // (ADR-081 deferred hook).
+
+    [Fact]
+    [Trait("Issue", "2446")]
+    public async Task Handle_Deleted_EvictsDeletedByUserStatsTag()
+    {
+        // Arrange — no record seed needed: DeletedByUserId is on the event.
+        var userId = Guid.NewGuid();
+        var recordId = Guid.NewGuid();
+
+        // Act
+        await _handler.Handle(
+            new PlayRecordDeletedEvent(recordId, userId),
+            TestContext.Current.CancellationToken);
+
+        // Assert — evicts the deleting user's tag.
+        _cache.Verify(
+            c => c.RemoveByTagAsync($"player-stats:{userId}", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    [Trait("Issue", "2446")]
+    public async Task Handle_Deleted_NullNotification_ThrowsArgumentNullException()
+    {
+        // Act
+        var act = () => _handler.Handle(
+            (PlayRecordDeletedEvent)null!,
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        await act.Should().ThrowAsync<ArgumentNullException>();
+    }
+
+    [Fact]
+    [Trait("Issue", "2446")]
+    public async Task Handle_Deleted_CacheThrows_IsSwallowed_BestEffort()
+    {
+        // Arrange — eviction is best-effort: a cache hiccup must NOT propagate into the
+        // DeletePlayRecordCommand that raised the event.
+        var userId = Guid.NewGuid();
+        var recordId = Guid.NewGuid();
+
+        _cache
+            .Setup(c => c.RemoveByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("redis down"));
+
+        // Act
+        var act = () => _handler.Handle(
+            new PlayRecordDeletedEvent(recordId, userId),
+            TestContext.Current.CancellationToken);
+
+        // Assert — does not throw.
+        await act.Should().NotThrowAsync();
+    }
+
     private static PlayRecordEntity MakeRecord(Guid id, Guid userId) => new()
     {
         Id = id,

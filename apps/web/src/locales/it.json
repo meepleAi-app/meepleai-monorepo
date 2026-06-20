@@ -4086,6 +4086,10 @@
         "cancel": "Annulla",
         "draft": "Bozza"
       },
+      "draft": {
+        "saving": "Salvataggio…",
+        "saved": "Bozza salvata {time}"
+      },
       "success": {
         "toast": "Partita registrata",
         "toastDescription": "La partita è stata registrata correttamente"

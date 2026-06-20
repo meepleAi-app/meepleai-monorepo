@@ -29,9 +29,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.PixelFormats;
+using ImageMagick;
 using Xunit;
 
 namespace Api.Tests.Integration.GameManagement;
@@ -153,12 +151,16 @@ public sealed class PlayRecordPhotoUploadTests : IAsyncLifetime
     // Helpers
     // ---------------------------------------------------------------------------
 
-    /// <summary>Generates a minimal but valid PNG byte array using ImageSharp.</summary>
+    /// <summary>
+    /// Generates a minimal but valid PNG byte array using Magick.NET.
+    /// Issue #2055 Phase G DEC-3d-1: migrated from SixLabors.ImageSharp 3.x to Magick.NET-Q8-AnyCPU 14.x (Apache 2.0).
+    /// </summary>
     private static byte[] MakePngBytes(int width = 10, int height = 10)
     {
-        using var image = new Image<Rgba32>(width, height);
+        using var image = new MagickImage(MagickColors.Black, (uint)width, (uint)height);
+        image.Format = MagickFormat.Png;
         using var ms = new MemoryStream();
-        image.Save(ms, new PngEncoder());
+        image.Write(ms);
         return ms.ToArray();
     }
 

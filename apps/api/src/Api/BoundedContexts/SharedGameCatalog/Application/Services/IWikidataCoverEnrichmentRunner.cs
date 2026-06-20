@@ -9,6 +9,13 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
 /// workflow used both by the M9 scheduler tick and the M12 admin trigger
 /// endpoint. Single source of truth so the audit trail is identical regardless
 /// of who pulled the trigger. Issue #1823 Wave 3 M12.
+///
+/// <para>
+/// <b>Architectural boundary</b>: this is a BC-internal port (consumer-owned by
+/// <c>SharedGameCatalog</c>). See ADR-082 (External Media Enrichment: Ports/Adapters
+/// Layout) for the formal decision rejecting a shared <c>MediaEnrichment</c> BC and
+/// codifying the promotion ladder for future cross-BC adapter reuse.
+/// </para>
 /// </summary>
 internal interface IWikidataCoverEnrichmentRunner
 {

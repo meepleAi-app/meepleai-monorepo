@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
+using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Infrastructure;
 using Api.Models;
 using Api.Services;
@@ -444,7 +445,11 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
                 p.Game.AverageRating != null && p.Game.AverageRating >= topRatedThreshold,
                 // IsNew: derived from NewThisWeekCount per mockup sp3-shared-games.jsx:127.
                 p.NewThisWeekCount >= IsNewMinThreshold,
-                CoverUrl: coverUrl));
+                CoverUrl: coverUrl,
+                // Issue #2055 Phase G AC-G6 — Wikidata cover attribution (HTML-stripped per DEC-G6-1).
+                WikidataCoverLicense: p.Game.WikidataCoverLicense,
+                WikidataCoverAttribution: AttributionTextExtractor.Strip(p.Game.WikidataCoverAttribution),
+                WikidataCoverSourceUrl: p.Game.WikidataCoverSourceUrl));
         }
 
         // Issue #2339 (Wave 4 Task 13 — DEC-WIRING): enrich SharedGameDto.Translations

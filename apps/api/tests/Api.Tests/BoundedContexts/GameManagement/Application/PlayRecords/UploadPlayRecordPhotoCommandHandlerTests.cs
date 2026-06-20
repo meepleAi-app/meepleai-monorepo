@@ -16,9 +16,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.PixelFormats;
+using ImageMagick;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.PlayRecords;
@@ -49,9 +47,11 @@ public class UploadPlayRecordPhotoCommandHandlerTests
     /// </summary>
     private static byte[] MakePngBytes()
     {
+        // Issue #2055 Phase G DEC-3d-1: Magick.NET-Q8-AnyCPU 14.x (Apache 2.0) replaces SixLabors.ImageSharp 3.x.
         var ms = new MemoryStream();
-        using var img = new Image<Rgba32>(10, 10);
-        img.Save(ms, new PngEncoder());
+        using var img = new MagickImage(MagickColors.Black, 10, 10);
+        img.Format = MagickFormat.Png;
+        img.Write(ms);
         return ms.ToArray();
     }
 

@@ -1,0 +1,26 @@
+{
+  "batchcomplete": "",
+  "query": {
+    "pages": {
+      "55555": {
+        "pageid": 55555,
+        "ns": 6,
+        "title": "File:Encumbered cover.jpg",
+        "imageinfo": [
+          {
+            "extmetadata": {
+              "LicenseShortName": {
+                "value": "CC BY-NC 4.0",
+                "source": "commons-desc-page"
+              },
+              "Artist": {
+                "value": "<a href=\"https://commons.wikimedia.org/wiki/User:NCArtist\" title=\"User:NCArtist\">Non-Commercial Artist</a>",
+                "source": "commons-desc-page"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

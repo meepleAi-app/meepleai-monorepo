@@ -171,6 +171,8 @@ internal sealed class SessionAttachmentService : ISessionAttachmentService
         }
     }
 
+    // Issue #2055 Phase G + #2436 PR-B: delegates to shared ImageThumbnailHelper
+    // (Magick.NET-Q8-AnyCPU 14.x, Apache 2.0, post DEC-3d-1 migration).
     internal static Task<MemoryStream?> GenerateThumbnailAsync(Stream sourceStream, CancellationToken ct = default)
         => ImageThumbnailHelper.GenerateThumbnailAsync(sourceStream, ct);
 

@@ -1,4 +1,5 @@
 using Api.Infrastructure;
+using Api.Observability;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -89,6 +90,10 @@ public sealed class WikidataQuarterlyReVerificationJob : IJob
 
         if (reset > 0)
         {
+            // Issue #2055 Phase G AC-G1 — record Prometheus counter so ops dashboards
+            // surface quarterly sweep activity alongside M9 batch metrics.
+            MeepleAiMetrics.WikidataQuarterlyReverificationReset.Add(reset);
+
             _logger.LogInformation(
                 "WikidataQuarterlyReVerificationJob: reset WikidataQidLastVerifiedAt on {Count} game(s) older than {Cutoff} — M9 scheduler will re-enrich on next tick.",
                 reset, cutoff);

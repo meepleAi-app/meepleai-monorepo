@@ -2,13 +2,19 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Processing;
+using ImageMagick;
 
 namespace Api.Helpers;
 
-/// <summary>Shared image thumbnail generation (300px max, JPEG q80). #2436 PR-B.</summary>
+/// <summary>
+/// Shared image thumbnail generation (300px max, JPEG q80). #2436 PR-B.
+///
+/// Issue #2055 Phase G DEC-3d-1: migrated from SixLabors.ImageSharp 3.x
+/// (Six Labors Split License → incompatible with proprietary use) to
+/// Magick.NET-Q8-AnyCPU 14.x (Apache 2.0). MagickImage constructor is
+/// synchronous, so we wrap in <see cref="Task.Run(System.Action, CancellationToken)"/>
+/// to preserve the public async signature.
+/// </summary>
 internal static class ImageThumbnailHelper
 {
     private const int ThumbnailMaxDimension = 300;
@@ -16,19 +22,19 @@ internal static class ImageThumbnailHelper
 
     public static async Task<MemoryStream?> GenerateThumbnailAsync(Stream sourceStream, CancellationToken ct = default)
     {
-        using var image = await Image.LoadAsync(sourceStream, ct).ConfigureAwait(false);
+        using var image = await Task.Run(() => new MagickImage(sourceStream), ct).ConfigureAwait(false);
 
-        // Calculate new dimensions maintaining aspect ratio
-        var (newWidth, newHeight) = CalculateThumbnailDimensions(image.Width, image.Height);
+        // Calculate new dimensions maintaining aspect ratio. Magick.NET 14.x
+        // exposes Width/Height as uint; cast to int for the existing helper.
+        var (newWidth, newHeight) = CalculateThumbnailDimensions((int)image.Width, (int)image.Height);
 
-        image.Mutate(ctx => ctx.Resize(newWidth, newHeight));
+        image.Resize((uint)newWidth, (uint)newHeight);
+
+        image.Format = MagickFormat.Jpeg;
+        image.Quality = ThumbnailJpegQuality;
 
         var outputStream = new MemoryStream();
-        var encoder = new JpegEncoder
-        {
-            Quality = ThumbnailJpegQuality
-        };
-        await image.SaveAsync(outputStream, encoder, ct).ConfigureAwait(false);
+        await Task.Run(() => image.Write(outputStream), ct).ConfigureAwait(false);
         outputStream.Position = 0;
         return outputStream;
     }

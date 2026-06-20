@@ -52,6 +52,20 @@ Regex (case-insensitive): `^(public domain|PD|CC0|CC[ -]BY([ -][0-9.]+)?|CC[ -]B
 
 **Rationale**: Production-proven, zero deployment friction. Pin major version to avoid unexpected v4 license changes.
 
+### DEC-3d-1 — ImageSharp → Magick.NET migration (LOCKED 2026-06-20)
+
+**Decision**: Replace `SixLabors.ImageSharp` 3.1.12 with `Magick.NET-Q8-AnyCPU` 14.x (Apache 2.0).
+
+**Rationale**:
+- ImageSharp 3.x changed license to Six Labors Split License (commercial use requires paid license). MeepleAI is proprietary → incompatible.
+- ImageSharp 2.1.x is EOL upstream (no security patches → audit risk).
+- `Magick.NET-Q8-AnyCPU` is Apache 2.0 (commercial-friendly), provides feature parity (WebP/JPEG/PNG encode + resize + metadata Strip).
+- Native deps (~70MB Linux/Windows/macOS binaries) are acceptable — image is already large from OCR/PDF stack.
+
+**Cross-cutting impact**: rifactoring touches `WebpVariantGenerator` + `SessionAttachmentService` (both Phase F + pre-existing) + their tests. CI lint guard added (`infra/scripts/lint-deps-imagesharp.sh`) to prevent regression.
+
+**Issue**: #2055 Phase G AC-G2.
+
 ### DEC-3e — Rate-limit topology (NEW post-spike, addresses N-001)
 **Decision**: Single-pod batch CRON (HPA=1) with in-process 5 RPS token bucket. NO distributed rate-limiter required.
 
@@ -167,3 +181,7 @@ Net-of-M0 effort: **~9 working days** (vs original spec estimate 5-7gg pre-spike
 - Spike summary: `docs/spikes/1823/spike-summary.md`
 - Plan: `docs/superpowers/plans/2026-06-09-large-medium-remaining-plan.md` § Phase 3
 - DEC-3 origin: sess.46f spec-panel + user-locked
+
+## Follow-up ADRs
+
+- [ADR-082](./adr-082-external-media-enrichment-ports.md) — External Media Enrichment ports/adapters layout (Proposed 2026-06-20, issue [#2055](https://github.com/meepleAi-app/meepleai-monorepo/issues/2055) Phase G). Formalizes the BC-internal port pattern for `IWikidataCoverEnrichmentRunner` + `IWikimediaCommonsClient` and rejects the `MediaEnrichment` shared-BC alternative. Closes Newman SN-001 gap from 2026-06-20 spec-panel.

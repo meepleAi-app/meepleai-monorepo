@@ -35,12 +35,23 @@ internal sealed class PlayRecord : AggregateRoot<Guid>
     private readonly List<RecordPlayer> _players = new();
     public IReadOnlyList<RecordPlayer> Players => _players.AsReadOnly();
 
+    // Photos (#2436 PR-B, ADR-067 — max 10 per record)
+    private readonly List<PlayRecordPhoto> _photos = new();
+    public IReadOnlyList<PlayRecordPhoto> Photos => _photos.AsReadOnly();
+
     // Scoring Configuration
     public SessionScoringConfig ScoringConfig { get; private set; }
 
     // Audit
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
+
+    /// <summary>Postgres xmin optimistic-concurrency token. Server-owned; the repository
+    /// round-trips it for detached Update (ADR-060). #2436 PR-B / #2437-1.</summary>
+    public uint Xmin { get; private set; }
+
+    /// <summary>Repository-only: restore the xmin token after loading from persistence.</summary>
+    internal void SetXmin(uint xmin) => Xmin = xmin;
 
     // Soft Delete (issue #2439 — mirrors GameBook.SoftDelete pattern)
     public bool IsDeleted { get; private set; }
@@ -214,6 +225,37 @@ internal sealed class PlayRecord : AggregateRoot<Guid>
     {
         var player = new RecordPlayer(playerId, Id, userId, displayName);
         _players.Add(player);
+    }
+
+    /// <summary>
+    /// Attaches an uploaded photo. Max 10 per record (#2436 PR-B, ADR-067). Raises a domain event.
+    /// </summary>
+    public void AddPhoto(
+        Guid photoId, string blobUrl, string? thumbnailUrl, long fileSizeBytes,
+        string sha256Hash, string? ocrText, double? ocrConfidence, string? caption,
+        Guid uploadedByUserId, TimeProvider? timeProvider = null)
+    {
+        if (_photos.Count >= 10)
+            throw new DomainException("Cannot attach more than 10 photos to a play record");
+
+        var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+        var photo = new PlayRecordPhoto(photoId, Id, blobUrl, thumbnailUrl, fileSizeBytes,
+            sha256Hash, ocrText, ocrConfidence, caption, uploadedByUserId, now);
+        _photos.Add(photo);
+        UpdatedAt = now;
+        AddDomainEvent(new PlayRecordPhotoUploadedEvent(Id, photo.Id, uploadedByUserId));
+    }
+
+    /// <summary>
+    /// Repository-only reconstitution from persistence (no domain event).
+    /// </summary>
+    internal void RestorePhoto(
+        Guid photoId, string blobUrl, string? thumbnailUrl, long fileSizeBytes,
+        string sha256Hash, string? ocrText, double? ocrConfidence, string? caption,
+        Guid uploadedByUserId, DateTime uploadedAt)
+    {
+        _photos.Add(new PlayRecordPhoto(photoId, Id, blobUrl, thumbnailUrl, fileSizeBytes,
+            sha256Hash, ocrText, ocrConfidence, caption, uploadedByUserId, uploadedAt));
     }
 
     /// <summary>

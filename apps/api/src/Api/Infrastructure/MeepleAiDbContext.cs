@@ -90,6 +90,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameSessionEntity> GameSessions => Set<GameSessionEntity>(); // DDD-PHASE2: GameSession aggregate
     public DbSet<PlayRecordEntity> PlayRecords => Set<PlayRecordEntity>(); // ISSUE-3888: Play history tracking
     public DbSet<RecordPlayerEntity> RecordPlayers => Set<RecordPlayerEntity>(); // ISSUE-3888: Play record players
+    public DbSet<PlayRecordPhotoEntity> PlayRecordPhotos => Set<PlayRecordPhotoEntity>(); // #2436 PR-B: Photos attached to PlayRecords
     public DbSet<RuleConflictFAQEntity> RuleConflictFAQs => Set<RuleConflictFAQEntity>(); // ISSUE-3761: Conflict resolution FAQ
     public DbSet<GameReviewEntity> GameReviews => Set<GameReviewEntity>(); // ISSUE-4904: Game reviews API
     public DbSet<GameStrategyEntity> GameStrategies => Set<GameStrategyEntity>(); // ISSUE-4903: Game strategies API
@@ -418,6 +419,7 @@ public class MeepleAiDbContext : DbContext
         // NOTE: Game domain aggregate removed by #1320 (P2c) - modelBuilder.Ignore<Game>() no longer needed
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.PlayRecord>(); // ISSUE-3888
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.RecordPlayer>(); // ISSUE-3888
+        modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.PlayRecordPhoto>(); // #2436 PR-B
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveGameSession>(); // ISSUE-4747
         modelBuilder.Ignore<BoundedContexts.GameToolkit.Domain.Entities.GameToolkit>(); // ISSUE-4753
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.ToolState.ToolState>(); // ISSUE-4754

@@ -39,6 +39,10 @@ public enum BlobCategory
     /// (which is the binary PDF document itself). Target prefix <c>photo-batches/{gameId}/</c>.
     /// </summary>
     PhotoBatch,
+
+    /// <summary>Photos attached to a PlayRecord (scoreboard captures, party shots).
+    /// Target prefix <c>play-record-photos/{playRecordId}/</c>.</summary>
+    PlayRecordPhoto,
 }
 
 internal static class BlobCategoryExtensions
@@ -57,6 +61,7 @@ internal static class BlobCategoryExtensions
         BlobCategory.VisionSnapshot => "vision-snapshots",
         BlobCategory.GamebookPhoto => "gamebook-photos",
         BlobCategory.PhotoBatch => "photo-batches",
+        BlobCategory.PlayRecordPhoto => "play-record-photos",
         _ => throw new ArgumentOutOfRangeException(nameof(category), category, null),
     };
 }

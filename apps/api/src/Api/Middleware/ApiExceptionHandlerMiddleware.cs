@@ -106,6 +106,14 @@ internal class ApiExceptionHandlerMiddleware
             return;
         }
 
+        // #2436 PR-B / #2437-1: optimistic-concurrency conflict (xmin mismatch) → 409 with
+        // X-Warning-Code: concurrent-edit so the FE can render a "reload & retry" prompt.
+        if (ex is Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException concurrencyEx)
+        {
+            await HandleConcurrencyConflictAsync(context, concurrencyEx).ConfigureAwait(false);
+            return;
+        }
+
         // Determine status code and error type based on exception type
         var (statusCode, errorType, message) = MapExceptionToResponse(ex);
 
@@ -303,6 +311,39 @@ internal class ApiExceptionHandlerMiddleware
         {
             error = "two_factor_unavailable",
             message = exception.Message,
+            correlationId = context.TraceIdentifier,
+            timestamp = DateTime.UtcNow
+        };
+
+        await context.Response.WriteAsJsonAsync(errorResponse).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Handles <see cref="Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException"/> with HTTP 409
+    /// and a body carrying <c>error="concurrent_edit"</c> so the FE can render a
+    /// "reload and retry" prompt. The xmin token mismatch means another request already mutated
+    /// the same row between our read and our write. ADR-060. #2436 PR-B / #2437-1.
+    /// </summary>
+    private async Task HandleConcurrencyConflictAsync(
+        HttpContext context,
+        Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException exception)
+    {
+        var endpoint = GetRoutePattern(context) ?? context.Request.Path.ToString();
+
+        MeepleAiMetrics.RecordApiError(
+            exception: exception,
+            httpStatusCode: StatusCodes.Status409Conflict,
+            endpoint: endpoint,
+            isUnhandled: true);
+
+        context.Response.StatusCode = StatusCodes.Status409Conflict;
+        context.Response.Headers["X-Warning-Code"] = "concurrent-edit";
+        context.Response.ContentType = "application/json";
+
+        var errorResponse = new
+        {
+            error = "concurrent_edit",
+            message = "The resource was modified by another request. Reload and retry.",
             correlationId = context.TraceIdentifier,
             timestamp = DateTime.UtcNow
         };

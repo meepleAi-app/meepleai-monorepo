@@ -158,6 +158,18 @@ export interface MeepleCardProps {
    * for omitting the prop on their consumers.
    */
   attribution?: CoverAttribution;
+  /**
+   * Issue #2055 Phase G AC-G6 — Wikidata cover license + attribution rendered
+   * as a plain-text footer beneath the card. Activated only for
+   * `entity === 'game'`. All three fields are optional so the footer
+   * gracefully degrades; when `wikidataCoverLicense` is null/undefined the
+   * footer renders nothing. BE strips HTML upstream per DEC-G6-1 LOCKED
+   * 2026-06-20 — render as plain text only, do NOT use
+   * `dangerouslySetInnerHTML`.
+   */
+  wikidataCoverLicense?: string | null;
+  wikidataCoverAttribution?: string | null;
+  wikidataCoverSourceUrl?: string | null;
 }
 
 /**

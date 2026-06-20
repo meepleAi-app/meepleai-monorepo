@@ -97,6 +97,17 @@ internal sealed class PlayRecordStatsCacheInvalidationHandler
         // (the soft-deleted row may even be filtered out by the global query filter).
         var userId = notification.DeletedByUserId;
 
+        // Defense in depth: refuse Guid.Empty so a misconfigured caller (seed script,
+        // anonymous delete) cannot evict a bogus "player-stats:00000000-..." tag. Mirrors
+        // the Completed handler's missing-owner guard.
+        if (userId == Guid.Empty)
+        {
+            _logger.LogWarning(
+                "PlayRecordDeletedEvent for record {RecordId} carried empty DeletedByUserId — skipping stats cache eviction",
+                notification.RecordId);
+            return;
+        }
+
         try
         {
             var removed = await _cache

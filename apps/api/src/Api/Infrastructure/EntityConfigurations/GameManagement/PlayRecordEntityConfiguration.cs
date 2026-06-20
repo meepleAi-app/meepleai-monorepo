@@ -50,6 +50,14 @@ internal class PlayRecordEntityConfiguration : IEntityTypeConfiguration<PlayReco
         builder.Property(e => e.CreatedAt).IsRequired();
         builder.Property(e => e.UpdatedAt).IsRequired();
 
+        // Soft Delete (issue #2439 — mirrors GameBook query-filter pattern)
+        builder.Property(e => e.IsDeleted)
+            .HasColumnName("is_deleted")
+            .HasDefaultValue(false)
+            .IsRequired();
+        builder.Property(e => e.DeletedAt)
+            .HasColumnName("deleted_at");
+
         // Issue #1938 / CF-2: source domain event id (nullable, UNIQUE partial).
         builder.Property(e => e.SourceEventId)
             .HasColumnName("source_event_id");
@@ -79,5 +87,9 @@ internal class PlayRecordEntityConfiguration : IEntityTypeConfiguration<PlayReco
             .WithOne(p => p.PlayRecord)
             .HasForeignKey(p => p.PlayRecordId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Soft-delete query filter: deleted records are excluded from all queries
+        // (history, statistics, get-by-id, can-view, can-edit). Issue #2439.
+        builder.HasQueryFilter(e => !e.IsDeleted);
     }
 }

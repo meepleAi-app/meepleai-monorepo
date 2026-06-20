@@ -346,8 +346,9 @@ export function PlayRecordDetailView({ recordId }: PlayRecordDetailViewProps): R
           spread={spread}
         />
 
-        {/* Photos — #2436 PR-C */}
-        <section aria-label={t('playRecords.photos.sectionTitle')} className="flex flex-col gap-2">
+        {/* Photos — #2436 PR-C. The gallery renders its own <h2>; no section aria-label
+            to avoid a double screen-reader announcement of the same title. */}
+        <section className="flex flex-col gap-2">
           {isCreator && (
             <div className="flex">
               <button

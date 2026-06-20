@@ -163,6 +163,10 @@ internal sealed class UploadPlayRecordPhotoCommandHandler
         }
 
         var url = await PlayRecordPhotoUrlResolver.ResolveAsync(_blobStorage, stored.FilePath, PlayRecordPhotoUrlResolver.DefaultExpirySeconds).ConfigureAwait(false);
-        return new PlayRecordPhotoUploadResult(photoId, url, thumbUrl, ocrText, WasDeduplicated: false);
+        // Presign the thumbnail for the response too (the entity keeps the raw FilePath above).
+        var thumbPresigned = thumbUrl is null
+            ? null
+            : await PlayRecordPhotoUrlResolver.ResolveAsync(_blobStorage, thumbUrl, PlayRecordPhotoUrlResolver.DefaultExpirySeconds).ConfigureAwait(false);
+        return new PlayRecordPhotoUploadResult(photoId, url, thumbPresigned, ocrText, WasDeduplicated: false);
     }
 }

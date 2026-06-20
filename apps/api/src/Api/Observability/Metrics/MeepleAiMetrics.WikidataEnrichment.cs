@@ -177,4 +177,25 @@ internal static partial class MeepleAiMetrics
     {
         System.Threading.Interlocked.Increment(ref _wikidataDeadLetterCount);
     }
+
+    /// <summary>
+    /// Issue #2055 Phase G AC-G1 — counter of rows reset to <c>NULL</c> by the
+    /// quarterly re-verification cron (<see cref="Api.BoundedContexts.SharedGameCatalog.Application.Jobs.WikidataQuarterlyReVerificationJob"/>).
+    /// Incremented once per cron tick by the reset count returned from
+    /// <c>RunOnceAsync</c>. Zero-tick increments are tracked separately by
+    /// <c>WikidataBatchDuration</c>'s sample count on the M9 batch job — this
+    /// counter only fires when the quarterly sweep actually reset something.
+    ///
+    /// Suggested alerting:
+    ///   - sudden surge &gt; 1000 rows in a single tick → schema drift or migration
+    ///     pushed an entire cohort past the 90d window; verify M9 throughput can
+    ///     absorb the backlog on its next tick.
+    ///   - zero resets across 4 consecutive quarterly ticks (1 year) → either
+    ///     catalog is stable (good) or the freshness clock is stuck (bad);
+    ///     cross-check with <c>WikidataQidHitRate</c>.
+    /// </summary>
+    public static readonly Counter<long> WikidataQuarterlyReverificationReset = Meter.CreateCounter<long>(
+        name: "meepleai.wikidata.quarterly_reverification.reset.total",
+        unit: "games",
+        description: "Cumulative count of SharedGames reset to NULL by WikidataQuarterlyReVerificationJob (#2055 Phase G AC-G1)");
 }

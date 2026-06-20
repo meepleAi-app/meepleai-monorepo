@@ -227,12 +227,12 @@ export const SharedGameSchema = z.object({
   // populated a cover for this game; consumers MUST fall back to a
   // deterministic placeholder via `lib/games/cover-utils.ts`.
   coverUrl: z.string().url().nullable().optional(),
-  // Issue #2339 sub-PR 2/3 — localized titles. Null = legacy admin endpoint
-  // that doesn't surface translations; empty array = explicit "no translations".
-  // FE consumers use `useGameTitle(game)` to resolve the best-fit title; never
-  // read `translations` directly to avoid bypassing the source/locale priority
-  // chain documented in docs/superpowers/specs/2026-06-20-translations-fe-hook-design.md.
-  translations: z.array(SharedGameTranslationDtoSchema).nullable().default([]),
+  // Issue #2339 — see SharedGameTranslationDtoSchema docstring above.
+  translations: z
+    .array(SharedGameTranslationDtoSchema)
+    .nullable()
+    .default([])
+    .transform(v => v ?? []),
 });
 
 export type SharedGame = z.infer<typeof SharedGameSchema>;
@@ -347,12 +347,12 @@ export const SharedGameDetailSchema = z.object({
   hasKnowledgeBase: z.boolean().default(false),
   isTopRated: z.boolean().default(false),
   isNew: z.boolean().default(false),
-  // Issue #2339 sub-PR 2/3 — localized titles. Null = legacy admin endpoint
-  // that doesn't surface translations; empty array = explicit "no translations".
-  // FE consumers use `useGameTitle(game)` to resolve the best-fit title; never
-  // read `translations` directly to avoid bypassing the source/locale priority
-  // chain documented in docs/superpowers/specs/2026-06-20-translations-fe-hook-design.md.
-  translations: z.array(SharedGameTranslationDtoSchema).nullable().default([]),
+  // Issue #2339 — see SharedGameTranslationDtoSchema docstring above.
+  translations: z
+    .array(SharedGameTranslationDtoSchema)
+    .nullable()
+    .default([])
+    .transform(v => v ?? []),
 });
 
 export type SharedGameDetail = z.infer<typeof SharedGameDetailSchema>;

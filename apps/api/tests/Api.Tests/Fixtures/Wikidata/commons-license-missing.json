@@ -1,0 +1,22 @@
+{
+  "batchcomplete": "",
+  "query": {
+    "pages": {
+      "99999": {
+        "pageid": 99999,
+        "ns": 6,
+        "title": "File:Untitled.jpg",
+        "imageinfo": [
+          {
+            "extmetadata": {
+              "Artist": {
+                "value": "Unknown",
+                "source": "commons-desc-page"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

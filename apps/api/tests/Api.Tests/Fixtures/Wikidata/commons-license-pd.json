@@ -1,0 +1,30 @@
+{
+  "batchcomplete": "",
+  "query": {
+    "pages": {
+      "12345": {
+        "pageid": 12345,
+        "ns": 6,
+        "title": "File:Catan-2015-boxed-edition.jpg",
+        "imageinfo": [
+          {
+            "extmetadata": {
+              "LicenseShortName": {
+                "value": "Public domain",
+                "source": "commons-desc-page"
+              },
+              "Artist": {
+                "value": "<a href=\"https://commons.wikimedia.org/wiki/User:CatanPublisher\" title=\"User:CatanPublisher\">Asterion Press</a>",
+                "source": "commons-desc-page"
+              },
+              "Credit": {
+                "value": "Own work",
+                "source": "commons-desc-page"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

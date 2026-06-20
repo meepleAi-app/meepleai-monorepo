@@ -63,7 +63,7 @@ export default function LiveSessionScoresPage({ params }: LiveSessionScoresPageP
         <div className="flex justify-end px-4 pt-2">
           <AutosaveIndicator />
         </div>
-        <ScoreBoard sessionId={sessionId} isHost={isHost} />
+        <ScoreBoard sessionId={sessionId} />
       </div>
     );
   }

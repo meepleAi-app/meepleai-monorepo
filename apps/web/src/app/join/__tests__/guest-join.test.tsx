@@ -64,7 +64,6 @@ const SESSION_RESPONSE = {
   status: 'InProgress',
   currentTurn: 1,
   players: [{ id: 'host-1', displayName: 'Mario', isHost: true, isOnline: true }],
-  scores: { Mario: 10 },
 };
 
 function setupFetch(opts: { sessionOk?: boolean; tokenValid?: boolean; joinOk?: boolean } = {}) {

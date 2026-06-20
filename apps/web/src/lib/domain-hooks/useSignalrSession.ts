@@ -30,11 +30,6 @@ import {
 
 // -------- Hub event payload shapes --------
 
-interface ScoreUpdatedPayload {
-  playerName: string;
-  score: number;
-}
-
 interface DisputeResolvedPayload {
   id: string;
   description: string;
@@ -65,8 +60,6 @@ export interface UseSignalRSessionReturn {
   connection: HubConnection | null;
   /** Whether the hub is currently connected */
   isConnected: boolean;
-  /** Notify all clients that a player's total score changed */
-  sendScore: (playerName: string, score: number) => Promise<void>;
   /** Propose a score delta that the host must confirm */
   proposeScore: (playerName: string, delta: number) => Promise<void>;
   /** Signal that this client went to the background (mobile PWA pause) */
@@ -99,10 +92,6 @@ export function useSignalRSession(sessionId: string | null): UseSignalRSessionRe
       .build();
 
     // ---- Register incoming event handlers ----
-
-    conn.on('ScoreUpdated', (data: ScoreUpdatedPayload) => {
-      store.getState().updateScore(data.playerName, data.score);
-    });
 
     conn.on('DisputeResolved', (data: DisputeResolvedPayload) => {
       const dispute: RuleDispute = {
@@ -205,12 +194,6 @@ export function useSignalRSession(sessionId: string | null): UseSignalRSessionRe
 
   // ---- Outbound methods ----
 
-  const sendScore = async (playerName: string, score: number): Promise<void> => {
-    const conn = connectionRef.current;
-    if (!conn || conn.state !== HubConnectionState.Connected) return;
-    await conn.invoke('NotifyScoreUpdated', sessionId, { playerName, score });
-  };
-
   const proposeScore = async (playerName: string, delta: number): Promise<void> => {
     const conn = connectionRef.current;
     if (!conn || conn.state !== HubConnectionState.Connected) return;
@@ -226,7 +209,6 @@ export function useSignalRSession(sessionId: string | null): UseSignalRSessionRe
   return {
     connection,
     isConnected,
-    sendScore,
     proposeScore,
     appBackgrounded,
   };

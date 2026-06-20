@@ -3116,7 +3116,44 @@
         "validationFailedTemplate": "Validation failed: {message}",
         "serverErrorToast": "Server error, retry",
         "networkErrorToast": "Connection lost, retry",
-        "retryCta": "Retry"
+        "retryCta": "Retry",
+        "scoreAriaTemplate": "Score for {name}",
+        "rankAriaTemplate": "Position of {name}",
+        "firstPlaceBadgeLabel": "first place",
+        "outcomeAriaTemplate": "{name}: {result}",
+        "completedAriaTemplate": "Completed by {name}",
+        "doneAriaTemplate": "{label} (completed)",
+        "pendingAriaTemplate": "{label} (not completed)",
+        "points": {
+          "title": "Scores",
+          "leaderLabel": "Leader",
+          "columns": {
+            "player": "Player",
+            "score": "Score"
+          }
+        },
+        "ranking": {
+          "title": "Ranking",
+          "columns": {
+            "rank": "Rank",
+            "player": "Player",
+            "score": "Score"
+          }
+        },
+        "binaryWin": {
+          "title": "Result",
+          "winLabel": "Won",
+          "loseLabel": "Lost",
+          "pendingLabel": "Pending"
+        },
+        "objectives": {
+          "title": "Objectives",
+          "completedLabel": "Completed",
+          "pendingLabel": "Pending",
+          "columns": {
+            "player": "Player"
+          }
+        }
       },
       "actionLog": {
         "title": "Events",

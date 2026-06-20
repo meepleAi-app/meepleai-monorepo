@@ -95,15 +95,6 @@ describe('useLiveSessionStore', () => {
     expect(state.status).toBe('InProgress');
   });
 
-  it('updateScore updates score for the given player', () => {
-    useLiveSessionStore.getState().updateScore('Alice', 42);
-    useLiveSessionStore.getState().updateScore('Bob', 18);
-
-    const { scores } = useLiveSessionStore.getState();
-    expect(scores['Alice']).toBe(42);
-    expect(scores['Bob']).toBe(18);
-  });
-
   it('addDispute appends to the disputes array', () => {
     const dispute = {
       id: 'd-1',
@@ -123,7 +114,10 @@ describe('useLiveSessionStore', () => {
   it('reset clears all state to initial values', () => {
     // Dirty the store
     useLiveSessionStore.getState().setSession({ sessionId: 'sess-1', gameName: 'Test' });
-    useLiveSessionStore.getState().updateScore('Alice', 100);
+    useLiveSessionStore.getState().setScoringConfig({
+      scoringType: 'Points',
+      scoreData: { scores: [{ playerId: 'p1', points: 100 }] },
+    });
     useLiveSessionStore.getState().addProposal({
       id: 'p-1',
       playerName: 'Alice',
@@ -137,7 +131,8 @@ describe('useLiveSessionStore', () => {
     const state = useLiveSessionStore.getState();
     expect(state.sessionId).toBeNull();
     expect(state.gameName).toBe('');
-    expect(state.scores).toEqual({});
+    expect(state.scoringType).toBeNull();
+    expect(state.scoreData).toBeNull();
     expect(state.pendingProposals).toEqual([]);
     expect(state.disputes).toEqual([]);
     expect(state.isConnected).toBe(false);

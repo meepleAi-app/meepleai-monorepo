@@ -169,6 +169,33 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionLive.scoring.playerCount':
     '{count, plural, =0 {Nessun giocatore} =1 {1 giocatore} other {# giocatori}}',
   'pages.sessionLive.scoring.loadingLabel': 'Caricamento punteggi…',
+  // Block C #2389 T6 — nested polymorphic scoring keys (mirror locale catalog T5 additions).
+  'pages.sessionLive.scoring.points.title': 'Punteggi',
+  'pages.sessionLive.scoring.points.leaderLabel': 'in testa',
+  'pages.sessionLive.scoring.points.columns.player': 'Giocatore',
+  'pages.sessionLive.scoring.points.columns.score': 'Punteggio',
+  'pages.sessionLive.scoring.ranking.title': 'Posizioni',
+  'pages.sessionLive.scoring.ranking.columns.rank': 'Posizione',
+  'pages.sessionLive.scoring.ranking.columns.player': 'Giocatore',
+  'pages.sessionLive.scoring.ranking.columns.score': 'Punteggio',
+  'pages.sessionLive.scoring.binaryWin.title': 'Esito',
+  'pages.sessionLive.scoring.binaryWin.winLabel': 'Vince',
+  'pages.sessionLive.scoring.binaryWin.loseLabel': 'Perde',
+  'pages.sessionLive.scoring.binaryWin.pendingLabel': 'Partita in corso',
+  'pages.sessionLive.scoring.objectives.title': 'Obiettivi',
+  'pages.sessionLive.scoring.objectives.completedLabel': 'Completato',
+  'pages.sessionLive.scoring.objectives.pendingLabel': 'In attesa',
+  'pages.sessionLive.scoring.objectives.columns.player': 'Giocatore',
+  // Block C #2389 T6 — aria templates consumed by ScoringPanelRenderer (NOT yet in
+  // production locale catalog — tracked as follow-up; test stub mirrors prior inline
+  // italian fallbacks so polymorphic renderer tests can pass).
+  'pages.sessionLive.scoring.scoreAriaTemplate': 'Punteggio di {name}',
+  'pages.sessionLive.scoring.rankAriaTemplate': 'Posizione di {name}',
+  'pages.sessionLive.scoring.firstPlaceBadgeLabel': 'primo posto',
+  'pages.sessionLive.scoring.outcomeAriaTemplate': '{name}: {result}',
+  'pages.sessionLive.scoring.completedAriaTemplate': 'Completati da {name}',
+  'pages.sessionLive.scoring.doneAriaTemplate': '{label} (completato)',
+  'pages.sessionLive.scoring.pendingAriaTemplate': '{label} (non completato)',
   'pages.sessionLive.actionLog.title': 'Eventi',
   'pages.sessionLive.actionLog.emptyLabel': 'Nessun evento ancora.',
   'pages.sessionLive.actionLog.typeScore': 'Punteggio',

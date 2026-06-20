@@ -292,7 +292,8 @@ export default [
       // @/lib/domain-hooks/useSessionScores. Severity is `warn` so the legacy
       // call in ScoreBoard.tsx surfaces without breaking CI; Block C will
       // migrate ScoreBoard, promote to `error`, then remove the store field.
-      "local/no-store-scores-direct": "warn",
+      // Block C promotion 2026-06-19: ScoreBoard migrated, store.scores removed; severity raised to `error`.
+      "local/no-store-scores-direct": "error",
       // Issue #2339 sub-PR 2/3 — surfaces direct `game.title` JSX access that
       // bypasses `useGameTitle()` locale + source priority resolution. WARN-only
       // per DEC-FE-8 until 14gg of trajectory verde on main-dev; follow-up PR

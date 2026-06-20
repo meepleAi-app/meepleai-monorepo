@@ -104,7 +104,6 @@ export function GuestJoinView({ token }: GuestJoinViewProps) {
         gameName: string;
         inviteCode: string;
         players?: Array<{ displayName: string; isHost?: boolean; isOnline?: boolean; id: string }>;
-        scores?: Record<string, number>;
         status?: string;
         currentTurn?: number;
       };
@@ -129,7 +128,6 @@ export function GuestJoinView({ token }: GuestJoinViewProps) {
             isHost: p.isHost ?? false,
             isOnline: p.isOnline ?? false,
           })) ?? [],
-        scores: data.scores ?? {},
       });
 
       // Auto-rejoin if valid saved token
@@ -366,7 +364,7 @@ export function GuestJoinView({ token }: GuestJoinViewProps) {
           </div>
 
           <div className="rounded-2xl bg-card/70 backdrop-blur-md border border-border shadow-sm overflow-hidden">
-            <ScoreBoard sessionId={sessionInfo.sessionId} isHost={false} />
+            <ScoreBoard sessionId={sessionInfo.sessionId} />
           </div>
 
           <GuestScoreProposal guestName={guestName} onPropose={handlePropose} />

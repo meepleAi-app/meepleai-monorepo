@@ -4297,6 +4297,21 @@
         "back": "← Indietro"
       }
     },
+    "share": {
+      "button": "Condividi",
+      "dialogTitle": "Condividi partita",
+      "dialogDescription": "Genera un link pubblico per condividere questa partita con chiunque.",
+      "generate": "Genera link",
+      "generating": "Generazione…",
+      "urlLabel": "Link di condivisione",
+      "copy": "Copia",
+      "copied": "Link copiato",
+      "revoke": "Revoca",
+      "revoking": "Revoca…",
+      "notShared": "Non ancora condivisa",
+      "errorGenerate": "Impossibile generare il link. Riprova.",
+      "errorRevoke": "Impossibile revocare il link. Riprova."
+    },
     "photos": {
       "sectionTitle": "Foto della partita",
       "addButton": "Aggiungi foto",

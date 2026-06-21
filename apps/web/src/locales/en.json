@@ -4244,6 +4244,21 @@
         "back": "← Back"
       }
     },
+    "share": {
+      "button": "Share",
+      "dialogTitle": "Share play record",
+      "dialogDescription": "Generate a public link to share this play record with anyone.",
+      "generate": "Generate link",
+      "generating": "Generating…",
+      "urlLabel": "Share link",
+      "copy": "Copy",
+      "copied": "Link copied",
+      "revoke": "Revoke",
+      "revoking": "Revoking…",
+      "notShared": "Not shared yet",
+      "errorGenerate": "Could not generate the link. Please try again.",
+      "errorRevoke": "Could not revoke the link. Please try again."
+    },
     "photos": {
       "sectionTitle": "Game photos",
       "addButton": "Add photo",

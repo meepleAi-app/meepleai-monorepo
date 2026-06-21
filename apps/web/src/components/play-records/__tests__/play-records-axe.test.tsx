@@ -113,6 +113,8 @@ vi.mock('@/lib/domain-hooks/usePlayRecords', () => ({
     error: null,
   })),
   usePlayRecords: vi.fn(() => ({ data: undefined, isLoading: false, error: null })),
+  useGeneratePlayRecordShareToken: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+  useRevokePlayRecordShareToken: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
 }));
 
 vi.mock('@/lib/play-records/useSharedGames', () => ({

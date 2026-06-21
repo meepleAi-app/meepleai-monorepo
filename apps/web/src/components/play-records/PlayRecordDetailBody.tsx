@@ -34,6 +34,7 @@ import {
   type RankedScore,
   type PlayRecordHeroPodiumLabels,
 } from './primitives/PlayRecordHeroPodium';
+import { SharePlayRecordDialog } from './SharePlayRecordDialog';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -161,6 +162,7 @@ export function PlayRecordDetailBody({
   const { t } = useTranslation();
   const router = useRouter();
   const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   // ── Derive perspective ──────────────────────────────────────────────────────
   const isCreator = currentUserId !== null && currentUserId === record.createdByUserId;
@@ -268,7 +270,14 @@ export function PlayRecordDetailBody({
             to avoid a double screen-reader announcement of the same title. */}
         <section className="flex flex-col gap-2">
           {isCreator && (
-            <div className="flex">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShareOpen(true)}
+                className="rounded-md border border-border px-3 py-1.5 text-sm font-bold text-foreground hover:bg-muted"
+              >
+                🔗 {t('playRecords.share.button')}
+              </button>
               <button
                 type="button"
                 onClick={() => setPhotoDialogOpen(true)}
@@ -297,6 +306,15 @@ export function PlayRecordDetailBody({
             recordId={record.id}
             open={photoDialogOpen}
             onClose={() => setPhotoDialogOpen(false)}
+          />
+        )}
+
+        {isCreator && (
+          <SharePlayRecordDialog
+            recordId={record.id}
+            currentShareToken={record.shareToken ?? null}
+            open={shareOpen}
+            onClose={() => setShareOpen(false)}
           />
         )}
 

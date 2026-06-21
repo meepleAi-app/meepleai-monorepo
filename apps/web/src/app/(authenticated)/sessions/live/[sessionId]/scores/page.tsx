@@ -21,7 +21,7 @@ import {
   UpdateSessionScoresError,
   useUpdateSessionScores,
 } from '@/hooks/use-update-session-scores';
-import { MVP_OBJECTIVES_CATALOGUE } from '@/lib/session-live/mvp-objectives-catalogue';
+import { useGameObjectivesCatalogue } from '@/hooks/useGameObjectivesCatalogue';
 import { useDebouncedCallback } from '@/lib/session-live/use-debounced-callback';
 import { useLiveSessionStore } from '@/lib/stores/live-session-store';
 
@@ -32,6 +32,13 @@ interface LiveSessionScoresPageProps {
 export default function LiveSessionScoresPage({ params }: LiveSessionScoresPageProps) {
   const { sessionId } = use(params);
   const players = useLiveSessionStore(s => s.players);
+
+  // #2432: catalogue lookup is centralised at the hook layer so the future
+  // per-game endpoint swap is invisible to this page. Today the store does
+  // not expose gameId here (#1899-followup, same TODO that gates scoringType
+  // wiring); pass null to opt into the default catalogue until the wiring
+  // lands.
+  const availableObjectives = useGameObjectivesCatalogue(null);
 
   /**
    * The live-session store does NOT yet expose `scoringType`. Until the asse-D
@@ -85,7 +92,7 @@ export default function LiveSessionScoresPage({ params }: LiveSessionScoresPageP
           // adapter can be removed.
           displayName: p.name,
         }))}
-        availableObjectives={MVP_OBJECTIVES_CATALOGUE}
+        availableObjectives={availableObjectives}
         onChange={debouncedSave}
         disabled={mutation.isPending}
       />

@@ -31,8 +31,8 @@ import {
   useUpdateSessionScores,
   type UpdateSessionScoresPayload,
 } from '@/hooks/use-update-session-scores';
+import { useGameObjectivesCatalogue } from '@/hooks/useGameObjectivesCatalogue';
 import { useTranslation } from '@/hooks/useTranslation';
-import { MVP_OBJECTIVES_CATALOGUE } from '@/lib/session-live/mvp-objectives-catalogue';
 import { mapScoreDataToPanelData } from '@/lib/session-live/score-data-to-panel-data';
 import { useDebouncedCallback } from '@/lib/session-live/use-debounced-callback';
 import { useLiveSessionStore } from '@/lib/stores/live-session-store';
@@ -139,13 +139,19 @@ export function ScoreTabContent(props: ScoreTabContentProps): ReactElement {
   // Effective score data: localOverride wins during pending debounce
   const effectiveScoreData = localScoreOverride ?? scoreData;
 
+  // #2432: catalogue lookup centralised at the hook so a future per-game
+  // BE endpoint becomes an internal swap. The store does not yet carry
+  // `gameId` (#1899-followup, same TODO that gates `scoringType` wiring),
+  // so we pass null today and let the hook resolve to the default catalogue.
+  const availableObjectives = useGameObjectivesCatalogue(null);
+
   // Renderer data (Block B path, used for non-Host roles + Host's null fallback)
   const scoringPanelData = useMemo<ScoringPanelData | null>(
     () =>
       mapScoreDataToPanelData(scoringType, effectiveScoreData, players, {
-        availableObjectives: MVP_OBJECTIVES_CATALOGUE,
+        availableObjectives,
       }),
-    [scoringType, effectiveScoreData, players]
+    [scoringType, effectiveScoreData, players, availableObjectives]
   );
 
   // Error handler — normalized via mapMutationError
@@ -279,7 +285,7 @@ export function ScoreTabContent(props: ScoreTabContentProps): ReactElement {
           scoringType={scoringType}
           players={playerOptions}
           initialData={effectiveScoreData ?? undefined}
-          availableObjectives={MVP_OBJECTIVES_CATALOGUE}
+          availableObjectives={availableObjectives}
           onChange={handleScoreChange}
           disabled={isRateLimited || mutation.isPending}
         />

@@ -21,6 +21,19 @@ import type {
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 const BASE_URL = `${API_BASE}/api/v1/play-records`;
 
+// #2437-1: Typed error for updateRecord — consumers can narrow on `kind` for conflict UI.
+export class UpdatePlayRecordError extends Error {
+  constructor(
+    message: string,
+    public readonly kind: 'conflict' | 'forbidden' | 'validation' | 'server',
+    public readonly status: number,
+    public readonly warningCode?: string
+  ) {
+    super(message);
+    this.name = 'UpdatePlayRecordError';
+  }
+}
+
 export interface UploadPlayRecordPhotoResult {
   photoId: string;
   photoUrl: string;
@@ -108,18 +121,45 @@ export const playRecordsApi = {
   },
 
   /**
-   * Update play record details
+   * Update play record details.
+   * #2437-1: Sends optional `xmin` for optimistic-concurrency; throws `UpdatePlayRecordError`
+   * with `kind='conflict'` on 409 + `X-Warning-Code: concurrent-edit`.
    */
   async updateRecord(recordId: string, updates: UpdatePlayRecordRequest): Promise<void> {
     const res = await fetch(`${BASE_URL}/${recordId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(updates),
     });
-    if (!res.ok) {
-      const error = await res.json().catch(() => ({ message: 'Failed to update record' }));
-      throw new Error(error.message || 'Failed to update record');
+    if (res.ok) return;
+    const warningCode = res.headers.get('X-Warning-Code') ?? undefined;
+    if (res.status === 409) {
+      throw new UpdatePlayRecordError(
+        'Modifica concorrente rilevata.',
+        'conflict',
+        409,
+        warningCode
+      );
     }
+    if (res.status === 403) {
+      throw new UpdatePlayRecordError(
+        'Non hai i permessi per modificare.',
+        'forbidden',
+        403,
+        warningCode
+      );
+    }
+    if (res.status === 400) {
+      throw new UpdatePlayRecordError('Dati non validi.', 'validation', 400, warningCode);
+    }
+    const err = await res.json().catch(() => ({ message: 'Failed to update record' }));
+    throw new UpdatePlayRecordError(
+      err.message || 'Failed to update record',
+      'server',
+      res.status,
+      warningCode
+    );
   },
 
   /**

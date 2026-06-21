@@ -68,16 +68,7 @@
 
 'use client';
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  lazy,
-  Suspense,
-  type ReactElement,
-} from 'react';
+import { useCallback, useEffect, useMemo, lazy, Suspense, type ReactElement } from 'react';
 
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useIntl } from 'react-intl';
@@ -350,16 +341,6 @@ export function SessionLiveView(): ReactElement {
       sessionQuery.data != null,
   });
 
-  // ── Optimistic local scores (for 403 rollback) ────────────────────────────
-  // Map: playerId → local score delta (applied on top of liveState)
-  // Rolled back on 403 response from server.
-  const [localScoreOverrides, setLocalScoreOverrides] = useState<ReadonlyMap<string, number>>(
-    new Map()
-  );
-
-  // Ref to track pending score requests for rollback
-  const pendingScoreRef = useRef<Map<string, number>>(new Map());
-
   // ── FSM derivation ────────────────────────────────────────────────────────
   const realUiState = useMemo<SessionLiveUiState>(() => {
     if (fixture != null) return 'default'; // fixture always renders default shell
@@ -393,12 +374,6 @@ export function SessionLiveView(): ReactElement {
     // Compose live state from DTO + accumulated SSE events
     const liveState = composeSessionLiveState(initialData, liveStream.events);
 
-    // Apply local score overrides (optimistic UI)
-    const playersWithOverrides = liveState.players.map(p => {
-      const override = localScoreOverrides.get(p.id);
-      return override !== undefined ? { ...p, score: override } : p;
-    });
-
     return {
       id: dto.id,
       name: `Sessione ${dto.id.slice(0, 8)}`,
@@ -408,10 +383,10 @@ export function SessionLiveView(): ReactElement {
       currentTurn: liveState.currentTurn,
       totalTurns: liveState.totalTurns,
       activePlayerId: liveState.activePlayerId,
-      players: playersWithOverrides,
+      players: liveState.players,
       actionLog: liveState.actionLog,
     };
-  }, [fixture, sessionQuery.data, liveStream.events, localScoreOverrides]);
+  }, [fixture, sessionQuery.data, liveStream.events]);
 
   // ── Navigation handlers ───────────────────────────────────────────────────
 
@@ -509,88 +484,10 @@ export function SessionLiveView(): ReactElement {
   }, [router]);
 
   // ── Write actions (Player+Host) ───────────────────────────────────────────
-
-  /**
-   * Optimistic score update with 403 rollback.
-   * Reserved for future score input UI in LiveScoringPanel — wired in v2 polish.
-   * Kept as `_handleScoreUpdate` to preserve callsite documentation while ESLint
-   * recognizes intentional non-usage in current sub-PR.
-   */
-  const _handleScoreUpdate = useCallback(
-    async (playerId: string, newScore: number): Promise<void> => {
-      if (activeSession == null) return;
-      if (!hasRequiredRole(activeSession.viewerRole, 'Player')) return;
-
-      // Get current score for rollback
-      const currentScore = activeSession.players.find(p => p.id === playerId)?.score ?? 0;
-      pendingScoreRef.current.set(playerId, currentScore);
-
-      // Optimistic update
-      setLocalScoreOverrides(prev => {
-        const next = new Map(prev);
-        next.set(playerId, newScore);
-        return next;
-      });
-
-      try {
-        if (sessionId == null) throw new Error('no sessionId');
-        const res = await fetch(
-          `/api/v1/game-sessions/${sessionId}/participants/${playerId}/score`,
-          {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ score: newScore }),
-            credentials: 'include',
-          }
-        );
-
-        if (res.status === 403) {
-          // 403: rollback optimistic update
-          setLocalScoreOverrides(prev => {
-            const next = new Map(prev);
-            const rollbackScore = pendingScoreRef.current.get(playerId);
-            if (rollbackScore !== undefined) next.set(playerId, rollbackScore);
-            else next.delete(playerId);
-            return next;
-          });
-          // TODO: toast "Permesso negato" (requires toast integration)
-          return;
-        }
-
-        if (res.status === 429) {
-          // 429: server rate limit — keep optimistic but note degraded state
-          // ConnectionLostBanner kind='failed' handles toast UI
-          return;
-        }
-
-        if (!res.ok) {
-          // Other error: rollback
-          setLocalScoreOverrides(prev => {
-            const next = new Map(prev);
-            const rollbackScore = pendingScoreRef.current.get(playerId);
-            if (rollbackScore !== undefined) next.set(playerId, rollbackScore);
-            else next.delete(playerId);
-            return next;
-          });
-          return;
-        }
-
-        // Success: clear pending (SSE event will arrive with canonical score)
-        pendingScoreRef.current.delete(playerId);
-      } catch {
-        // Network error: rollback
-        setLocalScoreOverrides(prev => {
-          const next = new Map(prev);
-          const rollbackScore = pendingScoreRef.current.get(playerId);
-          if (rollbackScore !== undefined) next.set(playerId, rollbackScore);
-          else next.delete(playerId);
-          return next;
-        });
-      }
-    },
-    [activeSession, sessionId]
-  );
-  void _handleScoreUpdate;
+  // Note: legacy per-participant score update flow was retired in #2433
+  // (post-#2389 Block C). The polymorphic flow now goes through
+  // useUpdateSessionScores → PUT /game-sessions/{id}/scores-polymorphic
+  // (wired in ScoreTabContent).
 
   const handleSendMessage = useCallback(
     async (content: string, visibility: 'private' | 'shared'): Promise<void> => {

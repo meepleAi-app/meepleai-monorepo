@@ -28,6 +28,10 @@ export function useOfflineToolkit(sessionId: string | null) {
               await rollDice(sessionId, op.payload.diceType as string, op.payload.count as number);
               break;
             case 'score_update':
+              // TODO(#2433-remove): updateScore targets the deprecated
+              // PUT /scores endpoint (Sunset 2026-07-21). Migrate the offline
+              // queue payload + this call to PUT /scores-polymorphic
+              // (UpdateSessionScoresCommand) BEFORE the legacy endpoint is removed.
               await updateScore(
                 sessionId,
                 op.payload.playerId as string,
@@ -95,6 +99,8 @@ export function useOfflineToolkit(sessionId: string | null) {
       if (!sessionId) return;
 
       if (isOnlineRef.current) {
+        // TODO(#2433-remove): legacy PUT /scores endpoint deprecated, Sunset 2026-07-21.
+        // Migrate to PUT /scores-polymorphic (UpdateSessionScoresCommand) before removal.
         updateScore(sessionId, playerId, score).catch(() => {
           if (!isMountedRef.current) return;
           void queueOperation({

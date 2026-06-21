@@ -79,3 +79,89 @@ export function findActiveRevert(events, mergeSha, checkName) {
   }
   return active;
 }
+
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * A4 outcome lifecycle — pure reconciler.
+ *
+ * For each eligible revert PR (state=merged + labeled auto-revert+phase2b + NOT dry-run):
+ *   - Skip if outcome_updated event already exists for this revertPr (idempotent)
+ *   - Priority: label revert-outcome:false-positive → emit false_positive (label_explicit)
+ *   - Priority: label revert-outcome:true-positive → emit true_positive_confirmed (label_explicit)
+ *   - Else: mergedAt + 7gg elapsed → emit true_positive_confirmed (silent_confirmation_7d_elapsed)
+ *   - Else: pending (no event this run)
+ *
+ * Returns new OutcomeUpdatedEvent[] to be appended to JSONL.
+ *
+ * @param {Array<{number, state, mergedAt, labels, createdAt}>} revertPRs
+ * @param {Array<Event>} events  existing JSONL events
+ * @param {Date} now
+ */
+export function reconcileOutcomes(revertPRs, events, now) {
+  const newEvents = [];
+
+  for (const pr of revertPRs) {
+    if (pr.state !== "merged") continue;
+    if (!pr.labels.includes("auto-revert")) continue;
+    if (!pr.labels.includes("phase2b")) continue;
+    if (pr.labels.includes("dry-run")) continue;
+
+    const openedEvent = events.find(e => e.eventType === "revert_opened" && e.revertPr === pr.number);
+    if (!openedEvent) continue; // drift tolerance — PR existed before JSONL adoption
+
+    const alreadyFinalized = events.some(
+      e => e.eventType === "outcome_updated" && e.revertPr === pr.number,
+    );
+    if (alreadyFinalized) continue;
+
+    const hasFalse = pr.labels.includes("revert-outcome:false-positive");
+    const hasTrue = pr.labels.includes("revert-outcome:true-positive");
+
+    let newOutcome;
+    let trigger;
+    let rationale = null;
+
+    if (hasFalse && hasTrue) {
+      console.warn(
+        `[reconcile-outcomes] PR #${pr.number} has BOTH revert-outcome labels — defaulting to false-positive`,
+      );
+      newOutcome = "false_positive";
+      trigger = "label_explicit";
+    } else if (hasFalse) {
+      newOutcome = "false_positive";
+      trigger = "label_explicit";
+    } else if (hasTrue) {
+      newOutcome = "true_positive_confirmed";
+      trigger = "label_explicit";
+    } else {
+      // Silent confirmation gate
+      const elapsedMs = now.getTime() - pr.mergedAt.getTime();
+      if (elapsedMs < SEVEN_DAYS_MS) continue; // < 7gg → pending
+      newOutcome = "true_positive_confirmed";
+      trigger = "silent_confirmation_7d_elapsed";
+      rationale = `auto-confirmed: no operator override label after ${Math.floor(elapsedMs / 86400000)}d`;
+    }
+
+    const ts = now.toISOString();
+    newEvents.push({
+      schemaVersion: EVENT_SCHEMA_VERSION,
+      eventId: buildEventId("outcome_updated", openedEvent.mergeSha, ts),
+      eventType: "outcome_updated",
+      timestamp: ts,
+      runUrl: process.env.GITHUB_SERVER_URL && process.env.GITHUB_REPOSITORY && process.env.GITHUB_RUN_ID
+        ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
+        : "local",
+      mode: openedEvent.mode,
+      originalPr: openedEvent.originalPr,
+      revertPr: pr.number,
+      mergeSha: openedEvent.mergeSha,
+      previousOutcome: "true_positive_pending",
+      newOutcome,
+      trigger,
+      rationale,
+    });
+  }
+
+  return newEvents;
+}

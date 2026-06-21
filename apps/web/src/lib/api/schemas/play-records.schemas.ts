@@ -86,6 +86,8 @@ export const PlayRecordDtoSchema = z.object({
   outcomeType: PlayRecordOutcomeTypeSchema.optional(),
   // #2436 PR-C: photos exposed on read. Optional during BE rollout; tighten later.
   photos: z.array(PlayRecordPhotoSchema).optional(),
+  // #2437-1: Postgres xmin optimistic-concurrency token (uint). Optional during rollout.
+  xmin: z.number().int().nonnegative().optional(),
 });
 export type PlayRecordDto = z.infer<typeof PlayRecordDtoSchema>;
 
@@ -177,6 +179,8 @@ export const UpdatePlayRecordRequestSchema = z.object({
   sessionDate: z.string().optional(),
   notes: z.string().max(2000).optional(),
   location: z.string().max(255).optional(),
+  // #2437-1: Postgres xmin optimistic-concurrency token (uint). Optional during rollout.
+  xmin: z.number().int().nonnegative().optional(),
 });
 export type UpdatePlayRecordRequest = z.infer<typeof UpdatePlayRecordRequestSchema>;
 

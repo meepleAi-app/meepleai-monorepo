@@ -4219,6 +4219,13 @@
         "deleteToast": "Record deleted",
         "deleteToastDescription": "The record was deleted successfully"
       },
+      "conflict": {
+        "title": "Concurrent edit",
+        "description": "Someone modified this game while you were editing. Reload the latest data or overwrite with your changes.",
+        "reload": "Reload",
+        "overwrite": "Overwrite anyway",
+        "stillConflict": "Your save was also beaten by another edit. Try again."
+      },
       "error": {
         "loadFailed": "Could not load the record",
         "updateFailed": "Update failed",

@@ -49,6 +49,15 @@ internal class UpdatePlayRecordCommandHandler : ICommandHandler<UpdatePlayRecord
             command.Location,
             _timeProvider);
 
+        // #2437-1: stale-form optimistic concurrency. When the client sends the xmin it read,
+        // push it so EF's concurrency check compares against the value the client saw — a
+        // concurrent edit then yields DbUpdateConcurrencyException → 409. When absent, skip →
+        // fresh-load behaviour (no check). Mirrors SharedGameTranslation.SetXmin(cmd.Xmin).
+        if (command.Xmin.HasValue)
+        {
+            record.SetXmin(command.Xmin.Value);
+        }
+
         await _recordRepository.UpdateAsync(record, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }

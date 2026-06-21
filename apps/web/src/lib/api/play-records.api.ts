@@ -21,6 +21,19 @@ import type {
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 const BASE_URL = `${API_BASE}/api/v1/play-records`;
 
+// #2437-1: Typed error for updateRecord — consumers can narrow on `kind` for conflict UI.
+export class UpdatePlayRecordError extends Error {
+  constructor(
+    message: string,
+    public readonly kind: 'conflict' | 'forbidden' | 'validation' | 'server',
+    public readonly status: number,
+    public readonly warningCode?: string
+  ) {
+    super(message);
+    this.name = 'UpdatePlayRecordError';
+  }
+}
+
 export interface UploadPlayRecordPhotoResult {
   photoId: string;
   photoUrl: string;
@@ -42,6 +55,7 @@ export const playRecordsApi = {
     const res = await fetch(BASE_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(data),
     });
     if (!res.ok) {
@@ -58,6 +72,7 @@ export const playRecordsApi = {
     const res = await fetch(`${BASE_URL}/${recordId}/players`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(player),
     });
     if (!res.ok) {
@@ -73,6 +88,7 @@ export const playRecordsApi = {
     const res = await fetch(`${BASE_URL}/${recordId}/scores`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(score),
     });
     if (!res.ok) {
@@ -87,6 +103,7 @@ export const playRecordsApi = {
   async startRecord(recordId: string): Promise<void> {
     const res = await fetch(`${BASE_URL}/${recordId}/start`, {
       method: 'POST',
+      credentials: 'include',
     });
     if (!res.ok) {
       const error = await res.json().catch(() => ({ message: 'Failed to start record' }));
@@ -100,6 +117,7 @@ export const playRecordsApi = {
   async completeRecord(recordId: string): Promise<void> {
     const res = await fetch(`${BASE_URL}/${recordId}/complete`, {
       method: 'POST',
+      credentials: 'include',
     });
     if (!res.ok) {
       const error = await res.json().catch(() => ({ message: 'Failed to complete record' }));
@@ -108,18 +126,45 @@ export const playRecordsApi = {
   },
 
   /**
-   * Update play record details
+   * Update play record details.
+   * #2437-1: Sends optional `xmin` for optimistic-concurrency; throws `UpdatePlayRecordError`
+   * with `kind='conflict'` on 409 + `X-Warning-Code: concurrent-edit`.
    */
   async updateRecord(recordId: string, updates: UpdatePlayRecordRequest): Promise<void> {
     const res = await fetch(`${BASE_URL}/${recordId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(updates),
     });
-    if (!res.ok) {
-      const error = await res.json().catch(() => ({ message: 'Failed to update record' }));
-      throw new Error(error.message || 'Failed to update record');
+    if (res.ok) return;
+    const warningCode = res.headers.get('X-Warning-Code') ?? undefined;
+    if (res.status === 409) {
+      throw new UpdatePlayRecordError(
+        'Modifica concorrente rilevata.',
+        'conflict',
+        409,
+        warningCode
+      );
     }
+    if (res.status === 403) {
+      throw new UpdatePlayRecordError(
+        'Non hai i permessi per modificare.',
+        'forbidden',
+        403,
+        warningCode
+      );
+    }
+    if (res.status === 400) {
+      throw new UpdatePlayRecordError('Dati non validi.', 'validation', 400, warningCode);
+    }
+    const err = await res.json().catch(() => ({ message: 'Failed to update record' }));
+    throw new UpdatePlayRecordError(
+      err.message || 'Failed to update record',
+      'server',
+      res.status,
+      warningCode
+    );
   },
 
   /**
@@ -154,7 +199,7 @@ export const playRecordsApi = {
    * Get full play record details
    */
   async getRecord(id: string): Promise<PlayRecordDto> {
-    const res = await fetch(`${BASE_URL}/${id}`);
+    const res = await fetch(`${BASE_URL}/${id}`, { credentials: 'include' });
     if (!res.ok) {
       if (res.status === 404) throw new Error('Play record not found');
       const error = await res.json().catch(() => ({ message: 'Failed to get record' }));
@@ -184,7 +229,9 @@ export const playRecordsApi = {
     if (params.dateFrom) searchParams.set('dateFrom', params.dateFrom);
     if (params.dateTo) searchParams.set('dateTo', params.dateTo);
 
-    const res = await fetch(`${BASE_URL}/history?${searchParams.toString()}`);
+    const res = await fetch(`${BASE_URL}/history?${searchParams.toString()}`, {
+      credentials: 'include',
+    });
     if (!res.ok) {
       const error = await res.json().catch(() => ({ message: 'Failed to get history' }));
       throw new Error(error.message || 'Failed to get history');
@@ -203,7 +250,9 @@ export const playRecordsApi = {
     if (params.startDate) search.set('startDate', params.startDate);
     if (params.endDate) search.set('endDate', params.endDate);
     const qs = search.toString();
-    const res = await fetch(`${BASE_URL}/statistics${qs ? `?${qs}` : ''}`);
+    const res = await fetch(`${BASE_URL}/statistics${qs ? `?${qs}` : ''}`, {
+      credentials: 'include',
+    });
     if (!res.ok) {
       const error = await res.json().catch(() => ({ message: 'Failed to get statistics' }));
       throw new Error(error.message || 'Failed to get statistics');
@@ -217,6 +266,7 @@ export const playRecordsApi = {
   async deleteRecord(recordId: string): Promise<void> {
     const res = await fetch(`${BASE_URL}/${recordId}`, {
       method: 'DELETE',
+      credentials: 'include',
     });
     if (!res.ok) {
       const error = await res.json().catch(() => ({ message: 'Failed to delete record' }));

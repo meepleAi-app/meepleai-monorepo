@@ -301,6 +301,13 @@ export function PlayRecordDetailView({ recordId }: PlayRecordDetailViewProps): R
   const formattedDuration = formatDuration(record.duration);
   const formattedDate = formatRelativeDate(record.sessionDate);
 
+  // #2437-1 MVP chip: derive from winnerPlayerIds — only when exactly 1 winner.
+  const winnerIds = record.winnerPlayerIds ?? [];
+  const mvpName =
+    winnerIds.length === 1
+      ? (record.players.find(p => p.id === winnerIds[0])?.displayName ?? null)
+      : null;
+
   const dimensions = record.scoringConfig.enabledDimensions;
 
   // Game info for hero (EC-2: freeform emoji fallback)
@@ -327,13 +334,14 @@ export function PlayRecordDetailView({ recordId }: PlayRecordDetailViewProps): R
         onStart={() => router.push(`/play-records/${recordId}/edit`)}
       />
 
-      {/* Connection Bar — AC-2.3 */}
+      {/* Connection Bar — AC-2.3, #2437-1 MVP chip */}
       <ConnectionBar
         gameId={record.gameId}
         gameName={record.gameName}
         playerCount={record.players.length}
         dateLabel={formattedDate}
         chatCount={0}
+        mvpName={mvpName}
       />
 
       {/* Body sections */}

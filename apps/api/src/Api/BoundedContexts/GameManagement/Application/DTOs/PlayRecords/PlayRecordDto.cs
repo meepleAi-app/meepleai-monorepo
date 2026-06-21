@@ -7,6 +7,7 @@ namespace Api.BoundedContexts.GameManagement.Application.DTOs.PlayRecords;
 /// Issue #3890: CQRS queries for play records.
 /// Issue #1663: Phase 1 – WinnerPlayerIds and OutcomeType computed on read.
 /// Issue #2436 PR-C: Photos (presigned read-path) added as last parameter.
+/// Issue #2437-1: Xmin concurrency token exposed so clients can round-trip it on update.
 /// </summary>
 public record PlayRecordDto(
     Guid Id,
@@ -27,7 +28,8 @@ public record PlayRecordDto(
     DateTime UpdatedAt,
     IReadOnlyList<Guid> WinnerPlayerIds,
     string OutcomeType,
-    IReadOnlyList<PlayRecordPhotoDto> Photos
+    IReadOnlyList<PlayRecordPhotoDto> Photos,
+    uint Xmin
 );
 
 /// <summary>

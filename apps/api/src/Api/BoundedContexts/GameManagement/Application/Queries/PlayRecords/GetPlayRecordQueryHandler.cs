@@ -95,7 +95,8 @@ internal class GetPlayRecordQueryHandler : IQueryHandler<GetPlayRecordQuery, Pla
             entity.UpdatedAt,
             winnerPlayerIds,
             outcomeType,
-            photos
+            photos,
+            entity.Xmin   // #2437-1: expose concurrency token so clients can round-trip it on update
         );
     }
 }

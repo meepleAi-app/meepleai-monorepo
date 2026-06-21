@@ -20,6 +20,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import EditPlayRecordPage from './page';
 import { playRecordsEditMessages } from '@/__tests__/fixtures/i18n-test-messages';
+import { UpdatePlayRecordError } from '@/lib/api/play-records.api';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -40,15 +41,10 @@ vi.mock('next/navigation', () => ({
 
 // usePlayRecord — provide fixture data
 const mockUsePlayRecord = vi.fn();
+const mockUseUpdateRecord = vi.fn();
 vi.mock('@/lib/domain-hooks/usePlayRecords', () => ({
   usePlayRecord: (id: string) => mockUsePlayRecord(id),
-  useUpdateRecord: () => ({
-    mutateAsync: vi.fn(async data => {
-      // Mock successful update
-      return { id: 'record-123' };
-    }),
-    isPending: false,
-  }),
+  useUpdateRecord: (id: string) => mockUseUpdateRecord(id),
   useDeleteRecord: () => ({
     mutateAsync: vi.fn(async () => {
       // Mock successful delete
@@ -56,6 +52,26 @@ vi.mock('@/lib/domain-hooks/usePlayRecords', () => ({
     }),
     isPending: false,
   }),
+}));
+
+// PlayRecordConflictDialog — mock to avoid Radix portal issues in jsdom
+vi.mock('@/components/play-records/PlayRecordConflictDialog', () => ({
+  PlayRecordConflictDialog: ({
+    open,
+    labels,
+  }: {
+    open: boolean;
+    labels: { title: string; description: string; reload: string; overwrite: string };
+    isOverwriting: boolean;
+    onReload: () => void;
+    onOverwrite: () => void;
+  }) =>
+    open ? (
+      <div role="dialog" aria-label={labels.title}>
+        <span>{labels.title}</span>
+        <span>{labels.description}</span>
+      </div>
+    ) : null,
 }));
 
 // SessionCreateForm — mock the form component.
@@ -146,6 +162,7 @@ vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),
     error: vi.fn(),
+    warning: vi.fn(),
   },
 }));
 
@@ -192,6 +209,11 @@ describe('EditPlayRecordPage', () => {
       data: playRecordFixture,
       isLoading: false,
       error: null,
+    });
+    // Default: successful update
+    mockUseUpdateRecord.mockReturnValue({
+      mutateAsync: vi.fn(async () => ({ id: 'record-123' })),
+      isPending: false,
     });
   });
 
@@ -391,6 +413,46 @@ describe('EditPlayRecordPage', () => {
     // to t('error.loadFailed') only when error has no message).
     await waitFor(() => {
       expect(screen.getByText(/Failed to load record/i)).toBeInTheDocument();
+    });
+  });
+
+  it('#2437-1: shows conflict dialog when updateRecord rejects with kind="conflict"', async () => {
+    const user = userEvent.setup();
+
+    // Override useUpdateRecord to reject with a conflict error
+    mockUseUpdateRecord.mockReturnValue({
+      mutateAsync: vi
+        .fn()
+        .mockRejectedValue(
+          new UpdatePlayRecordError(
+            'Modifica concorrente rilevata.',
+            'conflict',
+            409,
+            'concurrent-edit'
+          )
+        ),
+      isPending: false,
+    });
+
+    const queryClient = new QueryClient();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <EditPlayRecordPage />
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('session-form')).toBeInTheDocument();
+    });
+
+    // Submit the form — triggers handleSubmit → conflict path
+    const form = screen.getByTestId('session-form');
+    await user.click(form.querySelector('button[type="submit"]')!);
+
+    // Conflict dialog should appear
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.getByText(playRecordsEditMessages['conflict.title'])).toBeInTheDocument();
     });
   });
 });

@@ -33,10 +33,12 @@ import { toast } from 'sonner';
 
 import { FormPageContainer } from '@/components/layout/PageContainer';
 import { EditGateBanner } from '@/components/play-records/EditGateBanner';
+import { PlayRecordConflictDialog } from '@/components/play-records/PlayRecordConflictDialog';
 import { SessionCreateForm } from '@/components/play-records/SessionCreateForm';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
 import { useTranslation } from '@/hooks/useTranslation';
+import { UpdatePlayRecordError, playRecordsApi } from '@/lib/api/play-records.api';
 import {
   type SessionCreateForm as SessionCreateFormData,
   UpdatePlayRecordRequestSchema,
@@ -51,37 +53,63 @@ export default function EditPlayRecordPage() {
 
   const recordId = typeof params?.id === 'string' ? params.id : '';
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [conflictForm, setConflictForm] = useState<SessionCreateFormData | null>(null);
 
   const { data: record, isLoading, error } = usePlayRecord(recordId);
   const updateMutation = useUpdateRecord(recordId);
   const deleteMutation = useDeleteRecord(recordId);
 
+  const submitUpdate = async (data: SessionCreateFormData, xmin?: number) => {
+    const validated = UpdatePlayRecordRequestSchema.parse({
+      sessionDate: data.sessionDate,
+      notes: data.notes,
+      location: data.location,
+      xmin,
+    });
+    await updateMutation.mutateAsync(validated);
+    queryClient.invalidateQueries({ queryKey: ['play-records', 'detail', recordId] });
+    queryClient.invalidateQueries({ queryKey: ['play-records', 'history'] });
+    queryClient.invalidateQueries({ queryKey: ['play-records', 'stats'] });
+    toast.success(t('playRecords.edit.success.toast'), {
+      description: t('playRecords.edit.success.toastDescription'),
+    });
+    router.push(`/play-records/${recordId}`);
+  };
+
   const handleSubmit = async (data: SessionCreateFormData) => {
     try {
-      // Extract only the editable fields (K5 gate)
-      const updateData = {
-        sessionDate: data.sessionDate,
-        notes: data.notes,
-        location: data.location,
-      };
-
-      // Validate against schema
-      const validated = UpdatePlayRecordRequestSchema.parse(updateData);
-      await updateMutation.mutateAsync(validated);
-
-      // K11 cache invalidation
-      queryClient.invalidateQueries({ queryKey: ['play-records', 'detail', recordId] });
-      queryClient.invalidateQueries({ queryKey: ['play-records', 'history'] });
-      queryClient.invalidateQueries({ queryKey: ['play-records', 'stats'] });
-
-      toast.success(t('playRecords.edit.success.toast'), {
-        description: t('playRecords.edit.success.toastDescription'),
-      });
-      router.push(`/play-records/${recordId}`);
+      await submitUpdate(data, record?.xmin);
     } catch (error) {
+      if (error instanceof UpdatePlayRecordError && error.kind === 'conflict') {
+        setConflictForm(data);
+        return;
+      }
       toast.error(t('playRecords.edit.error.updateFailed'), {
         description: error instanceof Error ? error.message : 'Unknown error',
       });
+    }
+  };
+
+  const handleConflictReload = () => {
+    setConflictForm(null);
+    queryClient.invalidateQueries({ queryKey: ['play-records', 'detail', recordId] });
+  };
+
+  const handleConflictOverwrite = async () => {
+    if (!conflictForm) return;
+    try {
+      const fresh = await playRecordsApi.getRecord(recordId);
+      await submitUpdate(conflictForm, fresh.xmin);
+      setConflictForm(null);
+    } catch (error) {
+      if (error instanceof UpdatePlayRecordError && error.kind === 'conflict') {
+        toast.warning(t('playRecords.edit.conflict.stillConflict'));
+        return;
+      }
+      toast.error(t('playRecords.edit.error.updateFailed'), {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
+      setConflictForm(null);
     }
   };
 
@@ -227,6 +255,20 @@ export default function EditPlayRecordPage() {
           </div>
         </div>
       )}
+
+      {/* #2437-1: Conflict resolution dialog */}
+      <PlayRecordConflictDialog
+        open={conflictForm !== null}
+        isOverwriting={updateMutation.isPending}
+        labels={{
+          title: t('playRecords.edit.conflict.title'),
+          description: t('playRecords.edit.conflict.description'),
+          reload: t('playRecords.edit.conflict.reload'),
+          overwrite: t('playRecords.edit.conflict.overwrite'),
+        }}
+        onReload={handleConflictReload}
+        onOverwrite={handleConflictOverwrite}
+      />
     </div>
   );
 }

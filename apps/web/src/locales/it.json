@@ -4337,6 +4337,17 @@
       "lightboxPrev": "Precedente",
       "lightboxNext": "Successiva"
     },
+    "history": {
+      "button": "Cronologia",
+      "dialogTitle": "Cronologia modifiche",
+      "dialogDescription": "Ultime 5 versioni precedenti. Puoi ripristinare qualsiasi versione.",
+      "versionLabel": "v{n}",
+      "restore": "Ripristina",
+      "restoring": "Ripristino…",
+      "empty": "Nessuna versione precedente",
+      "restored": "Versione ripristinata",
+      "errorRestore": "Impossibile ripristinare la versione. Riprova."
+    },
     "kbGlobale": {
       "hero": {
         "placeholder": "Cerca nella knowledge base…",

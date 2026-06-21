@@ -4284,6 +4284,17 @@
       "lightboxPrev": "Previous",
       "lightboxNext": "Next"
     },
+    "history": {
+      "button": "History",
+      "dialogTitle": "Change history",
+      "dialogDescription": "Last 5 previous versions. You can restore any version.",
+      "versionLabel": "v{n}",
+      "restore": "Restore",
+      "restoring": "Restoring…",
+      "empty": "No previous versions",
+      "restored": "Version restored",
+      "errorRestore": "Could not restore version. Please try again."
+    },
     "kbGlobale": {
       "hero": {
         "placeholder": "Search across all games' KB…",

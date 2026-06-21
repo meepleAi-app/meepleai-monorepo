@@ -54,13 +54,14 @@ jobs:
         if: fromJSON(steps.metrics.outputs.metrics).breach == true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          METRICS_JSON: ${{ steps.metrics.outputs.metrics }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          RATE=$(echo '${{ steps.metrics.outputs.metrics }}' | jq -r .false_revert_rate)
-          gh issue create \
-            --title "🚨 Phase 2b false-revert rate breach — ${RATE}" \
-            --label "release-gate,phase2b,breach,blocker" \
-            --body "$(cat <<EOF
-          AC-7 breached: \`false_revert_rate=${RATE}\` > 0.02 (2%) over 30d rolling window.
+          RATE=$(printf '%s' "$METRICS_JSON" | jq -r .false_revert_rate)
+          # Validate RATE matches numeric pattern before using it
+          [[ "$RATE" =~ ^[0-9.]+$ ]] || { echo "invalid rate: $RATE"; exit 1; }
+          BODY=$(cat <<EOF
+          AC-7 breached: \`false_revert_rate=$RATE\` > 0.02 (2%) over 30d rolling window.
 
           **Required action**:
           1. Review JSONL events on branch \`release-gate-state/auto-revert-events\`
@@ -68,9 +69,13 @@ jobs:
 
           Metrics snapshot:
           \`\`\`json
-          ${{ steps.metrics.outputs.metrics }}
+          $METRICS_JSON
           \`\`\`
 
-          🤖 Auto-created by [release-gate-revert-metrics-check.yml](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          🤖 Auto-created by [release-gate-revert-metrics-check.yml]($RUN_URL)
           EOF
-          )"
+          )
+          gh issue create \
+            --title "🚨 Phase 2b false-revert rate breach — $RATE" \
+            --label "release-gate,phase2b,breach,blocker" \
+            --body "$BODY"

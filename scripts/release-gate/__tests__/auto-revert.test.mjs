@@ -124,3 +124,37 @@ describe("AC-2 — SHA pin (staleness)", () => {
     expect(result.action).toBe("open_revert");
   });
 });
+
+describe("noop_no_blockers + AC-12 pre-existing filter", () => {
+  const PRE_MERGE_COMMENT_WITH_OVERRIDE = {
+    classifications: [
+      { check_name: "Frontend - A11y E2E", override_accepted: true },
+    ],
+  };
+
+  it("returns noop_no_blockers when blockers[] is empty", () => {
+    const result = decideRevertAction(baseInput({ blockers: [] }));
+    expect(result.action).toBe("noop_no_blockers");
+  });
+
+  it("aborts skipped_pre_existing when all blockers were override-accepted pre-merge (AC-12)", () => {
+    const result = decideRevertAction(baseInput({
+      blockers: [{ ...BLOCKER, name: "Frontend - A11y E2E" }],
+      preMergeBotComment: PRE_MERGE_COMMENT_WITH_OVERRIDE,
+    }));
+    expect(result.action).toBe("abort");
+    expect(result.reason).toBe("skipped_pre_existing");
+  });
+
+  it("proceeds when at least one new (non-overridden) blocker exists (AC-12)", () => {
+    const result = decideRevertAction(baseInput({
+      blockers: [
+        { ...BLOCKER, name: "Frontend - A11y E2E" }, // pre-existing
+        { ...BLOCKER, name: "Backend - Unit Tests" }, // new
+      ],
+      preMergeBotComment: PRE_MERGE_COMMENT_WITH_OVERRIDE,
+    }));
+    expect(result.action).toBe("open_revert");
+    expect(result.blockerCheck.name).toBe("Backend - Unit Tests");
+  });
+});

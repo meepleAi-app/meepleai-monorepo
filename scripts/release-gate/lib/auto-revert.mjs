@@ -29,6 +29,19 @@ export const COOLDOWN_MS_DEFAULT = 15 * 60 * 1000; // 900_000
  * @property {Object} [rationale]
  */
 
+/**
+ * AC-12 — a blocker is "new" iff it was NOT marked override_accepted in the
+ * pre-merge bot comment. Exported for unit testability.
+ */
+export function isNewBlocker(checkName, preMergeBotComment) {
+  if (!preMergeBotComment || !Array.isArray(preMergeBotComment.classifications)) {
+    return true; // no comment / unknown → treat as new (conservative)
+  }
+  const match = preMergeBotComment.classifications.find(c => c.check_name === checkName);
+  if (!match) return true;
+  return !match.override_accepted;
+}
+
 export function decideRevertAction(input) {
   // Step [1] AC-4 — kill switch FIRST (zero external API calls when off)
   if (!input.killSwitchEnabled) {
@@ -71,11 +84,26 @@ export function decideRevertAction(input) {
     };
   }
 
-  // Step [10] DECISION: open_revert (placeholder until subsequent tasks add steps [4]-[9])
+  // [6] noop_no_blockers — nothing to revert
+  if (input.blockers.length === 0) {
+    return { action: "noop_no_blockers" };
+  }
+
+  // [7] AC-12 — filter NEW blockers only
+  const newBlockers = input.blockers.filter(b => isNewBlocker(b.name, input.preMergeBotComment));
+  if (newBlockers.length === 0) {
+    return {
+      action: "abort",
+      reason: "skipped_pre_existing",
+      rationale: { allBlockersWerePreMergeOverridden: input.blockers.map(b => b.name) },
+    };
+  }
+
+  // [10] DECISION: open_revert
   return {
     action: "open_revert",
     mergeSha: input.latestMergedRelease.mergeSha,
-    blockerCheck: input.blockers[0] ?? null,
-    rationale: {},
+    blockerCheck: newBlockers[0],
+    rationale: { newBlockerCount: newBlockers.length, allNewBlockers: newBlockers.map(b => b.name) },
   };
 }

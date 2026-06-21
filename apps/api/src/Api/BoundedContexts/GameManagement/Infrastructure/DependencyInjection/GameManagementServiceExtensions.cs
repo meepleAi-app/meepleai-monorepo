@@ -33,6 +33,7 @@ internal static class GameManagementServiceExtensions
         services.AddScoped<IGameSessionRepository, GameSessionRepository>();
         services.AddScoped<IGameSessionStateRepository, GameSessionStateRepository>(); // ISSUE-2403
         services.AddScoped<IPlayRecordRepository, PlayRecordRepository>(); // ISSUE-3889
+        services.AddScoped<IPlayRecordVersionRepository, PlayRecordVersionRepository>(); // #2437-3: version history + restore
         services.AddScoped<IRuleConflictFaqRepository, RuleConflictFaqRepository>(); // ISSUE-3761: Conflict FAQ
         services.AddScoped<ILiveSessionRepository, LiveSessionRepository>(); // Issue #2097 / ADR-060: EF-backed persistence
         services.AddScoped<IToolStateRepository, ToolStateRepository>(); // Issue #4754: ToolState persistence

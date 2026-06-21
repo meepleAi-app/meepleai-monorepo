@@ -91,6 +91,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<PlayRecordEntity> PlayRecords => Set<PlayRecordEntity>(); // ISSUE-3888: Play history tracking
     public DbSet<RecordPlayerEntity> RecordPlayers => Set<RecordPlayerEntity>(); // ISSUE-3888: Play record players
     public DbSet<PlayRecordPhotoEntity> PlayRecordPhotos => Set<PlayRecordPhotoEntity>(); // #2436 PR-B: Photos attached to PlayRecords
+    public DbSet<PlayRecordVersionEntity> PlayRecordVersions => Set<PlayRecordVersionEntity>(); // #2437-3: Version history + restore for PlayRecords
     public DbSet<RuleConflictFAQEntity> RuleConflictFAQs => Set<RuleConflictFAQEntity>(); // ISSUE-3761: Conflict resolution FAQ
     public DbSet<GameReviewEntity> GameReviews => Set<GameReviewEntity>(); // ISSUE-4904: Game reviews API
     public DbSet<GameStrategyEntity> GameStrategies => Set<GameStrategyEntity>(); // ISSUE-4903: Game strategies API

@@ -23,7 +23,7 @@
 
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { execSync } from "node:child_process";
 
 import { Octokit } from "@octokit/rest";
@@ -32,6 +32,7 @@ import yaml from "js-yaml";
 import { decideRevertAction, COOLDOWN_MS_DEFAULT } from "./lib/auto-revert.mjs";
 import { loadGates as loadClassifyGates, classify as classifyCheck } from "./lib/classify.mjs";
 import { pickLatestBotComment, parseBotComment } from "./lib/parse-bot-comment.mjs";
+import { parseEventLog, serializeEvent } from "./lib/auto-revert-events.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
@@ -155,6 +156,78 @@ async function fetchFixForwards(octokit, owner, repo, mergeTimeIso) {
     }
   }
   return fixForwards;
+}
+
+const STATE_BRANCH = process.env.STATE_BRANCH || "release-gate-state/auto-revert-events";
+const STATE_FILE_REL = "state/auto-revert-events.jsonl";
+
+const BOT_EMAIL = "41898282+github-actions[bot]@users.noreply.github.com";
+const BOT_NAME = "github-actions[bot]";
+
+function gitExec(cmd, opts = {}) {
+  return execSync(cmd, { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], ...opts }).trim();
+}
+
+function ensureStateBranchCheckout() {
+  // Try fetch first; if branch doesn't exist on remote, init empty
+  try {
+    gitExec(`git fetch origin ${STATE_BRANCH}`);
+    gitExec(`git checkout -B ${STATE_BRANCH} origin/${STATE_BRANCH}`);
+  } catch (err) {
+    // First-time bootstrap — create orphan branch
+    gitExec(`git checkout --orphan ${STATE_BRANCH}`);
+    gitExec("git rm -rf . || true");
+    mkdirSync(path.dirname(STATE_FILE_REL), { recursive: true });
+    writeFileSync(STATE_FILE_REL, "");
+    gitExec(`git add ${STATE_FILE_REL}`);
+    gitExec(`git -c user.email="${BOT_EMAIL}" -c user.name="${BOT_NAME}" commit -m "chore: bootstrap auto-revert state branch"`);
+    gitExec(`git push -u origin ${STATE_BRANCH}`);
+  }
+}
+
+function readEventLog() {
+  if (!existsSync(STATE_FILE_REL)) return [];
+  const text = readFileSync(STATE_FILE_REL, "utf8");
+  return parseEventLog(text);
+}
+
+async function appendEventsWithRetry(newEvents, originalBranch) {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      gitExec(`git fetch origin ${STATE_BRANCH}`);
+      gitExec(`git reset --hard origin/${STATE_BRANCH}`);
+
+      // Re-read latest events post-reset
+      const fresh = readEventLog();
+      // Idempotency: drop any newEvents whose eventId already exists upstream
+      const existingIds = new Set(fresh.map(e => e.eventId));
+      const toAppend = newEvents.filter(e => !existingIds.has(e.eventId));
+      if (toAppend.length === 0) {
+        logJson({ level: "info", ts: new Date().toISOString(), event_type: "jsonl_appended", note: "no_new_events_after_dedup", latency_ms: 0 });
+        return;
+      }
+
+      let text = "";
+      try { text = readFileSync(STATE_FILE_REL, "utf8"); } catch {}
+      for (const ev of toAppend) text += serializeEvent(ev);
+      writeFileSync(STATE_FILE_REL, text);
+
+      gitExec(`git add ${STATE_FILE_REL}`);
+      gitExec(`git -c user.email="${BOT_EMAIL}" -c user.name="${BOT_NAME}" commit -m "chore(events): append ${toAppend.length} auto-revert event(s)"`);
+      gitExec(`git push origin ${STATE_BRANCH}`);
+
+      logJson({ level: "info", ts: new Date().toISOString(), event_type: "jsonl_appended", count: toAppend.length, latency_ms: 0 });
+      return;
+    } catch (err) {
+      logJson({ level: "warn", ts: new Date().toISOString(), event_type: "jsonl_push_retry", attempt, error: err.message, latency_ms: 0 });
+      if (attempt === 3) throw err;
+      await new Promise(r => setTimeout(r, attempt * 5000));
+    }
+  }
+}
+
+function restoreOriginalBranch(originalBranch) {
+  try { gitExec(`git checkout ${originalBranch}`); } catch {}
 }
 
 async function main() {

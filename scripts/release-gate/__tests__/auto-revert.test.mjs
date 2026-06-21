@@ -1,0 +1,58 @@
+// scripts/release-gate/__tests__/auto-revert.test.mjs
+// Phase 2b (#1445) — unit tests for pure decideRevertAction.
+
+import { describe, it, expect } from "vitest";
+
+import { decideRevertAction, COOLDOWN_MS_DEFAULT } from "../lib/auto-revert.mjs";
+
+const MERGE_TIME = new Date("2026-06-23T08:00:00Z");
+const LATEST_MERGED_RELEASE = {
+  prNumber: 1234,
+  mergeSha: "abc12345",
+  mergeTime: MERGE_TIME,
+  isAutoRevertPr: false,
+};
+const BLOCKER = {
+  name: "Backend - Unit Tests",
+  conclusion: "failure",
+  checkRunUrl: "https://github.com/meepleAi-app/meepleai-monorepo/actions/runs/41",
+};
+
+function baseInput(overrides = {}) {
+  return {
+    killSwitchEnabled: true,
+    dryRunMode: false,
+    latestMergedRelease: LATEST_MERGED_RELEASE,
+    currentHeadSha: "abc12345",
+    cooldownMs: COOLDOWN_MS_DEFAULT,
+    now: new Date(MERGE_TIME.getTime() + 16 * 60 * 1000), // 16min elapsed
+    blockers: [BLOCKER],
+    preMergeBotComment: null,
+    fixForwards: [],
+    jsonlEvents: [],
+    ...overrides,
+  };
+}
+
+describe("constants", () => {
+  it("COOLDOWN_MS_DEFAULT is 900_000 (15min)", () => {
+    expect(COOLDOWN_MS_DEFAULT).toBe(900_000);
+  });
+});
+
+describe("AC-4 — kill switch", () => {
+  it("returns abort+kill_switch_active when killSwitchEnabled=false", () => {
+    const result = decideRevertAction(baseInput({ killSwitchEnabled: false }));
+    expect(result.action).toBe("abort");
+    expect(result.reason).toBe("kill_switch_active");
+  });
+
+  it("kill switch takes precedence over all other checks (even with valid blockers)", () => {
+    const result = decideRevertAction(baseInput({
+      killSwitchEnabled: false,
+      blockers: [BLOCKER, BLOCKER, BLOCKER],
+    }));
+    expect(result.action).toBe("abort");
+    expect(result.reason).toBe("kill_switch_active");
+  });
+});

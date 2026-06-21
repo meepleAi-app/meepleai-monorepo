@@ -108,4 +108,11 @@ describe("reconcileOutcomes — A4 silent confirmation + label override", () => 
     const events = reconcileOutcomes([pr], [OPENED_EVENT], NOW);
     expect(events.length).toBe(0);
   });
+
+  it("normalizes mergedAt when passed as ISO string (gh API format)", () => {
+    const pr = buildPr({ mergedAt: "2026-06-23T07:00:00Z" }); // ISO string, not Date
+    const events = reconcileOutcomes([pr], [OPENED_EVENT], NOW);
+    expect(events.length).toBe(1);
+    expect(events[0].trigger).toBe("silent_confirmation_7d_elapsed");
+  });
 });

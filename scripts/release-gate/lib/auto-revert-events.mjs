@@ -94,7 +94,7 @@ const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
  *
  * Returns new OutcomeUpdatedEvent[] to be appended to JSONL.
  *
- * @param {Array<{number, state, mergedAt, labels, createdAt}>} revertPRs
+ * @param {Array<{number, state, mergedAt: Date|string, labels: string[], createdAt: Date|string}>} revertPRs
  * @param {Array<Event>} events  existing JSONL events
  * @param {Date} now
  */
@@ -136,7 +136,9 @@ export function reconcileOutcomes(revertPRs, events, now) {
       trigger = "label_explicit";
     } else {
       // Silent confirmation gate
-      const elapsedMs = now.getTime() - pr.mergedAt.getTime();
+      // Normalize mergedAt: accept Date or ISO string (gh API returns string)
+      const mergedAt = pr.mergedAt instanceof Date ? pr.mergedAt : new Date(pr.mergedAt);
+      const elapsedMs = now.getTime() - mergedAt.getTime();
       if (elapsedMs < SEVEN_DAYS_MS) continue; // < 7gg → pending
       newOutcome = "true_positive_confirmed";
       trigger = "silent_confirmation_7d_elapsed";

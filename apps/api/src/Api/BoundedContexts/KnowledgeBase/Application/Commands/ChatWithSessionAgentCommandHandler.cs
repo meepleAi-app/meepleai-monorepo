@@ -479,22 +479,51 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             "Persisted session chat to thread {ThreadId}: user msg + assistant msg ({Tokens} tokens, {Chunks} RAG chunks)",
             thread.Id, totalTokens, assembled.Citations.Count);
 
-        // #2311 BE-1 — Increment text_chunks.usage_count for each cited chunk that we can
-        // resolve to a (PdfDocumentId, ChunkIndex) locator. This is a forward-looking
-        // telemetry metric (DEC-D2 start-from-0) and MUST NOT roll back the message
-        // persistence above — any exception is swallowed and logged.
+        // #2311 BE-1 + #2324 DEC-D2 — Increment text_chunks.usage_count for each cited
+        // chunk with distinct-thread semantics. The handler records each citation in the
+        // chat_message_chunk_citations junction so subsequent messages in the same thread
+        // citing the same chunk do not double-count. This is a forward-looking telemetry
+        // metric and MUST NOT roll back the message persistence above — any exception is
+        // swallowed and logged.
         try
         {
             var locators = BuildChunkUsageLocators(finalCitations);
             if (locators.Count > 0)
             {
-                using var incrementScope = _scopeFactory.CreateScope();
-                var incrementHandler = incrementScope.ServiceProvider
-                    .GetRequiredService<
-                        ICommandHandler<IncrementChunkUsageCountsCommand, int>>();
-                _ = await incrementHandler
-                    .Handle(new IncrementChunkUsageCountsCommand(locators), cancellationToken)
-                    .ConfigureAwait(false);
+                // Resolve the assistant message we just persisted.
+                // AddAssistantMessageWithMetadata appends with sequenceNumber =
+                // _messages.Count BEFORE the new message is added, which makes the
+                // freshly-appended assistant message the unique row with the highest
+                // SequenceNumber in the aggregate. This handler is the only writer
+                // for the thread within the current request scope (no concurrent
+                // mutation), and no path can append a higher-sequence message AFTER
+                // this point. The OrderByDescending picks that row safely.
+                var assistantMessageId = thread.Messages
+                    .OrderByDescending(m => m.SequenceNumber)
+                    .Select(m => (Guid?)m.Id)
+                    .FirstOrDefault();
+
+                if (assistantMessageId is null || assistantMessageId == Guid.Empty)
+                {
+                    _logger.LogDebug(
+                        "Skipping chunk-usage increment for thread {ThreadId}: could not resolve the assistant message id",
+                        thread.Id);
+                }
+                else
+                {
+                    using var incrementScope = _scopeFactory.CreateScope();
+                    var incrementHandler = incrementScope.ServiceProvider
+                        .GetRequiredService<
+                            ICommandHandler<IncrementChunkUsageCountsCommand, int>>();
+                    _ = await incrementHandler
+                        .Handle(
+                            new IncrementChunkUsageCountsCommand(
+                                thread.Id,
+                                assistantMessageId.Value,
+                                locators),
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                }
             }
         }
         catch (Exception ex)

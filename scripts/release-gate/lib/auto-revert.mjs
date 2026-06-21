@@ -117,11 +117,20 @@ export function decideRevertAction(input) {
     };
   }
 
-  // [10] DECISION: open_revert
+  // [10] DECISION: open_revert — populate full AC-6 audit rationale
   return {
     action: "open_revert",
     mergeSha: input.latestMergedRelease.mergeSha,
     blockerCheck: targetBlocker,
-    rationale: { newBlockerCount: newBlockers.length, allNewBlockers: newBlockers.map(b => b.name) },
+    rationale: {
+      cooldownElapsedMs: elapsedMs,
+      shaPinned: input.currentHeadSha,
+      isNewBlocker: true,
+      cascadeCheck: "pass",
+      fixForwardCheck: "none",
+      dryRunMode: input.dryRunMode,
+      newBlockerCount: newBlockers.length,
+      allNewBlockers: newBlockers.map(b => b.name),
+    },
   };
 }

@@ -232,3 +232,33 @@ describe("C1d — fix-forward pre-create detection", () => {
     expect(result.action).toBe("open_revert");
   });
 });
+
+describe("AC-5 + AC-6 — open_revert payload + dry-run marker + multi-blocker", () => {
+  it("populates rationale with all required AC-6 fields on happy path", () => {
+    const result = decideRevertAction(baseInput());
+    expect(result.action).toBe("open_revert");
+    expect(result.rationale.cooldownElapsedMs).toBeGreaterThanOrEqual(15 * 60 * 1000);
+    expect(result.rationale.shaPinned).toBe("abc12345");
+    expect(result.rationale.isNewBlocker).toBe(true);
+    expect(result.rationale.cascadeCheck).toBe("pass");
+    expect(result.rationale.fixForwardCheck).toBe("none");
+    expect(result.rationale.dryRunMode).toBe(false);
+  });
+
+  it("sets dryRunMode=true in rationale when input.dryRunMode=true", () => {
+    const result = decideRevertAction(baseInput({ dryRunMode: true }));
+    expect(result.action).toBe("open_revert");
+    expect(result.rationale.dryRunMode).toBe(true);
+  });
+
+  it("picks first NEW blocker and includes all in audit array", () => {
+    const result = decideRevertAction(baseInput({
+      blockers: [
+        { ...BLOCKER, name: "Backend - Unit Tests" },
+        { ...BLOCKER, name: "Frontend - Build & Test" },
+      ],
+    }));
+    expect(result.blockerCheck.name).toBe("Backend - Unit Tests");
+    expect(result.rationale.allNewBlockers).toEqual(["Backend - Unit Tests", "Frontend - Build & Test"]);
+  });
+});

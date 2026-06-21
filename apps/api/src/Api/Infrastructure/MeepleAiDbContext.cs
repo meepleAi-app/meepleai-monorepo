@@ -179,6 +179,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<ReportExecutionEntity> ReportExecutions => Set<ReportExecutionEntity>(); // ISSUE-916: Report execution history
     public DbSet<DocumentCollectionEntity> DocumentCollections => Set<DocumentCollectionEntity>(); // ISSUE-2051: Multi-document collections
     public DbSet<ChatThreadCollectionEntity> ChatThreadCollections => Set<ChatThreadCollectionEntity>(); // ISSUE-2051: Chat-collection junction
+    public DbSet<ChatMessageChunkCitationEntity> ChatMessageChunkCitations => Set<ChatMessageChunkCitationEntity>(); // ISSUE-2324: DEC-D2 distinct-thread citation junction
     public DbSet<ShareLinkEntity> ShareLinks => Set<ShareLinkEntity>(); // ISSUE-2052: Shareable chat links
     public DbSet<InvitationTokenEntity> InvitationTokens => Set<InvitationTokenEntity>(); // ISSUE-124: Admin invitation tokens
     public DbSet<InvitationGameSuggestionEntity> InvitationGameSuggestions => Set<InvitationGameSuggestionEntity>(); // Admin Invitation Flow: game suggestions on invitations

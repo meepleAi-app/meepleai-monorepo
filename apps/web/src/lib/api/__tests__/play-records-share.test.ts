@@ -87,7 +87,7 @@ describe('playRecordsApi — share token methods (#2437-2)', () => {
   // ---- getSharedRecord ----
 
   describe('getSharedRecord', () => {
-    it('GETs /shared/{token} with credentials:include and returns the parsed DTO', async () => {
+    it('GETs /shared/{token} WITHOUT credentials (public endpoint) and returns the parsed DTO', async () => {
       const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
       const dto = {
         id: '550e8400-e29b-41d4-a716-446655440000',
@@ -118,7 +118,7 @@ describe('playRecordsApi — share token methods (#2437-2)', () => {
       expect(fetchMock).toHaveBeenCalledOnce();
       const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
       expect(url).toMatch(/\/shared\/mytoken$/);
-      expect(init.credentials).toBe('include');
+      expect(init?.credentials).toBeUndefined();
       expect(result).toEqual(dto);
     });
 

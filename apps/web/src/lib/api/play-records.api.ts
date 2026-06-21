@@ -313,7 +313,10 @@ export const playRecordsApi = {
    * Returns 404 when the token is invalid or the record is unshared.
    */
   async getSharedRecord(token: string): Promise<PlayRecordDto> {
-    const res = await fetch(`${BASE_URL}/shared/${token}`, { credentials: 'include' });
+    // Public endpoint (AllowAnonymous): NO credentials — sending them forces a credentialed
+    // CORS preflight that anonymous cross-origin visitors (the core share-link use-case)
+    // can't satisfy. #2437-2.
+    const res = await fetch(`${BASE_URL}/shared/${token}`);
     if (!res.ok) {
       if (res.status === 404) throw new Error('Shared play record not found');
       const e = await res.json().catch(() => ({ message: 'Failed to load shared record' }));

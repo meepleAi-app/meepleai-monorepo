@@ -7,7 +7,7 @@
  *
  * Refs:
  * - Spec: docs/superpowers/specs/2026-06-11-ds-17-11-sp6-7-nano-cluster-design.md
- * - Skipped stems (6 forward-refactor): Phase D tracking issue raggruppato (Task 20)
+ * - Phase D-1 (game-night stems): #2174 — adds sp7-game-night-transition + sp7-game-night-join-public
  */
 
 import { test, expect } from '@playwright/test';
@@ -183,6 +183,70 @@ const FRAMES = [
   {
     slug: 'pages-sp7-game-night-summary--state-empty-all',
     file: 'game-night-summary-state-empty-all.png',
+  },
+
+  // sp7-game-night-transition (6 Frame + 1 State = 7 stories) — Phase D-1 #2174
+  {
+    slug: 'pages-sp7-game-night-transition--frame-01-default-two-col-split',
+    file: 'game-night-transition-01-default-two-col-split.png',
+  },
+  {
+    slug: 'pages-sp7-game-night-transition--frame-02-rules-loading-skeleton',
+    file: 'game-night-transition-02-rules-loading-skeleton.png',
+  },
+  {
+    slug: 'pages-sp7-game-night-transition--frame-03-rules-load-error',
+    file: 'game-night-transition-03-rules-load-error.png',
+  },
+  {
+    slug: 'pages-sp7-game-night-transition--frame-04-skip-confirm-submodal',
+    file: 'game-night-transition-04-skip-confirm-submodal.png',
+  },
+  {
+    slug: 'pages-sp7-game-night-transition--frame-05-end-night-confirm-submodal',
+    file: 'game-night-transition-05-end-night-confirm-submodal.png',
+  },
+  {
+    slug: 'pages-sp7-game-night-transition--frame-06-mobile-fullscreen',
+    file: 'game-night-transition-06-mobile-fullscreen.png',
+  },
+  {
+    slug: 'pages-sp7-game-night-transition--state-closed',
+    file: 'game-night-transition-state-closed.png',
+  },
+
+  // sp7-game-night-join-public (6 Frame + 2 State = 8 stories) — Phase D-1 #2174
+  {
+    slug: 'pages-sp7-game-night-join-public--frame-01-pending-empty',
+    file: 'game-night-join-public-01-pending-empty.png',
+  },
+  {
+    slug: 'pages-sp7-game-night-join-public--frame-02-pending-filled',
+    file: 'game-night-join-public-02-pending-filled.png',
+  },
+  {
+    slug: 'pages-sp7-game-night-join-public--frame-03-submitting',
+    file: 'game-night-join-public-03-submitting.png',
+  },
+  {
+    slug: 'pages-sp7-game-night-join-public--frame-04-already-responded',
+    file: 'game-night-join-public-04-already-responded.png',
+  },
+  {
+    slug: 'pages-sp7-game-night-join-public--frame-05-token-expired',
+    file: 'game-night-join-public-05-token-expired.png',
+  },
+  {
+    slug: 'pages-sp7-game-night-join-public--frame-06-rate-limited',
+    file: 'game-night-join-public-06-rate-limited.png',
+  },
+  {
+    slug: 'pages-sp7-game-night-join-public--state-token-invalid',
+    file: 'game-night-join-public-state-token-invalid.png',
+  },
+  {
+    slug: 'pages-sp7-game-night-join-public--state-loading',
+    file: 'game-night-join-public-state-loading.png',
   },
 ];
 

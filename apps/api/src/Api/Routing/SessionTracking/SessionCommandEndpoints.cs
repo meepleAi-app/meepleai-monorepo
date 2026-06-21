@@ -48,31 +48,65 @@ internal static class SessionCommandEndpoints
         .Produces(401);
     }
 
+    /// <summary>
+    /// DEPRECATED (#2433): per-participant score entry endpoint. Superseded by the
+    /// polymorphic <see cref="MapUpdateSessionScoresEndpoint"/> at
+    /// <c>PUT /game-sessions/{id}/scores-polymorphic</c> (Asse A #1896 T10).
+    /// Slated for removal after a 30-day deprecation window starting on the merge
+    /// date of #2433. New clients MUST migrate. Existing callers receive RFC 8594
+    /// <c>Deprecation: true</c> and <c>Link: ...; rel="successor-version"</c>
+    /// response headers and the OpenAPI operation is flagged <c>deprecated</c>.
+    /// </summary>
     private static void MapUpdateScoreEndpoint(RouteGroupBuilder group)
     {
-        group.MapPut("/game-sessions/{sessionId:guid}/scores", async (
-            Guid sessionId,
-            UpdateScoreCommand command,
-            IMediator mediator,
-            CancellationToken ct) =>
-        {
-            // Ensure route parameter matches command
-            if (sessionId != command.SessionId)
-            {
-                return Results.BadRequest(new { error = "Session ID mismatch" });
-            }
-
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
-            return Results.Ok(result);
-        })
+        group.MapPut("/game-sessions/{sessionId:guid}/scores", HandleUpdateScoreLegacy)
         .RequireAuthenticatedUser()
         .WithName("UpdateScore")
         .WithTags("SessionTracking")
-        .WithSummary("Update participant score")
+        .WithSummary("[DEPRECATED #2433] Update participant score — migrate to /scores-polymorphic")
+        .WithDescription(
+            "DEPRECATED (#2433): per-participant score entry. New clients MUST use " +
+            "PUT /game-sessions/{id}/scores-polymorphic (Asse A #1896 T10), which accepts a " +
+            "polymorphic ScoringType + ScoreData JSON payload with per-type schema validation. " +
+            "Removal scheduled after a 30-day deprecation window from the merge of #2433.")
+        .WithOpenApi(operation =>
+        {
+            operation.Deprecated = true;
+            return operation;
+        })
+        .WithMetadata(new ObsoleteAttribute(
+            "#2433: legacy per-participant score endpoint. Use UpdateSessionScoresCommand at " +
+            "PUT /game-sessions/{id}/scores-polymorphic. Removal scheduled after a 30-day " +
+            "deprecation window from #2433 merge."))
         .Produces(200)
         .Produces(400)
         .Produces(401)
         .Produces(404);
+    }
+
+    private static async Task<IResult> HandleUpdateScoreLegacy(
+        Guid sessionId,
+        UpdateScoreCommand command,
+        IMediator mediator,
+        HttpResponse response,
+        CancellationToken ct)
+    {
+        // Ensure route parameter matches command
+        if (sessionId != command.SessionId)
+        {
+            return Results.BadRequest(new { error = "Session ID mismatch" });
+        }
+
+        // RFC 8594: signal deprecation to clients without enforcing a hard sunset.
+        // The Link header points at the successor endpoint so HATEOAS-aware clients
+        // can auto-discover the migration target.
+        response.Headers.Append("Deprecation", "true");
+        response.Headers.Append(
+            "Link",
+            $"</api/v1/game-sessions/{sessionId}/scores-polymorphic>; rel=\"successor-version\"");
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
     }
 
     /// <summary>

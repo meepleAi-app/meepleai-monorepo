@@ -27,7 +27,13 @@ internal static class PlayRecordVersionSnapshotter
     /// <param name="userId">User triggering the update (stored on the version for audit).</param>
     /// <param name="timeProvider">Clock abstraction for the snapshot's CreatedAt timestamp.</param>
     /// <param name="ct">Cancellation token.</param>
-    public static async Task SnapshotCurrentAsync(
+    /// <returns>
+    /// The staged <see cref="PlayRecordVersion"/> (not yet persisted). The caller may use its
+    /// <c>Id</c> to re-assign the version number via
+    /// <see cref="IPlayRecordVersionRepository.ReassignVersionNumberAsync"/> in the event of a
+    /// concurrent version-number collision on save.
+    /// </returns>
+    public static async Task<PlayRecordVersion> SnapshotCurrentAsync(
         IPlayRecordVersionRepository versionRepository,
         PlayRecord record,
         Guid userId,
@@ -42,17 +48,18 @@ internal static class PlayRecordVersionSnapshotter
             .GetNextVersionNumberAsync(record.Id, ct)
             .ConfigureAwait(false);
 
-        await versionRepository.AddAsync(
-            new PlayRecordVersion(
-                Guid.NewGuid(),
-                record.Id,
-                versionNumber,
-                record.SessionDate,
-                record.Notes,
-                record.Location,
-                timeProvider.GetUtcNow().UtcDateTime,
-                userId),
-            ct)
-            .ConfigureAwait(false);
+        var version = new PlayRecordVersion(
+            Guid.NewGuid(),
+            record.Id,
+            versionNumber,
+            record.SessionDate,
+            record.Notes,
+            record.Location,
+            timeProvider.GetUtcNow().UtcDateTime,
+            userId);
+
+        await versionRepository.AddAsync(version, ct).ConfigureAwait(false);
+
+        return version;
     }
 }

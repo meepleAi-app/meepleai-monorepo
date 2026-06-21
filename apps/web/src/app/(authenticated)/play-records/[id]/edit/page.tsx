@@ -102,7 +102,10 @@ export default function EditPlayRecordPage() {
       await submitUpdate(conflictForm, fresh.xmin);
       setConflictForm(null);
     } catch (error) {
-      if (error instanceof UpdatePlayRecordError && error.kind === 'conflict') return;
+      if (error instanceof UpdatePlayRecordError && error.kind === 'conflict') {
+        toast.warning(t('playRecords.edit.conflict.stillConflict'));
+        return;
+      }
       toast.error(t('playRecords.edit.error.updateFailed'), {
         description: error instanceof Error ? error.message : 'Unknown error',
       });

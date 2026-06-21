@@ -4276,7 +4276,8 @@
         "title": "Modifica concorrente",
         "description": "Qualcuno ha modificato questa partita mentre la stavi modificando. Ricarica i dati aggiornati o sovrascrivi con le tue modifiche.",
         "reload": "Ricarica",
-        "overwrite": "Sovrascrivi comunque"
+        "overwrite": "Sovrascrivi comunque",
+        "stillConflict": "Anche il tuo salvataggio è stato battuto da un'altra modifica. Riprova."
       },
       "error": {
         "loadFailed": "Impossibile caricare la partita",

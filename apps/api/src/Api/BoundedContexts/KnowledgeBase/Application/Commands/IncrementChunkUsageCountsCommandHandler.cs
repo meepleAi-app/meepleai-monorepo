@@ -2,6 +2,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 
@@ -137,12 +138,35 @@ internal sealed class IncrementChunkUsageCountsCommandHandler
             }
         }
 
-        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+        {
+            // Parallel-replay race: a sibling command holding a stale "snapshot empty"
+            // view raced us to the junction insert. EF rolls back the whole change
+            // set, so the counter is NOT double-ticked. Treat as a no-op — the
+            // sibling's increment is the canonical one. Log at debug only.
+            _logger.LogDebug(ex,
+                "IncrementChunkUsageCountsCommand: junction insert raced (thread {ThreadId} message {MessageId}); rolled back without ticking",
+                command.ThreadId, command.MessageId);
+            return 0;
+        }
 
         _logger.LogDebug(
             "IncrementChunkUsageCountsCommand: thread {ThreadId} message {MessageId} → {Incremented}/{Matched} chunks ticked (distinct-thread)",
             command.ThreadId, command.MessageId, incremented, matched.Count);
 
         return incremented;
+    }
+
+    private static bool IsUniqueViolation(DbUpdateException ex)
+    {
+        // Postgres SQLSTATE 23505 = unique_violation. Surfaces via Npgsql when
+        // the composite PK on chat_message_chunk_citations rejects a duplicate
+        // (ThreadId, MessageId, ChunkId) tuple.
+        return ex.InnerException is PostgresException pg
+            && string.Equals(pg.SqlState, "23505", StringComparison.Ordinal);
     }
 }

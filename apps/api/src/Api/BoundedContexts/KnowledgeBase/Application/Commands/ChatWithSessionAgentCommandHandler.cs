@@ -490,10 +490,14 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             var locators = BuildChunkUsageLocators(finalCitations);
             if (locators.Count > 0)
             {
-                // Resolve the assistant message we just persisted. AddAssistantMessageWithMetadata
-                // appends with sequenceNumber = current message count, so the highest sequence
-                // is the row we want. Falling back to Guid.Empty would skip the increment — log
-                // and bail without raising.
+                // Resolve the assistant message we just persisted.
+                // AddAssistantMessageWithMetadata appends with sequenceNumber =
+                // _messages.Count BEFORE the new message is added, which makes the
+                // freshly-appended assistant message the unique row with the highest
+                // SequenceNumber in the aggregate. This handler is the only writer
+                // for the thread within the current request scope (no concurrent
+                // mutation), and no path can append a higher-sequence message AFTER
+                // this point. The OrderByDescending picks that row safely.
                 var assistantMessageId = thread.Messages
                     .OrderByDescending(m => m.SequenceNumber)
                     .Select(m => (Guid?)m.Id)

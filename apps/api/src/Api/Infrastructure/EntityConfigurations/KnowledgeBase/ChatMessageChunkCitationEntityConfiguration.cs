@@ -43,5 +43,14 @@ internal class ChatMessageChunkCitationEntityConfiguration
         // per-thread, per-chunk slice without bringing the message_id into play.
         builder.HasIndex(e => new { e.ThreadId, e.ChunkId })
             .HasDatabaseName("ix_chat_msg_chunk_thread_chunk");
+
+        // Explicit FK-support index on ChunkId alone — backs the CASCADE scan
+        // when a TextChunk is deleted. EF Core would auto-generate this for the
+        // ChunkId FK, but declaring it explicitly preserves it across any future
+        // migration squash / regeneration. The default name
+        // (IX_chat_message_chunk_citations_ChunkId) matches the existing
+        // migration so this is purely a configuration-side hardening — no
+        // schema diff.
+        builder.HasIndex(e => e.ChunkId);
     }
 }

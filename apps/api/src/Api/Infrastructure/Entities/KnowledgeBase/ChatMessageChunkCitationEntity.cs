@@ -23,7 +23,10 @@ public class ChatMessageChunkCitationEntity
     public Guid ThreadId { get; set; }
     public Guid MessageId { get; set; }
     public Guid ChunkId { get; set; }
-    public DateTime CitedAt { get; set; } = DateTime.UtcNow;
+    // CitedAt is assigned by the handler at insert time; no property-level default
+    // because EF would not project it as a column default (the handler is the
+    // single source of truth for this value).
+    public DateTime CitedAt { get; set; }
 
     // Navigation
     public ChatThreadEntity Thread { get; set; } = default!;

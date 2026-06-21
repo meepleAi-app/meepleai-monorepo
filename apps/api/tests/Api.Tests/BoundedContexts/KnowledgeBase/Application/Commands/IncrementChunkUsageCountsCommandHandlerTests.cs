@@ -281,8 +281,12 @@ public sealed class IncrementChunkUsageCountsCommandHandlerTests
     public async Task Handle_SameMessageReplayed_IsIdempotent()
     {
         // Replay protection: a transient retry of the same (threadId, messageId)
-        // must NOT double-count. The junction row's composite PK guarantees that
-        // the second insert is a no-op.
+        // must NOT double-count. Pre-loaded snapshot + alreadyRecorded early-return
+        // delivers idempotency on a shared DbContext (here). The composite PK
+        // also prevents a parallel-replay race in production where each call
+        // has a fresh scope; see IT Handle_ReplayedCommand_IsIdempotent_NoDuplicateJunctionRow
+        // and the 23505 catch in the handler. EF InMemory does NOT enforce the
+        // composite PK, so this test exercises the snapshot-based dedup path only.
         await using var db = NewDb();
         var pdfId = Guid.NewGuid();
         var chunk = NewChunk(pdfId, chunkIndex: 13);

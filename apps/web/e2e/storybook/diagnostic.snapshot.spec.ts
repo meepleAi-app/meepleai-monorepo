@@ -42,8 +42,8 @@ const STORIES = [
   },
   // DS-17 Phase C-1 sp6-7-nano cluster sample (#2166)
   {
-    name: 'Game Night Create Frame01 Step1 Quando (Phase C-1)',
-    slug: 'pages-sp7-game-night-create--frame-01-step-1-quando',
+    name: 'Game Night New Frame01 Step1 Quando (Phase C-1)',
+    slug: 'pages-sp7-game-night-new--frame-01-step-1-quando',
   },
 ];
 

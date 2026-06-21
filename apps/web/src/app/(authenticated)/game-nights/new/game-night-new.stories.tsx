@@ -13,7 +13,7 @@
  *     get individual dedicated stories alongside their files (see scaffold
  *     decision §6 of parent spec, mirrors auth-flow pattern).
  *
- * Stage axis (sp7-game-night-create.jsx STATES array lines 1475-1484 — 10
+ * Stage axis (sp7-game-night-new.jsx STATES array lines 1475-1484 — 10
  * frames including 8 Mobile + 1 Mobile step-flow overview + 1 Desktop split):
  *   step: 1 | 2 | 3 | 4
  *   variant: null | 'warning' | 'empty' | 'typing' | 'filled' | 'decide-group'
@@ -40,20 +40,20 @@ import {
   MOCK_SP7_CREATE_LIBRARY_GAMES,
   MOCK_SP7_CREATE_REGULARS,
   MOCK_SP7_CREATE_PLAYER_SEARCH_TYPING,
-} from '@/__tests__/fixtures/mockup-pilots/sp6-7-nano/sp7-game-night-create';
+} from '@/__tests__/fixtures/mockup-pilots/sp6-7-nano/sp7-game-night-new';
 import { GameNightCreateWizard } from '@/components/features/game-night-create';
 
 import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof GameNightCreateWizard> = {
-  title: 'Pages/SP7/Game Night Create',
+  title: 'Pages/SP7/Game Night New',
   component: GameNightCreateWizard,
   parameters: {
     layout: 'fullscreen',
     docs: {
       description: {
         component:
-          'Pixel-faithful matrix di sp7-game-night-create.jsx Mobile frames 01-08 + Mobile step-flow overview 09 + Desktop split-form 10. Hero usa `GameNightCreateWizard` (4-step orchestrator). 6 sub-componenti (DateTimePicker, LocationToggle, PlayerInviteAutocomplete, GameCandidatesPicker, RSVPCardLivePreview) hanno dedicated stories accanto ai loro file.',
+          'Pixel-faithful matrix di sp7-game-night-new.jsx Mobile frames 01-08 + Mobile step-flow overview 09 + Desktop split-form 10. Hero usa `GameNightCreateWizard` (4-step orchestrator). 6 sub-componenti (DateTimePicker, LocationToggle, PlayerInviteAutocomplete, GameCandidatesPicker, RSVPCardLivePreview) hanno dedicated stories accanto ai loro file.',
       },
     },
   },

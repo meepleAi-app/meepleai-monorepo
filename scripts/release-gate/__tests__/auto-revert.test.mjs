@@ -200,3 +200,35 @@ describe("B5 — idempotency check via findActiveRevert", () => {
     expect(result.action).toBe("open_revert");
   });
 });
+
+describe("C1d — fix-forward pre-create detection", () => {
+  it("aborts aborted_fix_forward when fix-forward PR matched via label", () => {
+    const result = decideRevertAction(baseInput({
+      fixForwards: [{
+        number: 5678,
+        matchedVia: "label",
+        createdAt: new Date(MERGE_TIME.getTime() + 5 * 60 * 1000),
+      }],
+    }));
+    expect(result.action).toBe("abort");
+    expect(result.reason).toBe("aborted_fix_forward");
+    expect(result.rationale.detected[0].number).toBe(5678);
+  });
+
+  it("aborts aborted_fix_forward when fix-forward PR matched via title prefix", () => {
+    const result = decideRevertAction(baseInput({
+      fixForwards: [{
+        number: 5679,
+        matchedVia: "title_prefix",
+        createdAt: new Date(MERGE_TIME.getTime() + 5 * 60 * 1000),
+      }],
+    }));
+    expect(result.action).toBe("abort");
+    expect(result.reason).toBe("aborted_fix_forward");
+  });
+
+  it("proceeds when fixForwards is empty (no fix-forward PRs detected)", () => {
+    const result = decideRevertAction(baseInput({ fixForwards: [] }));
+    expect(result.action).toBe("open_revert");
+  });
+});

@@ -108,6 +108,15 @@ export function decideRevertAction(input) {
     return { action: "noop_idempotent", existingRevertPr: activeRevert.revertPr };
   }
 
+  // [9] C1d — fix-forward pre-create detection (caller already filtered by label OR title regex)
+  if (input.fixForwards.length > 0) {
+    return {
+      action: "abort",
+      reason: "aborted_fix_forward",
+      rationale: { detected: input.fixForwards.map(f => ({ number: f.number, matchedVia: f.matchedVia, createdAt: f.createdAt.toISOString() })) },
+    };
+  }
+
   // [10] DECISION: open_revert
   return {
     action: "open_revert",

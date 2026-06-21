@@ -31,6 +31,10 @@ public class PlayRecordEntity
     public string? Notes { get; set; }
     public string? Location { get; set; }
 
+    // Share token (#2437-2, GameNightPlaylist pattern)
+    public string? ShareToken { get; set; }
+    public bool IsShared { get; set; }
+
     // Scoring Configuration (stored as JSON)
     public string ScoringConfigJson { get; set; } = default!;
 

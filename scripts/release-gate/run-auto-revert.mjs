@@ -478,7 +478,12 @@ async function main() {
   logJson({ level: "info", ts: new Date().toISOString(), event_type: "tick_end", outcome: "true_positive_pending", latency_ms: Date.now() - startTs });
 }
 
-main().catch(err => {
-  logJson({ level: "error", ts: new Date().toISOString(), event_type: "tick_end", error: err.message, stack: err.stack });
-  process.exit(1);
-});
+export { main };
+
+// Only auto-execute when invoked directly (not when imported by tests)
+if (import.meta.url === `file://${process.argv[1]}` || import.meta.url.endsWith(process.argv[1])) {
+  main().catch(err => {
+    logJson({ level: "error", ts: new Date().toISOString(), event_type: "tick_end", error: err.message, stack: err.stack });
+    process.exit(1);
+  });
+}

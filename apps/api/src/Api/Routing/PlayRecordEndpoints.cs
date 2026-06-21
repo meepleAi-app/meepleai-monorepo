@@ -205,7 +205,7 @@ internal static class PlayRecordEndpoints
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var command = new UpdatePlayRecordCommand(recordId, httpContext.User.GetUserId(), request.SessionDate, request.Notes, request.Location);
+        var command = new UpdatePlayRecordCommand(recordId, httpContext.User.GetUserId(), request.SessionDate, request.Notes, request.Location, request.Xmin);
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }
@@ -305,7 +305,10 @@ internal static class PlayRecordEndpoints
 
     private sealed record CompleteRecordRequest(TimeSpan? ManualDuration);
 
-    private sealed record UpdateRecordRequest(DateTime? SessionDate, string? Notes, string? Location);
+    // Xmin: optional Postgres xmin token captured by the client on read.
+    // When present, EF raises DbUpdateConcurrencyException on stale-form writes → 409.
+    // Omit to retain legacy fresh-load behaviour (no concurrency check). #2437-1.
+    private sealed record UpdateRecordRequest(DateTime? SessionDate, string? Notes, string? Location, uint? Xmin = null);
 
     private sealed record GetHistoryQueryParams(int Page = 1, int PageSize = 20, Guid? GameId = null);
 

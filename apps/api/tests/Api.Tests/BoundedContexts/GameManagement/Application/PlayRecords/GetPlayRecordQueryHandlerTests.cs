@@ -246,6 +246,22 @@ public class GetPlayRecordQueryHandlerTests : IDisposable
     }
 
     [Fact]
+    [Trait("Issue", "2437")]
+    public async Task Handle_ExposesXminConcurrencyToken()
+    {
+        var recordId = Guid.NewGuid();
+        var entity = MakePlayRecord(recordId);
+        entity.Players = new List<RecordPlayerEntity> { MakePlayer(Guid.NewGuid(), recordId, ("wins", 1)) };
+        entity.Xmin = 4242u;
+        _context.PlayRecords.Add(entity);
+        await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await _handler.Handle(new GetPlayRecordQuery(recordId, entity.CreatedByUserId), TestContext.Current.CancellationToken);
+
+        result.Xmin.Should().Be(4242u);
+    }
+
+    [Fact]
     [Trait("Issue", "2436")]
     public async Task Handle_RecordWithPhotos_ReturnsPhotosOrderedByUploadedAt()
     {

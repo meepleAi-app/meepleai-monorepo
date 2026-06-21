@@ -54,9 +54,28 @@ export function parseEventLog(text) {
 }
 
 /**
- * Stub for Task 6. Real implementation will scan events for active reverts
- * (those without a terminal outcome).
+ * B5 idempotency — returns the active revert_opened event for (mergeSha, checkName)
+ * or null if no active revert exists.
+ *
+ * Lock semantics:
+ *   - revert_opened → state = active_revert (returned)
+ *   - revert_aborted_at_merge for same revertPr → state = closed (lock released, returns null)
+ *   - revert_aborted (pre-create) → state = aborted (terminal, never affected lock)
+ *   - outcome_updated → state stays active (terminal outcome does NOT unlock — prevents re-revert post-confirmation)
  */
-export function findActiveRevert() {
-  return null;
+export function findActiveRevert(events, mergeSha, checkName) {
+  const matching = events
+    .filter(e => e.mergeSha === mergeSha && (e.blockerCheck?.name === checkName))
+    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+  let active = null;
+  for (const ev of matching) {
+    if (ev.eventType === "revert_opened") {
+      active = ev;
+    } else if (ev.eventType === "revert_aborted_at_merge" && active && ev.revertPr === active.revertPr) {
+      active = null; // race-abort released the lock
+    }
+    // outcome_updated and revert_aborted don't affect the lock
+  }
+  return active;
 }

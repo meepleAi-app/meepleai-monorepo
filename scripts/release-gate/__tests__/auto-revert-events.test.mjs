@@ -81,3 +81,53 @@ describe("buildEventId — deterministic from (eventType, mergeSha, ts)", () => 
     expect(id1).not.toBe(id2);
   });
 });
+
+describe("findActiveRevert — B5 idempotency", () => {
+  const openedEvent = {
+    ...SAMPLE_REVERT_OPENED,
+    eventType: "revert_opened",
+    mergeSha: "sha_a",
+    blockerCheck: { ...SAMPLE_REVERT_OPENED.blockerCheck, name: "Backend - Unit Tests" },
+  };
+
+  it("returns null for empty event list", () => {
+    expect(findActiveRevert([], "sha_a", "Backend - Unit Tests")).toBeNull();
+  });
+
+  it("returns the opened event when only revert_opened exists", () => {
+    expect(findActiveRevert([openedEvent], "sha_a", "Backend - Unit Tests")).toEqual(openedEvent);
+  });
+
+  it("returns null when followed by revert_aborted_at_merge for same revertPr (lock released)", () => {
+    const abortedAtMerge = {
+      ...openedEvent,
+      eventType: "revert_aborted_at_merge",
+      eventId: "test-id-002",
+      timestamp: "2026-06-23T08:05:00Z",
+      outcome: "aborted_fix_forward_race",
+    };
+    expect(findActiveRevert([openedEvent, abortedAtMerge], "sha_a", "Backend - Unit Tests")).toBeNull();
+  });
+
+  it("returns opened event even when followed by outcome_updated (terminal does NOT unlock)", () => {
+    const outcomeUpdated = {
+      ...openedEvent,
+      eventType: "outcome_updated",
+      eventId: "test-id-003",
+      timestamp: "2026-06-30T08:00:00Z",
+      previousOutcome: "true_positive_pending",
+      newOutcome: "true_positive_confirmed",
+      trigger: "silent_confirmation_7d_elapsed",
+      rationale: "auto-confirmed: no operator override label after 7d",
+    };
+    expect(findActiveRevert([openedEvent, outcomeUpdated], "sha_a", "Backend - Unit Tests")).toEqual(openedEvent);
+  });
+
+  it("isolates per (mergeSha, checkName) — does not return event for different sha", () => {
+    expect(findActiveRevert([openedEvent], "sha_b", "Backend - Unit Tests")).toBeNull();
+  });
+
+  it("isolates per (mergeSha, checkName) — does not return event for different checkName", () => {
+    expect(findActiveRevert([openedEvent], "sha_a", "Frontend - Lint")).toBeNull();
+  });
+});

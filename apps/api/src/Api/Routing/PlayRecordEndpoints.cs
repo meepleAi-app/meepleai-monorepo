@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.PlayRecords;
 using Api.BoundedContexts.GameManagement.Application.DTOs.PlayRecords;
 using Api.BoundedContexts.GameManagement.Application.Queries.PlayRecords;
+using ShareLinkResponse = Api.BoundedContexts.GameManagement.Application.DTOs.PlayRecords.ShareLinkResponse;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Extensions;
 using MediatR;
@@ -96,6 +97,20 @@ internal static class PlayRecordEndpoints
             .WithTags("PlayRecords")
             .WithSummary("Upload a photo to a play record (creator-only, ≤5MB, opt-in OCR)")
             .WithOpenApi();
+
+        group.MapPost("/play-records/{recordId:guid}/share", HandleGenerateShareLink)
+            .RequireAuthenticatedUser()
+            .Produces<ShareLinkResponse>(200)
+            .Produces(401).Produces(StatusCodes.Status403Forbidden).Produces(404)
+            .WithTags("PlayRecords")
+            .WithSummary("Generate a public share link (creator-only)");
+
+        group.MapDelete("/play-records/{recordId:guid}/share", HandleRevokeShareLink)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(401).Produces(StatusCodes.Status403Forbidden).Produces(404)
+            .WithTags("PlayRecords")
+            .WithSummary("Revoke the share link (creator-only)");
 
         // Queries
         group.MapGet("/play-records/{recordId}", HandleGetPlayRecord)
@@ -245,6 +260,30 @@ internal static class PlayRecordEndpoints
         // ValidationException→400) — matching every other handler in this file.
         var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.Created($"/api/v1/play-records/{recordId}/photos/{result.PhotoId}", result);
+    }
+
+    private static async Task<IResult> HandleGenerateShareLink(
+        Guid recordId,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(
+            new GeneratePlayRecordShareTokenCommand(recordId, httpContext.User.GetUserId()),
+            cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleRevokeShareLink(
+        Guid recordId,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        await mediator.Send(
+            new RevokePlayRecordShareTokenCommand(recordId, httpContext.User.GetUserId()),
+            cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
     }
 
     #endregion

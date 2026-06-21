@@ -29,6 +29,7 @@ import { KpiGrid } from './detail/KpiGrid';
 import { ScoreBreakdown, type ScoreBreakdownRow } from './detail/ScoreBreakdown';
 import { PlayRecordPhotoGallery } from './photos/PlayRecordPhotoGallery';
 import { PlayRecordPhotoUploadDialog } from './photos/PlayRecordPhotoUploadDialog';
+import { PlayRecordHistoryDialog } from './PlayRecordHistoryDialog';
 import {
   PlayRecordHeroPodium,
   type RankedScore,
@@ -163,6 +164,7 @@ export function PlayRecordDetailBody({
   const router = useRouter();
   const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   // ── Derive perspective ──────────────────────────────────────────────────────
   const isCreator = currentUserId !== null && currentUserId === record.createdByUserId;
@@ -280,6 +282,13 @@ export function PlayRecordDetailBody({
               </button>
               <button
                 type="button"
+                onClick={() => setHistoryOpen(true)}
+                className="rounded-md border border-border px-3 py-1.5 text-sm font-bold text-foreground hover:bg-muted"
+              >
+                🕘 {t('playRecords.history.button')}
+              </button>
+              <button
+                type="button"
                 onClick={() => setPhotoDialogOpen(true)}
                 className="ml-auto rounded-md border border-border px-3 py-1.5 text-sm font-bold text-foreground hover:bg-muted"
               >
@@ -315,6 +324,14 @@ export function PlayRecordDetailBody({
             currentShareToken={record.shareToken ?? null}
             open={shareOpen}
             onClose={() => setShareOpen(false)}
+          />
+        )}
+
+        {isCreator && (
+          <PlayRecordHistoryDialog
+            recordId={record.id}
+            open={historyOpen}
+            onClose={() => setHistoryOpen(false)}
           />
         )}
 

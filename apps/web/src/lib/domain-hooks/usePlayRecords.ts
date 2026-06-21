@@ -16,6 +16,7 @@ import type {
   RecordScoreRequest,
   UpdatePlayRecordRequest,
   ShareLinkResponse,
+  PlayRecordVersion,
 } from '@/lib/api/schemas/play-records.schemas';
 
 // ========== Types ==========
@@ -41,6 +42,8 @@ export const playRecordsKeys = {
     [...playRecordsKeys.statisticsAll(), range?.startDate ?? null, range?.endDate ?? null] as const,
   // #2437-2: public shared-record query (no auth required)
   shared: (token: string) => [...playRecordsKeys.all, 'shared', token] as const,
+  // #2437-3: version history for a specific record (creator-only)
+  versions: (recordId: string) => [...playRecordsKeys.all, 'versions', recordId] as const,
 };
 
 // ========== Queries ==========
@@ -303,5 +306,37 @@ export function useSharedPlayRecord(token: string) {
     queryFn: () => playRecordsApi.getSharedRecord(token),
     enabled: !!token,
     retry: false,
+  });
+}
+
+// ========== Version History Hooks (#2437-3) ==========
+
+/**
+ * Fetch the last-5 audit versions for a play record (creator-only).
+ * `enabled` can be set to false to suppress the query until needed (e.g. lazy dialog).
+ */
+export function usePlayRecordVersions(recordId: string, enabled = true) {
+  return useQuery<PlayRecordVersion[], Error>({
+    queryKey: playRecordsKeys.versions(recordId),
+    queryFn: () => playRecordsApi.getVersions(recordId),
+    enabled,
+    retry: false,
+  });
+}
+
+/**
+ * Restore a play record to a specific version (creator-only).
+ * On success invalidates both the record detail and its version list so both
+ * surfaces reflect the restored state.
+ */
+export function useRestorePlayRecordVersion(recordId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, number>({
+    mutationFn: (versionNumber: number) => playRecordsApi.restoreVersion(recordId, versionNumber),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: playRecordsKeys.detail(recordId) });
+      queryClient.invalidateQueries({ queryKey: playRecordsKeys.versions(recordId) });
+    },
   });
 }

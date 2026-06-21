@@ -62,4 +62,20 @@ describe('ConnectionBar', () => {
     const gameAnchor = container.querySelector('a[href*="/games/g-1"]');
     expect(gameAnchor).not.toBeNull();
   });
+
+  // #2437-1: MVP chip (derived winner, decision M3)
+  it('renders MVP chip when mvpName is provided', () => {
+    render(<ConnectionBar {...defaultProps} mvpName="Alice" />);
+    expect(screen.getByText('MVP: Alice')).toBeTruthy();
+  });
+
+  it('does NOT render MVP chip when mvpName is undefined', () => {
+    render(<ConnectionBar {...defaultProps} />);
+    expect(screen.queryByText(/MVP/i)).toBeNull();
+  });
+
+  it('does NOT render MVP chip when mvpName is null', () => {
+    render(<ConnectionBar {...defaultProps} mvpName={null} />);
+    expect(screen.queryByText(/MVP/i)).toBeNull();
+  });
 });

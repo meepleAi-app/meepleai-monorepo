@@ -41,6 +41,10 @@ internal class PlayRecordEntityConfiguration : IEntityTypeConfiguration<PlayReco
         builder.Property(e => e.Notes).HasMaxLength(2000);
         builder.Property(e => e.Location).HasMaxLength(255);
 
+        // Share token (#2437-2, GameNightPlaylist pattern)
+        builder.Property(e => e.ShareToken).HasMaxLength(50);
+        builder.Property(e => e.IsShared).HasDefaultValue(false).IsRequired();
+
         // Scoring Configuration (JSON)
         builder.Property(e => e.ScoringConfigJson)
             .IsRequired()
@@ -81,6 +85,13 @@ internal class PlayRecordEntityConfiguration : IEntityTypeConfiguration<PlayReco
             .IsUnique()
             .HasDatabaseName("UX_play_records_source_event_id")
             .HasFilter("source_event_id IS NOT NULL");
+
+        // Issue #2437-2: ShareToken UNIQUE (partial — only when not null).
+        // Allows multiple non-shared records (all NULL) while enforcing token uniqueness.
+        builder.HasIndex(e => e.ShareToken)
+            .HasDatabaseName("IX_play_records_share_token")
+            .IsUnique()
+            .HasFilter("\"ShareToken\" IS NOT NULL");
 
         // Optimistic concurrency via PostgreSQL's xmin system column (ADR-060).
         // xmin is a Postgres system column — EF maps it but does NOT create the column.

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -13,9 +14,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260621082834_AddPlayRecordShareToken")]
+    partial class AddPlayRecordShareToken
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -4613,30 +4616,6 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("idx_chat_logs_chat_id_sequence_role");
 
                     b.ToTable("chat_logs", (string)null);
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.ChatMessageChunkCitationEntity", b =>
-                {
-                    b.Property<Guid>("ThreadId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("MessageId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("ChunkId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CitedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("ThreadId", "MessageId", "ChunkId");
-
-                    b.HasIndex("ChunkId");
-
-                    b.HasIndex("ThreadId", "ChunkId")
-                        .HasDatabaseName("ix_chat_msg_chunk_thread_chunk");
-
-                    b.ToTable("chat_message_chunk_citations", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.ChatThreadCollectionEntity", b =>
@@ -16700,25 +16679,6 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("DeletedByUser");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.ChatMessageChunkCitationEntity", b =>
-                {
-                    b.HasOne("Api.Infrastructure.Entities.TextChunkEntity", "Chunk")
-                        .WithMany()
-                        .HasForeignKey("ChunkId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Api.Infrastructure.Entities.ChatThreadEntity", "Thread")
-                        .WithMany()
-                        .HasForeignKey("ThreadId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Chunk");
-
-                    b.Navigation("Thread");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.ChatThreadCollectionEntity", b =>

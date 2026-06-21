@@ -203,6 +203,18 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
         return Task.CompletedTask;
     }
 
+    public async Task<PlayRecord?> GetByShareTokenAsync(string shareToken, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(shareToken);
+        var entity = await DbContext.PlayRecords
+            .AsNoTracking()
+            .Include(r => r.Players).ThenInclude(p => p.Scores)
+            .Include(r => r.Photos)
+            .FirstOrDefaultAsync(r => r.ShareToken == shareToken && r.IsShared, cancellationToken)
+            .ConfigureAwait(false);
+        return entity != null ? MapToDomain(entity) : null;
+    }
+
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await DbContext.PlayRecords
@@ -292,6 +304,9 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
         // Restore the xmin optimistic-concurrency token (ADR-060). #2436 PR-B / #2437-1.
         record.SetXmin(entity.Xmin);
 
+        // Restore share state (#2437-2, GameNightPlaylist pattern).
+        record.SetShareState(entity.ShareToken, entity.IsShared);
+
         return record;
     }
 
@@ -320,7 +335,9 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
             SourceEventId = record.SourceEventId,
             IsDeleted = record.IsDeleted,
             DeletedAt = record.DeletedAt,
-            Xmin = record.Xmin  // round-trip for detached Update (ADR-060). #2436 PR-B / #2437-1.
+            Xmin = record.Xmin,  // round-trip for detached Update (ADR-060). #2436 PR-B / #2437-1.
+            ShareToken = record.ShareToken,  // #2437-2
+            IsShared = record.IsShared       // #2437-2
         };
 
         // Serialize scoring config

@@ -61,6 +61,15 @@ export const PlayRecordPhotoSchema = z.object({
 });
 export type PlayRecordPhoto = z.infer<typeof PlayRecordPhotoSchema>;
 
+// ========== Share Link ==========
+
+// #2437-2: response from POST /play-records/{id}/share
+export const ShareLinkResponseSchema = z.object({
+  shareToken: z.string(),
+  shareUrl: z.string(),
+});
+export type ShareLinkResponse = z.infer<typeof ShareLinkResponseSchema>;
+
 // ========== DTOs ==========
 
 export const PlayRecordDtoSchema = z.object({
@@ -88,6 +97,8 @@ export const PlayRecordDtoSchema = z.object({
   photos: z.array(PlayRecordPhotoSchema).optional(),
   // #2437-1: Postgres xmin optimistic-concurrency token (uint). Optional during rollout.
   xmin: z.number().int().nonnegative().optional(),
+  // #2437-2: current share token (null when not shared). Creator-only meaningful.
+  shareToken: z.string().nullable().optional(),
 });
 export type PlayRecordDto = z.infer<typeof PlayRecordDtoSchema>;
 

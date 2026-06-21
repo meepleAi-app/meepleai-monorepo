@@ -8,6 +8,7 @@ namespace Api.BoundedContexts.GameManagement.Application.DTOs.PlayRecords;
 /// Issue #1663: Phase 1 – WinnerPlayerIds and OutcomeType computed on read.
 /// Issue #2436 PR-C: Photos (presigned read-path) added as last parameter.
 /// Issue #2437-1: Xmin concurrency token exposed so clients can round-trip it on update.
+/// Issue #2437-2: ShareToken exposed so the authenticated detail view can show/revoke the link.
 /// </summary>
 public record PlayRecordDto(
     Guid Id,
@@ -29,7 +30,8 @@ public record PlayRecordDto(
     IReadOnlyList<Guid> WinnerPlayerIds,
     string OutcomeType,
     IReadOnlyList<PlayRecordPhotoDto> Photos,
-    uint Xmin
+    uint Xmin,
+    string? ShareToken
 );
 
 /// <summary>

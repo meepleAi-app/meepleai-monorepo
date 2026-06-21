@@ -16,6 +16,7 @@ import type {
   AddPlayerRequest,
   RecordScoreRequest,
   UpdatePlayRecordRequest,
+  ShareLinkResponse,
 } from '@/lib/api/schemas/play-records.schemas';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
@@ -272,5 +273,55 @@ export const playRecordsApi = {
       const error = await res.json().catch(() => ({ message: 'Failed to delete record' }));
       throw new Error(error.message || 'Failed to delete record');
     }
+  },
+
+  // ========== Share Token (#2437-2) ==========
+
+  /**
+   * Generate (or rotate) a share token for a play record.
+   * Creator-only. Returns { shareToken, shareUrl }.
+   */
+  async generateShareToken(recordId: string): Promise<ShareLinkResponse> {
+    const res = await fetch(`${BASE_URL}/${recordId}/share`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({ message: 'Failed to generate share link' }));
+      throw new Error(e.message || e.error || 'Failed to generate share link');
+    }
+    return res.json();
+  },
+
+  /**
+   * Revoke the share token for a play record (DELETE).
+   * Creator-only. Returns 204 No Content on success.
+   */
+  async revokeShareToken(recordId: string): Promise<void> {
+    const res = await fetch(`${BASE_URL}/${recordId}/share`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({ message: 'Failed to revoke share link' }));
+      throw new Error(e.message || e.error || 'Failed to revoke share link');
+    }
+  },
+
+  /**
+   * Fetch a publicly shared play record by its share token (no auth required).
+   * Returns 404 when the token is invalid or the record is unshared.
+   */
+  async getSharedRecord(token: string): Promise<PlayRecordDto> {
+    // Public endpoint (AllowAnonymous): NO credentials — sending them forces a credentialed
+    // CORS preflight that anonymous cross-origin visitors (the core share-link use-case)
+    // can't satisfy. #2437-2.
+    const res = await fetch(`${BASE_URL}/shared/${token}`);
+    if (!res.ok) {
+      if (res.status === 404) throw new Error('Shared play record not found');
+      const e = await res.json().catch(() => ({ message: 'Failed to load shared record' }));
+      throw new Error(e.message || 'Failed to load shared record');
+    }
+    return res.json();
   },
 };

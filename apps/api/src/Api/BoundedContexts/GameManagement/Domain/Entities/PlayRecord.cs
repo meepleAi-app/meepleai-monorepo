@@ -31,6 +31,10 @@ internal sealed class PlayRecord : AggregateRoot<Guid>
     public string? Notes { get; private set; }
     public string? Location { get; private set; }
 
+    // Share token (#2437-2, GameNightPlaylist pattern)
+    public string? ShareToken { get; private set; }
+    public bool IsShared { get; private set; }
+
     // Players & Scoring
     private readonly List<RecordPlayer> _players = new();
     public IReadOnlyList<RecordPlayer> Players => _players.AsReadOnly();
@@ -52,6 +56,31 @@ internal sealed class PlayRecord : AggregateRoot<Guid>
 
     /// <summary>Repository-only: restore the xmin token after loading from persistence.</summary>
     internal void SetXmin(uint xmin) => Xmin = xmin;
+
+    /// <summary>Generates a URL-safe share token for public read access (#2437-2, GameNightPlaylist pattern).</summary>
+    public string GenerateShareToken()
+    {
+        ShareToken = Convert.ToBase64String(Guid.NewGuid().ToByteArray())
+            .Replace("/", "_").Replace("+", "-").TrimEnd('=');
+        IsShared = true;
+        UpdatedAt = TimeProvider.System.GetUtcNow().UtcDateTime;
+        return ShareToken;
+    }
+
+    /// <summary>Revokes the share token, disabling public access.</summary>
+    public void RevokeShareToken()
+    {
+        ShareToken = null;
+        IsShared = false;
+        UpdatedAt = TimeProvider.System.GetUtcNow().UtcDateTime;
+    }
+
+    /// <summary>Repository-only: restore share state after loading from persistence.</summary>
+    internal void SetShareState(string? shareToken, bool isShared)
+    {
+        ShareToken = shareToken;
+        IsShared = isShared;
+    }
 
     // Soft Delete (issue #2439 — mirrors GameBook.SoftDelete pattern)
     public bool IsDeleted { get; private set; }

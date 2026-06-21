@@ -1,0 +1,76 @@
+name: Release-gate Revert Metrics Check (Phase 2b)
+
+# Phase 2b (#1445) — weekly AC-7 breach detector.
+# Reads JSONL state branch + invokes reconcile-revert-outcomes.mjs --metrics-only.
+# If false-revert rate > 2% over 30d → auto-creates P0 issue.
+#
+# Spec: docs/superpowers/specs/2026-06-21-issue-1445-release-gate-auto-revert-phase-2b-design.md
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"       # Lunedì 09:00 UTC (post-reconcile 07 UTC + post-digest 08 UTC)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    name: AC-7 breach check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa
+        with:
+          version: 9
+
+      - name: Install release-gate deps
+        working-directory: scripts/release-gate
+        run: pnpm install --frozen-lockfile
+
+      - name: Run --metrics-only
+        id: metrics
+        working-directory: scripts/release-gate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          OUTPUT=$(node reconcile-revert-outcomes.mjs --metrics-only)
+          echo "metrics=$OUTPUT" >> "$GITHUB_OUTPUT"
+          echo "$OUTPUT" | jq .
+
+      - name: Open issue on breach
+        if: fromJSON(steps.metrics.outputs.metrics).breach == true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RATE=$(echo '${{ steps.metrics.outputs.metrics }}' | jq -r .false_revert_rate)
+          gh issue create \
+            --title "🚨 Phase 2b false-revert rate breach — ${RATE}" \
+            --label "release-gate,phase2b,breach,blocker" \
+            --body "$(cat <<EOF
+          AC-7 breached: \`false_revert_rate=${RATE}\` > 0.02 (2%) over 30d rolling window.
+
+          **Required action**:
+          1. Review JSONL events on branch \`release-gate-state/auto-revert-events\`
+          2. Decide: (a) Flip \`bot.phase2b.enabled: false\` in \`.github/release-gates.yml\` (emergency stop), OR (b) investigate each false_positive event and improve detection logic before next run.
+
+          Metrics snapshot:
+          \`\`\`json
+          ${{ steps.metrics.outputs.metrics }}
+          \`\`\`
+
+          🤖 Auto-created by [release-gate-revert-metrics-check.yml](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          EOF
+          )"

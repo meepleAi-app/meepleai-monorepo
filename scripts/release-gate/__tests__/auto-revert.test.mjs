@@ -158,3 +158,45 @@ describe("noop_no_blockers + AC-12 pre-existing filter", () => {
     expect(result.blockerCheck.name).toBe("Backend - Unit Tests");
   });
 });
+
+describe("B5 — idempotency check via findActiveRevert", () => {
+  it("returns noop_idempotent (no event emitted) when active revert_opened exists for (mergeSha, blocker)", () => {
+    const existingOpened = {
+      schemaVersion: 1,
+      eventId: "x",
+      eventType: "revert_opened",
+      timestamp: "2026-06-23T08:00:00Z",
+      runUrl: "url",
+      mode: "live",
+      originalPr: 1234,
+      revertPr: 9999,
+      mergeSha: "abc12345",
+      blockerCheck: { name: BLOCKER.name, conclusion: "failure", checkRunUrl: "...", classifiedAt: "..." },
+      decisionRationale: {},
+      outcome: "true_positive_pending",
+    };
+    const result = decideRevertAction(baseInput({ jsonlEvents: [existingOpened] }));
+    expect(result.action).toBe("noop_idempotent");
+    expect(result.existingRevertPr).toBe(9999);
+  });
+
+  it("proceeds with open_revert when previous revert was aborted_at_merge (lock released)", () => {
+    const opened = {
+      schemaVersion: 1,
+      eventId: "x",
+      eventType: "revert_opened",
+      timestamp: "2026-06-23T08:00:00Z",
+      runUrl: "url",
+      mode: "live",
+      originalPr: 1234,
+      revertPr: 9999,
+      mergeSha: "abc12345",
+      blockerCheck: { name: BLOCKER.name, conclusion: "failure", checkRunUrl: "...", classifiedAt: "..." },
+      decisionRationale: {},
+      outcome: "true_positive_pending",
+    };
+    const abortedAtMerge = { ...opened, eventId: "y", eventType: "revert_aborted_at_merge", timestamp: "2026-06-23T08:05:00Z", outcome: "aborted_fix_forward_race" };
+    const result = decideRevertAction(baseInput({ jsonlEvents: [opened, abortedAtMerge] }));
+    expect(result.action).toBe("open_revert");
+  });
+});

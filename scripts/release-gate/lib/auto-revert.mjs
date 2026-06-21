@@ -6,6 +6,8 @@
 //
 // Tested by __tests__/auto-revert.test.mjs.
 
+import { findActiveRevert } from "./auto-revert-events.mjs";
+
 export const COOLDOWN_MS_DEFAULT = 15 * 60 * 1000; // 900_000
 
 /**
@@ -99,11 +101,18 @@ export function decideRevertAction(input) {
     };
   }
 
+  // [8] B5 — idempotency check (findActiveRevert imported from auto-revert-events.mjs)
+  const targetBlocker = newBlockers[0];
+  const activeRevert = findActiveRevert(input.jsonlEvents, input.latestMergedRelease.mergeSha, targetBlocker.name);
+  if (activeRevert) {
+    return { action: "noop_idempotent", existingRevertPr: activeRevert.revertPr };
+  }
+
   // [10] DECISION: open_revert
   return {
     action: "open_revert",
     mergeSha: input.latestMergedRelease.mergeSha,
-    blockerCheck: newBlockers[0],
+    blockerCheck: targetBlocker,
     rationale: { newBlockerCount: newBlockers.length, allNewBlockers: newBlockers.map(b => b.name) },
   };
 }

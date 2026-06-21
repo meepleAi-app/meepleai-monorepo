@@ -15,6 +15,7 @@ import type {
   AddPlayerRequest,
   RecordScoreRequest,
   UpdatePlayRecordRequest,
+  ShareLinkResponse,
 } from '@/lib/api/schemas/play-records.schemas';
 
 // ========== Types ==========
@@ -38,6 +39,8 @@ export const playRecordsKeys = {
   statisticsAll: () => [...playRecordsKeys.all, 'statistics'] as const,
   statistics: (range?: StatsRange) =>
     [...playRecordsKeys.statisticsAll(), range?.startDate ?? null, range?.endDate ?? null] as const,
+  // #2437-2: public shared-record query (no auth required)
+  shared: (token: string) => [...playRecordsKeys.all, 'shared', token] as const,
 };
 
 // ========== Queries ==========
@@ -255,5 +258,50 @@ export function useDeleteRecord(recordId: string) {
       queryClient.invalidateQueries({ queryKey: playRecordsKeys.lists() });
       queryClient.invalidateQueries({ queryKey: playRecordsKeys.statisticsAll() });
     },
+  });
+}
+
+// ========== Share Token Hooks (#2437-2) ==========
+
+/**
+ * Generate (or rotate) a share token for a play record.
+ * Creator-only. Invalidates the detail cache so shareToken is refreshed.
+ */
+export function useGeneratePlayRecordShareToken(recordId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation<ShareLinkResponse, Error>({
+    mutationFn: () => playRecordsApi.generateShareToken(recordId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: playRecordsKeys.detail(recordId) });
+    },
+  });
+}
+
+/**
+ * Revoke the share token for a play record.
+ * Creator-only. Invalidates the detail cache so shareToken clears.
+ */
+export function useRevokePlayRecordShareToken(recordId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error>({
+    mutationFn: () => playRecordsApi.revokeShareToken(recordId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: playRecordsKeys.detail(recordId) });
+    },
+  });
+}
+
+/**
+ * Fetch a publicly shared play record by its share token (no auth required).
+ * Disabled when token is empty. retry: false — 404 is a terminal state.
+ */
+export function useSharedPlayRecord(token: string) {
+  return useQuery<PlayRecordDto, Error>({
+    queryKey: playRecordsKeys.shared(token),
+    queryFn: () => playRecordsApi.getSharedRecord(token),
+    enabled: !!token,
+    retry: false,
   });
 }

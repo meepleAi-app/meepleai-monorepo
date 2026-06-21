@@ -289,6 +289,13 @@ export const playRecordsEditMessages = {
   'a11y.focusSessionDate': 'Focus iniziale sul campo data',
   'a11y.ariaReadonly': 'Questo campo non è modificabile',
 
+  // Conflict dialog (#2437-1)
+  'conflict.title': 'Modifica concorrente',
+  'conflict.description':
+    'Qualcuno ha modificato questa partita mentre la stavi modificando. Ricarica i dati aggiornati o sovrascrivi con le tue modifiche.',
+  'conflict.reload': 'Ricarica',
+  'conflict.overwrite': 'Sovrascrivi comunque',
+
   // Actions
   'actions.save': 'Salva modifiche',
   'actions.saving': 'Salvataggio…',

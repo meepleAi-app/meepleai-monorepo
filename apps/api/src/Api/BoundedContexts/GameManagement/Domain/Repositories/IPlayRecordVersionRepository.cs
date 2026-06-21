@@ -35,4 +35,13 @@ internal interface IPlayRecordVersionRepository
     /// Does not call SaveChanges — the UnitOfWork saves.
     /// </summary>
     Task PruneOldestAsync(Guid playRecordId, int keep, CancellationToken ct = default);
+
+    /// <summary>
+    /// Re-assigns the version number of a tracked (but not yet committed) version entity
+    /// to the next available number. Used by the concurrency-retry loop in command handlers
+    /// when a <c>UX_play_record_versions_record_version</c> unique violation is detected.
+    /// Reads the current MAX and sets the tracked entity's <c>VersionNumber</c> to MAX+1.
+    /// Does not call SaveChanges — the caller retries the save.
+    /// </summary>
+    Task ReassignVersionNumberAsync(Guid playRecordId, Guid versionId, CancellationToken ct = default);
 }

@@ -5,6 +5,7 @@ using Api.Infrastructure.Entities.GameManagement;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 
@@ -80,6 +81,52 @@ internal sealed class PlayRecordVersionRepository : RepositoryBase, IPlayRecordV
             DbContext.PlayRecordVersions.RemoveRange(toDelete);
         }
     }
+
+    /// <inheritdoc />
+    public async Task ReassignVersionNumberAsync(Guid playRecordId, Guid versionId, CancellationToken ct = default)
+    {
+        // Re-read the current MAX to get the next safe version number.
+        var maxVersion = await DbContext.PlayRecordVersions
+            .Where(v => v.PlayRecordId == playRecordId)
+            .MaxAsync(v => (int?)v.VersionNumber, ct)
+            .ConfigureAwait(false);
+
+        var newVersionNumber = (maxVersion ?? 0) + 1;
+
+        // Update the already-tracked (Added) entity in the change tracker so the
+        // next SaveChangesAsync will use the newly computed VersionNumber.
+        var trackedEntry = DbContext.ChangeTracker
+            .Entries<PlayRecordVersionEntity>()
+            .FirstOrDefault(e => e.Entity.Id == versionId);
+
+        if (trackedEntry is not null)
+        {
+            trackedEntry.Entity.VersionNumber = newVersionNumber;
+        }
+    }
+
+    // ========================================================================
+    // Conflict detection
+    // ========================================================================
+
+    /// <summary>
+    /// Returns <c>true</c> when <paramref name="ex"/> wraps a PostgreSQL unique-violation
+    /// on the <c>UX_play_record_versions_record_version</c> index — the signal that two
+    /// concurrent saves computed the same MAX+1 version number for the same record.
+    /// Delegates to the testable overload so tests can probe the predicate without
+    /// constructing a real <see cref="PostgresException"/>.
+    /// </summary>
+    internal static bool IsVersionNumberConflict(DbUpdateException ex) =>
+        ex.InnerException is PostgresException pgEx
+        && IsVersionNumberConflict(pgEx.SqlState, pgEx.ConstraintName);
+
+    /// <summary>
+    /// Testable inner predicate — checks SQLSTATE 23505 + the specific constraint name.
+    /// Mirrors the split used by <c>NotificationDedupePipelineBehavior.IsNotificationDedupViolation</c>.
+    /// </summary>
+    internal static bool IsVersionNumberConflict(string? sqlState, string? constraintName) =>
+        string.Equals(sqlState, "23505", StringComparison.Ordinal)
+        && string.Equals(constraintName, "UX_play_record_versions_record_version", StringComparison.Ordinal);
 
     // ========================================================================
     // Mapping

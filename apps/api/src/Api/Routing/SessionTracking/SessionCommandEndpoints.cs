@@ -84,6 +84,17 @@ internal static class SessionCommandEndpoints
         .Produces(404);
     }
 
+    // RFC 8594 deprecation metadata for the legacy PUT /scores endpoint (#2433).
+    // Deprecation: the date this endpoint was marked deprecated (this PR's intended
+    //              merge date — locked at code authoring time so the wire format is
+    //              a static HTTP-date, per RFC 8594 §2 + RFC 7231 §7.1.1.1).
+    // Sunset:      the planned removal date (Deprecation + 30 days), so consumers
+    //              have a machine-readable cutoff (RFC 8594 §4).
+    // The values stay valid even if the merge slips by a day — the headers are an
+    // advance warning, not a hard contract.
+    private const string DeprecationDate = "Sun, 21 Jun 2026 00:00:00 GMT";
+    private const string SunsetDate = "Tue, 21 Jul 2026 00:00:00 GMT";
+
     private static async Task<IResult> HandleUpdateScoreLegacy(
         Guid sessionId,
         UpdateScoreCommand command,
@@ -97,15 +108,19 @@ internal static class SessionCommandEndpoints
             return Results.BadRequest(new { error = "Session ID mismatch" });
         }
 
-        // RFC 8594: signal deprecation to clients without enforcing a hard sunset.
-        // The Link header points at the successor endpoint so HATEOAS-aware clients
-        // can auto-discover the migration target.
-        response.Headers.Append("Deprecation", "true");
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        // RFC 8594 deprecation signalling — set AFTER the command succeeds so the
+        // headers do not leak onto error responses produced by exception middleware.
+        // - Deprecation: when the deprecation started (HTTP-date per RFC 8594 §2).
+        // - Sunset:      when the endpoint is scheduled for removal (RFC 8594 §4).
+        // - Link:        successor endpoint, for HATEOAS-aware auto-discovery.
+        response.Headers.Append("Deprecation", DeprecationDate);
+        response.Headers.Append("Sunset", SunsetDate);
         response.Headers.Append(
             "Link",
             $"</api/v1/game-sessions/{sessionId}/scores-polymorphic>; rel=\"successor-version\"");
 
-        var result = await mediator.Send(command, ct).ConfigureAwait(false);
         return Results.Ok(result);
     }
 

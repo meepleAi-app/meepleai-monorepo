@@ -70,3 +70,40 @@ scripts/release-gate/
 | `GITHUB_STEP_SUMMARY` | no | Auto-set by GH Actions runner |
 | `DRY_RUN` | no | If `1`, print to stdout, no API calls |
 | `DRY_RUN_FAILURES` | no | Comma-separated check names for dry-run sample |
+
+## Phase 2b — Auto-Revert (#1445)
+
+### Files (new)
+
+| Path | Type |
+|---|---|
+| `lib/auto-revert.mjs` | Pure decision function (no I/O) |
+| `lib/auto-revert-events.mjs` | Pure JSONL helpers + reconciler |
+| `run-auto-revert.mjs` | CLI imperative shell — decision tick |
+| `reconcile-revert-outcomes.mjs` | CLI imperative shell — weekly reconciler |
+| `__tests__/auto-revert.test.mjs` | Unit (22 tests) |
+| `__tests__/auto-revert-events.test.mjs` | Unit (13 tests) |
+| `__tests__/reconcile-outcomes.test.mjs` | Unit (9 tests, includes mergedAt ISO normalization) |
+| `__tests__/integration-auto-revert.test.mjs` | Integration (5 tests) |
+| `__tests__/integration-reconcile.test.mjs` | Integration (3 tests) |
+
+### Side branch
+
+`release-gate-state/auto-revert-events` — JSONL event log durabile, ~2KB/anno.
+
+### CLI invocations
+
+```bash
+node run-auto-revert.mjs                  # decision tick (env: GITHUB_TOKEN, ...)
+node reconcile-revert-outcomes.mjs        # weekly reconcile + write events
+node reconcile-revert-outcomes.mjs --report-only    # maturity report (no writes)
+node reconcile-revert-outcomes.mjs --metrics-only   # AC-7 rate JSON (no writes)
+```
+
+### Operator runbook
+
+See `docs/for-developers/operations/release-gate-bot.md` § Phase 2b.
+
+### Spec
+
+`docs/superpowers/specs/2026-06-21-issue-1445-release-gate-auto-revert-phase-2b-design.md`

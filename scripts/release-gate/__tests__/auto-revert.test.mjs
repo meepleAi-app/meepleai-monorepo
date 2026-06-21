@@ -80,3 +80,28 @@ describe("AC-8 — cascade prevention (two-key check)", () => {
     expect(result.action).toBe("open_revert");
   });
 });
+
+describe("AC-1 — cooldown enforcement", () => {
+  it("aborts when cooldown not elapsed (10min)", () => {
+    const result = decideRevertAction(baseInput({
+      now: new Date(MERGE_TIME.getTime() + 10 * 60 * 1000),
+    }));
+    expect(result.action).toBe("abort");
+    expect(result.reason).toBe("cooldown_not_elapsed");
+  });
+
+  it("proceeds exactly at boundary (15:00)", () => {
+    const result = decideRevertAction(baseInput({
+      now: new Date(MERGE_TIME.getTime() + 15 * 60 * 1000),
+    }));
+    expect(result.action).toBe("open_revert");
+  });
+
+  it("aborts just before boundary (14:59)", () => {
+    const result = decideRevertAction(baseInput({
+      now: new Date(MERGE_TIME.getTime() + 14 * 60 * 1000 + 59 * 1000),
+    }));
+    expect(result.action).toBe("abort");
+    expect(result.reason).toBe("cooldown_not_elapsed");
+  });
+});

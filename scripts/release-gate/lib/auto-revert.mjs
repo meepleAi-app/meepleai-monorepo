@@ -49,6 +49,16 @@ export function decideRevertAction(input) {
     };
   }
 
+  // [4] AC-1 — cooldown elapsed
+  const elapsedMs = input.now.getTime() - input.latestMergedRelease.mergeTime.getTime();
+  if (elapsedMs < input.cooldownMs) {
+    return {
+      action: "abort",
+      reason: "cooldown_not_elapsed",
+      rationale: { elapsedMs, cooldownMs: input.cooldownMs },
+    };
+  }
+
   // Step [10] DECISION: open_revert (placeholder until subsequent tasks add steps [4]-[9])
   return {
     action: "open_revert",

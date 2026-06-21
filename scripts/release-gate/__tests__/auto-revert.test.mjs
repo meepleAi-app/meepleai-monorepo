@@ -105,3 +105,22 @@ describe("AC-1 — cooldown enforcement", () => {
     expect(result.reason).toBe("cooldown_not_elapsed");
   });
 });
+
+describe("AC-2 — SHA pin (staleness)", () => {
+  it("aborts when currentHeadSha differs from latestMergedRelease.mergeSha", () => {
+    const result = decideRevertAction(baseInput({
+      currentHeadSha: "def67890", // different from "abc12345"
+    }));
+    expect(result.action).toBe("abort");
+    expect(result.reason).toBe("sha_moved_staleness");
+    expect(result.rationale.currentHeadSha).toBe("def67890");
+    expect(result.rationale.expectedSha).toBe("abc12345");
+  });
+
+  it("proceeds when currentHeadSha matches mergeSha", () => {
+    const result = decideRevertAction(baseInput({
+      currentHeadSha: "abc12345",
+    }));
+    expect(result.action).toBe("open_revert");
+  });
+});

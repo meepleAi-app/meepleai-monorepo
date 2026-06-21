@@ -59,6 +59,18 @@ export function decideRevertAction(input) {
     };
   }
 
+  // [5] AC-2 — SHA pin (HEAD must still equal mergeSha at decision time)
+  if (input.currentHeadSha !== input.latestMergedRelease.mergeSha) {
+    return {
+      action: "abort",
+      reason: "sha_moved_staleness",
+      rationale: {
+        currentHeadSha: input.currentHeadSha,
+        expectedSha: input.latestMergedRelease.mergeSha,
+      },
+    };
+  }
+
   // Step [10] DECISION: open_revert (placeholder until subsequent tasks add steps [4]-[9])
   return {
     action: "open_revert",

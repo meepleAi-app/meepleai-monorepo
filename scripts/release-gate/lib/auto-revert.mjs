@@ -35,7 +35,25 @@ export function decideRevertAction(input) {
     return { action: "abort", reason: "kill_switch_active" };
   }
 
-  // Placeholder return — replaced by steps [2]-[10] across Tasks 9-15 (TDD incremental).
-  // Current skeleton scope: ONLY step [1] kill switch.
-  return { action: "noop_no_blockers" };
+  // Step [2] No recent merged release PR
+  if (!input.latestMergedRelease) {
+    return { action: "noop_no_recent_merge" };
+  }
+
+  // Step [3] AC-8 cascade prevention (two-key check applied upstream by caller; we honor the flag)
+  if (input.latestMergedRelease.isAutoRevertPr) {
+    return {
+      action: "abort",
+      reason: "cascade_prevented",
+      rationale: { originalPr: input.latestMergedRelease.prNumber, mergeSha: input.latestMergedRelease.mergeSha },
+    };
+  }
+
+  // Step [10] DECISION: open_revert (placeholder until subsequent tasks add steps [4]-[9])
+  return {
+    action: "open_revert",
+    mergeSha: input.latestMergedRelease.mergeSha,
+    blockerCheck: input.blockers[0] ?? null,
+    rationale: {},
+  };
 }

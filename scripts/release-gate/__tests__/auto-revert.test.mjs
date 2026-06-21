@@ -56,3 +56,27 @@ describe("AC-4 — kill switch", () => {
     expect(result.reason).toBe("kill_switch_active");
   });
 });
+
+describe("no recent merge", () => {
+  it("returns noop_no_recent_merge when latestMergedRelease is null", () => {
+    const result = decideRevertAction(baseInput({ latestMergedRelease: null }));
+    expect(result.action).toBe("noop_no_recent_merge");
+  });
+});
+
+describe("AC-8 — cascade prevention (two-key check)", () => {
+  it("returns abort+cascade_prevented when latest PR isAutoRevertPr=true (title prefix + body link)", () => {
+    const result = decideRevertAction(baseInput({
+      latestMergedRelease: { ...LATEST_MERGED_RELEASE, isAutoRevertPr: true },
+    }));
+    expect(result.action).toBe("abort");
+    expect(result.reason).toBe("cascade_prevented");
+  });
+
+  it("proceeds normally when isAutoRevertPr=false (single-key insufficient handled upstream)", () => {
+    const result = decideRevertAction(baseInput({
+      latestMergedRelease: { ...LATEST_MERGED_RELEASE, isAutoRevertPr: false },
+    }));
+    expect(result.action).toBe("open_revert");
+  });
+});

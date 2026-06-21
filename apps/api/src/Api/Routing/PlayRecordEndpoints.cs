@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Application.Commands.PlayRecords;
 using Api.BoundedContexts.GameManagement.Application.DTOs.PlayRecords;
 using Api.BoundedContexts.GameManagement.Application.Queries.PlayRecords;
 using ShareLinkResponse = Api.BoundedContexts.GameManagement.Application.DTOs.PlayRecords.ShareLinkResponse;
+using PlayRecordVersionDto = Api.BoundedContexts.GameManagement.Application.DTOs.PlayRecords.PlayRecordVersionDto;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Extensions;
 using MediatR;
@@ -112,6 +113,11 @@ internal static class PlayRecordEndpoints
             .WithTags("PlayRecords")
             .WithSummary("Revoke the share link (creator-only)");
 
+        group.MapPost("/play-records/{recordId:guid}/restore/{versionNumber:int}", HandleRestoreVersion)
+            .RequireAuthenticatedUser()
+            .Produces(204).Produces(401).Produces(StatusCodes.Status403Forbidden).Produces(404)
+            .WithTags("PlayRecords").WithSummary("Restore a play record to a previous version (creator-only)");
+
         // Public (anonymous) query — must be registered BEFORE the authenticated /{recordId} route
         // to avoid the router matching "shared" as a Guid and routing to HandleGetPlayRecord.
         group.MapGet("/play-records/shared/{token}", HandleGetSharedPlayRecord)
@@ -121,6 +127,11 @@ internal static class PlayRecordEndpoints
             .WithSummary("Get a shared play record by token (public, no auth)");
 
         // Queries
+        group.MapGet("/play-records/{recordId:guid}/versions", HandleGetVersions)
+            .RequireAuthenticatedUser()
+            .Produces<IReadOnlyList<PlayRecordVersionDto>>(200).Produces(401).Produces(StatusCodes.Status403Forbidden)
+            .WithTags("PlayRecords").WithSummary("Get a play record's version history (creator-only, last 5)");
+
         group.MapGet("/play-records/{recordId}", HandleGetPlayRecord)
             .RequireAuthenticatedUser()
             .Produces<PlayRecordDto>(200)
@@ -294,9 +305,34 @@ internal static class PlayRecordEndpoints
         return Results.NoContent();
     }
 
+    private static async Task<IResult> HandleRestoreVersion(
+        Guid recordId,
+        int versionNumber,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        await mediator.Send(
+            new RestorePlayRecordVersionCommand(recordId, versionNumber, httpContext.User.GetUserId()),
+            cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
     #endregion
 
     #region Query Handlers
+
+    private static async Task<IResult> HandleGetVersions(
+        Guid recordId,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(
+            new GetPlayRecordVersionsQuery(recordId, httpContext.User.GetUserId()),
+            cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
 
     private static async Task<IResult> HandleGetSharedPlayRecord(
         string token,

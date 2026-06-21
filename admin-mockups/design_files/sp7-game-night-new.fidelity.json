@@ -24,8 +24,8 @@
     ],
     "designer_approved_by": "user@meepleAi (self-waiver P250, single-person team)",
     "designer_approved_on": "2026-06-15",
-    "story_path": "apps/web/src/app/(authenticated)/game-nights/new/game-night-create.stories.tsx",
-    "fixtures_path": "apps/web/src/__tests__/fixtures/mockup-pilots/sp6-7-nano/sp7-game-night-create.ts",
+    "story_path": "apps/web/src/app/(authenticated)/game-nights/new/game-night-new.stories.tsx",
+    "fixtures_path": "apps/web/src/__tests__/fixtures/mockup-pilots/sp6-7-nano/sp7-game-night-new.ts",
     "design_intent": "current",
     "viewports": [
       "desktop"

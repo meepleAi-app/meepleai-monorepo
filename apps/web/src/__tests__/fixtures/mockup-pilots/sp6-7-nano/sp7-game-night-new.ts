@@ -1,19 +1,19 @@
 /**
- * Game Night Create page-mock fixtures (DS-17 Phase C-1 — argTypes matrix pattern).
+ * Game Night New page-mock fixtures (DS-17 Phase C-1 — argTypes matrix pattern).
  *
- * Consumed by `sp7-game-night-create` cluster Storybook story con axis matrix:
+ * Consumed by `sp7-game-night-new` cluster Storybook story con axis matrix:
  *   step:    1 | 2 | 3 | 4
  *   variant: 'default' | 'conflict' | 'submitting' | 'error'
  *
- * Stage axis discovery: grep `STATES = [` in sp7-game-night-create.jsx
+ * Stage axis discovery: grep `STATES = [` in sp7-game-night-new.jsx
  * (config array lines 1475-1484: 8 mobile state + 1 mobile overview + 1 desktop).
  *
  * Refs: spec docs/superpowers/specs/2026-06-11-ds-17-11-sp6-7-nano-cluster-design.md,
- *       umbrella #2063, sub-issue #2166.
+ *       umbrella #2063, sub-issue #2166, follow-up #2366 (FE rename).
  *
- * NOTE: this is a SCAFFOLD draft. Move to
- *   apps/web/src/__tests__/fixtures/mockup-pilots/sp6-7-nano/sp7-game-night-create.ts
- * when wiring into the Storybook tree.
+ * NOTE: this is a SCAFFOLD draft. Co-located with the story under
+ *   apps/web/src/__tests__/fixtures/mockup-pilots/sp6-7-nano/sp7-game-night-new.ts
+ * for the Storybook tree.
  */
 
 import { http, HttpResponse } from 'msw';

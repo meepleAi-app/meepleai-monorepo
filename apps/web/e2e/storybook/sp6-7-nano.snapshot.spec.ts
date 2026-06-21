@@ -13,49 +13,49 @@
 import { test, expect } from '@playwright/test';
 
 const FRAMES = [
-  // sp7-game-night-create (10 Frame + 2 State = 12 stories)
+  // sp7-game-night-new (10 Frame + 2 State = 12 stories)
   {
-    slug: 'pages-sp7-game-night-create--frame-01-step-1-quando',
-    file: 'game-night-create-01-step-1-quando.png',
+    slug: 'pages-sp7-game-night-new--frame-01-step-1-quando',
+    file: 'game-night-new-01-step-1-quando.png',
   },
   {
-    slug: 'pages-sp7-game-night-create--frame-02-step-1-warning',
-    file: 'game-night-create-02-step-1-warning.png',
+    slug: 'pages-sp7-game-night-new--frame-02-step-1-warning',
+    file: 'game-night-new-02-step-1-warning.png',
   },
   {
-    slug: 'pages-sp7-game-night-create--frame-03-step-2-location',
-    file: 'game-night-create-03-step-2-location.png',
+    slug: 'pages-sp7-game-night-new--frame-03-step-2-location',
+    file: 'game-night-new-03-step-2-location.png',
   },
   {
-    slug: 'pages-sp7-game-night-create--frame-04-step-3-empty',
-    file: 'game-night-create-04-step-3-empty.png',
+    slug: 'pages-sp7-game-night-new--frame-04-step-3-empty',
+    file: 'game-night-new-04-step-3-empty.png',
   },
   {
-    slug: 'pages-sp7-game-night-create--frame-05-step-3-typing',
-    file: 'game-night-create-05-step-3-typing.png',
+    slug: 'pages-sp7-game-night-new--frame-05-step-3-typing',
+    file: 'game-night-new-05-step-3-typing.png',
   },
   {
-    slug: 'pages-sp7-game-night-create--frame-06-step-3-filled',
-    file: 'game-night-create-06-step-3-filled.png',
+    slug: 'pages-sp7-game-night-new--frame-06-step-3-filled',
+    file: 'game-night-new-06-step-3-filled.png',
   },
   {
-    slug: 'pages-sp7-game-night-create--frame-07-step-4-games',
-    file: 'game-night-create-07-step-4-games.png',
+    slug: 'pages-sp7-game-night-new--frame-07-step-4-games',
+    file: 'game-night-new-07-step-4-games.png',
   },
   {
-    slug: 'pages-sp7-game-night-create--frame-08-step-4-decide-group',
-    file: 'game-night-create-08-step-4-decide-group.png',
+    slug: 'pages-sp7-game-night-new--frame-08-step-4-decide-group',
+    file: 'game-night-new-08-step-4-decide-group.png',
   },
   {
-    slug: 'pages-sp7-game-night-create--frame-09-mobile-step-flow',
-    file: 'game-night-create-09-mobile-step-flow.png',
+    slug: 'pages-sp7-game-night-new--frame-09-mobile-step-flow',
+    file: 'game-night-new-09-mobile-step-flow.png',
   },
   {
-    slug: 'pages-sp7-game-night-create--frame-10-desktop-split',
-    file: 'game-night-create-10-desktop-split.png',
+    slug: 'pages-sp7-game-night-new--frame-10-desktop-split',
+    file: 'game-night-new-10-desktop-split.png',
   },
-  { slug: 'pages-sp7-game-night-create--loading', file: 'game-night-create-loading.png' },
-  { slug: 'pages-sp7-game-night-create--error-state', file: 'game-night-create-error-state.png' },
+  { slug: 'pages-sp7-game-night-new--loading', file: 'game-night-new-loading.png' },
+  { slug: 'pages-sp7-game-night-new--error-state', file: 'game-night-new-error-state.png' },
 
   // sp7-game-night-detail-rsvp (12 Frame + 2 State = 14 stories)
   {

@@ -305,5 +305,5 @@ node scripts/release-gate/reconcile-revert-outcomes.mjs --report-only
 | Full JSONL event log | `git show release-gate-state/auto-revert-events:state/auto-revert-events.jsonl \| jq -s` |
 | Maturity report (dry-run) | `node scripts/release-gate/reconcile-revert-outcomes.mjs --report-only` |
 | AC-7 rate (JSON) | `node scripts/release-gate/reconcile-revert-outcomes.mjs --metrics-only` |
-| Recent revert PRs | `gh pr list --label auto-revert,phase2b --search "merged:>30d ago"` |
+| Recent revert PRs | `gh pr list --label auto-revert,phase2b --state merged --limit 50` |
 | Workflow logs | `gh run list --workflow=release-gate-auto-revert.yml` |

@@ -95,7 +95,9 @@ async function main() {
   const args = process.argv.slice(2);
   const reportOnly = args.includes("--report-only");
   const metricsOnly = args.includes("--metrics-only");
-  const now = process.env.AUTO_REVERT_TEST_NOW ? new Date(process.env.AUTO_REVERT_TEST_NOW) : new Date();
+  const now = (process.env.AUTO_REVERT_CLOCK_SOURCE === "test" && process.env.AUTO_REVERT_TEST_NOW)
+    ? new Date(process.env.AUTO_REVERT_TEST_NOW)
+    : new Date();
 
   // Switch to state branch
   const originalBranch = gitExec("git rev-parse --abbrev-ref HEAD");

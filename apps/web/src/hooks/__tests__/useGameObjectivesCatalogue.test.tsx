@@ -16,8 +16,10 @@ import {
 
 describe('useGameObjectivesCatalogue', () => {
   it('returns the default catalogue when no gameId is provided', () => {
+    // Use `toEqual` not `toBe` so the contract survives the future swap to a
+    // TanStack Query call that allocates a fresh array on each fetch.
     const { result } = renderHook(() => useGameObjectivesCatalogue(null));
-    expect(result.current).toBe(DEFAULT_OBJECTIVES_CATALOGUE);
+    expect(result.current).toEqual(DEFAULT_OBJECTIVES_CATALOGUE);
   });
 
   it('returns the default catalogue for any gameId (transitional stub)', () => {
@@ -27,7 +29,7 @@ describe('useGameObjectivesCatalogue', () => {
     const { result } = renderHook(() =>
       useGameObjectivesCatalogue('00000000-0000-0000-0000-000000000001')
     );
-    expect(result.current).toBe(DEFAULT_OBJECTIVES_CATALOGUE);
+    expect(result.current).toEqual(DEFAULT_OBJECTIVES_CATALOGUE);
   });
 
   it('returns a readonly array — callers cannot mutate the catalogue', () => {

@@ -37,9 +37,6 @@ export const DEFAULT_OBJECTIVES_CATALOGUE: readonly string[] = [
  * @returns A readonly list of objective labels — stable identity across
  *   re-renders to play well with `useMemo` dependency arrays in callers.
  */
-export function useGameObjectivesCatalogue(
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- preserved for future per-game lookup
-  gameId: string | null | undefined
-): readonly string[] {
+export function useGameObjectivesCatalogue(_gameId: string | null | undefined): readonly string[] {
   return DEFAULT_OBJECTIVES_CATALOGUE;
 }

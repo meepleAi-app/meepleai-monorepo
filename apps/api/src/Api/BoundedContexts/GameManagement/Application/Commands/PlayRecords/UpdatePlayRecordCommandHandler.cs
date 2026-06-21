@@ -10,21 +10,25 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.PlayRecords;
 /// <summary>
 /// Handles updating play record details.
 /// Issue #3889: CQRS commands for play records.
+/// Issue #2437-3: snapshot pre-edit state as a version before mutating, cap to 5 most-recent.
 /// </summary>
 internal class UpdatePlayRecordCommandHandler : ICommandHandler<UpdatePlayRecordCommand>
 {
     private readonly IPlayRecordRepository _recordRepository;
+    private readonly IPlayRecordVersionRepository _versionRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _timeProvider;
     private readonly PlayRecordPermissionChecker _permissionChecker;
 
     public UpdatePlayRecordCommandHandler(
         IPlayRecordRepository recordRepository,
+        IPlayRecordVersionRepository versionRepository,
         IUnitOfWork unitOfWork,
         TimeProvider timeProvider,
         PlayRecordPermissionChecker permissionChecker)
     {
         _recordRepository = recordRepository ?? throw new ArgumentNullException(nameof(recordRepository));
+        _versionRepository = versionRepository ?? throw new ArgumentNullException(nameof(versionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _permissionChecker = permissionChecker ?? throw new ArgumentNullException(nameof(permissionChecker));
@@ -43,6 +47,13 @@ internal class UpdatePlayRecordCommandHandler : ICommandHandler<UpdatePlayRecord
             throw new ForbiddenException("You do not have permission to edit this play record.");
         }
 
+        // #2437-3: snapshot the pre-edit state so this update is restorable.
+        // Captured BEFORE mutating, so each version is a prior state
+        // (the first update captures the initial state, making it undo-able).
+        await PlayRecordVersionSnapshotter.SnapshotCurrentAsync(
+            _versionRepository, record, command.UserId, _timeProvider, cancellationToken)
+            .ConfigureAwait(false);
+
         record.UpdateDetails(
             command.SessionDate,
             command.Notes,
@@ -59,6 +70,13 @@ internal class UpdatePlayRecordCommandHandler : ICommandHandler<UpdatePlayRecord
         }
 
         await _recordRepository.UpdateAsync(record, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Keep only the 5 most-recent versions per record (pruned AFTER the update save
+        // so the new version is never accidentally deleted before it is persisted).
+        await _versionRepository.PruneOldestAsync(
+            command.RecordId, PlayRecordVersionSnapshotter.MaxVersions, cancellationToken)
+            .ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

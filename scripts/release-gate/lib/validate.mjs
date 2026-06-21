@@ -10,6 +10,31 @@ const SEVERITIES = new Set(["blocker", "warning", "informational"]);
 const OWNERS = new Set(["backend-dev", "frontend-dev", "qa", "devops", "unknown"]);
 const OVERRIDE_PATHS = new Set(["fix-forward", "revert", "exception-comment", "baseline-update"]);
 
+// Phase 2b (#1445) — auto-revert config validator.
+// When phase2b is present, both `enabled` and `dry_run_mode` are required
+// (both booleans). Absence of phase2b is OK — runtime default applies.
+function validatePhase2b(gates, errors) {
+  const phase2b = gates.bot?.phase2b;
+  if (!phase2b) return; // not present is OK (default applies in runtime)
+
+  if (typeof phase2b !== "object" || Array.isArray(phase2b)) {
+    errors.push("bot.phase2b: must be an object");
+    return;
+  }
+
+  if (!("enabled" in phase2b)) {
+    errors.push("bot.phase2b.enabled: required key missing");
+  } else if (typeof phase2b.enabled !== "boolean") {
+    errors.push(`bot.phase2b.enabled: must be boolean (got ${typeof phase2b.enabled})`);
+  }
+
+  if (!("dry_run_mode" in phase2b)) {
+    errors.push("bot.phase2b.dry_run_mode: required key missing");
+  } else if (typeof phase2b.dry_run_mode !== "boolean") {
+    errors.push(`bot.phase2b.dry_run_mode: must be boolean (got ${typeof phase2b.dry_run_mode})`);
+  }
+}
+
 export function validateGates(gates) {
   const errors = [];
 
@@ -141,6 +166,8 @@ export function validateGates(gates) {
       }
     }
   }
+
+  validatePhase2b(gates, errors);
 
   return { ok: errors.length === 0, errors };
 }

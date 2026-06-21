@@ -262,6 +262,46 @@ public class GetPlayRecordQueryHandlerTests : IDisposable
     }
 
     [Fact]
+    [Trait("Issue", "2437")]
+    public async Task Handle_WhenIsSharedAndTokenSet_ExposesShareToken()
+    {
+        // Arrange
+        var recordId = Guid.NewGuid();
+        var entity = MakePlayRecord(recordId);
+        entity.Players = new List<RecordPlayerEntity> { MakePlayer(Guid.NewGuid(), recordId, ("wins", 1)) };
+        entity.ShareToken = "tok-abc123";
+        entity.IsShared = true;
+        _context.PlayRecords.Add(entity);
+        await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        // Act
+        var result = await _handler.Handle(new GetPlayRecordQuery(recordId, entity.CreatedByUserId), TestContext.Current.CancellationToken);
+
+        // Assert
+        result.ShareToken.Should().Be("tok-abc123");
+    }
+
+    [Fact]
+    [Trait("Issue", "2437")]
+    public async Task Handle_WhenNotShared_ShareTokenIsNull()
+    {
+        // Arrange — token present on entity but IsShared is false (revoked)
+        var recordId = Guid.NewGuid();
+        var entity = MakePlayRecord(recordId);
+        entity.Players = new List<RecordPlayerEntity> { MakePlayer(Guid.NewGuid(), recordId, ("wins", 1)) };
+        entity.ShareToken = "tok-stale";
+        entity.IsShared = false;
+        _context.PlayRecords.Add(entity);
+        await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        // Act
+        var result = await _handler.Handle(new GetPlayRecordQuery(recordId, entity.CreatedByUserId), TestContext.Current.CancellationToken);
+
+        // Assert — mapper must not expose the stale token when IsShared=false
+        result.ShareToken.Should().BeNull();
+    }
+
+    [Fact]
     [Trait("Issue", "2436")]
     public async Task Handle_RecordWithPhotos_ReturnsPhotosOrderedByUploadedAt()
     {

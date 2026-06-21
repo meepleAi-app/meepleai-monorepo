@@ -112,6 +112,14 @@ internal static class PlayRecordEndpoints
             .WithTags("PlayRecords")
             .WithSummary("Revoke the share link (creator-only)");
 
+        // Public (anonymous) query — must be registered BEFORE the authenticated /{recordId} route
+        // to avoid the router matching "shared" as a Guid and routing to HandleGetPlayRecord.
+        group.MapGet("/play-records/shared/{token}", HandleGetSharedPlayRecord)
+            .AllowAnonymous()
+            .Produces<PlayRecordDto>(200).Produces(404)
+            .WithTags("PlayRecords")
+            .WithSummary("Get a shared play record by token (public, no auth)");
+
         // Queries
         group.MapGet("/play-records/{recordId}", HandleGetPlayRecord)
             .RequireAuthenticatedUser()
@@ -289,6 +297,15 @@ internal static class PlayRecordEndpoints
     #endregion
 
     #region Query Handlers
+
+    private static async Task<IResult> HandleGetSharedPlayRecord(
+        string token,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GetPlayRecordByShareTokenQuery(token), cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
 
     private static async Task<IResult> HandleGetPlayRecord(
         Guid recordId,

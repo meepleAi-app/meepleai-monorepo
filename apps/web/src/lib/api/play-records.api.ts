@@ -17,6 +17,7 @@ import type {
   RecordScoreRequest,
   UpdatePlayRecordRequest,
   ShareLinkResponse,
+  PlayRecordVersion,
 } from '@/lib/api/schemas/play-records.schemas';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
@@ -305,6 +306,36 @@ export const playRecordsApi = {
     if (!res.ok) {
       const e = await res.json().catch(() => ({ message: 'Failed to revoke share link' }));
       throw new Error(e.message || e.error || 'Failed to revoke share link');
+    }
+  },
+
+  // ========== Version History (#2437-3) ==========
+
+  /**
+   * Fetch the last-5 audit versions for a play record (creator-only).
+   * Returns an array ordered DESC by versionNumber.
+   */
+  async getVersions(recordId: string): Promise<PlayRecordVersion[]> {
+    const res = await fetch(`${BASE_URL}/${recordId}/versions`, { credentials: 'include' });
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({ message: 'Failed to load versions' }));
+      throw new Error(e.message || e.error || 'Failed to load versions');
+    }
+    return res.json();
+  },
+
+  /**
+   * Restore a play record to a previous version (creator-only).
+   * Returns 204 No Content on success.
+   */
+  async restoreVersion(recordId: string, versionNumber: number): Promise<void> {
+    const res = await fetch(`${BASE_URL}/${recordId}/restore/${versionNumber}`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({ message: 'Failed to restore version' }));
+      throw new Error(e.message || e.error || 'Failed to restore version');
     }
   },
 

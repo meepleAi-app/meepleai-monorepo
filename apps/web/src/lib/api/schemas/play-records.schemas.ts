@@ -61,6 +61,19 @@ export const PlayRecordPhotoSchema = z.object({
 });
 export type PlayRecordPhoto = z.infer<typeof PlayRecordPhotoSchema>;
 
+// ========== Version History ==========
+
+// #2437-3: a single audit snapshot returned by GET /play-records/{id}/versions
+export const PlayRecordVersionSchema = z.object({
+  versionNumber: z.number().int(),
+  sessionDate: z.string(),
+  notes: z.string().nullable(),
+  location: z.string().nullable(),
+  createdAt: z.string(),
+  createdByUserId: z.string().uuid(),
+});
+export type PlayRecordVersion = z.infer<typeof PlayRecordVersionSchema>;
+
 // ========== Share Link ==========
 
 // #2437-2: response from POST /play-records/{id}/share

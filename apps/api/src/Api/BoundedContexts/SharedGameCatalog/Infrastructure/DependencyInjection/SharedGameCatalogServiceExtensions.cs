@@ -231,12 +231,12 @@ internal static class SharedGameCatalogServiceExtensions
         // the request UoW + repository.
         services.AddScoped<IWikidataCoverEnrichmentRunner, WikidataCoverEnrichmentRunner>();
 
-        // Issue #1823 Phase E F4: in-process SSE pub/sub for live admin
-        // dead-letter row updates. Singleton — the channel registry persists
-        // across requests so subscribers don't lose events between scheduler
-        // ticks. Single-pod assumption per DEC-3e (HPA=1); multi-pod fan-out
-        // would need a Redis/NATS backplane, explicitly out of scope.
-        services.AddSingleton<IWikidataEnrichmentEventBroadcaster, InMemoryWikidataEnrichmentEventBroadcaster>();
+        // Issue #1823 Phase E F4 + Issue #2256: SSE pub/sub for live admin
+        // dead-letter row updates. Default = in-memory (single-pod, ADR DEC-3e).
+        // Setting WIKIDATA_SSE_BACKPLANE=redis switches to the Redis pub/sub
+        // backplane for multi-pod fan-out — the SSE endpoint contract and
+        // publisher (M9 scheduler / M12 trigger) are unchanged.
+        services.AddWikidataEnrichmentEventBroadcaster(configuration);
 
         // Issue #1823 Wave 3 M9: Quartz scheduler for batch Wikidata cover
         // enrichment. Runs every 1 minute (HPA=1 per DEC-3e). [DisallowConcurrentExecution]

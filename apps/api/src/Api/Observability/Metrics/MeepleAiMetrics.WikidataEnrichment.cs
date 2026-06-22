@@ -198,4 +198,135 @@ internal static partial class MeepleAiMetrics
         name: "meepleai.wikidata.quarterly_reverification.reset.total",
         unit: "games",
         description: "Cumulative count of SharedGames reset to NULL by WikidataQuarterlyReVerificationJob (#2055 Phase G AC-G1)");
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Issue #2470 — SSE plane observability (Phase E F4 + #2256 backplane)
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Callback supplied by the hosted gauge binder that resolves the live
+    /// subscriber count from <c>IWikidataEnrichmentEventBroadcaster</c>.
+    /// Null until <see cref="SetWikidataSseSubscribersCallback(Func{int})"/>
+    /// is invoked at host startup; the gauge reports 0 while unbound so a
+    /// missing binder fails open instead of crashing the metric scrape.
+    /// </summary>
+    private static Func<int>? _wikidataSseSubscribersCallback;
+
+    /// <summary>
+    /// Issue #2470 — current SSE subscriber count on this pod. Sourced from
+    /// the broadcaster's <c>SubscriberCount</c> diagnostic via a lazy
+    /// callback set by the hosted binder. Per the issue DEC-A, the
+    /// <c>WikidataSseSubscriberStarvation</c> alert (see
+    /// <c>infra/prometheus/alerts/wikidata-sse.yml</c>) correlates this
+    /// gauge with <see cref="WikidataSseAdminClientsConnected"/> to fire only
+    /// when an admin is actually waiting for live updates.
+    /// </summary>
+    public static readonly ObservableGauge<int> WikidataSseSubscribers = Meter.CreateObservableGauge(
+        name: "meepleai.wikidata.sse.subscribers",
+        observeValue: () =>
+        {
+            try
+            {
+                return _wikidataSseSubscribersCallback?.Invoke() ?? 0;
+            }
+#pragma warning disable CA1031 // Metric scrapes must never throw — degrade to 0.
+            catch
+#pragma warning restore CA1031
+            {
+                return 0;
+            }
+        },
+        unit: "subscribers",
+        description: "Current SSE subscriber count on this pod (#2470)");
+
+    /// <summary>
+    /// Binds the gauge callback. Intended to be called once by
+    /// <c>WikidataSseGaugeBinder</c> at host startup; subsequent calls
+    /// replace the callback atomically (test helpers rely on this to swap
+    /// in deterministic values).
+    /// </summary>
+    public static void SetWikidataSseSubscribersCallback(Func<int> callback)
+    {
+        ArgumentNullException.ThrowIfNull(callback);
+        System.Threading.Interlocked.Exchange(ref _wikidataSseSubscribersCallback, callback);
+    }
+
+    /// <summary>
+    /// Test-only reset of the callback. Production code MUST NOT call this —
+    /// the gauge will revert to reporting 0 until a new callback is set.
+    /// </summary>
+    internal static void ResetWikidataSseSubscribersCallback()
+    {
+        System.Threading.Interlocked.Exchange(ref _wikidataSseSubscribersCallback, null);
+    }
+
+    /// <summary>
+    /// Callback supplied by the hosted gauge binder that resolves the live
+    /// admin-clients-connected count from
+    /// <c>WikidataAdminClientHeartbeatTracker</c>. Same lazy-init semantics
+    /// as <see cref="_wikidataSseSubscribersCallback"/>.
+    /// </summary>
+    private static Func<int>? _wikidataSseAdminClientsConnectedCallback;
+
+    /// <summary>
+    /// Issue #2470 (DEC-C) — count of distinct admin sessions that have
+    /// posted a heartbeat in the last 90 seconds, indicating the admin
+    /// dead-letter page is open and expecting live updates. Used by the
+    /// alert correlation: a starvation alert only fires when an admin is
+    /// actively watching.
+    /// </summary>
+    public static readonly ObservableGauge<int> WikidataSseAdminClientsConnected = Meter.CreateObservableGauge(
+        name: "meepleai.wikidata.sse.admin_clients_connected",
+        observeValue: () =>
+        {
+            try
+            {
+                return _wikidataSseAdminClientsConnectedCallback?.Invoke() ?? 0;
+            }
+#pragma warning disable CA1031
+            catch
+#pragma warning restore CA1031
+            {
+                return 0;
+            }
+        },
+        unit: "clients",
+        description: "Distinct admin sessions heartbeating the SSE dead-letter page in the last 90s (#2470 DEC-C)");
+
+    /// <summary>Binds the admin-clients gauge callback. Same semantics as <see cref="SetWikidataSseSubscribersCallback(Func{int})"/>.</summary>
+    public static void SetWikidataSseAdminClientsConnectedCallback(Func<int> callback)
+    {
+        ArgumentNullException.ThrowIfNull(callback);
+        System.Threading.Interlocked.Exchange(ref _wikidataSseAdminClientsConnectedCallback, callback);
+    }
+
+    /// <summary>Test-only reset; mirror of <see cref="ResetWikidataSseSubscribersCallback"/>.</summary>
+    internal static void ResetWikidataSseAdminClientsConnectedCallback()
+    {
+        System.Threading.Interlocked.Exchange(ref _wikidataSseAdminClientsConnectedCallback, null);
+    }
+
+    /// <summary>
+    /// Issue #2470 — counter incremented once per <c>Publish</c> call on the
+    /// broadcaster (both in-memory and Redis variants). Mirrors the
+    /// publisher-side activity rate so an operator can spot "publishes flowing
+    /// but no subscribers" via Grafana panel 10.
+    /// </summary>
+    public static readonly Counter<long> WikidataSseMessagesPublished = Meter.CreateCounter<long>(
+        name: "meepleai.wikidata.sse.messages.published.total",
+        unit: "messages",
+        description: "Wikidata SSE attempt-recorded messages emitted by the publisher (#2470)");
+
+    /// <summary>
+    /// Issue #2470 — counter incremented once per per-subscriber delivery on
+    /// this pod. For the in-memory broadcaster this is +N (N = local
+    /// subscribers) per <c>Publish</c>; for the Redis broadcaster it is +N
+    /// per incoming Redis pub/sub message. Diverges from
+    /// <see cref="WikidataSseMessagesPublished"/> only when a multi-pod
+    /// deployment fans the same publish out to subscribers on remote pods.
+    /// </summary>
+    public static readonly Counter<long> WikidataSseMessagesReceived = Meter.CreateCounter<long>(
+        name: "meepleai.wikidata.sse.messages.received.total",
+        unit: "messages",
+        description: "Wikidata SSE messages delivered to local subscriber channels (#2470)");
 }

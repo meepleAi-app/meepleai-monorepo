@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExtractor.Guardrails;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 
@@ -35,7 +36,15 @@ public sealed record MechanicPipelineRequest(
     string Model,
     decimal EffectiveCostCapUsd,
     decimal InputCostPerMillionTokens,
-    decimal OutputCostPerMillionTokens);
+    decimal OutputCostPerMillionTokens)
+{
+    /// <summary>T2/T3/T4 source pool: pinned retrieved chunks per section (#525).</summary>
+    public IReadOnlyDictionary<MechanicSection, IReadOnlyList<MechanicSourceChunk>> SourceChunksBySection { get; init; }
+        = new Dictionary<MechanicSection, IReadOnlyList<MechanicSourceChunk>>();
+
+    /// <summary>T4 page-range upper bound (PDF page count), null when unknown.</summary>
+    public int? PdfPageCount { get; init; }
+}
 
 /// <summary>Outcome of a pipeline run.</summary>
 public sealed record MechanicPipelineResult(

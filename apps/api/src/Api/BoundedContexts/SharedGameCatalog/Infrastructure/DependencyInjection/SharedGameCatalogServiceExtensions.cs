@@ -4,6 +4,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Jobs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services.BackgroundAnalysis;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExtractor;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExtractor.Guardrails;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Services;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Providers;
@@ -38,6 +39,10 @@ internal static class SharedGameCatalogServiceExtensions
         // Issue #2454: Configure background analysis options
         services.Configure<BackgroundAnalysisOptions>(
             configuration.GetSection(BackgroundAnalysisOptions.SectionName));
+
+        // Issue #525 / M1.3: Mechanic guardrail thresholds (ADR-051).
+        services.Configure<MechanicGuardrailOptions>(
+            configuration.GetSection(MechanicGuardrailOptions.SectionName));
 
 
         // Register repositories
@@ -90,6 +95,13 @@ internal static class SharedGameCatalogServiceExtensions
         // Singleton: prompts are embedded assembly resources + internal ConcurrentDictionary cache.
         // Scoped would silently defeat the cache (new instance per request).
         services.AddSingleton<IMechanicPromptProvider, EmbeddedMechanicPromptProvider>();
+        // Issue #525 / M1.3: guardrail chain (T1 quote cap, T3a citation presence, T4 page/substring,
+        // T2 long-verbatim, T3b grounding) — evaluated cheapest-first / fail-fast by the orchestrator.
+        services.AddScoped<IMechanicGuardrail, QuoteCapGuardrail>();
+        services.AddScoped<IMechanicGuardrail, CitationPresenceGuardrail>();
+        services.AddScoped<IMechanicGuardrail, PageSubstringGuardrail>();
+        services.AddScoped<IMechanicGuardrail, RejectionSamplingGuardrail>();
+        services.AddScoped<IMechanicGuardrail, GroundingGuardrail>();
         services.AddScoped<IMechanicOutputValidator, MechanicOutputValidator>();
         services.AddScoped<IAnalysisCostEstimator, AnalysisCostEstimator>();
         services.AddScoped<IMechanicAnalysisPipeline, MechanicAnalysisPipeline>();

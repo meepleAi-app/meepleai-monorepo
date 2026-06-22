@@ -257,6 +257,23 @@ const FRAMES: { slug: string; file: string }[] = [
     slug: 'pages-librogame-game-onboarding--frame-04-ready',
     file: 'librogame-game-onboarding-04-ready.png',
   },
+  // librogame-setup-chat (4 frames) — Task 11 #2174
+  {
+    slug: 'pages-librogame-setup-chat--frame-01-default',
+    file: 'librogame-setup-chat-01-default.png',
+  },
+  {
+    slug: 'pages-librogame-setup-chat--frame-02-low-confidence',
+    file: 'librogame-setup-chat-02-low-confidence.png',
+  },
+  {
+    slug: 'pages-librogame-setup-chat--frame-03-out-of-context',
+    file: 'librogame-setup-chat-03-out-of-context.png',
+  },
+  {
+    slug: 'pages-librogame-setup-chat--frame-04-loading',
+    file: 'librogame-setup-chat-04-loading.png',
+  },
 ];
 
 for (const { slug, file } of FRAMES) {

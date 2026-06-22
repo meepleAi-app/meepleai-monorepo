@@ -21,12 +21,12 @@ const FRAMES: { slug: string; file: string }[] = [
     file: 'librogame-game-detail-01-default.png',
   },
   {
-    slug: 'pages-librogame-game-detail--frame-01-b-kb-indexing',
-    file: 'librogame-game-detail-01b-kb-indexing.png',
+    slug: 'pages-librogame-game-detail--frame-01-kb-indexing',
+    file: 'librogame-game-detail-01-kb-indexing.png',
   },
   {
-    slug: 'pages-librogame-game-detail--frame-01-c-kb-error',
-    file: 'librogame-game-detail-01c-kb-error.png',
+    slug: 'pages-librogame-game-detail--frame-01-kb-error',
+    file: 'librogame-game-detail-01-kb-error.png',
   },
   {
     slug: 'pages-librogame-game-detail--frame-02-loading',

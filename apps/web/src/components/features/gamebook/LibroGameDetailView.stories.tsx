@@ -88,6 +88,13 @@ export default meta;
 
 type Story = StoryObj<typeof LibroGameDetailView>;
 
+// Stable spies for the forward-refactor mock frames — kept at module scope so the
+// Storybook actions panel accumulates calls across re-renders (a new fn() inside
+// `render` would reset every render and break interaction assertions).
+const mockOnRetry = fn();
+const mockOnBack = fn();
+const mockOnAddToCatalog = fn();
+
 // ── Frame 01 · Default — game loaded, CTA + Info tab ──────────────────────
 
 export const Frame01_Default: Story = {
@@ -107,10 +114,10 @@ export const Frame01_Default: Story = {
   },
 };
 
-// ── Frame 01b · Default KB Indexing variant ─────────────────────────────────
+// ── Frame 01 · Default — KB Indexing variant ────────────────────────────────
 
-export const Frame01b_KbIndexing: Story = {
-  name: '01b · Default — KB indexing in corso (kbStatus: indexing)',
+export const Frame01_KbIndexing: Story = {
+  name: '01 · Default — KB indexing in corso (kbStatus: indexing)',
   args: {
     gameDetail: MOCK_LIBROGAME_GAME_DETAIL_KB_INDEXING,
   },
@@ -125,10 +132,10 @@ export const Frame01b_KbIndexing: Story = {
   },
 };
 
-// ── Frame 01c · Default KB Error variant ────────────────────────────────────
+// ── Frame 01 · Default — KB Error variant ───────────────────────────────────
 
-export const Frame01c_KbError: Story = {
-  name: '01c · Default — KB error (kbStatus: error)',
+export const Frame01_KbError: Story = {
+  name: '01 · Default — KB error (kbStatus: error)',
   args: {
     gameDetail: MOCK_LIBROGAME_GAME_DETAIL_KB_ERROR,
   },
@@ -145,7 +152,7 @@ export const Frame01c_KbError: Story = {
 
 // ── Frame 02 · Loading — skeleton (presentational mock) ────────────────────
 
-export const Frame02_Loading: StoryObj<typeof LibroGameDetailLoadingMock> = {
+export const Frame02_Loading: Story = {
   name: '02 · Loading — skeleton hero + meta + CTA (forward-refactor mock)',
   render: () => <LibroGameDetailLoadingMock />,
   parameters: {
@@ -163,9 +170,9 @@ export const Frame02_Loading: StoryObj<typeof LibroGameDetailLoadingMock> = {
 
 // ── Frame 03 · Error — network error card (presentational mock) ─────────────
 
-export const Frame03_Error: StoryObj<typeof LibroGameDetailErrorMock> = {
+export const Frame03_Error: Story = {
   name: '03 · Error — errore rete, retry CTA (forward-refactor mock)',
-  render: () => <LibroGameDetailErrorMock onRetry={fn()} onBack={fn()} />,
+  render: () => <LibroGameDetailErrorMock onRetry={mockOnRetry} onBack={mockOnBack} />,
   parameters: {
     docs: {
       description: {
@@ -181,10 +188,14 @@ export const Frame03_Error: StoryObj<typeof LibroGameDetailErrorMock> = {
 
 // ── Frame 04 · Not Found — not in collection (presentational mock) ───────────
 
-export const Frame04_NotFound: StoryObj<typeof LibroGameDetailNotFoundMock> = {
+export const Frame04_NotFound: Story = {
   name: '04 · Not Found — gioco non in collezione, add-to-catalog CTA (forward-refactor mock)',
   render: () => (
-    <LibroGameDetailNotFoundMock gameTitle="Nanolith" onBack={fn()} onAddToCatalog={fn()} />
+    <LibroGameDetailNotFoundMock
+      gameTitle="Nanolith"
+      onBack={mockOnBack}
+      onAddToCatalog={mockOnAddToCatalog}
+    />
   ),
   parameters: {
     docs: {

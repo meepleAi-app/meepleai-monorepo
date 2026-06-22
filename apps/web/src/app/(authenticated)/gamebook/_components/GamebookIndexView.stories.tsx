@@ -59,8 +59,9 @@ const meta: Meta<typeof GamebookIndexView> = {
     docs: {
       description: {
         component:
-          'Pixel-faithful matrix di librogame-runthrough-library-search.html — `/gamebook` index ' +
-          '6-cell FSM (loading | error | empty | default | quota-soft | quota-hard). ' +
+          'Copertura FSM di `GamebookIndexView` (`/gamebook` index) — riferita dal persona flow di ' +
+          'librogame-runthrough-library-search.html (il cui HTML ritrae il hub `/library`). 6-cell FSM ' +
+          '(loading | error | empty | default | quota-soft | quota-hard). ' +
           'Tutti gli stati sono pilotati via `?fixture=<kind>` (Template Mf). Nessun MSW handler ' +
           'necessario: il meccanismo `STATE_OVERRIDE_ENABLED` short-circuit i hook reali.',
       },

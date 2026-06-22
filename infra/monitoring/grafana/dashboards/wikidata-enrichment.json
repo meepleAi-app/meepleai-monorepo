@@ -15,7 +15,7 @@
       }
     ]
   },
-  "description": "Wikidata cover enrichment pipeline observability — Issue #1823 (Phase B-F shipped) + #2055 Phase G (AC-G4). Tracks enrichment rate, failure breakdown, SPARQL latency, queue depth, batch duration, dead-letter count, and quarterly re-verification activity.",
+  "description": "Wikidata cover enrichment pipeline observability — Issue #1823 (Phase B-F shipped) + #2055 Phase G (AC-G4) + #2470 (SSE plane: subscribers, publish/receive rates, admin clients connected). Tracks enrichment rate, failure breakdown, SPARQL latency, queue depth, batch duration, dead-letter count, quarterly re-verification activity, and SSE pipeline health.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
@@ -653,12 +653,298 @@
       ],
       "title": "Panel 8 — Quarterly re-verification reset (1d window)",
       "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Issue #2470 — current SSE subscriber count on this pod. Red < 1 = no admin getting live updates. Correlate with Panel 12 to decide whether the gap is 'admin offline' (benign) or 'admin online but starved' (alert).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 22
+      },
+      "id": 9,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "meepleai_wikidata_sse_subscribers",
+          "refId": "A"
+        }
+      ],
+      "title": "Panel 9 — SSE subscribers (current)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Issue #2470 (DEC-C) — distinct admin sessions heartbeating the dead-letter page in the last 90s. Co-display with Panel 9: subscribers=0 AND admin_clients>0 sustained 15m fires WikidataSseSubscriberStarvation.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 6,
+        "y": 22
+      },
+      "id": 12,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "meepleai_wikidata_sse_admin_clients_connected",
+          "refId": "A"
+        }
+      ],
+      "title": "Panel 12 — Admin clients connected (90s TTL)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Issue #2470 — broadcaster Publish call rate. Background M9 ticks tick this counter even with zero subscribers; alert correlation uses Panels 9 + 12 to gate on 'admin online'.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 28
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "lastNotNull"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "rate(meepleai_wikidata_sse_messages_published_total[5m])",
+          "legendFormat": "publish rate",
+          "refId": "A"
+        }
+      ],
+      "title": "Panel 10 — SSE publish rate (5min rolling)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Issue #2470 — local-channel delivery rate. For in-memory backplane, this equals publish_rate × subscribers; for Redis backplane, the same value reflects N pods × local subscribers per pod (single-pod = same behaviour as in-memory).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 28
+      },
+      "id": 11,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "lastNotNull"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "rate(meepleai_wikidata_sse_messages_received_total[5m])",
+          "legendFormat": "receive rate",
+          "refId": "A"
+        }
+      ],
+      "title": "Panel 11 — SSE receive rate (5min rolling)",
+      "type": "timeseries"
     }
   ],
   "refresh": "30s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["meepleai", "wikidata", "enrichment", "issue-1823", "issue-2055", "phase-g"],
+  "tags": ["meepleai", "wikidata", "enrichment", "issue-1823", "issue-2055", "issue-2470", "phase-g", "sse-observability"],
   "templating": {
     "list": []
   },
@@ -670,6 +956,6 @@
   "timezone": "browser",
   "title": "Wikidata Cover Enrichment — Pipeline Health",
   "uid": "wikidata-enrichment",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }

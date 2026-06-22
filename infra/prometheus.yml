@@ -28,6 +28,8 @@ rule_files:
   - '/etc/prometheus/prometheus-rules.yml'
   # Issue #2019 — self-hosted GitHub Actions runner availability alerts.
   - '/etc/prometheus/runner-availability.yml'
+  # Issue #2470 — Wikidata SSE plane starvation alerts.
+  - '/etc/prometheus/wikidata-sse.yml'
 
 # Scrape configurations
 scrape_configs:

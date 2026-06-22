@@ -239,6 +239,12 @@ logs-ui: ## Open Grafana log explorer in browser (staging)
 seed-status: ## Report local snapshot freshness (age, schema drift, embedding model)
 	@bash scripts/seed-status.sh
 
+seed-status-badge: ## Regenerate README snapshot-freshness badge between <!-- snapshot-badge --> markers
+	@BADGE=$$(bash scripts/seed-status.sh --badge 2>/dev/null); \
+	perl -i -0pe "s|<!-- snapshot-badge:start -->.*?<!-- snapshot-badge:end -->|$$BADGE|gs" \
+	  ../README.md && \
+	echo "README.md badge updated: $$BADGE"
+
 seed-index: ## Bake: indicizza tutti i PDF e produce snapshot locale
 	@bash scripts/seed-index-preflight.sh
 	$(COMPOSE) -f compose.dev.yml --profile ai up -d postgres redis api embedding-service smoldocling-service

@@ -4,18 +4,27 @@
    Modello: sp4-sessions-index — Hero leggero + filtri sticky + list/grid.
    Entity dominante: session 🎯 (240 60% 55%).
 
-   Lista partite registrate: search + filtri (gioco / stato / data) + sort.
-   Card partita: gioco, data, n° giocatori, esito (completata/in corso/pianificata), vincitore.
+   ── Stati canonici (G7 SessionStateRenderer, PR 2357) ──────────────
+   Export per-stato (anchor #state-NN-* nell'index HTML):
+     State01_Default  → state-01-default   (hub completo, lista 9 record)
+     State02_Empty    → state-02-empty     (nessun record · CTA prima partita)
+     State03_Loading  → state-03-loading   (skeleton primitives · aria-busy)
+     State04_Error    → state-04-error     (banner alert · retry · dismiss)
+   state-05-sse → SKIPPED: questo hub NON è SSE-driven (vedi App, in fondo).
+
+   FREEZE: zero hex/hsl hardcoded per gli entity color → solo token --c-*
+   via entityHsl(). Nessun asset di hosting esterno (ban #2123).
 */
 const { useState, useEffect, useMemo } = React;
 const DS = window.DS;
 
-const entityHsl = (type, alpha) => {
-  const c = DS.EC[type] || DS.EC.session;
-  return alpha !== undefined
-    ? `hsla(${c.h}, ${c.s}%, ${c.l}%, ${alpha})`
-    : `hsl(${c.h}, ${c.s}%, ${c.l}%)`;
-};
+// entityHsl(entity, alpha?) — risolve SEMPRE sui token CSS (--c-*), così il
+// colore segue automaticamente light/dark ([data-theme]) ed è FREEZE-clean
+// (nessun valore hsl numerico hardcoded nel sorgente del mockup).
+const entityHsl = (entity, alpha) =>
+  alpha === undefined
+    ? `hsl(var(--c-${entity}))`
+    : `hsl(var(--c-${entity}) / ${alpha})`;
 
 const RECORDS = DS.playRecords;
 
@@ -206,15 +215,16 @@ const RecordsHero = ({ compact }) => {
 // ═══════════════════════════════════════════════════════
 // ─── FILTERS ───────────────────────────────────────────
 // ═══════════════════════════════════════════════════════
-const StatusChip = ({ active, label, onClick, count }) => (
-  <button type="button" onClick={onClick} aria-pressed={active} style={{
+const StatusChip = ({ active, label, onClick, count, disabled }) => (
+  <button type="button" onClick={onClick} aria-pressed={active} disabled={disabled} aria-disabled={disabled || undefined} style={{
     display:'inline-flex', alignItems:'center', gap: 5,
     padding:'6px 11px', borderRadius:'var(--r-pill)',
     background: active ? entityHsl('session', 0.14) : 'var(--bg-card)',
     border: active ? `1px solid ${entityHsl('session', 0.4)}` : '1px solid var(--border)',
     color: active ? entityHsl('session') : 'var(--text-sec)',
     fontFamily:'var(--f-display)', fontSize: 12, fontWeight: 700,
-    cursor:'pointer', whiteSpace:'nowrap', flexShrink: 0,
+    cursor: disabled ? 'not-allowed' : 'pointer', whiteSpace:'nowrap', flexShrink: 0,
+    opacity: disabled ? 0.5 : 1,
   }}>
     {label}
     {count !== undefined && (
@@ -228,13 +238,14 @@ const StatusChip = ({ active, label, onClick, count }) => (
   </button>
 );
 
-const Dropdown = ({ label, value }) => (
-  <button type="button" style={{
+const Dropdown = ({ label, value, disabled }) => (
+  <button type="button" disabled={disabled} aria-disabled={disabled || undefined} style={{
     display:'inline-flex', alignItems:'center', gap: 5,
     padding:'6px 10px', borderRadius:'var(--r-md)',
     background:'var(--bg-card)', border:'1px solid var(--border)', color:'var(--text-sec)',
     fontFamily:'var(--f-display)', fontSize: 11.5, fontWeight: 700,
-    cursor:'pointer', whiteSpace:'nowrap', flexShrink: 0,
+    cursor: disabled ? 'not-allowed' : 'pointer', whiteSpace:'nowrap', flexShrink: 0,
+    opacity: disabled ? 0.5 : 1,
   }}>
     <span style={{ fontFamily:'var(--f-mono)', fontSize: 9, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'.06em', fontWeight: 800 }}>{label}</span>
     <span>{value}</span>
@@ -242,49 +253,49 @@ const Dropdown = ({ label, value }) => (
   </button>
 );
 
-const RecordFilters = ({ statusFilter, onStatusChange, view, onViewChange, search, onSearchChange, compact, counts }) => (
+const RecordFilters = ({ statusFilter, onStatusChange, view, onViewChange, search, onSearchChange, compact, counts, disabled }) => (
   <div style={{
     padding: compact ? '10px 16px' : '12px 32px',
     background:'var(--glass-bg)', backdropFilter:'blur(12px)',
     borderBottom:'1px solid var(--border-light)',
     display:'flex', flexDirection:'column', gap: 8,
-  }}>
-    <div style={{ position:'relative' }}>
+  }} aria-disabled={disabled || undefined}>
+    <div style={{ position:'relative', opacity: disabled ? 0.55 : 1 }}>
       <span aria-hidden="true" style={{ position:'absolute', left: 12, top:'50%', transform:'translateY(-50%)', color:'var(--text-muted)', fontSize: 14, pointerEvents:'none' }}>⌕</span>
-      <input type="search" placeholder="Cerca partita o gioco..." value={search} onChange={e => onSearchChange(e.target.value)}
+      <input type="search" placeholder="Cerca partita o gioco..." value={search} disabled={disabled} onChange={e => onSearchChange && onSearchChange(e.target.value)}
         style={{
           width:'100%', padding:'8px 12px 8px 34px', borderRadius:'var(--r-md)',
           border:'1px solid var(--border)', background:'var(--bg-card)', color:'var(--text)',
-          fontFamily:'var(--f-body)', fontSize: 13,
+          fontFamily:'var(--f-body)', fontSize: 13, cursor: disabled ? 'not-allowed' : 'text',
         }}/>
     </div>
 
     <div className="mai-cb-scroll" style={{ display:'flex', alignItems:'center', gap: 6, overflowX:'auto' }}>
-      <StatusChip active={statusFilter==='all'} onClick={() => onStatusChange('all')} label="Tutte" count={counts.all}/>
-      <StatusChip active={statusFilter==='inprogress'} onClick={() => onStatusChange('inprogress')} label="● In corso" count={counts.inprogress}/>
-      <StatusChip active={statusFilter==='completed'} onClick={() => onStatusChange('completed')} label="✓ Completate" count={counts.completed}/>
-      <StatusChip active={statusFilter==='planned'} onClick={() => onStatusChange('planned')} label="📅 Pianificate" count={counts.planned}/>
+      <StatusChip active={statusFilter==='all'} onClick={() => onStatusChange && onStatusChange('all')} label="Tutte" count={counts.all} disabled={disabled}/>
+      <StatusChip active={statusFilter==='inprogress'} onClick={() => onStatusChange && onStatusChange('inprogress')} label="● In corso" count={counts.inprogress} disabled={disabled}/>
+      <StatusChip active={statusFilter==='completed'} onClick={() => onStatusChange && onStatusChange('completed')} label="✓ Completate" count={counts.completed} disabled={disabled}/>
+      <StatusChip active={statusFilter==='planned'} onClick={() => onStatusChange && onStatusChange('planned')} label="📅 Pianificate" count={counts.planned} disabled={disabled}/>
     </div>
 
     <div className="mai-cb-scroll" style={{ display:'flex', alignItems:'center', gap: 6, overflowX:'auto' }}>
-      <Dropdown label="GIOCO" value="Tutti"/>
-      <Dropdown label="DATA" value="Sempre"/>
-      <Dropdown label="ESITO" value="Tutti"/>
-      <Dropdown label="SORT" value="Data ↓"/>
+      <Dropdown label="GIOCO" value="Tutti" disabled={disabled}/>
+      <Dropdown label="DATA" value="Sempre" disabled={disabled}/>
+      <Dropdown label="ESITO" value="Tutti" disabled={disabled}/>
+      <Dropdown label="SORT" value="Data ↓" disabled={disabled}/>
       <div style={{ flex: 1 }}/>
       <div role="radiogroup" aria-label="Vista" style={{
         display:'inline-flex', borderRadius:'var(--r-md)', border:'1px solid var(--border)',
-        background:'var(--bg-card)', overflow:'hidden', flexShrink: 0,
+        background:'var(--bg-card)', overflow:'hidden', flexShrink: 0, opacity: disabled ? 0.5 : 1,
       }}>
         {[{ id:'list', icon:'☰', label:'List · default' }, { id:'grid', icon:'▦', label:'Grid' }].map(v => {
           const active = view === v.id;
           return (
-            <button key={v.id} type="button" role="radio" aria-checked={active} onClick={() => onViewChange(v.id)} aria-label={v.label}
+            <button key={v.id} type="button" role="radio" aria-checked={active} disabled={disabled} onClick={() => onViewChange && onViewChange(v.id)} aria-label={v.label}
               style={{
                 padding:'6px 10px',
                 background: active ? entityHsl('session', 0.14) : 'transparent',
                 color: active ? entityHsl('session') : 'var(--text-muted)',
-                border:'none', cursor:'pointer', fontSize: 13, fontWeight: 700,
+                border:'none', cursor: disabled ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 700,
               }}>{v.icon}</button>
           );
         })}
@@ -392,7 +403,7 @@ const RecordCardGrid = ({ record, compact }) => {
         <span style={{ filter:'drop-shadow(0 2px 6px rgba(0,0,0,.3))' }}>{game?.coverEmoji || '🎯'}</span>
         <div style={{
           position:'absolute', top: 8, left: 8, display:'inline-flex', alignItems:'center', gap: 4,
-          padding:'2px 7px', borderRadius:'var(--r-pill)', background:'rgba(255,255,255,.85)', backdropFilter:'blur(6px)',
+          padding:'2px 7px', borderRadius:'var(--r-pill)', background:'var(--glass-bg)', backdropFilter:'blur(6px)',
           fontFamily:'var(--f-mono)', fontSize: 8.5, fontWeight: 800, color: entityHsl('session'),
           textTransform:'uppercase', letterSpacing:'.06em',
         }}><span aria-hidden="true">🎯</span>Partita</div>
@@ -427,79 +438,9 @@ const RecordCardGrid = ({ record, compact }) => {
 };
 
 // ═══════════════════════════════════════════════════════
-// ─── EMPTY / LOADING / ERROR ───────────────────────────
+// ─── BODY (default · lista record) ─────────────────────
 // ═══════════════════════════════════════════════════════
-const EmptyState = ({ kind }) => {
-  if (kind === 'first-run') {
-    return (
-      <div style={{
-        padding:'48px 24px', textAlign:'center', background:'var(--bg-card)',
-        border:'1px dashed var(--border-strong)', borderRadius:'var(--r-xl)',
-        display:'flex', flexDirection:'column', alignItems:'center',
-      }}>
-        <div style={{
-          width: 92, height: 92, borderRadius:'50%',
-          background:`radial-gradient(circle, ${entityHsl('session', 0.18)} 0%, transparent 70%)`,
-          display:'flex', alignItems:'center', justifyContent:'center', fontSize: 42, marginBottom: 14,
-        }} aria-hidden="true">🎯</div>
-        <h2 style={{ fontFamily:'var(--f-display)', fontSize: 19, fontWeight: 800, color:'var(--text)', margin:'0 0 6px' }}>Nessuna partita registrata</h2>
-        <p style={{ fontSize: 13, color:'var(--text-sec)', margin:'0 0 18px', maxWidth: 360, lineHeight: 1.5 }}>Registra la tua prima partita per tracciare punteggi, esiti e classifiche del gruppo.</p>
-        <a href="sp4-play-records-new.html" style={{
-          padding:'9px 16px', borderRadius:'var(--r-md)', background: entityHsl('session'), color:'#fff',
-          fontFamily:'var(--f-display)', fontSize: 13, fontWeight: 800, boxShadow:`0 4px 14px ${entityHsl('session', 0.4)}`,
-        }}>+ Registra prima partita</a>
-      </div>
-    );
-  }
-  return (
-    <div style={{
-      padding:'40px 24px', textAlign:'center', background:'var(--bg-card)',
-      border:'1px dashed var(--border-strong)', borderRadius:'var(--r-xl)',
-      display:'flex', flexDirection:'column', alignItems:'center',
-    }}>
-      <div style={{
-        width: 56, height: 56, borderRadius:'50%', background: entityHsl('session', 0.12), color: entityHsl('session'),
-        display:'flex', alignItems:'center', justifyContent:'center', fontSize: 24, marginBottom: 12,
-      }} aria-hidden="true">⌕</div>
-      <h3 style={{ fontFamily:'var(--f-display)', fontSize: 15, fontWeight: 800, color:'var(--text)', margin:'0 0 4px' }}>Nessuna partita per questi filtri</h3>
-      <p style={{ fontSize: 12.5, color:'var(--text-muted)', margin:'0 0 14px', maxWidth: 320 }}>Prova a rimuovere alcuni vincoli o cambiare periodo.</p>
-      <button type="button" style={{
-        padding:'7px 14px', borderRadius:'var(--r-md)', background:'transparent', color: entityHsl('session'),
-        border:`1px solid ${entityHsl('session', 0.4)}`, fontFamily:'var(--f-display)', fontSize: 12, fontWeight: 800, cursor:'pointer',
-      }}>↻ Reset filtri</button>
-    </div>
-  );
-};
-
-const LoadingList = () => (
-  <div style={{ display:'flex', flexDirection:'column', gap: 8 }}>
-    {[0,1,2,3,4].map(i => <div key={i} className="mai-shimmer" style={{ height: 92, borderRadius:'var(--r-lg)', background:'var(--bg-muted)' }}/>)}
-  </div>
-);
-
-const ErrorState = () => (
-  <div style={{
-    padding:'40px 24px', textAlign:'center', background:'hsl(var(--c-danger) / .06)',
-    border:'1px solid hsl(var(--c-danger) / .25)', borderRadius:'var(--r-xl)',
-    display:'flex', flexDirection:'column', alignItems:'center',
-  }}>
-    <div style={{
-      width: 56, height: 56, borderRadius:'50%', background:'hsl(var(--c-danger) / .15)', color:'hsl(var(--c-danger))',
-      display:'flex', alignItems:'center', justifyContent:'center', fontSize: 26, marginBottom: 12,
-    }} aria-hidden="true">⚠</div>
-    <h3 style={{ fontFamily:'var(--f-display)', fontSize: 15, fontWeight: 800, color:'var(--text)', margin:'0 0 4px' }}>Errore caricamento</h3>
-    <p style={{ fontSize: 12.5, color:'var(--text-muted)', margin:'0 0 12px', maxWidth: 320 }}>Impossibile recuperare le partite. Verifica la connessione.</p>
-    <button type="button" style={{
-      padding:'7px 14px', borderRadius:'var(--r-md)', background:'hsl(var(--c-danger))', color:'#fff', border:'none',
-      fontFamily:'var(--f-display)', fontSize: 12, fontWeight: 800, cursor:'pointer',
-    }}>↻ Riprova</button>
-  </div>
-);
-
-// ═══════════════════════════════════════════════════════
-// ─── BODY ──────────────────────────────────────────────
-// ═══════════════════════════════════════════════════════
-const RecordsBody = ({ stateOverride, initialView='list', initialFilter='all', compact }) => {
+const RecordsBody = ({ initialView='list', initialFilter='all', compact }) => {
   const [view, setView] = useState(initialView);
   const [statusFilter, setStatusFilter] = useState(initialFilter);
   const [search, setSearch] = useState('');
@@ -520,11 +461,6 @@ const RecordsBody = ({ stateOverride, initialView='list', initialFilter='all', c
   }, [statusFilter]);
 
   const renderBody = () => {
-    if (stateOverride === 'loading') return <LoadingList/>;
-    if (stateOverride === 'error') return <ErrorState/>;
-    if (stateOverride === 'empty-first-run') return <EmptyState kind="first-run"/>;
-    if (stateOverride === 'empty-filter') return <EmptyState kind="no-results"/>;
-
     if (view === 'grid') {
       return (
         <div style={{ display:'grid', gridTemplateColumns: compact ? '1fr' : 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
@@ -553,7 +489,7 @@ const RecordsBody = ({ stateOverride, initialView='list', initialFilter='all', c
 };
 
 // ═══════════════════════════════════════════════════════
-// ─── FRAMES ────────────────────────────────────────────
+// ─── TOP NAV (in-app, hub chrome) ──────────────────────
 // ═══════════════════════════════════════════════════════
 const TopNav = ({ compact }) => (
   <div style={{
@@ -564,7 +500,7 @@ const TopNav = ({ compact }) => (
     <div style={{ display:'flex', alignItems:'center', gap: 9 }}>
       <div style={{
         width: 26, height: 26, borderRadius: 7,
-        background:'linear-gradient(135deg, hsl(var(--c-game)), hsl(var(--c-event)))',
+        background:`linear-gradient(135deg, ${entityHsl('game')}, ${entityHsl('event')})`,
         color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontWeight: 800, fontSize: 13, fontFamily:'var(--f-display)',
       }}>M</div>
       {!compact && <span style={{ fontFamily:'var(--f-display)', fontWeight: 800, fontSize: 14 }}>MeepleAI</span>}
@@ -582,104 +518,300 @@ const PhoneSbar = () => (
   </div>
 );
 
-const PhoneScreen = (props) => (
-  <>
-    <PhoneSbar/>
-    <div style={{ flex: 1, overflow:'hidden', display:'flex', flexDirection:'column', position:'relative', background:'var(--bg)' }}>
-      <TopNav compact/>
-      <RecordsBody {...props} compact/>
+// ═══════════════════════════════════════════════════════
+// ─── SKELETON PRIMITIVES (loading) ─────────────────────
+// ═══════════════════════════════════════════════════════
+const SkelRect = ({ w, h, r, style }) => (
+  <div aria-hidden="true" className="skel" style={{
+    width: w, height: h, borderRadius: r || 'var(--r-sm)',
+    background: entityHsl('session', 0.08), flexShrink: 0, ...style,
+  }}/>
+);
+
+const SkelCard = ({ compact }) => (
+  <div aria-hidden="true" style={{
+    display:'flex', background:'var(--bg-card)', border:'1px solid var(--border)',
+    borderRadius:'var(--r-lg)', overflow:'hidden', borderLeft:`3px solid ${entityHsl('session', 0.3)}`,
+  }}>
+    <div className="skel" style={{ width: compact ? 56 : 76, background: entityHsl('session', 0.08), flexShrink: 0 }}/>
+    <div style={{ flex: 1, padding: compact ? '12px' : '14px', display:'flex', flexDirection:'column', gap: 8, minHeight: compact ? 78 : 86 }}>
+      <SkelRect w={compact ? '60%' : 220} h={15}/>
+      <SkelRect w="92%" h={11} r="var(--r-xs)"/>
+      <SkelRect w="74%" h={11} r="var(--r-xs)"/>
+      <div style={{ flex: 1 }}/>
+      <SkelRect w={compact ? '52%' : 168} h={18} r="var(--r-pill)"/>
     </div>
-  </>
-);
-
-const DesktopFrameInner = (props) => (
-  <div style={{ display:'flex', flexDirection:'column', minHeight: 720, background:'var(--bg)' }}>
-    <TopNav/>
-    <RecordsBody {...props}/>
   </div>
 );
 
-const PhoneShell = ({ label, desc, children }) => (
-  <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap: 10 }}>
-    <div style={{ fontFamily:'var(--f-mono)', fontSize: 11, color:'var(--text-sec)', textTransform:'uppercase', letterSpacing:'.08em', fontWeight: 700 }}>{label}</div>
-    <div className="phone">{children}</div>
-    {desc && <div style={{ fontSize: 11, color:'var(--text-muted)', maxWidth: 340, textAlign:'center', lineHeight: 1.55 }}>{desc}</div>}
+// ═══════════════════════════════════════════════════════
+// ─── STATO 01 · DEFAULT ────────────────────────────────
+// state-01-default — hub completo: hero + filtri sticky + lista 9 record.
+// ═══════════════════════════════════════════════════════
+const State01_Default = ({ compact }) => (
+  <div style={{ flex: 1, display:'flex', flexDirection:'column', background:'var(--bg)', minHeight: 0 }}>
+    <TopNav compact={compact}/>
+    <RecordsBody initialView="list" initialFilter="all" compact={compact}/>
   </div>
 );
 
-const DesktopFrame = ({ label, desc, dark, children }) => (
-  <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap: 12, width:'100%' }} data-theme={dark ? 'dark' : undefined}>
-    <div style={{ fontFamily:'var(--f-mono)', fontSize: 11, color:'var(--text-sec)', textTransform:'uppercase', letterSpacing:'.08em', fontWeight: 700 }}>{label}{dark && <span style={{ color: entityHsl('session'), marginLeft: 6 }}>· dark</span>}</div>
+// ═══════════════════════════════════════════════════════
+// ─── STATO 02 · EMPTY ──────────────────────────────────
+// state-02-empty — nessun record. Filtri presenti ma disabled.
+// role="status" per annuncio screen reader.
+// ═══════════════════════════════════════════════════════
+const EMPTY_COUNTS = { all: 0, inprogress: 0, completed: 0, planned: 0 };
+
+const State02_Empty = ({ compact }) => (
+  <div style={{ flex: 1, display:'flex', flexDirection:'column', background:'var(--bg)', minHeight: 0 }}>
+    <TopNav compact={compact}/>
+    <div style={{ position:'sticky', top: 0, zIndex: 8 }}>
+      <RecordFilters statusFilter="all" view="list" search="" compact={compact} counts={EMPTY_COUNTS} disabled/>
+    </div>
+    <div style={{ flex: 1, padding: compact ? '24px 16px 32px' : '48px 32px 64px', display:'flex', alignItems:'flex-start', justifyContent:'center', overflowY:'auto' }}>
+      <div role="status" aria-live="polite" style={{
+        width:'100%', maxWidth: 440, padding: compact ? '36px 22px' : '48px 28px', textAlign:'center',
+        background:'var(--bg-card)', border:'1px dashed var(--border-strong)', borderRadius:'var(--r-xl)',
+        display:'flex', flexDirection:'column', alignItems:'center',
+      }}>
+        <div aria-hidden="true" style={{
+          width: 96, height: 96, borderRadius:'50%',
+          background:`radial-gradient(circle, ${entityHsl('session', 0.18)} 0%, transparent 70%)`,
+          display:'flex', alignItems:'center', justifyContent:'center', fontSize: 46, marginBottom: 16,
+        }}>🎲</div>
+        <h2 style={{ fontFamily:'var(--f-display)', fontSize: compact ? 18 : 20, fontWeight: 800, color:'var(--text)', margin:'0 0 8px' }}>Nessuna partita registrata</h2>
+        <p style={{ fontFamily:'var(--f-body)', fontSize: compact ? 13 : 13.5, color:'var(--text-sec)', margin:'0 0 20px', maxWidth: 360, lineHeight: 1.55, fontWeight: 500 }}>
+          Inizia a tracciare le tue serate per costruire la cronologia del gruppo
+        </p>
+        <a href="sp4-play-records-new.html" style={{
+          padding:'10px 18px', borderRadius:'var(--r-md)', background: entityHsl('session'), color:'#fff',
+          fontFamily:'var(--f-display)', fontSize: 13.5, fontWeight: 800,
+          display:'inline-flex', alignItems:'center', gap: 6,
+          boxShadow:`0 4px 14px ${entityHsl('session', 0.4)}`,
+        }}><span aria-hidden="true">+</span>Registra prima partita</a>
+      </div>
+    </div>
+  </div>
+);
+
+// ═══════════════════════════════════════════════════════
+// ─── STATO 03 · LOADING ────────────────────────────────
+// state-03-loading — skeleton primitives durante fetch iniziale.
+// aria-busy sul wrapper, role="status" sulla lista, skeleton aria-hidden.
+// Pulse 0.4→0.8→0.4 (2s) via .skel; prefers-reduced-motion → snap.
+// ═══════════════════════════════════════════════════════
+const State03_Loading = ({ compact }) => (
+  <div aria-busy="true" style={{ flex: 1, display:'flex', flexDirection:'column', background:'var(--bg)', minHeight: 0 }}>
+    <TopNav compact={compact}/>
+
+    {/* Header skeleton (title placeholder) */}
+    <div style={{
+      padding: compact ? '14px 16px' : '22px 32px', borderBottom:'1px solid var(--border-light)',
+      display:'flex', flexDirection:'column', gap: 10,
+      background:`radial-gradient(circle at 0% 0%, ${entityHsl('session', 0.08)} 0%, transparent 60%), var(--bg)`,
+    }}>
+      <SkelRect w={compact ? 110 : 130} h={16} r="var(--r-pill)"/>
+      <SkelRect w={compact ? '64%' : 280} h={compact ? 26 : 34} r="var(--r-md)"/>
+      <SkelRect w={compact ? '88%' : 360} h={13}/>
+    </div>
+
+    {/* Filter chips skeleton (4 chip rect) */}
+    <div style={{
+      padding: compact ? '10px 16px' : '12px 32px', borderBottom:'1px solid var(--border-light)',
+      background:'var(--glass-bg)', display:'flex', flexDirection:'column', gap: 8,
+    }}>
+      <SkelRect w="100%" h={34} r="var(--r-md)"/>
+      <div style={{ display:'flex', gap: 6 }}>
+        {[0,1,2,3].map(i => <SkelRect key={i} w={compact ? 66 : 92} h={30} r="var(--r-pill)"/>)}
+      </div>
+    </div>
+
+    {/* Lista 6 card skeleton */}
+    <div role="status" aria-live="polite" style={{ flex: 1, padding: compact ? '14px 16px 32px' : '20px 32px 64px', overflowY:'auto' }}>
+      <span style={{ position:'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow:'hidden', clip:'rect(0 0 0 0)', whiteSpace:'nowrap', border: 0 }}>
+        Caricamento partite in corso…
+      </span>
+      <div style={{ maxWidth: 1280, margin:'0 auto', display:'flex', flexDirection:'column', gap: 8 }}>
+        {[0,1,2,3,4,5].map(i => <SkelCard key={i} compact={compact}/>)}
+      </div>
+    </div>
+  </div>
+);
+
+// ═══════════════════════════════════════════════════════
+// ─── STATO 04 · ERROR ──────────────────────────────────
+// state-04-error — banner full-width (role="alert") + retry + hub vuoto + dismiss.
+// ═══════════════════════════════════════════════════════
+const State04_Error = ({ compact }) => (
+  <div style={{ flex: 1, display:'flex', flexDirection:'column', background:'var(--bg)', minHeight: 0 }}>
+    <TopNav compact={compact}/>
+
+    {/* Banner errore full-width */}
+    <div role="alert" style={{
+      display:'flex', alignItems:'center', gap: compact ? 10 : 14,
+      padding: compact ? '12px 16px' : '14px 32px',
+      background: entityHsl('event', 0.08),
+      borderLeft: `4px solid ${entityHsl('event', 0.6)}`,
+      borderBottom:'1px solid var(--border-light)',
+    }}>
+      <span aria-hidden="true" style={{ fontSize: compact ? 18 : 20, lineHeight: 1 }}>⚠️</span>
+      <div style={{ flex: 1, minWidth: 0, fontFamily:'var(--f-display)', fontSize: compact ? 13 : 14.5, fontWeight: 800, color:'var(--text)' }}>
+        Impossibile caricare le partite <span style={{ color: entityHsl('event'), fontWeight: 700 }}>· Riprova</span>
+      </div>
+      <button type="button" aria-label="Riprova caricamento partite" style={{
+        padding:'7px 14px', borderRadius:'var(--r-md)', background:'transparent',
+        color: entityHsl('event'), border:`1px solid ${entityHsl('event', 0.5)}`,
+        fontFamily:'var(--f-display)', fontSize: 12, fontWeight: 800, cursor:'pointer',
+        display:'inline-flex', alignItems:'center', gap: 5, whiteSpace:'nowrap', flexShrink: 0,
+      }}><span aria-hidden="true">↻</span>Riprova</button>
+    </div>
+
+    {/* Hub vuoto (nessuna lista renderizzata) */}
+    <div style={{ flex: 1, padding: compact ? '28px 16px' : '56px 32px', display:'flex', alignItems:'flex-start', justifyContent:'center', overflowY:'auto' }}>
+      <div style={{
+        display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center',
+        color:'var(--text-muted)', maxWidth: 360,
+      }}>
+        <div aria-hidden="true" style={{
+          width: 54, height: 54, borderRadius:'50%', background:'var(--bg-muted)',
+          display:'flex', alignItems:'center', justifyContent:'center', fontSize: 24, marginBottom: 12,
+        }}>🃏</div>
+        <div style={{ fontFamily:'var(--f-display)', fontSize: 14, fontWeight: 700, color:'var(--text-sec)', marginBottom: 4 }}>Nessun dato disponibile</div>
+        <p style={{ fontFamily:'var(--f-body)', fontSize: 12.5, color:'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>Le partite verranno mostrate qui una volta ripristinata la connessione.</p>
+      </div>
+    </div>
+
+    {/* Footer dismiss */}
+    <div style={{ padding: compact ? '12px 16px' : '14px 32px', borderTop:'1px solid var(--border-light)', display:'flex', justifyContent:'center' }}>
+      <button type="button" style={{
+        background:'transparent', border:'none', color:'var(--text-muted)',
+        fontFamily:'var(--f-display)', fontSize: 12.5, fontWeight: 700, cursor:'pointer',
+        textDecoration:'underline', textUnderlineOffset: 3,
+      }}>Chiudi</button>
+    </div>
+  </div>
+);
+
+// ═══════════════════════════════════════════════════════
+// ─── STATO 05 · SSE — SKIPPED ──────────────────────────
+// Questo hub NON è SSE-driven: la lista /play-records è fetch-once, non
+// streaming. Nessun State05_SSE renderizzato (cfr. G7 SessionStateRenderer:
+// lo stato `sse` si applica solo agli hub con sottoscrizione eventi live).
+// ═══════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════
+// ─── GALLERY (index) — frames + nav + sections ─────────
+// ═══════════════════════════════════════════════════════
+const MobileFrame = ({ children }) => (
+  <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap: 8 }}>
+    <div className="frame-tag">Mobile · 375</div>
+    <div className="phone">
+      <PhoneSbar/>
+      <div style={{ flex: 1, overflow:'hidden', display:'flex', flexDirection:'column', background:'var(--bg)' }}>{children}</div>
+    </div>
+  </div>
+);
+
+const DesktopFrame = ({ children }) => (
+  <div style={{ display:'flex', flexDirection:'column', gap: 8, flex: 1, minWidth: 0 }}>
+    <div className="frame-tag">Desktop · 1440</div>
     <div className="desktop-frame">
       <div className="desktop-bar">
         <span className="traffic"/><span className="traffic"/><span className="traffic"/>
         <span className="url">meepleai.app/play-records</span>
       </div>
-      {children}
+      <div style={{ display:'flex', flexDirection:'column', minHeight: 660, background:'var(--bg)' }}>{children}</div>
     </div>
-    {desc && <div style={{ fontSize: 11, color:'var(--text-muted)', maxWidth: 720, textAlign:'center', lineHeight: 1.55 }}>{desc}</div>}
   </div>
 );
 
-// ═══════════════════════════════════════════════════════
-const MOBILE_STATES = [
-  { id:'m1', view:'list', filter:'all', label:'01 · List · default', desc:'Hero compatto + filter chips. Card list con cover gioco + scoring inline + outcome badge + vincitore + ChipStrip.' },
-  { id:'m2', view:'list', filter:'inprogress', label:'02 · In corso', desc:'Solo partite live. Badge "In corso" pulsante + turno + CTA Riprendi.' },
-  { id:'m3', view:'grid', filter:'all', label:'03 · Grid view', desc:'Cover prominente, outcome top-right, scoring boxed, ChipStrip footer.' },
-  { id:'m4', view:'list', filter:'planned', label:'04 · Pianificate', desc:'Card opacity ridotta + badge "Pianificata" entity-event + CTA "Avvia ora".' },
-  { id:'m5', view:'list', state:'empty-first-run', label:'05 · Empty first-run', desc:'Illustrazione + CTA "Registra prima partita".' },
-  { id:'m6', view:'list', state:'empty-filter', label:'06 · Empty filtri', desc:'Nessun risultato per i filtri attivi + Reset.' },
-  { id:'m7', view:'list', state:'loading', label:'07 · Loading', desc:'Hero + filtri + 5 skeleton shimmer 92px.' },
-  { id:'m8', view:'list', state:'error', label:'08 · Error', desc:'Errore con CTA Riprova in danger color.' },
+// 2 viewport per stato (Mobile 375 + Desktop 1440). Il tema light/dark si applica
+// GLOBALMENTE via <html data-theme="light|dark"> (toggle in nav) — i token dark di
+// tokens.css sono scoping su :root, quindi NIENTE wrapper annidati. NO file separati.
+const StateMatrix = ({ Comp }) => (
+  <div className="matrix">
+    <div className="matrix-row">
+      <MobileFrame><Comp compact/></MobileFrame>
+      <DesktopFrame><Comp/></DesktopFrame>
+    </div>
+  </div>
+);
+
+const STATES = [
+  { id:'state-01-default', num:'01', title:'Default', sub:'Hub completo: hero stats + filtri sticky + lista 9 record (completate / in corso / pianificate). Stato base, invariato.', Comp: State01_Default },
+  { id:'state-02-empty',   num:'02', title:'Empty',   sub:'Nessuna partita registrata. Filtri presenti ma disabled, illustrazione 🎲 + CTA "Registra prima partita". role="status".', Comp: State02_Empty },
+  { id:'state-03-loading', num:'03', title:'Loading', sub:'Fetch iniziale: skeleton header + 4 chip + 6 card (pulse 2s, snap con reduced-motion). aria-busy + role="status".', Comp: State03_Loading },
+  { id:'state-04-error',   num:'04', title:'Error',   sub:'Banner full-width (role="alert") con retry inline, hub vuoto sotto, link "Chiudi" in footer.', Comp: State04_Error },
+];
+
+const NAV = [
+  { id:'state-01-default', label:'01 · Default' },
+  { id:'state-02-empty',   label:'02 · Empty' },
+  { id:'state-03-loading', label:'03 · Loading' },
+  { id:'state-04-error',   label:'04 · Error' },
 ];
 
 function ThemeToggle() {
-  const [dark, setDark] = useState(false);
-  useEffect(() => { document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light'); }, [dark]);
+  const initial = (() => { try { return localStorage.getItem('sp4-pr-theme') === 'dark'; } catch (e) { return false; } })();
+  const [dark, setDark] = useState(initial);
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    try { localStorage.setItem('sp4-pr-theme', dark ? 'dark' : 'light'); } catch (e) {}
+  }, [dark]);
   return (
-    <button onClick={() => setDark(d => !d)} className="theme-toggle" aria-label={dark ? 'Tema chiaro' : 'Tema scuro'}>
+    <button type="button" className="theme-toggle" onClick={() => setDark(d => !d)} aria-pressed={dark}
+      aria-label={dark ? 'Passa a tema chiaro' : 'Passa a tema scuro'}>
       <span aria-hidden="true">{dark ? '🌙' : '☀️'}</span><span>{dark ? 'Dark' : 'Light'}</span>
     </button>
   );
 }
 
+function GalleryNav() {
+  return (
+    <nav className="gallery-nav" aria-label="Stati canonici">
+      <div className="gallery-nav-brand"><span aria-hidden="true">🎯</span> SP4 · /play-records</div>
+      <div className="gallery-nav-links">
+        {NAV.map(n => <a key={n.id} href={`#${n.id}`}>{n.label}</a>)}
+      </div>
+      <a className="gallery-nav-ghost" href="#state-05-sse-skipped" aria-disabled="true" title="state-05-sse: skipped — hub non SSE-driven">05 · SSE · skip</a>
+      <ThemeToggle/>
+    </nav>
+  );
+}
+
+function StateSection({ id, num, title, sub, Comp }) {
+  return (
+    <section id={id} className="state-section" data-screen-label={id}>
+      <header className="state-head">
+        <div className="state-num">{num}</div>
+        <div className="state-head-text">
+          <h2>{title}</h2>
+          <p>{sub}</p>
+        </div>
+        <code className="state-anchor">#{id}</code>
+      </header>
+      <StateMatrix Comp={Comp}/>
+    </section>
+  );
+}
+
 function App() {
   return (
-    <div className="stage">
-      <ThemeToggle/>
-      <div className="stage-wrap">
-        <div style={{ fontFamily:'var(--f-mono)', fontSize: 11, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'.08em', marginBottom: 8 }}>SP4 · /play-records · Index 🎯</div>
-        <h1>Play records — /play-records</h1>
-        <p className="lead">
-          Lista partite registrate. Hero stats inline · status chips (Tutte / In corso / Completate / Pianificate) + dropdown
-          <strong> gioco · data · esito · sort</strong> + search · view toggle List default / Grid. Card con cover, data, n° giocatori,
-          esito (Vinta/Persa/Pareggio/In corso/Pianificata) e <strong>vincitore</strong> evidenziato.
-        </p>
+    <div className="gallery">
+      <GalleryNav/>
+      <div className="gallery-body">
+        <header className="gallery-intro">
+          <div className="kicker">SP4 · /play-records · Index 🎯 — canonical states</div>
+          <h1>Play records — Stati canonici</h1>
+          <p className="lead">
+            Hub lista partite registrate allineato al pattern <strong>G7 SessionStateRenderer</strong> (PR 2357).
+            4 stati canonici × viewport mobile&nbsp;375 / desktop&nbsp;1440 (8 frame), × tema light/dark via toggle = 16 combinazioni.
+            Entity dominante <strong>session 🎯</strong>; colori esclusivamente da token <code>--c-*</code> via <code>entityHsl()</code>.
+            Lo stato <code>state-05-sse</code> è intenzionalmente <strong>saltato</strong> (hub non SSE-driven).
+          </p>
+        </header>
 
-        <div className="section-label">Mobile · 375 — 8 stati</div>
-        <div className="phones-grid">
-          {MOBILE_STATES.map(s => (
-            <PhoneShell key={s.id} label={s.label} desc={s.desc}>
-              <PhoneScreen stateOverride={s.state || null} initialView={s.view} initialFilter={s.filter || 'all'}/>
-            </PhoneShell>
-          ))}
-        </div>
-
-        <div className="section-label">Desktop · 1280 — 4 stati chiave</div>
-        <div style={{ display:'flex', flexDirection:'column', gap: 36 }}>
-          <DesktopFrame label="09 · Desktop · List · default" desc="Container 1280. Card row complete: cover 76 + titolo+data+esito+vincitore + meta + scoring inline + ChipStrip.">
-            <DesktopFrameInner stateOverride={null} initialView="list" initialFilter="all"/>
-          </DesktopFrame>
-          <DesktopFrame label="10 · Desktop · Grid · 3-col" desc="Vista alternativa cover-first.">
-            <DesktopFrameInner stateOverride={null} initialView="grid" initialFilter="all"/>
-          </DesktopFrame>
-          <DesktopFrame label="11 · Desktop · Dark mode" dark desc="Verifica contrasti e accent entity-session in dark.">
-            <DesktopFrameInner stateOverride={null} initialView="list" initialFilter="all"/>
-          </DesktopFrame>
-          <DesktopFrame label="12 · Desktop · Empty first-run" desc="Hero + filtri + illustrazione 92 entity-session + CTA Registra.">
-            <DesktopFrameInner stateOverride="empty-first-run" initialView="list" initialFilter="all"/>
-          </DesktopFrame>
-        </div>
+        {STATES.map(s => <StateSection key={s.id} {...s}/>)}
       </div>
     </div>
   );

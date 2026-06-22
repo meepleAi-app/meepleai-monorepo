@@ -720,6 +720,28 @@ NON è un step, è un **modal preventivo** che appare alla 47ª/50 traduzione (w
 
 **Use case G3.3 + G3.4**: trigger dalla risposta low-confidence Q&A nel Tab Chat di C → "🤝 Definisci house rule". Drawer si apre con 2 tab: **Crea** | **Le tue rules**.
 
+### 🔒 Decisioni lockate (post-#2045 spec-panel synthesis 2026-06-22)
+
+Riferimento: [issue #2045](https://github.com/meepleAi-app/meepleai-monorepo/issues/2045) (6 esperti: Wiegers + Cockburn + Adzic + Fowler + Nygard + Crispin).
+
+- **DEC-1 — Trigger button "menu manuale" location**: **Option A — EntityChip entity="agent" row nel Tab Chat header**.
+  - L'EntityChip "Rules attive · 2" (counter dinamico) diventa l'entry-point secondario. Tap/click → apre drawer con default tab = **Tab 2 (Le tue rules)**.
+  - Trigger primary (low-confidence) → apre drawer con default tab = **Tab 1 (Crea)**.
+  - FE prop runtime: `defaultTab: 'create' | 'list'` (default `'create'`, override `'list'` quando trigger origine è EntityChip).
+  - Rationale Cockburn: scopre rules attive senza richiedere navigation extra; pip esiste già nel ConnectionBar pattern v2.
+
+- **DEC-2 — ConnectionBar counts source-of-truth**: **Option A — mockup placeholder con flag esplicito**.
+  - Counts (2 agents · 1 game · 8 sessions · 12 KB) sono `// MOCKUP DATA — FE wire TBD in follow-up issue` (commento inline JSX).
+  - Follow-up tracking issue (post-handoff): `useHouseRulesMetadata({ gameId })` hook + BE endpoint `GET /api/v1/agent-memory/house-rules/metadata?gameId={id}` → `{ agentCount, gameCount, sessionCount, kbCount }`.
+  - Rationale Fowler: evita premature commitment a hook signature che potrebbe drift in BE iteration.
+
+- **DEC-3 — Edit pattern**: **Option A — Edit in-place riusando Tab 1 con sub-state `mode`**.
+  - Tab 1 ha sub-stato runtime `mode: 'create' | 'edit'` con pre-fill data quando `mode='edit'`.
+  - Header Tab 1: "Crea house rule" (default) → "Modifica house rule" (quando `mode='edit'`).
+  - CTA Tab 1: "Salva house rule per Tainted Grail" → "Aggiorna house rule" (quando `mode='edit'`).
+  - Stato 8 "Tab Le tue rules edit modal" è **SOSTITUITO** da "Tab Crea edit mode pre-popolato".
+  - Rationale Fowler + UX consistency: SPA pattern, no fragmentazione componenti, evita doppia validation logic.
+
 ### Drawer header
 
 - Drag handle top (mobile only)
@@ -731,11 +753,14 @@ NON è un step, è un **modal preventivo** che appare alla 47ª/50 traduzione (w
 ### ConnectionBar (sotto header, 4 pip)
 
 ```ts
+// DEC-2 (lockata 2026-06-22): counts = MOCKUP DATA; FE wire via
+// `useHouseRulesMetadata({ gameId })` hook in follow-up issue post-#2027 handoff.
+// NO hardcoded counts in production — replace with hook return value.
 const connections: ConnectionPip[] = [
-  { entityType: 'agent',   count: 2,  label: 'Rules attive',  icon: Bot,         isEmpty: false },
-  { entityType: 'game',    count: 1,  label: 'Gioco target',  icon: Dice5,       isEmpty: false },
-  { entityType: 'session', count: 8,  label: 'Applicate in',  icon: Target,      isEmpty: false },
-  { entityType: 'kb',      count: 12, label: 'Sostituiscono', icon: FileText,    isEmpty: false },
+  { entityType: 'agent',   count: 2,  label: 'Rules attive',  icon: Bot,         isEmpty: false }, // MOCKUP PLACEHOLDER
+  { entityType: 'game',    count: 1,  label: 'Gioco target',  icon: Dice5,       isEmpty: false }, // MOCKUP PLACEHOLDER
+  { entityType: 'session', count: 8,  label: 'Applicate in',  icon: Target,      isEmpty: false }, // MOCKUP PLACEHOLDER
+  { entityType: 'kb',      count: 12, label: 'Sostituiscono', icon: FileText,    isEmpty: false }, // MOCKUP PLACEHOLDER
 ];
 ```
 
@@ -792,7 +817,7 @@ Each rule card:
   - "Applicata 3 volte"
   - "Creata 2 giorni fa da Sara"
 - Action row icons:
-  - ✏️ Modifica → riapre tab Crea pre-popolato
+  - ✏️ Modifica → **DEC-3 lockata**: switch a Tab 1 con `mode='edit'` + pre-fill data (header "Modifica house rule", CTA "Aggiorna house rule"). NO modal overlay separato.
   - 🗑️ Elimina → confirm dialog
   - 📤 Condividi → share placeholder
 
@@ -804,30 +829,59 @@ Empty state:
 
 ### Saved success state (transition Tab 1 → Tab 2)
 
-Dopo Salva click:
-- Tab 1 collapse animato
-- Toast bottom (entity=agent color, 3s autodismiss): "✅ House rule salvata · Marco e gli altri vedranno questa regola nelle prossime risposte"
-- Auto-switch a Tab 2 con la rule appena creata in highlight (bordo `entityHsl('agent', 0.6)` 2px, fade dopo 2s)
+**MAJ-1 lockata 2026-06-22**: timing precisi Given/When/Then (rationale Adzic, evita race condition di rendering e fissa il contract di animation).
 
-### Stati richiesti
+```gherkin
+Given: textarea contiene ≥10 char + utente ha cliccato "Salva house rule per Tainted Grail"
+When: BE save success (HTTP 201)
+Then 0-200ms: spinner replaces CTA "Salva" → stato visivo è il "Tab Crea saving"
+Then 200-500ms: toast bottom appare con entity=agent color, copy "✅ House rule salvata · Marco e gli altri vedranno questa regola nelle prossime risposte"
+Then 300-600ms: Tab 1 collapse animato (height auto→0, opacity 1→0)
+Then 600ms: switch attivo a Tab 2 con la rule appena creata mountata in cima alla lista
+Then 600ms: highlight border 2px `entityHsl('agent', 0.6)` sulla rule appena salvata
+Then 600-2600ms: highlight border opacity 1→0 (fade-out)
+Then 3000ms (assoluti da save click): toast autodismiss
+```
 
-- **Drawer closed** (mostrato come "trigger button" nel parent screen C)
-- **Tab Crea empty form** (textarea vuota, CTA disabled)
-- **Tab Crea typed** (~150 char, CTA enabled)
-- **Tab Crea saving** (spinner inline + CTA disabled)
-- **Tab Crea saved success** (transition + toast + Tab 2)
-- **Tab Le tue rules con 3 rules** (Tainted Grail 2 + ISS Vanguard 1, group headers)
-- **Tab Le tue rules empty** (illustrazione + CTA)
-- **Tab Le tue rules edit modal** (riapre Crea pre-popolato)
-- **Tab Le tue rules delete confirm** (modal "Elimina house rule? Le risposte future tornano al manuale ufficiale.")
-- **Light + dark**
-- **Mobile bottom sheet (drag-to-close)** + **Desktop side panel right 380px**
+Tutte le animazioni rispettano `prefers-reduced-motion`: se attivo, snap istantaneo senza transition (no fade, no collapse — solo state change).
+
+### Stati richiesti (13 stati, post-#2045 MAJ-2)
+
+Naming convention: `state-NN-{kebab-case-name}` come HTML anchor ID + JSX export name. Ogni stato deve essere renderizzato sia in **light** che in **dark** mode (no separate state — toggle `<html data-theme>`), e sia in **mobile 375px** (bottom sheet) che **desktop 1440px** (side panel 380px).
+
+| # | Anchor ID | Descrizione |
+|---|---|---|
+| 1 | `state-01-drawer-closed` | Drawer chiuso; mostrato come trigger button nel parent screen C (entry-point primary low-confidence + entry-point secondary EntityChip "rules attive · 2" per DEC-1) |
+| 2 | `state-02-create-empty` | Tab Crea, mode=create, textarea vuota, CTA "Salva" disabled |
+| 3 | `state-03-create-typed` | Tab Crea, mode=create, textarea ~150 char, CTA enabled |
+| 4 | `state-04-create-saving` | Tab Crea, spinner inline replaces CTA copy, CTA disabled (pointer-events none) |
+| 5 | `state-05-create-saved-success` | Transition Tab 1 → Tab 2 (timing Given/When/Then sopra — MAJ-1) |
+| 6 | `state-06-list-3-rules` | Tab Le tue rules con 3 rules (Tainted Grail 2 + ISS Vanguard 1, group headers per gioco) |
+| 7 | `state-07-list-empty` | Tab Le tue rules empty illustrazione + CTA "+ Crea la prima rule" |
+| 8 | `state-08-create-edit-mode-prefilled` | Tab Crea, mode=edit, pre-fill textarea, header "Modifica house rule", CTA "Aggiorna house rule" — DEC-3 in-place (sostituisce ex "edit modal") |
+| 9 | `state-09-list-delete-confirm` | Modal "Elimina house rule? Le risposte future tornano al manuale ufficiale." con confirm + cancel |
+| 10 | `state-10-mobile-bottom-sheet-drag` | Mobile 375px, drag handle visible, gesture drag-to-close attivo (snapshot mid-drag) |
+| 11 | `state-11-save-error` | **MAJ-2 nuovo**: toast rosso (entity=event severity critica) + retry button + textarea preserva input. Copy: "❌ Impossibile salvare la house rule · Riprova" + secondary button "Riprova" + dismiss. CTA "Salva" re-enabled. |
+| 12 | `state-12-offline-banner` | **MAJ-2 nuovo**: drawer renderizza OK, banner top entity=agent amber: "📴 Offline · Salveremo questa rule quando torni online", CTA "Salva" disabled + helper text "Salveremo automaticamente al ritorno della connessione" |
+| 13 | `state-13-delete-impossible-soft-delete-opt-out` | **MAJ-2 nuovo**: modal Elimina extends con counter "Questa rule è applicata in 5 sessioni attive" + checkbox opt-out "Disattiva invece di eliminare (preserva storico)". Default checked. |
 
 ### Deviazioni accettate
 
 - Drag-to-close mobile = riusa pattern `vaul` (placeholder JSX, vero impl userà `<DrawerProvider>` esistente)
-- Toast saved success = riusa pattern toast esistente (lib `react-hot-toast` placeholder)
-- Edit pre-populated form = same Tab 1 structure, no nuovo componente
+- Toast saved success + saved error = riusa pattern toast esistente (lib `react-hot-toast` placeholder)
+- Edit pre-populated form = same Tab 1 structure con `mode='edit'` (DEC-3 lockata, no nuovo componente)
+
+### AC microscopici (MAJ-3 lockata 2026-06-22)
+
+Granular checklist per testability (Crispin rationale: AC binary → AC granulari con anchor + matrice screenshot).
+
+- [ ] **Anchor pattern**: ogni stato ha HTML anchor `<section id="state-NN-{name}">` raggiungibile via `#state-NN-{name}` URL fragment
+- [ ] **JSX export**: ogni stato è esportato come `StateNN_KebabCaseName` React component (uppercase first letter post-`-`)
+- [ ] **Screenshot matrix**: ogni stato × 2 themes (light/dark) × 2 viewports (375px mobile / 1440px desktop) = **4 PNG inline** nel mockup HTML index, src `state-NN-{name}-{light|dark}-{375|1440}.png`
+- [ ] **Token contrast verified**: script inline `console.assert(getComputedStyle(el).color contrast vs background ≥ 4.5)` su tutti i testi primary in light + dark (CSS variable: `--fg`, `--fg-muted`, `--fg-strong` su `--bg`, `--bg-sunken`, `--bg-elevated`)
+- [ ] **A11y aria-modal**: drawer container ha `role="dialog"` + `aria-modal="true"` + `aria-labelledby="drawer-title-id"` + focus trap on open + restore focus on close
+- [ ] **prefers-reduced-motion**: snap immediato di tutte le transition (Tab 1 collapse, toast slide-in, highlight fade) — verifica via `@media (prefers-reduced-motion: reduce)`
+- [ ] **DoD shared SP6 compliance**: tokens.css only, entityHsl helper, AA contrast, Mobile 375 canonical + Desktop 1440 adaptation
 
 ---
 

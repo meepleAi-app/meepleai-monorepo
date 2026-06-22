@@ -32,7 +32,7 @@
     "designer_approved_on": "2026-06-15",
     "story_path": "apps/web/src/components/features/gamebook/GamebookPlayShell.stories.tsx",
     "fixtures_path": "apps/web/src/__tests__/fixtures/mockup-pilots/librogame/librogame-play-session.ts",
-    "design_intent": "current",
+    "design_intent": "forward-refactor",
     "viewports": [
       "desktop"
     ],

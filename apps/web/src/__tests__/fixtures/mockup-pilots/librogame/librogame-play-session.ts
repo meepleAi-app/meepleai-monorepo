@@ -40,10 +40,10 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 // Constants
 // ---------------------------------------------------------------------------
 
-export const MOCK_CAMPAIGN_ID = 'campaign-eldoria-abc123';
-export const MOCK_GAME_ID = 'game-nanolith-001';
-export const MOCK_BOOK_ID_STORY = 'book-storybook-001';
-export const MOCK_BOOK_ID_ENCOUNTER = 'book-encounter-001';
+export const MOCK_CAMPAIGN_ID = '00000000-0000-0000-0000-000000000001';
+export const MOCK_GAME_ID = '00000000-0000-0000-0000-000000000002';
+export const MOCK_BOOK_ID_STORY = '00000000-0000-0000-0000-000000000010';
+export const MOCK_BOOK_ID_ENCOUNTER = '00000000-0000-0000-0000-000000000011';
 
 // ---------------------------------------------------------------------------
 // Campaign DTO — §289 Cap 4 "La grotta dei Goblin"
@@ -54,7 +54,7 @@ export const MOCK_LIBROGAME_PLAY_SESSION_CAMPAIGN = {
   id: MOCK_CAMPAIGN_ID,
   gameRefId: MOCK_GAME_ID,
   gameRefKind: 0,
-  ownerUserId: 'user-aaron-001',
+  ownerUserId: '00000000-0000-0000-0000-000000000099',
   title: 'Con i ragazzi — Eldoria',
   currentParagraph: 289,
   history: [134, 189, 198, 214, 218, 271, 289],

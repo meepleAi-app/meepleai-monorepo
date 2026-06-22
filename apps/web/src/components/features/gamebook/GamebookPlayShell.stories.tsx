@@ -14,20 +14,20 @@
  *
  *   Four frames cover the distinct renderable states of the real component:
  *
- *   Frame01_Story Tab    — campaign §289 loaded, single narrative book auto-selected
+ *   Frame01_StoryTab    — campaign §289 loaded, single narrative book auto-selected
  *                          (BookPicker hidden), submit button enabled.
  *                          Covers mockup state-01 (story-tab default runtime).
  *
- *   Frame02_Encounter Tab — same campaign + 2 narrative books → BookPicker selector
+ *   Frame02_EncounterTab — same campaign + 2 narrative books → BookPicker selector
  *                           visible. Maps to mockup state-02 (encounter-tab with
  *                           multi-book context visible in the sidebar).
  *
- *   Frame03_Chat Overlay  — campaign §289 + Zustand decorator pre-seeds
+ *   Frame03_ChatOverlay  — campaign §289 + Zustand decorator pre-seeds
  *                           useChatPanelStore with isOpen=true so the chat button
  *                           reflects the active-chat state.
  *                           Maps to mockup state-03 (chat-overlay active).
  *
- *   Frame04_Glossary Inline — campaign with 10-entry history list rendered below the
+ *   Frame04_GlossaryInline — campaign with 10-entry history list rendered below the
  *                             form (data.history.length > 0). Maps to mockup state-04
  *                             (rich context panel / glossary-inline context).
  *
@@ -57,7 +57,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 
 // ---------------------------------------------------------------------------
 // Decorator — seeds Zustand useChatPanelStore.isOpen before each story renders.
-// Used only by Frame03_Chat Overlay to simulate the chat panel being active.
+// Used only by Frame03_ChatOverlay to simulate the chat panel being active.
 // ---------------------------------------------------------------------------
 const chatOpenDecorator: Decorator = Story => {
   useChatPanelStore.setState({
@@ -135,7 +135,7 @@ type Story = StoryObj<typeof GamebookPlayShell>;
 
 // ── Frame 01 · Story Tab — §289 loaded, single book auto-selected ─────────────
 
-export const Frame01_Story_Tab: Story = {
+export const Frame01_StoryTab: Story = {
   name: '01 · Story Tab — §289 caricato, libro singolo auto-selezionato',
   parameters: {
     msw: {
@@ -156,7 +156,7 @@ export const Frame01_Story_Tab: Story = {
 
 // ── Frame 02 · Encounter Tab — 2 narrative books → BookPicker visible ─────────
 
-export const Frame02_Encounter_Tab: Story = {
+export const Frame02_EncounterTab: Story = {
   name: '02 · Encounter Tab — 2 libri narrativi, BookPicker visibile',
   parameters: {
     msw: {
@@ -176,7 +176,7 @@ export const Frame02_Encounter_Tab: Story = {
 
 // ── Frame 03 · Chat Overlay — Zustand decorator: chat panel isOpen=true ───────
 
-export const Frame03_Chat_Overlay: Story = {
+export const Frame03_ChatOverlay: Story = {
   name: '03 · Chat Overlay — chat panel Zustand pre-seeded: isOpen=true',
   decorators: [chatOpenDecorator],
   parameters: {
@@ -198,7 +198,7 @@ export const Frame03_Chat_Overlay: Story = {
 
 // ── Frame 04 · Glossary Inline — 10-entry history list ───────────────────────
 
-export const Frame04_Glossary_Inline: Story = {
+export const Frame04_GlossaryInline: Story = {
   name: '04 · Glossary Inline — 10 paragrafi visitati nella history list',
   parameters: {
     msw: {

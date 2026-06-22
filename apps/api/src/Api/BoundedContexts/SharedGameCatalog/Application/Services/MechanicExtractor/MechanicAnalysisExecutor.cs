@@ -1,4 +1,5 @@
 using System.Text;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExtractor.Guardrails;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
@@ -156,6 +157,13 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
         // section semantic retrieval.
         var contextBySection = AllSections.ToDictionary(s => s, _ => retrievalContext);
 
+        // M1.3 (#525): pin the structured source chunk pool + page count for the guardrails
+        // (T2 long-verbatim, T3 grounding, T4 page/substring). Same bundle per section in M1.3.
+        var (sourceChunks, pdfPageCount) = await LoadSourcePoolAsync(analysis.PdfDocumentId, cancellationToken)
+            .ConfigureAwait(false);
+        var sourceChunksBySection = AllSections.ToDictionary(
+            s => s, _ => sourceChunks);
+
         var request = new MechanicPipelineRequest(
             AnalysisId: analysis.Id,
             SharedGameId: analysis.SharedGameId,
@@ -167,7 +175,11 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
             Model: analysis.ModelUsed,
             EffectiveCostCapUsd: analysis.CostCapUsd,
             InputCostPerMillionTokens: DefaultInputCostPerMillion,
-            OutputCostPerMillionTokens: DefaultOutputCostPerMillion);
+            OutputCostPerMillionTokens: DefaultOutputCostPerMillion)
+        {
+            SourceChunksBySection = sourceChunksBySection,
+            PdfPageCount = pdfPageCount
+        };
 
         var result = await _pipeline.RunAsync(request, cancellationToken).ConfigureAwait(false);
 
@@ -444,5 +456,31 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
         }
 
         return builder.ToString();
+    }
+
+    /// <summary>
+    /// M1.3 (#525): loads the structured source chunk pool (with page numbers + chunk ids) and the
+    /// PDF page count, pinned for the analysis run so the guardrails (T2/T3/T4) validate against the
+    /// same snapshot the LLM saw.
+    /// </summary>
+    private async Task<(IReadOnlyList<MechanicSourceChunk> Chunks, int? PageCount)> LoadSourcePoolAsync(
+        Guid pdfDocumentId, CancellationToken cancellationToken)
+    {
+        var chunks = await _dbContext.TextChunks
+            .AsNoTracking()
+            .Where(c => c.PdfDocumentId == pdfDocumentId)
+            .OrderBy(c => c.ChunkIndex)
+            .Select(c => new MechanicSourceChunk(c.ChunkIndex, c.PageNumber, c.Id, c.Content))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var pageCount = await _dbContext.PdfDocuments
+            .AsNoTracking()
+            .Where(p => p.Id == pdfDocumentId)
+            .Select(p => p.PageCount)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return (chunks, pageCount);
     }
 }

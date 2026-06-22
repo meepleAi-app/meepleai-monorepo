@@ -1,8 +1,14 @@
 using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using Api.BoundedContexts.SharedGameCatalog.Application.Configuration;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExtractor.Guardrails;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExtractor;
 
@@ -18,8 +24,6 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExt
 /// </remarks>
 internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
 {
-    private const int MaxValidationRetries = 1;
-
     // Per-section max_tokens cap. ADR-051 originally targeted 1500, but live runs on
     // dense rulebooks (e.g. Dune: Imperium Setup section) truncate at the 1500 boundary
     // — the validator catches it via the well_formed rule ("Expected depth to be zero")
@@ -35,18 +39,21 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
     private readonly IMechanicOutputValidator _validator;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<MechanicAnalysisPipeline> _logger;
+    private readonly MechanicGuardrailOptions _options;
 
     public MechanicAnalysisPipeline(
         ILlmService llmService,
         IMechanicPromptProvider promptProvider,
         IMechanicOutputValidator validator,
         TimeProvider timeProvider,
+        IOptions<MechanicGuardrailOptions> options,
         ILogger<MechanicAnalysisPipeline> logger)
     {
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _promptProvider = promptProvider ?? throw new ArgumentNullException(nameof(promptProvider));
         _validator = validator ?? throw new ArgumentNullException(nameof(validator));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -132,7 +139,15 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
         var startedAt = _timeProvider.GetUtcNow().UtcDateTime;
         var stopwatch = Stopwatch.StartNew();
         string? lastValidationError = null;
-        var attempts = MaxValidationRetries + 1;
+        string? lastOutputHash = null;
+        var currentSystemPrompt = systemPrompt;
+        var attempts = _options.MaxRetriesPerSection + 1;
+
+        // Accumulate tokens/cost across all attempts (retries share the T8 cap, AC-6).
+        var accPromptTokens = 0;
+        var accCompletionTokens = 0;
+        decimal accCostUsd = 0m;
+        LlmCompletionResult? lastResult = null;
 
         for (var attempt = 1; attempt <= attempts; attempt++)
         {
@@ -140,7 +155,7 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
 
             var result = await _llmService.GenerateCompletionWithModelAsync(
                 explicitModel: request.Model,
-                systemPrompt: systemPrompt,
+                systemPrompt: currentSystemPrompt,
                 userPrompt: userPrompt,
                 source: RequestSource.Manual,
                 maxTokens: SectionMaxTokens,
@@ -164,11 +179,18 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
                     Abort: MechanicPipelineOutcome.AbortedLlmFailed);
             }
 
+            lastResult = result;
+            accPromptTokens += result.Usage.PromptTokens;
+            accCompletionTokens += result.Usage.CompletionTokens;
+            accCostUsd += result.Cost.TotalCost;
+
             // DeepSeek (and some other chat models) wrap JSON in markdown code fences
             // (```json ... ``` or ``` ... ```). The validator and downstream parser expect
             // raw JSON, so strip fences before validation and persist the cleaned output.
             var cleanedResponse = StripCodeFences(result.Response);
-            var validation = _validator.Validate(section, cleanedResponse);
+            var validation = await ValidateSectionAsync(
+                request, section, cleanedResponse, attempt - 1, cancellationToken).ConfigureAwait(false);
+
             if (validation.IsValid)
             {
                 stopwatch.Stop();
@@ -181,10 +203,10 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
                     RunOrder = runOrder,
                     Provider = string.IsNullOrWhiteSpace(result.Cost.Provider) ? request.Provider : result.Cost.Provider,
                     ModelUsed = string.IsNullOrWhiteSpace(result.Cost.ModelId) ? request.Model : result.Cost.ModelId,
-                    PromptTokens = result.Usage.PromptTokens,
-                    CompletionTokens = result.Usage.CompletionTokens,
-                    TotalTokens = result.Usage.TotalTokens,
-                    EstimatedCostUsd = decimal.Round(result.Cost.TotalCost, 6, MidpointRounding.AwayFromZero),
+                    PromptTokens = accPromptTokens,
+                    CompletionTokens = accCompletionTokens,
+                    TotalTokens = accPromptTokens + accCompletionTokens,
+                    EstimatedCostUsd = decimal.Round(accCostUsd, 6, MidpointRounding.AwayFromZero),
                     LatencyMs = (int)Math.Min(int.MaxValue, stopwatch.ElapsedMilliseconds),
                     Status = 0,
                     ErrorMessage = null,
@@ -200,6 +222,20 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
             _logger.LogWarning(
                 "Mechanic section '{Section}' attempt {Attempt}/{Total} failed validation: {Error}",
                 section, attempt, attempts, lastValidationError);
+
+            // AC-6 stable-output detection: identical regeneration → stop early.
+            var outputHash = ComputeHash(cleanedResponse);
+            if (string.Equals(outputHash, lastOutputHash, StringComparison.Ordinal))
+            {
+                _logger.LogWarning(
+                    "Mechanic section '{Section}' produced identical output on retry; breaking loop (RegenerationDivergent=false).",
+                    section);
+                break;
+            }
+            lastOutputHash = outputHash;
+
+            // Augment the system prompt with the violations (JSON) for self-correction.
+            currentSystemPrompt = AugmentSystemPrompt(systemPrompt, validation.Violations);
         }
 
         stopwatch.Stop();
@@ -210,12 +246,12 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
             AnalysisId = request.AnalysisId,
             Section = (int)section,
             RunOrder = runOrder,
-            Provider = request.Provider,
-            ModelUsed = request.Model,
-            PromptTokens = 0,
-            CompletionTokens = 0,
-            TotalTokens = 0,
-            EstimatedCostUsd = 0m,
+            Provider = lastResult is null || string.IsNullOrWhiteSpace(lastResult.Cost.Provider) ? request.Provider : lastResult.Cost.Provider,
+            ModelUsed = lastResult is null || string.IsNullOrWhiteSpace(lastResult.Cost.ModelId) ? request.Model : lastResult.Cost.ModelId,
+            PromptTokens = accPromptTokens,
+            CompletionTokens = accCompletionTokens,
+            TotalTokens = accPromptTokens + accCompletionTokens,
+            EstimatedCostUsd = decimal.Round(accCostUsd, 6, MidpointRounding.AwayFromZero),
             LatencyMs = (int)Math.Min(int.MaxValue, stopwatch.ElapsedMilliseconds),
             Status = 1,
             ErrorMessage = $"Validation failed after {attempts} attempts: {lastValidationError}",
@@ -223,6 +259,76 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
             CompletedAt = completedAtValidationFail
         };
         return (validationFailureRun, Output: null, Abort: MechanicPipelineOutcome.AbortedValidation);
+    }
+
+    /// <summary>
+    /// Parses the cleaned LLM output, builds the guardrail context (source pool + page count +
+    /// options), and runs the validator chain. A JSON parse failure becomes a
+    /// <c>well_formed</c> violation (so the retry loop re-prompts).
+    /// </summary>
+    private async Task<MechanicValidationResult> ValidateSectionAsync(
+        MechanicPipelineRequest request,
+        MechanicSection section,
+        string cleanedResponse,
+        int retryCount,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(cleanedResponse))
+        {
+            return MechanicValidationResult.Invalid(new[]
+            {
+                new MechanicValidationViolation("well_formed", "Output is empty or whitespace.")
+            });
+        }
+
+        JsonDocument doc;
+        try
+        {
+            doc = JsonDocument.Parse(cleanedResponse);
+        }
+        catch (JsonException ex)
+        {
+            return MechanicValidationResult.Invalid(new[]
+            {
+                new MechanicValidationViolation("well_formed", $"Output is not valid JSON: {ex.Message}")
+            });
+        }
+
+        try
+        {
+            var chunks = request.SourceChunksBySection.TryGetValue(section, out var sc)
+                ? sc
+                : Array.Empty<MechanicSourceChunk>();
+            var context = new MechanicGuardrailContext(
+                section, doc.RootElement, chunks, request.PdfPageCount, _options)
+            {
+                AnalysisId = request.AnalysisId,
+                RetryCount = retryCount
+            };
+            return await _validator.ValidateAsync(context, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            doc.Dispose();
+        }
+    }
+
+    private static string AugmentSystemPrompt(
+        string baseSystemPrompt, IReadOnlyList<MechanicValidationViolation> violations)
+    {
+        var payload = JsonSerializer.Serialize(
+            violations.Select(v => new { rule = v.Rule, message = v.Message, path = v.Path }));
+        return baseSystemPrompt
+            + "\n\n## PREVIOUS_ATTEMPT_VIOLATIONS\n"
+            + "Your previous output was rejected by the guardrails below. Fix every violation and "
+            + "return corrected JSON only (no prose):\n"
+            + payload;
+    }
+
+    private static string ComputeHash(string text)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(text.Trim()));
+        return Convert.ToHexString(bytes);
     }
 
     private static MechanicAnalysisSectionRunEntity BuildFailedRun(

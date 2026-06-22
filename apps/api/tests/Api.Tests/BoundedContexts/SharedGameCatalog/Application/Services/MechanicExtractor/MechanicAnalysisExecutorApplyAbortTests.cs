@@ -192,7 +192,9 @@ public sealed class MechanicAnalysisExecutorApplyAbortTests
             .Should().ContainSingle().Subject;
         overrunEvent.OverrunCause.Should().Be(CostCapOverrunCause.MidStreamOverrun);
         overrunEvent.PreviousCapUsd.Should().Be(1m);
-        overrunEvent.NewCapUsd.Should().Be(1.25m, "the event carries the observed cumulative cost");
+        overrunEvent.NewCapUsd.Should().Be(1m, "the cap is NOT raised on the mid-stream path");
+        overrunEvent.ObservedCumulativeCostUsd.Should().Be(1.25m,
+            "the observed cumulative cost lives in its own field, separate from cap semantics");
         overrunEvent.ActorId.Should().Be(analysis.CreatedBy);
     }
 

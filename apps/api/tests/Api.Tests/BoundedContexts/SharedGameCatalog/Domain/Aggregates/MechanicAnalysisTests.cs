@@ -358,7 +358,8 @@ public sealed class MechanicAnalysisTests
             .Which.Should().BeOfType<MechanicAnalysisCostCapOverriddenEvent>().Subject;
         evt.OverrunCause.Should().Be(CostCapOverrunCause.MidStreamOverrun);
         evt.PreviousCapUsd.Should().Be(2m);
-        evt.NewCapUsd.Should().Be(2.50m, "NewCapUsd carries the observed cumulative cost on this path");
+        evt.NewCapUsd.Should().Be(2m, "NewCapUsd is unchanged on the mid-stream path — the cap was NOT raised");
+        evt.ObservedCumulativeCostUsd.Should().Be(2.50m, "the observed cumulative cost lives in its own field");
         evt.ActorId.Should().Be(actor);
         evt.Reason.Should().Contain("Mid-stream overrun");
     }
@@ -383,6 +384,24 @@ public sealed class MechanicAnalysisTests
         var act = () => analysis.RecordMidStreamCostCapOverrun(cumulativeCostUsd: 2.50m, Guid.Empty);
 
         act.Should().Throw<ArgumentException>();
+    }
+
+    // Code-review H1: aggregate must reject mid-stream overrun recording on a sealed aggregate.
+    [Fact]
+    public void RecordMidStreamCostCapOverrun_FromPartiallyExtracted_Throws()
+    {
+        // Arrange — transition to PartiallyExtracted via the existing path.
+        var analysis = NewAnalysisWithClaim(costCap: 2m);
+        analysis.MarkAsPartiallyExtracted(
+            MechanicAnalysis.AutoRejectionReasons.CostCapExceeded,
+            analysis.CreatedBy,
+            DateTime.UtcNow);
+
+        // Act / Assert
+        var act = () => analysis.RecordMidStreamCostCapOverrun(cumulativeCostUsd: 2.50m, analysis.CreatedBy);
+
+        act.Should().Throw<Api.BoundedContexts.SharedGameCatalog.Domain.Exceptions.InvalidMechanicAnalysisStateException>(
+            "the method is Draft-only — re-recording on a sealed aggregate would confuse audit consumers");
     }
 
     // ============================================================

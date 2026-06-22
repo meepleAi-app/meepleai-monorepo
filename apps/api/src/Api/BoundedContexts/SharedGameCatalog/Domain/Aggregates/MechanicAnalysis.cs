@@ -728,6 +728,16 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
             throw new ArgumentException("ActorId cannot be empty.", nameof(actorId));
         }
 
+        // Aggregate invariant: mid-stream overrun is a Draft-only signal. Once the
+        // aggregate transitions out of Draft (PartiallyExtracted / Rejected / Published)
+        // the cost-cap state is sealed and recording a second event would confuse
+        // downstream audit consumers.
+        if (Status != MechanicAnalysisStatus.Draft)
+        {
+            throw new InvalidMechanicAnalysisStateException(
+                Id, Status, "record mid-stream cost cap overrun", MechanicAnalysisStatus.Draft);
+        }
+
         if (cumulativeCostUsd <= CostCapUsd)
         {
             throw new ArgumentOutOfRangeException(
@@ -740,10 +750,11 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
         AddDomainEvent(new MechanicAnalysisCostCapOverriddenEvent(
             Id,
             actorId,
-            CostCapUsd,
-            cumulativeCostUsd,
+            previousCapUsd: CostCapUsd,
+            newCapUsd: CostCapUsd, // cap is NOT raised on this path — it was breached
             reason: $"Mid-stream overrun: cumulative {cumulativeCostUsd:F6} USD > cap {CostCapUsd:F6} USD.",
-            CostCapOverrunCause.MidStreamOverrun));
+            overrunCause: CostCapOverrunCause.MidStreamOverrun,
+            observedCumulativeCostUsd: cumulativeCostUsd));
     }
 
     // === AI comprehension certification methods (ADR-051 M2) ===

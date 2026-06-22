@@ -29,13 +29,22 @@ internal sealed class MechanicAnalysisCostCapOverriddenEvent : DomainEventBase
     /// </summary>
     public CostCapOverrunCause OverrunCause { get; }
 
+    /// <summary>
+    /// #2494 AC-5: observed cumulative cost at the moment of mid-stream breach detection.
+    /// Populated only when <see cref="OverrunCause"/> is
+    /// <see cref="CostCapOverrunCause.MidStreamOverrun"/>. <c>null</c> on the admin override
+    /// path where the cap itself was raised.
+    /// </summary>
+    public decimal? ObservedCumulativeCostUsd { get; }
+
     public MechanicAnalysisCostCapOverriddenEvent(
         Guid analysisId,
         Guid actorId,
         decimal previousCapUsd,
         decimal newCapUsd,
         string reason,
-        CostCapOverrunCause overrunCause = CostCapOverrunCause.AdminOverride)
+        CostCapOverrunCause overrunCause = CostCapOverrunCause.AdminOverride,
+        decimal? observedCumulativeCostUsd = null)
     {
         AnalysisId = analysisId;
         ActorId = actorId;
@@ -43,5 +52,6 @@ internal sealed class MechanicAnalysisCostCapOverriddenEvent : DomainEventBase
         NewCapUsd = newCapUsd;
         Reason = reason;
         OverrunCause = overrunCause;
+        ObservedCumulativeCostUsd = observedCumulativeCostUsd;
     }
 }

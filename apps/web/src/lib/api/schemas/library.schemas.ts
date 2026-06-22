@@ -330,6 +330,26 @@ export const GameDetailDtoSchema = z.object({
 
   // Issue #1824 L3: user-custom cover R2 key (null if no custom cover)
   customCoverR2Key: z.string().nullable().optional(),
+
+  // Issue #2035 — Designer names from the shared game catalog M:N relation.
+  // Optional + nullable because legacy BE versions don't surface the field
+  // and the BE handler emits `null` when the relation is empty.
+  // The handler at GetGameDetailQueryHandler.cs (commit 09ea5eae7) projects
+  // `sharedGame.Designers.Select(d => d.Name)` → string[]. Note the
+  // LibraryGameDetail consumer surface (useLibrary.ts:815) is still object-
+  // shaped (`Array<{ id; name }>`) and populated from `sharedGame.designers`
+  // via the parallel fetch; this wire field is currently received-but-unused
+  // by the mapper (a future fallback wire can consume it when sharedGame fetch
+  // fails — see useLibrary.ts:1023-1029).
+  designers: z.array(z.string()).nullable().optional(),
+
+  // Issue #2034 — ConnectionBar pill counts. Replaces FE-side hardcoded zeros
+  // in GameDetailDesktop.tsx (`agentCount: 0`, `chatCount: 0`). `agentCount` is
+  // cross-user (AgentDefinitions linked to this SharedGame); `chatThreadCount`
+  // is the requesting user's own thread count for the game. Defaults to 0 to
+  // tolerate legacy BE responses that don't surface the fields yet.
+  agentCount: z.number().int().nonnegative().optional().default(0),
+  chatThreadCount: z.number().int().nonnegative().optional().default(0),
 });
 
 export type GameDetailDto = z.infer<typeof GameDetailDtoSchema>;

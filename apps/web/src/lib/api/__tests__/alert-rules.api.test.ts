@@ -19,14 +19,16 @@ const mockPut = vi.fn();
 const mockDelete = vi.fn();
 const mockPatch = vi.fn();
 
+// #1972 M4 batch: vitest v4 rejects arrow-mock used with `new`. Use class with shared closure spy refs.
+class MockHttpClient {
+  get = mockGet;
+  post = mockPost;
+  put = mockPut;
+  delete = mockDelete;
+  patch = mockPatch;
+}
 vi.mock('../core/httpClient', () => ({
-  HttpClient: vi.fn().mockImplementation(() => ({
-    get: mockGet,
-    post: mockPost,
-    put: mockPut,
-    delete: mockDelete,
-    patch: mockPatch,
-  })),
+  HttpClient: MockHttpClient,
 }));
 
 // Import after mock

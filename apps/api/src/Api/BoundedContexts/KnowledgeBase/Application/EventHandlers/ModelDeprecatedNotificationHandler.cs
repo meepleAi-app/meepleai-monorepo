@@ -76,9 +76,11 @@ internal sealed class ModelDeprecatedNotificationHandler
                 detectedAt = notification.DetectedAt,
             });
 
-            foreach (var adminId in adminIds)
-            {
-                var n = new Notification(
+            // Issue #2392: collect notifications + AddBatchAndCommitAsync ensures
+            // POST-save metric + SSE broadcast discipline (was AddAsync + manual save
+            // → phantom broadcast risk if SaveChanges failed after fan-out).
+            var notifications = adminIds
+                .Select(adminId => new Notification(
                     id: Guid.NewGuid(),
                     userId: adminId,
                     type: NotificationType.AdminModelStatusChanged,
@@ -86,12 +88,10 @@ internal sealed class ModelDeprecatedNotificationHandler
                     title: title,
                     message: message,
                     link: "/admin/agents/usage",
-                    metadata: metadata);
+                    metadata: metadata))
+                .ToList();
 
-                await _notificationRepository.AddAsync(n, cancellationToken).ConfigureAwait(false);
-            }
-
-            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await _notificationRepository.AddBatchAndCommitAsync(notifications, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "ModelDeprecatedEvent: notified {Count} admins — {ModelId} affects [{Strategies}], replacement: {Replacement}",

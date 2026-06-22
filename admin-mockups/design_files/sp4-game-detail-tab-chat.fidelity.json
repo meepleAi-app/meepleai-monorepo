@@ -1,0 +1,35 @@
+{
+  "_comment": "AI-generated placeholder (#2148). Standalone chat sub-tab for /games/[id]/chat; previously only partial coverage via sp4-game-chat-tab.html composite. Designer review required.",
+  "mockup": {
+    "source": "admin-mockups/design_files/sp4-game-detail-tab-chat.html",
+    "states": [
+      "default"
+    ]
+  },
+  "acceptance": {
+    "visual_diff_max_px": 12,
+    "color_delta_e_max": 5,
+    "tokens_used": "canonical_only",
+    "legacy_token_names_forbidden": true,
+    "states_covered": [
+      "default"
+    ],
+    "a11y_axe": "AA",
+    "a11y_violations_max": 0,
+    "responsive_breakpoints": [
+      375,
+      768,
+      1024,
+      1440
+    ],
+    "designer_approved_by": "",
+    "designer_approved_on": "",
+    "story_path": "",
+    "fixtures_path": "",
+    "design_intent": "forward-refactor",
+    "viewports": [
+      "desktop"
+    ],
+    "obsolete_tracking_issue": ""
+  }
+}

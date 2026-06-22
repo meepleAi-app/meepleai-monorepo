@@ -3,6 +3,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 
+import { useQueryClient } from '@tanstack/react-query';
 import {
   UploadCloudIcon,
   FileTextIcon,
@@ -46,6 +47,7 @@ const MAX_CONCURRENT_UPLOADS = 3;
 
 export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
   const api = useApiClient();
+  const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const preSelectedRef = useRef(false);
 
@@ -60,6 +62,28 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [urgentPriority, setUrgentPriority] = useState(false);
   const router = useRouter();
+
+  // Issue #2246: Invalidate admin UI caches after upload completes so the
+  // newly-uploaded document immediately shows up in:
+  // - admin/pdfs documents list
+  // - admin game KB documents/statuses
+  // - admin queue
+  // - shared-games documents + kb-cards
+  const invalidateAdminCaches = useCallback(
+    (gameId: string) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'pdfs'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-game-kb-documents', gameId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-game-kb-statuses'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'queue'] });
+      queryClient.invalidateQueries({
+        queryKey: ['admin', 'shared-games', gameId, 'documents'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['admin', 'shared-games', gameId, 'kb-cards'],
+      });
+    },
+    [queryClient]
+  );
 
   // ── Validation ──────────────────────────────────────────────────────
 
@@ -111,6 +135,7 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
         }
 
         updateUpload(index, { status: 'completed' });
+        invalidateAdminCaches(selectedGame.id);
       } catch (err) {
         updateUpload(index, {
           status: 'error',
@@ -118,7 +143,7 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
         });
       }
     },
-    [api.pdf, selectedGame, updateUpload, urgentPriority, handleEnqueueError]
+    [api.pdf, selectedGame, updateUpload, urgentPriority, handleEnqueueError, invalidateAdminCaches]
   );
 
   const uploadChunkedFile = useCallback(
@@ -169,6 +194,7 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
         }
 
         updateUpload(index, { status: 'completed' });
+        invalidateAdminCaches(selectedGame.id);
       } catch (err) {
         updateUpload(index, {
           status: 'error',
@@ -176,7 +202,7 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
         });
       }
     },
-    [api.pdf, selectedGame, updateUpload, urgentPriority, handleEnqueueError]
+    [api.pdf, selectedGame, updateUpload, urgentPriority, handleEnqueueError, invalidateAdminCaches]
   );
 
   const startUpload = useCallback(
@@ -315,7 +341,9 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
                   Ricerca...
                 </div>
               ) : gameResults.length === 0 ? (
-                <div className="p-3 text-sm text-muted-foreground text-center">Nessun gioco trovato</div>
+                <div className="p-3 text-sm text-muted-foreground text-center">
+                  Nessun gioco trovato
+                </div>
               ) : (
                 gameResults.map(game => (
                   <button

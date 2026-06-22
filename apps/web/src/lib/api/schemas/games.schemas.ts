@@ -23,9 +23,12 @@ export const GameSchema = z.object({
   bggId: z.number().int().nonnegative().nullable(),
   createdAt: z.string().datetime({ offset: true }),
   // Issue #1830: UI-003 GameCard enhancements
-  imageUrl: z.string().url().nullable().optional(),
+  // Accept empty string as a sentinel for "no image" — the BE returns "" rather
+  // than null for some catalogue rows (#2247 follow-up: schema validation
+  // failed and broke the /library page badge wiring downstream).
+  imageUrl: z.string().nullable().optional(),
   // Admin Wizard: Game icon URL
-  iconUrl: z.string().url().nullable().optional(),
+  iconUrl: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   faqCount: z.number().int().nonnegative().nullable().optional(),
   averageRating: z.number().nullable().optional(),
@@ -103,6 +106,10 @@ export const GameSessionDtoSchema = z.object({
   winnerName: z.string().nullable(),
   notes: z.string().nullable(),
   durationMinutes: z.number().int().nonnegative(),
+  // #2389 Block B: polymorphic scoring config exposed by Block A BE evolution.
+  // Both fields are nullable strings (scoreData is a JSON-encoded payload).
+  scoringType: z.string().nullable().optional(),
+  scoreData: z.string().nullable().optional(),
 });
 
 export type GameSessionDto = z.infer<typeof GameSessionDtoSchema>;
@@ -505,3 +512,20 @@ export const PagedReviewsResultSchema = z.object({
 });
 
 export type PagedReviewsResult = z.infer<typeof PagedReviewsResultSchema>;
+
+// ========== Contributors (#2036) ==========
+
+/**
+ * Issue #2036 — Contributor strip avatar entry.
+ * BE handler: <c>GetGameContributorsQueryHandler</c>.
+ * The endpoint returns up to N registered users with at least one finalized
+ * session for the game, ordered by descending session count.
+ */
+export const SessionContributorDtoSchema = z.object({
+  userId: z.string().uuid(),
+  displayName: z.string(),
+  initials: z.string().min(1).max(2),
+  sessionCount: z.number().int().nonnegative(),
+});
+
+export type SessionContributorDto = z.infer<typeof SessionContributorDtoSchema>;

@@ -18,7 +18,7 @@
  *   - useSessionLiveStream NOT called in IS_VISUAL_TEST_BUILD mode
  *   - Dialog state from URL: ?dialog=pause mounts PauseOverlay, ?dialog=endgame mounts EndgameDialog
  *   - ConnectionLostBanner renders for reconnecting / degraded-polling / failed states
- *   - Mobile tab routing: chat tab renders LiveAgentChat, tools tab renders SessionToolsRail
+ *   - Mobile tab routing: chat tab renders LiveAgentChat, tools/widget tab renders ToolkitRenderer (G5c #2376)
  *   - Desktop right column: RightColumnTabs mounted with correct activeTab
  *   - Desktop tab change calls router.replace with ?tab= param
  *   - Optimistic score update via liveStream events
@@ -36,6 +36,8 @@ import type { ReactElement } from 'react';
 
 import type { GameSessionDto } from '@/lib/api/schemas/games.schemas';
 import type { UseSessionLiveStreamResult } from '@/lib/session-live/use-session-live-stream';
+import { useLiveSessionStore } from '@/lib/stores/live-session-store';
+import type { ScoreDataByType } from '@/components/sessions/score-strategies/types';
 
 // ─── next/navigation mocks ────────────────────────────────────────────────
 
@@ -86,6 +88,32 @@ const useSessionLiveStreamMock = vi.fn<[unknown], UseSessionLiveStreamResult>();
 
 vi.mock('@/lib/session-live/use-session-live-stream', () => ({
   useSessionLiveStream: (args: unknown) => useSessionLiveStreamMock(args),
+}));
+
+// ─── useUpdateSessionScores mock (#2430 Block B+: avoid QueryClientProvider) ──
+
+vi.mock('@/hooks/use-update-session-scores', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/use-update-session-scores')>(
+    '@/hooks/use-update-session-scores'
+  );
+  return {
+    ...actual,
+    useUpdateSessionScores: () => ({
+      mutate: vi.fn(),
+      isPending: false,
+    }),
+  };
+});
+
+// ─── sonner mock (#2430 Block B+: ScoreTabContent toasts) ─────────────────
+
+vi.mock('sonner', () => ({
+  toast: {
+    error: vi.fn(),
+    warning: vi.fn(),
+    success: vi.fn(),
+    dismiss: vi.fn(),
+  },
 }));
 
 // ─── visual-test-fixture mock ─────────────────────────────────────────────
@@ -140,6 +168,34 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionLive.scoring.scoreInputAriaLabel': 'Inserisci punteggio per {playerName}',
   'pages.sessionLive.scoring.playerCount':
     '{count, plural, =0 {Nessun giocatore} =1 {1 giocatore} other {# giocatori}}',
+  'pages.sessionLive.scoring.loadingLabel': 'Caricamento punteggi…',
+  // Block C #2389 T6 — nested polymorphic scoring keys (mirror locale catalog T5 additions).
+  'pages.sessionLive.scoring.points.title': 'Punteggi',
+  'pages.sessionLive.scoring.points.leaderLabel': 'in testa',
+  'pages.sessionLive.scoring.points.columns.player': 'Giocatore',
+  'pages.sessionLive.scoring.points.columns.score': 'Punteggio',
+  'pages.sessionLive.scoring.ranking.title': 'Posizioni',
+  'pages.sessionLive.scoring.ranking.columns.rank': 'Posizione',
+  'pages.sessionLive.scoring.ranking.columns.player': 'Giocatore',
+  'pages.sessionLive.scoring.ranking.columns.score': 'Punteggio',
+  'pages.sessionLive.scoring.binaryWin.title': 'Esito',
+  'pages.sessionLive.scoring.binaryWin.winLabel': 'Vince',
+  'pages.sessionLive.scoring.binaryWin.loseLabel': 'Perde',
+  'pages.sessionLive.scoring.binaryWin.pendingLabel': 'Partita in corso',
+  'pages.sessionLive.scoring.objectives.title': 'Obiettivi',
+  'pages.sessionLive.scoring.objectives.completedLabel': 'Completato',
+  'pages.sessionLive.scoring.objectives.pendingLabel': 'In attesa',
+  'pages.sessionLive.scoring.objectives.columns.player': 'Giocatore',
+  // Block C #2389 T6 — aria templates consumed by ScoringPanelRenderer (NOT yet in
+  // production locale catalog — tracked as follow-up; test stub mirrors prior inline
+  // italian fallbacks so polymorphic renderer tests can pass).
+  'pages.sessionLive.scoring.scoreAriaTemplate': 'Punteggio di {name}',
+  'pages.sessionLive.scoring.rankAriaTemplate': 'Posizione di {name}',
+  'pages.sessionLive.scoring.firstPlaceBadgeLabel': 'primo posto',
+  'pages.sessionLive.scoring.outcomeAriaTemplate': '{name}: {result}',
+  'pages.sessionLive.scoring.completedAriaTemplate': 'Completati da {name}',
+  'pages.sessionLive.scoring.doneAriaTemplate': '{label} (completato)',
+  'pages.sessionLive.scoring.pendingAriaTemplate': '{label} (non completato)',
   'pages.sessionLive.actionLog.title': 'Eventi',
   'pages.sessionLive.actionLog.emptyLabel': 'Nessun evento ancora.',
   'pages.sessionLive.actionLog.typeScore': 'Punteggio',
@@ -166,9 +222,24 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionLive.a11y.viewLabel': 'Vista sessione live',
   // Interactions sub-PR labels
   'pages.sessionLive.rightColumn.tabsAriaLabel': 'Pannelli sessione',
+  // G1 #2374 sess.46r canonical tab keys
+  'pages.sessionLive.rightColumn.tabScore': 'Score',
+  'pages.sessionLive.rightColumn.tabTurn': 'Turni',
+  'pages.sessionLive.rightColumn.tabWidget': 'Widget',
+  'pages.sessionLive.rightColumn.tabNotes': 'Note',
+  // Back-compat (legacy keys for older callers — not used by SessionLiveView post-T4)
   'pages.sessionLive.rightColumn.tabTools': 'Strumenti',
   'pages.sessionLive.rightColumn.tabChat': 'Chat',
-  'pages.sessionLive.rightColumn.tabNotes': 'Note',
+  // ChatAgentPanel labels (G1 #2374 T3 — composite header)
+  'pages.sessionLive.chatAgent.title': 'ChatAgent',
+  'pages.sessionLive.chatAgent.agentNameAriaLabel': 'Nome agente {name}',
+  'pages.sessionLive.chatAgent.onlineLabel': 'Online',
+  'pages.sessionLive.chatAgent.latencyAriaLabel': 'Latenza {ms}ms',
+  // MobileBody bottom-sheet labels (G1 #2374 T9 — sess.46r)
+  'pages.sessionLive.mobile.openSheetCta': 'Apri pannello',
+  'pages.sessionLive.mobile.closeSheetAriaLabel': 'Chiudi pannello',
+  'pages.sessionLive.mobile.drawerTitle': 'Strumenti sessione',
+  'pages.sessionLive.mobile.tabsAriaLabel': 'Tab strumenti',
   'pages.sessionLive.tools.title': 'Strumenti',
   'pages.sessionLive.tools.toolDiceLabel': 'Dado',
   'pages.sessionLive.tools.toolTimerLabel': 'Timer',
@@ -226,6 +297,14 @@ const MOCK_SESSION_DTO: GameSessionDto = {
 // ─── Import under test ─────────────────────────────────────────────────────
 
 import { SessionLiveView } from '../SessionLiveView';
+
+// Block B #2389: reset the polymorphic scoring slice between tests at file
+// scope so no test bleeds stale scoringType/scoreData/players into the next.
+// Use the store's reset() action (which sets the full initial state) instead
+// of setState({...partial}) — Zustand setState merges by default.
+beforeEach(() => {
+  useLiveSessionStore.getState().reset();
+});
 
 describe('SessionLiveView (Wave D.2 Foundation)', () => {
   beforeEach(() => {
@@ -395,32 +474,77 @@ describe('SessionLiveView (Wave D.2 Foundation)', () => {
     expect(routerPush).toHaveBeenCalledWith('/sessions/session-abc-123');
   });
 
-  // ─── 3.8: URL state — tab changes ──────────────────────────────────────
+  // ─── 3.8: URL state — mobile bottom-sheet (G1 #2374 T9 sess.46r) ────────
 
-  it('mobile tab change to "log" calls router.replace with ?mtab=log', () => {
+  it('mobile renders mainContent = ChatAgentPanel + ActionLogTimeline (full-width, no bottom-nav)', () => {
     const { container } = renderWithIntl(<SessionLiveView />);
-    const logTab = container.querySelector(
-      '[data-slot="mobile-body-tab"][data-tab="log"]'
-    ) as HTMLButtonElement;
-    expect(logTab).toBeInTheDocument();
-    fireEvent.click(logTab);
-    expect(routerReplace).toHaveBeenCalled();
-    const callArg = routerReplace.mock.calls[0]?.[0] as string;
-    expect(callArg).toContain('mtab=log');
+    // Main column should contain ChatAgentPanel + ActionLogTimeline (mirrors desktop LEFT)
+    const mobileBody = container.querySelector('[data-slot="mobile-body"]');
+    expect(mobileBody).toBeInTheDocument();
+    expect(mobileBody?.querySelector('[data-slot="chat-agent-panel"]')).not.toBeNull();
+    expect(mobileBody?.querySelector('[data-slot="action-log-timeline"]')).not.toBeNull();
+    // NO legacy bottom-nav tabs
+    expect(container.querySelector('[data-slot="mobile-body-tab"]')).toBeNull();
   });
 
-  it('mobile tab "score" (default) removes ?mtab param when already on log', () => {
-    searchParamsMap['mtab'] = 'log';
+  it('FAB tap calls router.replace with ?msheet=open', () => {
     const { container } = renderWithIntl(<SessionLiveView />);
-    const scoreTab = container.querySelector(
-      '[data-slot="mobile-body-tab"][data-tab="score"]'
+    const fab = container.querySelector(
+      '[data-slot="mobile-body-open-sheet"]'
     ) as HTMLButtonElement;
-    expect(scoreTab).toBeInTheDocument();
-    fireEvent.click(scoreTab);
+    expect(fab).toBeInTheDocument();
+    fireEvent.click(fab);
     expect(routerReplace).toHaveBeenCalled();
     const callArg = routerReplace.mock.calls[0]?.[0] as string;
-    // Default tab 'score' should NOT have mtab in URL
-    expect(callArg).not.toContain('mtab=score');
+    expect(callArg).toContain('msheet=open');
+  });
+
+  it('?msheet=open mounts MobileBottomSheetDrawer with active tab content', () => {
+    searchParamsMap['msheet'] = 'open';
+    renderWithIntl(<SessionLiveView />);
+    // Drawer portals to document.body, so query document directly.
+    expect(document.querySelector('[data-slot="mobile-bottom-sheet"]')).not.toBeNull();
+  });
+
+  it('?mtab=turn pre-selects Turn tab in the drawer when sheet is open', () => {
+    searchParamsMap['msheet'] = 'open';
+    searchParamsMap['mtab'] = 'turn';
+    renderWithIntl(<SessionLiveView />);
+    // Drawer has 4 tabs; the 2nd (index 1) is Turn — aria-selected="true".
+    const drawerTabs = document.querySelectorAll('[data-slot="mobile-bottom-sheet"] [role="tab"]');
+    expect(drawerTabs).toHaveLength(4);
+    expect(drawerTabs[1]).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('?mtab=tools legacy maps to widget (back-compat)', () => {
+    // Legacy URL bookmark must not 404 — parseMobileTab('tools') → 'widget'.
+    searchParamsMap['msheet'] = 'open';
+    searchParamsMap['mtab'] = 'tools';
+    renderWithIntl(<SessionLiveView />);
+    const drawerTabs = document.querySelectorAll('[data-slot="mobile-bottom-sheet"] [role="tab"]');
+    // widget = 3rd tab (index 2)
+    expect(drawerTabs[2]).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('?mtab=chat legacy maps to score (chat is always-visible in main column)', () => {
+    searchParamsMap['msheet'] = 'open';
+    searchParamsMap['mtab'] = 'chat';
+    renderWithIntl(<SessionLiveView />);
+    const drawerTabs = document.querySelectorAll('[data-slot="mobile-bottom-sheet"] [role="tab"]');
+    // score = 1st tab (index 0)
+    expect(drawerTabs[0]).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('drawer tab click calls router.replace with ?mtab= (non-default)', () => {
+    searchParamsMap['msheet'] = 'open';
+    renderWithIntl(<SessionLiveView />);
+    const turnTab = document.querySelectorAll(
+      '[data-slot="mobile-bottom-sheet"] [role="tab"]'
+    )[1] as HTMLButtonElement;
+    fireEvent.click(turnTab);
+    expect(routerReplace).toHaveBeenCalled();
+    const callArg = routerReplace.mock.calls[0]?.[0] as string;
+    expect(callArg).toContain('mtab=turn');
   });
 
   // ─── 3.9: ?state= URL override ────────────────────────────────────────
@@ -595,27 +719,36 @@ describe('SessionLiveView (Wave D.2 Interactions — Task 3)', () => {
     }
   });
 
-  // ─── T3.2: RightColumnTabs — desktop tab routing ───────────────────────
+  // ─── T3.2: RightColumnTabs — desktop tab routing (G1 #2374 sess.46r) ───
+  // Tab keys refactored: 'tools'|'chat'|'notes' → 'score'|'turn'|'widget'|'notes'
+  // Back-compat aliases (R-1): legacy ?tab=tools → 'widget', ?tab=chat → 'score'
 
   it('T3.2a: RightColumnTabs is mounted in default shell', () => {
     const { container } = renderWithIntl(<SessionLiveView />);
     expect(container.querySelector('[data-slot="right-column-tabs"]')).toBeInTheDocument();
   });
 
-  it('T3.2b: ?tab=tools shows RightColumnTabs with activeTab=tools (default)', () => {
+  it('T3.2b: default ?tab shows RightColumnTabs with activeTab=score (new default)', () => {
     const { container } = renderWithIntl(<SessionLiveView />);
     const tabs = container.querySelector('[data-slot="right-column-tabs"]');
-    expect(tabs).toHaveAttribute('data-active-tab', 'tools');
+    expect(tabs).toHaveAttribute('data-active-tab', 'score');
   });
 
-  it('T3.2c: ?tab=chat shows RightColumnTabs with activeTab=chat', () => {
-    searchParamsMap['tab'] = 'chat';
+  it('T3.2c: ?tab=turn shows RightColumnTabs with activeTab=turn', () => {
+    searchParamsMap['tab'] = 'turn';
     const { container } = renderWithIntl(<SessionLiveView />);
     const tabs = container.querySelector('[data-slot="right-column-tabs"]');
-    expect(tabs).toHaveAttribute('data-active-tab', 'chat');
+    expect(tabs).toHaveAttribute('data-active-tab', 'turn');
   });
 
-  it('T3.2d: ?tab=notes shows RightColumnTabs with activeTab=notes', () => {
+  it('T3.2d: ?tab=widget shows RightColumnTabs with activeTab=widget', () => {
+    searchParamsMap['tab'] = 'widget';
+    const { container } = renderWithIntl(<SessionLiveView />);
+    const tabs = container.querySelector('[data-slot="right-column-tabs"]');
+    expect(tabs).toHaveAttribute('data-active-tab', 'widget');
+  });
+
+  it('T3.2d2: ?tab=notes shows RightColumnTabs with activeTab=notes', () => {
     searchParamsMap['tab'] = 'notes';
     const { container } = renderWithIntl(<SessionLiveView />);
     const tabs = container.querySelector('[data-slot="right-column-tabs"]');
@@ -624,31 +757,127 @@ describe('SessionLiveView (Wave D.2 Interactions — Task 3)', () => {
 
   it('T3.2e: clicking a desktop tab calls router.replace with ?tab= param', () => {
     const { container } = renderWithIntl(<SessionLiveView />);
-    // Find the chat tab button inside RightColumnTabs
-    const chatTabBtn = container.querySelector(
+    // Find a non-active tab button inside RightColumnTabs
+    const nextTabBtn = container.querySelector(
       '[data-slot="right-column-tabs"] [role="tab"][aria-selected="false"]'
     ) as HTMLButtonElement;
-    expect(chatTabBtn).toBeInTheDocument();
-    fireEvent.click(chatTabBtn);
+    expect(nextTabBtn).toBeInTheDocument();
+    fireEvent.click(nextTabBtn);
     expect(routerReplace).toHaveBeenCalled();
   });
 
-  // ─── T3.3: Mobile tab routing — Interactions panels ────────────────────
+  // ─── T4.x: Back-compat URL aliases (R-1 mitigation) ──────────────────────
 
-  it('T3.3a: ?mtab=chat shows LiveAgentChat in mobile content', () => {
-    searchParamsMap['mtab'] = 'chat';
+  it('T4.1: legacy ?tab=tools is treated as widget (back-compat alias)', () => {
+    searchParamsMap['tab'] = 'tools';
     const { container } = renderWithIntl(<SessionLiveView />);
-    expect(container.querySelector('[data-slot="live-agent-chat"]')).toBeInTheDocument();
+    const tabs = container.querySelector('[data-slot="right-column-tabs"]');
+    expect(tabs).toHaveAttribute('data-active-tab', 'widget');
   });
 
-  it('T3.3b: ?mtab=tools shows SessionToolsRail in mobile content (Player role)', () => {
-    // Default fixture role is Player, so tools rail is visible
-    searchParamsMap['mtab'] = 'tools';
+  it('T4.2: legacy ?tab=chat falls back to score (chat is no longer a tab)', () => {
+    searchParamsMap['tab'] = 'chat';
     const { container } = renderWithIntl(<SessionLiveView />);
-    // SessionToolsRail renders for Player/Host, returns null for Spectator
-    // In default fixture (IS_VISUAL_TEST_BUILD=false), viewerRole=Player from proxy
-    const rail = container.querySelector('[data-slot="session-tools-rail"]');
-    // May or may not render depending on role resolution; assert no crash
+    const tabs = container.querySelector('[data-slot="right-column-tabs"]');
+    expect(tabs).toHaveAttribute('data-active-tab', 'score');
+  });
+
+  it('T4.3: unknown ?tab value falls back to score (default)', () => {
+    searchParamsMap['tab'] = 'bogus-tab';
+    const { container } = renderWithIntl(<SessionLiveView />);
+    const tabs = container.querySelector('[data-slot="right-column-tabs"]');
+    expect(tabs).toHaveAttribute('data-active-tab', 'score');
+  });
+
+  it('T4.4: tab change to "score" (default) omits ?tab from URL (clean bookmark)', () => {
+    searchParamsMap['tab'] = 'widget';
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // Click the score tab (which is at index 0, currently non-active)
+    const scoreTabBtn = container.querySelector(
+      '[data-slot="right-column-tabs"] [role="tab"]:nth-of-type(1)'
+    ) as HTMLButtonElement;
+    expect(scoreTabBtn).toBeInTheDocument();
+    fireEvent.click(scoreTabBtn);
+    expect(routerReplace).toHaveBeenCalled();
+    const callArg = routerReplace.mock.calls[0]?.[0] as string;
+    // Default tab 'score' should NOT have tab in URL
+    expect(callArg).not.toContain('tab=score');
+  });
+
+  // ─── T4.5: 60/40 layout contract ─────────────────────────────────────────
+
+  it('T4.5: default-state root container has data-layout="2col-60-40"', () => {
+    const { container } = renderWithIntl(<SessionLiveView />);
+    const root = container.querySelector('[data-slot="session-live-view"]');
+    expect(root).toBeInTheDocument();
+    expect(root).toHaveAttribute('data-layout', '2col-60-40');
+  });
+
+  it('T4.6: Cell 5 desktop renders ChatAgentPanel in LEFT mainColumn', () => {
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // ChatAgentPanel data-slot stable per §5 frozen contract for #2375 G3
+    expect(container.querySelector('[data-slot="chat-agent-panel"]')).toBeInTheDocument();
+  });
+
+  it('T4.7: Cell 5 desktop renders ActionLogTimeline stacked in LEFT mainColumn', () => {
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // ActionLogTimeline is rendered alongside ChatAgentPanel in mainColumn
+    expect(container.querySelector('[data-slot="action-log-timeline"]')).toBeInTheDocument();
+  });
+
+  it('T4.8: RIGHT tab=turn renders TurnIndicator + PlayerRosterLive', () => {
+    searchParamsMap['tab'] = 'turn';
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // TurnIndicator + PlayerRosterLive moved from LEFT sidebar to RIGHT 'turn' tab (D-6)
+    expect(container.querySelector('[data-slot="turn-indicator"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-slot="player-roster-live"]')).toBeInTheDocument();
+  });
+
+  it('T4.9: RIGHT tab=widget renders ToolkitRenderer (G5c #2376, replaces SessionToolsRail)', () => {
+    searchParamsMap['tab'] = 'widget';
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // G5c swap: ToolkitRenderer replaces SessionToolsRail in the 'widget' tab.
+    // Empty store → empty state renders the region with data-empty="true".
+    expect(container.querySelector('[data-slot="toolkit-renderer"]')).toBeInTheDocument();
+  });
+
+  it('T4.10: RIGHT tab=notes renders LiveSessionNotes', () => {
+    searchParamsMap['tab'] = 'notes';
+    const { container } = renderWithIntl(<SessionLiveView />);
+    expect(container.querySelector('[data-slot="live-session-notes"]')).toBeInTheDocument();
+  });
+
+  it('T4.11: RIGHT tab=score renders ScoringPanelRenderer (G5a #2375)', () => {
+    // ?tab default → 'score'. ScoringPanelRenderer replaces LiveScoringPanel (#2421 wire-up).
+    // #2389 Block B: renderer is now gated on scoringType != null — seed the store
+    // first so the renderer mounts instead of the a11y placeholder.
+    useLiveSessionStore.getState().setScoringConfig({
+      scoringType: 'Points',
+      scoreData: { scores: [] },
+    });
+    const { container } = renderWithIntl(<SessionLiveView />);
+    expect(container.querySelector('[data-slot="scoring-panel-renderer"]')).toBeInTheDocument();
+  });
+
+  // ─── T3.3: Mobile drawer tab routing — Interactions panels (T9 sess.46r) ─
+
+  it('T3.3a: chat is always-visible in mobile main column (no longer a drawer tab)', () => {
+    // Post-T9: chat lives in the main column (ChatAgentPanel), not the drawer.
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // LiveAgentChat is mounted as the body of ChatAgentPanel inside MobileBody main column.
+    const mobileBody = container.querySelector('[data-slot="mobile-body"]');
+    expect(mobileBody?.querySelector('[data-slot="live-agent-chat"]')).not.toBeNull();
+  });
+
+  it('T3.3b: ?msheet=open + ?mtab=widget mounts ToolkitRenderer in drawer (G5c #2376)', () => {
+    // G5c swap: ToolkitRenderer replaces SessionToolsRail in the mobile 'widget' tab.
+    searchParamsMap['msheet'] = 'open';
+    searchParamsMap['mtab'] = 'widget';
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // Drawer mounted with ToolkitRenderer inside (empty store → data-empty="true").
+    expect(document.querySelector('[data-slot="mobile-bottom-sheet"]')).not.toBeNull();
+    expect(document.querySelector('[data-slot="toolkit-renderer"]')).not.toBeNull();
+    // Assert no crash + drawer mounted with widget tab selected.
     expect(container.querySelector('[data-slot="session-live-view"]')).toBeInTheDocument();
   });
 
@@ -792,5 +1021,322 @@ describe('SessionLiveView (Wave D.2 Interactions — Task 3)', () => {
       ],
     });
     expect(() => renderWithIntl(<SessionLiveView />)).not.toThrow();
+  });
+});
+
+// ─── #2375 G3 — accordion FSM URL SSOT ──────────────────────────────────────
+
+describe('SessionLiveView (#2375 G3 — accordion FSM URL SSOT)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
+    mockParamsId = 'session-abc-123';
+    IS_VISUAL_TEST_BUILD_MOCK = false;
+    useSessionMock.mockReturnValue({
+      data: MOCK_SESSION_DTO,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
+  });
+
+  it('G3-1: renders ChatAgentPanel expanded by default (no ?chat param)', () => {
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // Desktop ChatAgentPanel — no ?chat param → data-collapsed attribute absent (expanded).
+    const desktopBody = container.querySelector('[data-slot="desktop-body"]');
+    expect(desktopBody).toBeInTheDocument();
+    const panels = desktopBody?.querySelectorAll('[data-slot="chat-agent-panel"]');
+    expect(panels).toBeTruthy();
+    expect(panels!.length).toBeGreaterThanOrEqual(1);
+    // No data-collapsed="true" when expanded (attribute is absent per ChatAgentPanel contract).
+    expect(panels![0]).not.toHaveAttribute('data-collapsed', 'true');
+  });
+
+  it('G3-2: ?chat=collapsed → desktop ChatAgentPanel has data-collapsed="true"', () => {
+    searchParamsMap['chat'] = 'collapsed';
+    const { container } = renderWithIntl(<SessionLiveView />);
+    const desktopBody = container.querySelector('[data-slot="desktop-body"]');
+    expect(desktopBody).toBeInTheDocument();
+    const panels = desktopBody?.querySelectorAll('[data-slot="chat-agent-panel"]');
+    expect(panels).toBeTruthy();
+    expect(panels![0]).toHaveAttribute('data-collapsed', 'true');
+  });
+
+  it('G3-3: ?mchat=collapsed → mobile ChatAgentPanel has data-collapsed="true"', () => {
+    searchParamsMap['mchat'] = 'collapsed';
+    const { container } = renderWithIntl(<SessionLiveView />);
+    const mobileBody = container.querySelector('[data-slot="mobile-body"]');
+    expect(mobileBody).toBeInTheDocument();
+    const panels = mobileBody?.querySelectorAll('[data-slot="chat-agent-panel"]');
+    expect(panels).toBeTruthy();
+    expect(panels!.length).toBeGreaterThanOrEqual(1);
+    expect(panels![0]).toHaveAttribute('data-collapsed', 'true');
+  });
+
+  it('G3-4: ?chat=collapsed&mchat=collapsed → both desktop and mobile ChatAgentPanel collapsed', () => {
+    searchParamsMap['chat'] = 'collapsed';
+    searchParamsMap['mchat'] = 'collapsed';
+    const { container } = renderWithIntl(<SessionLiveView />);
+    const desktopBody = container.querySelector('[data-slot="desktop-body"]');
+    const mobileBody = container.querySelector('[data-slot="mobile-body"]');
+    const desktopPanels = desktopBody?.querySelectorAll('[data-slot="chat-agent-panel"]');
+    const mobilePanels = mobileBody?.querySelectorAll('[data-slot="chat-agent-panel"]');
+    expect(desktopPanels![0]).toHaveAttribute('data-collapsed', 'true');
+    expect(mobilePanels![0]).toHaveAttribute('data-collapsed', 'true');
+  });
+
+  it('G3-5: clicking desktop ChatAgentPanel header calls router.replace with ?chat=collapsed', () => {
+    const { container } = renderWithIntl(<SessionLiveView />);
+    const desktopBody = container.querySelector('[data-slot="desktop-body"]');
+    // Header is a <button> (a11y) when onHeaderClick is provided (§5 contract).
+    const headerBtn = desktopBody?.querySelector(
+      '[data-slot="chat-agent-panel"] button[aria-expanded]'
+    ) as HTMLButtonElement | null;
+    expect(headerBtn).not.toBeNull();
+    fireEvent.click(headerBtn!);
+    expect(routerReplace).toHaveBeenCalled();
+    const callArg = routerReplace.mock.calls[0]?.[0] as string;
+    expect(callArg).toContain('chat=collapsed');
+  });
+
+  it('G3-6: clicking header when ?chat=collapsed calls router.replace WITHOUT chat param (toggle expand)', () => {
+    searchParamsMap['chat'] = 'collapsed';
+    const { container } = renderWithIntl(<SessionLiveView />);
+    const desktopBody = container.querySelector('[data-slot="desktop-body"]');
+    const headerBtn = desktopBody?.querySelector(
+      '[data-slot="chat-agent-panel"] button[aria-expanded]'
+    ) as HTMLButtonElement | null;
+    expect(headerBtn).not.toBeNull();
+    fireEvent.click(headerBtn!);
+    expect(routerReplace).toHaveBeenCalled();
+    const callArg = routerReplace.mock.calls[0]?.[0] as string;
+    // When expanding, 'chat' param is removed (null → deleted from query string).
+    expect(callArg).not.toContain('chat=collapsed');
+  });
+});
+
+// ─── Block B (#2389) scoring wire-up tests ────────────────────────────────────
+
+describe('SessionLiveView — Block B (#2389) scoring wire-up', () => {
+  beforeEach(() => {
+    // Default useSession + useSessionLiveStream returns for these tests.
+    useSessionMock.mockReturnValue({
+      data: MOCK_SESSION_DTO,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
+  });
+
+  // ── REST hydration (5) ──────────────────────────────────────────────────────
+
+  it('calls setScoringConfig when DTO carries scoringType+scoreData', () => {
+    const dtoWithConfig: GameSessionDto = {
+      ...MOCK_SESSION_DTO,
+      scoringType: 'Points',
+      scoreData: JSON.stringify({
+        scores: [{ playerId: 'player-001', points: 10 }],
+      }),
+    };
+    useSessionMock.mockReturnValue({
+      data: dtoWithConfig,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    renderWithIntl(<SessionLiveView />);
+
+    expect(useLiveSessionStore.getState().scoringType).toBe('Points');
+    expect(useLiveSessionStore.getState().scoreData).toEqual({
+      scores: [{ playerId: 'player-001', points: 10 }],
+    });
+  });
+
+  it('logs console.warn on malformed scoreData JSON', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const dtoMalformed: GameSessionDto = {
+      ...MOCK_SESSION_DTO,
+      scoringType: 'Points',
+      scoreData: 'not-valid-json',
+    };
+    useSessionMock.mockReturnValue({
+      data: dtoMalformed,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    renderWithIntl(<SessionLiveView />);
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('[#2389]'),
+      expect.objectContaining({ sessionId: MOCK_SESSION_DTO.id })
+    );
+    expect(useLiveSessionStore.getState().scoringType).toBeNull();
+    warnSpy.mockRestore();
+  });
+
+  it('does not call setScoringConfig when DTO has no scoringType (legacy session)', () => {
+    // MOCK_SESSION_DTO has no scoringType/scoreData by default.
+    renderWithIntl(<SessionLiveView />);
+    expect(useLiveSessionStore.getState().scoringType).toBeNull();
+    expect(useLiveSessionStore.getState().scoreData).toBeNull();
+  });
+
+  it('does not overwrite SignalR-hydrated store on later REST resolve (race guard)', () => {
+    // SignalR hydrates first.
+    act(() => {
+      useLiveSessionStore.setState({
+        scoringType: 'Points',
+        scoreData: {
+          scores: [{ playerId: 'player-001', points: 99 }],
+        } as ScoreDataByType['Points'],
+      });
+    });
+
+    // REST resolves with stale snapshot.
+    const dtoStale: GameSessionDto = {
+      ...MOCK_SESSION_DTO,
+      scoringType: 'Points',
+      scoreData: JSON.stringify({
+        scores: [{ playerId: 'player-001', points: 0 }],
+      }),
+    };
+    useSessionMock.mockReturnValue({
+      data: dtoStale,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    renderWithIntl(<SessionLiveView />);
+
+    // SignalR data wins; REST does NOT overwrite.
+    expect(useLiveSessionStore.getState().scoreData).toEqual({
+      scores: [{ playerId: 'player-001', points: 99 }],
+    });
+  });
+
+  it('does not call setScoringConfig when scoringType present but scoreData null', () => {
+    const dtoPartial: GameSessionDto = {
+      ...MOCK_SESSION_DTO,
+      scoringType: 'Points',
+      scoreData: null,
+    };
+    useSessionMock.mockReturnValue({
+      data: dtoPartial,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    renderWithIntl(<SessionLiveView />);
+    expect(useLiveSessionStore.getState().scoringType).toBeNull();
+  });
+
+  // ── Null gate + a11y placeholder (2) ────────────────────────────────────────
+
+  it('renders aria-live placeholder when scoringType is null', () => {
+    // Default beforeEach leaves store null; no DTO config either.
+    renderWithIntl(<SessionLiveView />);
+
+    const placeholder = document.querySelector('[data-slot="scoring-panel-empty"]');
+    expect(placeholder).not.toBeNull();
+    expect(placeholder?.getAttribute('role')).toBe('status');
+    expect(placeholder?.getAttribute('aria-live')).toBe('polite');
+  });
+
+  it('placeholder shows the localized loading label text', () => {
+    renderWithIntl(<SessionLiveView />);
+    expect(screen.getByText('Caricamento punteggi…')).toBeInTheDocument();
+  });
+
+  // ── Variant mount via setScoringConfig action (4) ───────────────────────────
+
+  it('mounts Points renderer when scoringType=Points', () => {
+    renderWithIntl(<SessionLiveView />);
+    act(() => {
+      useLiveSessionStore.getState().setScoringConfig({
+        scoringType: 'Points',
+        scoreData: { scores: [{ playerId: 'player-001', points: 10 }] },
+      });
+    });
+    expect(document.querySelector('[data-slot="scoring-panel-points"]')).not.toBeNull();
+  });
+
+  it('mounts BinaryWin renderer when scoringType=BinaryWin', () => {
+    renderWithIntl(<SessionLiveView />);
+    act(() => {
+      useLiveSessionStore.getState().setScoringConfig({
+        scoringType: 'BinaryWin',
+        scoreData: { results: [{ playerId: 'player-001', isWinner: true }] },
+      });
+    });
+    expect(document.querySelector('[data-slot="scoring-panel-binary-win"]')).not.toBeNull();
+  });
+
+  it('mounts Ranking renderer when scoringType=Ranking', () => {
+    renderWithIntl(<SessionLiveView />);
+    act(() => {
+      useLiveSessionStore.getState().setScoringConfig({
+        scoringType: 'Ranking',
+        scoreData: { positions: [{ playerId: 'player-001', position: 1 }] },
+      });
+    });
+    expect(document.querySelector('[data-slot="scoring-panel-ranking"]')).not.toBeNull();
+  });
+
+  it('mounts Objectives renderer when scoringType=Objectives', () => {
+    renderWithIntl(<SessionLiveView />);
+    act(() => {
+      useLiveSessionStore.getState().setScoringConfig({
+        scoringType: 'Objectives',
+        scoreData: {
+          completedByPlayer: [{ playerId: 'player-001', objectives: [] }],
+        },
+      });
+    });
+    expect(document.querySelector('[data-slot="scoring-panel-objectives"]')).not.toBeNull();
+  });
+
+  // ── #2430 Block B+ smoke: ScoreTabContent mount ──────────────────────────
+
+  it('mounts ScoreTabContent inside score tab (any state)', () => {
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // ScoreTabContent has no unique top-level data-slot; probe via children:
+    // it renders either the placeholder (when scoringType=null) or a renderer.
+    const hasMount =
+      container.querySelector('[data-slot="polymorphic-score-editor"]') ||
+      container.querySelector('[data-slot="scoring-panel-points"]') ||
+      container.querySelector('[data-slot="scoring-panel-empty"]');
+    expect(hasMount).not.toBeNull();
+  });
+
+  it('renders ScoringPanelRenderer (not editor) when viewerRole=Player', () => {
+    // Default fixture viewerRole is 'Player'.
+    act(() => {
+      useLiveSessionStore.getState().setScoringConfig({
+        scoringType: 'Points',
+        scoreData: { scores: [{ playerId: 'player-001', points: 10 }] },
+      });
+    });
+    const { container } = renderWithIntl(<SessionLiveView />);
+    expect(container.querySelector('[data-slot="polymorphic-score-editor"]')).toBeNull();
+    expect(container.querySelector('[data-slot="scoring-panel-points"]')).not.toBeNull();
   });
 });

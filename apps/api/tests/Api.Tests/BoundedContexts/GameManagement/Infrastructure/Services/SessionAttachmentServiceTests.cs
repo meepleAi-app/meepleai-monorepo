@@ -3,10 +3,9 @@ using Api.BoundedContexts.GameManagement.Domain.Entities.SessionAttachment;
 using Api.BoundedContexts.GameManagement.Infrastructure.Services;
 using Api.Services.Pdf;
 using Api.Tests.Constants;
+using ImageMagick;
 using Microsoft.Extensions.Logging;
 using Moq;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 using Xunit;
 using FluentAssertions;
 
@@ -149,7 +148,8 @@ public sealed class SessionAttachmentServiceTests
 
         _blobStorageMock
             .Setup(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Callback<Stream, string, BlobCategory, string, CancellationToken>((_, fileName, _, _, _) => {
+            .Callback<Stream, string, BlobCategory, string, CancellationToken>((_, fileName, _, _, _) =>
+            {
                 callCount++;
                 if (callCount == 1) capturedFileName = fileName; // Capture only the original upload
             })
@@ -359,20 +359,25 @@ public sealed class SessionAttachmentServiceTests
         return CreateMinimalJpegImage(100, 100);
     }
 
+    // ADR DEC-3d-1 (issue #2055 Phase G): fixtures migrated to Magick.NET 14.x.
+    // MagickColors.Black gives a deterministic byte stream identical in role to
+    // the prior ImageSharp `new Image<Rgba32>(w, h)` (zero-initialised buffer).
     private static MemoryStream CreateMinimalJpegImage(int width, int height)
     {
-        using var image = new Image<Rgba32>(width, height);
+        using var image = new MagickImage(MagickColors.Black, (uint)width, (uint)height);
+        image.Format = MagickFormat.Jpeg;
         var stream = new MemoryStream();
-        image.Save(stream, new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder());
+        image.Write(stream);
         stream.Position = 0;
         return stream;
     }
 
     private static MemoryStream CreateMinimalPngStream()
     {
-        using var image = new Image<Rgba32>(100, 100);
+        using var image = new MagickImage(MagickColors.Black, 100u, 100u);
+        image.Format = MagickFormat.Png;
         var stream = new MemoryStream();
-        image.Save(stream, new SixLabors.ImageSharp.Formats.Png.PngEncoder());
+        image.Write(stream);
         stream.Position = 0;
         return stream;
     }

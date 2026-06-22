@@ -48,6 +48,41 @@ export type SessionPlayer = z.infer<typeof SessionPlayerSchema>;
 export const PlayRecordOutcomeTypeSchema = z.enum(['competitive', 'none']);
 export type PlayRecordOutcomeType = z.infer<typeof PlayRecordOutcomeTypeSchema>;
 
+// #2436 PR-C: photo attached to a play record (read path). url/thumbnailUrl are
+// presigned download URLs (or raw paths on local storage).
+export const PlayRecordPhotoSchema = z.object({
+  id: z.string().uuid(),
+  url: z.string(),
+  thumbnailUrl: z.string().nullable(),
+  ocrText: z.string().nullable(),
+  caption: z.string().nullable(),
+  uploadedByUserId: z.string().uuid(),
+  uploadedAt: z.string(),
+});
+export type PlayRecordPhoto = z.infer<typeof PlayRecordPhotoSchema>;
+
+// ========== Version History ==========
+
+// #2437-3: a single audit snapshot returned by GET /play-records/{id}/versions
+export const PlayRecordVersionSchema = z.object({
+  versionNumber: z.number().int(),
+  sessionDate: z.string(),
+  notes: z.string().nullable(),
+  location: z.string().nullable(),
+  createdAt: z.string(),
+  createdByUserId: z.string().uuid(),
+});
+export type PlayRecordVersion = z.infer<typeof PlayRecordVersionSchema>;
+
+// ========== Share Link ==========
+
+// #2437-2: response from POST /play-records/{id}/share
+export const ShareLinkResponseSchema = z.object({
+  shareToken: z.string(),
+  shareUrl: z.string(),
+});
+export type ShareLinkResponse = z.infer<typeof ShareLinkResponseSchema>;
+
 // ========== DTOs ==========
 
 export const PlayRecordDtoSchema = z.object({
@@ -71,6 +106,12 @@ export const PlayRecordDtoSchema = z.object({
   // Optional during BE rollout; tighten once the BE ships the fields.
   winnerPlayerIds: z.array(z.string().uuid()).optional(),
   outcomeType: PlayRecordOutcomeTypeSchema.optional(),
+  // #2436 PR-C: photos exposed on read. Optional during BE rollout; tighten later.
+  photos: z.array(PlayRecordPhotoSchema).optional(),
+  // #2437-1: Postgres xmin optimistic-concurrency token (uint). Optional during rollout.
+  xmin: z.number().int().nonnegative().optional(),
+  // #2437-2: current share token (null when not shared). Creator-only meaningful.
+  shareToken: z.string().nullable().optional(),
 });
 export type PlayRecordDto = z.infer<typeof PlayRecordDtoSchema>;
 
@@ -162,6 +203,8 @@ export const UpdatePlayRecordRequestSchema = z.object({
   sessionDate: z.string().optional(),
   notes: z.string().max(2000).optional(),
   location: z.string().max(255).optional(),
+  // #2437-1: Postgres xmin optimistic-concurrency token (uint). Optional during rollout.
+  xmin: z.number().int().nonnegative().optional(),
 });
 export type UpdatePlayRecordRequest = z.infer<typeof UpdatePlayRecordRequestSchema>;
 

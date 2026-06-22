@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 const mockSearch = vi.fn();
+const mockGetLibrary = vi.fn();
 const mockCreateSession = vi.fn();
 const mockAddPlayer = vi.fn();
 const mockStartSession = vi.fn();
@@ -17,6 +18,11 @@ vi.mock('@/lib/api', () => ({
     sharedGames: {
       search: (...args: unknown[]) => mockSearch(...args),
     },
+    library: {
+      // GamePicker source="both" now also queries the library — return empty
+      // by default since the catalog (mockSearch) carries the test fixtures.
+      getLibrary: (...args: unknown[]) => mockGetLibrary(...args),
+    },
     liveSessions: {
       createSession: (...args: unknown[]) => mockCreateSession(...args),
       addPlayer: (...args: unknown[]) => mockAddPlayer(...args),
@@ -26,6 +32,10 @@ vi.mock('@/lib/api', () => ({
       getUserGameKbStatus: (...args: unknown[]) => mockGetUserGameKbStatus(...args),
     },
   },
+}));
+
+vi.mock('sonner', () => ({
+  toast: { error: vi.fn(), success: vi.fn() },
 }));
 
 vi.mock('next/navigation', () => ({
@@ -71,6 +81,16 @@ describe('GameNightWizard', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default library mock: empty (catalog is the primary source for these flows)
+    mockGetLibrary.mockResolvedValue({
+      items: [],
+      page: 1,
+      pageSize: 10,
+      totalCount: 0,
+      totalPages: 0,
+      hasNextPage: false,
+      hasPreviousPage: false,
+    });
     // Default KB status: indexed=false so warning appears but tests still proceed
     mockGetUserGameKbStatus.mockResolvedValue({
       gameId: 'g1',
@@ -90,7 +110,7 @@ describe('GameNightWizard', () => {
     expect(screen.getByTestId('game-search-input')).toBeInTheDocument();
   });
 
-  it('searches catalog via Enter key and shows results', async () => {
+  it('searches catalog with debounce and shows results', async () => {
     const user = userEvent.setup();
     mockSearch.mockResolvedValue({
       items: [{ id: 'g1', title: 'Agricola', thumbnailUrl: '/thumb.jpg', yearPublished: 2007 }],
@@ -99,10 +119,10 @@ describe('GameNightWizard', () => {
 
     renderWizard(onComplete);
 
-    await user.type(screen.getByTestId('game-search-input'), 'Agricola{Enter}');
+    // Issue #2089: search is now debounce-driven (no Enter required).
+    await user.type(screen.getByTestId('game-search-input'), 'Agricola');
 
     await waitFor(() => {
-      expect(mockSearch).toHaveBeenCalledTimes(1);
       expect(mockSearch).toHaveBeenCalledWith(expect.objectContaining({ searchTerm: 'Agricola' }));
     });
 
@@ -121,7 +141,7 @@ describe('GameNightWizard', () => {
     renderWizard(onComplete);
 
     // Search and select
-    await user.type(screen.getByTestId('game-search-input'), 'Catan{Enter}');
+    await user.type(screen.getByTestId('game-search-input'), 'Catan');
     await waitFor(() => expect(screen.getByText('Catan')).toBeInTheDocument());
     await user.click(screen.getByText('Catan'));
     // Confirm selection (MVP hardening F1: user sees KB status before advancing)
@@ -150,7 +170,7 @@ describe('GameNightWizard', () => {
     renderWizard(onComplete);
 
     // Step 1: search + select + confirm
-    await user.type(screen.getByTestId('game-search-input'), 'Ticket{Enter}');
+    await user.type(screen.getByTestId('game-search-input'), 'Ticket');
     await waitFor(() => expect(screen.getByText('Ticket to Ride')).toBeInTheDocument());
     await user.click(screen.getByText('Ticket to Ride'));
     await user.click(screen.getByTestId('confirm-game-button'));
@@ -186,7 +206,7 @@ describe('GameNightWizard', () => {
     renderWizard(onComplete);
 
     // Navigate to step 3
-    await user.type(screen.getByTestId('game-search-input'), 'Splendor{Enter}');
+    await user.type(screen.getByTestId('game-search-input'), 'Splendor');
     await waitFor(() => expect(screen.getByText('Splendor')).toBeInTheDocument());
     await user.click(screen.getByText('Splendor'));
     await user.click(screen.getByTestId('confirm-game-button'));
@@ -222,7 +242,7 @@ describe('GameNightWizard', () => {
 
       renderWizard(onComplete);
 
-      await user.type(screen.getByTestId('game-search-input'), 'Ag{Enter}');
+      await user.type(screen.getByTestId('game-search-input'), 'Ag');
       await waitFor(() => expect(screen.getByText('Agricola')).toBeInTheDocument());
 
       // Badge should appear for all game options (after hook resolves)
@@ -248,7 +268,7 @@ describe('GameNightWizard', () => {
 
       renderWizard(onComplete);
 
-      await user.type(screen.getByTestId('game-search-input'), 'Catan{Enter}');
+      await user.type(screen.getByTestId('game-search-input'), 'Catan');
       await waitFor(() => expect(screen.getByText('Catan')).toBeInTheDocument());
 
       // Warning not visible before selection
@@ -285,7 +305,7 @@ describe('GameNightWizard', () => {
 
       renderWizard(onComplete);
 
-      await user.type(screen.getByTestId('game-search-input'), 'Wingspan{Enter}');
+      await user.type(screen.getByTestId('game-search-input'), 'Wingspan');
       await waitFor(() => expect(screen.getByText('Wingspan')).toBeInTheDocument());
       await user.click(screen.getByText('Wingspan'));
 

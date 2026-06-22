@@ -13,6 +13,8 @@ import { useMemo } from 'react';
 
 import Link from 'next/link';
 
+import { DetailPageContainer } from '@/components/layout/PageContainer';
+
 export interface GamesTabPanelLabels {
   readonly title: string;
   readonly viewAll: string;
@@ -42,10 +44,7 @@ export function GamesTabPanel({
   const isEmpty = ranked.length === 0;
 
   return (
-    <div
-      data-slot="games-tab-panel"
-      className="mx-auto w-full max-w-4xl px-4 sm:px-8 flex flex-col gap-4"
-    >
+    <DetailPageContainer data-slot="games-tab-panel" className="gap-4 py-0">
       <h2 className="text-lg font-semibold">{labels.title}</h2>
       {isEmpty ? (
         <p className="text-muted-foreground">{labels.empty}</p>
@@ -72,6 +71,6 @@ export function GamesTabPanel({
           </Link>
         </>
       )}
-    </div>
+    </DetailPageContainer>
   );
 }

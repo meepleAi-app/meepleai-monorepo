@@ -1,0 +1,494 @@
+using System.Net;
+using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Providers;
+using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
+using FluentAssertions;
+using Microsoft.Extensions.Logging;
+using Moq;
+using WireMock.RequestBuilders;
+using WireMock.ResponseBuilders;
+using WireMock.Server;
+using Xunit;
+
+namespace Api.Tests.Contract.SharedGameCatalog;
+
+/// <summary>
+/// Contract tests for the upstream Wikidata SPARQL endpoint and the Wikimedia
+/// Commons <c>imageinfo</c> API. These tests pin the request/response shape
+/// consumed by <see cref="WikidataCatalogProvider.FetchCoverImageAsync"/> and
+/// <see cref="WikimediaCommonsClient.FetchLicenseAsync"/> so that an upstream
+/// rename (Crispin C-002 concern — issue #2055 AC-G5) breaks the build before
+/// production catches it.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Strategy: spin up an in-process <see cref="WireMockServer"/> per test
+/// scenario, point a real <see cref="HttpClient"/> at it, then inject that
+/// client into the actual producer (no mocks of the parser code). The fixture
+/// JSONs under <c>Fixtures/Wikidata/</c> are intentionally captured from live
+/// API responses so contract drift surfaces as a parser regression.
+/// </para>
+/// <para>
+/// License whitelist scenarios are exercised directly against
+/// <see cref="LicenseValidator"/> because the whitelist is a pure helper with
+/// no HTTP surface; this gives surgical coverage of DEC-3c without the WireMock
+/// orchestration overhead.
+/// </para>
+/// <para>
+/// Fixture refresh: run <c>infra/scripts/wikidata-fixtures/refresh.sh</c>
+/// quarterly to pull live SPARQL + Commons responses and diff-review before
+/// committing. The script targets the same Catan QID (<c>Q1057010</c>) used
+/// by <see cref="FetchCoverImage_SuccessfulP18_ReturnsImageUri"/>.
+/// </para>
+/// </remarks>
+[Trait("Category", "Contract")]
+[Trait("BoundedContext", "SharedGameCatalog")]
+[Trait("Issue", "2055")]
+public sealed class WikidataContractTests : IAsyncLifetime
+{
+    private const string CatanQid = "Q1057010";
+
+    private WireMockServer _wikidataServer = null!;
+    private WireMockServer _commonsServer = null!;
+
+    public ValueTask InitializeAsync()
+    {
+        _wikidataServer = WireMockServer.Start();
+        _commonsServer = WireMockServer.Start();
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _wikidataServer?.Stop();
+        _wikidataServer?.Dispose();
+        _commonsServer?.Stop();
+        _commonsServer?.Dispose();
+        return ValueTask.CompletedTask;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Fixture loader — resolves files copied to the test output dir via the
+    // <None Include="Fixtures\**\*.*" CopyToOutputDirectory="PreserveNewest" />
+    // entry in Api.Tests.csproj.
+    // ─────────────────────────────────────────────────────────────────────────
+    private static string LoadFixture(string fileName)
+    {
+        var assemblyDir = Path.GetDirectoryName(typeof(WikidataContractTests).Assembly.Location)
+                          ?? throw new InvalidOperationException("Assembly location resolved to null.");
+        var path = Path.Combine(assemblyDir, "Fixtures", "Wikidata", fileName);
+        if (!File.Exists(path))
+        {
+            throw new FileNotFoundException($"Contract fixture not found: {path}", path);
+        }
+        return File.ReadAllText(path);
+    }
+
+    private WikidataCatalogProvider CreateWikidataProvider()
+    {
+        var http = new HttpClient { BaseAddress = new Uri(_wikidataServer.Url!) };
+        var rateLimiter = new Mock<IWikimediaRateLimiter>();
+        rateLimiter.Setup(r => r.AcquireAsync(It.IsAny<CancellationToken>()))
+                   .Returns(ValueTask.CompletedTask);
+        return new WikidataCatalogProvider(
+            http,
+            new Mock<ILogger<WikidataCatalogProvider>>().Object,
+            rateLimiter.Object);
+    }
+
+    private WikimediaCommonsClient CreateCommonsClient()
+    {
+        var http = new HttpClient { BaseAddress = new Uri(_commonsServer.Url! + "/") };
+        var rateLimiter = new Mock<IWikimediaRateLimiter>();
+        rateLimiter.Setup(r => r.AcquireAsync(It.IsAny<CancellationToken>()))
+                   .Returns(ValueTask.CompletedTask);
+        return new WikimediaCommonsClient(
+            http,
+            rateLimiter.Object,
+            new Mock<ILogger<WikimediaCommonsClient>>().Object);
+    }
+
+    // =========================================================================
+    // Wikidata SPARQL contract — wdt:P18 cover-image lookup
+    // =========================================================================
+
+    [Fact]
+    public async Task FetchCoverImage_SuccessfulP18_ReturnsImageFilename()
+    {
+        // Arrange — pin the SPARQL response shape parsed by ParseCoverResponse:
+        //   results.bindings[0].image.value → http://commons.wikimedia.org/wiki/Special:FilePath/{filename}
+        _wikidataServer
+            .Given(Request.Create().WithPath("/sparql").UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/sparql-results+json")
+                .WithBody(LoadFixture("P18-catan-q1234.json")));
+
+        var provider = CreateWikidataProvider();
+
+        // Act
+        var result = await provider.FetchCoverImageAsync(CatanQid, CancellationToken.None);
+
+        // Assert — contract: producer parses the bindings[].image.value IRI,
+        // strips the Special:FilePath/ prefix, and returns the URL-encoded
+        // filename (preserved verbatim per WikidataCoverImageResult.Filename docs).
+        result.Should().NotBeNull();
+        result.HasImage.Should().BeTrue("the fixture publishes a wdt:P18 binding");
+        result.Filename.Should().Be("Catan-2015-boxed-edition.jpg");
+        result.SourceUrl.Should().Be($"https://www.wikidata.org/wiki/{CatanQid}");
+    }
+
+    [Fact]
+    public async Task FetchCoverImage_NoP18Binding_ReturnsNotFound()
+    {
+        // Arrange — empty bindings array (valid SPARQL response with no P18 claim).
+        _wikidataServer
+            .Given(Request.Create().WithPath("/sparql").UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/sparql-results+json")
+                .WithBody(LoadFixture("P18-no-image.json")));
+
+        var provider = CreateWikidataProvider();
+
+        // Act
+        var result = await provider.FetchCoverImageAsync(CatanQid, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.HasImage.Should().BeFalse("the fixture returns zero bindings");
+        result.Filename.Should().BeNull();
+        result.SourceUrl.Should().Be($"https://www.wikidata.org/wiki/{CatanQid}");
+    }
+
+    [Fact]
+    public async Task FetchCoverImage_503ServiceUnavailable_ReturnsNotFoundGracefully()
+    {
+        // Arrange — Wikidata routinely returns 503 under load; producer must
+        // degrade gracefully without throwing (caller decides retry, DEC-3f
+        // circuit breaker handles repeated failures).
+        _wikidataServer
+            .Given(Request.Create().WithPath("/sparql").UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(503)
+                .WithHeader("Content-Type", "text/html")
+                .WithBody(LoadFixture("P18-503.json")));
+
+        var provider = CreateWikidataProvider();
+
+        // Act
+        var act = async () => await provider.FetchCoverImageAsync(CatanQid, CancellationToken.None);
+
+        // Assert — must not throw; producer logs warning + returns NotFound.
+        var result = await act.Should().NotThrowAsync();
+        result.Subject.HasImage.Should().BeFalse("503 must collapse to NotFound");
+        result.Subject.Filename.Should().BeNull();
+    }
+
+    // =========================================================================
+    // Wikimedia Commons imageinfo contract — license + attribution extraction
+    // =========================================================================
+    //
+    // The graceful-degradation contract (malformed JSON, missing fields, 5xx)
+    // is exercised here through the real WikimediaCommonsClient. The pure
+    // whitelist verdict is exercised against LicenseValidator directly below.
+
+    [Fact]
+    public async Task FetchLicense_MalformedJson_ReturnsNotAvailableGracefully()
+    {
+        // Arrange — Commons API sometimes returns truncated JSON under load.
+        // ParseResponse catches JsonException and returns NotAvailable per
+        // WikimediaCommonsClient.FetchLicenseAsync line 127-134.
+        _commonsServer
+            .Given(Request.Create().WithPath("/w/api.php").UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody(LoadFixture("commons-malformed.json")));
+
+        var client = CreateCommonsClient();
+
+        // Act
+        var act = async () => await client.FetchLicenseAsync("Brass%20Birmingham%20cover.jpg", CancellationToken.None);
+
+        // Assert — must not throw; producer logs warning + returns NotAvailable.
+        var result = await act.Should().NotThrowAsync();
+        result.Subject.RawLicense.Should().BeNull("malformed JSON must collapse to NotAvailable");
+        result.Subject.IsWhitelisted.Should().BeFalse();
+        result.Subject.Attribution.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task FetchLicense_MissingLicenseShortName_ReturnsNotAvailableGracefully()
+    {
+        // Arrange — Commons occasionally returns extmetadata without
+        // LicenseShortName for files lacking machine-readable license templates.
+        // ExtractFromPage handles this at WikimediaCommonsClient.cs lines
+        // 285-293.
+        _commonsServer
+            .Given(Request.Create().WithPath("/w/api.php").UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody(LoadFixture("commons-license-missing.json")));
+
+        var client = CreateCommonsClient();
+
+        // Act
+        var result = await client.FetchLicenseAsync("Untitled.jpg", CancellationToken.None);
+
+        // Assert — producer logs warning + returns NotAvailable; never throws.
+        result.RawLicense.Should().BeNull("LicenseShortName must be present to surface a verdict");
+        result.IsWhitelisted.Should().BeFalse();
+        result.Attribution.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task FetchLicense_PublicDomain_ParsesRawLicenseAndMarksWhitelisted()
+    {
+        // Arrange — successful Commons response with Public Domain license.
+        // Verifies the end-to-end contract: producer parses
+        // extmetadata.LicenseShortName.value, runs it through LicenseValidator,
+        // and returns the whitelist verdict.
+        _commonsServer
+            .Given(Request.Create().WithPath("/w/api.php").UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody(LoadFixture("commons-license-pd.json")));
+
+        var client = CreateCommonsClient();
+
+        // Act
+        var result = await client.FetchLicenseAsync("Catan-2015-boxed-edition.jpg", CancellationToken.None);
+
+        // Assert
+        result.RawLicense.Should().Be("Public domain");
+        result.IsWhitelisted.Should().BeTrue("Public domain is in the DEC-3c whitelist");
+        result.Attribution.Should().Be("Asterion Press", "HTML tags must be stripped from extmetadata.Artist");
+    }
+
+    [Fact]
+    public async Task FetchLicense_CcBySa_ParsesRawLicenseAndMarksWhitelisted()
+    {
+        // Arrange — successful Commons response with CC BY-SA 4.0 license.
+        _commonsServer
+            .Given(Request.Create().WithPath("/w/api.php").UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody(LoadFixture("commons-license-cc-by-sa.json")));
+
+        var client = CreateCommonsClient();
+
+        // Act
+        var result = await client.FetchLicenseAsync("Brass%20Birmingham%20cover.jpg", CancellationToken.None);
+
+        // Assert
+        result.RawLicense.Should().Be("CC BY-SA 4.0");
+        result.IsWhitelisted.Should().BeTrue("CC-BY-SA (any version) is in the DEC-3c whitelist");
+        result.Attribution.Should().Be("Roxley Games");
+    }
+
+    [Fact]
+    public async Task FetchLicense_CcByNc_IsRejectedByWhitelist()
+    {
+        // Arrange — CC-BY-NC is NOT in the whitelist (non-commercial restriction
+        // is incompatible with the catalog's redistribution model).
+        _commonsServer
+            .Given(Request.Create().WithPath("/w/api.php").UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody(LoadFixture("commons-license-cc-by-nc.json")));
+
+        var client = CreateCommonsClient();
+
+        // Act
+        var result = await client.FetchLicenseAsync("Encumbered%20cover.jpg", CancellationToken.None);
+
+        // Assert — license IS returned, but the whitelist verdict rejects it.
+        // Downstream callers see IsWhitelisted=false and skip persistence.
+        result.RawLicense.Should().Be("CC BY-NC 4.0");
+        result.IsWhitelisted.Should().BeFalse("CC-BY-NC is intentionally excluded from DEC-3c");
+        result.Attribution.Should().Be("Non-Commercial Artist");
+    }
+
+    // =========================================================================
+    // Wikimedia Commons FilePath contract — image-bytes download path
+    // =========================================================================
+    //
+    // Pins the request/response shape consumed by
+    // WikimediaCommonsClient.FetchImageBytesAsync(filename, ct), which hits
+    // GET /wiki/Special:FilePath/{decoded_name} (relative to the Commons base
+    // address). The default HttpClientHandler auto-follows 302 redirects, so
+    // a single 200 response is the correct WireMock stub for the happy path;
+    // no explicit redirect-chasing test is required.
+    //
+    // Tiny valid 1×1 PNG (67 bytes, minimal IHDR+IDAT+IEND) used as the served
+    // body so the consumer's `bytes.Length == 0` guard does not false-fire.
+
+    private static readonly byte[] TinyPng =
+    [
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
+        0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, // IHDR chunk length + type
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, // width=1, height=1
+        0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, // bit depth=8, colour=RGB, CRC start
+        0xDE, 0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41, // IHDR CRC, IDAT chunk length + type
+        0x54, 0x08, 0xD7, 0x63, 0xF8, 0xCF, 0xC0, 0x00, // IDAT data (deflate-compressed 1px)
+        0x00, 0x00, 0x02, 0x00, 0x01, 0xE2, 0x21, 0xBC, // IDAT CRC
+        0x33, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, // padding + IEND chunk length + type
+        0x44, 0xAE, 0x42, 0x60, 0x82                    // IEND CRC
+    ];
+
+    [Fact]
+    public async Task FetchImageBytes_Success_ReturnsBytes()
+    {
+        // Arrange — WireMock serves the tiny PNG directly on the FilePath route.
+        // The real Commons endpoint resolves the name to a CDN URL and returns
+        // 302, but HttpClientHandler auto-follows by default, so what the client
+        // sees is a 200 with the image body; a single 200 stub exercises the
+        // same production code path.
+        const string filename = "Catan-2015-boxed-edition.jpg";
+        var decodedEscaped = Uri.EscapeDataString(Uri.UnescapeDataString(filename));
+        _commonsServer
+            .Given(Request.Create()
+                .WithPath($"/wiki/Special:FilePath/{decodedEscaped}")
+                .UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "image/png")
+                .WithBody(TinyPng));
+
+        var client = CreateCommonsClient();
+
+        // Act
+        var result = await client.FetchImageBytesAsync(filename, CancellationToken.None);
+
+        // Assert — contract: on 200 the client returns the raw body bytes.
+        result.Should().NotBeNull("a 200 response with a non-empty body must return bytes");
+        result.Should().HaveCount(TinyPng.Length,
+            "returned bytes must match the full served body without truncation");
+    }
+
+    [Fact]
+    public async Task FetchImageBytes_NotFound_ReturnsNull()
+    {
+        // Arrange — Commons returns 404 when the file does not exist. Producer
+        // must degrade gracefully (null) without throwing, per failure semantics
+        // documented on WikimediaCommonsClient (DEC-3f / issue #2157).
+        const string filename = "NonExistentFile.jpg";
+        var decodedEscaped = Uri.EscapeDataString(Uri.UnescapeDataString(filename));
+        _commonsServer
+            .Given(Request.Create()
+                .WithPath($"/wiki/Special:FilePath/{decodedEscaped}")
+                .UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(404)
+                .WithBody(string.Empty));
+
+        var client = CreateCommonsClient();
+
+        // Act
+        var act = async () => await client.FetchImageBytesAsync(filename, CancellationToken.None);
+
+        // Assert — must not throw; non-2xx collapses to null.
+        var result = await act.Should().NotThrowAsync();
+        result.Subject.Should().BeNull("404 must collapse to null per failure semantics");
+    }
+
+    [Fact]
+    public async Task FetchImageBytes_ServerError_ReturnsNull()
+    {
+        // Arrange — Commons 503 under load; producer must degrade gracefully.
+        // Consistent with FetchLicense_503 behavior: non-2xx status → null,
+        // warning logged, caller (batch handler) decides retry. Issue #2157.
+        const string filename = "Catan-2015-boxed-edition.jpg";
+        var decodedEscaped = Uri.EscapeDataString(Uri.UnescapeDataString(filename));
+        _commonsServer
+            .Given(Request.Create()
+                .WithPath($"/wiki/Special:FilePath/{decodedEscaped}")
+                .UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(503)
+                .WithHeader("Content-Type", "text/html")
+                .WithBody("<html><body>Service Unavailable</body></html>"));
+
+        var client = CreateCommonsClient();
+
+        // Act
+        var act = async () => await client.FetchImageBytesAsync(filename, CancellationToken.None);
+
+        // Assert — must not throw; 5xx collapses to null.
+        var result = await act.Should().NotThrowAsync();
+        result.Subject.Should().BeNull("503 must collapse to null per failure semantics");
+    }
+
+    [Fact]
+    public async Task FetchImageBytes_EmptyBody_ReturnsNull()
+    {
+        // Arrange — Commons occasionally returns 200 with an empty body (CDN
+        // misconfiguration, zero-byte file). WikimediaCommonsClient.cs lines
+        // 175-182 guard against this with an explicit length check.
+        const string filename = "Brass%20Birmingham%20cover.jpg";
+        var decodedEscaped = Uri.EscapeDataString(Uri.UnescapeDataString(filename));
+        _commonsServer
+            .Given(Request.Create()
+                .WithPath($"/wiki/Special:FilePath/{decodedEscaped}")
+                .UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "image/jpeg")
+                .WithBody(Array.Empty<byte>()));
+
+        var client = CreateCommonsClient();
+
+        // Act
+        var act = async () => await client.FetchImageBytesAsync(filename, CancellationToken.None);
+
+        // Assert — must not throw; 200+empty body collapses to null.
+        var result = await act.Should().NotThrowAsync();
+        result.Subject.Should().BeNull("200 with empty body must return null per the length guard");
+    }
+
+    // =========================================================================
+    // LicenseValidator direct contract — DEC-3c whitelist regex
+    // =========================================================================
+    //
+    // Crispin C-002 concern: if the upstream Commons format ever renames the
+    // canonical license short names (e.g. "CC BY-SA 4.0" → "CC-BY-SA-4.0-EN")
+    // the regex would silently start failing. These tests pin the EXACT strings
+    // the spike sess.46h validated against 13 real boardgame samples.
+
+    [Theory]
+    [InlineData("Public domain")]
+    [InlineData("PD")]
+    [InlineData("CC0")]
+    [InlineData("CC BY 2.0")]
+    [InlineData("CC-BY-2.0")]
+    [InlineData("CC BY-SA 4.0")]
+    [InlineData("CC-BY-SA-4.0")]
+    public void LicenseValidator_KnownGoodShortNames_AreWhitelisted(string licenseShortName)
+    {
+        // Act
+        var result = LicenseValidator.IsWhitelisted(licenseShortName);
+
+        // Assert — pin the spike sess.46h whitelist (DEC-3c).
+        result.Should().BeTrue($"'{licenseShortName}' is in the DEC-3c whitelist");
+    }
+
+    [Theory]
+    [InlineData("CC BY-NC 4.0")]
+    [InlineData("CC BY-ND 4.0")]
+    [InlineData("CC BY-NC-SA 4.0")]
+    [InlineData("All Rights Reserved")]
+    [InlineData("Fair use")]
+    [InlineData("GFDL")]
+    public void LicenseValidator_KnownBadShortNames_AreRejected(string licenseShortName)
+    {
+        // Act
+        var result = LicenseValidator.IsWhitelisted(licenseShortName);
+
+        // Assert — adversarial fixtures guard against Crispin C-002 future drift.
+        result.Should().BeFalse($"'{licenseShortName}' must NOT be in the DEC-3c whitelist");
+    }
+}

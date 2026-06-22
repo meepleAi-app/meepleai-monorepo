@@ -1,108 +1,138 @@
+'use client';
+
 /**
- * MobileBody — Wave D.2 Foundation sub-PR (Issue #746).
+ * MobileBody — Issue #2374 G1 (T9 refactor, sess.46r).
  *
- * Mobile layout with bottom-nav tab bar (< lg breakpoint only).
- * Hidden on desktop (DesktopBody takes over at lg+).
+ * Mobile layout (< lg breakpoint only). Hidden on desktop (DesktopBody takes
+ * over at lg+). REFACTORED from the legacy 4-tab bottom-nav (Foundation #746)
+ * to the mockup canonical bottom-sheet pattern (parts.jsx L266-286):
  *
- * Tabs:
- *   score  — LiveScoringPanel (default)
- *   log    — ActionLogTimeline
- *   tools  — SessionToolsRail (Interactions sub-PR)
- *   chat   — LiveAgentChat (Interactions sub-PR)
+ *   - Main area = full-width = ChatAgentPanel + ActionLogTimeline stacked
+ *     (mirrors desktop LEFT 60%).
+ *   - Floating action button (bottom-right) opens MobileBottomSheetDrawer.
+ *   - Drawer hosts the 4 polymorphic tabs (Score/Turn/Widget/Notes) — same
+ *     content as desktop RIGHT 40%.
  *
- * A11y: role="tablist" + roving tabindex for bottom-nav tabs.
+ * Tab union: shared `LiveTab` ('score'|'turn'|'widget'|'notes') from
+ * RightColumnTabs. Legacy `MobileTab` ('score'|'log'|'tools'|'chat') is
+ * DELETED — log is now always-visible in the main column, tools renamed to
+ * widget, chat is the always-visible ChatAgentPanel.
+ *
+ * URL SSOT: parent owns `?msheet=open|closed` + `?mtab=` via the
+ * sheetOpen/onSheetOpenChange + sheetActiveTab/onSheetTabChange props.
  *
  * Gate C: layout primitive, not a MeepleCard pattern.
  */
 
 import type { ReactElement, ReactNode } from 'react';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+import { MobileBottomSheetDrawer } from './MobileBottomSheetDrawer';
 
-export type MobileTab = 'score' | 'log' | 'tools' | 'chat';
+import type { LiveTab } from './RightColumnTabs';
 
 // ─── Labels ───────────────────────────────────────────────────────────────────
 
 export interface MobileBodyLabels {
+  /** Floating action button label (mockup CTA "Apri pannello"). */
+  readonly openSheetCta: string;
+  /** aria-label for the drawer close button. */
+  readonly closeSheetAriaLabel: string;
+  /** Drawer sr-only title (Radix Dialog a11y contract). */
+  readonly drawerTitle: string;
+  /** aria-label for the drawer's role="tablist". */
+  readonly tabsAriaLabel: string;
   readonly tabScore: string;
-  readonly tabLog: string;
-  readonly tabTools: string;
-  readonly tabChat: string;
-  readonly bottomNavAriaLabel: string;
+  readonly tabTurn: string;
+  readonly tabWidget: string;
+  readonly tabNotes: string;
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 export interface MobileBodyProps {
-  readonly activeTab: MobileTab;
-  readonly onTabChange: (next: MobileTab) => void;
-  readonly content: ReactNode;
+  /** Full-width LEFT-equivalent content (ChatAgentPanel + ActionLogTimeline). */
+  readonly mainContent: ReactNode;
+  /** Drawer open state (URL SSOT in parent: ?msheet=open|closed). */
+  readonly sheetOpen: boolean;
+  readonly onSheetOpenChange: (open: boolean) => void;
+  /** Active tab in the drawer (URL SSOT in parent: ?mtab=score|turn|widget|notes). */
+  readonly sheetActiveTab: LiveTab;
+  readonly onSheetTabChange: (next: LiveTab) => void;
+  /** Tab body for the currently active drawer tab (parent owns the switch). */
+  readonly sheetContent: ReactNode;
   readonly labels: MobileBodyLabels;
 }
-
-// ─── Tab config ───────────────────────────────────────────────────────────────
-
-const TABS: ReadonlyArray<{ id: MobileTab; labelKey: keyof MobileBodyLabels }> = [
-  { id: 'score', labelKey: 'tabScore' },
-  { id: 'log', labelKey: 'tabLog' },
-  { id: 'tools', labelKey: 'tabTools' },
-  { id: 'chat', labelKey: 'tabChat' },
-];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function MobileBody({
-  activeTab,
-  onTabChange,
-  content,
+  mainContent,
+  sheetOpen,
+  onSheetOpenChange,
+  sheetActiveTab,
+  onSheetTabChange,
+  sheetContent,
   labels,
 }: MobileBodyProps): ReactElement {
   return (
-    <div data-slot="mobile-body" className="flex flex-1 flex-col overflow-hidden lg:hidden">
-      {/* Content area */}
-      <div className="flex-1 overflow-y-auto p-4">{content}</div>
+    <div
+      data-slot="mobile-body"
+      data-layout="mobile-sheet"
+      className="relative flex flex-1 flex-col overflow-hidden lg:hidden"
+    >
+      {/* Main area — full-width LEFT-equivalent (ChatAgentPanel + ActionLogTimeline) */}
+      <main className="flex-1 overflow-y-auto p-3">{mainContent}</main>
 
-      {/* Bottom navigation */}
-      <nav
-        aria-label={labels.bottomNavAriaLabel}
-        className="shrink-0 border-t border-border/60 bg-[hsl(240,40%,10%)]"
+      {/* Floating action button — opens bottom-sheet drawer */}
+      <button
+        type="button"
+        data-slot="mobile-body-open-sheet"
+        aria-label={labels.openSheetCta}
+        onClick={() => onSheetOpenChange(true)}
+        className="absolute bottom-4 right-4 z-30 flex h-12 w-12
+          items-center justify-center rounded-full border
+          border-entity-session bg-entity-session text-white shadow-lg
+          transition-transform hover:scale-105 focus-visible:outline-none
+          focus-visible:ring-2 focus-visible:ring-ring
+          focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
-        <div
-          role="tablist"
-          aria-label={labels.bottomNavAriaLabel}
-          aria-orientation="horizontal"
-          className="flex"
+        {/* Three-dots vertical icon → indicates "more / panel" */}
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
         >
-          {TABS.map(tab => {
-            const isActive = activeTab === tab.id;
-            const label = labels[tab.labelKey] as string;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                data-slot="mobile-body-tab"
-                data-tab={tab.id}
-                aria-selected={isActive}
-                tabIndex={isActive ? 0 : -1}
-                onClick={() => onTabChange(tab.id)}
-                className={[
-                  'flex flex-1 flex-col items-center justify-center gap-0.5 py-2.5',
-                  'text-xs font-medium transition-colors focus-visible:outline-none',
-                  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: session hue in Tailwind arbitrary classes (ring/text/border); no dark-bg light-text entity token exists
-                  'focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[hsl(240,60%,70%)]',
-                  isActive
-                    ? // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: session hue in Tailwind arbitrary classes (active state); no dark-bg light-text entity token exists
-                      'text-[hsl(240,60%,75%)] border-t-2 border-[hsl(240,60%,70%)] -mt-0.5'
-                    : 'text-muted-foreground hover:text-slate-300 border-t-2 border-transparent -mt-0.5',
-                ].join(' ')}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-      </nav>
+          <line x1="3" y1="12" x2="21" y2="12" />
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <line x1="3" y1="18" x2="21" y2="18" />
+        </svg>
+      </button>
+
+      {/* Bottom-sheet drawer — hosts the 4 polymorphic tabs */}
+      <MobileBottomSheetDrawer
+        open={sheetOpen}
+        onOpenChange={onSheetOpenChange}
+        activeTab={sheetActiveTab}
+        onTabChange={onSheetTabChange}
+        labels={{
+          drawerTitle: labels.drawerTitle,
+          closeAriaLabel: labels.closeSheetAriaLabel,
+          tabsAriaLabel: labels.tabsAriaLabel,
+          tabScore: labels.tabScore,
+          tabTurn: labels.tabTurn,
+          tabWidget: labels.tabWidget,
+          tabNotes: labels.tabNotes,
+        }}
+      >
+        {sheetContent}
+      </MobileBottomSheetDrawer>
     </div>
   );
 }

@@ -479,6 +479,61 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             "Persisted session chat to thread {ThreadId}: user msg + assistant msg ({Tokens} tokens, {Chunks} RAG chunks)",
             thread.Id, totalTokens, assembled.Citations.Count);
 
+        // #2311 BE-1 + #2324 DEC-D2 — Increment text_chunks.usage_count for each cited
+        // chunk with distinct-thread semantics. The handler records each citation in the
+        // chat_message_chunk_citations junction so subsequent messages in the same thread
+        // citing the same chunk do not double-count. This is a forward-looking telemetry
+        // metric and MUST NOT roll back the message persistence above — any exception is
+        // swallowed and logged.
+        try
+        {
+            var locators = BuildChunkUsageLocators(finalCitations);
+            if (locators.Count > 0)
+            {
+                // Resolve the assistant message we just persisted.
+                // AddAssistantMessageWithMetadata appends with sequenceNumber =
+                // _messages.Count BEFORE the new message is added, which makes the
+                // freshly-appended assistant message the unique row with the highest
+                // SequenceNumber in the aggregate. This handler is the only writer
+                // for the thread within the current request scope (no concurrent
+                // mutation), and no path can append a higher-sequence message AFTER
+                // this point. The OrderByDescending picks that row safely.
+                var assistantMessageId = thread.Messages
+                    .OrderByDescending(m => m.SequenceNumber)
+                    .Select(m => (Guid?)m.Id)
+                    .FirstOrDefault();
+
+                if (assistantMessageId is null || assistantMessageId == Guid.Empty)
+                {
+                    _logger.LogDebug(
+                        "Skipping chunk-usage increment for thread {ThreadId}: could not resolve the assistant message id",
+                        thread.Id);
+                }
+                else
+                {
+                    using var incrementScope = _scopeFactory.CreateScope();
+                    var incrementHandler = incrementScope.ServiceProvider
+                        .GetRequiredService<
+                            ICommandHandler<IncrementChunkUsageCountsCommand, int>>();
+                    _ = await incrementHandler
+                        .Handle(
+                            new IncrementChunkUsageCountsCommand(
+                                thread.Id,
+                                assistantMessageId.Value,
+                                locators),
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Failed to increment text_chunks.usage_count for thread {ThreadId} (best-effort telemetry, ignored)",
+                thread.Id);
+        }
+
         // Fire-and-forget: generate conversation summary if thread is long enough
         var activeMessageCount = thread.Messages.Count(m => !m.IsDeleted && !m.IsInvalidated);
         if (activeMessageCount > SummaryThreshold &&
@@ -549,6 +604,33 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         {
             _logger.LogWarning(ex, "Fire-and-forget conversation summary failed for thread {ThreadId}", threadId);
         }
+    }
+
+    /// <summary>
+    /// #2311 BE-1 — Projects the final citations from the RAG pipeline onto the
+    /// natural composite key (PdfDocumentId, ChunkIndex) consumed by
+    /// <see cref="IncrementChunkUsageCountsCommand"/>. Citations without a
+    /// <see cref="ChunkCitation.ChunkIndex"/> (legacy paths that pre-date BE-1)
+    /// or with an unparseable <see cref="ChunkCitation.DocumentId"/> are dropped
+    /// so the increment is a best-effort no-op on those edges.
+    /// </summary>
+    private static IReadOnlyList<ChunkUsageLocator> BuildChunkUsageLocators(
+        IReadOnlyList<ChunkCitation> citations)
+    {
+        if (citations.Count == 0)
+        {
+            return Array.Empty<ChunkUsageLocator>();
+        }
+
+        var locators = new List<ChunkUsageLocator>(citations.Count);
+        foreach (var citation in citations)
+        {
+            if (citation.ChunkIndex is null) continue;
+            if (!Guid.TryParse(citation.DocumentId, out var pdfDocId)) continue;
+            locators.Add(new ChunkUsageLocator(pdfDocId, citation.ChunkIndex.Value));
+        }
+
+        return locators;
     }
 
     private static RagStreamingEvent CreateEvent(StreamingEventType type, object? data)

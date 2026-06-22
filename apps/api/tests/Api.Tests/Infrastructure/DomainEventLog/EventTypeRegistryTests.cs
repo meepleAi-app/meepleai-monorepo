@@ -1,5 +1,6 @@
 using System.Reflection;
 using Api.BoundedContexts.Administration.Domain.Events;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.Infrastructure.DomainEventLog;
 using Api.SharedKernel.Domain.Interfaces;
@@ -158,5 +159,51 @@ public sealed class EventTypeRegistryTests
             IsTest: false);
 
         EventTypeRegistry.TryResolve(ev).Should().Be("alert.resolved");
+    }
+
+    /// <summary>
+    /// Issue #2245 (epic #2242 Sub #3) — PdfStateChangedEvent must resolve so the admin
+    /// LiveEventLog SSE stream renders real-time PDF pipeline transitions and the FE
+    /// can drop polling. Revisits B3 (#1590 spec panel) — see EventTypeRegistry rationale.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "2245")]
+    public void Registry_resolves_pdf_state_changed_alias()
+    {
+        var ev = new PdfStateChangedEvent(
+            pdfDocumentId: Guid.NewGuid(),
+            previousState: PdfProcessingState.Indexing,
+            newState: PdfProcessingState.Ready,
+            uploadedByUserId: Guid.NewGuid());
+
+        EventTypeRegistry.TryResolve(ev).Should().Be("pdf.state.changed");
+    }
+
+    /// <summary>
+    /// Issue #2245 — the mapper must populate <c>AggregateId</c> and <c>UserId</c> for the
+    /// SSE event. <see cref="PdfStateChangedEvent"/> exposes computed
+    /// <c>AggregateId</c>/<c>UserId</c> properties (mirrors of <c>PdfDocumentId</c>/<c>UploadedByUserId</c>)
+    /// so <see cref="DomainEventLogMapper.Map"/> reflection picks them up. If a future refactor drops
+    /// those mirror properties, this test will fail.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "2245")]
+    public void Mapper_PdfStateChangedEvent_populates_aggregate_id_and_user_id()
+    {
+        var pdfId = Guid.NewGuid();
+        var uploaderId = Guid.NewGuid();
+        var ev = new PdfStateChangedEvent(
+            pdfDocumentId: pdfId,
+            previousState: PdfProcessingState.Indexing,
+            newState: PdfProcessingState.Ready,
+            uploadedByUserId: uploaderId);
+
+        var row = DomainEventLogMapper.Map(ev);
+
+        row.Should().NotBeNull("the event is registered for log persistence");
+        row!.EventType.Should().Be("pdf.state.changed");
+        row.AggregateId.Should().Be(pdfId, "AggregateId mirrors PdfDocumentId so the mapper can populate domain_event_logs.aggregate_id");
+        row.UserId.Should().Be(uploaderId, "UserId mirrors UploadedByUserId so the mapper can populate domain_event_logs.user_id");
+        row.AggregateType.Should().Be("PdfStateChanged", "class name minus 'Event' suffix → aggregate type");
     }
 }

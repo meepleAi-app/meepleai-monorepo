@@ -40,6 +40,7 @@ import {
   type PlayersHeroLabels,
   type PlayersResultsGridLabels,
 } from '@/components/features/players';
+import { HubPageContainer } from '@/components/layout/PageContainer';
 import { usePlayerStatistics } from '@/hooks/queries/usePlayersFromRecords';
 import { useTranslation } from '@/hooks/useTranslation';
 import {
@@ -76,7 +77,7 @@ function PlayersLoadingSkeleton(): ReactElement {
       aria-label="Caricamento in corso…"
       aria-busy="true"
       aria-live="polite"
-      className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4 px-4 sm:px-8 max-w-[1280px] mx-auto"
+      className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4"
     >
       {Array.from({ length: 6 }).map((_, i) => (
         <div key={i} className="animate-pulse rounded-2xl border border-border bg-muted/40 h-40" />
@@ -229,7 +230,7 @@ export function PlayersLibraryView(): ReactElement {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div data-slot="players-library-view" className="flex flex-col gap-6 pb-24">
+    <HubPageContainer data-slot="players-library-view" className="gap-6 pb-24">
       <PlayersHero
         totalSessions={totalSessions}
         distinctGames={distinctGames}
@@ -258,6 +259,6 @@ export function PlayersLibraryView(): ReactElement {
           onRetry={handleRetry}
         />
       )}
-    </div>
+    </HubPageContainer>
   );
 }

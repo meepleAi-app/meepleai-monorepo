@@ -102,7 +102,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
 
         // Apply migrations
         _output("Applying migrations...");
-        await MigrateWithRetry(_dbContext);
+        await TestMigrationHelper.MigrateWithRetryAsync(_dbContext, TestCancellationToken, onRetry: _output);
         _output("✓ Migrations applied");
 
         // Create test data (users for linking tests)
@@ -623,23 +623,6 @@ public class OAuthIntegrationTests : IAsyncLifetime
 
         // Recreate test data after reset
         await CreateTestDataAsync();
-    }
-
-    private static async Task MigrateWithRetry(MeepleAiDbContext context)
-    {
-        const int maxAttempts = 3;
-        for (var attempt = 1; attempt <= maxAttempts; attempt++)
-        {
-            try
-            {
-                await context.Database.MigrateAsync(TestCancellationToken);
-                return;
-            }
-            catch (NpgsqlException) when (attempt < maxAttempts)
-            {
-                await Task.Delay(TestConstants.Timing.RetryDelay, TestCancellationToken);
-            }
-        }
     }
 
     private static string SanitizeIdentifier(string identifier)

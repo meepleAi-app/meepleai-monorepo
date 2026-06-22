@@ -29,6 +29,12 @@ export type {
   ActionLogTimelineProps,
 } from '@/components/features/session-live/ActionLogTimeline';
 
+export { ChatAgentPanel } from '@/components/features/session-live/ChatAgentPanel';
+export type {
+  ChatAgentPanelLabels,
+  ChatAgentPanelProps,
+} from '@/components/features/session-live/ChatAgentPanel';
+
 export { DesktopBody } from '@/components/features/session-live/DesktopBody';
 export type { DesktopBodyProps } from '@/components/features/session-live/DesktopBody';
 
@@ -39,18 +45,44 @@ export type {
   LiveScoringPanelScoreEntry,
 } from '@/components/features/session-live/LiveScoringPanel';
 
+// ─── G5a #2375 ScoringPanelRenderer (polymorphic, replaces LiveScoringPanel) ──
+export { ScoringPanelRenderer } from '@/components/features/session-live/scoring/ScoringPanelRenderer';
+export type {
+  BinaryWinScoringData,
+  ObjectiveScoringItem,
+  ObjectivesScoringData,
+  PointsScoringData,
+  RankingScoringData,
+  ScoringPanelData,
+  ScoringPanelRendererLabels,
+  ScoringPanelRendererProps,
+  ScoringPlayerEntry,
+} from '@/components/features/session-live/scoring/ScoringPanelRenderer';
+
 export { LiveTopBar } from '@/components/features/session-live/LiveTopBar';
 export type {
+  LiveTopBarConnectionState,
   LiveTopBarLabels,
   LiveTopBarProps,
 } from '@/components/features/session-live/LiveTopBar';
+
+export { SessionStateRenderer } from '@/components/features/session-live/SessionStateRenderer';
+export type {
+  SessionLiveState,
+  SessionStateRendererProps,
+} from '@/components/features/session-live/SessionStateRenderer';
 
 export { MobileBody } from '@/components/features/session-live/MobileBody';
 export type {
   MobileBodyLabels,
   MobileBodyProps,
-  MobileTab,
 } from '@/components/features/session-live/MobileBody';
+
+export { MobileBottomSheetDrawer } from '@/components/features/session-live/MobileBottomSheetDrawer';
+export type {
+  MobileBottomSheetDrawerLabels,
+  MobileBottomSheetDrawerProps,
+} from '@/components/features/session-live/MobileBottomSheetDrawer';
 
 export { PlayerRosterLive } from '@/components/features/session-live/PlayerRosterLive';
 export type {
@@ -113,3 +145,19 @@ export type {
   SessionToolsRailLabels,
   SessionToolsRailProps,
 } from '@/components/features/session-live/SessionToolsRail';
+
+// ─── G5c #2376 ToolkitRenderer ────────────────────────────────────────────────
+
+export { ToolkitRenderer } from '@/components/features/session-live/toolkit-renderer/ToolkitRenderer';
+export type {
+  ToolkitRendererLabels,
+  ToolkitRendererProps,
+} from '@/components/features/session-live/toolkit-renderer/ToolkitRenderer';
+
+// ─── Turn Indicator Renderer sub-PR (Issue #2378 G5b) ─────────────────────────
+
+export { TurnIndicatorRenderer } from '@/components/features/session-live/turn-indicator-renderer/TurnIndicatorRenderer';
+export type {
+  TurnIndicatorRendererLabels,
+  TurnIndicatorRendererProps,
+} from '@/components/features/session-live/turn-indicator-renderer/TurnIndicatorRenderer';

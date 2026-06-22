@@ -18,6 +18,8 @@ import userEvent from '@testing-library/user-event';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 
+import { trackEvent } from '@/lib/analytics/track-event';
+
 import { renderWithIntl } from '../../../../__tests__/fixtures/common-fixtures';
 import { AddGameDrawer, AddGameDrawerController } from '../AddGameDrawer';
 
@@ -55,22 +57,42 @@ vi.mock('@/app/(authenticated)/library/private/add/client', () => ({
   ),
 }));
 
+// #2012 — telemetry instrumentation for AddGameDrawer conversion funnel.
+// Tests assert trackEvent is called with the expected event name + props.
+vi.mock('@/lib/analytics/track-event', () => ({
+  trackEvent: vi.fn(),
+}));
+
 // Mock CatalogSearchStep — contains React Query hooks
 vi.mock('@/app/(authenticated)/library/CatalogSearchStep', () => ({
   CatalogSearchStep: ({
     onSelect,
     onBack,
+    onGoToManual,
+    onNavigateToGame,
   }: {
-    onSelect: (gameId: string, gameName: string) => void;
+    onSelect: (gameId: string) => void;
     onBack: () => void;
+    onGoToManual?: () => void;
+    onNavigateToGame?: (gameId: string) => void;
   }) => (
     <div data-testid="catalog-search-step">
-      <button data-testid="catalog-select-game" onClick={() => onSelect('game-123', 'Catan')}>
+      <button data-testid="catalog-select-game" onClick={() => onSelect('game-123')}>
         Select Catan
       </button>
       <button data-testid="catalog-back" onClick={onBack}>
         Back
       </button>
+      {onGoToManual && (
+        <button data-testid="catalog-go-to-manual" onClick={onGoToManual}>
+          Go to manual
+        </button>
+      )}
+      {onNavigateToGame && (
+        <button data-testid="catalog-navigate-to-game" onClick={() => onNavigateToGame('game-456')}>
+          Vai alla scheda
+        </button>
+      )}
     </div>
   ),
 }));
@@ -250,6 +272,38 @@ describe('AddGameDrawer', () => {
       const wizard = screen.getByTestId('user-wizard-client');
       expect(wizard).toHaveAttribute('data-compact-mode', 'true');
     });
+
+    // #2269 P0-1 (M1) — when the catalog is empty, CatalogSearchStep exposes
+    // an onGoToManual bridge that must transition the drawer to step "manual".
+    // This breaks the dead-end in the empty-search flow.
+    it('transitions to manual step when CatalogSearchStep invokes onGoToManual', async () => {
+      const user = userEvent.setup();
+      renderDrawer({ open: true });
+
+      await user.click(screen.getByTestId('add-game-choice-catalog'));
+      await user.click(screen.getByTestId('catalog-go-to-manual'));
+
+      expect(screen.getByTestId('add-game-step-manual')).toBeInTheDocument();
+      expect(screen.queryByTestId('add-game-step-catalog')).not.toBeInTheDocument();
+    });
+
+    // #2269 P0-2 (M2 / review #2270 finding C1) — when the user clicks an
+    // already-in-library card, the blocked-alert CTA triggers
+    // onNavigateToGame, which the drawer wires to close + router.push to the
+    // game's detail page. Pre-fix the mock destructured only onSelect/onBack/
+    // onGoToManual so this wiring had no unit-level guard (only the live
+    // Playwright QA in PR #2270 exercised it).
+    it('closes drawer and pushes to /library/{id} when CatalogSearchStep invokes onNavigateToGame', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+      renderDrawer({ open: true, onClose });
+
+      await user.click(screen.getByTestId('add-game-choice-catalog'));
+      await user.click(screen.getByTestId('catalog-navigate-to-game'));
+
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(mockRouter.push).toHaveBeenCalledWith('/library/game-456');
+    });
   });
 
   describe('Close behavior', () => {
@@ -261,6 +315,100 @@ describe('AddGameDrawer', () => {
       await user.keyboard('{Escape}');
 
       expect(onClose).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // #2269 P0-3 (M4) — Accessibility regression guards. The drawer must
+  // expose itself as a modal dialog and be labelled by its title so screen
+  // readers announce it as "Add a game, dialog". Memory `radix-dialog-no-
+  // aria-modal` notes that the Radix Dialog primitive (which Sheet wraps)
+  // does NOT emit `aria-modal` on its own — we force the attribute here.
+  describe('Accessibility (M4)', () => {
+    it('exposes role="dialog" on the SheetContent', () => {
+      renderDrawer({ open: true });
+      // Radix renders the modal content into a portal; the role survives.
+      const dialog = screen.getByRole('dialog');
+      expect(dialog).toBeInTheDocument();
+    });
+
+    it('exposes aria-modal="true" on the dialog', () => {
+      renderDrawer({ open: true });
+      const dialog = screen.getByRole('dialog');
+      expect(dialog).toHaveAttribute('aria-modal', 'true');
+    });
+
+    it('connects aria-labelledby to the SheetTitle element', () => {
+      renderDrawer({ open: true });
+      const dialog = screen.getByRole('dialog');
+      const labelledById = dialog.getAttribute('aria-labelledby');
+      expect(labelledById).toBeTruthy();
+
+      const title = screen.getByTestId('add-game-drawer-title');
+      expect(title.id).toBe(labelledById);
+    });
+  });
+
+  describe('Telemetry (#2012)', () => {
+    // T3 conversion funnel instrumentation: measure drawer-open → choice
+    // conversion rate, manual vs catalog ratio, abandonment without choice.
+    // Once 2 weeks of data are collected, T3 UX writing review can land
+    // with Adzic-style measurable thresholds (#2012 acceptance criteria).
+
+    it('tracks library_addgame_drawer_opened when drawer opens', () => {
+      renderDrawer({ open: true });
+
+      expect(trackEvent).toHaveBeenCalledWith('library_addgame_drawer_opened');
+    });
+
+    it('does not track drawer_opened when drawer stays closed', () => {
+      renderDrawer({ open: false });
+
+      expect(trackEvent).not.toHaveBeenCalled();
+    });
+
+    it('tracks choice_selected with choice=manual on manual click', async () => {
+      const user = userEvent.setup();
+      renderDrawer({ open: true });
+      (trackEvent as Mock).mockClear();
+
+      await user.click(screen.getByTestId('add-game-choice-manual'));
+
+      expect(trackEvent).toHaveBeenCalledWith('library_addgame_choice_selected', {
+        choice: 'manual',
+      });
+    });
+
+    it('tracks choice_selected with choice=catalog on catalog click', async () => {
+      const user = userEvent.setup();
+      renderDrawer({ open: true });
+      (trackEvent as Mock).mockClear();
+
+      await user.click(screen.getByTestId('add-game-choice-catalog'));
+
+      expect(trackEvent).toHaveBeenCalledWith('library_addgame_choice_selected', {
+        choice: 'catalog',
+      });
+    });
+
+    it('tracks closed_without_choice when drawer is closed from choice step (Escape)', async () => {
+      const user = userEvent.setup();
+      renderDrawer({ open: true });
+      (trackEvent as Mock).mockClear();
+
+      await user.keyboard('{Escape}');
+
+      expect(trackEvent).toHaveBeenCalledWith('library_addgame_drawer_closed_without_choice');
+    });
+
+    it('does NOT track closed_without_choice when drawer is closed after a choice was selected', async () => {
+      const user = userEvent.setup();
+      renderDrawer({ open: true });
+      await user.click(screen.getByTestId('add-game-choice-manual'));
+      (trackEvent as Mock).mockClear();
+
+      await user.keyboard('{Escape}');
+
+      expect(trackEvent).not.toHaveBeenCalledWith('library_addgame_drawer_closed_without_choice');
     });
   });
 });

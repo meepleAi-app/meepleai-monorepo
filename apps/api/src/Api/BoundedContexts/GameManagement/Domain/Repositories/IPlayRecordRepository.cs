@@ -33,4 +33,10 @@ internal interface IPlayRecordRepository : IRepository<PlayRecord, Guid>
     /// Checks if a user has permission to edit a play record.
     /// </summary>
     Task<bool> CanUserEditAsync(Guid userId, Guid recordId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets a publicly shared play record by its share token.
+    /// Returns null if the token does not exist or the record is not shared (#2437-2).
+    /// </summary>
+    Task<PlayRecord?> GetByShareTokenAsync(string shareToken, CancellationToken cancellationToken = default);
 }

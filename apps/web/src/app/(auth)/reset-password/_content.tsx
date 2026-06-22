@@ -85,6 +85,10 @@ export function ResetPasswordPageContent(): JSX.Element | null {
 
   const token = searchParams?.get('token') ?? null;
   const mode: 'request' | 'reset' = token ? 'reset' : 'request';
+  // Note (#2168): all redirect targets in this file are hardcoded (/chat, /, /reset-password).
+  // Do NOT introduce ?from= here without using assertSafeRelativeOrFallback
+  // from @/lib/url-safety — open-redirect guard is mandatory for any
+  // query-param-driven navigation.
 
   // Auth state
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);

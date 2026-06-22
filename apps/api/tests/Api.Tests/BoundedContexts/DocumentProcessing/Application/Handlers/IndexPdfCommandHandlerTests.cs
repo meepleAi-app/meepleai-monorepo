@@ -69,7 +69,8 @@ public class IndexPdfCommandHandlerTests
             embeddingServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>());
 
         // Assert
         handler.Should().NotBeNull();
@@ -91,6 +92,7 @@ public class IndexPdfCommandHandlerTests
             loggerMock.Object,
             indexingSettingsMock.Object,
             Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>(),
             timeProvider);
 
         // Assert
@@ -112,6 +114,7 @@ public class IndexPdfCommandHandlerTests
             loggerMock.Object,
             indexingSettingsMock.Object,
             Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>(),
             null);
 
         // Assert
@@ -265,7 +268,8 @@ public class IndexPdfCommandHandlerTests
             embeddingServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>());
 
         var command = new IndexPdfCommand(pdfId.ToString());
 
@@ -328,7 +332,8 @@ public class IndexPdfCommandHandlerTests
             embeddingServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>());
 
         var command = new IndexPdfCommand(pdfId.ToString());
 
@@ -388,7 +393,8 @@ public class IndexPdfCommandHandlerTests
             embeddingServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>());
 
         var command = new IndexPdfCommand(pdfId.ToString());
 
@@ -430,7 +436,8 @@ public class IndexPdfCommandHandlerTests
             embeddingServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>());
 
         var command = new IndexPdfCommand(pdfId.ToString());
 
@@ -487,7 +494,8 @@ public class IndexPdfCommandHandlerTests
         var handler = new IndexPdfCommandHandler(
             context, chunkingServiceMock.Object, embeddingServiceMock.Object,
             loggerMock.Object, indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>());
 
         // Act
         var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
@@ -523,7 +531,8 @@ public class IndexPdfCommandHandlerTests
         var handler = new IndexPdfCommandHandler(
             context, chunkingServiceMock.Object, embeddingServiceMock.Object,
             loggerMock.Object, indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>());
 
         // Act
         var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
@@ -559,7 +568,8 @@ public class IndexPdfCommandHandlerTests
         var handler = new IndexPdfCommandHandler(
             context, chunkingServiceMock.Object, embeddingServiceMock.Object,
             loggerMock.Object, indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>());
 
         // Act
         var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
@@ -648,10 +658,15 @@ public class IndexPdfCommandHandlerTests
         embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
         embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
 
+        // ADR-063: Verify mandatory pipeline invocation on happy path.
+        // Mock.Of<>() without Verify masks silent regression where handler
+        // stops calling pipeline (the very anti-pattern #2244 closed).
+        var pipelineMock = new Mock<IPdfIndexingPipeline>();
         var handler = new IndexPdfCommandHandler(
             context, chunkingServiceMock.Object, embeddingServiceMock.Object,
             loggerMock.Object, indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            pipelineMock.Object);
 
         // Act
         var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
@@ -661,6 +676,21 @@ public class IndexPdfCommandHandlerTests
         var updatedPdf = await context.PdfDocuments.FindAsync(pdfId);
         updatedPdf!.ProcessingState.Should().Be("Ready");
         updatedPdf.IsActiveForRag.Should().BeTrue("vectors are indexed and must be searchable via RAG");
+
+        // Assert: handler delegated to IPdfIndexingPipeline (ADR-063 canonical example).
+        // If a future refactor accidentally bypasses the pipeline, this assertion fails
+        // before the silent VectorDocumentIndexedEvent bypass surfaces in production.
+        pipelineMock.Verify(
+            p => p.IndexAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<Guid?>(),
+                It.IsAny<Guid?>(),
+                It.IsAny<int>(),
+                It.IsAny<int>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once,
+            "successful indexing MUST delegate to IPdfIndexingPipeline so VectorDocumentIndexedEvent fires structurally");
     }
 
     [Fact]
@@ -715,10 +745,15 @@ public class IndexPdfCommandHandlerTests
         embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
         embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
 
+        // ADR-063: Verify pipeline invocation + assert that SharedGameId flows through
+        // the pipeline call. Without explicit Verify, a future refactor that wired the
+        // wrong gameId would pass this test (text_chunks assertion is independent).
+        var pipelineMock = new Mock<IPdfIndexingPipeline>();
         var handler = new IndexPdfCommandHandler(
             context, chunkingServiceMock.Object, embeddingServiceMock.Object,
             loggerMock.Object, indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
+            Mock.Of<ISemanticResponseCache>(),
+            pipelineMock.Object);
 
         // Act
         var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
@@ -737,6 +772,21 @@ public class IndexPdfCommandHandlerTests
             chunk.SharedGameId.Should().Be(sharedGameId, "SharedGameId must propagate from PDF to text chunks");
             chunk.GameId.Should().Be(sharedGameId, "post-Phase2d: text_chunks.GameId IS shared_games.id (no more legacy games table)");
         });
+
+        // Assert: pipeline invoked with the SharedGame's gameId (post-Phase2d resolution).
+        // PdfGameIdResolver returns SharedGameId for SharedGame PDFs; the pipeline call
+        // must propagate that through so the VectorDocument carries the correct GameId.
+        pipelineMock.Verify(
+            p => p.IndexAsync(
+                pdfId,
+                It.Is<Guid?>(g => g == sharedGameId),
+                It.Is<Guid?>(s => s == sharedGameId),
+                It.IsAny<int>(),
+                It.IsAny<int>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once,
+            "SharedGame PDF indexing MUST pass sharedGameId and the resolved gameId through to the pipeline");
     }
 
     // NOTE: Full workflow tests (text chunking, embedding generation, pgvector indexing)

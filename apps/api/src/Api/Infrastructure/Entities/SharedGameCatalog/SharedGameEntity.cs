@@ -18,8 +18,15 @@ public class SharedGameEntity
     public int MinAge { get; set; }
     public decimal? ComplexityRating { get; set; }
     public decimal? AverageRating { get; set; }
-    public string ImageUrl { get; set; } = string.Empty;
-    public string ThumbnailUrl { get; set; } = string.Empty;
+    /// <summary>
+    /// Issue #2123 — BGG ToS compliance: nullable. Covers are resolved at runtime by
+    /// <see cref="Api.BoundedContexts.SharedGameCatalog.Application.Services.CoverUrlResolver"/>
+    /// from R2-hosted assets (PDF, BGG-reuploaded, Wikidata). This column is kept for
+    /// backward-compat with legacy admin tooling but seeders write <c>null</c> here.
+    /// FE consumers MUST prefer <c>SharedGameDto.CoverUrl</c>.
+    /// </summary>
+    public string? ImageUrl { get; set; }
+    public string? ThumbnailUrl { get; set; }
     public int Status { get; set; } // 0=Draft, 1=Published, 2=Archived
     public int GameDataStatus { get; set; } = 5; // Default Complete (5) for existing games
     public string? RulesContent { get; set; }
@@ -78,6 +85,23 @@ public class SharedGameEntity
 
     /// <summary>Attribution string ready for display (author + license link).</summary>
     public string? WikidataCoverAttribution { get; set; }
+
+    /// <summary>
+    /// Issue #1823 Phase B M8 — Wikidata QID (e.g. <c>"Q98056728"</c>) that identifies this
+    /// game on Wikidata. Set by the M9 scheduler (or admin trigger) BEFORE the M8
+    /// enrichment orchestrator runs; the orchestrator reads this column to resolve
+    /// the SPARQL <c>wdt:P18</c> claim. Pattern <c>^Q\d+$</c>; max 32 chars covers
+    /// Q-numbers well past the current Wikidata range (~Q120M as of 2026).
+    /// </summary>
+    public string? WikidataQid { get; set; }
+
+    /// <summary>
+    /// Issue #1823 Phase B M8 (ADR DEC-3i) — timestamp of the last successful
+    /// QID + license re-verification. Used by the M15 quarterly re-verification
+    /// cron to skip recently-verified games and by the M8 orchestrator to detect
+    /// stale entries (&gt;90gg) that need refresh.
+    /// </summary>
+    public DateTime? WikidataQidLastVerifiedAt { get; set; }
 
     /// <summary>
     /// Gap G2 (issue: BGG cover re-upload).

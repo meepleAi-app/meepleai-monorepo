@@ -25,9 +25,9 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-// Mock MeepleLogo to avoid styled-jsx issues in tests
-vi.mock('@/components/ui/meeple/meeple-logo', () => ({
-  MeepleLogo: () => <div data-testid="meeple-logo">MeepleAI</div>,
+// Mock BrandMark to keep the test focused on layout structure
+vi.mock('@/components/ui/brand', () => ({
+  BrandMark: () => <div data-testid="brand-mark">MeepleAI</div>,
 }));
 
 describe('AuthLayout', () => {
@@ -44,14 +44,14 @@ describe('AuthLayout', () => {
       expect(screen.getByText('Auth Form Content')).toBeInTheDocument();
     });
 
-    it('renders MeepleLogo in header', () => {
+    it('renders BrandMark in header', () => {
       render(
         <AuthLayout>
           <div>Content</div>
         </AuthLayout>
       );
 
-      const logo = screen.getByTestId('meeple-logo');
+      const logo = screen.getByTestId('brand-mark');
       expect(logo).toBeInTheDocument();
     });
 

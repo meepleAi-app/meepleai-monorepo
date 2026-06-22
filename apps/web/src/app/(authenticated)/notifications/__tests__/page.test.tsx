@@ -18,6 +18,7 @@ import userEvent from '@testing-library/user-event';
 
 import NotificationsPage from '../page';
 import type { NotificationDto } from '@/lib/api';
+import { logger } from '@/lib/logger';
 import { EMPTY } from '../../../../__tests__/fixtures/test-strings';
 // #1816 P3-i18n: CatalogPagination (rendered when notifications > 20) calls
 // useTranslation which requires IntlProvider in the tree. Use renderWithIntl
@@ -138,7 +139,7 @@ describe('NotificationsPage', () => {
     expect(screen.getByText(/Second notification/)).toBeInTheDocument();
   });
 
-  it('should show "Tutte" tab showing all notifications and "Non lette" showing unread only', async () => {
+  it('toggles unread-only view via the counter button (#2181)', async () => {
     const user = userEvent.setup();
     const notifications = [
       createNotification({ title: 'Read notification', isRead: true }),
@@ -148,17 +149,43 @@ describe('NotificationsPage', () => {
 
     render(<NotificationsPage />);
 
-    // "Tutte" tab should be active by default - shows both
+    // Default view shows both (toggle off)
     expect(screen.getByText(/Read notification/)).toBeInTheDocument();
     expect(screen.getByText(/Unread notification/)).toBeInTheDocument();
 
-    // Click "Non lette" tab
-    const unreadTab = screen.getByRole('tab', { name: /non lette/i });
-    await user.click(unreadTab);
+    // Click the header counter to turn the unread-only toggle on
+    const toggle = screen.getByTestId('notifications-unread-toggle');
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
 
-    // Only unread notification should be visible
+    // Only the unread notification should be visible
     expect(screen.queryByText(/Read notification/)).not.toBeInTheDocument();
     expect(screen.getByText(/Unread notification/)).toBeInTheDocument();
+
+    // Click again to restore the full list
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByText(/Read notification/)).toBeInTheDocument();
+  });
+
+  it('disables the unread-toggle when there are no unread items (#2181)', () => {
+    const notifications = [createNotification({ title: 'Read', isRead: true })];
+    setupStore({ notifications, unreadCount: 0 });
+
+    render(<NotificationsPage />);
+
+    const toggle = screen.getByTestId('notifications-unread-toggle');
+    expect(toggle).toBeDisabled();
+    expect(toggle).toHaveTextContent(/Nessuna notifica non letta/);
+  });
+
+  it('does not render the legacy "Tutte / Non lette" role=tab pair (#2181)', () => {
+    setupStore({ notifications: [], unreadCount: 0 });
+    render(<NotificationsPage />);
+
+    expect(screen.queryByRole('tab', { name: /^Tutte$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /non lette/i })).not.toBeInTheDocument();
   });
 
   it('should filter by notification category when filter pills are clicked', async () => {
@@ -221,41 +248,65 @@ describe('NotificationsPage', () => {
     expect(mockMarkAllAsRead).toHaveBeenCalledTimes(1);
   });
 
-  it('should not show "Segna tutte come lette" when all notifications are read', () => {
+  it('disables "Segna tutte come lette" when there are no unread notifications (#2181)', () => {
     const notifications = [createNotification({ isRead: true })];
     setupStore({ notifications, unreadCount: 0 });
 
     render(<NotificationsPage />);
 
-    expect(
-      screen.queryByRole('button', { name: /segna tutte come lette/i })
-    ).not.toBeInTheDocument();
+    // Issue #2181: the CTA is now persistent and disabled rather than hidden,
+    // so the user knows the action exists even before any unread arrives.
+    const markAllButton = screen.getByRole('button', { name: /segna tutte come lette/i });
+    expect(markAllButton).toBeInTheDocument();
+    expect(markAllButton).toBeDisabled();
   });
 
-  it('should show empty state when no notifications', () => {
+  it('should show empty state when no notifications (#2183)', () => {
     setupStore({ notifications: [], unreadCount: 0, isFetching: false });
 
     render(<NotificationsPage />);
 
-    expect(screen.getByText(EMPTY.notifications)).toBeInTheDocument();
+    // Heading: explicit "no notifications yet" headline (#2183 contextual copy)
+    expect(screen.getByText(EMPTY.notificationsEmptyDefault)).toBeInTheDocument();
+    // CTA to /notifications/preferences must always render
+    const cta = screen.getByTestId('notifications-empty-preferences-cta');
+    expect(cta).toHaveAttribute('href', '/notifications/preferences');
   });
 
-  it('should show empty state with unread tab message', async () => {
+  it('should show empty state with unread message when unread-only toggle is on (#2181)', async () => {
     const user = userEvent.setup();
-    const notifications = [createNotification({ isRead: true })];
-    setupStore({ notifications, unreadCount: 0 });
+    // Need at least one unread item so the toggle is enabled; once toggled
+    // we mark it as read mid-test? Simpler: start with one unread, mark it
+    // first so the count is 1 and the toggle button is reachable, then turn
+    // the toggle on and assert the empty-state copy is rendered.
+    const notifications = [
+      createNotification({ title: 'Read item', isRead: true }),
+      createNotification({ title: 'Single unread', isRead: false }),
+    ];
+    setupStore({ notifications, unreadCount: 1 });
 
     render(<NotificationsPage />);
 
-    // Switch to unread tab
-    const unreadTab = screen.getByRole('tab', { name: /non lette/i });
-    await user.click(unreadTab);
+    const toggle = screen.getByTestId('notifications-unread-toggle');
+    await user.click(toggle);
 
-    // The empty state container has the text "Nessuna notifica non letta"
-    // Also appears in header subtitle, so check for the empty state icon (Bell) + text combo
-    const emptyStates = screen.getAllByText(EMPTY.notificationsUnread);
-    // At least one should be in the empty state container (not just the header)
-    expect(emptyStates.length).toBeGreaterThanOrEqual(1);
+    // Only the single unread notification should remain visible (no empty state)
+    expect(screen.getByText(/Single unread/)).toBeInTheDocument();
+
+    // Now simulate that the user marked it as read by re-rendering with 0 unread
+    // and the toggle staying on. Easiest path: assert that with 0 filtered + toggle on,
+    // the empty-state copy mentions "non letta".
+    setupStore({
+      notifications: [createNotification({ title: 'All read', isRead: true })],
+      unreadCount: 0,
+    });
+    render(<NotificationsPage />);
+    const newToggle = screen.getAllByTestId('notifications-unread-toggle').at(-1)!;
+    // Toggle is disabled (unreadCount === 0), so the "all-read" message
+    // lives both in the toggle label and in the empty-state copy (#2181
+    // toggle + #2183 contextual empty-state heading).
+    expect(newToggle).toBeDisabled();
+    expect(screen.getAllByText(EMPTY.notificationsUnread).length).toBeGreaterThanOrEqual(1);
   });
 
   it('should show loading state while fetching', () => {
@@ -298,7 +349,7 @@ describe('NotificationsPage', () => {
     expect(screen.getByText('2 non lette')).toBeInTheDocument();
   });
 
-  it('should show type-specific empty state when filter has no results', async () => {
+  it('should show type-specific empty state when filter has no results (#2183)', async () => {
     const user = userEvent.setup();
     const notifications = [createNotification({ type: 'document_ready' })];
     setupStore({ notifications, unreadCount: 1 });
@@ -308,7 +359,7 @@ describe('NotificationsPage', () => {
     // Click a filter category that has no matching notifications
     await user.click(screen.getByRole('button', { name: /serate/i }));
 
-    expect(screen.getByText(EMPTY.notificationsOfType)).toBeInTheDocument();
+    expect(screen.getByText(EMPTY.notificationsEmptyCategory)).toBeInTheDocument();
   });
 
   it('should display all filter category pills', () => {
@@ -392,5 +443,98 @@ describe('NotificationsPage', () => {
     expect(screen.getByRole('heading', { name: /oggi/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /ieri/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /precedenti/i })).toBeInTheDocument();
+  });
+
+  // ── detail.link safety (#2182) ───────────────────────────────────
+  describe('Notifications detail.link click handler (#2182)', () => {
+    it('calls window.location.assign for safe relative path', async () => {
+      const user = userEvent.setup();
+      const assignMock = vi.fn();
+      const originalLocation = window.location;
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        writable: true,
+        value: { ...originalLocation, assign: assignMock },
+      });
+
+      try {
+        const notifications = [
+          createNotification({
+            title: 'Safe link notification',
+            link: '/games/abc-123',
+            isRead: true,
+          }),
+        ];
+        setupStore({ notifications, unreadCount: 0 });
+
+        render(<NotificationsPage />);
+
+        // Open the detail drawer by clicking the card
+        const card = screen.getByRole('button', { name: /safe link notification/i });
+        await user.click(card);
+
+        // The "Apri" button should now be rendered inside the open drawer
+        const apriBtn = await screen.findByRole('button', { name: /^apri$/i });
+        await user.click(apriBtn);
+
+        expect(assignMock).toHaveBeenCalledWith('/games/abc-123');
+      } finally {
+        Object.defineProperty(window, 'location', {
+          configurable: true,
+          writable: true,
+          value: originalLocation,
+        });
+      }
+    });
+
+    it('does NOT call window.location.assign for external URL', async () => {
+      const user = userEvent.setup();
+      const assignMock = vi.fn();
+      const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
+      const originalLocation = window.location;
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        writable: true,
+        value: { ...originalLocation, assign: assignMock },
+      });
+
+      try {
+        const notifications = [
+          createNotification({
+            title: 'Unsafe link notification',
+            link: 'https://evil.com',
+            isRead: true,
+          }),
+        ];
+        setupStore({ notifications, unreadCount: 0 });
+
+        render(<NotificationsPage />);
+
+        // Open detail drawer
+        const card = screen.getByRole('button', { name: /unsafe link notification/i });
+        await user.click(card);
+
+        // The "Apri" button renders because detail.link is truthy
+        const apriBtn = await screen.findByRole('button', { name: /^apri$/i });
+        await user.click(apriBtn);
+
+        // window.location.assign must NOT be called for an external URL
+        expect(assignMock).not.toHaveBeenCalled();
+        // Rejection must be logged via logger.warn
+        expect(warnSpy).toHaveBeenCalledWith(
+          'Rejected unsafe detail.link in notification',
+          expect.objectContaining({
+            metadata: expect.objectContaining({ linkMasked: 'https://evil.com' }),
+          })
+        );
+      } finally {
+        warnSpy.mockRestore();
+        Object.defineProperty(window, 'location', {
+          configurable: true,
+          writable: true,
+          value: originalLocation,
+        });
+      }
+    });
   });
 });

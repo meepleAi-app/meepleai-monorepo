@@ -94,6 +94,30 @@ internal interface IHybridCacheService
     /// <param name="ct">Cancellation token</param>
     /// <returns>Cache statistics (hit rate, entry count, memory usage)</returns>
     Task<HybridCacheStats> GetStatsAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Removes cache entries by tag locally AND broadcasts an invalidation message
+    /// to all API replicas via Redis Pub/Sub. Each replica's
+    /// <see cref="HybridCacheInvalidationSubscriber"/> evicts matching L1 entries on receipt.
+    ///
+    /// Use this for cross-replica L1 invalidation when a domain event mutates a projection
+    /// that downstream readers consume from L1 cache (e.g. <c>HasKnowledgeBase</c> flip
+    /// post-PDF indexing). Without the broadcast, only the calling replica's L1 evicts;
+    /// other replicas keep serving stale L1 entries until <c>LocalCacheExpiration</c>.
+    ///
+    /// ADR-062 (KB-flag cache propagation strategy).
+    /// </summary>
+    /// <param name="tag">Tag to invalidate across replicas (e.g. "search-games", "shared-game:{id}")</param>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns>Number of L1+L2 cache entries removed on the calling replica.
+    /// Other replicas' eviction is asynchronous (sub-second typical) and not counted in the return.</returns>
+    /// <remarks>
+    /// Failure modes:
+    /// - Redis Pub/Sub unreachable → local <see cref="RemoveByTagAsync(string,CancellationToken)"/> still runs;
+    ///   only the broadcast step is skipped. Behaviour degrades to legacy single-replica eviction.
+    /// - Subscriber receiving its own publishing replica's message → no-op (L1 already evicted by Step 1).
+    /// </remarks>
+    Task<int> RemoveByTagAcrossReplicasAsync(string tag, CancellationToken ct = default);
 }
 
 /// <summary>

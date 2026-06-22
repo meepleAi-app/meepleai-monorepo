@@ -4,11 +4,13 @@ COMPOSE := docker compose -f docker-compose.yml
 # === Environments ===
 
 dev: ## Start full local development (all profiles)
+	@bash scripts/seed-status.sh --brief || true
 	$(COMPOSE) -f compose.dev.yml \
 		--profile ai --profile monitoring --profile automation \
 		--profile proxy --profile storage up -d
 
 dev-core: ## Start core only (postgres, redis, api, web)
+	@bash scripts/seed-status.sh --brief || true
 	$(COMPOSE) -f compose.dev.yml up -d
 
 dev-down: ## Stop dev environment
@@ -233,6 +235,9 @@ logs-ui: ## Open Grafana log explorer in browser (staging)
 # Seed snapshot lifecycle (bake + consume)
 # See docs/development/snapshot-seed-workflow.md
 # ================================================================
+
+seed-status: ## Report local snapshot freshness (age, schema drift, embedding model)
+	@bash scripts/seed-status.sh
 
 seed-index: ## Bake: indicizza tutti i PDF e produce snapshot locale
 	@bash scripts/seed-index-preflight.sh

@@ -13,6 +13,7 @@ import {
   type EntityFilter,
   type RowItemBase,
 } from '@/components/features/discover';
+import { resolveCardHref } from '@/components/features/discover/resolveCardHref';
 import { HubLayout } from '@/components/layout/HubLayout';
 import { useCatalogTrending } from '@/hooks/queries/useCatalogTrending';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -128,12 +129,15 @@ export function DiscoverHub({ pathnameOverride }: DiscoverHubProps = {}) {
   const trending = useCatalogTrending(10);
 
   // ── DTO → RowItemBase adapter for Row 1 (trending) ───────────────────────
+  // Issue #2290: pass `hasKnowledgeBase` through so the featured card can
+  // render the KB badge (Block B of #2289).
   const trendingItems = useMemo<ReadonlyArray<RowItemBase>>(
     () =>
       (trending.data ?? []).map(g => ({
         id: g.gameId,
         name: g.title,
         imageUrl: g.thumbnailUrl,
+        hasKnowledgeBase: g.hasKnowledgeBase,
       })),
     [trending.data]
   );
@@ -179,14 +183,23 @@ export function DiscoverHub({ pathnameOverride }: DiscoverHubProps = {}) {
     [entity, updateUrl]
   );
 
-  // ── Telemetry: card click + disabled-row impression ───────────────────────
-  const handleCardClick = useCallback((rowId: string, item: RowItemBase) => {
-    trackEvent('discover_card_clicked', {
-      row: rowId,
-      entityId: item.id,
-      entityType: rowId,
-    });
-  }, []);
+  // ── Card click: telemetry + navigation (#2085 F2/F3) ──────────────────────
+  // Order matters: track FIRST so the event fires even if the user cancels
+  // navigation (middle-click, ctrl-click → opens in new tab via the router's
+  // own handling). Navigation is best-effort: unknown rowIds resolve to null
+  // and we silently skip the push (telemetry already captured the click).
+  const handleCardClick = useCallback(
+    (rowId: string, item: RowItemBase) => {
+      trackEvent('discover_card_clicked', {
+        row: rowId,
+        entityId: item.id,
+        entityType: rowId,
+      });
+      const href = resolveCardHref(rowId, item);
+      if (href) router.push(href);
+    },
+    [router]
+  );
 
   const handleDisabledRowVisible = useCallback((rowId: string) => {
     trackEvent('discover_disabled_row_visible', { row: rowId });
@@ -210,10 +223,11 @@ export function DiscoverHub({ pathnameOverride }: DiscoverHubProps = {}) {
   const trendingVisible = entity === 'all' || entity === 'games';
 
   return (
-    <HubLayout searchPlaceholder={t('pages.discover.search.placeholder')}>
+    <HubLayout searchPlaceholder={t('pages.discover.search.placeholder')} showSearch={false}>
       <DiscoverHero
         title={t('pages.discover.hero.title')}
         subtitle={t('pages.discover.hero.subtitle')}
+        pathLabel={effectivePathname}
         searchSlot={
           <DiscoverSearchBox
             value={q}

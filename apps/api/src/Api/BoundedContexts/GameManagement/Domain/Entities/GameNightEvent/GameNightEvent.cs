@@ -26,6 +26,22 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     public GameNightStatus Status { get; private set; }
     public DateTimeOffset? Reminder24hSentAt { get; private set; }
     public DateTimeOffset? Reminder1hSentAt { get; private set; }
+
+    // RSVP deadline — ADR-074 (#2383 follow-up)
+    /// <summary>
+    /// Optional cutoff after which RSVP submission is rejected by the validator.
+    /// Set by the organiser via <see cref="SetRsvpDeadline"/>. Per ADR-074 Option C
+    /// (lazy validation-time closure check + nullable closed-at timestamp).
+    /// </summary>
+    public DateTimeOffset? RsvpDeadline { get; private set; }
+
+    /// <summary>
+    /// Timestamp at which RSVPs were closed (either by deadline expiry observed at
+    /// validation time, by Hangfire cleanup job, or by manual organiser closure).
+    /// Once set, no further RSVPs are accepted regardless of <see cref="RsvpDeadline"/>.
+    /// </summary>
+    public DateTimeOffset? RsvpClosedAt { get; private set; }
+
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset? UpdatedAt { get; private set; }
     public IReadOnlyList<GameNightRsvp> Rsvps => _rsvps.AsReadOnly();
@@ -316,6 +332,55 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     public void MarkReminder1hSent()
     {
         Reminder1hSentAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
+    /// Sets the RSVP deadline. Organiser-only operation. Per ADR-074 Option C,
+    /// the deadline is consulted at validation time (lazy check); a Hangfire job
+    /// observes expired deadlines and calls <see cref="MarkRsvpClosed"/> for audit.
+    /// Pass null to clear (e.g. organiser extends an indefinitely open RSVP window).
+    /// Throws if RSVP is already closed.
+    /// </summary>
+    public void SetRsvpDeadline(DateTimeOffset? deadline)
+    {
+        if (RsvpClosedAt.HasValue)
+            throw new InvalidOperationException(
+                "Cannot change RSVP deadline after RSVP has been closed");
+
+        if (deadline.HasValue && deadline.Value <= DateTimeOffset.UtcNow)
+            throw new ArgumentException(
+                "RSVP deadline must be in the future",
+                nameof(deadline));
+
+        RsvpDeadline = deadline;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
+    /// Marks RSVPs as closed. Internal entry point — callable only by the repository
+    /// (during Hangfire cleanup job dispatch) or by validator on first-read deadline
+    /// expiry observation, per ADR-074 Option C. Idempotent: subsequent calls are no-ops.
+    /// </summary>
+    internal void MarkRsvpClosed()
+    {
+        if (RsvpClosedAt.HasValue)
+            return; // idempotent
+
+        RsvpClosedAt = DateTimeOffset.UtcNow;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
+    /// Returns true if RSVPs are no longer accepted (either explicit close, or
+    /// deadline passed). Validator should call this before persisting a new RSVP.
+    /// </summary>
+    public bool IsRsvpClosed(DateTimeOffset utcNow)
+    {
+        if (RsvpClosedAt.HasValue)
+            return true;
+        if (RsvpDeadline.HasValue && utcNow >= RsvpDeadline.Value)
+            return true;
+        return false;
     }
 
     /// <summary>

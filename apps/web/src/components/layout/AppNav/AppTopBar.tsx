@@ -4,7 +4,10 @@ import { ChevronDown, Menu } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import { LiveSessionPill } from '@/components/layout/AppNav/LiveSessionPill';
+import { SearchPill } from '@/components/layout/AppNav/SearchPill';
 import { UserMenuDropdown } from '@/components/layout/UserMenuDropdown';
+import { BrandMark } from '@/components/ui/brand';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,19 +63,8 @@ export function AppTopBar({ adminMode, onMenuClick, className }: AppTopBarProps)
       )}
 
       {/* Logo */}
-      <Link href="/dashboard" aria-label="MeepleAI" className="flex shrink-0 items-center gap-2">
-        <span
-          aria-hidden="true"
-          className="flex h-7 w-7 items-center justify-center rounded-[10px] bg-[linear-gradient(135deg,hsl(var(--c-game)),hsl(var(--c-event)))] font-quicksand text-sm font-extrabold text-white"
-        >
-          M
-        </span>
-        <span className="font-quicksand text-sm font-bold text-foreground">MeepleAI</span>
-        {adminMode && (
-          <span className="ml-1 rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-destructive">
-            Admin
-          </span>
-        )}
+      <Link href="/dashboard" aria-label="MeepleAI" className="flex shrink-0 items-center">
+        <BrandMark variant="full" size="sm" adminBadge={adminMode} />
       </Link>
 
       {/* Primary links + overflow (user shell only) */}
@@ -133,6 +125,17 @@ export function AppTopBar({ adminMode, onMenuClick, className }: AppTopBarProps)
       )}
 
       <div className="flex-1" />
+
+      {/* Issue #2320 — D5 search slot trigger. Click dispatches a window
+          event that the CommandPalette host in `providers.tsx` listens for.
+          Keyboard shortcut (Cmd/Ctrl+K) is wired in `useGlobalKeyboardShortcuts`
+          and opens the same modal. Visible in both user and admin shells. */}
+      <SearchPill />
+
+      {/* Issue #2150 — runtime backfill of nav-chrome primitive D5: surfaces a
+          chip when a live session is active, with a Resume CTA. Hidden when
+          `useLiveSessionStore.sessionId === null` or `status === 'Completed'`. */}
+      {!adminMode && <LiveSessionPill />}
 
       <UserMenuDropdown variant="pill" />
     </header>

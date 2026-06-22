@@ -201,15 +201,16 @@ export function CrossEntityFilters({
 
       {/* Row 2 — Filter chips + advanced CTA + view toggle */}
       <div className="flex items-center gap-1.5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-        {/* 4 mockup-conformant filter chips (visual stubs).
-            STATO/GIOCO/DATA are non-interactive placeholders.
-            SORT reflects current sortKey label as a hook for a future popover. */}
+        {/* Mockup-conformant filter chips. STATO/DATA are non-interactive
+            placeholders; SORT reflects current sortKey label as a hook for a
+            future popover.
+            Issue #2186: the GIOCO chip was removed — it was a visual stub
+            duplicating the LibraryTabs entity scope (Tutti / Giochi / Agenti /
+            KB / Sessioni / Chat) and contributed to the triple-filter overlap
+            reported in the US-10 audit. Sort/Ordina now lives as its own
+            visual chip surface here, matching the locked decision A. */}
         <FilterChip
           label={t('pages.library.filters.chips.stato')}
-          value={t('pages.library.filters.chips.value.all')}
-        />
-        <FilterChip
-          label={t('pages.library.filters.chips.gioco')}
           value={t('pages.library.filters.chips.value.all')}
         />
         <FilterChip

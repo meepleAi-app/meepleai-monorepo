@@ -39,6 +39,6 @@ internal record UserLibraryEntryDto(
     bool HasRagAccess = false,            // Ownership/RAG access: computed from admin/public/ownership rules
     int TimesPlayed = 0,                  // #1566: gameplay count for games-tab 'played' filter
     DateTime? LastPlayed = null,          // #1566: last play timestamp for games-tab 'last-played' sort
-    // Issue #1852 (Gap A): cover URL resolved via L3 → L4 → L2 priority; null if no cover available.
+                                          // Issue #1852 (Gap A): cover URL resolved via L3 → L4 → L2 priority; null if no cover available.
     string? CoverUrl = null
 );

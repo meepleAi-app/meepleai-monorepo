@@ -225,3 +225,85 @@ See [design doc § Phase plan](../specs/2026-05-22-release-gate-spreadsheet.md#p
 - Parent epic: [#842](https://github.com/meepleAi-app/meepleai-monorepo/issues/842) — DevOps Multi-Branch Strategy
 - Sibling: [#850](https://github.com/meepleAi-app/meepleai-monorepo/issues/850) — CI cost optimization (pattern reuse: branch-aware concurrency, idempotency)
 - Post-mortem template: [#1088](https://github.com/meepleAi-app/meepleai-monorepo/issues/1088)
+
+## Phase 2b — Auto-Revert Bot (#1445)
+
+### Overview
+
+When a release PR merges and a `blocker`-tier check surfaces post-merge, the bot opens + auto-mergia un revert PR within ~16min. Kill-switched off by default.
+
+### Operational lifecycle
+
+| Phase | State | Operator action |
+|---|---|---|
+| **Phase A** | `enabled=false, dry_run_mode=true` | Code shipped + workflow active but short-circuited |
+| **Phase B (dry-run)** | `enabled=true, dry_run_mode=true` | Bot opens DRAFT revert PRs, NO merge. Operator review + label outcome |
+| **Phase C (live)** | `enabled=true, dry_run_mode=false` | Bot opens + mergia revert PR via `--admin --squash` |
+
+### Pre-Phase A bootstrap (one-time)
+
+Before flipping any kill-switch, the operator MUST bootstrap the side branch that holds the JSONL event log:
+
+```bash
+# From a clean working tree on main-dev
+git checkout --orphan release-gate-state/auto-revert-events
+git rm -rf .
+mkdir -p state
+touch state/auto-revert-events.jsonl
+git add state/auto-revert-events.jsonl
+git -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+    -c user.name="github-actions[bot]" \
+    commit -m "chore: bootstrap auto-revert state branch"
+git push -u origin release-gate-state/auto-revert-events
+git checkout main-dev
+```
+
+Verify: `git ls-remote origin release-gate-state/auto-revert-events` should return a single SHA.
+
+### Flipping phases
+
+**Phase A → Phase B** (start dry-run period):
+
+```bash
+# Edit .github/release-gates.yml — change bot.phase2b.enabled to true
+# Then open PR with title "chore(release-gate): #1445 Phase 2b enter dry-run"
+```
+
+**Phase B → Phase C** (start live mode):
+
+```bash
+# 1. Verify exit criterion via report-only run:
+node scripts/release-gate/reconcile-revert-outcomes.mjs --report-only
+
+# 2. Expected output ends with:
+#    DECISION: ready to flip phase2b.dry_run_mode=false
+
+# 3. Edit .github/release-gates.yml — change bot.phase2b.dry_run_mode to false
+# 4. Open PR with title "chore(release-gate): #1445 Phase 2b enter live mode"
+```
+
+### Rollback (4 levels)
+
+| Level | When | Action |
+|---|---|---|
+| L1 | Specifico revert sbagliato | Re-merge dell'original PR (revert-of-revert) |
+| L2 | AC-7 breach | Single-line PR: `bot.phase2b.enabled: false` |
+| L3 | Live mode problematico | Single-line PR: `bot.phase2b.dry_run_mode: true` |
+| L4 | Bug fondamentale | Revert PR Phase A iniziale |
+
+### Outcome labels (Phase 2b reconciler)
+
+| Label | Significato | Quando applicarla |
+|---|---|---|
+| `revert-outcome:false-positive` | "Revert sbagliato — non era una vera regressione" | Quando rivedi un revert PR e capisci che il blocker era flake/infra/pre-existing missed |
+| `revert-outcome:true-positive` | "Revert corretto — accelera silent confirmation" | Opzionale, accelera maturazione vs 7gg silent |
+
+### Inspection commands
+
+| Need | Command |
+|---|---|
+| Full JSONL event log | `git show release-gate-state/auto-revert-events:state/auto-revert-events.jsonl \| jq -s` |
+| Maturity report (dry-run) | `node scripts/release-gate/reconcile-revert-outcomes.mjs --report-only` |
+| AC-7 rate (JSON) | `node scripts/release-gate/reconcile-revert-outcomes.mjs --metrics-only` |
+| Recent revert PRs | `gh pr list --label auto-revert,phase2b --state merged --limit 50` |
+| Workflow logs | `gh run list --workflow=release-gate-auto-revert.yml` |

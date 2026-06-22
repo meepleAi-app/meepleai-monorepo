@@ -11,8 +11,11 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.EventHandlers;
 
 /// <summary>
 /// Automatically creates an AI agent when a PDF finishes processing (state == Ready).
-/// Only triggers for admin-priority PDFs to avoid auto-creating agents for all user uploads.
 /// Uses the first active system definition with "Balanced" strategy as defaults.
+///
+/// Issue #2245 (epic #2242 Sub #3): the previous <c>ProcessingPriority == "Admin"</c> guard was
+/// removed so user-side uploads (Newman flow NW1) also trigger agent auto-creation. Tier quotas
+/// (handled by <c>CreateGameAgentCommand</c>) remain the only gate on user uploads.
 /// </summary>
 internal sealed class AutoCreateAgentOnPdfReadyHandler : INotificationHandler<PdfStateChangedEvent>
 {
@@ -41,10 +44,12 @@ internal sealed class AutoCreateAgentOnPdfReadyHandler : INotificationHandler<Pd
 
         try
         {
-            // Get the PDF entity to check priority (ProcessingPriority is on EF entity, not domain)
+            // Get the PDF entity to resolve game id (private > shared > empty).
+            // Issue #2245: the previous ProcessingPriority guard was dropped — user uploads also
+            // get an auto-created agent. Tier quotas inside CreateGameAgentCommand remain the gate.
             var pdfEntity = await _dbContext.PdfDocuments
                 .Where(p => p.Id == notification.PdfDocumentId)
-                .Select(p => new { p.SharedGameId, p.PrivateGameId, p.ProcessingPriority })
+                .Select(p => new { p.SharedGameId, p.PrivateGameId })
                 .FirstOrDefaultAsync(cancellationToken)
                 .ConfigureAwait(false);
 
@@ -52,15 +57,6 @@ internal sealed class AutoCreateAgentOnPdfReadyHandler : INotificationHandler<Pd
             {
                 _logger.LogWarning(
                     "AutoCreateAgent: PDF {PdfId} not found, skipping auto-agent creation",
-                    notification.PdfDocumentId);
-                return;
-            }
-
-            // Only auto-create for admin-priority PDFs (wizard flow)
-            if (!string.Equals(pdfEntity.ProcessingPriority, "Admin", StringComparison.Ordinal))
-            {
-                _logger.LogDebug(
-                    "AutoCreateAgent: PDF {PdfId} is not admin priority, skipping",
                     notification.PdfDocumentId);
                 return;
             }

@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 
@@ -13,13 +14,16 @@ internal class RecordLiveSessionScoreCommandHandler : ICommandHandler<RecordLive
 {
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly TimeProvider _timeProvider;
+    private readonly IUnitOfWork _unitOfWork;
 
     public RecordLiveSessionScoreCommandHandler(
         ILiveSessionRepository sessionRepository,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IUnitOfWork unitOfWork)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task Handle(RecordLiveSessionScoreCommand command, CancellationToken cancellationToken)
@@ -32,6 +36,7 @@ internal class RecordLiveSessionScoreCommandHandler : ICommandHandler<RecordLive
 
         session.RecordScore(command.PlayerId, command.Round, command.Dimension, command.Value, _timeProvider, command.Unit);
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }
 
@@ -43,13 +48,16 @@ internal class EditLiveSessionScoreCommandHandler : ICommandHandler<EditLiveSess
 {
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly TimeProvider _timeProvider;
+    private readonly IUnitOfWork _unitOfWork;
 
     public EditLiveSessionScoreCommandHandler(
         ILiveSessionRepository sessionRepository,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IUnitOfWork unitOfWork)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task Handle(EditLiveSessionScoreCommand command, CancellationToken cancellationToken)
@@ -62,6 +70,7 @@ internal class EditLiveSessionScoreCommandHandler : ICommandHandler<EditLiveSess
 
         session.RecordScore(command.PlayerId, command.Round, command.Dimension, command.Value, _timeProvider, command.Unit);
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }
 
@@ -73,13 +82,16 @@ internal class AdvanceLiveSessionTurnCommandHandler : ICommandHandler<AdvanceLiv
 {
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly TimeProvider _timeProvider;
+    private readonly IUnitOfWork _unitOfWork;
 
     public AdvanceLiveSessionTurnCommandHandler(
         ILiveSessionRepository sessionRepository,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IUnitOfWork unitOfWork)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task Handle(AdvanceLiveSessionTurnCommand command, CancellationToken cancellationToken)
@@ -92,6 +104,7 @@ internal class AdvanceLiveSessionTurnCommandHandler : ICommandHandler<AdvanceLiv
 
         session.AdvanceTurn(_timeProvider);
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }
 
@@ -103,13 +116,16 @@ internal class UpdateLiveSessionNotesCommandHandler : ICommandHandler<UpdateLive
 {
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly TimeProvider _timeProvider;
+    private readonly IUnitOfWork _unitOfWork;
 
     public UpdateLiveSessionNotesCommandHandler(
         ILiveSessionRepository sessionRepository,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IUnitOfWork unitOfWork)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task Handle(UpdateLiveSessionNotesCommand command, CancellationToken cancellationToken)
@@ -122,5 +138,6 @@ internal class UpdateLiveSessionNotesCommandHandler : ICommandHandler<UpdateLive
 
         session.UpdateNotes(command.Notes, _timeProvider);
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

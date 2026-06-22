@@ -20,19 +20,28 @@
  *   empty   → derived (length === 0)
  *   default → otherwise
  *
- * Pixel-faithful to admin-mockups/design_files/sp4-dashboard.jsx.
+ * Note on mockup divergence (#2114): `admin-mockups/design_files/sp4-dashboard.{html,jsx}`
+ * is the legacy Pre-Stage-3 design with 5 entity sections — it is intentionally
+ * NOT the design target for this component. The mockup is classified
+ * `forward-refactor-obsolete` in its fidelity.json companion; the codebase
+ * supersedes it via the Asse C refactor. There is no current pixel-faithful
+ * mockup for the priority-driven layout; the spec lives in the plan archived
+ * under `docs/superpowers/plans/` (2026-06-05 Asse C session).
  */
 
 'use client';
 
-import { useMemo, type ReactElement } from 'react';
+import { useEffect, useMemo, type ReactElement } from 'react';
+
+import Link from 'next/link';
 
 import { useAuth } from '@/components/auth/AuthProvider';
 import { CascadeDrawerHost } from '@/components/dashboard/CascadeDrawerHost';
+import { HubPageContainer } from '@/components/layout/PageContainer';
+import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
 import { useCompletedGameNights, useUpcomingGameNights } from '@/hooks/queries/useGameNights';
-import { useGames } from '@/hooks/queries/useGames';
-import { useLibraryStats } from '@/hooks/queries/useLibrary';
+import { useLibrary, useLibraryStats } from '@/hooks/queries/useLibrary';
 import { useFriendsActivity } from '@/hooks/use-friends-activity';
 import { useTranslation } from '@/hooks/useTranslation';
 
@@ -76,7 +85,15 @@ export function DashboardClient(): ReactElement {
   // F20 #1974: dashboard "Recenti" slot — recently completed game nights.
   const completedGNQuery = useCompletedGameNights({ limit: 5 });
   const sessionsQuery = useActiveSessions(10);
-  const gamesQuery = useGames(undefined, undefined, 1, 20);
+  // Issue #2176: SuggestedSection renders "Potresti giocare" cards from the
+  // user's OWN library (UserLibrary), NOT from the shared catalog (SharedGames).
+  // The previous useGames(undefined,…,20) call read SharedGames system-wide,
+  // which created a silent inconsistency: KPI "GIOCHI N" (useLibraryStats →
+  // UserLibrary) and the suggested cards (useGames → SharedGames) drew from
+  // different sources, so the section could render community catalog items
+  // even when the user owned 0 games, or hide when the user owned N games
+  // but the catalog query was throttled.
+  const libraryQuery = useLibrary({ page: 1, pageSize: 20 });
   const statsQuery = useLibraryStats();
   const friendsActivityQuery = useFriendsActivity();
 
@@ -139,37 +156,78 @@ export function DashboardClient(): ReactElement {
   );
 
   // ── Slot #3: Suggested ("Potresti giocare") ──────────────────────────────
-  // MVP algorithm: surface up to 6 owned games. Future BE endpoint
-  // `GET /dashboard/suggestions` will refine to "owned NOT played last 30d
-  // sorted by play count DESC" + collaborative filtering (plan §"MIN-2").
+  // MVP algorithm: surface up to 6 OWNED games from the user's UserLibrary.
+  // Future BE endpoint `GET /dashboard/suggestions` will refine to
+  // "owned NOT played last 30d sorted by play count DESC" + collaborative
+  // filtering (plan §"MIN-2"). Source is UserLibrary (not SharedGames) —
+  // see #2176 for why this matters.
   const suggestedCards = useMemo<ReadonlyArray<SuggestedGameCard>>(() => {
-    const games = gamesQuery.data?.games ?? [];
-    return games.slice(0, 6).map<SuggestedGameCard>(g => {
-      const min = g.minPlayers ?? 0;
-      const max = g.maxPlayers ?? 0;
-      const playerCount =
-        min > 0 && max > 0 && min !== max
-          ? `${min}-${max}`
-          : min > 0
-            ? `${min}`
-            : max > 0
-              ? `${max}`
-              : '—';
-      const durationMin = g.maxPlayTimeMinutes ?? g.minPlayTimeMinutes ?? 60;
-      return {
-        id: g.id,
-        title: g.title,
-        coverImageUrl: g.imageUrl ?? undefined,
-        playerCount,
-        durationMin,
-      };
-    });
-  }, [gamesQuery.data]);
+    const entries = libraryQuery.data?.items ?? [];
+    return entries
+      .filter(entry => entry.currentState === 'Owned' || entry.currentState === 'Nuovo')
+      .slice(0, 6)
+      .map<SuggestedGameCard>(entry => {
+        const min = entry.minPlayers ?? 0;
+        const max = entry.maxPlayers ?? 0;
+        const playerCount =
+          min > 0 && max > 0 && min !== max
+            ? `${min}-${max}`
+            : min > 0
+              ? `${min}`
+              : max > 0
+                ? `${max}`
+                : '—';
+        const durationMin = entry.playingTimeMinutes ?? 60;
+        return {
+          id: entry.gameId,
+          title: entry.gameTitle,
+          coverImageUrl: entry.coverUrl ?? entry.gameImageUrl ?? undefined,
+          playerCount,
+          durationMin,
+        };
+      });
+  }, [libraryQuery.data]);
 
   const suggestedState: SuggestedSectionState = deriveSectionState(
-    gamesQuery.isLoading,
-    gamesQuery.isError,
+    libraryQuery.isLoading,
+    libraryQuery.isError,
     suggestedCards.length
+  );
+
+  // Issue #2176 observability: detect cross-endpoint drift when stats reports
+  // owned games but the library list returned 0 mappable entries. Fires once
+  // per state transition (React StrictMode double-mount produces 2 warns in
+  // dev, expected). Logged via console.warn in non-production builds —
+  // production emits this as a Prometheus counter from the backend audit
+  // layer instead.
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
+    if (!statsQuery.data || libraryQuery.isLoading || libraryQuery.isError) return;
+    if (statsQuery.data.totalGames > 0 && suggestedCards.length === 0) {
+      console.warn(
+        '[Dashboard] cross-endpoint drift: useLibraryStats.totalGames > 0 but SuggestedSection rendered 0 cards. ' +
+          `stats=${statsQuery.data.totalGames}, libraryItems=${libraryQuery.data?.items.length ?? 0}, ` +
+          'check filter (Owned/Nuovo) or useLibrary pagination.'
+      );
+    }
+  }, [
+    statsQuery.data,
+    libraryQuery.isLoading,
+    libraryQuery.isError,
+    libraryQuery.data,
+    suggestedCards.length,
+  ]);
+
+  // ── Block C (#2289 / #2247 follow-up): Agenti pronti ─────────────────────
+  // Surfaces the user's library entries that already have an indexed KB
+  // (`hasKb=true`, mapped from `UserLibraryEntry`). Mirrors the at-a-glance
+  // chip wired on `/library` so the dashboard's headline answer to "which of
+  // my games already have a chat-ready agent?" is one fold above the
+  // suggested cards. The section is hidden when the list is empty so first-
+  // login users with no KB-ready games still see a clean dashboard.
+  const agentiProntiEntries = useMemo(
+    () => (libraryQuery.data?.items ?? []).filter(entry => entry.hasKb).slice(0, 6),
+    [libraryQuery.data]
   );
 
   // ── Slot #4: Friends Activity ────────────────────────────────────────────
@@ -212,10 +270,7 @@ export function DashboardClient(): ReactElement {
         labels={heroLabels}
       />
 
-      <div
-        data-slot="dashboard-priority-sections"
-        className="container mx-auto flex flex-col gap-8 px-4 py-8 pb-16 sm:px-8"
-      >
+      <HubPageContainer data-slot="dashboard-priority-sections" className="gap-8 py-8 pb-16">
         <ProssimiSection
           state={prossimiState}
           gameNights={prossimiCards}
@@ -237,12 +292,72 @@ export function DashboardClient(): ReactElement {
           state={suggestedState}
           games={suggestedCards}
           onRetry={() => {
-            void gamesQuery.refetch();
+            void libraryQuery.refetch();
           }}
         />
 
+        {/* Block C (#2289 / #2247): inline section because the dashboard
+            already adopts the "filter → render-if-non-empty → MeepleCard grid"
+            pattern (see SuggestedSection internals) and a dedicated section
+            primitive here would add a `Section/Empty/Error/Loading` family
+            that's outside the scope of this follow-up — `hasKb` data piggy-
+            backs on `libraryQuery`, so loading/error states are already
+            covered upstream by SuggestedSection rendering. */}
+        {agentiProntiEntries.length > 0 ? (
+          <section
+            data-slot="dashboard-agenti-pronti"
+            aria-label="Giochi con agente pronto"
+            className="flex flex-col gap-4"
+          >
+            <header className="flex items-baseline justify-between gap-3">
+              <h2 className="font-display text-[18px] font-extrabold text-foreground">
+                Giochi con agente pronto
+              </h2>
+              <Link
+                href="/library?hasKb=true"
+                className="font-display text-[12px] font-bold text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Vedi tutti →
+              </Link>
+            </header>
+            <ul
+              role="list"
+              className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
+            >
+              {agentiProntiEntries.map(entry => (
+                <li key={entry.id} role="listitem">
+                  <Link
+                    href={`/library/${entry.gameId}`}
+                    className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <MeepleCard
+                      entity="game"
+                      variant="compact"
+                      id={entry.id}
+                      title={entry.gameTitle}
+                      subtitle={entry.gamePublisher ?? undefined}
+                      imageUrl={entry.coverUrl ?? entry.gameImageUrl ?? undefined}
+                      rating={entry.averageRating ?? undefined}
+                      ratingMax={10}
+                      metadata={[
+                        {
+                          label:
+                            entry.kbCardCount > 1
+                              ? `📄 ${entry.kbIndexedCount}/${entry.kbCardCount} KB`
+                              : '📄 KB',
+                        },
+                      ]}
+                      headingLevel={3}
+                    />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
         <FriendsActivitySection state={friendsState} activities={friendsActivities} />
-      </div>
+      </HubPageContainer>
 
       {/* #1929 WP5: cascade-store driven drawer renderer for dashboard card clicks */}
       <CascadeDrawerHost />

@@ -28,6 +28,12 @@ internal class TextChunkEntityConfiguration : IEntityTypeConfiguration<TextChunk
         builder.Property(e => e.Level).IsRequired().HasDefaultValue<short>(1);
         builder.Property(e => e.ElementType).IsRequired().HasMaxLength(20).HasDefaultValue("NarrativeText");
 
+        // #2311 BE-1 — UsageCount counter (DEC-D2 start-from-0)
+        builder.Property(e => e.UsageCount)
+               .HasColumnName("usage_count")
+               .IsRequired()
+               .HasDefaultValue(0);
+
         // Phase D — RAG role-aware: multi-label role classification (bitflag)
         builder.Property(e => e.RoleTags)
                .HasColumnName("role_tags")

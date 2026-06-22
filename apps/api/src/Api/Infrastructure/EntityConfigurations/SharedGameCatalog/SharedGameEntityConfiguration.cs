@@ -66,14 +66,16 @@ internal class SharedGameEntityConfiguration : IEntityTypeConfiguration<SharedGa
             .HasColumnName("average_rating")
             .HasColumnType("decimal(4,2)");
 
+        // Issue #2123 — BGG ToS compliance: image_url + thumbnail_url are now
+        // nullable. The seeder writes NULL on every create path; covers are
+        // resolved at runtime via CoverUrlResolver from R2 (PDF / Wikidata)
+        // and the frontend renders a deterministic placeholder when null.
         builder.Property(e => e.ImageUrl)
             .HasColumnName("image_url")
-            .IsRequired()
             .HasMaxLength(1000);
 
         builder.Property(e => e.ThumbnailUrl)
             .HasColumnName("thumbnail_url")
-            .IsRequired()
             .HasMaxLength(1000);
 
         builder.Property(e => e.Status)
@@ -156,6 +158,20 @@ internal class SharedGameEntityConfiguration : IEntityTypeConfiguration<SharedGa
         builder.Property(e => e.WikidataCoverAttribution)
             .HasMaxLength(512)
             .HasColumnName("wikidata_cover_attribution")
+            .IsRequired(false);
+
+        // Issue #1823 Phase B M8 — Wikidata QID resolved against shared_games
+        // before the cover-enrichment orchestrator runs (ADR DEC-3a). Max 32
+        // chars covers Q-numbers well past the current Wikidata range.
+        builder.Property(e => e.WikidataQid)
+            .HasMaxLength(32)
+            .HasColumnName("wikidata_qid")
+            .IsRequired(false);
+
+        // Issue #1823 Phase B M8 (ADR DEC-3i) — quarterly re-verification
+        // timestamp. NULL until the M8 orchestrator first enriches successfully.
+        builder.Property(e => e.WikidataQidLastVerifiedAt)
+            .HasColumnName("wikidata_qid_last_verified_at")
             .IsRequired(false);
 
         // Global query filter for soft deletes

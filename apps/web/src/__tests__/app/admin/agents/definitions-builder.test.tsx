@@ -20,13 +20,15 @@ vi.mock('@/lib/api/agent-definitions.api', () => ({
 }));
 
 // Mock the httpClient used internally by the API (avoids initialization errors)
+// #1972 M4 batch: vitest v4 rejects arrow-mock used with `new`. Use class with stub methods.
+class MockHttpClient {
+  get = vi.fn();
+  post = vi.fn();
+  put = vi.fn();
+  delete = vi.fn();
+}
 vi.mock('@/lib/api/core/httpClient', () => ({
-  HttpClient: vi.fn().mockImplementation(() => ({
-    get: vi.fn(),
-    post: vi.fn(),
-    put: vi.fn(),
-    delete: vi.fn(),
-  })),
+  HttpClient: MockHttpClient,
 }));
 
 // Mock the builder component to avoid deep deps

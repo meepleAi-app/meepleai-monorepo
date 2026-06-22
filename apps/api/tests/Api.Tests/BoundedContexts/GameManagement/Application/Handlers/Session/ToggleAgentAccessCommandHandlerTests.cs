@@ -154,7 +154,7 @@ public sealed class ToggleAgentAccessCommandHandlerTests : IDisposable
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
             ScoringConfigJson = "{}",
-            RowVersion = new byte[] { 1 }
+            Xmin = 1u
         });
         await _dbContext.SaveChangesAsync();
 
@@ -183,7 +183,7 @@ public sealed class ToggleAgentAccessCommandHandlerTests : IDisposable
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
             ScoringConfigJson = "{}",
-            RowVersion = new byte[] { 1 }
+            Xmin = 1u
         });
 
         _dbContext.SessionParticipants.Add(new SessionParticipantEntity

@@ -19,6 +19,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { useAuthUser } from '@/components/auth/AuthProvider';
+import { HubPageContainer } from '@/components/layout/PageContainer';
 import { Badge } from '@/components/ui/data-display/badge';
 import {
   Card,
@@ -55,19 +56,19 @@ function EditorAuthGuard({
   user: { role: string; id: string } | null;
 }) {
   if (loading) {
-    return <div className="container mx-auto p-6">Loading...</div>;
+    return <HubPageContainer className="p-6">Loading...</HubPageContainer>;
   }
 
   if (!user || (user.role !== 'Editor' && user.role !== 'Admin')) {
     return (
-      <div className="container mx-auto p-6">
+      <HubPageContainer className="p-6">
         <div className="text-center p-12">
           <h2 className="text-2xl font-bold mb-4">Access Denied</h2>
           <p className="text-muted-foreground">
             This page is only accessible to Editors and Administrators.
           </p>
         </div>
-      </div>
+      </HubPageContainer>
     );
   }
 
@@ -198,16 +199,16 @@ function TestSandboxClient() {
   // Loading state
   if (authLoading || isLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <HubPageContainer className="p-6">
         <div className="text-center p-12">Loading...</div>
-      </div>
+      </HubPageContainer>
     );
   }
 
   // Error state
   if (error || !typology) {
     return (
-      <div className="container mx-auto p-6">
+      <HubPageContainer className="p-6">
         <div className="text-center p-12">
           <h2 className="text-2xl font-bold mb-4">Proposal Not Found</h2>
           <p className="text-muted-foreground">
@@ -216,7 +217,7 @@ function TestSandboxClient() {
               : 'The proposal you are looking for does not exist.'}
           </p>
         </div>
-      </div>
+      </HubPageContainer>
     );
   }
 
@@ -224,7 +225,7 @@ function TestSandboxClient() {
 
   return (
     <EditorAuthGuard loading={authLoading} user={user}>
-      <div className="container mx-auto p-6 max-w-7xl">
+      <HubPageContainer className="p-6">
         {/* Header */}
         <div className="mb-6 flex items-start justify-between">
           <div>
@@ -379,7 +380,7 @@ function TestSandboxClient() {
             </Card>
           </div>
         </div>
-      </div>
+      </HubPageContainer>
     </EditorAuthGuard>
   );
 }

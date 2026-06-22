@@ -21,6 +21,8 @@ namespace Api.Observability;
 ///   - MeepleAiMetrics.SharedGameDetail.cs — Shared-game detail-page requests, cache hits, render and fan-out durations (#614)
 ///   - MeepleAiMetrics.AdminMonitor.cs    — SSE broadcast drop counter for Admin Monitor LiveEventLog (F4.1 #1718)
 ///   - MeepleAiMetrics.PdfConcurrency.cs  — DbUpdateConcurrencyException counter for PdfDocumentEntity (#1802)
+///   - MeepleAiMetrics.WikidataEnrichment.cs — Wikidata cover enrichment attempts, SPARQL latency, QID hit-rate (#1823 DEC-3g)
+///   - MeepleAiMetrics.LiveSession.cs        — LiveSession write counters and UpdateAsync duration (#2097 ADR-060)
 /// </summary>
 internal static partial class MeepleAiMetrics
 {

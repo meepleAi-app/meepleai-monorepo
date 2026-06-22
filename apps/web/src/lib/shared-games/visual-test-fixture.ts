@@ -126,6 +126,11 @@ const FIXTURE_DETAIL: SharedGameDetail = {
   hasKnowledgeBase: true,
   isTopRated: true,
   isNew: false,
+  translations: [],
+  // Issue #2055 Phase G AC-G6 — fixture intentionally null (no Wikidata cover for this synthetic game).
+  wikidataCoverLicense: null,
+  wikidataCoverAttribution: null,
+  wikidataCoverSourceUrl: null,
 };
 
 const FIXTURE_CONTRIBUTORS: readonly TopContributor[] = [

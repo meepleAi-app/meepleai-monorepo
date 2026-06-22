@@ -2,21 +2,26 @@
  * Active Session Layout — /sessions/[id]
  *
  * Responsibilities:
- * 1. Render PageHeader with session-specific tabs (Punteggi, Strumenti, Chat, Note)
+ * 1. Register tabs (Punteggi · Strumenti · Chat · Note) on the MiniNavSlot
  * 2. Load session data on mount
- * 3. Own LiveScoreSheet state
+ * 3. Own LiveScoreSheet state and render the inline session header
  *
  * Issue #5041 — Sessions Redesign Phase 2
+ * #2158 (Fix #2 codemod): migrated from legacy PageHeader to MiniNavSlot via
+ * useMiniNavConfig. The session name + "Aggiungi Punteggio" CTA + back link
+ * now live in an inline header above {children}, keeping the LiveScoreSheet
+ * trigger inside this layout (it owns the sheet state).
  */
 
 'use client';
 
 import { type ReactNode, useEffect, useState, use } from 'react';
 
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { PageHeader } from '@/components/layout/PageHeader';
 import { LiveScoreSheet } from '@/components/session';
+import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
 import { useSessionStore } from '@/lib/stores/session-store';
 
 interface SessionLayoutProps {
@@ -48,6 +53,27 @@ export default function SessionDetailLayout({ children, params }: SessionLayoutP
     return 'scores';
   };
 
+  const sessionName = activeSession?.gameName ?? 'Sessione';
+
+  // G1 #2374 sess.46r — R-3 mitigation: suppress topbar tab strip on /live route.
+  // SessionLiveView mounts its own RightColumnTabs (Score/Turni/Widget/Note) in the
+  // RIGHT 40% column — keeping the parent miniNav above would create duplicate
+  // tablist navigation. Other session subroutes (/tools, /chat, /notes, /) still
+  // get the full 4-tab strip.
+  const isLiveRoute = pathname?.endsWith('/live') ?? false;
+  useMiniNavConfig({
+    breadcrumb: `Sessioni · ${sessionName}`,
+    tabs: isLiveRoute
+      ? []
+      : [
+          { id: 'scores', label: 'Punteggi', href: `/sessions/${id}` },
+          { id: 'tools', label: 'Strumenti', href: `/sessions/${id}/tools` },
+          { id: 'chat', label: 'Chat', href: `/sessions/${id}/chat` },
+          { id: 'notes', label: 'Note', href: `/sessions/${id}/notes` },
+        ],
+    activeTabId: isLiveRoute ? '' : deriveActiveTab(),
+  });
+
   // Derive scoring context from store (same source as page.tsx for consistency)
   const players = activeSession?.players ?? [];
   const roundNumbers = scores.map(s => s.round);
@@ -56,22 +82,28 @@ export default function SessionDetailLayout({ children, params }: SessionLayoutP
 
   return (
     <>
-      <PageHeader
-        title={activeSession?.gameName ?? 'Sessione'}
-        parentHref="/sessions"
-        parentLabel="Sessioni"
-        tabs={[
-          { id: 'scores', label: 'Punteggi', href: `/sessions/${id}` },
-          { id: 'tools', label: 'Strumenti', href: `/sessions/${id}/tools` },
-          { id: 'chat', label: 'Chat', href: `/sessions/${id}/chat` },
-          { id: 'notes', label: 'Note', href: `/sessions/${id}/notes` },
-        ]}
-        activeTabId={deriveActiveTab()}
-        primaryAction={{
-          label: 'Aggiungi Punteggio',
-          onClick: () => setScoreSheetOpen(true),
-        }}
-      />
+      {/* #2158 (Fix #2): inline session header — title + back link + CTA. */}
+      <header className="mx-auto flex w-full max-w-[1200px] items-center justify-between gap-4 px-4 pt-4 sm:px-6">
+        <div className="min-w-0">
+          <Link
+            href="/sessions"
+            className="inline-flex items-center gap-1 text-sm font-medium text-foreground/70 hover:text-foreground"
+          >
+            <span aria-hidden="true">←</span>
+            <span>Sessioni</span>
+          </Link>
+          <h1 className="mt-0.5 truncate font-quicksand text-2xl font-bold tracking-tight text-foreground">
+            {sessionName}
+          </h1>
+        </div>
+        <button
+          type="button"
+          onClick={() => setScoreSheetOpen(true)}
+          className="inline-flex shrink-0 items-center gap-2 rounded-md bg-[hsl(25,95%,38%)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          Aggiungi Punteggio
+        </button>
+      </header>
       {children}
 
       <LiveScoreSheet

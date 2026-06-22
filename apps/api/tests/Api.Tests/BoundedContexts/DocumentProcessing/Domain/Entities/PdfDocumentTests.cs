@@ -351,6 +351,63 @@ public class PdfDocumentTests
         document.ProcessingState.Should().Be(PdfProcessingState.Chunking);
     }
 
+    // #2284 follow-up: TD1 — MarkProcessed domain method
+    [Fact]
+    public void MarkProcessed_FromReadyState_SetsProcessedAt()
+    {
+        // Arrange — advance the document fully to Ready first.
+        var document = CreateTestDocument(LanguageCode.English);
+        document.TransitionTo(PdfProcessingState.Uploading);
+        document.TransitionTo(PdfProcessingState.Extracting);
+        document.TransitionTo(PdfProcessingState.Chunking);
+        document.TransitionTo(PdfProcessingState.Embedding);
+        document.TransitionTo(PdfProcessingState.Indexing);
+        document.TransitionTo(PdfProcessingState.Ready);
+        var expected = new DateTime(2026, 6, 13, 12, 0, 0, DateTimeKind.Utc);
+
+        // Act
+        document.MarkProcessed(expected);
+
+        // Assert
+        document.ProcessedAt.Should().Be(expected);
+        document.ProcessingState.Should().Be(PdfProcessingState.Ready,
+            "MarkProcessed is a pure audit setter — state must remain Ready");
+    }
+
+    [Fact]
+    public void MarkProcessed_FromNonReadyState_Throws()
+    {
+        var document = CreateTestDocument(LanguageCode.English);
+        document.TransitionTo(PdfProcessingState.Uploading);
+
+        var act = () => document.MarkProcessed(DateTime.UtcNow);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*Ready*");
+    }
+
+    [Fact]
+    public void MarkProcessed_DoesNotRaiseDomainEvent()
+    {
+        // MarkProcessed is intentionally a pure audit setter — no event raised.
+        // Consumers receive PdfStateChangedEvent + KbDocIndexedEvent from
+        // TransitionTo(Ready) instead.
+        var document = CreateTestDocument(LanguageCode.English);
+        document.TransitionTo(PdfProcessingState.Uploading);
+        document.TransitionTo(PdfProcessingState.Extracting);
+        document.TransitionTo(PdfProcessingState.Chunking);
+        document.TransitionTo(PdfProcessingState.Embedding);
+        document.TransitionTo(PdfProcessingState.Indexing);
+        document.TransitionTo(PdfProcessingState.Ready);
+
+        var eventsBeforeMark = document.DomainEvents.Count;
+
+        document.MarkProcessed(DateTime.UtcNow);
+
+        document.DomainEvents.Count.Should().Be(eventsBeforeMark,
+            "MarkProcessed must NOT add a new domain event");
+    }
+
     [Fact]
     public void MarkAsFailed_WithCategory_SetsAllFields()
     {
@@ -433,6 +490,36 @@ public class PdfDocumentTests
         document.MarkAsCompleted(10);
         document.ProcessingState.Should().Be(PdfProcessingState.Ready);
         document.CanRetry().Should().BeFalse(); // Can't retry completed document
+    }
+
+    [Fact]
+    public void TransitionTo_Ready_FromIndexing_RaisesExactlyTwoDomainEvents_Tripwire()
+    {
+        // TRIPWIRE (#2284): pins the event count raised by PdfDocument.TransitionTo(Ready) at 2.
+        // The Ready transition raises BOTH PdfStateChangedEvent (consumed by 4 handlers:
+        // cache-invalidation, notification, metrics, auto-agent-creation) AND KbDocIndexedEvent
+        // (activity rail milestone, BE-3 #1590 B2).
+        //
+        // If a future change adds a third event to TransitionTo(Ready), this test fails and
+        // forces the developer to wire the new event into the appropriate downstream handlers
+        // before merging — preventing silent drift between domain emission and handler coverage.
+        var document = CreateDefaultDocument();
+        document.TransitionTo(PdfProcessingState.Uploading);
+        document.TransitionTo(PdfProcessingState.Extracting);
+        document.TransitionTo(PdfProcessingState.Chunking);
+        document.TransitionTo(PdfProcessingState.Embedding);
+        document.TransitionTo(PdfProcessingState.Indexing);
+        document.ClearDomainEvents();
+
+        document.TransitionTo(PdfProcessingState.Ready);
+
+        document.DomainEvents.Should().HaveCount(2,
+            because: "PdfDocument.TransitionTo(Ready) is documented to raise exactly " +
+                     "PdfStateChangedEvent + KbDocIndexedEvent. Adding a third event without " +
+                     "wiring its handlers breaks the structural-dispatch contract used by " +
+                     "FinalizeProcessingAsync (#2284 PR C and follow-ups).");
+        document.DomainEvents.Should().ContainSingle(e => e is PdfStateChangedEvent);
+        document.DomainEvents.Should().ContainSingle(e => e is KbDocIndexedEvent);
     }
 
     #region BaseDocumentId Tests (Issue #5444)

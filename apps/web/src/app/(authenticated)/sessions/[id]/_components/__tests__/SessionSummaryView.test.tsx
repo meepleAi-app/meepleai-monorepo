@@ -137,7 +137,10 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionSummary.states.notCompleted.title': 'Sessione in corso',
   'pages.sessionSummary.states.notCompleted.description': 'Questa sessione non è ancora terminata.',
   'pages.sessionSummary.states.notCompleted.continueLive': 'Vai alla sessione live',
-  'pages.sessionSummary.states.notFound.title': 'Sessione non trovata',
+  'pages.sessionSummary.states.notFound.title': 'Nessuna sessione attiva',
+  'pages.sessionSummary.states.notFound.description':
+    'La sessione richiesta non esiste o non è ancora stata creata.',
+  'pages.sessionSummary.states.notFound.newSession': 'Inizia nuova sessione',
   'pages.sessionSummary.states.notFound.backToSessions': 'Torna alle sessioni',
   'common.errorTitle': 'Errore',
   'common.retry': 'Riprova',
@@ -290,9 +293,32 @@ describe('SessionSummaryView — 6-cell FSM', () => {
     useSessionDiaryQueryMock.mockReturnValue({ data: [], isLoading: false, isError: false });
     useSessionVisionSnapshotsMock.mockReturnValue({ data: [], isLoading: false, isError: false });
     renderView();
-    expect(screen.getByText('Sessione non trovata')).toBeInTheDocument();
+    // Issue #2088: title renamed "Sessione non trovata" → "Nessuna sessione attiva"
+    expect(screen.getByText('Nessuna sessione attiva')).toBeInTheDocument();
+    expect(
+      screen.getByText('La sessione richiesta non esiste o non è ancora stata creata.')
+    ).toBeInTheDocument();
     const root = document.querySelector('[data-slot="session-summary-view"]');
     expect(root).toHaveAttribute('data-ui-state', 'not-found');
+  });
+
+  it('not-found shell exposes "Inizia nuova sessione" CTA → /sessions/new (Issue #2088)', () => {
+    useSessionDetailMock.mockReturnValue({
+      data: null,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useSessionDiaryQueryMock.mockReturnValue({ data: [], isLoading: false, isError: false });
+    useSessionVisionSnapshotsMock.mockReturnValue({ data: [], isLoading: false, isError: false });
+    renderView();
+
+    const newSessionCta = screen.getByRole('button', { name: /inizia nuova sessione/i });
+    expect(newSessionCta).toBeInTheDocument();
+    fireEvent.click(newSessionCta);
+    expect(routerPush).toHaveBeenCalledWith('/sessions/new');
   });
 
   it('renders not-completed shell + redirect to /live for InProgress status', () => {

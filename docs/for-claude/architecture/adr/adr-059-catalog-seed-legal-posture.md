@@ -134,6 +134,132 @@ remain OFF in production until every box above is checked.
 | M8 | Admin UI `/admin/catalog/seed-queue` + Playwright E2E | ✅ |
 | — | Pre-rollout legal checklist (§8.5.6) | ⏳ Required before public |
 
+## 5. Amendment 2026-06-10 — User-side BGG asset ban enforcement (issue #2123)
+
+ADR-059 §2 narrowly addressed the **admin pipeline** whitelist filter and left
+**user-side BGG asset traffic** (cover images served from `cf.geekdo-images.com`
+and `**.boardgamegeek.com`) uncontrolled. The legacy YAML seed manifests carried
+568 BGG URL occurrences across 142 `bggEnhanced: true` entries × 4 image fields,
+the Next.js `remotePatterns` whitelist contained both BGG hostnames and a
+`{hostname: '**'}` catch-all that nullified every host-specific guard, and 30+
+FE consumers passed the raw `imageUrl` straight into `<Image>` without runtime
+filtering.
+
+Issue #2123 closes this gap with a **three-layer ban**:
+
+### 5.1 Data plane
+
+- `dev/staging/prod.yml` seed manifests scrubbed of `imageUrl`, `thumbnailUrl`,
+  `fallbackImageUrl`, `fallbackThumbnailUrl`, and the legacy `bggEnhanced` boolean
+  flag (which is semantically replaced by presence/absence of `description`).
+- `SeedManifestGame.{BggEnhanced, ImageUrl, ThumbnailUrl, FallbackImageUrl,
+  FallbackThumbnailUrl}` C# properties removed — compile-time hard ban prevents
+  future regression.
+- `GameSeeder` write paths assign `ImageUrl = null` + `ThumbnailUrl = null` on
+  every create path; cover URLs are NEVER seeded inline.
+- DB migration `20260610152201_NullifyBggImageColumns` makes
+  `shared_games.image_url` + `thumbnail_url` nullable and nullifies any
+  existing row matching `ILIKE '%geekdo%' OR '%boardgamegeek%'`.
+
+### 5.2 Resolution plane
+
+- `SharedGameDto.CoverUrl` (R2 presigned URL resolved server-side by
+  `CoverUrlResolver` via the L3→L4→L2.5→L2 priority chain) is the single
+  source of truth for FE rendering.
+- `CoverUrlResolver` emits a Prometheus counter
+  `meepleai_cover_resolution_total{source}` on every resolution, tagged with
+  the winning layer (`r2_user|r2_pdf|r2_bgg|r2_wikidata|placeholder`).
+- Fallback when no R2 cover is available: deterministic placeholder rendered by
+  `lib/games/cover-utils.ts` (hash-based hue + extracted initials, WCAG AA
+  verified). Zero network requests.
+
+### 5.3 Network plane
+
+- `apps/web/next.config.js` `remotePatterns` now an **explicit allowlist** with
+  no catch-all `**`. The allowlist contains: `picsum.photos`, `placehold.co`,
+  `**.r2.cloudflarestorage.com`, `*.r2.dev`, `commons.wikimedia.org`,
+  `upload.wikimedia.org`, `meepleai.app`, `staging.meepleai.app`.
+- ESLint custom rule `local/no-bgg-host` errors on any BGG hostname literal in
+  `apps/web/src/**`. Path overrides allowlist legitimate sites (admin
+  server-to-server BGG path, Storybook fixtures, E2E tests, the cover-utils
+  blocklist itself).
+- `pnpm lint:bgg` standalone grep gate covers manifest YAML, `next.config.js`,
+  FE source, BE seeders. Defense in depth: catches violations ESLint can't
+  reach (the manifests, the API source tree).
+- Prometheus counter `meepleai_bgg_url_attempted_render_total` (SLO = 0)
+  will be incremented from the FE custom Image loader on any browser-side BGG
+  asset render attempt; alert fires on the first nonzero increment.
+
+### 5.4 Bootstrap procedure (one-shot, per environment)
+
+The infrastructure pipeline (#1823 M3-M8) is fully wired but `WikidataQid` was
+null on every prod entry at the time of issue #2123. To populate covers at
+maximum coverage:
+
+1. Run `python scripts/bootstrap_wikidata_qid.py --connection-string $DB_URL`
+   to query SPARQL `wdt:P2339` for each `shared_games.bgg_id` and populate
+   `shared_games.wikidata_qid` (~120/159 expected hit-rate; the residual gap
+   falls back to placeholder).
+2. Run the batch admin endpoint to enrich every QID-populated game:
+   ```bash
+   curl -X POST https://<env>.meepleai.app/api/v1/admin/catalog/covers/enrich-batch \
+     -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: application/json" \
+     -d "{\"gameIds\":[<id-1>,...,<id-N>]}"
+   ```
+
+### 5.5 CI gating
+
+Blocking jobs:
+- `Frontend - BGG Lint` runs `pnpm lint:bgg` on every PR.
+- `Backend - BGG ToS IT` runs `BggToSComplianceIntegrationTests` against
+  Testcontainers Postgres — seeds `dev/staging/prod/ci.yml`, asserts SQL
+  `COUNT(*)` matching BGG host pattern equals 0.
+
+References:
+- Spec: [`docs/superpowers/specs/2026-06-10-issue-2123-bgg-tos-compliance.md`](../../../superpowers/specs/2026-06-10-issue-2123-bgg-tos-compliance.md)
+- Plan: [`docs/superpowers/plans/2026-06-10-issue-2123-bgg-tos-compliance.md`](../../../superpowers/plans/2026-06-10-issue-2123-bgg-tos-compliance.md)
+- Operations runbook: [`docs/for-developers/operations/operations-manual.md`](../../../for-developers/operations/operations-manual.md) § Catalog covers — BGG ToS compliance
+
+## 6. Amendment 2026-06-20 — IT seed translations (issue #2339 sub-PR 3/3)
+
+### 6.1 Scope
+
+Sub-PR 3/3 of issue [#2339](https://github.com/meepleAi-app/meepleai-monorepo/issues/2339) introduces 2 IT-locale translation rows for the SP4 seed dataset (`Catan` → `I Coloni di Catan`, `Pandemic` → `Pandemia`). These rows are persisted in the `shared_game_translations` table shipped by sub-PR 1/3 (PR [#2370](https://github.com/meepleAi-app/meepleai-monorepo/pull/2370)) and are surfaced to the FE via the `useGameTitle()` hook shipped by sub-PR 2/3 (PR [#2449](https://github.com/meepleAi-app/meepleai-monorepo/pull/2449)).
+
+### 6.2 Legal posture for translation strings
+
+Game titles are **facts** (per ADR-059 § 1 reasoning). The IT translation of a foreign game title (e.g. `I Coloni di Catan` for `Catan`) is the **official IT trade name** chosen by the IT publisher (`dV Giochi`, `Asmodee Italia`, etc.) for the IT market. As such:
+
+- The IT title is **identifiable factual information** about the game, not creative content.
+- Storing the IT title alongside the canonical EN does **not** create derivative work — same legal status as storing publisher names or BGG IDs (already permitted by ADR-059 § 3).
+- No attribution is required for trade name re-use; trademarks remain the publishers' property and are referenced descriptively (not used as marks).
+
+### 6.3 Curation process
+
+The 2 IT translations were curated by `@badsworm` (IT native, board game collector) via cross-reference with:
+
+- IT publisher catalog pages (`dV Giochi`, `Asmodee Italia`)
+- BGG IT version pages
+- IT retail listings (verifying that the IT edition is currently sold under the localized title)
+
+The full audit trail is in [`infra/scripts/seed-sp4/translations-research.md`](../../../../infra/scripts/seed-sp4/translations-research.md), which documents the decision (`translate` vs `retain canonical EN`) for all 13 SP4 games.
+
+### 6.4 Source attribution
+
+Each persisted translation carries a `source` discriminator:
+
+- `manual` — admin-curated (the 2 SP4 seed entries, fully attributable to `@badsworm`'s review)
+- `auto-openrouter` — machine-translated via `OpenRouterTranslationService` (DeepSeek V3); NOT used in seed but available for future bulk imports
+- `community` — community-sourced (out of scope MVP, moderation workflow TBD)
+
+The `source` field is the audit primitive: any future Wikidata enrichment or community submission for translations would create a NEW row with the appropriate source, preserving the original `manual` row as the curated canonical IT title.
+
+### 6.5 BGG-compliance note
+
+Translation rows are stored entirely in our DB (no upstream sync to BGG). They are not subject to the BGG user-side asset ban (§ 5). The 2 seed translations originate from IT publisher catalogs, not BGG version pages.
+
+---
+
 ## References
 
 - Design spec: [`docs/superpowers/specs/2026-06-04-admin-catalog-seed-design.md`](../../../superpowers/specs/2026-06-04-admin-catalog-seed-design.md)

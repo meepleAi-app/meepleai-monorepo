@@ -16,19 +16,10 @@
 
 import { useState, useCallback } from 'react';
 
-import {
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  Dices,
-  Loader2,
-  Plus,
-  Search,
-  Trash2,
-  X,
-} from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Dices, Loader2, Plus, Trash2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+import { GamePicker, type GameOption } from '@/components/features/game-picker';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
@@ -40,12 +31,6 @@ import type {
 } from '@/lib/api/schemas/live-sessions.schemas';
 
 // ========== Types ==========
-
-interface GameOption {
-  id: string;
-  title: string;
-  imageUrl?: string;
-}
 
 interface ScoringDimension {
   name: string;
@@ -98,45 +83,20 @@ function StepIndicator({ currentStep, totalSteps }: { currentStep: number; total
 
 function SelectGameStep({
   selectedGame,
-  gameName,
   onSelectGame,
   onGameNameChange,
 }: {
   selectedGame: GameOption | null;
-  gameName: string;
   onSelectGame: (game: GameOption | null) => void;
   onGameNameChange: (name: string) => void;
 }) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<GameOption[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-
-  const handleSearch = useCallback(async (query: string) => {
-    setSearchQuery(query);
-    if (query.length < 2) {
-      setSearchResults([]);
-      return;
-    }
-
-    setIsSearching(true);
-    try {
-      const response = await api.library.getLibrary({ pageSize: 50 });
-      const filtered = (response.items ?? [])
-        .filter(g => g.gameTitle.toLowerCase().includes(query.toLowerCase()))
-        .slice(0, 10);
-      setSearchResults(
-        filtered.map(g => ({
-          id: g.gameId,
-          title: g.gameTitle,
-          imageUrl: g.gameImageUrl ?? undefined,
-        }))
-      );
-    } catch {
-      setSearchResults([]);
-    } finally {
-      setIsSearching(false);
-    }
-  }, []);
+  const handleChange = useCallback(
+    (option: GameOption | null) => {
+      onSelectGame(option);
+      onGameNameChange(option?.title ?? '');
+    },
+    [onSelectGame, onGameNameChange]
+  );
 
   return (
     <div className="space-y-4">
@@ -147,85 +107,14 @@ function SelectGameStep({
         </p>
       </div>
 
-      {selectedGame ? (
-        <div className="flex items-center gap-3 rounded-xl border border-indigo-200 bg-indigo-50 p-3 dark:bg-indigo-950/20 dark:border-indigo-800">
-          {selectedGame.imageUrl && (
-            <img
-              src={selectedGame.imageUrl}
-              alt={selectedGame.title}
-              className="h-12 w-12 rounded-lg object-cover"
-            />
-          )}
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold truncate">{selectedGame.title}</p>
-            <p className="text-xs text-muted-foreground">Dalla tua libreria</p>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              onSelectGame(null);
-              onGameNameChange('');
-            }}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      ) : (
-        <>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Cerca nella tua libreria..."
-              value={searchQuery}
-              onChange={e => handleSearch(e.target.value)}
-              className="pl-9"
-            />
-            {isSearching && (
-              <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
-            )}
-          </div>
-
-          {/* Search results */}
-          {searchResults.length > 0 && (
-            <div className="rounded-xl border border-border bg-card divide-y divide-border max-h-60 overflow-y-auto">
-              {searchResults.map(game => (
-                <button
-                  key={game.id}
-                  onClick={() => {
-                    onSelectGame(game);
-                    onGameNameChange(game.title);
-                    setSearchQuery('');
-                    setSearchResults([]);
-                  }}
-                  className="flex items-center gap-3 w-full p-3 text-left hover:bg-muted/50 transition-colors"
-                >
-                  {game.imageUrl && (
-                    <img
-                      src={game.imageUrl}
-                      alt={game.title}
-                      className="h-10 w-10 rounded-lg object-cover"
-                    />
-                  )}
-                  <span className="font-medium text-sm truncate">{game.title}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="relative flex items-center gap-3">
-            <div className="flex-1 border-t border-border" />
-            <span className="text-xs text-muted-foreground px-2">oppure</span>
-            <div className="flex-1 border-t border-border" />
-          </div>
-
-          <Input
-            placeholder="Nome del gioco (es. Catan, Ticket to Ride...)"
-            value={gameName}
-            onChange={e => onGameNameChange(e.target.value)}
-          />
-        </>
-      )}
+      <GamePicker
+        source="library"
+        value={selectedGame}
+        onChange={handleChange}
+        allowManualEntry
+        placeholder="Cerca nella tua libreria..."
+        testId="session-creation-game-picker"
+      />
     </div>
   );
 }
@@ -530,9 +419,12 @@ export function SessionCreationWizard() {
     setError(null);
 
     try {
+      // Manual entries have synthetic ids (manual-<title>) — don't send those as gameId.
+      const realGameId = selectedGame && !selectedGame.manual ? selectedGame.id : undefined;
+
       const request: CreateLiveSessionRequest = {
         gameName: gameName.trim(),
-        gameId: selectedGame?.id,
+        gameId: realGameId,
         scoringDimensions: dimensions.map(d => d.name),
         dimensionUnits: Object.fromEntries(dimensions.map(d => [d.name, d.unit])),
       };
@@ -551,8 +443,8 @@ export function SessionCreationWizard() {
       await api.liveSessions.startSession(sessionId);
 
       // Track flywheel event: session successfully created and started
-      if (selectedGame?.id) {
-        trackSessionCreated({ gameId: selectedGame.id, playerCount: players.length });
+      if (realGameId) {
+        trackSessionCreated({ gameId: realGameId, playerCount: players.length });
       }
 
       router.push(`/sessions/${sessionId}`);
@@ -570,7 +462,6 @@ export function SessionCreationWizard() {
       {step === 0 && (
         <SelectGameStep
           selectedGame={selectedGame}
-          gameName={gameName}
           onSelectGame={setSelectedGame}
           onGameNameChange={setGameName}
         />

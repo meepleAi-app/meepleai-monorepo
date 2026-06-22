@@ -1,0 +1,3023 @@
+{
+  "generatedAt": "2026-06-10",
+  "totalClassifications": 229,
+  "byCluster": {
+    "dev-fixtures": [
+      {
+        "mockup_path": "admin-mockups/design_files/state-matrix.html",
+        "design_intent": "current",
+        "confidence": 0.95,
+        "reasoning": "Dev-fixture explicitly labeled 'Type: dev-fixture (companion a 01-screens.html)' in header comment. Cross-route state coverage grid (8 routes x 5 states) for design reference, no markers found. Not mapped to user-reachable route.",
+        "sub_components": [],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/nanolith-nav-topbar.html",
+        "design_intent": "current",
+        "confidence": 0.95,
+        "reasoning": "Nav primitive dev-fixture for N1 top-bar pattern implementing decisions D5/D8. Pattern reference, not a user-reachable route. No forward-refactor or obsolete markers found.",
+        "sub_components": [],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/nanolith-nav-chat-panel.html",
+        "design_intent": "current",
+        "confidence": 0.95,
+        "reasoning": "Nav primitive dev-fixture for N3 global chat panel slide-over pattern implementing decisions D4/D7. Pattern reference compatibile con ChatSlideOverPanel esistente (PR #344). No forward-refactor or obsolete markers found.",
+        "sub_components": [],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/nanolith-nav-bottom-mobile.html",
+        "design_intent": "current",
+        "confidence": 0.95,
+        "reasoning": "Nav primitive dev-fixture for N2 bottom-nav mobile pattern implementing decisions D6/D8. Pattern reference, not a user-reachable route. No forward-refactor or obsolete markers found.",
+        "sub_components": [],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/index.html",
+        "design_intent": "current",
+        "confidence": 0.95,
+        "reasoning": "Dev navigation helper: meta-refresh redirect to sp4-dashboard.html, not a design surface. No markers found. Not mapped to user-reachable route.",
+        "sub_components": [],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/05-dark-mode.html",
+        "design_intent": "current",
+        "confidence": 0.95,
+        "reasoning": "SP4 design system gallery page demonstrating dark/light theme switching. Dev-fixture pattern reference, no markers found. Not mapped to user-reachable route.",
+        "sub_components": [],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/04-design-system.html",
+        "design_intent": "current",
+        "confidence": 0.95,
+        "reasoning": "SP4 design system tokens gallery (entity palette, typography, spacing). Dev-fixture documentation page for the design system, no markers found. Not mapped to user-reachable route.",
+        "sub_components": [],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/03-drawer-variants.html",
+        "design_intent": "current",
+        "confidence": 0.95,
+        "reasoning": "SP4 design system gallery showing drawer pattern variants. Dev-fixture pattern reference, no markers found. Not mapped to user-reachable route.",
+        "sub_components": [],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/02-desktop-patterns.html",
+        "design_intent": "current",
+        "confidence": 0.95,
+        "reasoning": "SP4 design system gallery showing desktop layout patterns inside a scaled browser frame. Dev-fixture pattern reference, no markers found. Not mapped to user-reachable route.",
+        "sub_components": [],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/01-screens.html",
+        "design_intent": "current",
+        "confidence": 0.95,
+        "reasoning": "SP4 mobile screens gallery (React/Babel-standalone in-browser). Dev-fixture playground showcasing phone-frame patterns, no markers found. Not mapped to user-reachable route.",
+        "sub_components": [],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/00-hub.html",
+        "design_intent": "current",
+        "confidence": 0.95,
+        "reasoning": "SP4 design system v1 hub landing page (entry index to the gallery). Dev-fixture navigation page, no markers found. Not mapped to user-reachable route.",
+        "sub_components": [],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/mobile-app.jsx",
+        "design_intent": "current",
+        "confidence": 0.95,
+        "reasoning": "JSX prototype 'Mobile app — interactive screens with drawer, navigation between entities, session mode'. Dev-fixture interactive playground consumed by 01-screens.html via Babel standalone. No markers found.",
+        "sub_components": [],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/tokens.css",
+        "design_intent": "current",
+        "confidence": 0.95,
+        "reasoning": "Design system source of truth: 'MeepleAI Design System v1 - Design Tokens. Source of truth for all colors, spacing, type, motion.' Active token file referenced by all mockup pages and runtime via design-tokens-canonical.css. No markers found.",
+        "sub_components": [],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/scaffold.css",
+        "design_intent": "current",
+        "confidence": 0.95,
+        "reasoning": "Shared mockup gallery scaffold CSS providing page chrome (.stage / .phone / .theme-toggle) and SP7 patterns. Dev-fixture support file, no markers found. Not mapped to user-reachable route.",
+        "sub_components": [],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/components.css",
+        "design_intent": "current",
+        "confidence": 0.95,
+        "reasoning": "Shared mockup gallery component CSS (theme-toggle, entity chips/dots, cards, buttons) using tokens.css variables. Dev-fixture support file labeled 'MeepleAI Design System v1 - Shared components & layout', no markers found.",
+        "sub_components": [],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-play-records-data.js",
+        "design_intent": "current",
+        "confidence": 0.95,
+        "reasoning": "Fake dataset extension for SP4 play-records mockups: 'window.DS extension' with fixture record/stats data. Dev-fixture support file, no markers found. Not mapped to user-reachable route.",
+        "sub_components": [],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/data.js",
+        "design_intent": "current",
+        "confidence": 0.95,
+        "reasoning": "Shared fake dataset for the deliverable mockups: 'Fake data with coherent cross-references between entities. Attached to window.DS for all pages to read.' Dev-fixture support file, no markers found.",
+        "sub_components": [],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      }
+    ],
+    "auth": [
+      {
+        "mockup_path": "admin-mockups/design_files/sp5-profile-settings.html",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "SP5 Profile Settings tab + 2FA wizard targeting /profile?tab=settings — codebase route apps/web/src/app/(authenticated)/profile/page.tsx exists with SettingsTab and SettingsSectionId wiring, mockup-annotation marker present. Header mentions 'Sblocca #1608 (SP5 S3 strict cutover)' suggesting issue is closed/shipped.",
+        "sub_components": [
+          "ProfileTabBar",
+          "SettingsTab",
+          "SettingsSubNav",
+          "TwoFactorStatusCard",
+          "TwoFactorSetupModal",
+          "OTPInput6Slot",
+          "BackupCodesGrid",
+          "TwoFactorBottomSheet"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp5-profile-settings.jsx",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "Twin of sp5-profile-settings.html exporting same 8 sub-components for SP5 S3 strict cutover. Codebase route /profile shipped with SettingsTab component, no REFACTOR-FORWARD/OBSOLETE markers.",
+        "sub_components": [
+          "ProfileTabBar",
+          "SettingsTab",
+          "SettingsSubNav",
+          "TwoFactorStatusCard",
+          "TwoFactorSetupModal",
+          "OTPInput6Slot",
+          "BackupCodesGrid",
+          "TwoFactorBottomSheet"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/settings.html",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "Generic 7-panel Settings mockup (Profile, Account, Preferenze, Notifiche, API Keys, Servizi) with desktop sidebar + mobile phone frames. Annotation in apps/web/src/app/(authenticated)/profile/page.tsx points here as @mockup ref, route shipped.",
+        "sub_components": [
+          "ToggleSwitch",
+          "SegmentedControl",
+          "FInput",
+          "FPwd",
+          "FTextarea",
+          "ProfilePanel",
+          "AccountPanel",
+          "PreferencesPanel",
+          "NotificationsPanel",
+          "ApiKeysPanel",
+          "ServicesPanel"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/settings.jsx",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "Twin of settings.html with same 7-panel design (Profile, Account, Preferenze, Notifiche, API Keys, Servizi). React 18 UMD pattern, no forward markers.",
+        "sub_components": [
+          "ToggleSwitch",
+          "SegmentedControl",
+          "Lbl",
+          "FInput",
+          "FPwd",
+          "FTextarea",
+          "ProfilePanel",
+          "AccountPanel",
+          "PreferencesPanel",
+          "NotificationsPanel",
+          "ApiKeysPanel",
+          "ServicesPanel"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/public.html",
+        "design_intent": "current",
+        "confidence": 0.9,
+        "reasoning": "Public marketing landing page (hero + features + stats + CTAs). Codebase route apps/web/src/app/(public)/page.tsx exists with @mockup annotation pointing to public.html, fully SSR landing shipped.",
+        "sub_components": [
+          "PublicNav",
+          "HeroSection",
+          "StatsRow",
+          "FeaturesGrid",
+          "HowItWorksSection",
+          "PricingSection",
+          "AboutSection",
+          "ContactSection",
+          "Footer"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/public.jsx",
+        "design_intent": "current",
+        "confidence": 0.9,
+        "reasoning": "Twin of public.html — React UMD components PublicNav/HeroSection/StatsRow for landing/marketing page. Codebase landing fully shipped, no forward markers.",
+        "sub_components": [
+          "PublicNav",
+          "HeroSection",
+          "StatsRow",
+          "FeaturesGrid",
+          "HowItWorksSection",
+          "PricingSection",
+          "AboutSection",
+          "ContactSection",
+          "Footer"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/onboarding.html",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "Phone-style onboarding frame with progress bar + steps (0 Welcome | 1 Games | 2 Agents | 3 Session | 4 Complete). Codebase /onboarding route shipped with OnboardingGenericWizard + InviteFriendComingSoonStep. Note CLAUDE.md describes Asse D follow-up P3 as a 3-step wizard while mockup shows 5 steps — minor scope divergence but design lang consistent.",
+        "sub_components": [
+          "OnboardingProgress",
+          "Confetti",
+          "WelcomeStep",
+          "GamesStep",
+          "AgentsStep",
+          "SessionStep",
+          "CompleteStep"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/onboarding.jsx",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "Twin of onboarding.html with same 5-step flow (Welcome/Games/Agents/Session/Complete) and entity colors per step. Codebase wizard shipped; minor step-count divergence vs CLAUDE.md (3-step generic refactor) but design tokens match.",
+        "sub_components": [
+          "OnboardingProgress",
+          "Confetti",
+          "WelcomeStep",
+          "GamesStep",
+          "AgentsStep",
+          "SessionStep",
+          "CompleteStep"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/notifications.html",
+        "design_intent": "current",
+        "confidence": 0.9,
+        "reasoning": "Notifications phone frames grid (5 screens) with filters bar, grouped feed, detail drawer. Codebase /notifications route shipped with mockup-annotation comment 'migrated to Claude Design v1 with NotificationCard (M6 Task 11)' confirming alignment.",
+        "sub_components": [
+          "TimestampRelative",
+          "EntityIcon",
+          "NotificationItem",
+          "NotificationDetail",
+          "FiltersBar",
+          "EmptyState",
+          "SettingsQuickLink",
+          "NotificationsFeed"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/notifications.jsx",
+        "design_intent": "current",
+        "confidence": 0.9,
+        "reasoning": "Twin of notifications.html exporting NotificationsFeed + 8 sub-components to window. Codebase explicitly notes 'migrated to Claude Design v1 with NotificationCard (M6 Task 11)' = current source of truth.",
+        "sub_components": [
+          "PhoneSBar",
+          "PhoneTopBar",
+          "TimestampRelative",
+          "EntityIcon",
+          "NotificationItem",
+          "NotificationDetail",
+          "FiltersBar",
+          "EmptyState",
+          "SettingsQuickLink",
+          "NotificationsFeed"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/auth-flow.html",
+        "design_intent": "current",
+        "confidence": 0.9,
+        "reasoning": "6-screen pre-auth flow (Login, Register, Recover, Reset, Verify email, Setup 2FA) phone-frame grid. Codebase routes (auth)/login + (auth)/register shipped with @mockup annotation to auth-flow.html, AuthLayout/AuthModal in use.",
+        "sub_components": [
+          "BrandMark",
+          "AuthCard",
+          "InputField",
+          "Divider",
+          "LoginScreen",
+          "RegisterScreen",
+          "RecoverPasswordScreen",
+          "ResetPasswordScreen",
+          "VerifyEmailScreen",
+          "Setup2FAScreen"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/auth-flow.jsx",
+        "design_intent": "current",
+        "confidence": 0.9,
+        "reasoning": "Twin of auth-flow.html — same 6 pre-auth screens with shared BrandMark/AuthCard/InputField primitives. Codebase /login + /register routes shipped with explicit mockup annotation pointing here.",
+        "sub_components": [
+          "BrandMark",
+          "AuthCard",
+          "InputField",
+          "Divider",
+          "LoginScreen",
+          "RegisterScreen",
+          "RecoverPasswordScreen",
+          "ResetPasswordScreen",
+          "VerifyEmailScreen",
+          "Setup2FAScreen"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      }
+    ],
+    "sp3": [
+      {
+        "mockup_path": "admin-mockups/design_files/sp3-shared-games.html",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "Public catalog index for /shared-games route (exists at apps/web/src/app/(public)/shared-games/page.tsx). No OBSOLETE/REFACTOR-FORWARD/Diverge/Pre-Stage markers. Mockup describes current vetrina pattern: hero + filter bar sticky + grid MeepleCard entity=game variant=grid + ContributorsSidebar, references existing primitives (Banner, MeepleCard, entity-color system).",
+        "sub_components": [
+          "SharedGamesFilters",
+          "ContributorsSidebar",
+          "MeepleCard grid variant",
+          "Banner",
+          "HeroPattern"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp3-shared-games.jsx",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "JSX twin of sp3-shared-games.html. Header comment 'Route target: /shared-games' (live route). EXTRA_GAMES dataset extends DS.games with realistic Italian community catalog entries. No design markers indicating forward-refactor or obsolescence.",
+        "sub_components": [
+          "buildPublicGames",
+          "SharedGamesFilters",
+          "ContributorsSidebar",
+          "MeepleCard grid"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp3-shared-game-detail.html",
+        "design_intent": "current",
+        "confidence": 0.9,
+        "reasoning": "Detail page for /shared-games/[id] route. MOCKUPS_INDEX maps to 'Wave A.3, PR #600/605/612/630' — shipped wave references. ConnectionBar described as 'riproduzione 1:1 dal componente prod PR #549/#552'. No OBSOLETE/REFACTOR-FORWARD markers.",
+        "sub_components": [
+          "ConnectionBar",
+          "ToolkitPublicListItem",
+          "AgentPublicListItem",
+          "KBPublicDocItem",
+          "ContributorsStrip",
+          "Tabs"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp3-shared-game-detail.jsx",
+        "design_intent": "current",
+        "confidence": 0.9,
+        "reasoning": "JSX twin of sp3-shared-game-detail.html. Header confirms 'riproduzione 1:1 dal componente prod PR #549/#552' for ConnectionBar — production-aligned reproduction. PUB_TOOLKITS/PUB_AGENTS/PUB_KBS datasets follow shipped catalog data model.",
+        "sub_components": [
+          "ConnectionBar",
+          "Tabs",
+          "PUB_TOOLKITS",
+          "PUB_AGENTS",
+          "PUB_KBS",
+          "ContributorsStrip"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp3-library-public.html",
+        "design_intent": "forward-refactor",
+        "confidence": 0.6,
+        "reasoning": "Comment 'SP3 missing #8 /library (public variant, non-loggato) ULTIMO OBBLIGATORIO SP3' — explicitly labeled 'missing' design slot needing implementation. Maps per MOCKUPS_INDEX to /shared-games (variant) + /library/shared/[token]. Public marketing-style 'library della community' design (hero + featured carousel + trending games + category stats) does NOT match the shipped /library route. The mockup describes a distinct community showcase concept not yet shipped. NOT 'forward-refactor-obsolete' because the public showcase concept remains active (distinct from auth /games hub).",
+        "sub_components": [
+          "HeroGradient",
+          "CommunityStatsRow",
+          "FeaturedGamesCarousel",
+          "MeepleCard hero variant",
+          "EntityChip",
+          "TRENDING_GAMES",
+          "CATEGORIES"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp3-library-public.jsx",
+        "design_intent": "forward-refactor",
+        "confidence": 0.6,
+        "reasoning": "JSX twin of sp3-library-public.html. Header 'ULTIMO OBBLIGATORIO SP3 — Componenti v2 nuovi: CommunityStatsRow, FeaturedGamesCarousel' — both new v2 compositions not yet implemented in codebase. Public community showcase concept distinct from sp4 authenticated hub. Design ambitions exceed shipped scope.",
+        "sub_components": [
+          "HeroGradient",
+          "CommunityStatsRow",
+          "FeaturedGamesCarousel",
+          "FEATURED_GAMES",
+          "TRENDING_GAMES",
+          "CATEGORIES"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp3-legal.html",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "Comment 'Legal pages template, Route: /terms (riusabile per /privacy /cookies), Template UNICO'. All target routes (/legal, /terms, /privacy, /cookies, /cookie-settings) exist. Template-unico approach is standard convention. No forward-refactor markers.",
+        "sub_components": [
+          "LegalPageShell",
+          "LegalTOC",
+          "TERMS_DOC content sections"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp3-legal.jsx",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "JSX twin of sp3-legal.html. v2-new components are scoped extensions for a stable, template-driven concept. Placeholder content with versioned doc ('versione 2.4.0', 'updated 26 aprile 2026') indicates active maintenance, not redesign.",
+        "sub_components": [
+          "LegalPageShell",
+          "LegalTOC",
+          "scroll-spy",
+          "TERMS_DOC"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp3-join.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "Route /join exists. Public waitlist page concept aligns with shipped invite-only registration. Riusa AuthCard/InputField/PwdInput/SuccessCard (shipped SP1 primitives). No forward-refactor/obsolete markers.",
+        "sub_components": [
+          "AuthCard",
+          "InputField",
+          "PwdInput",
+          "SuccessCard",
+          "GamePreferenceSelect",
+          "AlphaPill",
+          "BrandMark"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp3-join.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX twin of sp3-join.html. Header 'Route target: /join. Riusa AuthCard/InputField/PwdInput/SuccessCard pattern; introduce GamePreferenceSelect' — explicit reuse of shipped SP1 primitives plus one new compositional element. 5 stati reflect standard form-with-states semantics.",
+        "sub_components": [
+          "BrandMark",
+          "AlphaPill",
+          "GamePreferenceSelect",
+          "TOP_GAMES",
+          "ALPHA_FEATURES"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp3-how-it-works.html",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "Route /how-it-works exists. Comment 'Riusa HeroGradient (public.jsx pub-hero pattern) + EntityChip; Nuovo v2: HowItWorksStep' — explicit reuse of existing patterns + one scoped new component. Educational 4-step page.",
+        "sub_components": [
+          "HeroGradient",
+          "EntityChip",
+          "HowItWorksStep"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp3-how-it-works.jsx",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "JSX twin. Reaffirms 'Route: /how-it-works' + 'Pagina educativa statica — nessuna variante dinamica per stato'. Riuso 1:1 di HeroGradient da public.jsx (shipped pattern).",
+        "sub_components": [
+          "HeroGradient",
+          "EntityChip",
+          "HowItWorksStep",
+          "ENTITIES"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp3-faq-enhanced.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "Route /faq exists. Comment 'FAQ Enhanced, Route: /faq (replaces existing static FAQ from PR #553)' — explicit upgrade-in-place from previously shipped static FAQ. The enhancement (search + categorie tab pills + quick answers + accordion) is iterative on shipped concept.",
+        "sub_components": [
+          "FAQ search",
+          "category tab pills sticky",
+          "quick answers cards",
+          "Accordion clone Radix"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp3-faq-enhanced.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX twin. Header 'replaces existing static FAQ from PR #553' — explicit upgrade path from shipped FAQ. FAQ_CATEGORIES, FAQS dataset, mark highlighting, single-open accordion are all conventional patterns.",
+        "sub_components": [
+          "FAQ_CATEGORIES",
+          "FAQS dataset",
+          "category tab pills",
+          "Accordion (Radix clone)",
+          "search highlight mark"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp3-accept-invite.html",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "Route /accept-invite/[token] exists. Game-night invite flow with 7 stati aligns with shipped GameNightEvent/RSVP semantics. Riusi AuthCard/InputField/PrimaryBtn (shipped SP1), SuccessCard pattern extended.",
+        "sub_components": [
+          "InviteHostCard",
+          "SessionMetaGrid",
+          "DeclinedShell",
+          "AuthCard",
+          "InputField",
+          "PrimaryBtn",
+          "SuccessCard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp3-accept-invite.jsx",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "JSX twin. Header confirms 'Route target: /accept-invite/[token]', 7 stati for invite lifecycle. Riusi explicit AuthCard/InputField/PrimaryBtn from SP1, SuccessCard pattern, Banner, MeepleCardGame compact. Mock data uses DS.players + DS.games (shipped seed).",
+        "sub_components": [
+          "InviteHostCard",
+          "SessionMetaGrid",
+          "DeclinedShell",
+          "INVITE mock",
+          "ROSTER",
+          "HOST",
+          "GAME"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      }
+    ],
+    "sp4-core": [
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-upload-wizard-extended.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "SP4 wave page-mock /upload, /gamebook/upload (partial) per MOCKUPS_INDEX. Current upload wizard surface.",
+        "sub_components": [
+          "UploadWizardShell",
+          "StepIndicator",
+          "DropzoneArea"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-sessions-index.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "SP4 page-mock /sessions, /games/[id]/sessions per MOCKUPS_INDEX. Sessions list current surface.",
+        "sub_components": [
+          "SessionsGrid",
+          "SessionFilters",
+          "SessionCard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-zombicide-summary.html",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "SP4 game-specific session summary mockup (Zombicide). Part of polymorphic session summary surface.",
+        "sub_components": [
+          "SessionSummary",
+          "ScoreBoard",
+          "ZombicideParts"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-wingspan-summary.html",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "SP4 game-specific session summary mockup (Wingspan). Part of polymorphic session summary surface.",
+        "sub_components": [
+          "SessionSummary",
+          "WingspanScoreBoard",
+          "WingspanParts"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-summary-skeleton.html",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "SP4 session summary skeleton template. Shared shell for all game-specific session summaries.",
+        "sub_components": [
+          "SessionSummarySkeleton",
+          "GenericLayout"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-puerto-rico-summary.html",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "SP4 game-specific session summary mockup (Puerto Rico). Part of polymorphic session summary surface.",
+        "sub_components": [
+          "SessionSummary",
+          "PuertoRicoScoreBoard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-power-grid-summary.html",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "SP4 game-specific session summary mockup (Power Grid). Part of polymorphic session summary surface.",
+        "sub_components": [
+          "SessionSummary",
+          "PowerGridScoreBoard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-play.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "SP4 live session play surface (active session UI with score tracking).",
+        "sub_components": [
+          "LiveSessionShell",
+          "PolymorphicScoreEditor",
+          "PlayerList"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-paleo-summary.html",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "SP4 game-specific session summary mockup (Paleo). Part of polymorphic session summary surface.",
+        "sub_components": [
+          "SessionSummary",
+          "PaleoScoreBoard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-codenames-summary.html",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "SP4 game-specific session summary mockup (Codenames). Part of polymorphic session summary surface.",
+        "sub_components": [
+          "SessionSummary",
+          "CodenamesScoreBoard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-catan-summary.html",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "SP4 game-specific session summary mockup (Catan). Part of polymorphic session summary surface.",
+        "sub_components": [
+          "SessionSummary",
+          "CatanScoreBoard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-players-index.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "SP4 page-mock /players per MOCKUPS_INDEX. Players directory current surface.",
+        "sub_components": [
+          "PlayersGrid",
+          "PlayerSearchFilters",
+          "MeepleCardPlayer"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-player-detail.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "SP4 page-mock /players/[id] with achievements/games/sessions/stats sub-routes per MOCKUPS_INDEX.",
+        "sub_components": [
+          "PlayerHero",
+          "PlayerStatsTab",
+          "PlayerAchievements",
+          "PlayerSessions"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-play-records-stats.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "SP4 page-mock /play-records/stats per MOCKUPS_INDEX. Stats aggregation view current surface.",
+        "sub_components": [
+          "PlayRecordsStats",
+          "StatsCharts",
+          "FilterPanel"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-play-records-new.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "SP4 page-mock /play-records/new per MOCKUPS_INDEX. Play record creation form current surface.",
+        "sub_components": [
+          "PlayRecordForm",
+          "GameSelector",
+          "PlayerPicker"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-play-records-index.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "SP4 page-mock /play-records per MOCKUPS_INDEX. Play records list current surface.",
+        "sub_components": [
+          "PlayRecordsList",
+          "RecordsFilters",
+          "PlayRecordCard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-play-records-edit.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "SP4 page-mock /play-records/[id]/edit per MOCKUPS_INDEX. Play record edit form current surface.",
+        "sub_components": [
+          "PlayRecordEditForm",
+          "ScoreEditor"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-play-records-detail.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "SP4 page-mock /play-records/[id] per MOCKUPS_INDEX. Play record detail view current surface.",
+        "sub_components": [
+          "PlayRecordDetail",
+          "ScoreBoardView",
+          "PlayerScores"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-library-wishlist.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "SP4 library wishlist surface. Wishlist tab in /library.",
+        "sub_components": [
+          "WishlistGrid",
+          "WishlistCard",
+          "WishlistFilters"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-library-mobile.html",
+        "design_intent": "forward-refactor",
+        "confidence": 0.85,
+        "reasoning": "Title 'SP8 mobile-parity · Library mobile' with @status in-design annotation in HTML head. MOCKUPS_INDEX confirms 'SP8 brief 2026-05-30, IA semplificata 3 tab + overflow'. Mobile <768px variant not yet shipped; planned redesign of /library for mobile.",
+        "sub_components": [
+          "LibraryMobileShell",
+          "MobileNavTabs",
+          "BulkSelectLongPress",
+          "FiltersBottomSheet"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-library-desktop.html",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "SP4 page-mock /library Wave B.3 done per MOCKUPS_INDEX (shipped library hybrid-hub epic #1585). Current desktop surface.",
+        "sub_components": [
+          "LibraryHybridHub",
+          "EntityTabs",
+          "MeepleCardGrid",
+          "FiltersRail"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-kb-hub.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "SP4 page-mock /knowledge-base per MOCKUPS_INDEX (no deferred annotation). KB hub current surface.",
+        "sub_components": [
+          "KbHubShell",
+          "DocumentsList",
+          "KbSearch"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-kb-globale.html",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "SP4 KB global search surface (cross-game knowledge base search).",
+        "sub_components": [
+          "KbGlobalSearch",
+          "SearchResults",
+          "GameFilter"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-kb-detail.html",
+        "design_intent": "forward-refactor",
+        "confidence": 0.85,
+        "reasoning": "MOCKUPS_INDEX annotates '(deferred — G4 v3 pivot)' for /knowledge-base/[id] route. Mockup represents planned KB detail surface not yet built; pending G4 v3 architectural pivot.",
+        "sub_components": [
+          "KbDocDetail",
+          "ChunksList",
+          "DocumentPreview",
+          "ConnectionBar"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-hub-games.html",
+        "design_intent": "forward-refactor-obsolete",
+        "confidence": 0.85,
+        "reasoning": "HTML title 'Pre-Stage-3 · Hub Games (public) — /hub/games'. Route /hub/games was retired by Asse D follow-up P2 #1899 which refactored /games as multi-tab hub (discover/catalogo/trending/community) with Discover default tab. Mockup represents pre-refactor target the codebase has already surpassed. Not in MOCKUPS_INDEX (non-mappable). Per CLAUDE.md Stage 3 #1026 (closed 2026-05-18) the legacy hub/<entity> directories were emptied post-codemod.",
+        "sub_components": [
+          "HubGamesShell",
+          "HubGamesGrid",
+          "HubGamesNav"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": {
+          "title": "[DS-17] Delete obsolete sp4-hub-games mockup — /hub/games route retired by Asse D P2 multi-tab refactor",
+          "body": "## Context\n\nThe sp4-hub-games.{html,jsx} mockup pair targets the retired /hub/games route. Per CLAUDE.md Asse D follow-up P2 (#1899), the /games route was refactored as a multi-tab hub (discover/catalogo/trending/community) with Discover as default tab. The /hub/games legacy route is no longer canonical.\n\n## Scope\n\n- DELETE admin-mockups/design_files/sp4-hub-games.html\n- DELETE admin-mockups/design_files/sp4-hub-games.jsx\n- Verify no references in MOCKUPS_INDEX.md (currently not listed → non-mappable, consistent with retirement)\n- Update audit manifest if scanned\n\n## Acceptance\n\n- [ ] Files deleted\n- [ ] CI passes\n- [ ] No broken refs in docs\n\n## Refs\n\n- Stage 3 #1026 (closed 2026-05-18) — hub/<entity> directories emptied\n- Asse D P2 #1899 — /games multi-tab hub refactor\n- DS-17 Phase B mockup audit (umbrella #2063)"
+        }
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-hub-agents.html",
+        "design_intent": "forward-refactor-obsolete",
+        "confidence": 0.85,
+        "reasoning": "HTML title 'Pre-Stage-3 · Hub Agents (authenticated) — /hub/agents'. Route /hub/agents was retired by Stage 3 #1026 (closed 2026-05-18); current canonical agents route is /agents per MOCKUPS_INDEX (sp4-agents-index → /agents). Mockup represents pre-refactor target. Not in MOCKUPS_INDEX (non-mappable).",
+        "sub_components": [
+          "HubAgentsShell",
+          "HubAgentsGrid",
+          "HubAgentsNav"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": {
+          "title": "[DS-17] Delete obsolete sp4-hub-agents mockup — /hub/agents route retired by Stage 3 deversioning",
+          "body": "## Context\n\nThe sp4-hub-agents.{html,jsx} mockup pair targets the retired /hub/agents route. Per CLAUDE.md Stage 3 #1026 (closed 2026-05-18), the legacy hub/<entity> directories were emptied post-codemod. Current canonical agents route is /agents (see sp4-agents-index.html → /agents in MOCKUPS_INDEX).\n\n## Scope\n\n- DELETE admin-mockups/design_files/sp4-hub-agents.html\n- DELETE admin-mockups/design_files/sp4-hub-agents.jsx\n- Verify no references in MOCKUPS_INDEX.md (currently not listed → non-mappable, consistent with retirement)\n- Update audit manifest if scanned\n\n## Acceptance\n\n- [ ] Files deleted\n- [ ] CI passes\n- [ ] No broken refs in docs\n\n## Refs\n\n- Stage 3 #1026 (closed 2026-05-18) — hub/<entity> directories emptied\n- sp4-agents-index → /agents (canonical)\n- DS-17 Phase B mockup audit (umbrella #2063)"
+        }
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-games-index.html",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "SP4 wave 1 #1/5 Games index → /games per MOCKUPS_INDEX. Current /games hub multi-tab refactor (Asse D P2 #1899) with discover/catalogo/trending/community tabs.",
+        "sub_components": [
+          "GamesHubShell",
+          "TabsNav",
+          "DiscoverDefaultTab"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-game-nights-index.html",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "SP4 page-mock /game-nights per MOCKUPS_INDEX. Game nights list current surface (per asse-A semantic alignment shipped #1896).",
+        "sub_components": [
+          "GameNightsList",
+          "GameNightCard",
+          "FiltersPanel"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-game-detail.html",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "SP4 page-mock /games/[id], /library/[gameId], /private-games/[id] per MOCKUPS_INDEX. Game detail current surface.",
+        "sub_components": [
+          "GameDetailHero",
+          "GameDetailTabs",
+          "GameChat",
+          "GameStats"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-game-chat-tab.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "SP4 component-mock chat tab embedded in /library/[gameId]/agent, /games/[id] per MOCKUPS_INDEX. Current chat surface.",
+        "sub_components": [
+          "GameChatShell",
+          "ChatMessages",
+          "ChatInput",
+          "AgentSelector"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-editor-proposals-test.html",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "SP4 editor proposals test surface (proposal validation/testing UI).",
+        "sub_components": [
+          "EditorProposalsTest",
+          "TestRunner",
+          "ResultsPanel"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-editor-proposals-index.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "SP4 editor proposals list surface (/editor/proposals).",
+        "sub_components": [
+          "EditorProposalsList",
+          "ProposalFilters",
+          "ProposalCard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-editor-proposals-edit.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "SP4 editor proposal edit surface (/editor/proposals/[id]/edit).",
+        "sub_components": [
+          "ProposalEditor",
+          "DiffViewer",
+          "MetadataEditor"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-editor-proposals-create.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "SP4 editor proposal create surface (/editor/proposals/new).",
+        "sub_components": [
+          "ProposalCreateForm",
+          "GameSelector",
+          "ProposalTypeSelector"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-editor-index.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "SP4 editor index/landing surface (/editor).",
+        "sub_components": [
+          "EditorHubShell",
+          "EditorNav",
+          "ProposalsSummary"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-discover.html",
+        "design_intent": "current",
+        "confidence": 0.9,
+        "reasoning": "HTML title 'MeepleAI · /discover — Scopri' SP4 wave 3 I. Netflix-style cross-entity discover surface. Current canonical route (default tab in /games hub multi-tab refactor per Asse D P2 #1899). MOCKUPS_INDEX confirms /discover.",
+        "sub_components": [
+          "DiscoverHub",
+          "EntityRails",
+          "CrossEntityCards"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-dashboard.html",
+        "design_intent": "forward-refactor-obsolete",
+        "confidence": 0.95,
+        "reasoning": "Pre-existing CLAUDE.md precedent: sp4-dashboard.{html,jsx} superseded by Asse C #1898 priority-driven dashboard refactor (shipped 2026-06-05 sess.34). 5 entity sections legacy → 4 priority sections (ProssimiSection/RecentiSection/SuggestedSection/FriendsActivitySection). Mockup represents pre-Asse-C design that codebase has surpassed. Existing tracking issue: #2114.",
+        "sub_components": [
+          "DashboardLegacy",
+          "EntitySections",
+          "DashboardHero"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": {
+          "title": "Already tracked in #2114",
+          "body": "## Context\n\nsp4-dashboard.{html,jsx} represents the pre-Asse-C dashboard design. Asse C #1898 shipped 2026-06-05 (sess.34) refactored the dashboard to priority-driven 4-section layout (ProssimiSection / RecentiSection / SuggestedSection / FriendsActivitySection) replacing the legacy 5 entity sections.\n\nThe codebase has surpassed this mockup — it is forward-refactor-obsolete.\n\n## Existing tracking\n\nIssue #2114 already tracks the deletion/supersession of this mockup. No new issue needed.\n\n## Refs\n\n- Asse C #1898 — priority-driven dashboard shipped 2026-06-05\n- Existing tracking issue: #2114\n- DS-17 Phase B mockup audit (umbrella #2063)"
+        }
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-citation-pdf-viewer.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "SP4 component-mock citation overlay used by /chat/[threadId] and game-chat tabs per MOCKUPS_INDEX. Current citation viewer surface.",
+        "sub_components": [
+          "CitationPdfViewer",
+          "PdfHighlighter",
+          "ChunkNavigator"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-agents-index.html",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "SP4 page-mock /agents, /editor/agent-proposals/* (partial), /chat/agents/create (partial) per MOCKUPS_INDEX. Current canonical agents directory.",
+        "sub_components": [
+          "AgentsGrid",
+          "AgentSearchFilters",
+          "AgentCard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-agent-detail.html",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "SP4 page-mock /agents/[id], /library/[gameId]/agent per MOCKUPS_INDEX. Current agent detail surface.",
+        "sub_components": [
+          "AgentHero",
+          "AgentChatTab",
+          "AgentConfig",
+          "AgentMemory"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-add-game-pdf-dedup.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "SP4 page-mock /library/private/add, /upload (partial) per MOCKUPS_INDEX. PDF deduplication step in add-game flow.",
+        "sub_components": [
+          "AddGamePdfDedup",
+          "DuplicateDetector",
+          "ConfirmDialog"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-add-game-drawer.html",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "SP4 AddGameDrawer surface (sidebar drawer for adding games). Current per issue #2012 telemetry instrumentation shipped 2026-06-08 PR #2032. AddGameDrawer is current canonical surface.",
+        "sub_components": [
+          "AddGameDrawer",
+          "ChoiceCards",
+          "TelemetryTrackedTabs"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-add-game-bgg-step.html",
+        "design_intent": "forward-refactor-obsolete",
+        "confidence": 0.9,
+        "reasoning": "Mockup designs AddGameDrawer → tab 'From BGG' (user-side BGG search) per JSX comment. Per CLAUDE.md DP-5 feedback (sess.46h 2026-06-09) and #1903 ADR: user-side BGG access is BLOCKED for ToS compliance. Only admin-only via useSearchBggGames hook is allowed. Mockup specifies BGG rate-limit, HTTP 202 throttled, tier-quota — all USER-FACING BGG features that violate ToS. Pattern: catalog interno via api.games.getAll, NON useSearchBggGames user-side. MOCKUPS_INDEX listing as /library/proposals predates the ToS restriction.",
+        "sub_components": [
+          "BggSearchStep",
+          "BggResults",
+          "BggThrottledBanner",
+          "TierQuotaLock"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": {
+          "title": "[DS-17] Delete obsolete sp4-add-game-bgg-step mockup — BGG ToS violation (user-side BGG access forbidden per #1903 ADR)",
+          "body": "## Context\n\nThe sp4-add-game-bgg-step.{html,jsx} mockup pair designs a USER-FACING BGG (BoardGameGeek) search step inside AddGameDrawer with rate-limit banner, HTTP 202 throttled state, and tier-quota lock. This violates the BGG ToS constraint documented in #1903 ADR and reinforced by CLAUDE.md DP-5 feedback (sess.46h 2026-06-09):\n\n> 'user-side BGG access bloccato per ToS compliance — FirstGameStep usa catalog interno (api.games.getAll) NON useSearchBggGames (admin-only)'\n\n## Forbidden surfaces in mockup\n\n- BGG search input visible to non-admin users\n- BGG rate-limit messaging exposed to user\n- BGG throttled (HTTP 202) UX\n- Tier-quota lock specifically gating BGG access\n\n## Scope\n\n- DELETE admin-mockups/design_files/sp4-add-game-bgg-step.html\n- DELETE admin-mockups/design_files/sp4-add-game-bgg-step.jsx\n- Remove entry from MOCKUPS_INDEX.md (currently mapped to /library/proposals, /library/propose)\n- Verify AddGameDrawer current implementation uses catalog interno (api.games.getAll), NOT useSearchBggGames\n\n## Acceptance\n\n- [ ] Files deleted\n- [ ] MOCKUPS_INDEX.md entry removed\n- [ ] CI passes\n- [ ] AddGameDrawer audit confirms ToS compliance\n\n## Refs\n\n- #1903 ADR — BGG ToS user-side access forbidden\n- CLAUDE.md DP-5 BGG flag during mockup migration (sess.46h)\n- Issue #911 (original mockup issue)\n- DS-17 Phase B mockup audit (umbrella #2063)"
+        }
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-upload-wizard-extended.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX twin of sp4-upload-wizard-extended.html. SP4 upload wizard surface (current per HTML pair).",
+        "sub_components": [
+          "UploadWizardShell",
+          "StepIndicator",
+          "DropzoneArea"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-sessions-index.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX twin of sp4-sessions-index.html. Sessions list current surface.",
+        "sub_components": [
+          "SessionsGrid",
+          "SessionFilters",
+          "SessionCard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-zombicide-summary.jsx",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "JSX twin of sp4-session-zombicide-summary.html. Game-specific session summary mockup (Zombicide).",
+        "sub_components": [
+          "SessionSummary",
+          "ScoreBoard",
+          "ZombicideParts"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-zombicide-parts.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for Zombicide session summary (parts split). Sub-component of session summary surface.",
+        "sub_components": [
+          "ZombicideHeader",
+          "ZombicidePlayerCard",
+          "ZombicideMissionInfo"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-zombicide-flavor.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for Zombicide session summary (flavor/theme styling).",
+        "sub_components": [
+          "ZombicideTheme",
+          "ZombicideFlavorBits"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-zombicide-data.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for Zombicide session summary (data/fixtures).",
+        "sub_components": [
+          "ZombicideFixtures",
+          "ZombicideMockData"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-wingspan-summary.jsx",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "JSX twin of sp4-session-wingspan-summary.html. Game-specific session summary mockup (Wingspan).",
+        "sub_components": [
+          "SessionSummary",
+          "WingspanScoreBoard",
+          "WingspanParts"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-wingspan-summary-tabs.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for Wingspan session summary (tabs container).",
+        "sub_components": [
+          "WingspanTabs",
+          "WingspanTabContent"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-wingspan-summary-sections.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for Wingspan session summary (section composition).",
+        "sub_components": [
+          "WingspanSection",
+          "WingspanSectionHeader"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-wingspan-summary-parts.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for Wingspan session summary (parts split).",
+        "sub_components": [
+          "WingspanHeader",
+          "WingspanPlayerCard",
+          "WingspanBirdsList"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-summary-skeleton.jsx",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "JSX twin of sp4-session-summary-skeleton.html. Generic session summary template.",
+        "sub_components": [
+          "SessionSummarySkeleton",
+          "GenericLayout"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-skeleton-renderers.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for session skeleton renderers (shared rendering helpers).",
+        "sub_components": [
+          "SkeletonRenderer",
+          "GenericScoreRenderer",
+          "SkeletonPlayerRow"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-skeleton-parts.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for session skeleton parts (shared sub-components).",
+        "sub_components": [
+          "SkeletonHeader",
+          "SkeletonFooter",
+          "SkeletonShell"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-skeleton-data.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for session skeleton data (generic mock data).",
+        "sub_components": [
+          "SkeletonMockData",
+          "GenericFixtures"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-puerto-rico-summary.jsx",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "JSX twin of sp4-session-puerto-rico-summary.html. Game-specific session summary mockup (Puerto Rico).",
+        "sub_components": [
+          "SessionSummary",
+          "PuertoRicoScoreBoard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-puerto-rico-parts.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for Puerto Rico session summary (parts split).",
+        "sub_components": [
+          "PuertoRicoHeader",
+          "PuertoRicoPlayerCard",
+          "PuertoRicoBuildings"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-puerto-rico-flavor.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for Puerto Rico session summary (flavor/theme).",
+        "sub_components": [
+          "PuertoRicoTheme",
+          "PuertoRicoFlavorBits"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-puerto-rico-data.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for Puerto Rico session summary (data/fixtures).",
+        "sub_components": [
+          "PuertoRicoFixtures",
+          "PuertoRicoMockData"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-power-grid-summary.jsx",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "JSX twin of sp4-session-power-grid-summary.html. Game-specific session summary mockup (Power Grid).",
+        "sub_components": [
+          "SessionSummary",
+          "PowerGridScoreBoard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-power-grid-parts.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for Power Grid session summary (parts split).",
+        "sub_components": [
+          "PowerGridHeader",
+          "PowerGridPlayerCard",
+          "PowerGridCities"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-power-grid-flavor.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for Power Grid session summary (flavor/theme).",
+        "sub_components": [
+          "PowerGridTheme",
+          "PowerGridFlavorBits"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-power-grid-data.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for Power Grid session summary (data/fixtures).",
+        "sub_components": [
+          "PowerGridFixtures",
+          "PowerGridMockData"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-play.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX twin of sp4-session-play.html. Current live session play surface.",
+        "sub_components": [
+          "LiveSessionShell",
+          "PolymorphicScoreEditor",
+          "PlayerList"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-play-ui.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for session play UI (shared UI helpers).",
+        "sub_components": [
+          "LiveSessionToolbar",
+          "ScoreInput",
+          "TurnIndicator"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-play-parts.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for session play parts (sub-components split).",
+        "sub_components": [
+          "SessionPlayHeader",
+          "PlayerPanel",
+          "TurnControls"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-paleo-summary.jsx",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "JSX twin of sp4-session-paleo-summary.html. Game-specific session summary mockup (Paleo).",
+        "sub_components": [
+          "SessionSummary",
+          "PaleoScoreBoard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-paleo-parts.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for Paleo session summary (parts split).",
+        "sub_components": [
+          "PaleoHeader",
+          "PaleoPlayerCard",
+          "PaleoCardsPlayed"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-paleo-flavor.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for Paleo session summary (flavor/theme).",
+        "sub_components": [
+          "PaleoTheme",
+          "PaleoFlavorBits"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-paleo-data.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for Paleo session summary (data/fixtures).",
+        "sub_components": [
+          "PaleoFixtures",
+          "PaleoMockData"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-codenames-summary.jsx",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "JSX twin of sp4-session-codenames-summary.html. Game-specific session summary mockup (Codenames).",
+        "sub_components": [
+          "SessionSummary",
+          "CodenamesScoreBoard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-codenames-parts.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for Codenames session summary (parts split).",
+        "sub_components": [
+          "CodenamesHeader",
+          "CodenamesTeamPanel",
+          "CodenamesClueLog"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-codenames-flavor.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for Codenames session summary (flavor/theme).",
+        "sub_components": [
+          "CodenamesTheme",
+          "CodenamesFlavorBits"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-codenames-data.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for Codenames session summary (data/fixtures).",
+        "sub_components": [
+          "CodenamesFixtures",
+          "CodenamesMockData"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-codenames-bodies.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for Codenames session summary (body content components, specific to Codenames team-based UI).",
+        "sub_components": [
+          "CodenamesBody",
+          "CodenamesGridView",
+          "CodenamesTeamBody"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-catan-summary.jsx",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "JSX twin of sp4-session-catan-summary.html. Game-specific session summary mockup (Catan).",
+        "sub_components": [
+          "SessionSummary",
+          "CatanScoreBoard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-catan-parts.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for Catan session summary (parts split).",
+        "sub_components": [
+          "CatanHeader",
+          "CatanPlayerCard",
+          "CatanResources"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-catan-flavor.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for Catan session summary (flavor/theme).",
+        "sub_components": [
+          "CatanTheme",
+          "CatanFlavorBits"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-catan-data.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for Catan session summary (data/fixtures).",
+        "sub_components": [
+          "CatanFixtures",
+          "CatanMockData"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-players-index.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX twin of sp4-players-index.html. Players directory current surface.",
+        "sub_components": [
+          "PlayersGrid",
+          "PlayerSearchFilters",
+          "MeepleCardPlayer"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-player-detail.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX twin of sp4-player-detail.html. Player detail current surface.",
+        "sub_components": [
+          "PlayerHero",
+          "PlayerStatsTab",
+          "PlayerAchievements",
+          "PlayerSessions"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-play-records-stats.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX twin of sp4-play-records-stats.html. Stats view current surface.",
+        "sub_components": [
+          "PlayRecordsStats",
+          "StatsCharts",
+          "FilterPanel"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-play-records-new.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX twin of sp4-play-records-new.html. Play record creation form current surface.",
+        "sub_components": [
+          "PlayRecordForm",
+          "GameSelector",
+          "PlayerPicker"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-play-records-index.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX twin of sp4-play-records-index.html. Play records list current surface.",
+        "sub_components": [
+          "PlayRecordsList",
+          "RecordsFilters",
+          "PlayRecordCard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-play-records-edit.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX twin of sp4-play-records-edit.html. Play record edit form current surface.",
+        "sub_components": [
+          "PlayRecordEditForm",
+          "ScoreEditor"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-play-records-detail.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX twin of sp4-play-records-detail.html. Play record detail view current surface.",
+        "sub_components": [
+          "PlayRecordDetail",
+          "ScoreBoardView",
+          "PlayerScores"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-parts-common.jsx",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "Shared modular JSX fixture (common parts/helpers reused across multiple sp4 mockups).",
+        "sub_components": [
+          "CommonParts",
+          "SharedHeader",
+          "SharedCard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-library-wishlist.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX twin of sp4-library-wishlist.html. Wishlist surface current.",
+        "sub_components": [
+          "WishlistGrid",
+          "WishlistCard",
+          "WishlistFilters"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-library-wishlist-ui.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Modular JSX fixture for Library Wishlist UI (shared UI helpers/components for wishlist surface).",
+        "sub_components": [
+          "WishlistUI",
+          "WishlistToolbar"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-library-mobile.jsx",
+        "design_intent": "forward-refactor",
+        "confidence": 0.85,
+        "reasoning": "JSX twin of sp4-library-mobile.html. Per HTML head annotation '@status in-design' and MOCKUPS_INDEX 'SP8 brief 2026-05-30, IA semplificata 3 tab + overflow'. Mobile parity not yet shipped.",
+        "sub_components": [
+          "LibraryMobileShell",
+          "MobileNavTabs",
+          "BulkSelectLongPress",
+          "FiltersBottomSheet"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-library-desktop.jsx",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "JSX twin of sp4-library-desktop.html. Library hybrid hub current desktop surface (Wave B.3 done #1585).",
+        "sub_components": [
+          "LibraryHybridHub",
+          "EntityTabs",
+          "MeepleCardGrid",
+          "FiltersRail"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-kb-hub.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX twin of sp4-kb-hub.html. KB hub current surface (no deferred annotation).",
+        "sub_components": [
+          "KbHubShell",
+          "DocumentsList",
+          "KbSearch"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-kb-globale.jsx",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "JSX twin of sp4-kb-globale.html. KB global search current surface.",
+        "sub_components": [
+          "KbGlobalSearch",
+          "SearchResults",
+          "GameFilter"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-kb-detail.jsx",
+        "design_intent": "forward-refactor",
+        "confidence": 0.85,
+        "reasoning": "JSX twin of sp4-kb-detail.html. MOCKUPS_INDEX explicitly annotates '(deferred — G4 v3 pivot)'. Surface not yet built; pending G4 v3 architectural pivot.",
+        "sub_components": [
+          "KbDocDetail",
+          "ChunksList",
+          "DocumentPreview",
+          "ConnectionBar"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-hub-games.jsx",
+        "design_intent": "forward-refactor-obsolete",
+        "confidence": 0.85,
+        "reasoning": "JSX twin of sp4-hub-games.html titled 'Pre-Stage-3 · Hub Games (public) — /hub/games'. Route /hub/games retired by Stage 3 #1026 + superseded by /games multi-tab hub (Asse D P2 #1899). Not in MOCKUPS_INDEX (non-mappable).",
+        "sub_components": [
+          "HubGamesShell",
+          "HubGamesGrid",
+          "HubGamesNav"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": {
+          "title": "[DS-17] Delete obsolete sp4-hub-games mockup — /hub/games route retired by Asse D P2 multi-tab refactor",
+          "body": "## Context\n\nThe sp4-hub-games.{html,jsx} mockup pair targets the retired /hub/games route. Per CLAUDE.md Asse D follow-up P2 (#1899), the /games route was refactored as a multi-tab hub (discover/catalogo/trending/community) with Discover as default tab. The /hub/games legacy route is no longer canonical.\n\n## Scope\n\n- DELETE admin-mockups/design_files/sp4-hub-games.html\n- DELETE admin-mockups/design_files/sp4-hub-games.jsx\n- Verify no references in MOCKUPS_INDEX.md (currently not listed → non-mappable, consistent with retirement)\n- Update audit manifest if scanned\n\n## Acceptance\n\n- [ ] Files deleted\n- [ ] CI passes\n- [ ] No broken refs in docs\n\n## Refs\n\n- Stage 3 #1026 (closed 2026-05-18) — hub/<entity> directories emptied\n- Asse D P2 #1899 — /games multi-tab hub refactor\n- DS-17 Phase B mockup audit (umbrella #2063)"
+        }
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-hub-agents.jsx",
+        "design_intent": "forward-refactor-obsolete",
+        "confidence": 0.85,
+        "reasoning": "JSX twin of sp4-hub-agents.html titled 'Pre-Stage-3 · Hub Agents (authenticated) — /hub/agents'. Route /hub/agents retired by Stage 3 #1026 (closed 2026-05-18); current canonical is /agents.",
+        "sub_components": [
+          "HubAgentsShell",
+          "HubAgentsGrid",
+          "HubAgentsNav"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": {
+          "title": "[DS-17] Delete obsolete sp4-hub-agents mockup — /hub/agents route retired by Stage 3 deversioning",
+          "body": "## Context\n\nThe sp4-hub-agents.{html,jsx} mockup pair targets the retired /hub/agents route. Per CLAUDE.md Stage 3 #1026 (closed 2026-05-18), the legacy hub/<entity> directories were emptied post-codemod. Current canonical agents route is /agents (see sp4-agents-index.html → /agents in MOCKUPS_INDEX).\n\n## Scope\n\n- DELETE admin-mockups/design_files/sp4-hub-agents.html\n- DELETE admin-mockups/design_files/sp4-hub-agents.jsx\n- Verify no references in MOCKUPS_INDEX.md (currently not listed → non-mappable, consistent with retirement)\n- Update audit manifest if scanned\n\n## Acceptance\n\n- [ ] Files deleted\n- [ ] CI passes\n- [ ] No broken refs in docs\n\n## Refs\n\n- Stage 3 #1026 (closed 2026-05-18) — hub/<entity> directories emptied\n- sp4-agents-index → /agents (canonical)\n- DS-17 Phase B mockup audit (umbrella #2063)"
+        }
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-games-index.jsx",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "JSX twin of sp4-games-index.html. /games multi-tab hub current canonical surface (Asse D P2 #1899).",
+        "sub_components": [
+          "GamesHubShell",
+          "TabsNav",
+          "DiscoverDefaultTab"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-game-nights-index.jsx",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "JSX twin of sp4-game-nights-index.html. Game nights list current surface.",
+        "sub_components": [
+          "GameNightsList",
+          "GameNightCard",
+          "FiltersPanel"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-game-detail.jsx",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "JSX twin of sp4-game-detail.html. Game detail current surface.",
+        "sub_components": [
+          "GameDetailHero",
+          "GameDetailTabs",
+          "GameChat",
+          "GameStats"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-editor-proposals-test.jsx",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "JSX twin of sp4-editor-proposals-test.html. Editor proposals test surface.",
+        "sub_components": [
+          "EditorProposalsTest",
+          "TestRunner",
+          "ResultsPanel"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-editor-proposals-index.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX twin of sp4-editor-proposals-index.html. Editor proposals list current surface.",
+        "sub_components": [
+          "EditorProposalsList",
+          "ProposalFilters",
+          "ProposalCard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-editor-proposals-edit.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX twin of sp4-editor-proposals-edit.html. Editor proposal edit current surface.",
+        "sub_components": [
+          "ProposalEditor",
+          "DiffViewer",
+          "MetadataEditor"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-editor-proposals-create.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX twin of sp4-editor-proposals-create.html. Editor proposal create current surface.",
+        "sub_components": [
+          "ProposalCreateForm",
+          "GameSelector",
+          "ProposalTypeSelector"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-editor-index.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX twin of sp4-editor-index.html. Editor landing current surface.",
+        "sub_components": [
+          "EditorHubShell",
+          "EditorNav",
+          "ProposalsSummary"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-discover.jsx",
+        "design_intent": "current",
+        "confidence": 0.9,
+        "reasoning": "JSX twin of sp4-discover.html. /discover Netflix-style cross-entity surface (current canonical, default tab in /games hub).",
+        "sub_components": [
+          "DiscoverHub",
+          "EntityRails",
+          "CrossEntityCards"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-dashboard.jsx",
+        "design_intent": "forward-refactor-obsolete",
+        "confidence": 0.95,
+        "reasoning": "JSX twin of sp4-dashboard.html. Pre-existing CLAUDE.md precedent: superseded by Asse C #1898 priority-driven dashboard refactor (shipped 2026-06-05 sess.34). Existing tracking issue: #2114.",
+        "sub_components": [
+          "DashboardLegacy",
+          "EntitySections",
+          "DashboardHero"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": {
+          "title": "Already tracked in #2114",
+          "body": "## Context\n\nsp4-dashboard.{html,jsx} represents the pre-Asse-C dashboard design. Asse C #1898 shipped 2026-06-05 (sess.34) refactored the dashboard to priority-driven 4-section layout (ProssimiSection / RecentiSection / SuggestedSection / FriendsActivitySection) replacing the legacy 5 entity sections.\n\nThe codebase has surpassed this mockup — it is forward-refactor-obsolete.\n\n## Existing tracking\n\nIssue #2114 already tracks the deletion/supersession of this mockup. No new issue needed.\n\n## Refs\n\n- Asse C #1898 — priority-driven dashboard shipped 2026-06-05\n- Existing tracking issue: #2114\n- DS-17 Phase B mockup audit (umbrella #2063)"
+        }
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-agents-index.jsx",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "JSX twin of sp4-agents-index.html. /agents directory current canonical surface.",
+        "sub_components": [
+          "AgentsGrid",
+          "AgentSearchFilters",
+          "AgentCard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-agent-detail.jsx",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "JSX twin of sp4-agent-detail.html. Agent detail current surface.",
+        "sub_components": [
+          "AgentHero",
+          "AgentChatTab",
+          "AgentConfig",
+          "AgentMemory"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-add-game-pdf-dedup.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX twin of sp4-add-game-pdf-dedup.html. PDF dedup step in add-game flow current.",
+        "sub_components": [
+          "AddGamePdfDedup",
+          "DuplicateDetector",
+          "ConfirmDialog"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-add-game-drawer.jsx",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "JSX twin of sp4-add-game-drawer.html. AddGameDrawer current surface (issue #2012 telemetry shipped 2026-06-08).",
+        "sub_components": [
+          "AddGameDrawer",
+          "ChoiceCards",
+          "TelemetryTrackedTabs"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-add-game-bgg-step.jsx",
+        "design_intent": "forward-refactor-obsolete",
+        "confidence": 0.9,
+        "reasoning": "JSX twin of sp4-add-game-bgg-step.html. Designs user-side BGG search step in AddGameDrawer (rate-limit banner, HTTP 202 throttled, tier-quota lock). Violates BGG ToS per #1903 ADR and CLAUDE.md DP-5 (user-side BGG access bloccato). Forbidden surface.",
+        "sub_components": [
+          "BggSearchStep",
+          "BggResults",
+          "BggThrottledBanner",
+          "TierQuotaLock"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": {
+          "title": "[DS-17] Delete obsolete sp4-add-game-bgg-step mockup — BGG ToS violation (user-side BGG access forbidden per #1903 ADR)",
+          "body": "## Context\n\nThe sp4-add-game-bgg-step.{html,jsx} mockup pair designs a USER-FACING BGG (BoardGameGeek) search step inside AddGameDrawer with rate-limit banner, HTTP 202 throttled state, and tier-quota lock. This violates the BGG ToS constraint documented in #1903 ADR and reinforced by CLAUDE.md DP-5 feedback (sess.46h 2026-06-09):\n\n> 'user-side BGG access bloccato per ToS compliance — FirstGameStep usa catalog interno (api.games.getAll) NON useSearchBggGames (admin-only)'\n\n## Forbidden surfaces in mockup\n\n- BGG search input visible to non-admin users\n- BGG rate-limit messaging exposed to user\n- BGG throttled (HTTP 202) UX\n- Tier-quota lock specifically gating BGG access\n\n## Scope\n\n- DELETE admin-mockups/design_files/sp4-add-game-bgg-step.html\n- DELETE admin-mockups/design_files/sp4-add-game-bgg-step.jsx\n- Remove entry from MOCKUPS_INDEX.md (currently mapped to /library/proposals, /library/propose)\n- Verify AddGameDrawer current implementation uses catalog interno (api.games.getAll), NOT useSearchBggGames\n\n## Acceptance\n\n- [ ] Files deleted\n- [ ] MOCKUPS_INDEX.md entry removed\n- [ ] CI passes\n- [ ] AddGameDrawer audit confirms ToS compliance\n\n## Refs\n\n- #1903 ADR — BGG ToS user-side access forbidden\n- CLAUDE.md DP-5 BGG flag during mockup migration (sess.46h)\n- Issue #911 (original mockup issue)\n- DS-17 Phase B mockup audit (umbrella #2063)"
+        }
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/pr-form-core.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "Shared JSX form-core fixture (Proposal/Request form base components reused across editor surfaces).",
+        "sub_components": [
+          "FormCore",
+          "FormField",
+          "FormActions"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      }
+    ],
+    "sp4-sessions": [
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-toolkit-templates.html",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "SP4 toolkit templates page (route /toolkits/templates) — active main app surface for toolkit template library/picker.",
+        "sub_components": [
+          "ToolkitTemplatesGrid",
+          "ToolkitTemplateCard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-toolkit-stats.html",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "SP4 toolkit stats page (route /toolkits/[id]/stats) — analytics/metrics view for shipped toolkit detail.",
+        "sub_components": [
+          "ToolkitStatsHeader",
+          "ToolkitStatsCharts"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-toolkit-play.html",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "SP4 toolkit play page (route /toolkits/[id]/play) — runtime play view tied to live session surface.",
+        "sub_components": [
+          "ToolkitPlayHeader",
+          "ToolkitPlayTools",
+          "ToolkitPlayDice"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-toolkit-history.html",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "SP4 toolkit history page (route /toolkits/[id]/history) — session history for shipped toolkit detail.",
+        "sub_components": [
+          "ToolkitHistoryList",
+          "ToolkitHistoryItem"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-toolkit-detail.html",
+        "design_intent": "current",
+        "confidence": 0.9,
+        "reasoning": "SP4 wave 3 toolkit detail (route /toolkits/[id]) — split-view summary + tabs (Overview/Agente/KB/Tools/Versioni/Recensioni). Active main surface.",
+        "sub_components": [
+          "ToolkitDetailHeader",
+          "ToolkitTabs",
+          "ToolkitSummarySidebar"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-zombicide-live.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "Game-specific session live view fixture for Zombicide — shipped session live view per Asse A/D #1895 session refactor.",
+        "sub_components": [
+          "SessionLiveHeader",
+          "ZombicideLiveBoard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-wingspan-live.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "Game-specific session live view fixture for Wingspan — shipped session live view per Asse A/D #1895 session refactor.",
+        "sub_components": [
+          "SessionLiveHeader",
+          "WingspanLiveBoard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-skeleton-live.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "Game-specific session live view skeleton fixture — shipped session live view per Asse A/D #1895 session refactor.",
+        "sub_components": [
+          "SessionLiveHeader",
+          "SessionLiveSkeleton"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-puerto-rico-live.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "Game-specific session live view fixture for Puerto Rico — shipped session live view per Asse A/D #1895 session refactor.",
+        "sub_components": [
+          "SessionLiveHeader",
+          "PuertoRicoLiveBoard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-power-grid-live.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "Game-specific session live view fixture for Power Grid — shipped session live view per Asse A/D #1895 session refactor.",
+        "sub_components": [
+          "SessionLiveHeader",
+          "PowerGridLiveBoard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-paleo-live.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "Game-specific session live view fixture for Paleo — shipped session live view per Asse A/D #1895 session refactor.",
+        "sub_components": [
+          "SessionLiveHeader",
+          "PaleoLiveBoard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-codenames-live.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "Game-specific session live view fixture for Codenames — shipped session live view per Asse A/D #1895 session refactor.",
+        "sub_components": [
+          "SessionLiveHeader",
+          "CodenamesLiveBoard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-catan-live.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "Game-specific session live view fixture for Catan — shipped session live view per Asse A/D #1895 session refactor.",
+        "sub_components": [
+          "SessionLiveHeader",
+          "CatanLiveBoard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-hub-toolkits.html",
+        "design_intent": "forward-refactor-obsolete",
+        "confidence": 0.9,
+        "reasoning": "Title 'Pre-Stage-3 · Hub Toolkits (authenticated) — /hub/toolkits'. Same Pre-Stage-3 hub-* pattern as sp4-hub-games and sp4-hub-agents, which were retired by Stage 3 #1026 (design system de-versioning, umbrella #1023). Per CLAUDE.md, hub/<entity> 3-routes pattern was refactored. Mockup superseded by current hub layout — do not migrate.",
+        "sub_components": [],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": {
+          "title": "DS-17 Phase B: classify sp4-hub-toolkits as forward-refactor-obsolete (Pre-Stage-3 retired)",
+          "body": "## Context\n\nDuring DS-17 Phase B mockup audit (sub-issue #2127, cluster sp4-sessions), the file pair `admin-mockups/design_files/sp4-hub-toolkits.{html,jsx}` was classified as `forward-refactor-obsolete`.\n\n## Evidence\n\n- HTML title explicitly tags it: `Pre-Stage-3 · Hub Toolkits (authenticated) — /hub/toolkits`\n- Same `Pre-Stage-3 · Hub …` pattern as sp4-hub-games and sp4-hub-agents, both already classified `forward-refactor-obsolete` in sp4-core audit (precedent set in cluster sp4-core, 8 obsolete pairs incl. sp4-hub-games + sp4-hub-agents)\n- Stage 3 #1026 (under umbrella #1023, design system de-versioning, **COMPLETE 2026-05-18**) retired the legacy `hub/<entity>` pattern — see CLAUDE.md § Active Freezes:\n  > 'hub/<entity> 3-routes (REFACTOR-FORWARD)'\n- Current canonical hub layout supersedes the Pre-Stage-3 mockup; migrating this fixture would re-introduce a retired pattern.\n\n## Action\n\n- [ ] Mark `sp4-hub-toolkits.html` + `sp4-hub-toolkits.jsx` as `forward-refactor-obsolete` in `audits/2026-06-10-mockup-design-intent-manifest.json`.\n- [ ] Skip Storybook story migration for this pair (DS-17 Phase 2.5+ pattern).\n- [ ] Document in `MOCKUPS_INDEX.md` annotation that the route `/hub/toolkits` is no longer the canonical surface; the actual user-reachable route is `/toolkits` (sp4-toolkit-detail family) post Stage 3.\n- [ ] Verify no `@mockup` JSDoc annotations in `apps/web/src/app/**/page.tsx` reference this mockup (DS-17-1 sweep #2084 mappable=true gate).\n\n## References\n\n- Umbrella: #2063 (DS-17 mockup fidelity)\n- Phase B audit sub-issue: #2127\n- Stage 3 closure: #1026\n- Precedent: sp4-core cluster audit, 8 forward-refactor-obsolete files (sp4-dashboard, sp4-hub-games, sp4-hub-agents, sp4-add-game-bgg-step pairs)\n- CLAUDE.md § Design System De-versioning — COMPLETE 2026-05-18\n\n## Cluster\n\n`sp4-sessions` (52 files: 50 `current` + 2 `forward-refactor-obsolete` for sp4-hub-toolkits pair)"
+        }
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/librogame-runthrough-translate-viewer.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "Librogame runthrough translate viewer — Phase A current product vertical (mentioned in Asse A sub-spec, persona Aaron). Active surface for translate flow during play session.",
+        "sub_components": [
+          "TranslateViewerHeader",
+          "TranslatePhotoCapture"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/librogame-runthrough-setup-wizard.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "Librogame runthrough setup wizard — current product vertical, multi-step campaign setup flow.",
+        "sub_components": [
+          "SetupWizardSteps",
+          "SetupWizardActions"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/librogame-runthrough-setup-chat.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "Librogame runthrough setup chat — current product vertical, chat-driven onboarding for campaign setup.",
+        "sub_components": [
+          "SetupChatStream",
+          "SetupChatComposer"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/librogame-runthrough-session-end.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "Librogame runthrough session-end view — current product vertical, post-session summary/wrap-up.",
+        "sub_components": [
+          "SessionEndSummary",
+          "SessionEndActions"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/librogame-runthrough-resume-picker.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "Librogame runthrough resume picker — current product vertical, resume in-progress campaign.",
+        "sub_components": [
+          "ResumePickerList",
+          "ResumePickerItem"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/librogame-runthrough-quota-credits.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "Librogame runthrough quota/credits view — current product vertical, billing/usage display for runthrough feature.",
+        "sub_components": [
+          "QuotaCreditsHeader",
+          "QuotaCreditsMeter"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/librogame-runthrough-play-session.html",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "Librogame Phase A runthrough play session shell (route /library/librogame/play/{campaignId}). Tabbed mobile / split-view desktop. Persona Aaron. Replaces deprecated sp6-libro-game-play-session. Active current main surface.",
+        "sub_components": [
+          "PlaySessionShell",
+          "StoryTab",
+          "EncounterTab",
+          "ChatOverlay",
+          "GlossaryInline"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/librogame-runthrough-library-search.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "Librogame runthrough library search — current product vertical, search/browse librogame campaigns.",
+        "sub_components": [
+          "LibrarySearchHeader",
+          "LibrarySearchResults"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/librogame-runthrough-glossary-editor.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "Librogame runthrough glossary editor — current product vertical, manage in-campaign glossary terms.",
+        "sub_components": [
+          "GlossaryEditorList",
+          "GlossaryEditorForm"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/librogame-runthrough-game-onboarding.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "Librogame runthrough game onboarding — current product vertical, first-time game intro flow.",
+        "sub_components": [
+          "GameOnboardingSteps",
+          "GameOnboardingHero"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/librogame-runthrough-game-detail.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "Librogame runthrough game detail — current product vertical, librogame book detail page.",
+        "sub_components": [
+          "GameDetailHeader",
+          "GameDetailTabs"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/librogame-runthrough-error-states.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "Librogame runthrough error states fixture — current product vertical, documents failure modes (Nygard) for runthrough feature.",
+        "sub_components": [
+          "ErrorStateBanner",
+          "ErrorStateRetry"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/librogame-runthrough-encounter-cheatsheet.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "Librogame runthrough encounter cheatsheet — current product vertical, quick-reference for encounter mechanics during play.",
+        "sub_components": [
+          "EncounterCheatsheetCard",
+          "EncounterStatsTable"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/librogame-game-night-storyboard.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "Librogame game night storyboard — current product vertical, multi-step storyboard for game night planning. Bridges librogame and game-night domains.",
+        "sub_components": [
+          "StoryboardSteps",
+          "StoryboardHero"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/chat-fullscreen.html",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "Page-level full-screen chat (routes /chat/[threadId] + /chat/new). B11b follow-up to issue #491. 3 layouts (Desktop 3-col, Mobile single-pane, Empty new-thread) + 4 stream states (idle/streaming/error/abort). Active main app surface complementing nanolith-nav-chat-panel slide-over.",
+        "sub_components": [
+          "ChatThreadList",
+          "ChatStream",
+          "ChatAgentInfo",
+          "ChatComposer",
+          "ChatEmptyState"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-toolkit-templates.jsx",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "JSX pair for SP4 toolkit templates page — current main app surface.",
+        "sub_components": [
+          "ToolkitTemplatesGrid",
+          "ToolkitTemplateCard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-toolkit-templates-ui.jsx",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "Modular JSX UI sub-file for SP4 toolkit templates — atomic UI primitives for the shipped templates view. Not a HTML pair twin.",
+        "sub_components": [
+          "ToolkitTemplatesUIBits"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-toolkit-stats.jsx",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "JSX pair for SP4 toolkit stats page — current main app surface.",
+        "sub_components": [
+          "ToolkitStatsHeader",
+          "ToolkitStatsCharts"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-toolkit-play.jsx",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "JSX pair for SP4 toolkit play page — current main app surface.",
+        "sub_components": [
+          "ToolkitPlayHeader",
+          "ToolkitPlayTools",
+          "ToolkitPlayDice"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-toolkit-play-ui.jsx",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "Modular JSX UI sub-file for SP4 toolkit play — atomic UI primitives for the shipped play view. Not a HTML pair twin.",
+        "sub_components": [
+          "ToolkitPlayUIBits"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-toolkit-play-tools.jsx",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "Modular JSX tools sub-file for SP4 toolkit play — atomic tool primitives for the shipped play view. Not a HTML pair twin.",
+        "sub_components": [
+          "ToolkitPlayTools"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-toolkit-play-dice.jsx",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "Modular JSX dice sub-file for SP4 toolkit play — dice roller primitive for the shipped play view. Not a HTML pair twin.",
+        "sub_components": [
+          "ToolkitPlayDice"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-toolkit-history.jsx",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "JSX pair for SP4 toolkit history page — current main app surface.",
+        "sub_components": [
+          "ToolkitHistoryList",
+          "ToolkitHistoryItem"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-toolkit-history-ui.jsx",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "Modular JSX UI sub-file for SP4 toolkit history — atomic UI primitives for the shipped history view. Not a HTML pair twin.",
+        "sub_components": [
+          "ToolkitHistoryUIBits"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-toolkit-detail.jsx",
+        "design_intent": "current",
+        "confidence": 0.9,
+        "reasoning": "JSX pair for SP4 wave 3 toolkit detail (route /toolkits/[id]) — current main app surface.",
+        "sub_components": [
+          "ToolkitDetailHeader",
+          "ToolkitTabs",
+          "ToolkitSummarySidebar"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-zombicide-live.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX pair for Zombicide session live view — shipped session live view per Asse A/D #1895 session refactor.",
+        "sub_components": [
+          "SessionLiveHeader",
+          "ZombicideLiveBoard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-wingspan-live.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX pair for Wingspan session live view — shipped session live view per Asse A/D #1895 session refactor.",
+        "sub_components": [
+          "SessionLiveHeader",
+          "WingspanLiveBoard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-wingspan-live-tabs.jsx",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "Modular JSX tabs sub-file for Wingspan session live view — atomic tab primitives. Not a HTML pair twin.",
+        "sub_components": [
+          "WingspanLiveTabs"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-wingspan-live-parts.jsx",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "Modular JSX parts sub-file for Wingspan session live view — atomic component primitives. Not a HTML pair twin.",
+        "sub_components": [
+          "WingspanLiveParts"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-skeleton-live.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX pair for skeleton session live view — shipped session live view per Asse A/D #1895 session refactor.",
+        "sub_components": [
+          "SessionLiveHeader",
+          "SessionLiveSkeleton"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-puerto-rico-live.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX pair for Puerto Rico session live view — shipped session live view per Asse A/D #1895 session refactor.",
+        "sub_components": [
+          "SessionLiveHeader",
+          "PuertoRicoLiveBoard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-power-grid-live.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX pair for Power Grid session live view — shipped session live view per Asse A/D #1895 session refactor.",
+        "sub_components": [
+          "SessionLiveHeader",
+          "PowerGridLiveBoard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-paleo-live.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX pair for Paleo session live view — shipped session live view per Asse A/D #1895 session refactor.",
+        "sub_components": [
+          "SessionLiveHeader",
+          "PaleoLiveBoard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-codenames-live.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX pair for Codenames session live view — shipped session live view per Asse A/D #1895 session refactor.",
+        "sub_components": [
+          "SessionLiveHeader",
+          "CodenamesLiveBoard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-session-catan-live.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX pair for Catan session live view — shipped session live view per Asse A/D #1895 session refactor.",
+        "sub_components": [
+          "SessionLiveHeader",
+          "CatanLiveBoard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp4-hub-toolkits.jsx",
+        "design_intent": "forward-refactor-obsolete",
+        "confidence": 0.9,
+        "reasoning": "JSX pair for Pre-Stage-3 Hub Toolkits mockup. Same Pre-Stage-3 hub-* pattern as sp4-hub-games and sp4-hub-agents (classified obsolete in sp4-core audit). Stage 3 #1026 (umbrella #1023, COMPLETE 2026-05-18) retired the legacy hub/<entity> pattern. Do not migrate.",
+        "sub_components": [],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": {
+          "title": "DS-17 Phase B: classify sp4-hub-toolkits as forward-refactor-obsolete (Pre-Stage-3 retired)",
+          "body": "## Context\n\nDuring DS-17 Phase B mockup audit (sub-issue #2127, cluster sp4-sessions), the file pair `admin-mockups/design_files/sp4-hub-toolkits.{html,jsx}` was classified as `forward-refactor-obsolete`.\n\n## Evidence\n\n- HTML title explicitly tags it: `Pre-Stage-3 · Hub Toolkits (authenticated) — /hub/toolkits`\n- Same `Pre-Stage-3 · Hub …` pattern as sp4-hub-games and sp4-hub-agents, both already classified `forward-refactor-obsolete` in sp4-core audit (precedent set in cluster sp4-core, 8 obsolete pairs incl. sp4-hub-games + sp4-hub-agents)\n- Stage 3 #1026 (under umbrella #1023, design system de-versioning, **COMPLETE 2026-05-18**) retired the legacy `hub/<entity>` pattern — see CLAUDE.md § Active Freezes:\n  > 'hub/<entity> 3-routes (REFACTOR-FORWARD)'\n- Current canonical hub layout supersedes the Pre-Stage-3 mockup; migrating this fixture would re-introduce a retired pattern.\n\n## Action\n\n- [ ] Mark `sp4-hub-toolkits.html` + `sp4-hub-toolkits.jsx` as `forward-refactor-obsolete` in `audits/2026-06-10-mockup-design-intent-manifest.json`.\n- [ ] Skip Storybook story migration for this pair (DS-17 Phase 2.5+ pattern).\n- [ ] Document in `MOCKUPS_INDEX.md` annotation that the route `/hub/toolkits` is no longer the canonical surface; the actual user-reachable route is `/toolkits` (sp4-toolkit-detail family) post Stage 3.\n- [ ] Verify no `@mockup` JSDoc annotations in `apps/web/src/app/**/page.tsx` reference this mockup (DS-17-1 sweep #2084 mappable=true gate).\n\n## References\n\n- Umbrella: #2063 (DS-17 mockup fidelity)\n- Phase B audit sub-issue: #2127\n- Stage 3 closure: #1026\n- Precedent: sp4-core cluster audit, 8 forward-refactor-obsolete files (sp4-dashboard, sp4-hub-games, sp4-hub-agents, sp4-add-game-bgg-step pairs)\n- CLAUDE.md § Design System De-versioning — COMPLETE 2026-05-18\n\n## Cluster\n\n`sp4-sessions` (52 files: 50 `current` + 2 `forward-refactor-obsolete` for sp4-hub-toolkits pair)"
+        }
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/librogame-runthrough-play-session.jsx",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "JSX pair for Librogame Phase A runthrough play session shell — current main app surface. Persona Aaron. Replaces deprecated sp6-libro-game-play-session.",
+        "sub_components": [
+          "PlaySessionShell",
+          "StoryTab",
+          "EncounterTab",
+          "ChatOverlay",
+          "GlossaryInline"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/chat-fullscreen.jsx",
+        "design_intent": "current",
+        "confidence": 0.85,
+        "reasoning": "JSX pair for page-level full-screen chat (routes /chat/[threadId] + /chat/new) — current main app surface. B11b follow-up to issue #491.",
+        "sub_components": [
+          "ChatThreadList",
+          "ChatStream",
+          "ChatAgentInfo",
+          "ChatComposer",
+          "ChatEmptyState"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      }
+    ],
+    "sp6-7-nano": [
+      {
+        "mockup_path": "admin-mockups/design_files/sp7-game-night-transition.html",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "SP7 Game Night transition state mockup — part of well-defined Game Night domain (Asse A #1895). Uses canonical tokens.css + components.css. Prototype quality acceptable as current baseline for Game Night transition states between phases.",
+        "sub_components": [
+          "TransitionScreen",
+          "PhaseIndicator",
+          "GameNightHeader"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp7-game-night-summary.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "SP7 Game Night summary/recap mockup — aligns with Asse A domain model (Session completion flow per spec 2026-06-04). Canonical tokens. Summary view is core Game Night UX, current baseline appropriate.",
+        "sub_components": [
+          "GameNightSummary",
+          "SessionStats",
+          "PlayerScoreboard",
+          "MVPCallout"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp7-game-night-live.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "SP7 Game Night live session mockup — core Asse A domain (Session.IsLive state per spec 2026-06-04). Canonical tokens. Live session UI is foundational Game Night feature, current baseline.",
+        "sub_components": [
+          "LiveSessionHeader",
+          "PlayerRoster",
+          "TurnIndicator",
+          "ScoreTracker",
+          "ActionBar"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp7-game-night-detail-rsvp.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "SP7 Game Night detail with RSVP flow — aligns with Asse A 5-phase RSVP invariant (tag silente → 'Invia inviti' → pending → confermato). Canonical tokens. RSVP is core Game Night domain per spec.",
+        "sub_components": [
+          "GameNightDetail",
+          "RSVPPanel",
+          "GuestList",
+          "InviteCTA",
+          "AttendeeStatus"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp7-game-night-create.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "SP7 Game Night create wizard mockup — entry point for GameNightEvent aggregate creation (Asse A spec). Uses canonical tokens.css + components.css, standard wizard pattern. Current baseline for Game Night creation flow.",
+        "sub_components": [
+          "CreateWizard",
+          "GameNightForm",
+          "DatePicker",
+          "PlayerInviter",
+          "GameSelector"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp6-libro-game-resume-state.html",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "SP6 Librogame resume-state mockup — librogame product vertical per Asse-A spec sub-issues. Pattern librogame-* in sp4-sessions cluster classified as current; consistent treatment. Canonical tokens.",
+        "sub_components": [
+          "ResumeStateView",
+          "BookProgressIndicator",
+          "LastChapterCard",
+          "ContinueButton"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp6-libro-game-photo-upload.html",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "SP6 Librogame photo-upload mockup — gamebook photo capture flow, librogame product vertical. Canonical tokens. Photo upload for OCR/scan is core librogame ingestion feature, current baseline.",
+        "sub_components": [
+          "PhotoUploadZone",
+          "CameraTrigger",
+          "PreviewGrid",
+          "UploadProgress"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp6-libro-game-index.html",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "SP6 Librogame index/list mockup — route /gamebook, persona Sara casual GM. Hero + grid manuali fotografati + quota mensile widget. Header comment explicit design intent. Canonical tokens. Entry point for librogame vertical, current baseline.",
+        "sub_components": [
+          "GamebookHero",
+          "GamebookGrid",
+          "QuotaWidget",
+          "GamebookCard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp7-game-night-transition.jsx",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "JSX twin of sp7-game-night-transition.html. Same classification — Game Night transition state, Asse A domain, canonical tokens. Pair consistent.",
+        "sub_components": [
+          "TransitionScreen",
+          "PhaseIndicator",
+          "GameNightHeader"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp7-game-night-summary.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX twin of sp7-game-night-summary.html. Same classification — Game Night summary/recap, Asse A domain. Pair consistent.",
+        "sub_components": [
+          "GameNightSummary",
+          "SessionStats",
+          "PlayerScoreboard",
+          "MVPCallout"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp7-game-night-live.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX twin of sp7-game-night-live.html. Same classification — Game Night live session, Asse A domain (Session.IsLive). Pair consistent.",
+        "sub_components": [
+          "LiveSessionHeader",
+          "PlayerRoster",
+          "TurnIndicator",
+          "ScoreTracker",
+          "ActionBar"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp7-game-night-join-public.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "JSX-only Game Night join-public flow (no HTML twin). Public RSVP/join endpoint for Game Night events — aligns with Asse A RSVP invariants. Current baseline for public join UX, standalone JSX file.",
+        "sub_components": [
+          "JoinPublicView",
+          "GameNightPreview",
+          "GuestJoinForm",
+          "RSVPConfirm"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp7-game-night-detail-rsvp.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX twin of sp7-game-night-detail-rsvp.html. Same classification — Game Night detail with RSVP, Asse A 5-phase RSVP. Pair consistent.",
+        "sub_components": [
+          "GameNightDetail",
+          "RSVPPanel",
+          "GuestList",
+          "InviteCTA",
+          "AttendeeStatus"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp7-game-night-create.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX twin of sp7-game-night-create.html. Same classification — Game Night create wizard, Asse A GameNightEvent aggregate entry. Pair consistent.",
+        "sub_components": [
+          "CreateWizard",
+          "GameNightForm",
+          "DatePicker",
+          "PlayerInviter",
+          "GameSelector"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp6-libro-game-resume-state.jsx",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "JSX twin of sp6-libro-game-resume-state.html. Same classification — librogame resume-state, librogame product vertical. Pair consistent.",
+        "sub_components": [
+          "ResumeStateView",
+          "BookProgressIndicator",
+          "LastChapterCard",
+          "ContinueButton"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp6-libro-game-quota-credits.jsx",
+        "design_intent": "current",
+        "confidence": 0.7,
+        "reasoning": "JSX-only librogame quota/credits view (no HTML twin). Free-tier quota management UI per librogame vertical (monthly quota widget pattern matches sp6-libro-game-index hero widget). Current baseline for credits/quota UX.",
+        "sub_components": [
+          "QuotaCard",
+          "CreditsBalance",
+          "UpgradePrompt",
+          "UsageMeter"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp6-libro-game-photo-upload.jsx",
+        "design_intent": "current",
+        "confidence": 0.75,
+        "reasoning": "JSX twin of sp6-libro-game-photo-upload.html. Same classification — librogame photo upload, OCR/scan ingestion. Pair consistent.",
+        "sub_components": [
+          "PhotoUploadZone",
+          "CameraTrigger",
+          "PreviewGrid",
+          "UploadProgress"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      },
+      {
+        "mockup_path": "admin-mockups/design_files/sp6-libro-game-index.jsx",
+        "design_intent": "current",
+        "confidence": 0.8,
+        "reasoning": "JSX twin of sp6-libro-game-index.html. Same classification — librogame index/list entry point, /gamebook route. Pair consistent.",
+        "sub_components": [
+          "GamebookHero",
+          "GamebookGrid",
+          "QuotaWidget",
+          "GamebookCard"
+        ],
+        "pair_disagreement": false,
+        "suggested_tracking_issue": null
+      }
+    ]
+  }
+}

@@ -7,6 +7,7 @@ using Api.Hubs;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using Microsoft.AspNetCore.SignalR;
@@ -60,11 +61,14 @@ public sealed class ScoreProposalFlowTests
             proposeLogger.Object);
 
         var confirmLogger = new Mock<ILogger<ConfirmScoreProposalCommandHandler>>();
+        var unitOfWorkMock = new Mock<IUnitOfWork>();
         _confirmSut = new ConfirmScoreProposalCommandHandler(
             _dbContext,
             _sessionRepoMock.Object,
             _hubContextMock.Object,
-            confirmLogger.Object);
+            confirmLogger.Object,
+            unitOfWorkMock.Object,
+            TimeProvider.System);
     }
 
     private async Task SeedSessionWithParticipant(
@@ -86,7 +90,7 @@ public sealed class ScoreProposalFlowTests
             Visibility = 0,
             AgentMode = 0,
             ScoringConfigJson = "{}",
-            RowVersion = new byte[] { 1 }
+            Xmin = 1u
         });
 
         _dbContext.SessionParticipants.Add(new SessionParticipantEntity

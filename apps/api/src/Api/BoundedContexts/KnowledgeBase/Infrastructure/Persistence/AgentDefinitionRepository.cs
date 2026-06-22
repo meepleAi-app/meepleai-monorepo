@@ -138,9 +138,16 @@ public sealed class AgentDefinitionRepository : RepositoryBase, IAgentDefinition
 
         // Count agents linked to any of the provided gameIds.
         // The global HasQueryFilter ensures soft-deleted agents are excluded automatically.
+        // EF.Property<Guid?>(a, "_gameId") is the canonical translation pattern for
+        // the AgentDefinition backing field — `a.GameId` is a computed getter on the
+        // domain entity (=> _gameId) and EF Core cannot translate it to SQL directly.
+        // Mirrors the pattern used in SearchSharedGamesQueryHandler.cs:249-256.
         return await DbContext.Set<AgentDefinition>()
             .AsNoTracking()
-            .CountAsync(a => a.GameId != null && gameIds.Contains(a.GameId.Value), cancellationToken)
+            .CountAsync(
+                a => EF.Property<Guid?>(a, "_gameId") != null
+                    && gameIds.Contains(EF.Property<Guid?>(a, "_gameId")!.Value),
+                cancellationToken)
             .ConfigureAwait(false);
     }
 

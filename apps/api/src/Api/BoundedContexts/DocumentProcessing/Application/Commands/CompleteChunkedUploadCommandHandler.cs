@@ -8,6 +8,7 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.EntityRelationships.Application.Commands;
 using Api.BoundedContexts.EntityRelationships.Domain.Enums;
 using Api.BoundedContexts.EntityRelationships.Domain.Exceptions;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Security;
@@ -751,7 +752,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
     {
 
         // Update vector document with chunk count (no pgvector indexing)
-        await UpdateOrCreateVectorDocumentAsync(pdfGuid, pdfDoc, fullText, allDocumentChunks.Count, db, cancellationToken).ConfigureAwait(false);
+        await UpdateOrCreateVectorDocumentAsync(pdfGuid, pdfDoc, fullText, allDocumentChunks.Count, db, scope, cancellationToken).ConfigureAwait(false);
 
         // Save text chunks to PostgreSQL for hybrid search (FTS)
         await SaveTextChunksForHybridSearchAsync(pdfGuid, pdfDoc, allDocumentChunks, db, scope, cancellationToken).ConfigureAwait(false);
@@ -759,52 +760,29 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
 
     /// <summary>
     /// Updates or creates VectorDocument entity after successful indexing.
+    /// Delegates to <see cref="IPdfIndexingPipeline"/> (#2244 / epic #2242) so the
+    /// VectorDocumentIndexedEvent fires structurally. This is the 5th call site
+    /// historically not enumerated in OP #2242 — chunked uploads of >5MB PDFs
+    /// were silently bypassing the projection too.
     /// </summary>
-    private async Task UpdateOrCreateVectorDocumentAsync(
+    private static async Task UpdateOrCreateVectorDocumentAsync(
         Guid pdfGuid,
         PdfDocumentEntity pdfDoc,
         string fullText,
         int indexedCount,
         MeepleAiDbContext db,
+        IServiceScope scope,
         CancellationToken cancellationToken)
     {
-        var vectorDoc = await db.VectorDocuments.FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, cancellationToken).ConfigureAwait(false);
-        if (vectorDoc == null)
-        {
-            vectorDoc = new VectorDocumentEntity
-            {
-                Id = Guid.NewGuid(),
-                GameId = pdfDoc.SharedGameId,
-                SharedGameId = pdfDoc.SharedGameId, // Issue #5185: propagate SharedGameId from PDF
-                PdfDocumentId = pdfGuid,
-                IndexingStatus = "completed",
-                ChunkCount = indexedCount,
-                TotalCharacters = fullText.Length,
-                IndexedAt = _timeProvider.GetUtcNow().UtcDateTime
-            };
-            db.VectorDocuments.Add(vectorDoc);
-        }
-        else
-        {
-            vectorDoc.IndexingStatus = "completed";
-            vectorDoc.ChunkCount = indexedCount;
-            vectorDoc.TotalCharacters = fullText.Length;
-            vectorDoc.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
-        }
-
-        try
-        {
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (DbUpdateConcurrencyException ex)
-        {
-            MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                nameof(CompleteChunkedUploadCommandHandler),
-                MeepleAiMetrics.PdfConcurrencyCategories.B);
-            _logger.LogWarning(ex,
-                "Concurrency conflict on VectorDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                pdfGuid, nameof(CompleteChunkedUploadCommandHandler));
-        }
+        var pipeline = scope.ServiceProvider.GetRequiredService<IPdfIndexingPipeline>();
+        await pipeline.IndexAsync(
+            pdfDocumentId: pdfGuid,
+            gameId: pdfDoc.SharedGameId,
+            sharedGameId: pdfDoc.SharedGameId,
+            chunkCount: indexedCount,
+            totalCharacters: fullText.Length,
+            language: string.IsNullOrWhiteSpace(pdfDoc.Language) ? "en" : pdfDoc.Language,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

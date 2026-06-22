@@ -25,7 +25,16 @@ internal sealed class GameNightPlaylist : AggregateRoot<Guid>
     public DateTime? DeletedAt { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
-    public byte[] RowVersion { get; private set; } = Array.Empty<byte>();
+
+    // Optimistic concurrency via PostgreSQL's xmin system column (Issue #2306).
+    // Server-owned: Postgres assigns xmin on each write; EF reads it back so the
+    // repository can round-trip the value for detached Update scenarios.
+    public uint Xmin { get; private set; }
+
+    /// <summary>
+    /// Called by the repository mapper to restore the xmin token after loading from persistence.
+    /// </summary>
+    internal void SetXmin(uint xmin) => Xmin = xmin;
 
     /// <summary>
     /// Private constructor for EF Core.

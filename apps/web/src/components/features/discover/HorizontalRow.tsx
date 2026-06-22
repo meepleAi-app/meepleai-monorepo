@@ -28,6 +28,12 @@ export interface RowItemBase {
   readonly chunkCount?: number;
   readonly docType?: string;
   readonly contributionCount?: number;
+  /**
+   * Issue #2290 — when true, the card renders a "KB" pill matching the
+   * existing badge style from `HubGameCard.tsx`. Currently wired by the
+   * Row 1 trending mapper in `DiscoverHub.tsx`; other rows leave undefined.
+   */
+  readonly hasKnowledgeBase?: boolean;
 }
 
 export type RowVariant = 'featured' | 'compact' | 'grid' | 'list-row';
@@ -166,8 +172,20 @@ export function HorizontalRow({
               🎲
             </div>
             <div className="flex flex-col gap-1 p-3">
-              <div className="line-clamp-1 font-bold font-[Quicksand] text-sm text-foreground">
-                {item.name ?? item.title ?? 'Senza titolo'}
+              <div className="flex items-center gap-2">
+                <div className="line-clamp-1 flex-1 font-bold font-[Quicksand] text-sm text-foreground">
+                  {item.name ?? item.title ?? 'Senza titolo'}
+                </div>
+                {/* Issue #2290: KB badge mirrors HubGameCard.tsx style. */}
+                {item.hasKnowledgeBase && (
+                  <span
+                    data-slot="row-card-kb-badge"
+                    aria-label="AI Ready"
+                    className="inline-flex shrink-0 items-center rounded bg-[hsl(var(--c-kb)/0.15)] px-1.5 py-0.5 font-bold text-[9px] uppercase tracking-wider text-[hsl(var(--c-kb))]"
+                  >
+                    KB
+                  </span>
+                )}
               </div>
               <div className="font-mono text-[10px] text-muted-foreground">
                 {[item.publisher, item.year].filter(Boolean).join(' · ') || ' '}

@@ -22,6 +22,26 @@ namespace Api.Tests.Infrastructure;
 ///   var services = IntegrationServiceCollectionBuilder.CreateBase(connectionString);
 ///   services.AddScoped&lt;IMyRepository, MyRepository&gt;(); // test-specific
 ///   _serviceProvider = services.BuildServiceProvider();
+///
+/// <para><b>⚠ Domain event dispatch trap (#2389 audit follow-up):</b></para>
+/// <para>The default <c>IOptions&lt;DomainEventOutboxOptions&gt;</c> binds
+/// <c>Mode = DomainEventDispatchMode.OutboxOnly</c> (steady-state post-T9 cutover, see
+/// <c>docs/superpowers/specs/2026-06-06-issue-1535-event-outbox-design.md</c>). In that
+/// mode <c>MeepleAiDbContext.SaveChangesAsync</c> persists raised domain events to
+/// <c>domain_event_outbox</c> and the <c>DomainEventOutboxProcessor</c> BackgroundService
+/// drains them asynchronously — but that processor is NOT registered in this minimal
+/// integration setup.</para>
+/// <para>ITs that depend on <see cref="MediatR.INotificationHandler{T}"/> handlers firing
+/// inline on SaveChangesAsync (spy handlers, broadcast handlers, side-effect handlers) MUST
+/// override the options to <see cref="DomainEventDispatchMode.Hybrid"/> after calling
+/// <c>CreateBase</c>:
+/// <code>
+/// services.AddSingleton&lt;IOptions&lt;DomainEventOutboxOptions&gt;&gt;(
+///     Options.Create(new DomainEventOutboxOptions { Mode = DomainEventDispatchMode.Hybrid }));
+/// </code>
+/// Without this override the spy handler silently never fires and assertions read 0.
+/// See <c>SessionScoresUpdatedSignalRBroadcastIntegrationTests</c> and
+/// <c>FinalizeSessionSingleDispatchIntegrationTests</c> for the canonical pattern.</para>
 /// </summary>
 internal static class IntegrationServiceCollectionBuilder
 {
@@ -31,8 +51,14 @@ internal static class IntegrationServiceCollectionBuilder
     /// that aren't registered in the minimal test DI container.
     /// </summary>
     /// <param name="connectionString">PostgreSQL connection string for the isolated test database.</param>
+    /// <param name="useHybridCachePassthrough">
+    /// When true, registers <see cref="PassthroughHybridCache"/> instead of <c>Mock.Of&lt;IHybridCacheService&gt;()</c>.
+    /// Required for tests that exercise read→write→read of the same cached key in a single run,
+    /// because the default Moq mock returns null without invoking the factory and the read
+    /// would miss the write. See issue #2162 follow-up.
+    /// </param>
     /// <returns>A ServiceCollection ready for test-specific repository registrations.</returns>
-    public static ServiceCollection CreateBase(string connectionString)
+    public static ServiceCollection CreateBase(string connectionString, bool useHybridCachePassthrough = false)
     {
         var services = new ServiceCollection();
 
@@ -82,8 +108,15 @@ internal static class IntegrationServiceCollectionBuilder
             Mock.Of<Api.BoundedContexts.UserNotifications.Application.Services.INotificationDispatcher>());
         services.AddScoped(_ =>
             Mock.Of<Api.BoundedContexts.GameManagement.Domain.Repositories.IGameSessionRepository>());
-        services.AddScoped(_ =>
-            Mock.Of<Api.Services.IHybridCacheService>());
+        if (useHybridCachePassthrough)
+        {
+            services.AddScoped<Api.Services.IHybridCacheService, PassthroughHybridCache>();
+        }
+        else
+        {
+            services.AddScoped(_ =>
+                Mock.Of<Api.Services.IHybridCacheService>());
+        }
         services.AddScoped(_ =>
             Mock.Of<Api.Services.IEmbeddingService>());
         services.AddScoped(_ =>

@@ -7,7 +7,9 @@
  *   - Filter pill bar (4 segments: all / featured / new / top, URL ?filter=)
  *   - Card grid (caller provides `renderCard` for entity-specific layout)
  *   - 4 FSM shells: loading / error / empty / filtered-empty
- *   - Optional bottom slot (StickyAccessCta for /hub/games)
+ *   - Optional bottom slot (caller-supplied — historically used for the
+ *     visitor `StickyAccessCta` when `/hub/games` was public; now unused but
+ *     kept as a generic extension point)
  *
  * Pattern reference: discover FE (#1160) — same approach with shared atoms.
  */
@@ -69,7 +71,7 @@ export interface HubCatalogViewProps<TItem> {
   readonly onSearchCommitted?: (q: string) => void;
   /** Called when user changes filter. */
   readonly onFilterChanged?: (from: HubFilter, to: HubFilter) => void;
-  /** Optional bottom slot — used by /hub/games for StickyAccessCta. */
+  /** Optional bottom slot — generic extension point, currently unused. */
   readonly bottomSlot?: ReactNode;
 }
 

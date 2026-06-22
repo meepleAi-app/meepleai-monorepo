@@ -97,15 +97,6 @@ const SOURCE_CARDS = [
     href: null,
   },
   {
-    id: 'bgg',
-    icon: '🎲',
-    title: 'Da BoardGameGeek',
-    sub: 'Cerca nel catalogo BGG',
-    hint: 'Importa PDF ufficiali',
-    disabled: false,
-    href: 'sp4-add-game-bgg-step.html',
-  },
-  {
     id: 'dedup',
     icon: '♻️',
     title: 'Riusa PDF esistente',

@@ -68,6 +68,7 @@ vi.mock('@/lib/analytics/flywheel-events', () => ({
 
 // Import AFTER mocks
 import { RegisterPageContent, RegisterFallback } from '../_content';
+import { logger } from '@/lib/logger';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -226,6 +227,10 @@ describe('RegisterPageContent (v2 AuthCard)', () => {
         expect(screen.getByText(/Email already taken/i)).toBeInTheDocument();
       });
       expect(pushMock).not.toHaveBeenCalled();
+
+      // Issue #2171: HttpClient already calls logApiError on failed responses —
+      // the caller MUST NOT re-log to avoid duplicate console.error noise.
+      expect(logger.error).not.toHaveBeenCalled();
     });
 
     it('renders OAuth buttons when oauthEnabled flag is true', async () => {

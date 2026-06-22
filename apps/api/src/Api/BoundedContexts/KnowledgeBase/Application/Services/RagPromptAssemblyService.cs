@@ -400,7 +400,9 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
             // Step 4: Sentence window expansion — include adjacent chunks for more context
             filteredChunks = await TrySentenceWindowExpansionAsync(filteredChunks, profile, ct).ConfigureAwait(false);
 
-            // Format chunks and track citations (with copyright annotation)
+            // Format chunks and track citations (with copyright annotation).
+            // #2311 BE-1 — propagate ChunkIndex so the downstream IncrementChunkUsageCountsCommand
+            // can resolve the underlying TextChunk via the (PdfDocumentId, ChunkIndex) unique index.
             foreach (var chunk in filteredChunks)
             {
                 var citation = new ChunkCitation(
@@ -409,7 +411,8 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                     RelevanceScore: chunk.Score,
                     SnippetPreview: chunk.Text.Length > 120 ? string.Concat(chunk.Text.AsSpan(0, 117), "...") : chunk.Text)
                 {
-                    FullText = chunk.Text  // #447: preserve full text for copyright leak guard
+                    FullText = chunk.Text,  // #447: preserve full text for copyright leak guard
+                    ChunkIndex = chunk.ChunkIndex,
                 };
 
                 citations.Add(citation);

@@ -10,6 +10,8 @@
 
 import type { JSX } from 'react';
 
+import { DetailPageContainer } from '@/components/layout/PageContainer';
+
 export interface ToolkitsTabPanelLabels {
   readonly title: string;
   readonly comingSoon: string;
@@ -21,12 +23,9 @@ export interface ToolkitsTabPanelProps {
 
 export function ToolkitsTabPanel({ labels }: ToolkitsTabPanelProps): JSX.Element {
   return (
-    <div
-      data-slot="toolkits-tab-panel"
-      className="mx-auto w-full max-w-4xl px-4 sm:px-8 flex flex-col items-center gap-2 py-12"
-    >
+    <DetailPageContainer data-slot="toolkits-tab-panel" className="items-center gap-2 py-12">
       <h2 className="text-lg font-semibold">{labels.title}</h2>
       <p className="text-muted-foreground text-center">{labels.comingSoon}</p>
-    </div>
+    </DetailPageContainer>
   );
 }

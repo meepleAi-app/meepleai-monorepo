@@ -115,7 +115,7 @@ const LibraryHero = ({ stats, compact }) => (
             border:'1px solid var(--border-strong)',
             fontFamily:'var(--f-display)', fontSize: 13, fontWeight: 700,
             cursor:'pointer',
-          }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-add-game-bgg-step.html'; }, 0); /* DEMO-NAV */ }}>↓ Importa BGG</button>
+          }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-add-game-drawer.html'; }, 0); /* DEMO-NAV */ }}>+ Aggiungi gioco</button>
           <button type="button" aria-label="Esporta" style={{
             padding:'9px 12px', borderRadius:'var(--r-md)',
             background:'var(--bg-card)', color:'var(--text)',
@@ -1048,7 +1048,7 @@ const EmptyLibrary = ({ kind, compact }) => {
         }}>La tua libreria è vuota</h2>
         <p style={{
           fontSize: 13.5, color:'var(--text-sec)', margin:'0 0 18px', maxWidth: 380, lineHeight: 1.55,
-        }}>Inizia aggiungendo il tuo primo gioco. Importa la collezione da BoardGameGeek o cerca per titolo.</p>
+        }}>Inizia aggiungendo il tuo primo gioco dal catalogo condiviso o crea un gioco custom.</p>
         <div style={{ display:'flex', gap: 8, marginBottom: 22, flexWrap:'wrap', justifyContent:'center' }}>
           <button type="button" style={{
             padding:'9px 16px', borderRadius:'var(--r-md)',
@@ -1061,7 +1061,7 @@ const EmptyLibrary = ({ kind, compact }) => {
             background:'var(--bg)', color:'var(--text)',
             border:'1px solid var(--border-strong)',
             fontFamily:'var(--f-display)', fontSize: 13, fontWeight: 700, cursor:'pointer',
-          }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-add-game-bgg-step.html'; }, 0); /* DEMO-NAV */ }}>↓ Importa da BGG</button>
+          }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-add-game-drawer.html'; }, 0); /* DEMO-NAV */ }}>+ Aggiungi gioco</button>
         </div>
         {/* Suggested */}
         <div style={{ width:'100%', maxWidth: 480 }}>
@@ -1445,7 +1445,7 @@ const MOBILE_STATES = [
   { id:'m3', tab:'agent', view:'list', label:'03 · Agenti · List', desc:'Tab Agenti attiva, vista list più densa con border-left entity-agent + status dot + badge mono.' },
   { id:'m4', tab:'all', view:'compact', label:'04 · Compact view', desc:'Vista compact: una row per item, dot status + emoji entity. Massima densità per power-user.' },
   { id:'m5', tab:'all', view:'grid', drawerOpen:true, label:'05 · Drawer aperto', desc:'AdvancedFiltersDrawer come bottom-sheet 100% width: 7 sezioni accordion (Stato/Entity/Gioco/Periodo/Tag/Rating/Complessità). Footer fisso Reset + Applica(N).' },
-  { id:'m6', tab:'all', view:'grid', state:'empty-first-run', label:'06 · Empty first-run', desc:'Hero + tabs visibili. Body: illustrazione + CTA Aggiungi/Importa + 4 suggerimenti BGG con add inline.' },
+  { id:'m6', tab:'all', view:'grid', state:'empty-first-run', label:'06 · Empty first-run', desc:'Hero + tabs visibili. Body: illustrazione + CTA Aggiungi/Importa + 4 suggerimenti catalogo con add inline.' },
   { id:'m7', tab:'all', view:'grid', state:'empty-filtered', label:'07 · Nessun risultato', desc:'Filtri attivi visibili nel chip "SORT". Body empty centered con CTA Reset filtri colore agent.' },
   { id:'m8', tab:'all', view:'grid', state:'loading', label:'08 · Loading', desc:'Hero pieno + tabs + filtri reali, body 4 skeleton card altezza 180.' },
 ];
@@ -1521,7 +1521,7 @@ function App() {
           </DesktopFrame>
 
           <DesktopFrame label="13 · Desktop · Empty first-run"
-            desc="Nuovo utente: hero (stats a zero) + tabs visibili (count 0) + body con illustrazione 96 + CTA Aggiungi/Importa + 3 suggerimenti BGG con +.">
+            desc="Nuovo utente: hero (stats a zero) + tabs visibili (count 0) + body con illustrazione 96 + CTA Aggiungi/Importa + 3 suggerimenti catalogo con +.">
             <DesktopFrameInner stateOverride="empty-first-run" initialTab="all" initialView="grid"/>
           </DesktopFrame>
         </div>

@@ -22,7 +22,10 @@ import { API_CONFIG } from '@/config';
 import { sanitizeError } from '@/lib/errors';
 
 import { ApiError, NetworkError, ServerError } from './errors';
-import { logApiError, logger } from './logger';
+// Issue #2171: logApiError import removed — retry layer no longer
+// duplicates HttpClient + caller error logging. `logger.warn` is still
+// used for retry attempt telemetry.
+import { logger } from './logger';
 
 export interface RetryConfig {
   /** Maximum number of retry attempts (default: 3) */
@@ -216,19 +219,16 @@ export async function withRetry<T>(fn: () => Promise<T>, options: RetryOptions =
 
       // Check if we should retry this error
       if (!isRetryableError(error)) {
-        // Log non-retryable error and throw immediately
-        if (error instanceof ApiError) {
-          logApiError(error);
-        }
+        // Issue #2171: HttpClient catch handlers + caller already invoke
+        // logApiError. Don't double-log from the retry layer — only
+        // record the retry attempt count for telemetry.
         throw error;
       }
 
       // Check if we have retries left
       if (attempt >= config.maxAttempts) {
-        // All retries exhausted, log and throw
-        if (error instanceof ApiError) {
-          logApiError(error);
-        }
+        // Issue #2171: all retries exhausted — let HttpClient's catch logging
+        // and the caller surface the error once. No duplicate log here.
         throw error;
       }
 

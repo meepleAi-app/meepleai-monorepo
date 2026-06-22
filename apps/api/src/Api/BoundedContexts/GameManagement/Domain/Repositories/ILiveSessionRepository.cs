@@ -3,9 +3,9 @@ using Api.BoundedContexts.GameManagement.Domain.Entities;
 namespace Api.BoundedContexts.GameManagement.Domain.Repositories;
 
 /// <summary>
-/// Repository interface for live game session aggregate.
-/// In-memory backed since LiveGameSession is not EF-persisted.
-/// Issue #4749: CQRS commands/queries for live sessions.
+/// Repository for the LiveGameSession aggregate, EF Core-backed.
+/// Issue #2097 / ADR-060: Replaced in-memory ConcurrentDictionary with persistent
+/// storage. Live sessions survive container restarts and scale multi-instance.
 /// </summary>
 internal interface ILiveSessionRepository
 {

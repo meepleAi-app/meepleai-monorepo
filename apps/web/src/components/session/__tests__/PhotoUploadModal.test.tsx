@@ -267,19 +267,23 @@ describe('PhotoUploadModal', () => {
     const onUploadComplete = vi.fn();
     const onOpenChange = vi.fn();
 
-    // Mock XHR
-    const xhrMock = {
-      open: vi.fn(),
-      send: vi.fn(),
-      upload: { addEventListener: vi.fn() },
-      addEventListener: vi.fn(),
-      status: 201,
-      responseText: JSON.stringify(mockAttachmentResponse),
-    };
-
-    vi.spyOn(window, 'XMLHttpRequest').mockImplementation(
-      () => xhrMock as unknown as XMLHttpRequest
-    );
+    // Mock XHR — v4 fix: function-with-this constructor so open/send/etc. are
+    // tracked on the instance that the component actually uses.
+    function makeXhrMock() {
+      return {
+        open: vi.fn(),
+        send: vi.fn(),
+        upload: { addEventListener: vi.fn() },
+        addEventListener: vi.fn(),
+        status: 201,
+        responseText: JSON.stringify(mockAttachmentResponse),
+      };
+    }
+    let xhrMock: ReturnType<typeof makeXhrMock>;
+    xhrMock = makeXhrMock();
+    vi.spyOn(window, 'XMLHttpRequest').mockImplementation(function (this: any) {
+      Object.assign(this, xhrMock);
+    } as unknown as () => XMLHttpRequest);
 
     render(
       <PhotoUploadModal
@@ -316,18 +320,21 @@ describe('PhotoUploadModal', () => {
   });
 
   it('shows error on XHR failure', async () => {
-    const xhrMock = {
-      open: vi.fn(),
-      send: vi.fn(),
-      upload: { addEventListener: vi.fn() },
-      addEventListener: vi.fn(),
-      status: 400,
-      responseText: JSON.stringify({ error: 'File too large' }),
-    };
-
-    vi.spyOn(window, 'XMLHttpRequest').mockImplementation(
-      () => xhrMock as unknown as XMLHttpRequest
-    );
+    function makeXhrMock() {
+      return {
+        open: vi.fn(),
+        send: vi.fn(),
+        upload: { addEventListener: vi.fn() },
+        addEventListener: vi.fn(),
+        status: 400,
+        responseText: JSON.stringify({ error: 'File too large' }),
+      };
+    }
+    let xhrMock: ReturnType<typeof makeXhrMock>;
+    xhrMock = makeXhrMock();
+    vi.spyOn(window, 'XMLHttpRequest').mockImplementation(function (this: any) {
+      Object.assign(this, xhrMock);
+    } as unknown as () => XMLHttpRequest);
 
     render(<PhotoUploadModal {...defaultProps} />);
 
@@ -350,16 +357,19 @@ describe('PhotoUploadModal', () => {
   });
 
   it('shows error on XHR network error', async () => {
-    const xhrMock = {
-      open: vi.fn(),
-      send: vi.fn(),
-      upload: { addEventListener: vi.fn() },
-      addEventListener: vi.fn(),
-    };
-
-    vi.spyOn(window, 'XMLHttpRequest').mockImplementation(
-      () => xhrMock as unknown as XMLHttpRequest
-    );
+    function makeXhrMock() {
+      return {
+        open: vi.fn(),
+        send: vi.fn(),
+        upload: { addEventListener: vi.fn() },
+        addEventListener: vi.fn(),
+      };
+    }
+    let xhrMock: ReturnType<typeof makeXhrMock>;
+    xhrMock = makeXhrMock();
+    vi.spyOn(window, 'XMLHttpRequest').mockImplementation(function (this: any) {
+      Object.assign(this, xhrMock);
+    } as unknown as () => XMLHttpRequest);
 
     render(<PhotoUploadModal {...defaultProps} />);
 
@@ -386,18 +396,21 @@ describe('PhotoUploadModal', () => {
   // ================================================================
 
   it('includes snapshotIndex in FormData when provided', async () => {
-    const xhrMock = {
-      open: vi.fn(),
-      send: vi.fn(),
-      upload: { addEventListener: vi.fn() },
-      addEventListener: vi.fn(),
-      status: 201,
-      responseText: JSON.stringify(mockAttachmentResponse),
-    };
-
-    vi.spyOn(window, 'XMLHttpRequest').mockImplementation(
-      () => xhrMock as unknown as XMLHttpRequest
-    );
+    function makeXhrMock() {
+      return {
+        open: vi.fn(),
+        send: vi.fn(),
+        upload: { addEventListener: vi.fn() },
+        addEventListener: vi.fn(),
+        status: 201,
+        responseText: JSON.stringify(mockAttachmentResponse),
+      };
+    }
+    let xhrMock: ReturnType<typeof makeXhrMock>;
+    xhrMock = makeXhrMock();
+    vi.spyOn(window, 'XMLHttpRequest').mockImplementation(function (this: any) {
+      Object.assign(this, xhrMock);
+    } as unknown as () => XMLHttpRequest);
 
     render(<PhotoUploadModal {...defaultProps} snapshotIndex={3} />);
 

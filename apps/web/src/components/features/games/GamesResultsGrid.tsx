@@ -20,9 +20,35 @@ import clsx from 'clsx';
 import Link from 'next/link';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+import type { MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 
 export type GamesResultsView = 'grid' | 'list';
+
+/**
+ * Surface the "KB linked" state at a glance — mirrors the chip wired on
+ * `/library` via `LibraryHybridGrid.itemMetadata` so the same dataset
+ * (`UserLibraryEntry.hasKb`) renders consistently across the two surfaces.
+ * Closes Block E of #2247 / #2289. The `📄 X/Y KB` count variant fires
+ * when the entry tracks `kbCardCount > 1`; otherwise we emit the bare
+ * `📄 KB` chip, matching the LibraryHybridGrid baseline.
+ */
+function entryMetadata(entry: UserLibraryEntry): MeepleCardMetadata[] | undefined {
+  if (entry.hasKb) {
+    return [
+      {
+        label:
+          entry.kbCardCount > 1
+            ? `📄 ${entry.kbIndexedCount}/${entry.kbCardCount} KB`
+            : '📄 KB',
+      },
+    ];
+  }
+  if (entry.kbProcessingCount > 0) {
+    return [{ label: '⏳ KB in elaborazione' }];
+  }
+  return undefined;
+}
 
 export interface GamesResultsGridProps {
   readonly entries: readonly UserLibraryEntry[];
@@ -69,6 +95,7 @@ export function GamesResultsGrid({
             imageUrl={entry.gameImageUrl ?? undefined}
             rating={entry.averageRating ?? undefined}
             ratingMax={10}
+            metadata={entryMetadata(entry)}
             headingLevel={2}
           />
         </Link>

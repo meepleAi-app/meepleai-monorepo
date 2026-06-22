@@ -18,8 +18,10 @@
  *   - Bulk delete: enter select mode (games tab) → toggle cards → confirm
  *     dialog → `Promise.allSettled` fan-out + clear selection + exit.
  *   - Hero stats are hybrid counts (games/agents/docs/chats) from totalCounts.
- *   - `useMiniNavConfig` invoked with breadcrumb 'Libreria · Hub' + Hub/Wishlist
- *     tabs + 'Aggiungi gioco' primary action.
+ *   - `useMiniNavConfig` NOT invoked: LibraryHub owns its 6 hub tabs (HUB_TABS)
+ *     and the CTA lives in `LibraryHeroDesktop`; registering a parallel breadcrumb
+ *     + Hub/Wishlist tabs + primaryAction in MiniNavSlot produced visible duplicates
+ *     (issue #2158, Fix #1).
  *   - clearFilters CTA from filtered-empty drops `?state=` override.
  *
  * Hooks mocked:
@@ -790,26 +792,29 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
 
   // ─── useMiniNavConfig invocation contract ──────────────────────────────
 
-  it('registers mini-nav config with breadcrumb + Hub/Wishlist tabs + primaryAction', () => {
+  it('does NOT register a mini-nav config (issue #2158, Fix #1)', () => {
+    // LibraryHub has its own 6-tab system (HUB_TABS rendered by LibraryTabs)
+    // and the "+ Aggiungi gioco" CTA is owned by LibraryHeroDesktop. Registering
+    // a parallel breadcrumb + Hub/Wishlist tabs + primaryAction in MiniNavSlot
+    // duplicated those affordances (CTA + tabs) on screen. Convention adopted
+    // in #2158: /library page does not consume the MiniNavSlot.
     renderHub(makeHub());
-    expect(useMiniNavConfigMock).toHaveBeenCalled();
-    const lastCall = useMiniNavConfigMock.mock.calls.at(-1)?.[0] as {
-      breadcrumb: string;
-      tabs: ReadonlyArray<{ id: string; label: string; href: string; count?: number }>;
-      activeTabId: string;
-      primaryAction: { label: string; icon: string; onClick: () => void };
-    };
-    expect(lastCall.breadcrumb).toBe('Libreria · Hub');
-    expect(lastCall.activeTabId).toBe('hub');
-    expect(lastCall.tabs).toHaveLength(2);
-    expect(lastCall.tabs[0]).toMatchObject({ id: 'hub', href: '/library' });
-    expect(lastCall.tabs[1]).toMatchObject({
-      id: 'wishlist',
-      href: '/library/wishlist',
-      count: 0, // Phase 2a: wishlist count not yet wired into the hybrid hub
-    });
-    expect(lastCall.primaryAction.label).toBe('Aggiungi gioco');
-    expect(typeof lastCall.primaryAction.onClick).toBe('function');
+    expect(useMiniNavConfigMock).not.toHaveBeenCalled();
+  });
+
+  // ─── Single-CTA invariant (Fix #3, issue #2158) ────────────────────────
+
+  it('renders exactly ONE "+ Aggiungi gioco" CTA on the default surface', () => {
+    // Regression guard for the original bug: pre-#2158 LibraryHub rendered the
+    // CTA in two places (MiniNavSlot.primaryAction + LibraryHeroDesktop action
+    // bar) wired to the same handler. After Fix #1 the CTA lives ONLY in the
+    // hero on the default surface; this assertion makes future regressions
+    // visible. Note: the empty/filtered-empty surfaces intentionally surface a
+    // second CTA inside `EmptyLibrary` — that is a contextual nudge, not a
+    // duplicate of the hero, and is covered by EmptyLibrary's own suite.
+    renderHub(makeHub());
+    const ctas = screen.getAllByRole('button', { name: /Aggiungi gioco/i });
+    expect(ctas).toHaveLength(1);
   });
 });
 

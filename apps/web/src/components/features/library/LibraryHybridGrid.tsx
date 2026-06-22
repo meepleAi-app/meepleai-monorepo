@@ -42,7 +42,10 @@ import type { ReactElement } from 'react';
 import clsx from 'clsx';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
-import type { MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
+import type {
+  MeepleCardMetadata,
+  MeepleCardVariant,
+} from '@/components/ui/data-display/meeple-card';
 import type { HybridHubItem } from '@/lib/library/hybrid-hub.types';
 
 export type LibraryViewMode = 'grid' | 'list' | 'compact';
@@ -90,6 +93,25 @@ function itemRating(item: HybridHubItem): number | undefined {
   return item.entity === 'game' ? item.rating : undefined;
 }
 
+/**
+ * Game-only visual extra: metadata chip that surfaces a "KB linked" state
+ * at a glance. The flag is mapped from `UserLibraryEntry` in
+ * `libraryEntryToHubItem` (see `lib/library/hybrid-hub.mappers.ts`) via
+ * `isKbEntry`, which returns true when EITHER the backend reports the
+ * shared game's `has_knowledge_base` flag (≥ 1 PDF fully indexed end-to-end
+ * by #2244 / epic #2242 BE pipeline) OR at least one PDF document is
+ * linked but still in the pipeline (`kbCardCount > 0`). The single
+ * `📄 KB` label intentionally collapses the two states for now; a
+ * separate `⏳ KB in elaborazione` variant for in-flight uploads is
+ * tracked as Block E follow-up of #2247.
+ *
+ * Non-game variants render nothing.
+ */
+function itemMetadata(item: HybridHubItem): MeepleCardMetadata[] | undefined {
+  if (item.entity !== 'game' || !item.hasKb) return undefined;
+  return [{ label: '📄 KB' }];
+}
+
 export function LibraryHybridGrid({
   items,
   view,
@@ -135,6 +157,7 @@ export function LibraryHybridGrid({
               imageUrl={itemImageUrl(item)}
               rating={itemRating(item)}
               ratingMax={10}
+              metadata={itemMetadata(item)}
               headingLevel={2}
             />
             {isSelectMode && isSelected ? (

@@ -177,7 +177,7 @@ export const meepleCardStory: ShowcaseStory<MeepleCardShowcaseProps> = {
           connections={connections}
           imageUrl={
             entity === 'game'
-              ? 'https://cf.geekdo-images.com/WPKk3MeT3EKhKnhFLB8OoA__itemrep/img/yJB95GXRb10MKzqxKOXGKjgMrPQ=/fit-in/246x300/filters:strip_icc()/pic3490053.jpg'
+              ? 'https://placehold.co/600x400/4f46e5/ffffff?text=cover-cfc506)/pic3490053.jpg'
               : undefined
           }
         />

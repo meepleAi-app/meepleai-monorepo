@@ -10,8 +10,8 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 
 import { AdminConfirmationDialog, AdminConfirmationLevel } from '../admin-confirmation-dialog';
 
@@ -164,6 +164,89 @@ describe('AdminConfirmationDialog', () => {
       fireEvent.change(screen.getByRole('textbox'), { target: { value: 'CONFIRM' } });
       fireEvent.click(screen.getByRole('button', { name: /confirm|conferma|delete|elimina/i }));
       expect(onConfirm).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // PR #2428 — Regression guard for "setState after unmount" race.
+  //
+  // Flow that used to surface as `ReferenceError: window is not defined`
+  // (originating in React 19's `resolveUpdatePriority` when the test env had
+  // already torn down `window`):
+  //   1. user clicks Confirm
+  //   2. handleConfirm flips isSubmitting=true, then `await onConfirm()`
+  //   3. host (e.g. RestartAllPanel) responds to onConfirm by flipping isOpen
+  //      to false → Radix unmounts the dialog before onConfirm resolves
+  //   4. dialog finishes the await, calls onClose() (no-op), and the `finally`
+  //      block fires `setIsSubmitting(false)` on the torn-down component
+  //
+  // The fix is a mount sentinel that short-circuits the late setState. This
+  // suite re-creates the unmount-mid-await scenario and pins the absence of
+  // both console errors AND unhandled rejections.
+  describe('post-unmount race (PR #2428)', () => {
+    let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+    let unhandledRejections: unknown[];
+    let unhandledListener: (event: PromiseRejectionEvent) => void;
+
+    beforeEach(() => {
+      consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      unhandledRejections = [];
+      unhandledListener = event => {
+        unhandledRejections.push(event.reason);
+      };
+      window.addEventListener('unhandledrejection', unhandledListener);
+    });
+
+    afterEach(() => {
+      window.removeEventListener('unhandledrejection', unhandledListener);
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('does not setState (or surface a window-undefined error) when the dialog unmounts mid-onConfirm', async () => {
+      // Slow onConfirm so we can unmount the dialog while it's still in flight.
+      let resolveConfirm: () => void = () => undefined;
+      const onConfirm = vi.fn(
+        () =>
+          new Promise<void>(resolve => {
+            resolveConfirm = resolve;
+          })
+      );
+      const onClose = vi.fn();
+
+      const { rerender } = render(
+        <AdminConfirmationDialog
+          isOpen
+          level={AdminConfirmationLevel.Level2}
+          title="Restart"
+          message="Slow op?"
+          confirmPhrase="GO"
+          onClose={onClose}
+          onConfirm={onConfirm}
+        />
+      );
+
+      fireEvent.change(screen.getByRole('textbox'), { target: { value: 'GO' } });
+      fireEvent.click(
+        screen.getByRole('button', { name: /confirm|conferma|delete|elimina|restart/i })
+      );
+
+      // Sanity: handleConfirm started awaiting onConfirm.
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+
+      // Unmount the dialog while onConfirm is still pending — this mimics the
+      // RestartAllPanel pattern of synchronously flipping isOpen=false before
+      // the host's restart loop resolves.
+      rerender(<div data-testid="placeholder" />);
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      });
+
+      // Now resolve onConfirm — the `finally` block must NOT crash.
+      resolveConfirm();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(consoleErrorSpy).not.toHaveBeenCalled();
+      expect(unhandledRejections).toHaveLength(0);
     });
   });
 });

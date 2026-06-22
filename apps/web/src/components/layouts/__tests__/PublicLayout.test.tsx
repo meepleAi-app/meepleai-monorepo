@@ -43,9 +43,9 @@ vi.mock('next-themes', () => ({
   ThemeProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-// Mock MeepleLogo to avoid styled-jsx issues in tests
-vi.mock('@/components/ui/meeple/meeple-logo', () => ({
-  MeepleLogo: () => <div data-testid="meeple-logo">MeepleAI</div>,
+// Mock BrandMark to keep the test focused on layout structure
+vi.mock('@/components/ui/brand', () => ({
+  BrandMark: () => <div data-testid="brand-mark">MeepleAI</div>,
 }));
 
 // Mock NotificationCenter to avoid IntlProvider dependency (it uses useTranslation/useIntl)

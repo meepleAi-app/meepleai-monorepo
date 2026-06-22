@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities.GameManagement;
 using Api.Infrastructure.Entities.UserLibrary;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Services;
@@ -45,6 +46,35 @@ public sealed class StartImprovvisataSessionCommandHandlerTests
         _tierEnforcementMock
             .Setup(t => t.RecordUsageAsync(It.IsAny<Guid>(), It.IsAny<TierAction>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+
+        // Simulate the EF-backed repository: stage a minimal entity in the DbContext so
+        // the handler's subsequent SaveChangesAsync persists it for the FindAsync-based
+        // assertions. Mirrors the LiveGameSessionMapper.ToEntity path the real repository
+        // would take (Issue #2097 / ADR-060).
+        _sessionRepoMock
+            .Setup(r => r.AddAsync(It.IsAny<LiveGameSession>(), It.IsAny<CancellationToken>()))
+            .Returns<LiveGameSession, CancellationToken>((session, _) =>
+            {
+                _dbContext.LiveGameSessions.Add(new LiveGameSessionEntity
+                {
+                    Id = session.Id,
+                    SessionCode = session.SessionCode,
+                    GameId = session.GameId,
+                    GameName = session.GameName,
+                    ToolkitId = session.ToolkitId,
+                    CreatedByUserId = session.CreatedByUserId,
+                    Visibility = (int)session.Visibility,
+                    GroupId = session.GroupId,
+                    Status = (int)session.Status,
+                    CurrentTurnIndex = session.CurrentTurnIndex,
+                    CreatedAt = session.CreatedAt,
+                    UpdatedAt = session.UpdatedAt,
+                    AgentMode = (int)session.AgentMode,
+                    ScoringConfigJson = "{}",
+                    Xmin = 0u
+                });
+                return Task.CompletedTask;
+            });
 
         _sut = new StartImprovvisataSessionCommandHandler(
             _dbContext,

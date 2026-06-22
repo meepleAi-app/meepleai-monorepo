@@ -134,9 +134,14 @@ internal sealed class MechanicDraftEntityConfiguration : IEntityTypeConfiguratio
             .HasDefaultValue(0m)
             .IsRequired();
 
-        builder.Property(d => d.RowVersion)
-            .HasColumnName("row_version")
-            .IsRowVersion();
+        // Optimistic concurrency via PostgreSQL's xmin system column (Issue #2306).
+        // Replaces the silently-disabled bytea row_version (no trigger populated it).
+        // Server-owned, collision-safe (xmin = unique transaction id per row UPDATE).
+        builder.Property(d => d.Xmin)
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
 
         // Indexes
         builder.HasIndex(d => d.SharedGameId)

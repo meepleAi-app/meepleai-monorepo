@@ -74,7 +74,7 @@ export const SETTINGS_SECTIONS: SettingsSectionDef[] = [
   {
     id: 'services',
     label: 'Connected services',
-    subtitle: 'BGG, Discord',
+    subtitle: 'Integrazioni esterne',
     entity: 'entity-toolkit',
     icon: Link2,
     placeholder: true,

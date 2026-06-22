@@ -450,20 +450,20 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
 
         return new AuditOutboxPayload
         {
-            Action      = attr.Action,
-            Resource    = attr.Resource,
-            UserId      = userIdForRow,
-            ResourceId  = resourceId,
-            Result      = result,
-            IpAddress   = ipAddress,
-            UserAgent   = userAgent,
+            Action = attr.Action,
+            Resource = attr.Resource,
+            UserId = userIdForRow,
+            ResourceId = resourceId,
+            Result = result,
+            IpAddress = ipAddress,
+            UserAgent = userAgent,
             RequestType = typeof(TRequest).Name,
-            Details     = details,
-            Snapshots   = snapshotPayloads,
+            Details = details,
+            Snapshots = snapshotPayloads,
             ImpersonatedUserId = impersonatedUserIdForRow,
-            StepUpTokenId      = null,  // populated by S3
-            Timestamp   = DateTimeOffset.UtcNow,
-            Oversize    = oversize,
+            StepUpTokenId = null,  // populated by S3
+            Timestamp = DateTimeOffset.UtcNow,
+            Oversize = oversize,
         };
     }
 

@@ -41,6 +41,10 @@ internal class PlayRecordEntityConfiguration : IEntityTypeConfiguration<PlayReco
         builder.Property(e => e.Notes).HasMaxLength(2000);
         builder.Property(e => e.Location).HasMaxLength(255);
 
+        // Share token (#2437-2, GameNightPlaylist pattern)
+        builder.Property(e => e.ShareToken).HasMaxLength(50);
+        builder.Property(e => e.IsShared).HasDefaultValue(false).IsRequired();
+
         // Scoring Configuration (JSON)
         builder.Property(e => e.ScoringConfigJson)
             .IsRequired()
@@ -49,6 +53,14 @@ internal class PlayRecordEntityConfiguration : IEntityTypeConfiguration<PlayReco
         // Audit
         builder.Property(e => e.CreatedAt).IsRequired();
         builder.Property(e => e.UpdatedAt).IsRequired();
+
+        // Soft Delete (issue #2439 — mirrors GameBook query-filter pattern)
+        builder.Property(e => e.IsDeleted)
+            .HasColumnName("is_deleted")
+            .HasDefaultValue(false)
+            .IsRequired();
+        builder.Property(e => e.DeletedAt)
+            .HasColumnName("deleted_at");
 
         // Issue #1938 / CF-2: source domain event id (nullable, UNIQUE partial).
         builder.Property(e => e.SourceEventId)
@@ -74,10 +86,32 @@ internal class PlayRecordEntityConfiguration : IEntityTypeConfiguration<PlayReco
             .HasDatabaseName("UX_play_records_source_event_id")
             .HasFilter("source_event_id IS NOT NULL");
 
+        // Issue #2437-2: ShareToken UNIQUE (partial — only when not null).
+        // Allows multiple non-shared records (all NULL) while enforcing token uniqueness.
+        builder.HasIndex(e => e.ShareToken)
+            .HasDatabaseName("IX_play_records_share_token")
+            .IsUnique()
+            .HasFilter("\"ShareToken\" IS NOT NULL");
+
+        // Optimistic concurrency via PostgreSQL's xmin system column (ADR-060).
+        // xmin is a Postgres system column — EF maps it but does NOT create the column.
+        // ValueGeneratedOnAddOrUpdate tells EF the DB owns the value on every write.
+        // IsConcurrencyToken() makes EF include it in UPDATE … WHERE xmin = @p0.
+        // #2436 PR-B / #2437-1.
+        builder.Property(e => e.Xmin)
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
+
         // Relationships
         builder.HasMany(e => e.Players)
             .WithOne(p => p.PlayRecord)
             .HasForeignKey(p => p.PlayRecordId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Soft-delete query filter: deleted records are excluded from all queries
+        // (history, statistics, get-by-id, can-view, can-edit). Issue #2439.
+        builder.HasQueryFilter(e => !e.IsDeleted);
     }
 }

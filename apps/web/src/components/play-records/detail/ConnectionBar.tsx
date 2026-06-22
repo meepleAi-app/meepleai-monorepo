@@ -26,6 +26,8 @@ export interface ConnectionBarProps {
   readonly playerCount: number;
   readonly dateLabel: string;
   readonly chatCount: number;
+  /** #2437-1 MVP chip: pass the single winner's displayName, or null/undefined for no chip. */
+  readonly mvpName?: string | null;
   readonly className?: string;
 }
 
@@ -54,6 +56,7 @@ export function ConnectionBar({
   playerCount,
   dateLabel,
   chatCount,
+  mvpName,
   className,
 }: ConnectionBarProps): ReactElement {
   const hasChat = chatCount > 0;
@@ -124,6 +127,14 @@ export function ConnectionBar({
         <span aria-hidden="true">📅</span>
         {dateLabel}
       </span>
+
+      {/* MVP chip — #2437-1: only when exactly 1 winner (decision M3) */}
+      {mvpName && (
+        <span className={CHIP_BASE} style={chipStyle('player')} aria-label={`MVP: ${mvpName}`}>
+          <span aria-hidden="true">🎯</span>
+          MVP: {mvpName}
+        </span>
+      )}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Application.DTOs.PlayRecords;
 using Api.BoundedContexts.GameManagement.Application.Queries.PlayRecords;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
@@ -5,9 +6,11 @@ using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.GameManagement;
+using Api.Services;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
+using Moq;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.PlayRecords;
@@ -31,7 +34,23 @@ public class GetPlayerStatisticsQueryHandlerTests : IDisposable
     public GetPlayerStatisticsQueryHandlerTests()
     {
         _context = TestDbContextFactory.CreateInMemoryDbContext();
-        _handler = new GetPlayerStatisticsQueryHandler(_context);
+
+        // #2438: the handler now wraps its compute in IHybridCacheService.GetOrCreateAsync.
+        // Use a pass-through cache double that always invokes the factory so these tests keep
+        // asserting on the freshly-computed projection (cache behaviour is covered separately
+        // by GetPlayerStatisticsQueryHandlerCacheTests).
+        var cache = new Mock<IHybridCacheService>();
+        cache
+            .Setup(c => c.GetOrCreateAsync(
+                It.IsAny<string>(),
+                It.IsAny<Func<CancellationToken, Task<PlayerStatisticsDto>>>(),
+                It.IsAny<string[]>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<CancellationToken>()))
+            .Returns<string, Func<CancellationToken, Task<PlayerStatisticsDto>>, string[], TimeSpan?, CancellationToken>(
+                (key, factory, tags, exp, ct) => factory(ct));
+
+        _handler = new GetPlayerStatisticsQueryHandler(_context, cache.Object);
     }
 
     public void Dispose() => _context.Dispose();
@@ -512,19 +531,19 @@ public class GetPlayerStatisticsQueryHandlerTests : IDisposable
         string gameName = "Test Game",
         TimeSpan? duration = null,
         DateTime? sessionDate = null) => new()
-    {
-        Id = id,
-        GameId = gameId,
-        GameName = gameName,
-        CreatedByUserId = userId,
-        Visibility = 0,
-        SessionDate = sessionDate ?? DateTime.UtcNow.AddDays(-1),
-        Duration = duration,
-        Status = 2, // Completed
-        ScoringConfigJson = """{"Dimensions":["points","wins"],"Units":{"points":"pts","wins":"W"}}""",
-        CreatedAt = DateTime.UtcNow,
-        UpdatedAt = DateTime.UtcNow
-    };
+        {
+            Id = id,
+            GameId = gameId,
+            GameName = gameName,
+            CreatedByUserId = userId,
+            Visibility = 0,
+            SessionDate = sessionDate ?? DateTime.UtcNow.AddDays(-1),
+            Duration = duration,
+            Status = 2, // Completed
+            ScoringConfigJson = """{"Dimensions":["points","wins"],"Units":{"points":"pts","wins":"W"}}""",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
 
     private static RecordPlayerEntity MakePlayer(
         Guid id,

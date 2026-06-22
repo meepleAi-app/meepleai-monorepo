@@ -16,9 +16,9 @@ import { type ReactNode, use } from 'react';
 import { usePathname } from 'next/navigation';
 
 import { ContextBarRegistrar } from '@/components/layout/ContextBar';
-import { PageHeader } from '@/components/layout/PageHeader';
 import { LiveSessionContextBarConnected } from '@/components/session/LiveSessionContextBarConnected';
 import { OverlayHybrid } from '@/components/ui/overlays';
+import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
 
 interface LiveSessionLayoutProps {
   children: ReactNode;
@@ -38,26 +38,26 @@ export default function LiveSessionLayout({ children, params }: LiveSessionLayou
   const pathname = usePathname();
   const activeTabId = getActiveTabId(pathname);
 
+  // #2158 (Fix #2 codemod): migrated from legacy PageHeader to MiniNavSlot via
+  // useMiniNavConfig. No primaryAction here — the live session UX is driven
+  // by the ContextBar (LiveSessionContextBarConnected) below.
+  useMiniNavConfig({
+    breadcrumb: 'Sessioni · Live',
+    tabs: [
+      { id: 'partita', label: 'Partita', href: `/sessions/live/${sessionId}` },
+      { id: 'agent', label: 'Chat AI', href: `/sessions/live/${sessionId}/agent` },
+      { id: 'scores', label: 'Punteggi', href: `/sessions/live/${sessionId}/scores` },
+      { id: 'photos', label: 'Foto', href: `/sessions/live/${sessionId}/photos` },
+      { id: 'players', label: 'Giocatori', href: `/sessions/live/${sessionId}/players` },
+    ],
+    activeTabId,
+  });
+
   return (
     <>
       <ContextBarRegistrar alwaysVisible>
         <LiveSessionContextBarConnected sessionId={sessionId} />
       </ContextBarRegistrar>
-      <div className="px-4 py-4">
-        <PageHeader
-          title="Partita"
-          parentHref="/sessions"
-          parentLabel="Sessioni"
-          tabs={[
-            { id: 'partita', label: 'Partita', href: `/sessions/live/${sessionId}` },
-            { id: 'agent', label: 'Chat AI', href: `/sessions/live/${sessionId}/agent` },
-            { id: 'scores', label: 'Punteggi', href: `/sessions/live/${sessionId}/scores` },
-            { id: 'photos', label: 'Foto', href: `/sessions/live/${sessionId}/photos` },
-            { id: 'players', label: 'Giocatori', href: `/sessions/live/${sessionId}/players` },
-          ]}
-          activeTabId={activeTabId}
-        />
-      </div>
       {children}
 
       <OverlayHybrid enableDeepLink>

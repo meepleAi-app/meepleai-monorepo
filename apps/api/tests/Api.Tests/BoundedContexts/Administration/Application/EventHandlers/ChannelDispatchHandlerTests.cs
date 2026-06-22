@@ -101,7 +101,7 @@ public sealed class ChannelDispatchHandlerTests
             .ReturnsAsync(new SlackSendResult(true, null, 200));
 
         var handler = CreateHandler();
-        var evt = CreateEvent(false, false,"slack");
+        var evt = CreateEvent(false, false, "slack");
 
         await handler.Handle(evt, CancellationToken.None);
 
@@ -120,7 +120,7 @@ public sealed class ChannelDispatchHandlerTests
             .ReturnsAsync((AlertChannel?)null);
 
         var handler = CreateHandler();
-        var evt = CreateEvent(false, false,"slack");
+        var evt = CreateEvent(false, false, "slack");
 
         var act = () => handler.Handle(evt, CancellationToken.None);
 
@@ -143,7 +143,7 @@ public sealed class ChannelDispatchHandlerTests
             .ReturnsAsync(channel);
 
         var handler = CreateHandler();
-        var evt = CreateEvent(false, false,"slack");
+        var evt = CreateEvent(false, false, "slack");
 
         await handler.Handle(evt, CancellationToken.None);
 
@@ -166,7 +166,7 @@ public sealed class ChannelDispatchHandlerTests
             .ReturnsAsync(new SlackSendResult(true));
 
         var handler = CreateHandler();
-        var evt = CreateEvent(false, false,"slack", "email");
+        var evt = CreateEvent(false, false, "slack", "email");
 
         await handler.Handle(evt, CancellationToken.None);
 
@@ -192,7 +192,7 @@ public sealed class ChannelDispatchHandlerTests
             .ThrowsAsync(new HttpRequestException("network unreachable"));
 
         var handler = CreateHandler();
-        var evt = CreateEvent(false, false,"slack", "email");
+        var evt = CreateEvent(false, false, "slack", "email");
 
         await handler.Handle(evt, CancellationToken.None);
 
@@ -215,7 +215,7 @@ public sealed class ChannelDispatchHandlerTests
             .ReturnsAsync(channel);
 
         var handler = CreateHandler();
-        var evt = CreateEvent(false, false,"slack");
+        var evt = CreateEvent(false, false, "slack");
 
         await handler.Handle(evt, CancellationToken.None);
 
@@ -228,7 +228,7 @@ public sealed class ChannelDispatchHandlerTests
     public async Task Handle_WhenUnknownChannelName_SkipsWithoutThrowing()
     {
         var handler = CreateHandler();
-        var evt = CreateEvent(false, false,"pagerduty"); // explicitly out of #1840 scope
+        var evt = CreateEvent(false, false, "pagerduty"); // explicitly out of #1840 scope
 
         var act = () => handler.Handle(evt, CancellationToken.None);
 
@@ -245,7 +245,7 @@ public sealed class ChannelDispatchHandlerTests
             .ReturnsAsync(CreateEmailChannel("ops@meepleai.dev", "oncall@meepleai.dev"));
 
         var handler = CreateHandler();
-        var evt = CreateEvent(false, false,"email");
+        var evt = CreateEvent(false, false, "email");
 
         await handler.Handle(evt, CancellationToken.None);
 
@@ -268,7 +268,7 @@ public sealed class ChannelDispatchHandlerTests
             .ThrowsAsync(new InvalidOperationException("smtp 5xx"));
 
         var handler = CreateHandler();
-        var evt = CreateEvent(false, false,"email");
+        var evt = CreateEvent(false, false, "email");
 
         await handler.Handle(evt, CancellationToken.None);
 

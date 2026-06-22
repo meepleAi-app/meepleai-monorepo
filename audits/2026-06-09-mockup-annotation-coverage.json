@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-06-16T11:49:06.112Z",
+  "marker": "MOCKUP-ANNOTATION",
+  "threshold": 80,
+  "denominator": "mappable",
+  "total": 70,
+  "covered": 70,
+  "uncovered": [],
+  "coveragePct": 100
+}

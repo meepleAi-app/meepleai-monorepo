@@ -90,6 +90,8 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameSessionEntity> GameSessions => Set<GameSessionEntity>(); // DDD-PHASE2: GameSession aggregate
     public DbSet<PlayRecordEntity> PlayRecords => Set<PlayRecordEntity>(); // ISSUE-3888: Play history tracking
     public DbSet<RecordPlayerEntity> RecordPlayers => Set<RecordPlayerEntity>(); // ISSUE-3888: Play record players
+    public DbSet<PlayRecordPhotoEntity> PlayRecordPhotos => Set<PlayRecordPhotoEntity>(); // #2436 PR-B: Photos attached to PlayRecords
+    public DbSet<PlayRecordVersionEntity> PlayRecordVersions => Set<PlayRecordVersionEntity>(); // #2437-3: Version history + restore for PlayRecords
     public DbSet<RuleConflictFAQEntity> RuleConflictFAQs => Set<RuleConflictFAQEntity>(); // ISSUE-3761: Conflict resolution FAQ
     public DbSet<GameReviewEntity> GameReviews => Set<GameReviewEntity>(); // ISSUE-4904: Game reviews API
     public DbSet<GameStrategyEntity> GameStrategies => Set<GameStrategyEntity>(); // ISSUE-4903: Game strategies API
@@ -98,6 +100,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<LiveGameSessionEntity> LiveGameSessions => Set<LiveGameSessionEntity>(); // ISSUE-4750: Live game sessions
     public DbSet<GameToolkitEntity> GameToolkits => Set<GameToolkitEntity>(); // ISSUE-4753: Game toolkit configs
     public DbSet<ToolkitVersionEntity> ToolkitVersions => Set<ToolkitVersionEntity>(); // ISSUE-822: Phase 5 marketplace version history
+    public DbSet<AiToolkitSuggestionCacheEntity> AiToolkitSuggestionCache => Set<AiToolkitSuggestionCacheEntity>(); // ADR-069 follow-up (#2383): cache-aside for toolkit suggestions
     public DbSet<BoundedContexts.GameToolkit.Domain.Entities.Toolkit> Toolkits => Set<BoundedContexts.GameToolkit.Domain.Entities.Toolkit>(); // ISSUE-5144: Epic B — user toolkit dashboard
     public DbSet<BoundedContexts.SessionTracking.Domain.Entities.ToolkitSessionState> ToolkitSessionStates => Set<BoundedContexts.SessionTracking.Domain.Entities.ToolkitSessionState>(); // ISSUE-5148: Epic B5 — toolkit session state
     public DbSet<BoundedContexts.SessionTracking.Domain.Entities.GamebookCampaignSession> GamebookCampaignSessions => Set<BoundedContexts.SessionTracking.Domain.Entities.GamebookCampaignSession>(); // Iter 1.A — Libro Game gamebook campaigns
@@ -177,6 +180,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<ReportExecutionEntity> ReportExecutions => Set<ReportExecutionEntity>(); // ISSUE-916: Report execution history
     public DbSet<DocumentCollectionEntity> DocumentCollections => Set<DocumentCollectionEntity>(); // ISSUE-2051: Multi-document collections
     public DbSet<ChatThreadCollectionEntity> ChatThreadCollections => Set<ChatThreadCollectionEntity>(); // ISSUE-2051: Chat-collection junction
+    public DbSet<ChatMessageChunkCitationEntity> ChatMessageChunkCitations => Set<ChatMessageChunkCitationEntity>(); // ISSUE-2324: DEC-D2 distinct-thread citation junction
     public DbSet<ShareLinkEntity> ShareLinks => Set<ShareLinkEntity>(); // ISSUE-2052: Shareable chat links
     public DbSet<InvitationTokenEntity> InvitationTokens => Set<InvitationTokenEntity>(); // ISSUE-124: Admin invitation tokens
     public DbSet<InvitationGameSuggestionEntity> InvitationGameSuggestions => Set<InvitationGameSuggestionEntity>(); // Admin Invitation Flow: game suggestions on invitations
@@ -185,6 +189,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<WaitlistEntryEntity> WaitlistEntries => Set<WaitlistEntryEntity>(); // ISSUE-589: Public Alpha waitlist (Wave A.2)
     public DbSet<NotificationEntity> Notifications => Set<NotificationEntity>(); // ISSUE-2053: User notifications
     public DbSet<SharedGameEntity> SharedGames => Set<SharedGameEntity>(); // ISSUE-2370: Shared game catalog
+    public DbSet<SharedGameTranslationEntity> SharedGameTranslations => Set<SharedGameTranslationEntity>(); // ISSUE-2339: Shared game translations (non-EN)
     public DbSet<GameDesignerEntity> GameDesigners => Set<GameDesignerEntity>(); // ISSUE-2370: Game designers
     public DbSet<GamePublisherEntity> GamePublishers => Set<GamePublisherEntity>(); // ISSUE-2370: Game publishers
     public DbSet<GameCategoryEntity> GameCategories => Set<GameCategoryEntity>(); // ISSUE-2370: Game categories taxonomy
@@ -212,6 +217,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<CatalogSyncRunEntity> CatalogSyncRuns => Set<CatalogSyncRunEntity>(); // #1861: F4-A6 catalog sync run history (BGG / CSV / Manual)
     public DbSet<EnrichmentQueueEntryEntity> EnrichmentQueueEntries => Set<EnrichmentQueueEntryEntity>(); // #1874: queued BGG enrichment requests
     public DbSet<EnrichmentAttemptEntity> EnrichmentAttempts => Set<EnrichmentAttemptEntity>(); // #1874: BGG enrichment outcome history
+    public DbSet<WikidataCoverEnrichmentAttemptEntity> WikidataCoverEnrichmentAttempts => Set<WikidataCoverEnrichmentAttemptEntity>(); // #1823 M9: Wikidata cover enrichment outcome history
     public DbSet<QuickQuestionEntity> QuickQuestions => Set<QuickQuestionEntity>(); // ISSUE-2401: Sprint 3 - Quick questions AI generation
     public DbSet<UserLibraryEntryEntity> UserLibraryEntries => Set<UserLibraryEntryEntity>(); // User Library feature
     public DbSet<WishlistItemEntity> WishlistItems => Set<WishlistItemEntity>(); // ISSUE-3917: Wishlist management
@@ -415,6 +421,7 @@ public class MeepleAiDbContext : DbContext
         // NOTE: Game domain aggregate removed by #1320 (P2c) - modelBuilder.Ignore<Game>() no longer needed
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.PlayRecord>(); // ISSUE-3888
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.RecordPlayer>(); // ISSUE-3888
+        modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.PlayRecordPhoto>(); // #2436 PR-B
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveGameSession>(); // ISSUE-4747
         modelBuilder.Ignore<BoundedContexts.GameToolkit.Domain.Entities.GameToolkit>(); // ISSUE-4753
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.ToolState.ToolState>(); // ISSUE-4754

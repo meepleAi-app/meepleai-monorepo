@@ -327,3 +327,47 @@ describe("validateGates — Phase 2a (#1444) schema", () => {
     expect(result.errors.some((e) => /bot\.phase2a/.test(e))).toBe(true);
   });
 });
+
+describe("phase2b schema (#1445)", () => {
+  function gatesWith(phase2b) {
+    return {
+      version: 1,
+      checks: [],
+      bot: {
+        signature_header: "<!-- release-gate-bot:v1 -->",
+        verdict_emoji: { blocker: "X", warning: "X", informational: "X", unknown: "X" },
+        fallback_unknown: { severity: "warning", owner: "unknown", override_path: "exception-comment" },
+        phase2b,
+      },
+    };
+  }
+
+  it("accepts bot.phase2b.enabled: false + dry_run_mode: true (default ship state)", () => {
+    const result = validateGates(gatesWith({ enabled: false, dry_run_mode: true }));
+    expect(result.ok).toBe(true);
+    expect(result.errors).toEqual([]);
+  });
+
+  it("accepts bot.phase2b.enabled: true + dry_run_mode: false (live mode)", () => {
+    const result = validateGates(gatesWith({ enabled: true, dry_run_mode: false }));
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects bot.phase2b without enabled key", () => {
+    const result = validateGates(gatesWith({ dry_run_mode: true }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((e) => e.includes("phase2b.enabled"))).toBe(true);
+  });
+
+  it("rejects bot.phase2b.enabled non-boolean (e.g. string 'false')", () => {
+    const result = validateGates(gatesWith({ enabled: "false", dry_run_mode: true }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((e) => e.includes("phase2b.enabled") && e.includes("boolean"))).toBe(true);
+  });
+
+  it("rejects bot.phase2b.dry_run_mode missing when phase2b present", () => {
+    const result = validateGates(gatesWith({ enabled: false }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((e) => e.includes("phase2b.dry_run_mode"))).toBe(true);
+  });
+});

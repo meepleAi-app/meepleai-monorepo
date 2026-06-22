@@ -348,6 +348,7 @@
     "filter": "Filtra",
     "import": "Importa",
     "loading": "Caricamento...",
+    "localizedFromEnglish": "{localizedTitle} (tradotto da: {originalTitle})",
     "loginRequired": "Accesso richiesto per continuare.",
     "next": "Avanti",
     "no": "No",
@@ -2111,7 +2112,11 @@
           "emptyResultsHeading": "Nessun risultato",
           "emptyResultsSubtitle": "Prova con un titolo diverso o controlla l'ortografia.",
           "toastAdded": "«{gameName}» aggiunto alla tua libreria!",
-          "toastError": "Impossibile aggiungere «{gameName}». Riprova."
+          "toastError": "Impossibile aggiungere «{gameName}». Riprova.",
+          "emptyManualCta": "Aggiungi manualmente",
+          "blockedMessage": "Hai già «{gameTitle}» in libreria.",
+          "blockedCta": "Vai alla scheda",
+          "blockedDismiss": "Chiudi"
         }
       },
       "catalogPagination": {
@@ -2234,24 +2239,19 @@
         "resultsCountTemplate": "{filtered} di {total} risultati"
       },
       "games": {
-        "badge": "Hub · /hub/games · Pubblico",
+        "badge": "Games · /games · Community",
         "title": "Catalogo giochi della community",
-        "subtitle": "Esplora i giochi indicizzati dalla community. Accedi per aggiungerli alla tua libreria.",
+        "subtitle": "Esplora i giochi indicizzati dalla community.",
         "kpi": {
           "total": "Giochi totali",
           "featured": "In evidenza",
           "recent": "Recenti"
         },
         "emptyTitle": "Catalogo vuoto",
-        "emptyBody": "Nessun gioco pubblico è ancora stato aggiunto al catalogo della community.",
-        "stickyCta": {
-          "title": "Accedi per installare",
-          "description": "Crea un account gratuito per aggiungere giochi alla tua libreria personale.",
-          "buttonLabel": "Accedi"
-        }
+        "emptyBody": "Nessun gioco è ancora stato aggiunto al catalogo della community."
       },
       "agents": {
-        "badge": "Hub · /hub/agents",
+        "badge": "Hub · /agents",
         "title": "Agenti community",
         "subtitle": "Scopri agenti AI condivisi dalla community per i tuoi giochi preferiti.",
         "installLabel": "Installa agente",
@@ -2265,7 +2265,7 @@
         "emptyBody": "La community non ha ancora pubblicato agenti AI."
       },
       "toolkits": {
-        "badge": "Hub · /hub/toolkits",
+        "badge": "Hub · /toolkits",
         "title": "Toolkit community",
         "subtitle": "Toolkit di strumenti condivisi dalla community per arricchire le tue sessioni.",
         "installLabel": "Installa toolkit",
@@ -2349,7 +2349,7 @@
           "statusIdle": "Inattivo",
           "callsTemplate": "{count} call",
           "emptyTitle": "Nessun agente AI attivo.",
-          "emptyCta": "Esplora /hub/agents"
+          "emptyCta": "Esplora /agents"
         },
         "sessions": {
           "title": "Sessioni",
@@ -2843,6 +2843,7 @@
         "rules": "Regole",
         "faqs": "FAQ",
         "sessions": "Partite",
+        "stats": "Statistiche",
         "agents": "Agenti",
         "documents": "Documenti"
       },
@@ -3172,13 +3173,29 @@
         "pauseCta": "Pausa",
         "resumeCta": "Riprendi",
         "endgameCta": "Termina sessione",
-        "exitAriaLabel": "Esci dalla sessione"
+        "exitAriaLabel": "Esci dalla sessione",
+        "elapsedTimeAriaLabel": "Tempo trascorso",
+        "connectionStateConnected": "Connessione attiva",
+        "connectionStateReconnecting": "Riconnessione in corso",
+        "connectionStateFailed": "Connessione persa"
       },
       "turnIndicator": {
         "currentTurnAriaLabel": "Turno {current} di {total}",
         "activePlayerLabel": "{playerName}",
         "yourTurnLabel": "Il tuo turno",
-        "waitingLabel": "Aspetta il tuo turno"
+        "waitingLabel": "Aspetta il tuo turno",
+        "roundRobinHeading": "Turno attivo",
+        "sequentialHeading": "Fasi",
+        "simultaneousHeading": "Tutti giocano",
+        "realtimeHeading": "Tempo reale",
+        "noneHeading": "Gioco libero",
+        "customHeading": "Sequenza custom",
+        "firstPlayerTokenHeading": "Token primo giocatore",
+        "unknownTitle": "Tipo di turno non supportato",
+        "unknownBody": "Aggiorna l'app per supportare questa modalità.",
+        "roundCountTemplate": "Round {current} di {total}",
+        "playOrderHeading": "Ordine di gioco",
+        "firstPlayerTokenHolderTemplate": "Token primo giocatore: {playerName}"
       },
       "roster": {
         "title": "Giocatori",
@@ -3198,7 +3215,52 @@
         "incrementAriaLabel": "Aumenta punteggio di {playerName}",
         "decrementAriaLabel": "Diminuisci punteggio di {playerName}",
         "scoreInputAriaLabel": "Inserisci punteggio per {playerName}",
-        "playerCount": "{count, plural, =0 {Nessun giocatore} =1 {1 giocatore} other {# giocatori}}"
+        "playerCount": "{count, plural, =0 {Nessun giocatore} =1 {1 giocatore} other {# giocatori}}",
+        "loadingLabel": "Caricamento punteggi…",
+        "forbiddenToast": "Permesso negato: solo l'host può modificare i punteggi",
+        "rateLimitedTemplate": "Limite raggiunto, riprova tra {seconds}s",
+        "rateLimitedToast": "Hai aggiornato i punteggi troppo velocemente. Aspetta {seconds}s.",
+        "validationFailedTemplate": "Validazione fallita: {message}",
+        "serverErrorToast": "Errore server, riprova",
+        "networkErrorToast": "Connessione persa, riprova",
+        "retryCta": "Riprova",
+        "scoreAriaTemplate": "Punteggio di {name}",
+        "rankAriaTemplate": "Posizione di {name}",
+        "firstPlaceBadgeLabel": "primo posto",
+        "outcomeAriaTemplate": "{name}: {result}",
+        "completedAriaTemplate": "Completati da {name}",
+        "doneAriaTemplate": "{label} (completato)",
+        "pendingAriaTemplate": "{label} (non completato)",
+        "points": {
+          "title": "Punteggi",
+          "leaderLabel": "in testa",
+          "columns": {
+            "player": "Giocatore",
+            "score": "Punteggio"
+          }
+        },
+        "ranking": {
+          "title": "Posizioni",
+          "columns": {
+            "rank": "Posizione",
+            "player": "Giocatore",
+            "score": "Punteggio"
+          }
+        },
+        "binaryWin": {
+          "title": "Esito",
+          "winLabel": "Vince",
+          "loseLabel": "Perde",
+          "pendingLabel": "Partita in corso"
+        },
+        "objectives": {
+          "title": "Obiettivi",
+          "completedLabel": "Completato",
+          "pendingLabel": "In attesa",
+          "columns": {
+            "player": "Giocatore"
+          }
+        }
       },
       "actionLog": {
         "title": "Eventi",
@@ -3236,9 +3298,12 @@
       },
       "rightColumn": {
         "tabsAriaLabel": "Pannelli sessione",
+        "tabScore": "Score",
+        "tabTurn": "Turni",
+        "tabWidget": "Widget",
+        "tabNotes": "Note",
         "tabTools": "Strumenti",
-        "tabChat": "Chat",
-        "tabNotes": "Note"
+        "tabChat": "Chat"
       },
       "tools": {
         "title": "Strumenti",
@@ -3254,7 +3319,23 @@
         "sendAriaLabel": "Invia messaggio",
         "visibilityPrivate": "Privato",
         "visibilityShared": "Condiviso",
-        "emptyMessage": "Nessun messaggio ancora."
+        "emptyMessage": "Nessun messaggio ancora.",
+        "newMessagesToast": "{count, plural, one {# nuovo messaggio} other {# nuovi messaggi}}",
+        "newMessagesToastAriaLabel": "Nuovi messaggi disponibili — clic per scorrere in fondo"
+      },
+      "chatAgent": {
+        "title": "ChatAgent",
+        "onlineLabel": "Online",
+        "latencyAriaLabel": "Latenza {ms}ms",
+        "agentNameAriaLabel": "Nome agente {name}",
+        "collapsedAriaLabel": "ChatAgent collassato — clic per espandere",
+        "expandedAriaLabel": "ChatAgent espanso — clic per collassare"
+      },
+      "mobile": {
+        "openSheetCta": "Apri pannello",
+        "closeSheetAriaLabel": "Chiudi pannello",
+        "drawerTitle": "Strumenti sessione",
+        "tabsAriaLabel": "Tab strumenti"
       },
       "notes": {
         "title": "Note",
@@ -3275,6 +3356,51 @@
         "winnerLabel": "Vincitore",
         "acknowledgeCta": "Ho capito",
         "viewSummaryCta": "Vedi riepilogo"
+      },
+      "toolkitRenderer": {
+        "title": "Strumenti",
+        "emptyTitle": "Nessun widget attivo",
+        "emptyBody": "Abilita i widget dal toolkit per usarli durante la sessione.",
+        "unknownTitle": "Widget non supportato",
+        "unknownBody": "Aggiorna l'app per supportare questo tipo di widget.",
+        "expandAriaTemplate": "Espandi widget {name}",
+        "collapseAriaTemplate": "Collassa widget {name}",
+        "randomGenerator": {
+          "heading": "Generatore",
+          "rollLabel": "Genera",
+          "lastLabel": "Ultimo"
+        },
+        "turnManager": {
+          "heading": "Gestore turni",
+          "prevLabel": "Prec",
+          "nextLabel": "Succ",
+          "turnOfLabel": "Turno di",
+          "phaseLabel": "Fase"
+        },
+        "scoreTracker": {
+          "heading": "Punteggio",
+          "incrementAriaTemplate": "Aumenta punteggio {name}",
+          "decrementAriaTemplate": "Diminuisci punteggio {name}"
+        },
+        "resourceManager": {
+          "heading": "Risorse",
+          "sharedHeading": "Risorse condivise",
+          "incrementAriaTemplate": "Aumenta {label}",
+          "decrementAriaTemplate": "Diminuisci {label}"
+        },
+        "noteManager": {
+          "heading": "Note",
+          "inputAriaLabel": "Scrivi una nota condivisa",
+          "savingLabel": "Salvataggio…",
+          "savedLabel": "Salvato"
+        },
+        "whiteboard": {
+          "heading": "Lavagna",
+          "toolPenLabel": "Penna",
+          "toolEraserLabel": "Gomma",
+          "toolCircleLabel": "Cerchio",
+          "placeholderLabel": "Area disegno condivisa"
+        }
       }
     },
     "sessionSummary": {
@@ -3353,7 +3479,9 @@
           "continueLive": "Vai alla sessione live"
         },
         "notFound": {
-          "title": "Sessione non trovata",
+          "title": "Nessuna sessione attiva",
+          "description": "La sessione richiesta non esiste o non è ancora stata creata.",
+          "newSession": "Inizia nuova sessione",
           "backToSessions": "Torna alle sessioni"
         }
       }
@@ -3930,6 +4058,19 @@
       "error": {
         "title": "Impossibile caricare le statistiche",
         "description": "Si è verificato un errore di rete. Verifica la connessione e riprova."
+      },
+      "trend": {
+        "title": "Andamento win rate",
+        "empty": "Dati insufficienti per l'andamento",
+        "month": "Mese",
+        "winRate": "Win rate"
+      },
+      "range": {
+        "label": "Filtra periodo",
+        "all": "Tutto",
+        "30d": "30g",
+        "90d": "90g",
+        "12m": "12 mesi"
       }
     },
     "new": {
@@ -3982,6 +4123,10 @@
         "saving": "Salvataggio…",
         "cancel": "Annulla",
         "draft": "Bozza"
+      },
+      "draft": {
+        "saving": "Salvataggio…",
+        "saved": "Bozza salvata {time}"
       },
       "success": {
         "toast": "Partita registrata",
@@ -4127,6 +4272,13 @@
         "deleteToast": "Partita eliminata",
         "deleteToastDescription": "La partita è stata eliminata correttamente"
       },
+      "conflict": {
+        "title": "Modifica concorrente",
+        "description": "Qualcuno ha modificato questa partita mentre la stavi modificando. Ricarica i dati aggiornati o sovrascrivi con le tue modifiche.",
+        "reload": "Ricarica",
+        "overwrite": "Sovrascrivi comunque",
+        "stillConflict": "Anche il tuo salvataggio è stato battuto da un'altra modifica. Riprova."
+      },
       "error": {
         "loadFailed": "Impossibile caricare la partita",
         "updateFailed": "Aggiornamento non riuscito",
@@ -4144,6 +4296,57 @@
         "cancel": "Annulla",
         "back": "← Indietro"
       }
+    },
+    "share": {
+      "button": "Condividi",
+      "dialogTitle": "Condividi partita",
+      "dialogDescription": "Genera un link pubblico per condividere questa partita con chiunque.",
+      "generate": "Genera link",
+      "generating": "Generazione…",
+      "urlLabel": "Link di condivisione",
+      "copy": "Copia",
+      "copied": "Link copiato",
+      "revoke": "Revoca",
+      "revoking": "Revoca…",
+      "notShared": "Non ancora condivisa",
+      "errorGenerate": "Impossibile generare il link. Riprova.",
+      "errorRevoke": "Impossibile revocare il link. Riprova."
+    },
+    "photos": {
+      "sectionTitle": "Foto della partita",
+      "addButton": "Aggiungi foto",
+      "dialogTitle": "Carica foto",
+      "dialogDescription": "JPG, PNG, WebP o HEIC · max 5MB · fino a 10 foto.",
+      "selectLabel": "Seleziona foto",
+      "captionLabel": "Didascalia (opzionale)",
+      "captionPlaceholder": "Es. tabellone finale",
+      "extractScoreLabel": "Estrai il punteggio dalla foto (OCR)",
+      "ocrResultTitle": "Testo rilevato",
+      "uploadCta": "Carica",
+      "uploading": "Caricamento…",
+      "emptyTitle": "Nessuna foto",
+      "emptyDescription": "Carica una foto del tabellone o del tavolo.",
+      "photoAltFallback": "Foto della partita",
+      "dedupToast": "Questa foto è già presente.",
+      "uploadError": "Caricamento foto non riuscito.",
+      "tooLarge": "File troppo grande, massimo 5MB.",
+      "tooMany": "Massimo 10 foto per partita.",
+      "badFormat": "Formato non supportato. Usa JPG, PNG, WebP o HEIC.",
+      "heicFailed": "Conversione HEIC fallita. Riprova con JPEG o PNG.",
+      "lightboxClose": "Chiudi",
+      "lightboxPrev": "Precedente",
+      "lightboxNext": "Successiva"
+    },
+    "history": {
+      "button": "Cronologia",
+      "dialogTitle": "Cronologia modifiche",
+      "dialogDescription": "Ultime 5 versioni precedenti. Puoi ripristinare qualsiasi versione.",
+      "versionLabel": "v{n}",
+      "restore": "Ripristina",
+      "restoring": "Ripristino…",
+      "empty": "Nessuna versione precedente",
+      "restored": "Versione ripristinata",
+      "errorRestore": "Impossibile ripristinare la versione. Riprova."
     },
     "kbGlobale": {
       "hero": {

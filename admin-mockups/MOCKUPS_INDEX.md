@@ -22,6 +22,23 @@
 > The two are equivalent: HTML for browser preview, JSX for codebase clone. The index lists the
 > HTML file as canonical when both exist.
 
+> **State variants (DS-17 Phase 1, #2071)**: a mockup that ships multiple states uses the
+> `<base>-state-NN-<label>.{html,jsx}` pattern with a fixed `NN` slot per state. See the
+> dedicated section ["State variants"](./README.md#state-variants-2071-ds-17-phase-1)
+> in `README.md` for the canonical table. Quick reference:
+>
+> | Suffix | State |
+> |---|---|
+> | _(none — bare `<base>.html`)_ | `01-default` |
+> | `-state-02-empty` | empty / zero-data |
+> | `-state-03-loading` | skeleton / loading |
+> | `-state-04-error` | error / failure |
+> | `-state-05-sse` | live stream (opt-in) |
+> | `-state-06-offline` | offline / PWA fallback (opt-in) |
+>
+> Enforcement: `pnpm lint:mockup-state-naming` fails CI when a `*-state-*` file violates
+> the pattern (missing `NN`, unknown label, or `NN` outside the catalog).
+
 ## Dev fixtures (design system, prototype, tokens)
 
 | File | Type | Note |
@@ -58,7 +75,7 @@
 | `sp3-how-it-works.html` | page-mock | `/how-it-works` |
 | `sp3-join.html` | page-mock | `/join`, `/sessions/join` (reuse) |
 | `sp3-legal.html` | page-mock | `/privacy`, `/terms`, `/cookies`, `/cookie-settings` |
-| `sp3-library-public.html` | page-mock | `/shared-games` (variant), `/library/shared/[token]` |
+| `sp3-library-public.html` | page-mock | `/library-public`, `/shared-games` (variant), `/library/shared/[token]` |
 | `sp3-shared-game-detail.html` | page-mock | `/shared-games/[id]` (Wave A.3, PR #600/605/612/630) |
 | `sp3-shared-games.html` | page-mock | `/shared-games` |
 
@@ -66,18 +83,23 @@
 
 | File | Type | Mapped routes |
 |------|------|---------------|
-| `sp4-add-game-bgg-step.html` | page-mock | `/library/proposals`, `/library/propose` |
 | `sp4-add-game-pdf-dedup.html` | page-mock | `/library/private/add`, `/upload` (partial) |
 | `sp4-agent-detail.html` | page-mock | `/agents/[id]`, `/library/[gameId]/agent` |
 | `sp4-agents-index.html` | page-mock | `/agents`, `/editor/agent-proposals/*` (partial), `/chat/agents/create` (partial) |
 | `sp4-citation-pdf-viewer.html` | component-mock | Citation overlay used by `/chat/[threadId]` and game-chat tabs |
-| `sp4-dashboard.html` | page-mock | `/dashboard` (forward-design Pre-Stage-3, closes #491) |
+| `sp4-dashboard.html` | page-mock (obsolete) | `/dashboard` — historical Pre-Stage-3 mockup, superseded by Asse C #1898 priority-driven design (4 priority sections replace 5 entity sections); tracking #2114 |
 | `sp4-discover.html` | page-mock | `/discover` |
 | `sp4-game-chat-tab.html` | component-mock | Chat tab embedded in `/library/[gameId]/agent`, `/games/[id]` |
 | `sp4-game-detail.html` | page-mock | `/games/[id]`, `/library/[gameId]`, `/private-games/[id]` |
+| `sp4-game-detail-tab-rules.html` | sub-tab placeholder (#2148) | `/games/[id]/rules` — AI placeholder, designer review required |
+| `sp4-game-detail-tab-reviews.html` | sub-tab placeholder (#2148) | `/games/[id]/reviews` — friend-first M1 variant, designer review required |
+| `sp4-game-detail-tab-strategies.html` | sub-tab placeholder (#2148) | `/games/[id]/strategies` — AI placeholder, designer review required |
+| `sp4-game-detail-tab-chat.html` | sub-tab placeholder (#2148) | `/games/[id]/chat` — standalone (was partial via composite), designer review required |
+| `sp4-game-detail-tab-faqs.html` | sub-tab placeholder (#2148) | `/games/[id]/faqs` — game-scoped variant of public FAQ, designer review required |
 | `sp4-game-nights-index.html` | page-mock | `/game-nights` |
 | `sp4-games-index.html` | page-mock | `/games` |
 | `sp4-kb-detail.html` | page-mock | `/knowledge-base/[id]` (deferred — G4 v3 pivot) |
+| `sp4-kb-global.html` | page-mock | `/knowledge-base/global` |
 | `sp4-kb-hub.html` | page-mock | `/knowledge-base` |
 | `sp4-library-desktop.html` | page-mock | `/library` (Wave B.3 done) |
 | `sp4-library-mobile.html` | page-mock | `/library` (mobile <768px variant, SP8 brief 2026-05-30, IA semplificata 3 tab + overflow) |
@@ -159,21 +181,21 @@
 
 ## SP6 — Libro-game (Nanolith dogfood Iter 1+4)
 
-| File | Type | Mapped routes |
-|------|------|---------------|
-| `sp6-libro-game-glossary-editor.jsx` | component-mock | Glossary editor overlay inside `/library/[gameId]/play/[campaignId]/translate` |
-| `sp6-libro-game-index.html` | page-mock | `/gamebook`, `/library/[gameId]/play/[campaignId]` (libro variant) |
-| `sp6-libro-game-photo-upload.html` | page-mock | `/library/[gameId]/play/[campaignId]/translate` (camera step) |
-| `sp6-libro-game-play-session.jsx` | component-mock | Play-session view embedded in libro-game runthrough |
-| `sp6-libro-game-quota-credits.jsx` | component-mock | Quota/credits widget (global modal, not page-level) |
-| `sp6-libro-game-resume-state.html` | page-mock | `/library/[gameId]/play` (resume picker variant) |
-| `sp6-libro-game-translation-viewer.jsx` | component-mock | Translation viewer inside `/library/[gameId]/play/[campaignId]/translate` |
+> **Note 2026-06-08 (#2025 cleanup)**: 3 JSX Sara obsoleti eliminati
+> (`sp6-libro-game-{play-session,translation-viewer,glossary-editor}.jsx`).
+> Canonici sostitutivi: `librogame-runthrough-{play-session,translate-viewer,glossary-editor}.html`
+> (persona Aaron, IA consolidata post #871). Vedi audit
+> `docs/for-developers/audits/2026-06-08-mockup-portfolio-review.md` Cluster B/C/E.
+
+_The `sp6-libro-game-*` family was retired by #2152 (#2025 cleanup completion).
+Canonical equivalents live under `librogame-runthrough-*` (Aaron Iter 1 cluster
+below) and the `/gamebook` family pages render directly from those._
 
 ## SP7 — Game nights
 
 | File | Type | Mapped routes |
 |------|------|---------------|
-| `sp7-game-night-create.html` | page-mock | `/game-nights/new` |
+| `sp7-game-night-new.html` | page-mock | `/game-nights/new` |
 | `sp7-game-night-detail-rsvp.html` | page-mock | `/game-nights/[id]`, `/game-nights/[id]/edit` |
 | `sp7-game-night-live.html` | page-mock | `/game-nights/[id]/live` (issue #487 screen #4+#7) |
 | `sp7-game-night-transition.html` | component-mock | Modal opened from `/game-nights/[id]/live` (issue #487 screen #5) |
@@ -189,15 +211,15 @@
 
 | File | Type | Mapped routes |
 |------|------|---------------|
-| `nanolith-game-night-storyboard.html` | page-mock | `/game-nights/[id]` (storyboard variant) |
-| `nanolith-nav-bottom-mobile.html` | component-mock | Mobile bottom-nav primitive (global) |
-| `nanolith-nav-chat-panel.html` | component-mock | Chat slide-over panel (used globally via `useChatPanel`) |
-| `nanolith-nav-topbar.html` | component-mock | Top-bar primitive (global) |
+| `librogame-game-night-storyboard.html` | page-mock | `/game-nights/[id]` (storyboard variant — was `nanolith-game-night-storyboard.html` pre-rename post-IA consolidation #871, sync inline 2026-06-08 #2025) |
+| `primitive-nav-bottom-mobile.html` | component-mock | Mobile bottom-nav primitive (global, was `nanolith-nav-bottom-mobile.html` pre-#2152) |
+| `primitive-nav-chat-panel.html` | component-mock | Chat slide-over panel (used globally via `useChatPanel`, was `nanolith-nav-chat-panel.html` pre-#2152) |
+| `primitive-nav-topbar.html` | component-mock | Top-bar primitive (global, was `nanolith-nav-topbar.html` pre-#2152) |
 | `librogame-runthrough-encounter-cheatsheet.html` | page-mock | `/library/[gameId]/play/[campaignId]/encounter` (gap-coverage 2026-05-12, PR #1056) |
 | `librogame-runthrough-error-states.html` | component-mock | Trasversale: chat (N1/N2) · translate (N3) · encounter — stream-timeout / OCR-fail / LLM-503 / segmentation-fail (PR #1056) |
 | `librogame-runthrough-game-detail.html` | page-mock | `/library/[gameId]` (libro variant, PR #1037) |
 | `librogame-runthrough-game-onboarding.html` | page-mock | `/library/[gameId]` (libro variant — prereq gate, gap-coverage 2026-05-12, PR #1056) |
-| `librogame-runthrough-glossary-editor.html` | component-mock | Glossary editor (mirror of sp6 jsx) |
+| `librogame-runthrough-glossary-editor.html` | component-mock | Glossary editor (canonical, SP6 jsx mirror eliminato in #2025) |
 | `librogame-runthrough-library-search.html` | component-mock | In-library search overlay (not page-level) |
 | `librogame-runthrough-play-session.html` | page-mock | `/library/[gameId]/play/[campaignId]` (4 stati v1 congelati + 3 stati SP8 companion: state-05 diary, state-06 paragrafi-drawer, state-07 end-campaign, brief 2026-05-30; jsx twin nuovo con 3 lab interattivi) |
 | `librogame-runthrough-quota-credits.html` | component-mock | Quota/credits overlay (global) |
@@ -212,9 +234,14 @@
 | Type | Count |
 |------|------:|
 | page-mock | 67 |
-| component-mock | 51 |
+| component-mock | 48 |
 | dev-fixture | 12 |
-| **Total** | **130** |
+| **Total** | **127** |
+
+> **Updated 2026-06-08** (#2025): 3 component-mock JSX Sara obsoleti eliminati
+> (`sp6-libro-game-{play-session,translation-viewer,glossary-editor}.jsx`).
+> Companion: file `nanolith-game-night-storyboard.html` rinominato in
+> `librogame-game-night-storyboard.html` (sync con filesystem post-IA #871).
 
 > The `*.jsx` twins of `*.html` files are not double-counted (the JSX is the
 > implementation companion of the HTML reference). Listing them separately

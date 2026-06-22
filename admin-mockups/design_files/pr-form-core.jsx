@@ -1,5 +1,5 @@
 /* MeepleAI SP4 — /play-records form CORE (shared by -new e -edit)
-   Modello: sp7-game-night-create — wizard 3-step mobile + split-form desktop
+   Modello: sp7-game-night-new — wizard 3-step mobile + split-form desktop
    (form 8-col + live preview record-card 4-col).
    Entity dominante: session 🎯. game picker = game 🎲, giocatori = player 👤.
 

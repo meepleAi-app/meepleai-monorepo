@@ -21,15 +21,13 @@ function render(ui: React.ReactElement): RenderResult {
 }
 
 // jsdom doesn't implement URL.createObjectURL / revokeObjectURL.
-// Stub them so <img src={...}> and revoke-on-unmount work in tests.
-if (typeof URL.createObjectURL === 'undefined') {
-  // @ts-expect-error — assign for jsdom
-  URL.createObjectURL = () => 'blob:mock';
-}
-if (typeof URL.revokeObjectURL === 'undefined') {
-  // @ts-expect-error — assign for jsdom
-  URL.revokeObjectURL = () => {};
-}
+// Stub them unconditionally: vitest v4 exposes the Node.js native
+// URL.createObjectURL which strictly requires a real Blob instance,
+// but fake-indexeddb returns plain objects on retrieval. Always replace.
+// @ts-expect-error — assign for jsdom / vitest v4 compat
+URL.createObjectURL = () => 'blob:mock';
+// @ts-expect-error — assign for jsdom / vitest v4 compat
+URL.revokeObjectURL = () => {};
 
 function makeFakeFile(name = 'snap.png'): File {
   return new File([new Blob(['fake'], { type: 'image/png' })], name, { type: 'image/png' });

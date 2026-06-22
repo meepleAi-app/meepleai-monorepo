@@ -10,6 +10,12 @@ export interface TrendingGame {
   viewCount: number;
   libraryAddCount: number;
   playCount: number;
+  /**
+   * Issue #2290 — mirrors `SharedGameDto.hasKnowledgeBase`. True when the
+   * game has at least one indexed KB. Drives the "KB" / AI-Ready badge on
+   * the Discover Row 1 card (Block B of #2289).
+   */
+  hasKnowledgeBase: boolean;
 }
 
 export async function getTrendingGames(limit = 10): Promise<TrendingGame[]> {

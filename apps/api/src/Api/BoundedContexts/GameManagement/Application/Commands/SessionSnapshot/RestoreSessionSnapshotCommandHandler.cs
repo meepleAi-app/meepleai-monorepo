@@ -24,17 +24,20 @@ internal sealed class RestoreSessionSnapshotCommandHandler
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly IMediator _mediator;
     private readonly TimeProvider _timeProvider;
+    private readonly IUnitOfWork _unitOfWork;
 
     public RestoreSessionSnapshotCommandHandler(
         ISessionSnapshotRepository snapshotRepository,
         ILiveSessionRepository sessionRepository,
         IMediator mediator,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IUnitOfWork unitOfWork)
     {
         _snapshotRepository = snapshotRepository ?? throw new ArgumentNullException(nameof(snapshotRepository));
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task<SessionSnapshotDto> Handle(
@@ -85,6 +88,7 @@ internal sealed class RestoreSessionSnapshotCommandHandler
         session.UpdateGameState(restoredGameState, _timeProvider);
 
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return preRestoreSnapshot;
     }

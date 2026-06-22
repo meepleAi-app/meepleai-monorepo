@@ -356,7 +356,15 @@ internal sealed class SlackNotificationProcessorJob : IJob
                         connection.Id, item.RecipientUserId);
                 }
 
-                // Create in-app notification about the disconnection
+                // Create in-app notification about the disconnection.
+                //
+                // Issue #2392 KEEP rationale: this path intentionally keeps the
+                // legacy AddAsync + manual SaveChanges pattern because the outer
+                // SaveChanges (line below) atomically commits BOTH the Slack
+                // connection deactivation AND the in-app notification. Splitting
+                // them via AddAndCommitAsync would risk a worse failure mode
+                // (connection deactivated, user never notified) than the residual
+                // phantom-broadcast risk we accept here.
                 var notification = new Notification(
                     id: Guid.NewGuid(),
                     userId: item.RecipientUserId.Value,

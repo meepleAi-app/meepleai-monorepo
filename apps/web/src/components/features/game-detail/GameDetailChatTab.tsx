@@ -43,11 +43,30 @@ export interface GameDetailChatTabProps {
   /** Max messages rendered (default 3). */
   readonly maxItems?: number;
   readonly className?: string;
+  /**
+   * When true (Block A of #2289 / #2247), the "Open chat" CTA is rendered as a
+   * disabled `<button>` instead of a `<Link>` and the `disabledTitle` tooltip
+   * explains why. Used on `/games/[id]` when the SharedGame has no indexed KB
+   * yet, so users can see the CTA but understand it is not reachable.
+   */
+  readonly disabled?: boolean;
+  readonly disabledTitle?: string;
 }
 
 export function GameDetailChatTab(props: GameDetailChatTabProps): ReactElement {
-  const { messages, openHref, labels, maxItems = 3, className } = props;
+  const {
+    messages,
+    openHref,
+    labels,
+    maxItems = 3,
+    className,
+    disabled = false,
+    disabledTitle,
+  } = props;
   const rows = messages.slice(0, maxItems);
+
+  const ctaClass =
+    'rounded-md border border-border bg-transparent px-2.5 py-1 font-display text-[12px] font-extrabold text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
   return (
     <section
@@ -56,13 +75,30 @@ export function GameDetailChatTab(props: GameDetailChatTabProps): ReactElement {
     >
       <div className="mb-3.5 flex items-center justify-between gap-3">
         <h3 className="font-display text-[15px] font-extrabold text-foreground">{labels.title}</h3>
-        <Link
-          href={openHref}
-          data-slot="game-detail-chat-tab-open-cta"
-          className="rounded-md border border-border bg-transparent px-2.5 py-1 font-display text-[12px] font-extrabold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          {labels.openCta}
-        </Link>
+        {disabled ? (
+          <button
+            type="button"
+            disabled
+            aria-disabled="true"
+            title={disabledTitle}
+            data-slot="game-detail-chat-tab-open-cta"
+            data-disabled="true"
+            className={clsx(
+              ctaClass,
+              'cursor-not-allowed text-muted-foreground opacity-60 hover:bg-transparent'
+            )}
+          >
+            {labels.openCta}
+          </button>
+        ) : (
+          <Link
+            href={openHref}
+            data-slot="game-detail-chat-tab-open-cta"
+            className={clsx(ctaClass, 'hover:bg-muted')}
+          >
+            {labels.openCta}
+          </Link>
+        )}
       </div>
 
       {rows.length === 0 ? (

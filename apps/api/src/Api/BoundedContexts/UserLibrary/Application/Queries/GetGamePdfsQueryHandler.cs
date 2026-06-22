@@ -11,6 +11,8 @@ namespace Api.BoundedContexts.UserLibrary.Application.Queries;
 /// Handler for GetGamePdfsQuery.
 /// Retrieves all PDFs associated with a game from the pdf_documents table.
 /// Issue #3152: Game Detail Split View - PDF selector support
+/// Issue #1529: Enriched with <c>ProcessingStatus</c> (FE-friendly badge) and
+/// per-PDF <c>ChunkCount</c> (PostgreSQL <c>COUNT(*)</c> grouped on <c>PdfDocumentId</c>).
 /// </summary>
 internal class GetGamePdfsQueryHandler : IRequestHandler<GetGamePdfsQuery, List<GamePdfDto>>
 {
@@ -60,6 +62,18 @@ internal class GetGamePdfsQueryHandler : IRequestHandler<GetGamePdfsQuery, List<
             .OrderByDescending(p => p.UploadedAt)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
+        // Issue #1529: Bulk-fetch chunk counts grouped by PdfDocumentId so we avoid N+1.
+        var pdfIds = entities.Select(p => p.Id).ToList();
+        var chunkCountByPdfId = pdfIds.Count == 0
+            ? new Dictionary<Guid, int>()
+            : await _db.TextChunks
+                .AsNoTracking()
+                .Where(tc => pdfIds.Contains(tc.PdfDocumentId))
+                .GroupBy(tc => tc.PdfDocumentId)
+                .Select(g => new { PdfId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.PdfId, x => x.Count, cancellationToken)
+                .ConfigureAwait(false);
+
         var pdfs = entities.Select(p => new GamePdfDto(
             Id: p.Id.ToString(),
             Name: p.FileName.Replace(".pdf", "", StringComparison.OrdinalIgnoreCase),
@@ -68,7 +82,9 @@ internal class GetGamePdfsQueryHandler : IRequestHandler<GetGamePdfsQuery, List<
             UploadedAt: p.UploadedAt,
             Source: p.PrivateGameId != null ? "Custom" : "Catalog",
             Language: p.Language,
-            ProcessingState: p.ProcessingState
+            ProcessingState: p.ProcessingState,
+            ProcessingStatus: MapProcessingStatus(p.ProcessingState),
+            ChunkCount: chunkCountByPdfId.TryGetValue(p.Id, out var count) ? count : 0
         )).ToList();
 
         _logger.LogInformation(
@@ -76,5 +92,30 @@ internal class GetGamePdfsQueryHandler : IRequestHandler<GetGamePdfsQuery, List<
             pdfs.Count, request.GameId, request.UserId);
 
         return pdfs;
+    }
+
+    /// <summary>
+    /// Issue #1529: Maps the granular 7-state pipeline value (Pending|Uploading|Extracting|
+    /// Chunking|Embedding|Indexing|Ready|Failed) to the FE badge contract
+    /// (<c>ready|indexing|stale|failed</c>).
+    /// <para>
+    /// <c>stale</c> is reserved for a future "PDF mtime &gt; last-reindex" detection and is
+    /// NOT emitted by this iteration; #1529 explicitly defers staleness checks to a separate
+    /// follow-up (would require comparing <c>PdfDocumentEntity.UpdatedAt</c> against
+    /// <c>VectorDocument.IndexedAt</c> with a tolerance policy).
+    /// </para>
+    /// </summary>
+    private static string MapProcessingStatus(string? processingState)
+    {
+        if (string.IsNullOrWhiteSpace(processingState))
+            return "indexing";
+
+        return processingState.Trim() switch
+        {
+            "Ready" => "ready",
+            "Failed" => "failed",
+            // Pending | Uploading | Extracting | Chunking | Embedding | Indexing → "indexing"
+            _ => "indexing"
+        };
     }
 }

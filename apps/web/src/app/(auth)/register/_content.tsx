@@ -15,7 +15,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from '@/hooks/useTranslation';
 import { trackSignUp } from '@/lib/analytics/flywheel-events';
 import { useApiClient } from '@/lib/api/context';
-import { logger } from '@/lib/logger';
 
 // ============================================================================
 // Types
@@ -53,6 +52,10 @@ export function RegisterPageContent() {
   const [error, setError] = useState<string>('');
 
   const oauthDisabled = searchParams?.get('oauth_disabled') === 'true';
+  // Audit (#2168): register does NOT read ?from=. Post-registration redirect is
+  // hardcoded to /verification-pending (line below in handleRegister). If a
+  // ?from= param is ever introduced here, use assertSafeRelativeOrFallback from
+  // @/lib/url-safety before passing it to router.push().
 
   // Fetch registration mode on mount
   useEffect(() => {
@@ -94,11 +97,13 @@ export function RegisterPageContent() {
         // (matches AuthModal.handleRegister behavior)
         await new Promise(resolve => setTimeout(resolve, 100));
 
+        // #2168 audit: hardcoded redirect target — see header comment.
         await router.push(`/verification-pending?email=${encodeURIComponent(data.email)}`);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : t('auth.register.genericError');
         setError(errorMessage);
-        logger.error('Registration failed:', err);
+        // Issue #2171: HttpClient already calls logApiError on failed responses —
+        // re-logging here produced duplicate console.error noise.
       } finally {
         setIsAuthenticating(false);
       }

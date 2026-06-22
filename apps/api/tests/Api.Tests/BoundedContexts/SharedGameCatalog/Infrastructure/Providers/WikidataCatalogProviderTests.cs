@@ -1,6 +1,7 @@
 using System.Net;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Providers;
+using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -28,7 +29,7 @@ public sealed class WikidataCatalogProviderTests
     [Fact]
     public void Name_Equals_Wikidata()
     {
-        var provider = new WikidataCatalogProvider(MakeClient(HttpStatusCode.OK, "{}"), NullLogger<WikidataCatalogProvider>.Instance);
+        var provider = new WikidataCatalogProvider(MakeClient(HttpStatusCode.OK, "{}"), NullLogger<WikidataCatalogProvider>.Instance, Mock.Of<IWikimediaRateLimiter>());
         provider.Name.Should().Be("wikidata");
     }
 
@@ -47,7 +48,7 @@ public sealed class WikidataCatalogProviderTests
           "playingTimeMinutes":{"value": "60"}
         }]}}
         """;
-        var provider = new WikidataCatalogProvider(MakeClient(HttpStatusCode.OK, body), NullLogger<WikidataCatalogProvider>.Instance);
+        var provider = new WikidataCatalogProvider(MakeClient(HttpStatusCode.OK, body), NullLogger<WikidataCatalogProvider>.Instance, Mock.Of<IWikimediaRateLimiter>());
         var result = await provider.FetchAsync(new CatalogProviderQuery(BggId: 13, null, null), default);
 
         result.Success.Should().BeTrue();
@@ -66,7 +67,7 @@ public sealed class WikidataCatalogProviderTests
     public async Task FetchAsync_NoResults_ReturnsEmptyWithError()
     {
         const string body = """{"results":{"bindings":[]}}""";
-        var provider = new WikidataCatalogProvider(MakeClient(HttpStatusCode.OK, body), NullLogger<WikidataCatalogProvider>.Instance);
+        var provider = new WikidataCatalogProvider(MakeClient(HttpStatusCode.OK, body), NullLogger<WikidataCatalogProvider>.Instance, Mock.Of<IWikimediaRateLimiter>());
         var result = await provider.FetchAsync(new CatalogProviderQuery(99999, null, null), default);
 
         result.Success.Should().BeFalse();
@@ -76,7 +77,7 @@ public sealed class WikidataCatalogProviderTests
     [Fact]
     public async Task FetchAsync_HttpError_ReturnsErrorMessage()
     {
-        var provider = new WikidataCatalogProvider(MakeClient(HttpStatusCode.InternalServerError, "boom"), NullLogger<WikidataCatalogProvider>.Instance);
+        var provider = new WikidataCatalogProvider(MakeClient(HttpStatusCode.InternalServerError, "boom"), NullLogger<WikidataCatalogProvider>.Instance, Mock.Of<IWikimediaRateLimiter>());
         var result = await provider.FetchAsync(new CatalogProviderQuery(13, null, null), default);
 
         result.Success.Should().BeFalse();
@@ -86,7 +87,7 @@ public sealed class WikidataCatalogProviderTests
     [Fact]
     public async Task FetchAsync_AllNullInputs_ReturnsMissingParametersError()
     {
-        var provider = new WikidataCatalogProvider(MakeClient(HttpStatusCode.OK, "{}"), NullLogger<WikidataCatalogProvider>.Instance);
+        var provider = new WikidataCatalogProvider(MakeClient(HttpStatusCode.OK, "{}"), NullLogger<WikidataCatalogProvider>.Instance, Mock.Of<IWikimediaRateLimiter>());
 
         var result = await provider.FetchAsync(new CatalogProviderQuery(null, null, null), default);
 
@@ -97,7 +98,7 @@ public sealed class WikidataCatalogProviderTests
     [Fact]
     public async Task FetchAsync_InvalidWikidataQid_ReturnsValidationError()
     {
-        var provider = new WikidataCatalogProvider(MakeClient(HttpStatusCode.OK, "{}"), NullLogger<WikidataCatalogProvider>.Instance);
+        var provider = new WikidataCatalogProvider(MakeClient(HttpStatusCode.OK, "{}"), NullLogger<WikidataCatalogProvider>.Instance, Mock.Of<IWikimediaRateLimiter>());
 
         var result = await provider.FetchAsync(new CatalogProviderQuery(null, "Q123} . ?x ?y ?z", null), default);
 
@@ -115,7 +116,7 @@ public sealed class WikidataCatalogProviderTests
           "gameLabel":   {"value": "Catan"}
         }]}}
         """;
-        var provider = new WikidataCatalogProvider(MakeClient(HttpStatusCode.OK, body), NullLogger<WikidataCatalogProvider>.Instance);
+        var provider = new WikidataCatalogProvider(MakeClient(HttpStatusCode.OK, body), NullLogger<WikidataCatalogProvider>.Instance, Mock.Of<IWikimediaRateLimiter>());
 
         var result = await provider.FetchAsync(new CatalogProviderQuery(null, "Q98056728", null), default);
 

@@ -22,6 +22,16 @@ import noHardcodedColorUtility from "./eslint-rules/no-hardcoded-color-utility.j
 // API proxy guard — apiClient.{get,post,...} paths must start with /api/v1/
 // (post-#1229 regression preventer; rationale in rule docstring)
 import apiClientV1Prefix from "./eslint-rules/api-client-v1-prefix.js";
+import noBggHost from "./eslint-rules/no-bgg-host.js";
+// Game detail orphan routes guard — ADR-061 removed
+// /games/[id]/{reviews,strategies,chat}; restoration requires a follow-up ADR.
+import noGameDetailOrphanRoutes from "./eslint-rules/no-game-detail-orphan-routes.js";
+// Session live store scores deprecation guard — Issue #2389 Block A.7
+// Forbids direct reads of `useLiveSessionStore(s => s.scores)`; consumers
+// must use `useSessionScores()` from @/lib/domain-hooks/useSessionScores.
+import noStoreScoresDirect from "./eslint-rules/no-store-scores-direct.js";
+// Issue #2339 sub-PR 2/3 — encourage useGameTitle() adoption (warn-only).
+import preferUseGameTitle from "./eslint-rules/prefer-use-game-title.js";
 
 export default [
   {
@@ -105,6 +115,14 @@ export default [
           "no-inline-hsl-v2": noInlineHslV2,
           "no-hardcoded-color-utility": noHardcodedColorUtility,
           "api-client-v1-prefix": apiClientV1Prefix,
+          // Issue #2123 — BGG ToS compliance hard ban on user-side BGG asset traffic.
+          "no-bgg-host": noBggHost,
+          // ADR-061 — game detail orphan routes removed; re-scaffolding requires a follow-up ADR.
+          "no-game-detail-orphan-routes": noGameDetailOrphanRoutes,
+          // Issue #2389 Block A.7 — useLiveSessionStore.scores is deprecated; use useSessionScores() instead.
+          "no-store-scores-direct": noStoreScoresDirect,
+          // Issue #2339 sub-PR 2/3 — encourage useGameTitle() adoption (warn-only per DEC-FE-8).
+          "prefer-use-game-title": preferUseGameTitle,
         },
       },
     },
@@ -259,6 +277,29 @@ export default [
       // class of bug fixed in PR #1229 (refs #1160). Rationale in the rule's
       // docstring at eslint-rules/api-client-v1-prefix.js.
       "local/api-client-v1-prefix": "error",
+
+      // Issue #2123 — BGG ToS compliance: NO BGG hostname literals in user-side
+      // source. ADR-059 §5 forbids user-side asset traffic to BoardGameGeek.
+      // Admin server-to-server callers, Storybook fixtures, E2E tests, and the
+      // BGG host blocklist itself (cover-utils.ts) get path-based overrides
+      // further down in this config — see the `local/no-bgg-host: off` blocks.
+      "local/no-bgg-host": "error",
+      // ADR-061 — /games/[id]/{reviews,strategies,chat} were removed; restoration
+      // requires a follow-up ADR superseding ADR-061 (not gap-fix scaffolding).
+      "local/no-game-detail-orphan-routes": "error",
+      // Issue #2389 Block A.7 — `useLiveSessionStore(s => s.scores)` is the legacy
+      // store-level read; new consumers must use `useSessionScores()` from
+      // @/lib/domain-hooks/useSessionScores. Severity is `warn` so the legacy
+      // call in ScoreBoard.tsx surfaces without breaking CI; Block C will
+      // migrate ScoreBoard, promote to `error`, then remove the store field.
+      // Block C promotion 2026-06-19: ScoreBoard migrated, store.scores removed; severity raised to `error`.
+      "local/no-store-scores-direct": "error",
+      // Issue #2339 sub-PR 2/3 — surfaces direct `game.title` JSX access that
+      // bypasses `useGameTitle()` locale + source priority resolution. WARN-only
+      // per DEC-FE-8 until 14gg of trajectory verde on main-dev; follow-up PR
+      // promotes to `error`. Allow-list: aria-label values (DEC-FE-9), test
+      // files, stories, lib/i18n/.
+      "local/prefer-use-game-title": "warn",
     },
     settings: {
       react: {
@@ -645,20 +686,75 @@ export default [
       "local/no-hardcoded-color-utility": "error",
     },
   },
-  // StatePreviewProvider tree-shake guarantee (Asse B WP5 T5, Issue #1897):
-  // Direct import of state-preview-provider bypasses the dynamic({ssr:false})
-  // loader, which is the mechanism that guarantees the provider implementation
-  // tree-shakes out of production chunks (DEC-4 + CRIT-5). Consumers MUST use
-  // the barrel `@/components/ui/state-preview`, which re-exports the loader.
+  // Issue #2123 — BGG ToS compliance path-based overrides for local/no-bgg-host.
   //
-  // Scope excludes the state-preview folder itself: (a) the loader is the only
-  // sanctioned import site of the provider impl, (b) unit tests must wrap the
-  // SUT in the provider tree directly without dynamic indirection.
+  // The rule is `error` everywhere by default. The following file globs are the
+  // ONLY legitimate places where a BGG host literal may appear:
   //
-  // Spec: docs/superpowers/plans/2026-06-04-asse-b-ui-shell-pattern.md WP5 T5
+  //   1. Storybook fixtures (*.stories.tsx, *.story.tsx)
+  //      Design-review-only, not runtime. Tracked for cleanup in follow-up F2
+  //      (spec §9). Re-enabling the rule here would require regenerating ~10
+  //      storybook fixtures with new mock cover URLs — a separate concern.
+  //
+  //   2. Admin server-to-server BGG paths
+  //      `src/app/admin/(dashboard)/**` and `src/components/admin/**` host the
+  //      admin BGG XML API consumer (ADR-059 §2). The BGG fetcher legitimately
+  //      surfaces BGG URLs in admin-only UI (e.g. BggSearchPanel) for the admin
+  //      to manually pick a game to import. Never user-facing.
+  //
+  //   3. E2E test suite (`e2e/**`)
+  //      Tests assert the admin BGG-import flow and the user-side BGG ban; both
+  //      need to reference BGG hosts literally.
+  //
+  //   4. The BGG host blocklist itself (lib/games/cover-utils.ts)
+  //      The `BLOCKED_IMAGE_HOSTS` array contains the BGG hostnames as data,
+  //      not as URLs to render. Handled with per-line eslint-disable comments
+  //      inside the file rather than a path override, to keep the override
+  //      blast radius minimal.
+  {
+    files: [
+      "**/*.stories.{ts,tsx,js,jsx}",
+      "**/*.story.{ts,tsx,js,jsx}",
+      "src/app/admin/**/*.{ts,tsx}",
+      "src/components/admin/**/*.{ts,tsx}",
+      "e2e/**/*.{ts,tsx,js,jsx}",
+    ],
+    rules: {
+      "local/no-bgg-host": "off",
+    },
+  },
+  // Composite no-restricted-imports block for src/**.
+  //
+  // 1. StatePreviewProvider tree-shake guarantee (Asse B WP5 T5, Issue #1897):
+  //    Direct import of state-preview-provider bypasses the
+  //    dynamic({ssr:false}) loader, which is the mechanism that guarantees the
+  //    provider implementation tree-shakes out of production chunks
+  //    (DEC-4 + CRIT-5). Consumers MUST use the barrel
+  //    `@/components/ui/state-preview`, which re-exports the loader.
+  //
+  //    Scope excludes the state-preview folder itself: (a) the loader is the
+  //    only sanctioned import site of the provider impl, (b) unit tests must
+  //    wrap the SUT in the provider tree directly without dynamic indirection.
+  //
+  //    Spec: docs/superpowers/plans/2026-06-04-asse-b-ui-shell-pattern.md WP5 T5
+  //
+  // 2. Legacy PageHeader deprecation (Issue #2158 Fix #2 bis):
+  //    `components/layout/PageHeader.tsx` was the pre-Asse-B header
+  //    (h1 + tabs + primaryAction). It is superseded by `useMiniNavConfig`
+  //    (MiniNavSlot) for breadcrumb+tabs and by inline page-specific headers
+  //    for CTAs. The component is kept around as `@deprecated` so the type
+  //    surface does not vanish before any in-flight branch can rebase, but
+  //    new imports are forbidden so the migration cannot regress.
+  //
+  //    Scope excludes the PageHeader folder itself (the component still
+  //    exports its types) and its own test file.
   {
     files: ["src/**/*.{ts,tsx}"],
-    ignores: ["src/components/ui/state-preview/**"],
+    ignores: [
+      "src/components/ui/state-preview/**",
+      "src/components/layout/PageHeader.tsx",
+      "src/__tests__/components/layout/PageHeader.test.tsx",
+    ],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -671,6 +767,14 @@ export default [
               ],
               message:
                 "Use '@/components/ui/state-preview' barrel (which uses dynamic({ssr:false}) for tree-shake guarantee). Direct import of state-preview-provider bypasses dev-only isolation.",
+            },
+            {
+              group: [
+                "**/components/layout/PageHeader",
+                "@/components/layout/PageHeader",
+              ],
+              message:
+                "PageHeader is deprecated (#2158). Use `useMiniNavConfig` for breadcrumb+tabs and an inline page-specific header for the CTA. See docs/for-developers/frontend or the Fix #2 codemod in #2158 for examples.",
             },
           ],
         },

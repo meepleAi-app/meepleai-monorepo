@@ -8,6 +8,7 @@ import { useSearchParams } from 'next/navigation';
 
 import { CommentThread } from '@/components/comments';
 import { DiffViewerEnhanced } from '@/components/diff';
+import { HubPageContainer } from '@/components/layout/PageContainer';
 import { VersionTimeline, VersionTimelineFilters } from '@/components/versioning';
 import { api } from '@/lib/api';
 import type { RuleSpecHistory, RuleSpecDiff } from '@/lib/api/schemas';
@@ -220,7 +221,7 @@ function VersionHistoryContent() {
   }
 
   return (
-    <main className="p-6 font-sans max-w-[1600px] mx-auto">
+    <HubPageContainer className="p-6 font-sans">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="m-0">Storico Versioni RuleSpec</h1>
@@ -318,7 +319,9 @@ function VersionHistoryContent() {
                   <div className="text-xs text-muted-foreground mb-2">
                     {new Date(version.createdAt).toLocaleString()}
                   </div>
-                  <div className="text-xs text-muted-foreground mb-2">{version.atomCount} regole</div>
+                  <div className="text-xs text-muted-foreground mb-2">
+                    {version.atomCount} regole
+                  </div>
                   {authUser.role.toLowerCase() === 'admin' ||
                   authUser.role.toLowerCase() === 'superadmin' ||
                   authUser.role.toLowerCase() === 'editor' ? (
@@ -417,12 +420,14 @@ function VersionHistoryContent() {
                 )}
               </>
             ) : (
-              <p className="text-muted-foreground">Seleziona due versioni per visualizzare le differenze</p>
+              <p className="text-muted-foreground">
+                Seleziona due versioni per visualizzare le differenze
+              </p>
             )}
           </div>
         </div>
       )}
-    </main>
+    </HubPageContainer>
   );
 }
 

@@ -85,6 +85,7 @@ import {
   type PageThumbLabels,
   type StepIndicatorLabels,
 } from '@/components/features/gamebook';
+import { DetailPageContainer } from '@/components/layout/PageContainer';
 import { useBggSearch } from '@/hooks/queries/useBggSearch';
 import { useGames } from '@/hooks/queries/useGames';
 import { useAdminRole } from '@/hooks/useAdminRole';
@@ -816,10 +817,10 @@ export function GamebookUploadView(): ReactElement {
 
   // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <div
+    <DetailPageContainer
       data-slot="gamebook-upload-view"
       data-ui-state={cell.kind}
-      className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-4xl flex-col"
+      className="min-h-[calc(100vh-4rem)] p-0"
     >
       <StepIndicator currentStep={currentStep} labels={stepIndicatorLabels} />
 
@@ -875,7 +876,7 @@ export function GamebookUploadView(): ReactElement {
         onDismiss={handleCancelDismiss}
         labels={cancelModalLabels}
       />
-    </div>
+    </DetailPageContainer>
   );
 }
 

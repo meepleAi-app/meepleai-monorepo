@@ -75,7 +75,8 @@ internal class NotificationPreferencesRepository : RepositoryBase, INotification
             entity.SlackEnabled, entity.SlackOnDocumentReady, entity.SlackOnDocumentFailed,
             entity.SlackOnRetryAvailable, entity.SlackOnGameNightInvitation,
             entity.SlackOnGameNightReminder, entity.SlackOnShareRequestCreated,
-            entity.SlackOnShareRequestApproved, entity.SlackOnBadgeEarned
+            entity.SlackOnShareRequestApproved, entity.SlackOnBadgeEarned,
+            entity.TimeZone, entity.QuietHoursStart, entity.QuietHoursEnd
         );
     }
 
@@ -110,7 +111,10 @@ internal class NotificationPreferencesRepository : RepositoryBase, INotification
             SlackOnGameNightReminder = domain.SlackOnGameNightReminder,
             SlackOnShareRequestCreated = domain.SlackOnShareRequestCreated,
             SlackOnShareRequestApproved = domain.SlackOnShareRequestApproved,
-            SlackOnBadgeEarned = domain.SlackOnBadgeEarned
+            SlackOnBadgeEarned = domain.SlackOnBadgeEarned,
+            TimeZone = domain.TimeZone,
+            QuietHoursStart = domain.QuietHoursStart,
+            QuietHoursEnd = domain.QuietHoursEnd
         };
     }
 }

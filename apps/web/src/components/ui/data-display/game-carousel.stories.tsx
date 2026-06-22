@@ -38,7 +38,7 @@ const MOCK_GAMES: CarouselGame[] = [
     title: 'Gloomhaven',
     subtitle: 'Cephalofair Games',
     imageUrl:
-      'https://cf.geekdo-images.com/sZYp_3BTDGjh2unaZfZmuA__imagepage/img/pBaOL7vV402ZGRoKKDOGBmCLdUs=/fit-in/900x600/filters:no_upscale():strip_icc()/pic2437871.jpg',
+      'https://placehold.co/600x400/4f46e5/ffffff?text=cover-2b6d09):strip_icc()/pic2437871.jpg',
     rating: 8.7,
     ratingMax: 10,
     metadata: [
@@ -52,7 +52,7 @@ const MOCK_GAMES: CarouselGame[] = [
     title: 'Brass: Birmingham',
     subtitle: 'Roxley Games',
     imageUrl:
-      'https://cf.geekdo-images.com/x3zxjr-Vw5iU4yDPg70Jgw__imagepage/img/giNUMut4HAl-zWyQkGG0YchmuLI=/fit-in/900x600/filters:no_upscale():strip_icc()/pic3490053.jpg',
+      'https://placehold.co/600x400/4f46e5/ffffff?text=cover-4e9676):strip_icc()/pic3490053.jpg',
     rating: 8.6,
     ratingMax: 10,
     metadata: [
@@ -66,7 +66,7 @@ const MOCK_GAMES: CarouselGame[] = [
     title: 'Ark Nova',
     subtitle: 'Capstone Games',
     imageUrl:
-      'https://cf.geekdo-images.com/SoU8p28Sk1s8MSvoM4N8pQ__imagepage/img/qR1EvTSNPjDa-pNPGxU9HY2oKfs=/fit-in/900x600/filters:no_upscale():strip_icc()/pic6293412.jpg',
+      'https://placehold.co/600x400/4f46e5/ffffff?text=cover-714fc5):strip_icc()/pic6293412.jpg',
     rating: 8.5,
     ratingMax: 10,
     metadata: [
@@ -80,7 +80,7 @@ const MOCK_GAMES: CarouselGame[] = [
     title: 'Terraforming Mars',
     subtitle: 'Stronghold Games',
     imageUrl:
-      'https://cf.geekdo-images.com/wg9oOLcsKvDesSUdZQ4rxw__imagepage/img/FS1RE8Ue6nk1pNbPI3l-OSapQGc=/fit-in/900x600/filters:no_upscale():strip_icc()/pic3536616.jpg',
+      'https://placehold.co/600x400/4f46e5/ffffff?text=cover-630fbf):strip_icc()/pic3536616.jpg',
     rating: 8.4,
     ratingMax: 10,
     metadata: [
@@ -93,7 +93,7 @@ const MOCK_GAMES: CarouselGame[] = [
     title: 'Spirit Island',
     subtitle: 'Greater Than Games',
     imageUrl:
-      'https://cf.geekdo-images.com/kjCm4ZvPjIZxS-mYgSPy1g__imagepage/img/h9D-SfnpjfTGXbsZM85CYRjS0oo=/fit-in/900x600/filters:no_upscale():strip_icc()/pic7013651.jpg',
+      'https://placehold.co/600x400/4f46e5/ffffff?text=cover-2b3ff8):strip_icc()/pic7013651.jpg',
     rating: 8.3,
     ratingMax: 10,
     metadata: [
@@ -107,7 +107,7 @@ const MOCK_GAMES: CarouselGame[] = [
     title: 'Dune: Imperium',
     subtitle: 'Dire Wolf Digital',
     imageUrl:
-      'https://cf.geekdo-images.com/PhjygpWSo-0labGrPBMyyg__imagepage/img/BjM3LyahJ4IQ2ov5MkzkHatbmUc=/fit-in/900x600/filters:no_upscale():strip_icc()/pic5666597.jpg',
+      'https://placehold.co/600x400/4f46e5/ffffff?text=cover-a306da):strip_icc()/pic5666597.jpg',
     rating: 8.3,
     ratingMax: 10,
     metadata: [
@@ -120,7 +120,7 @@ const MOCK_GAMES: CarouselGame[] = [
     title: 'Wingspan',
     subtitle: 'Stonemaier Games',
     imageUrl:
-      'https://cf.geekdo-images.com/yLZJCVLlIx4c7eJEWUNJ7w__imagepage/img/uIjeoKgHMcRtzRSR4MoUYl3nXxs=/fit-in/900x600/filters:no_upscale():strip_icc()/pic4458123.jpg',
+      'https://placehold.co/600x400/4f46e5/ffffff?text=cover-765d11):strip_icc()/pic4458123.jpg',
     rating: 8.1,
     ratingMax: 10,
     metadata: [

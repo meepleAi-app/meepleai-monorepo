@@ -101,7 +101,7 @@ public sealed class InvitationFlowIntegrationTests : IAsyncLifetime
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 
         _output("Applying migrations...");
-        await MigrateWithRetry(_dbContext);
+        await TestMigrationHelper.MigrateWithRetryAsync(_dbContext, TestCancellationToken, onRetry: _output);
 
         // Seed admin user (required for FK constraints on invitation_tokens.invited_by_user_id)
         var userRepo = _serviceProvider.GetRequiredService<IUserRepository>();
@@ -733,24 +733,4 @@ public sealed class InvitationFlowIntegrationTests : IAsyncLifetime
 
     #endregion
 
-    #region Helper Methods
-
-    private async Task MigrateWithRetry(MeepleAiDbContext context, int maxRetries = 3)
-    {
-        for (int i = 0; i < maxRetries; i++)
-        {
-            try
-            {
-                await context.Database.MigrateAsync(TestCancellationToken);
-                return;
-            }
-            catch (Exception ex) when (i < maxRetries - 1)
-            {
-                _output($"Migration attempt {i + 1} failed: {ex.Message}. Retrying...");
-                await Task.Delay(TimeSpan.FromSeconds(2), TestCancellationToken);
-            }
-        }
-    }
-
-    #endregion
 }

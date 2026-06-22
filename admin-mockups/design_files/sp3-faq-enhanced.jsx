@@ -48,7 +48,7 @@ const FAQS = [
     popular: true, popularRank: 2 },
   { id:'q5', cat:'games', q:'Posso aggiungere un gioco non presente nel catalogo?',
     short:'Durante l\'alpha solo gli admin possono aggiungere giochi. Suggerisci nuovi giochi via /contact.',
-    long:'Durante l\'**alpha privata**, l\'aggiunta di nuovi giochi al catalogo è ristretta agli admin per garantire qualità delle KB.\n\nPuoi **suggerire un gioco** via `/contact`: indicaci titolo, editore, anno e link BoardGameGeek. Valutiamo le richieste settimanalmente. Post-alpha, gli utenti potranno proporre giochi self-service con approvazione moderata.',
+    long:'Durante l\'**alpha privata**, l\'aggiunta di nuovi giochi al catalogo è ristretta agli admin per garantire qualità delle KB.\n\nPuoi **suggerire un gioco** via `/contact`: indicaci titolo, editore, anno e link della fonte ufficiale. Valutiamo le richieste settimanalmente. Post-alpha, gli utenti potranno proporre giochi self-service con approvazione moderata.',
     popular: false },
   { id:'q6', cat:'games', q:'Come funziona la mia libreria personale?',
     short:'La libreria contiene i giochi che possiedi o segui. Aggiungi giochi dal catalogo con il pulsante "Possiedo".',

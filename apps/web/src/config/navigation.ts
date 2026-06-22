@@ -231,14 +231,18 @@ export const UNIFIED_NAV_ITEMS: UnifiedNavItem[] = [
   },
   {
     id: 'hub',
-    href: '/hub/games',
+    // Issue #2190: /hub/games was retired by Stage 3 #1026 + superseded by
+    // /games multi-tab hub (Asse D P2 #1899, default tab=discover). Voice
+    // renamed "Hub" → "Games" 2026-06-13 for semantic clarity; nav id stays
+    // "hub" to preserve TOP_BAR_NAV_IDS / BOTTOM_TAB_NAV_IDS wiring.
+    href: '/games',
     icon: Globe,
     iconName: 'globe',
-    label: 'Hub',
+    label: 'Games',
     ariaLabel: 'Esplora il catalogo community',
     priority: 13,
     testId: 'nav-hub',
-    activePattern: /^\/hub/,
+    activePattern: /^\/(games|hub)/,
     visibility: { authOnly: true },
   },
   {

@@ -1411,6 +1411,18 @@ namespace Api.Infrastructure.Migrations
                     table.PrimaryKey("PK_notifications", x => x.id);
                 });
 
+            // 🔴 ATTENTION FOR FUTURE RE-SQUASHES (issue #2022): the `pgvector_embeddings`
+            // table also has a server-managed `search_vector tsvector` column
+            // (GENERATED ALWAYS AS (to_tsvector('english', text_content)) STORED) and a
+            // matching GIN index. EF Core cannot model GENERATED STORED tsvector via the
+            // standard `table.Column<>` API, and `PgVectorEmbeddingEntity` deliberately does
+            // NOT declare the column (see PgVectorEmbeddingEntity.cs line 51), so EF would
+            // not emit it from the model snapshot. The column + index are added below via
+            // `migrationBuilder.Sql(...)` right after the last `IX_pgvector_embeddings_*`
+            // CreateIndex call — search the file for "Issue #2022" to find that block.
+            // If you re-squash this migration, you MUST copy that Sql() block back; without
+            // it, `PgVectorStoreAdapter.EnsureCollectionExistsAsync` will fail on fresh
+            // deploys with `42703: column "search_vector" does not exist`.
             migrationBuilder.CreateTable(
                 name: "pgvector_embeddings",
                 columns: table => new
@@ -1428,11 +1440,32 @@ namespace Api.Infrastructure.Migrations
                     source_chunk_id = table.Column<Guid>(type: "uuid", nullable: true),
                     is_translation = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     role_tags = table.Column<int>(type: "integer", nullable: false)
+                    // NOTE: search_vector column intentionally NOT declared here — see banner above.
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_pgvector_embeddings", x => x.id);
                 });
+
+            // #2022 — search_vector is a Postgres-side GENERATED column the production
+            // runtime expects (PgVectorStoreAdapter.cs CREATE INDEX USING gin uses it).
+            // EF can't model GENERATED ALWAYS AS STORED, so we add it via raw SQL right
+            // after the table is created and immediately back it with the GIN index the
+            // adapter would otherwise create itself.
+            //
+            // WARNING for future migration-squash work: if this migration is ever
+            // re-generated from the entity model, these two Sql() calls will be lost
+            // because EF cannot scaffold GENERATED columns. Preserve them manually.
+            migrationBuilder.Sql(@"
+                ALTER TABLE pgvector_embeddings
+                ADD COLUMN search_vector tsvector
+                GENERATED ALWAYS AS (to_tsvector('english', text_content)) STORED;
+            ");
+
+            migrationBuilder.Sql(@"
+                CREATE INDEX IF NOT EXISTS idx_pgvector_embeddings_search_vector
+                ON pgvector_embeddings USING gin (search_vector);
+            ");
 
             migrationBuilder.CreateTable(
                 name: "player_memories",
@@ -8431,6 +8464,49 @@ namespace Api.Infrastructure.Migrations
                 table: "pgvector_embeddings",
                 column: "vector_document_id");
 
+            // 🔴 Issue #2022: search_vector tsvector + GIN index for hybrid full-text search.
+            //
+            // WHY raw SQL inside an InitialCreate (vs. inline `table.Column<>` in the CreateTable above):
+            //   - EF Core's table.Column<> API has no first-class support for tsvector with
+            //     GENERATED ALWAYS AS (...) STORED. The `Npgsql:ComputedColumnSql` annotation
+            //     covers basic computed columns but is not surfaced through the squash code
+            //     generator for tsvector with stored persistence.
+            //   - PgVectorEmbeddingEntity.cs (line 51) deliberately does NOT map `search_vector`
+            //     as a CLR property: it is server-managed and any RAG export/import path treats
+            //     it as opaque. Keeping it server-only avoids forcing a tsvector ↔ string round-trip
+            //     through EF, which would also break the `Vector` non-comparability story.
+            //   - The original 81 pre-squash migrations created this column + index via raw SQL
+            //     (a `migrationBuilder.Sql()` block in the file that became
+            //     20240XXXXX_AddSearchVectorToPgVectorEmbeddings.cs). When the squash regenerated
+            //     `InitialCreate` from the EF model snapshot it dropped the raw SQL since the
+            //     entity has no matching property — this is the regression that produced #2022.
+            //
+            // 🔴 ATTENTION FOR FUTURE RE-SQUASHES: if you run `dotnet ef migrations add`
+            // to re-squash, this Sql() block will be lost again — see the banner over the
+            // CreateTable("pgvector_embeddings") call near line 1414. You MUST copy this
+            // block into the new InitialCreate before deleting the previous one. The
+            // accompanying integration test
+            // `MigrationRollbackIntegrationTests.MigrateUp_PgvectorEmbeddings_ShouldHaveSearchVectorColumnAndGinIndex`
+            // is the safety net — it will fail on a fresh DB if the column or GIN index is missing.
+            //
+            // 🔴 RUNTIME NOTE: `PgVectorStoreAdapter.EnsureCollectionExistsAsync` also has a
+            // defensive `ALTER TABLE … ADD COLUMN IF NOT EXISTS search_vector` fallback (lines
+            // 540-557) for legacy DBs that predate the original raw SQL migration. That
+            // fallback runs AFTER `CREATE INDEX … USING gin (search_vector)` (line 528-538) on
+            // the same code path, so it CANNOT recover a fresh deploy from this regression —
+            // the index creation fails with `42703: column "search_vector" does not exist`
+            // before the fallback can run. The migration is the only place that can fix this
+            // for fresh deploys.
+            migrationBuilder.Sql(@"
+                ALTER TABLE pgvector_embeddings
+                ADD COLUMN IF NOT EXISTS search_vector tsvector
+                GENERATED ALWAYS AS (to_tsvector('english', text_content)) STORED;");
+
+            migrationBuilder.Sql(@"
+                CREATE INDEX IF NOT EXISTS idx_pgvector_embeddings_search_vector
+                ON pgvector_embeddings
+                USING gin (search_vector);");
+
             migrationBuilder.CreateIndex(
                 name: "ix_photo_batch_pages_batch_id",
                 table: "photo_batch_pages",
@@ -10228,6 +10304,13 @@ namespace Api.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            // #2022 — Inverse of the raw-SQL search_vector additions in Up().
+            // Drop the GIN index first, then the GENERATED column; the surrounding
+            // DropTable("pgvector_embeddings") later in Down() would otherwise succeed
+            // but leave orphaned dependencies in tooling that snapshots schemas.
+            migrationBuilder.Sql("DROP INDEX IF EXISTS idx_pgvector_embeddings_search_vector;");
+            migrationBuilder.Sql("ALTER TABLE pgvector_embeddings DROP COLUMN IF EXISTS search_vector;");
+
             migrationBuilder.DropTable(
                 name: "ab_test_variants",
                 schema: "knowledge_base");

@@ -4,13 +4,14 @@ import { useState } from 'react';
 
 import { CustomCoverDialog } from '@/components/features/library/custom-cover/CustomCoverDialog';
 import { EditCoverOverlay } from '@/components/features/library/custom-cover/EditCoverOverlay';
-import { SplitViewLayout } from '@/components/layout/SplitViewLayout/SplitViewLayout';
+import { SessionContributorsStrip } from '@/components/features/library/SessionContributorsStrip';
 import { ConnectionBar, buildGameConnections } from '@/components/ui/data-display/connection-bar';
-import { MeepleCard } from '@/components/ui/data-display/meeple-card/MeepleCard';
 import type { MeepleCardMetadata } from '@/components/ui/data-display/meeple-card/types';
+import { useGameSessionContributors } from '@/hooks/queries/useGameSessionContributors';
 import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
 import { useConnectionBarNav } from '@/hooks/useConnectionBarNav';
 
+import { GameHero, type GameHeroMetaItem } from './GameHero';
 import { GameTabsPanel } from './GameTabsPanel';
 
 import type { GameTabId } from './tabs';
@@ -25,15 +26,16 @@ interface GameDetailDesktopProps {
 /**
  * Desktop variant of the game detail page.
  *
- * Uses the existing SplitViewLayout with:
- *  - list  (left):  MeepleCard hero for the selected game
- *  - detail (right): GameTabsPanel with 5 tabs (Info / AI Chat / Toolbox / House Rules / Partite)
+ * #2105 M7 (Epic #2096) — Layout restructure. Switched from SplitView 50/50
+ * (hero left-column 50% + vertical-rail tabs right-column 50%) to a vertical
+ * full-width stack matching mockup `sp3-shared-game-detail`:
  *
- * Note: `SplitViewLayout` uses preset `listRatio` ('narrow' | 'balanced' | 'wide').
- * `listRatio="wide"` renders a ~50/50 split without adding drag-to-resize logic.
- * If resizable layout is required in the future, extend SplitViewLayout directly.
+ *   1. Hero          — full-width 100% (240px tall)
+ *   2. Strip         — connection-bar + session contributors (full-width)
+ *   3. Tabs panel    — horizontal underline tabs + scrollable content
  *
  * Reference: docs/superpowers/specs/2026-04-09-library-to-game-epic-design.md §4.4
+ * Mockup:    admin-mockups/design_files/sp3-shared-game-detail.jsx
  */
 export function GameDetailDesktop({
   gameId,
@@ -43,6 +45,11 @@ export function GameDetailDesktop({
 }: GameDetailDesktopProps) {
   const { data: game, isLoading, isError } = useLibraryGameDetail(gameId);
   const { handlePipClick } = useConnectionBarNav(gameId);
+  // #2036: Top session contributors strip. Public endpoint — runs even when
+  // the user hasn't actually added the game to their library yet (the share
+  // surfaces social proof before deciding to play). `enabled` gates on gameId
+  // being present so the hook doesn't fire with the empty-string sentinel.
+  const { data: contributors = [] } = useGameSessionContributors(gameId, 8, !!gameId);
   const [coverDialogOpen, setCoverDialogOpen] = useState(false);
 
   if (isLoading) {
@@ -82,6 +89,12 @@ export function GameDetailDesktop({
   if (game?.gameYearPublished) {
     heroMetadata.push({ label: String(game.gameYearPublished) });
   }
+  // `playingTimeMinutes` matches the TS `LibraryGameDetail` interface
+  // (apps/web/src/hooks/queries/useLibrary.ts:803). The raw API JSON uses
+  // `playTimeMinutes`, but the useLibraryGameDetail hook renames the field
+  // during DTO mapping — so the TS surface is `playingTimeMinutes`. A previous
+  // attempted "fix" to `playTimeMinutes` here matched the wire shape instead
+  // of the typed surface and silently dropped the entry.
   if (game?.playingTimeMinutes) {
     heroMetadata.push({ label: `${game.playingTimeMinutes} min` });
   }
@@ -97,29 +110,40 @@ export function GameDetailDesktop({
     heroMetadata.push({ label: `Complessità ${game.complexityRating.toFixed(1)}` });
   }
 
+  // #2034: agentCount + chatCount now flow from /library/{gameId} instead of
+  // being hardcoded zeros. `agentCount` is cross-user (AgentDefinitions linked
+  // to this SharedGame); `chatThreadCount` is the requesting user's own
+  // threads for the game. Both default to 0 when the BE field is undefined
+  // (legacy response shapes).
   const gameConnections = game
     ? buildGameConnections({
-        agentCount: 0,
+        agentCount: game.agentCount ?? 0,
         kbCount: game.hasCustomPdf || game.hasRagAccess ? 1 : 0,
-        chatCount: 0,
+        chatCount: game.chatThreadCount ?? 0,
         sessionCount: game.timesPlayed ?? 0,
       })
     : [];
 
   const hasCustomCover = Boolean(game?.customCoverR2Key);
 
-  const listContent = (
-    <div className="flex flex-col gap-3">
+  // #2100 M1: GameHero v2 — mockup parity con cover gradient overlay + title
+  // bottom-anchor. Sostituisce MeepleCard hero precedente (#2079 F1 closed).
+  // Append rating come ultimo entry meta (parity con mockup "★ 7.7" footer).
+  const heroMetaItems: GameHeroMetaItem[] = heroMetadata.map(m => ({ label: m.label }));
+  if (game?.averageRating != null) {
+    heroMetaItems.push({ label: `★ ${game.averageRating.toFixed(1)}` });
+  }
+
+  return (
+    <div data-testid="game-detail-desktop" className="flex h-full flex-col gap-4 px-4 py-4">
+      {/* 1. Hero — full-width 240px */}
       <div className="group relative">
-        <MeepleCard
-          entity="game"
-          variant="hero"
+        <GameHero
           title={game?.gameTitle ?? 'Gioco non in libreria'}
-          subtitle={game?.gamePublisher ?? undefined}
+          variant={isNotInLibrary ? 'community' : 'own'}
           imageUrl={game?.gameImageUrl ?? undefined}
-          rating={game?.averageRating ?? undefined}
-          metadata={heroMetadata.length > 0 ? heroMetadata : undefined}
-          data-testid="game-detail-hero-card"
+          metadata={heroMetaItems.length > 0 ? heroMetaItems : undefined}
+          className="rounded-2xl"
         />
         {game && (
           <EditCoverOverlay
@@ -128,29 +152,28 @@ export function GameDetailDesktop({
           />
         )}
       </div>
-      <ConnectionBar connections={gameConnections} onPipClick={handlePipClick} />
-    </div>
-  );
 
-  const tabsPanel = (
-    <GameTabsPanel
-      gameId={gameId}
-      initialTab={initialTab}
-      onTabChange={onTabChange}
-      isPrivateGame={isPrivateGame}
-      isNotInLibrary={isNotInLibrary}
-    />
-  );
+      {/* 2. Strip — connection-bar + session contributors */}
+      <div className="flex flex-col gap-3">
+        <ConnectionBar connections={gameConnections} onPipClick={handlePipClick} />
+        {/* #2036: SP3 mockup parity — avatar strip of past players. Strip
+            renders nothing when the contributor list is empty (no recorded
+            finalized sessions for this game), so it never claims layout
+            space on freshly-added games. */}
+        <SessionContributorsStrip contributors={contributors} />
+      </div>
 
-  return (
-    <div data-testid="game-detail-desktop" className="h-full">
-      <SplitViewLayout
-        list={listContent}
-        detail={tabsPanel}
-        listRatio="wide"
-        listLabel="Carta del gioco"
-        detailLabel="Strumenti e informazioni"
-      />
+      {/* 3. Tabs panel — horizontal tabs + content */}
+      <div className="min-h-0 flex-1">
+        <GameTabsPanel
+          gameId={gameId}
+          initialTab={initialTab}
+          onTabChange={onTabChange}
+          isPrivateGame={isPrivateGame}
+          isNotInLibrary={isNotInLibrary}
+        />
+      </div>
+
       {game && (
         <CustomCoverDialog
           gameId={game.gameId}

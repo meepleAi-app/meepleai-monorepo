@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SP4 · game-detail sub-tab — Recensioni (placeholder)</title>
+<!--
+  @route /games/{id}/reviews
+  @last-verified 2026-06-14
+  @verified-by ai-placeholder
+  @status placeholder
+  @parent-mockup sp4-game-detail.html
+  @tracking-issue 2148
+
+  AI-generated placeholder mockup (Issue #2148). Friend-first commentary M1
+  variant — show reviews from people the user follows BEFORE community at
+  large (per audit `2026-06-10-mockup-coverage-gap-report.md`).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+<link rel="stylesheet" href="components.css"/>
+<style>
+  body { font-family: 'Nunito', system-ui, sans-serif; background: hsl(var(--bg, 0 0% 100%)); color: hsl(var(--fg, 0 0% 12%)); margin: 0; padding: 24px; }
+  .placeholder-banner { background: hsl(var(--c-game, 25 95% 53%) / 0.08); border: 1px dashed hsl(var(--c-game, 25 95% 53%) / 0.4); border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; font-size: 13px; line-height: 1.5; }
+  .placeholder-banner strong { color: hsl(var(--c-game, 25 95% 53%)); }
+  main { max-width: 880px; margin: 0 auto; }
+  h1 { font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 28px; margin: 0 0 8px; display: flex; align-items: center; gap: 12px; }
+  h1 .entity-chip { font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 8px; border-radius: 999px; background: hsl(var(--c-game, 25 95% 53%) / 0.14); color: hsl(var(--c-game, 25 95% 53%)); }
+  .subtitle { color: hsl(var(--fg-muted, 0 0% 40%)); font-size: 14px; margin-bottom: 32px; }
+  .section-title { font-family: 'Quicksand', sans-serif; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: hsl(var(--fg-muted, 0 0% 40%)); margin: 24px 0 12px; }
+  .review-card { background: hsl(var(--card, 0 0% 100%)); border: 1px solid hsl(var(--border, 0 0% 88%)); border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; display: flex; gap: 12px; }
+  .avatar { width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; background: linear-gradient(135deg, hsl(var(--c-player, 270 70% 60%) / 0.6), hsl(var(--c-player, 270 70% 60%) / 0.2)); display: flex; align-items: center; justify-content: center; font-weight: 800; color: white; font-size: 16px; }
+  .review-body { flex: 1; min-width: 0; }
+  .review-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; font-size: 14px; }
+  .reviewer-name { font-weight: 700; }
+  .friend-pip { font-size: 11px; background: hsl(var(--c-player, 270 70% 60%) / 0.14); color: hsl(var(--c-player, 270 70% 60%)); padding: 2px 6px; border-radius: 999px; font-weight: 700; }
+  .rating { color: hsl(var(--c-game, 25 95% 53%)); font-weight: 700; }
+  .review-text { line-height: 1.55; margin: 0 0 6px; font-size: 14px; }
+  .review-meta { font-size: 12px; color: hsl(var(--fg-muted, 0 0% 40%)); }
+</style>
+</head>
+<body>
+<main>
+  <p class="placeholder-banner">
+    <strong>AI-generated placeholder (#2148)</strong> — sub-tab `/games/[id]/reviews`
+    of the canonical <code>sp4-game-detail.html</code>. Friend-first commentary M1
+    variant. <strong>Designer review required.</strong>
+  </p>
+
+  <header>
+    <h1>Recensioni <span class="entity-chip">🎲 Game</span></h1>
+    <p class="subtitle">Cosa pensano i tuoi amici e la community di questo gioco.</p>
+  </header>
+
+  <h2 class="section-title">👥 Dai tuoi amici</h2>
+
+  <article class="review-card">
+    <div class="avatar">LU</div>
+    <div class="review-body">
+      <div class="review-header">
+        <span class="reviewer-name">Luigi</span>
+        <span class="friend-pip">amico</span>
+        <span class="rating">★★★★☆ 4.2</span>
+      </div>
+      <p class="review-text">Bel gioco, ma le prime partite sono un po' lente. Dopo si vola.</p>
+      <span class="review-meta">2 giorni fa · 3 partite giocate</span>
+    </div>
+  </article>
+
+  <article class="review-card">
+    <div class="avatar">MA</div>
+    <div class="review-body">
+      <div class="review-header">
+        <span class="reviewer-name">Marco</span>
+        <span class="friend-pip">amico</span>
+        <span class="rating">★★★★★ 4.8</span>
+      </div>
+      <p class="review-text">Capolavoro. Ogni partita è diversa, scelte significative dall'inizio.</p>
+      <span class="review-meta">1 settimana fa · 12 partite giocate</span>
+    </div>
+  </article>
+
+  <h2 class="section-title">🌐 Dalla community</h2>
+
+  <article class="review-card">
+    <div class="avatar">AN</div>
+    <div class="review-body">
+      <div class="review-header">
+        <span class="reviewer-name">Anna_2024</span>
+        <span class="rating">★★★★☆ 4.5</span>
+      </div>
+      <p class="review-text">Setup un po' lungo, ma il gameplay ripaga ampiamente.</p>
+      <span class="review-meta">3 settimane fa · community</span>
+    </div>
+  </article>
+</main>
+</body>
+</html>

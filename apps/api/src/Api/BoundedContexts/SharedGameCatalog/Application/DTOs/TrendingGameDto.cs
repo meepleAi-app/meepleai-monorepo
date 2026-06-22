@@ -50,4 +50,12 @@ public sealed record TrendingGameDto
     /// Number of play session events in the time window.
     /// </summary>
     public int PlayCount { get; init; }
+
+    /// <summary>
+    /// Issue #2290: mirrors <see cref="Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity.HasKnowledgeBase"/>
+    /// so Discover row 1 can render the "AI Ready" / KB badge inline (Block B
+    /// of <see href="https://github.com/meepleAi-app/meepleai-monorepo/issues/2289">#2289</see>)
+    /// without an N+1 lookup on <see cref="SharedGameDto"/>.
+    /// </summary>
+    public bool HasKnowledgeBase { get; init; }
 }

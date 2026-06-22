@@ -145,36 +145,36 @@ public sealed class BackfillPdfCoversJob : IJob
             switch (result.Outcome)
             {
                 case PdfCoverExtractionOutcome.Generated:
-                {
-                    var resourceKey = $"pdf-cover-{pdf.Id}";
-
-                    using (var thumbStream = new MemoryStream(result.ThumbnailWebp!, writable: false))
                     {
-                        await blob.StoreAsync(thumbStream, "thumb.webp", BlobCategory.GameImage, resourceKey, ct)
-                            .ConfigureAwait(false);
+                        var resourceKey = $"pdf-cover-{pdf.Id}";
+
+                        using (var thumbStream = new MemoryStream(result.ThumbnailWebp!, writable: false))
+                        {
+                            await blob.StoreAsync(thumbStream, "thumb.webp", BlobCategory.GameImage, resourceKey, ct)
+                                .ConfigureAwait(false);
+                        }
+                        using (var previewStream = new MemoryStream(result.PreviewWebp!, writable: false))
+                        {
+                            await blob.StoreAsync(previewStream, "preview.webp", BlobCategory.GameImage, resourceKey, ct)
+                                .ConfigureAwait(false);
+                        }
+
+                        pdf.CoverR2Key = resourceKey;
+                        pdf.CoverGenerationStatus = nameof(PdfCoverGenerationStatus.Generated);
+                        pdf.CoverPageIndex = result.SelectedPageIndex;
+                        pdf.CoverGenerationError = null;
+
+                        eventCollector?.Collect(new PdfCoverGeneratedEvent(
+                            pdfDocumentId: pdf.Id,
+                            sharedGameId: pdf.SharedGameId,
+                            coverR2Key: resourceKey,
+                            coverPageIndex: result.SelectedPageIndex ?? 0));
+
+                        _logger.LogInformation(
+                            "BackfillPdfCoversJob: cover generated for PDF {PdfId} from page {PageIndex}",
+                            pdf.Id, result.SelectedPageIndex);
+                        break;
                     }
-                    using (var previewStream = new MemoryStream(result.PreviewWebp!, writable: false))
-                    {
-                        await blob.StoreAsync(previewStream, "preview.webp", BlobCategory.GameImage, resourceKey, ct)
-                            .ConfigureAwait(false);
-                    }
-
-                    pdf.CoverR2Key = resourceKey;
-                    pdf.CoverGenerationStatus = nameof(PdfCoverGenerationStatus.Generated);
-                    pdf.CoverPageIndex = result.SelectedPageIndex;
-                    pdf.CoverGenerationError = null;
-
-                    eventCollector?.Collect(new PdfCoverGeneratedEvent(
-                        pdfDocumentId: pdf.Id,
-                        sharedGameId: pdf.SharedGameId,
-                        coverR2Key: resourceKey,
-                        coverPageIndex: result.SelectedPageIndex ?? 0));
-
-                    _logger.LogInformation(
-                        "BackfillPdfCoversJob: cover generated for PDF {PdfId} from page {PageIndex}",
-                        pdf.Id, result.SelectedPageIndex);
-                    break;
-                }
                 case PdfCoverExtractionOutcome.Skipped:
                     pdf.CoverGenerationStatus = nameof(PdfCoverGenerationStatus.Skipped);
                     pdf.CoverPageIndex = result.SelectedPageIndex;

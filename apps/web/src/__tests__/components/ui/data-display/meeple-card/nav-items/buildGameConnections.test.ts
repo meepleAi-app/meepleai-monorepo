@@ -14,7 +14,9 @@ describe('buildGameConnections', () => {
     expect(items.find(i => i.entityType === 'kb')?.href).toBe('/games/abc123/kb');
     expect(items.find(i => i.entityType === 'session')?.href).toBe('/games/abc123/sessions');
     expect(items.find(i => i.entityType === 'agent')?.href).toBe('/games/abc123/agent');
-    expect(items.find(i => i.entityType === 'chat')?.href).toBe('/games/abc123/chat');
+    // ADR-061: /games/[id]/chat was deleted (orphan route). Chat slot now
+    // redirects to chat creation flow with game pre-selected via query.
+    expect(items.find(i => i.entityType === 'chat')?.href).toBe('/chat/new?gameId=abc123');
   });
 
   it('href is undefined when no gameId', () => {

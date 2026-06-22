@@ -314,6 +314,14 @@ bot:
   phase2a:
     enabled: false
 
+  # Phase 2b (#1445) — auto-revert bot for main-staging post-merge blockers.
+  # Ships kill-switched OFF; operator flips enabled=true to start dry-run period,
+  # then dry_run_mode=false to enter live mode after AC-5 exit criterion satisfied.
+  # See: docs/superpowers/specs/2026-06-21-issue-1445-release-gate-auto-revert-phase-2b-design.md
+  phase2b:
+    enabled: false
+    dry_run_mode: true
+
   # Phase 2c (#1446) — weekly Slack digest of warning-tier classifications.
   # Read by scripts/release-gate/build-digest.mjs + lib/digest-builder.mjs.
   phase2c:

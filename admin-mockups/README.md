@@ -57,6 +57,94 @@ See:
 
 ---
 
+## Suffix vocabulary (#2152)
+
+Mockup file names use a `<prefix>-<entity>-<suffix>.html` convention. The suffix
+slot has accumulated 13 distinct tokens across the catalog; the table below
+is the **canonical definition** — new mockups should reuse an existing suffix
+rather than coin a synonym.
+
+| Suffix | Meaning | Example |
+|---|---|---|
+| `-live` | Active / live play state (timer running, players acting). | `sp7-game-night-live.html` |
+| `-summary` | Post-game / completed / read-only end state. | `sp7-game-night-summary.html` |
+| `-parts` | Shared sub-components for the family (consumed by siblings). | `sp4-parts-common.jsx` |
+| `-flavor` | Game-specific UI variant of a shared shell. | `sp4-session-flavor-catan.html` |
+| `-data` | Static dataset / fixture used by demo runtime. | `sp4-discover-data.json` |
+| `-renderers` | Polymorphic dispatcher that picks a sub-component by type. | `sp4-session-renderers.jsx` |
+| `-tabs` | Horizontal tab strip + content area. | `sp4-game-detail-tabs.jsx` |
+| `-sections` | Vertical layout sections of a long-form page. | `sp4-game-detail-sections.jsx` |
+| `-ui` | UI-only variant (no logic, presentational shell). | `sp4-onboarding-ui.html` |
+| `-bodies` | Body / content slot variants for a layout primitive. | `sp4-drawer-bodies.jsx` |
+| `-tools` | Toolkit-specific dispatch / tool launcher panel. | `sp4-session-tools.jsx` |
+| `-dice` | Dice / RNG rendering primitive. | `sp4-session-dice.jsx` |
+| `-stats` | Statistical KPI / scoreboard panel. | `sp4-session-stats.jsx` |
+
+When introducing a new conceptual category, propose the suffix in a PR that
+edits this table — do not coin synonyms.
+
+---
+
+## State variants (#2071, DS-17 Phase 1)
+
+Multi-state mockups follow a canonical naming pattern so designers and
+developers can refer to each state unambiguously. A mockup that ships
+empty / loading / error / SSE / offline variants names them with a
+fixed `-state-NN-<label>` tail:
+
+| Pattern | Meaning |
+|---|---|
+| `<base>.html`                          | `state-01-default` (canonical, no tail) |
+| `<base>-state-02-empty.html`           | Zero-data state (no records yet) |
+| `<base>-state-03-loading.html`         | Skeleton / shimmer while data fetches |
+| `<base>-state-04-error.html`           | Failure (network, server, validation) |
+| `<base>-state-05-sse.html`             | Live SSE stream rendering (incremental) |
+| `<base>-state-06-offline.html`         | Offline / PWA fallback |
+
+Rules:
+
+1. **`NN` is fixed** — `02` always means empty, `04` always means error.
+   This lets `<base>-state-04-error.html` mean the same thing across all
+   mockups and frees the lint check from per-mockup config.
+2. **The default state has NO `-state-NN-default` suffix.** The bare
+   `<base>.html` IS the default — adding a redundant `-state-01-default`
+   creates two files for the same view.
+3. **Only states actually shipped are present.** A page that never has
+   an empty state (e.g. a 404 page) does not need `state-02-empty`. A
+   page that does not stream data (e.g. settings) does not need
+   `state-05-sse`. States `05` and `06` are opt-in.
+4. **Sibling fidelity.json is shared.** The canonical
+   `<base>.fidelity.json` covers all `<base>-state-NN-*.html` variants.
+   The DS-17 lint scripts (`lint:tokens:mockups`, `lint:bgg-mockups`)
+   strip the `-state-NN-<label>` tail before reading the fidelity file.
+
+Lint enforcement: `pnpm lint:mockup-state-naming` (`scripts/validate-state-naming.mjs`)
+fails CI when a file matches `*-state-*.html` or `*-state-*.jsx` but
+violates the `state-NN-<label>` pattern (e.g. `*-state-empty.html`
+missing the `NN` prefix, or `state-99-typo` outside the catalog of
+defined NN slots).
+
+State content guidance (#2071):
+
+- Empty states use an icon (96px) + tagline + CTA. **No emoji-heavy
+  default illustrations.** Use a placeholder until a brand illustrator
+  is briefed.
+- Loading states use the skeleton primitives from
+  `admin-mockups/design_files/04-design-system.html`.
+- Error states are inline banners, not modals (per the existing
+  "Error states" guidance in the design system section below).
+- SSE states show the first frame of incremental content + the
+  "streaming" indicator from `sp4-chat.html`.
+
+Refs:
+
+- Spec: [`2026-06-09-mockup-to-app-drift-spec-panel-review.md`](../docs/superpowers/specs/2026-06-09-mockup-to-app-drift-spec-panel-review.md) § Adzic CRIT-2
+- Sub-issue: [#2071](https://github.com/meepleAi-app/meepleai-monorepo/issues/2071)
+- Umbrella: [#2063](https://github.com/meepleAi-app/meepleai-monorepo/issues/2063)
+- Pattern reference (dev fixture): `admin-mockups/design_files/state-matrix.html`
+
+---
+
 ## About the Design Files
 
 The files in `design_files/` are **design references created in HTML** — prototypes

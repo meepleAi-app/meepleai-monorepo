@@ -69,11 +69,11 @@ vi.mock('html2canvas', () => ({
 
 // Mock jsPDF
 vi.mock('jspdf', () => ({
-  default: vi.fn().mockImplementation(() => ({
-    addImage: vi.fn(),
-    addPage: vi.fn(),
-    save: vi.fn(),
-  })),
+  default: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
+    this.addImage = vi.fn();
+    this.addPage = vi.fn();
+    this.save = vi.fn();
+  }),
 }));
 
 describe('Export Utilities', () => {

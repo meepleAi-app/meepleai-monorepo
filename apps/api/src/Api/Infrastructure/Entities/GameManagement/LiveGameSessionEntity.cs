@@ -51,12 +51,24 @@ public class LiveGameSessionEntity
     // Content
     public string? Notes { get; set; }
 
+    // Turn phase configuration (added by Issue #2097 / ADR-060 schema audit)
+    public string? PhaseNamesJson { get; set; } // string[] serialized as jsonb
+    public int CurrentPhaseIndex { get; set; }
+    public int TurnAdvancePolicy { get; set; } // TurnAdvancePolicy enum: 0=Manual, 1=AllPlayersConfirm, 2=ActivePlayerConfirms
+
+    // Snapshot debounce state (added by Issue #2097 / ADR-060 schema audit)
+    public string? SnapshotTriggerConfigJson { get; set; } // SnapshotTriggerConfig serialized as jsonb
+    public DateTime? LastSnapshotTimestamp { get; set; }
+
     // AI Integration
     public int AgentMode { get; set; } // AgentSessionMode enum: 0=None,1=Assistant,2=GameMaster
     public Guid? ChatSessionId { get; set; }
 
-    // Concurrency
-    public byte[] RowVersion { get; set; } = default!;
+    // Optimistic concurrency via PostgreSQL's xmin system column (Issue #2305).
+    // Postgres assigns xmin = transaction-id-of-last-write per row; EF reads back via the
+    // xid type-mapped uint property. Server-owned: NO mapper assignment, NO client default,
+    // NO trigger maintenance.
+    public uint Xmin { get; set; }
 
     // Navigation Properties
     public ICollection<SessionPlayerEntity> Players { get; set; } = new List<SessionPlayerEntity>();

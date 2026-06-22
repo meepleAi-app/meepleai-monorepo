@@ -109,6 +109,30 @@ describe('useSharedGameDetail (Wave A.4)', () => {
     expect(result.current.data).toBeUndefined();
   });
 
+  // #2309 DEC-B — lazy fetch on tab-active
+  it('does not fetch when enabled=false (external gate, lazy lazy on tab-active)', () => {
+    renderHook(() => useSharedGameDetail({ id: SAMPLE_ID, enabled: false }), {
+      wrapper: createWrapper(),
+    });
+    expect(mockGet).not.toHaveBeenCalled();
+  });
+
+  it('fetches when enabled=true is passed explicitly (default behaviour preserved)', async () => {
+    mockGet.mockResolvedValue(SAMPLE_DETAIL);
+    const { result } = renderHook(() => useSharedGameDetail({ id: SAMPLE_ID, enabled: true }), {
+      wrapper: createWrapper(),
+    });
+    await waitFor(() => expect(result.current.data).toBeDefined());
+    expect(mockGet).toHaveBeenCalledTimes(1);
+  });
+
+  it('honors id-empty gate even when enabled=true (ANDed precedence)', () => {
+    renderHook(() => useSharedGameDetail({ id: '', enabled: true }), {
+      wrapper: createWrapper(),
+    });
+    expect(mockGet).not.toHaveBeenCalled();
+  });
+
   it('exposes refetch that triggers a new fetch', async () => {
     mockGet.mockResolvedValue(SAMPLE_DETAIL);
     const { result } = renderHook(() => useSharedGameDetail({ id: SAMPLE_ID }), {

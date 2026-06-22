@@ -1,0 +1,361 @@
+[
+{
+  "bucket": "bgg_top_100",
+  "title": "Brass: Birmingham",
+  "year": 2018,
+  "qid_found": true,
+  "disambiguation_required": false,
+  "image_p18": "Playing%20board%20game%20-%20Play%201048%201724352635173.jpg",
+  "license_machine_readable": true,
+  "license_code": "CC BY-SA 4.0",
+  "license_whitelist_match": true
+}
+,
+{
+  "bucket": "bgg_top_100",
+  "title": "Pandemic Legacy: Season 1",
+  "year": 2015,
+  "qid_found": true,
+  "disambiguation_required": false,
+  "image_p18": "Playing%20board%20game%20-%20IMG%2020240110%20183908.jpg",
+  "license_machine_readable": true,
+  "license_code": "CC BY-SA 4.0",
+  "license_whitelist_match": true
+}
+,
+{
+  "bucket": "bgg_top_100",
+  "title": "Ark Nova",
+  "year": 2021,
+  "qid_found": true,
+  "disambiguation_required": false,
+  "image_p18": null,
+  "license_machine_readable": false,
+  "license_code": null,
+  "license_whitelist_match": false
+}
+,
+{
+  "bucket": "bgg_top_100",
+  "title": "Gloomhaven",
+  "year": 2017,
+  "qid_found": true,
+  "disambiguation_required": true,
+  "image_p18": null,
+  "license_machine_readable": false,
+  "license_code": null,
+  "license_whitelist_match": false
+}
+,
+{
+  "bucket": "bgg_top_100",
+  "title": "Twilight Imperium: Fourth Edition",
+  "year": 2017,
+  "qid_found": false,
+  "disambiguation_required": false,
+  "image_p18": null,
+  "license_machine_readable": false,
+  "license_code": null,
+  "license_whitelist_match": false
+}
+,
+{
+  "bucket": "bgg_top_100",
+  "title": "Terraforming Mars",
+  "year": 2016,
+  "qid_found": false,
+  "disambiguation_required": false,
+  "image_p18": null,
+  "license_machine_readable": false,
+  "license_code": null,
+  "license_whitelist_match": false
+}
+,
+{
+  "bucket": "bgg_top_100",
+  "title": "Spirit Island",
+  "year": 2017,
+  "qid_found": false,
+  "disambiguation_required": false,
+  "image_p18": null,
+  "license_machine_readable": false,
+  "license_code": null,
+  "license_whitelist_match": false
+}
+,
+{
+  "bucket": "bgg_top_100",
+  "title": "Wingspan",
+  "year": 2019,
+  "qid_found": true,
+  "disambiguation_required": false,
+  "image_p18": "Birdfeeder%20dice%20tower%20in%20Wingspan%20board%20game.jpg",
+  "license_machine_readable": true,
+  "license_code": "CC BY-SA 3.0",
+  "license_whitelist_match": true
+}
+,
+{
+  "bucket": "bgg_top_100",
+  "title": "Scythe",
+  "year": 2016,
+  "qid_found": true,
+  "disambiguation_required": false,
+  "image_p18": "Scythe%20set-up%201.jpg",
+  "license_machine_readable": true,
+  "license_code": "CC BY-SA 4.0",
+  "license_whitelist_match": true
+}
+,
+{
+  "bucket": "bgg_top_100",
+  "title": "Through the Ages: A New Story of Civilization",
+  "year": 2015,
+  "qid_found": true,
+  "disambiguation_required": false,
+  "image_p18": null,
+  "license_machine_readable": false,
+  "license_code": null,
+  "license_whitelist_match": false
+}
+,
+{
+  "bucket": "bgg_top_100",
+  "title": "Catan",
+  "year": 1995,
+  "qid_found": false,
+  "disambiguation_required": false,
+  "image_p18": null,
+  "license_machine_readable": false,
+  "license_code": null,
+  "license_whitelist_match": false
+}
+,
+{
+  "bucket": "bgg_top_100",
+  "title": "Carcassonne",
+  "year": 2000,
+  "qid_found": true,
+  "disambiguation_required": false,
+  "image_p18": null,
+  "license_machine_readable": false,
+  "license_code": null,
+  "license_whitelist_match": false
+}
+,
+{
+  "bucket": "bgg_top_100",
+  "title": "Ticket to Ride",
+  "year": 2004,
+  "qid_found": true,
+  "disambiguation_required": true,
+  "image_p18": "Deskohran%C3%AD%2008-09-27%20212.jpg",
+  "license_machine_readable": true,
+  "license_code": "CC BY-SA 3.0",
+  "license_whitelist_match": true
+}
+,
+{
+  "bucket": "bgg_top_100",
+  "title": "7 Wonders",
+  "year": 2010,
+  "qid_found": true,
+  "disambiguation_required": true,
+  "image_p18": "7%20Wonders%20game.jpg",
+  "license_machine_readable": true,
+  "license_code": "CC BY 2.0",
+  "license_whitelist_match": true
+}
+,
+{
+  "bucket": "bgg_top_100",
+  "title": "Agricola",
+  "year": 2007,
+  "qid_found": true,
+  "disambiguation_required": false,
+  "image_p18": "Agricola%20board%20game.jpg",
+  "license_machine_readable": true,
+  "license_code": "CC BY 2.0",
+  "license_whitelist_match": true
+}
+,
+{
+  "bucket": "bgg_mid_tier",
+  "title": "Splendor",
+  "year": 2014,
+  "qid_found": true,
+  "disambiguation_required": false,
+  "image_p18": "Playing%20board%20game%20-%20Play%20465%201693484486999.jpg",
+  "license_machine_readable": true,
+  "license_code": "CC BY-SA 4.0",
+  "license_whitelist_match": true
+}
+,
+{
+  "bucket": "bgg_mid_tier",
+  "title": "Azul",
+  "year": 2017,
+  "qid_found": false,
+  "disambiguation_required": false,
+  "image_p18": null,
+  "license_machine_readable": false,
+  "license_code": null,
+  "license_whitelist_match": false
+}
+,
+{
+  "bucket": "bgg_mid_tier",
+  "title": "Dominion",
+  "year": 2008,
+  "qid_found": false,
+  "disambiguation_required": false,
+  "image_p18": null,
+  "license_machine_readable": false,
+  "license_code": null,
+  "license_whitelist_match": false
+}
+,
+{
+  "bucket": "bgg_mid_tier",
+  "title": "Codenames",
+  "year": 2015,
+  "qid_found": true,
+  "disambiguation_required": false,
+  "image_p18": "Codenames%20board%20game.jpg",
+  "license_machine_readable": true,
+  "license_code": "CC BY-SA 3.0",
+  "license_whitelist_match": true
+}
+,
+{
+  "bucket": "bgg_mid_tier",
+  "title": "Dixit",
+  "year": 2008,
+  "qid_found": false,
+  "disambiguation_required": false,
+  "image_p18": null,
+  "license_machine_readable": false,
+  "license_code": null,
+  "license_whitelist_match": false
+}
+,
+{
+  "bucket": "bgg_mid_tier",
+  "title": "Pandemic",
+  "year": 2008,
+  "qid_found": true,
+  "disambiguation_required": true,
+  "image_p18": "Essen%202008%2050101.jpg",
+  "license_machine_readable": true,
+  "license_code": "CC BY-SA 3.0",
+  "license_whitelist_match": true
+}
+,
+{
+  "bucket": "bgg_mid_tier",
+  "title": "Puerto Rico",
+  "year": 2002,
+  "qid_found": true,
+  "disambiguation_required": true,
+  "image_p18": "Deskohran%C3%AD%2008-10-04%20130.jpg",
+  "license_machine_readable": true,
+  "license_code": "CC BY-SA 3.0",
+  "license_whitelist_match": true
+}
+,
+{
+  "bucket": "bgg_mid_tier",
+  "title": "Power Grid",
+  "year": 2004,
+  "qid_found": true,
+  "disambiguation_required": false,
+  "image_p18": "Hry%20a%20hlavolamy%202008%20-%20Vysok%C3%A9%20nap%C4%9Bt%C3%AD%202.jpg",
+  "license_machine_readable": false,
+  "license_code": null,
+  "license_whitelist_match": false
+}
+,
+{
+  "bucket": "italian_publisher",
+  "title": "Barrage",
+  "year": 2019,
+  "qid_found": true,
+  "disambiguation_required": false,
+  "image_p18": "Playing%20board%20game%20-%20Play%20772%201710099142730.jpg",
+  "license_machine_readable": true,
+  "license_code": "CC BY-SA 4.0",
+  "license_whitelist_match": true
+}
+,
+{
+  "bucket": "italian_publisher",
+  "title": "Lorenzo il Magnifico",
+  "year": 2016,
+  "qid_found": false,
+  "disambiguation_required": false,
+  "image_p18": null,
+  "license_machine_readable": false,
+  "license_code": null,
+  "license_whitelist_match": false
+}
+,
+{
+  "bucket": "italian_publisher",
+  "title": "Coimbra",
+  "year": 2018,
+  "qid_found": false,
+  "disambiguation_required": false,
+  "image_p18": null,
+  "license_machine_readable": false,
+  "license_code": null,
+  "license_whitelist_match": false
+}
+,
+{
+  "bucket": "italian_publisher",
+  "title": "Grand Austria Hotel",
+  "year": 2015,
+  "qid_found": true,
+  "disambiguation_required": false,
+  "image_p18": "Playing%20board%20game%20-%20Play%20965%201720890815192.jpg",
+  "license_machine_readable": true,
+  "license_code": "CC BY-SA 4.0",
+  "license_whitelist_match": true
+}
+,
+{
+  "bucket": "niche",
+  "title": "Eclipse: Second Dawn for the Galaxy",
+  "year": 2020,
+  "qid_found": false,
+  "disambiguation_required": false,
+  "image_p18": null,
+  "license_machine_readable": false,
+  "license_code": null,
+  "license_whitelist_match": false
+}
+,
+{
+  "bucket": "niche",
+  "title": "John Company: Second Edition",
+  "year": 2022,
+  "qid_found": false,
+  "disambiguation_required": false,
+  "image_p18": null,
+  "license_machine_readable": false,
+  "license_code": null,
+  "license_whitelist_match": false
+}
+,
+{
+  "bucket": "niche",
+  "title": "Pax Pamir: Second Edition",
+  "year": 2019,
+  "qid_found": false,
+  "disambiguation_required": false,
+  "image_p18": null,
+  "license_machine_readable": false,
+  "license_code": null,
+  "license_whitelist_match": false
+}
+]

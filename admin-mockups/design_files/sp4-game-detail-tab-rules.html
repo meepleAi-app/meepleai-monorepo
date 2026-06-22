@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SP4 · game-detail sub-tab — Regole (placeholder)</title>
+<!--
+  @route /games/{id}/rules
+  @last-verified 2026-06-14
+  @verified-by ai-placeholder
+  @status placeholder
+  @parent-mockup sp4-game-detail.html
+  @tracking-issue 2148
+
+  AI-generated placeholder mockup (Issue #2148). Low-fidelity stub provided
+  to unblock US-9 conformity coverage. Designer review required: pin acceptance
+  values, polish typography, add empty/loading/error state variants, and graduate
+  `design_intent` from "forward-refactor" to "current".
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+<link rel="stylesheet" href="components.css"/>
+<style>
+  body { font-family: 'Nunito', system-ui, sans-serif; background: hsl(var(--bg, 0 0% 100%)); color: hsl(var(--fg, 0 0% 12%)); margin: 0; padding: 24px; }
+  .placeholder-banner { background: hsl(var(--c-game, 25 95% 53%) / 0.08); border: 1px dashed hsl(var(--c-game, 25 95% 53%) / 0.4); border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; font-size: 13px; line-height: 1.5; }
+  .placeholder-banner strong { color: hsl(var(--c-game, 25 95% 53%)); }
+  main { max-width: 880px; margin: 0 auto; }
+  h1 { font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 28px; margin: 0 0 8px; display: flex; align-items: center; gap: 12px; }
+  h1 .entity-chip { font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 8px; border-radius: 999px; background: hsl(var(--c-game, 25 95% 53%) / 0.14); color: hsl(var(--c-game, 25 95% 53%)); }
+  .subtitle { color: hsl(var(--fg-muted, 0 0% 40%)); font-size: 14px; margin-bottom: 32px; }
+  .rule-section { background: hsl(var(--card, 0 0% 100%)); border: 1px solid hsl(var(--border, 0 0% 88%)); border-radius: 12px; padding: 20px 24px; margin-bottom: 16px; }
+  .rule-section h2 { font-family: 'Quicksand', sans-serif; font-size: 18px; font-weight: 700; margin: 0 0 12px; }
+  .rule-section p { margin: 0 0 8px; line-height: 1.6; }
+  .rule-section .citation { font-size: 12px; color: hsl(var(--fg-muted, 0 0% 40%)); display: inline-flex; align-items: center; gap: 4px; }
+  .citation::before { content: "📄"; }
+  .floating-cta { position: fixed; bottom: 24px; right: 24px; padding: 14px 22px; background: hsl(var(--c-agent, 220 80% 55%)); color: white; border: none; border-radius: 999px; font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; box-shadow: 0 8px 24px hsl(var(--c-agent, 220 80% 55%) / 0.4); }
+</style>
+</head>
+<body>
+<main>
+  <p class="placeholder-banner">
+    <strong>AI-generated placeholder (#2148)</strong> — sub-tab `/games/[id]/rules`
+    of the canonical <code>sp4-game-detail.html</code>. Stub layout provided to
+    unblock US-9 conformity coverage. <strong>Designer review required.</strong>
+  </p>
+
+  <header>
+    <h1>Regole <span class="entity-chip">🎲 Game</span></h1>
+    <p class="subtitle">Sintesi delle regole del gioco, con citazioni al PDF originale.</p>
+  </header>
+
+  <section class="rule-section">
+    <h2>Preparazione</h2>
+    <p>Ogni giocatore riceve la propria plancia, 3 carte iniziali e 5 risorse di partenza.</p>
+    <span class="citation">Manuale Cap. 1, p. 4</span>
+  </section>
+
+  <section class="rule-section">
+    <h2>Svolgimento del turno</h2>
+    <p>Il turno si svolge in 3 fasi: azione principale, scambio, mantenimento.</p>
+    <span class="citation">Manuale Cap. 2, p. 8</span>
+  </section>
+
+  <section class="rule-section">
+    <h2>Condizioni di vittoria</h2>
+    <p>Il primo giocatore a raggiungere 10 punti vittoria vince la partita.</p>
+    <span class="citation">Manuale Cap. 5, p. 22</span>
+  </section>
+</main>
+
+<button class="floating-cta" type="button">💬 Chiedi all'Agente</button>
+</body>
+</html>

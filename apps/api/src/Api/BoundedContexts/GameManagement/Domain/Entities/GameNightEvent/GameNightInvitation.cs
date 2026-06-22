@@ -26,9 +26,9 @@ namespace Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 internal sealed class GameNightInvitation : AggregateRoot<Guid>
 {
     /// <summary>
-     /// Maximum length of <see cref="RespondedByName"/>. Aligned with EF column
-     /// width and FluentValidation rule on the endpoint DTO. Issue #1169.
-     /// </summary>
+    /// Maximum length of <see cref="RespondedByName"/>. Aligned with EF column
+    /// width and FluentValidation rule on the endpoint DTO. Issue #1169.
+    /// </summary>
     public const int MaxRespondedByNameLength = 120;
 
     public string Token { get; private set; }

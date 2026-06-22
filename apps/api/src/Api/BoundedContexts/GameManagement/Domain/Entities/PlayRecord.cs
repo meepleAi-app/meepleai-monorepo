@@ -31,9 +31,17 @@ internal sealed class PlayRecord : AggregateRoot<Guid>
     public string? Notes { get; private set; }
     public string? Location { get; private set; }
 
+    // Share token (#2437-2, GameNightPlaylist pattern)
+    public string? ShareToken { get; private set; }
+    public bool IsShared { get; private set; }
+
     // Players & Scoring
     private readonly List<RecordPlayer> _players = new();
     public IReadOnlyList<RecordPlayer> Players => _players.AsReadOnly();
+
+    // Photos (#2436 PR-B, ADR-067 — max 10 per record)
+    private readonly List<PlayRecordPhoto> _photos = new();
+    public IReadOnlyList<PlayRecordPhoto> Photos => _photos.AsReadOnly();
 
     // Scoring Configuration
     public SessionScoringConfig ScoringConfig { get; private set; }
@@ -41,6 +49,42 @@ internal sealed class PlayRecord : AggregateRoot<Guid>
     // Audit
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
+
+    /// <summary>Postgres xmin optimistic-concurrency token. Server-owned; the repository
+    /// round-trips it for detached Update (ADR-060). #2436 PR-B / #2437-1.</summary>
+    public uint Xmin { get; private set; }
+
+    /// <summary>Repository-only: restore the xmin token after loading from persistence.</summary>
+    internal void SetXmin(uint xmin) => Xmin = xmin;
+
+    /// <summary>Generates a URL-safe share token for public read access (#2437-2, GameNightPlaylist pattern).</summary>
+    public string GenerateShareToken()
+    {
+        ShareToken = Convert.ToBase64String(Guid.NewGuid().ToByteArray())
+            .Replace("/", "_").Replace("+", "-").TrimEnd('=');
+        IsShared = true;
+        UpdatedAt = TimeProvider.System.GetUtcNow().UtcDateTime;
+        return ShareToken;
+    }
+
+    /// <summary>Revokes the share token, disabling public access.</summary>
+    public void RevokeShareToken()
+    {
+        ShareToken = null;
+        IsShared = false;
+        UpdatedAt = TimeProvider.System.GetUtcNow().UtcDateTime;
+    }
+
+    /// <summary>Repository-only: restore share state after loading from persistence.</summary>
+    internal void SetShareState(string? shareToken, bool isShared)
+    {
+        ShareToken = shareToken;
+        IsShared = isShared;
+    }
+
+    // Soft Delete (issue #2439 — mirrors GameBook.SoftDelete pattern)
+    public bool IsDeleted { get; private set; }
+    public DateTime? DeletedAt { get; private set; }
 
     /// <summary>
     /// Optional source domain event id used to dedupe at the DB level (issue #1938 / CF-2).
@@ -213,6 +257,37 @@ internal sealed class PlayRecord : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Attaches an uploaded photo. Max 10 per record (#2436 PR-B, ADR-067). Raises a domain event.
+    /// </summary>
+    public void AddPhoto(
+        Guid photoId, string blobUrl, string? thumbnailUrl, long fileSizeBytes,
+        string sha256Hash, string? ocrText, double? ocrConfidence, string? caption,
+        Guid uploadedByUserId, TimeProvider? timeProvider = null)
+    {
+        if (_photos.Count >= 10)
+            throw new DomainException("Cannot attach more than 10 photos to a play record");
+
+        var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+        var photo = new PlayRecordPhoto(photoId, Id, blobUrl, thumbnailUrl, fileSizeBytes,
+            sha256Hash, ocrText, ocrConfidence, caption, uploadedByUserId, now);
+        _photos.Add(photo);
+        UpdatedAt = now;
+        AddDomainEvent(new PlayRecordPhotoUploadedEvent(Id, photo.Id, uploadedByUserId));
+    }
+
+    /// <summary>
+    /// Repository-only reconstitution from persistence (no domain event).
+    /// </summary>
+    internal void RestorePhoto(
+        Guid photoId, string blobUrl, string? thumbnailUrl, long fileSizeBytes,
+        string sha256Hash, string? ocrText, double? ocrConfidence, string? caption,
+        Guid uploadedByUserId, DateTime uploadedAt)
+    {
+        _photos.Add(new PlayRecordPhoto(photoId, Id, blobUrl, thumbnailUrl, fileSizeBytes,
+            sha256Hash, ocrText, ocrConfidence, caption, uploadedByUserId, uploadedAt));
+    }
+
+    /// <summary>
     /// Records a score for a player.
     /// </summary>
     public void RecordScore(Guid playerId, RecordScore score, TimeProvider? timeProvider = null)
@@ -338,6 +413,20 @@ internal sealed class PlayRecord : AggregateRoot<Guid>
 
         Status = PlayRecordStatus.Archived;
         UpdatedAt = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+    }
+
+    /// <summary>
+    /// Soft-deletes the record. Idempotent at the persistence layer because the
+    /// EF query filter hides deleted rows (a second delete resolves to NotFound).
+    /// </summary>
+    public void SoftDelete(TimeProvider? timeProvider = null)
+    {
+        var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+        IsDeleted = true;
+        DeletedAt = now;
+        UpdatedAt = now;
+
+        AddDomainEvent(new PlayRecordDeletedEvent(Id, CreatedByUserId));
     }
 
     /// <summary>

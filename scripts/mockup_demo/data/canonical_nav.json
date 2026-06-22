@@ -18,8 +18,8 @@
     "Serate": "sp4-game-nights-index.html",
     "Knowledge Base": "sp4-kb-hub.html",
     "Conoscenza": "sp4-kb-hub.html",
-    "Toolkit": "sp4-hub-toolkits.html",
-    "Toolkits": "sp4-hub-toolkits.html",
+    "Toolkit": "sp4-toolkit-detail.html",
+    "Toolkits": "sp4-toolkit-detail.html",
     "Hub": "sp4-dashboard.html",
     "Notifications": "notifications.html",
     "Notifiche": "notifications.html",
@@ -64,9 +64,6 @@
     "sp4-agents-index.html": "sp4-agent-detail.html",
     "sp4-game-nights-index.html": "sp7-game-night-detail-rsvp.html",
     "sp4-kb-hub.html": "sp4-kb-detail.html",
-    "sp4-hub-toolkits.html": "sp4-toolkit-detail.html",
-    "sp4-hub-games.html": "sp4-game-detail.html",
-    "sp4-hub-agents.html": "sp4-agent-detail.html",
     "sp4-discover.html": "sp4-game-detail.html"
   },
   "detail_action_keywords": {
@@ -83,9 +80,9 @@
     "aggiungi alla libreria": "sp4-library-desktop.html",
     "upload pdf": "sp4-upload-wizard-extended.html",
     "carica pdf": "sp4-upload-wizard-extended.html",
-    "aggiungi gioco": "sp4-add-game-bgg-step.html",
-    "crea game night": "sp7-game-night-create.html",
-    "crea serata": "sp7-game-night-create.html",
+    "aggiungi gioco": "sp4-library-desktop.html",
+    "crea game night": "sp7-game-night-new.html",
+    "crea serata": "sp7-game-night-new.html",
     "glossary": "librogame-runthrough-glossary-editor.html",
     "glossario": "sp6-libro-game-glossary-editor.html"
   }

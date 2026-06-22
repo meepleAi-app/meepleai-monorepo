@@ -1,10 +1,7 @@
 using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 using Api.Services.Pdf;
 using FluentAssertions;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Metadata.Profiles.Exif;
-using SixLabors.ImageSharp.PixelFormats;
+using ImageMagick;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Infrastructure.Services;
@@ -74,15 +71,24 @@ public sealed class GamebookPhotoStorageServiceTests
 
     /// <summary>
     /// Builds a 64×64 JPEG stream with an EXIF GPS latitude tag embedded.
+    /// ADR DEC-3d-1 (issue #2055 Phase G): Magick.NET 14.x replaces ImageSharp.
     /// </summary>
     private static MemoryStream BuildJpegWithExif()
     {
-        using var img = new Image<Rgb24>(64, 64);
+        using var img = new MagickImage(MagickColors.Black, 64u, 64u);
+
+        // ExifProfile in Magick.NET 14.x: set the GPS latitude (rational triple
+        // degrees/minutes/seconds) so the strip operation has something to remove.
         var exif = new ExifProfile();
-        exif.SetValue(ExifTag.GPSLatitude, new Rational[] { new(48, 1), new(51, 1), new(30, 1) });
-        img.Metadata.ExifProfile = exif;
+        exif.SetValue(
+            ExifTag.GPSLatitude,
+            new Rational[] { new(48, 1), new(51, 1), new(30, 1) });
+        img.SetProfile(exif);
+
+        img.Format = MagickFormat.Jpeg;
+        img.Quality = 90;
         var ms = new MemoryStream();
-        img.SaveAsJpeg(ms, new JpegEncoder { Quality = 90 });
+        img.Write(ms);
         ms.Position = 0;
         return ms;
     }
@@ -102,10 +108,12 @@ public sealed class GamebookPhotoStorageServiceTests
 
         // Assert: reload stored bytes and confirm EXIF GPS is gone
         fake.LastStoredBytes.Should().NotBeNullOrEmpty();
-        using var reloaded = Image.Load(fake.LastStoredBytes!);
-        var exifProfile = reloaded.Metadata.ExifProfile;
-        // After stripping, either no profile or no GPS tag present
-        bool hasGps = exifProfile != null && exifProfile.TryGetValue(ExifTag.GPSLatitude, out _);
+        using var reloaded = new MagickImage(fake.LastStoredBytes!);
+        // ImageMagick.Strip() removes all profiles; GetExifProfile() returns
+        // null after the round-trip. Belt-and-braces: even if a residual EXIF
+        // profile survives, the GPSLatitude tag MUST be absent.
+        var exifProfile = reloaded.GetExifProfile();
+        bool hasGps = exifProfile is not null && exifProfile.GetValue(ExifTag.GPSLatitude) is not null;
         hasGps.Should().BeFalse("EXIF GPS latitude must be stripped before storage");
     }
 

@@ -106,6 +106,21 @@ jobs:
       - name: Build Solution (Release)
         run: dotnet build MeepleAI.Api.sln --no-restore --configuration Release
 
+      # #1960 — Replicate the Docker production publish so warnings-as-errors
+      # surface BEFORE merge instead of at deploy time. PR #1892 introduced a
+      # CS8604 that compiled cleanly under `dotnet build` but failed under
+      # `dotnet publish -c Release` with `TreatWarningsAsErrors=true` (csproj
+      # line 10). The bug survived 4 days because no staging deploy ran in
+      # between. ~30-60s marginal cost on the runner; major safety win.
+      - name: Verify production-grade publish (catch warnings-as-errors)
+        run: |
+          dotnet publish src/Api/Api.csproj \
+            -c Release \
+            -p:SkipAnalyzers=true \
+            -p:GenerateDocumentationFile=false \
+            -o /tmp/publish-verify \
+            --no-restore
+
       - name: Package build artifacts
         # Tar+zstd preserves symlinks and timestamps; small overhead vs raw upload
         # but avoids the artifact-v4+ silent permission stripping on bin/ executables.
@@ -262,6 +277,13 @@ jobs:
         run: pnpm lint
         # Note: package.json lint script has --max-warnings=15 for security false positives
 
+      # DS-17 Phase 1 (mockup state naming, #2071): hard gate on the
+      # canonical `<base>-state-NN-<label>.{html,jsx}` pattern. Cheap (regex
+      # over admin-mockups/**/*.{html,jsx} only) — runs before the heavier
+      # token/annotation/BGG scans below.
+      - name: Mockup state-variant naming gate (#2071)
+        run: pnpm lint:mockup-state-naming
+
       # DS-2 (token canonicalization, 2026-05-12):
       # Non-blocking inventory of `local/no-hardcoded-color-utility` violations.
       # Produces audits/2026-05-12-token-violations.{json,md} for cluster
@@ -279,6 +301,113 @@ jobs:
           path: |
             audits/2026-05-12-token-violations.json
             audits/2026-05-12-token-violations.md
+          retention-days: 14
+
+      # DS-17-2 (mockup-to-app fidelity, 2026-06-09):
+      # Blocking guard against NEW legacy CSS variable literals in admin-mockups
+      # (`var(--bg-base|--gaming-*|--nh-*|--e-*)`). Whitelist-incremental — the
+      # baseline ceiling is the current count snapshotted at PR #2077; if a new
+      # mockup introduces another reference the gate fails. Replace with
+      # canonical semantic tokens (--background, --foreground, --card, --border,
+      # --primary, …). Bridge unwind tracked in DS-16.
+      # Spec: docs/superpowers/specs/2026-06-09-mockup-to-app-drift-spec-panel-review.md
+      # Sub-issue: #2070 · Umbrella: #2063
+      - name: Mockup legacy token guard (DS-17-2)
+        run: pnpm lint:tokens:mockups --strict --max-baseline 1500
+        # Note: script resolves REPO_ROOT from __dirname; runs from apps/web (job default) but scans admin-mockups/**.
+
+      - name: Upload mockup token violations report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mockup-token-violations-${{ github.run_number }}
+          path: |
+            audits/2026-06-09-mockup-token-violations.json
+            audits/2026-06-09-mockup-token-violations.md
+          retention-days: 14
+
+      # DS-17-1 sweep (mockup-to-app fidelity, 2026-06-09):
+      # Blocking @mockup annotation coverage gate. Coverage is computed against
+      # the `mappable` denominator (routes that have a MOCKUPS_INDEX.md mapping)
+      # so the threshold reflects "annotated / annotatable" rather than the
+      # full 229-page app tree (only ~75 routes have mockup mappings today; the
+      # remaining ~154 are admin/api/internal routes with no design surface).
+      # Current state: 100% (68/68) post-sweep; threshold 80% gives headroom
+      # for new mockups landing without immediate annotation churn.
+      # Spec: docs/superpowers/specs/2026-06-09-mockup-to-app-drift-spec-panel-review.md
+      # Sub-issues: #2069 (pilot) + #2084 (sweep) · Umbrella: #2063
+      - name: Mockup annotation coverage gate (DS-17-1)
+        run: pnpm mockup-annotations:audit --denominator mappable --threshold 80
+        # Note: script resolves REPO_ROOT from __dirname; runs from apps/web (job default).
+
+      # Issue #2123 — BGG ToS compliance gate
+      - name: BGG ToS compliance gate (#2123)
+        run: pnpm lint:bgg
+
+      # ADR-075 short-term (#2383 brainstorm 2026-06-16):
+      # Cross-language constants drift detection. Auto-discovers paired files
+      # under `apps/api/src/Api/**/Constants/*Routes.cs` and
+      # `apps/web/src/lib/constants/*-routes.ts` (PascalCase ↔ kebab-case).
+      # No-op until the first BE/FE constants pair lands; fails fast on key
+      # mismatch when it does. Long-term: replaced by JSON single-source-of-truth
+      # codegen step (tracked separately).
+      - name: Cross-language constants drift (ADR-075)
+        run: bash scripts/lint-cross-lang-constants.sh
+        working-directory: ${{ github.workspace }}
+
+      - name: Upload mockup annotation coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mockup-annotation-coverage-${{ github.run_number }}
+          path: |
+            audits/2026-06-09-mockup-annotation-coverage.json
+            audits/2026-06-09-mockup-annotation-coverage.md
+          retention-days: 14
+
+      # Issue #2151 — BGG user-side copy gate (mockup + FE source, whitelist-incremental).
+      # Mirror of the DS-17-2 lint:tokens:mockups pattern (#2070). Baseline locked to
+      # the current inventory; a NEW BGG reference fails the gate. Reduce the baseline
+      # opportunistically as cleanup PRs land. See ADR-059 §2.
+      - name: BGG mockup + FE copy gate (#2151)
+        run: pnpm lint:bgg-mockups --strict --max-baseline 325
+
+      - name: Upload BGG mockup violations report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: bgg-mockup-violations-${{ github.run_number }}
+          path: |
+            audits/2026-06-14-bgg-mockup-violations.json
+            audits/2026-06-14-bgg-mockup-violations.md
+          retention-days: 14
+
+      # DS-17-8-v2 (mockup-to-app fidelity, 2026-06-10):
+      # Non-blocking Storybook snapshot scaffolding per Phase 2 pilot stories.
+      # Phase 2 ships scaffolding only (config + specs + scripts); baseline
+      # capture deferred to Phase 4 hardening — the pilot Client components
+      # call `useTranslation()` (react-intl) and the global `.storybook/preview.tsx`
+      # decorator stack does not yet wire IntlProvider, so the stories render
+      # an "intl object missing" error wall at snapshot time. Phase 4 fixes
+      # the preview decorator + captures real baselines. CI runs the suite
+      # with continue-on-error: true so the artifact + failure log are
+      # uploaded for debugging without blocking the build.
+      # Spec: docs/superpowers/specs/2026-06-09-ds-17-phase-2-design.md
+      # Sub-issue: #2095 · Umbrella: #2063
+      - name: Storybook snapshot scaffolding (DS-17-8-v2 non-blocking)
+        run: pnpm test:storybook:snapshots
+        continue-on-error: true
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
+
+      - name: Upload Storybook snapshot diff artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: storybook-snapshots-${{ github.run_number }}
+          path: |
+            apps/web/test-results/**
+            apps/web/playwright-report/**
           retention-days: 14
 
   # Frontend Typecheck — fast-fail check (~1 min). Independent job for
@@ -683,6 +812,18 @@ jobs:
           CI: true
         # Note: Coverage requirement removed - test isolation makes 85% threshold impractical
         # Coverage is still measured and reported to Codecov for monitoring
+
+      - name: Install ruamel.yaml for codemod tests
+        run: pip install 'ruamel.yaml>=0.19'
+        working-directory: ${{ github.workspace }}
+
+      - name: Run BGG manifest scrub codemod tests (#2123)
+        run: python -m pytest scripts/tests/test_scrub_bgg_manifest.py -v
+        working-directory: ${{ github.workspace }}
+
+      - name: Run Wikidata QID bootstrap tests (#2123)
+        run: python -m pytest scripts/tests/test_bootstrap_wikidata_qid.py -v
+        working-directory: ${{ github.workspace }}
 
       - name: Upload Python Coverage
         if: always()

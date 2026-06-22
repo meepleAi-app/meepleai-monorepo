@@ -357,6 +357,7 @@
     "filter": "Filter",
     "import": "Import",
     "loading": "Loading...",
+    "localizedFromEnglish": "{localizedTitle} (localized from English: {originalTitle})",
     "loginRequired": "Login required to continue.",
     "next": "Next",
     "no": "No",
@@ -2061,7 +2062,11 @@
           "emptyResultsHeading": "No results",
           "emptyResultsSubtitle": "Try a different title or check the spelling.",
           "toastAdded": "\"{gameName}\" added to your library!",
-          "toastError": "Could not add \"{gameName}\". Please try again."
+          "toastError": "Could not add \"{gameName}\". Please try again.",
+          "emptyManualCta": "Add manually",
+          "blockedMessage": "You already have \"{gameTitle}\" in your library.",
+          "blockedCta": "Go to game page",
+          "blockedDismiss": "Dismiss"
         }
       },
       "catalogPagination": {
@@ -2184,24 +2189,19 @@
         "resultsCountTemplate": "{filtered} of {total} results"
       },
       "games": {
-        "badge": "Hub · /hub/games · Public",
+        "badge": "Games · /games · Community",
         "title": "Community games catalog",
-        "subtitle": "Browse community-indexed games. Sign in to add them to your library.",
+        "subtitle": "Browse community-indexed games.",
         "kpi": {
           "total": "Total games",
           "featured": "Featured",
           "recent": "Recent"
         },
         "emptyTitle": "Empty catalog",
-        "emptyBody": "No public games have been added to the community catalog yet.",
-        "stickyCta": {
-          "title": "Sign in to install",
-          "description": "Create a free account to add games to your personal library.",
-          "buttonLabel": "Sign in"
-        }
+        "emptyBody": "No games have been added to the community catalog yet."
       },
       "agents": {
-        "badge": "Hub · /hub/agents",
+        "badge": "Hub · /agents",
         "title": "Community agents",
         "subtitle": "Discover AI agents shared by the community for your favourite games.",
         "installLabel": "Install agent",
@@ -2215,7 +2215,7 @@
         "emptyBody": "The community has not published any AI agents yet."
       },
       "toolkits": {
-        "badge": "Hub · /hub/toolkits",
+        "badge": "Hub · /toolkits",
         "title": "Community toolkits",
         "subtitle": "Community-shared toolkits of tools to enrich your sessions.",
         "installLabel": "Install toolkit",
@@ -2299,7 +2299,7 @@
           "statusIdle": "Idle",
           "callsTemplate": "{count} call",
           "emptyTitle": "No active AI agents.",
-          "emptyCta": "Explore /hub/agents"
+          "emptyCta": "Explore /agents"
         },
         "sessions": {
           "title": "Sessions",
@@ -2793,6 +2793,7 @@
         "rules": "Rules",
         "faqs": "FAQ",
         "sessions": "Sessions",
+        "stats": "Stats",
         "agents": "Agents",
         "documents": "Documents"
       },
@@ -3065,13 +3066,29 @@
         "pauseCta": "Pause",
         "resumeCta": "Resume",
         "endgameCta": "End session",
-        "exitAriaLabel": "Exit session"
+        "exitAriaLabel": "Exit session",
+        "elapsedTimeAriaLabel": "Elapsed time",
+        "connectionStateConnected": "Connection active",
+        "connectionStateReconnecting": "Reconnecting",
+        "connectionStateFailed": "Connection lost"
       },
       "turnIndicator": {
         "currentTurnAriaLabel": "Turn {current} of {total}",
         "activePlayerLabel": "{playerName}",
         "yourTurnLabel": "Your turn",
-        "waitingLabel": "Wait for your turn"
+        "waitingLabel": "Wait for your turn",
+        "roundRobinHeading": "Active turn",
+        "sequentialHeading": "Phases",
+        "simultaneousHeading": "All players act",
+        "realtimeHeading": "Real time",
+        "noneHeading": "Free play",
+        "customHeading": "Custom sequence",
+        "firstPlayerTokenHeading": "First player token",
+        "unknownTitle": "Unsupported turn type",
+        "unknownBody": "Update the app to support this mode.",
+        "roundCountTemplate": "Round {current} of {total}",
+        "playOrderHeading": "Play order",
+        "firstPlayerTokenHolderTemplate": "First player token: {playerName}"
       },
       "roster": {
         "title": "Players",
@@ -3091,7 +3108,52 @@
         "incrementAriaLabel": "Increase {playerName}'s score",
         "decrementAriaLabel": "Decrease {playerName}'s score",
         "scoreInputAriaLabel": "Enter score for {playerName}",
-        "playerCount": "{count, plural, =0 {No players} =1 {1 player} other {# players}}"
+        "playerCount": "{count, plural, =0 {No players} =1 {1 player} other {# players}}",
+        "loadingLabel": "Loading scores…",
+        "forbiddenToast": "Permission denied: only the host can edit scores",
+        "rateLimitedTemplate": "Rate limit reached, retry in {seconds}s",
+        "rateLimitedToast": "You updated scores too quickly. Wait {seconds}s.",
+        "validationFailedTemplate": "Validation failed: {message}",
+        "serverErrorToast": "Server error, retry",
+        "networkErrorToast": "Connection lost, retry",
+        "retryCta": "Retry",
+        "scoreAriaTemplate": "Score for {name}",
+        "rankAriaTemplate": "Position of {name}",
+        "firstPlaceBadgeLabel": "first place",
+        "outcomeAriaTemplate": "{name}: {result}",
+        "completedAriaTemplate": "Completed by {name}",
+        "doneAriaTemplate": "{label} (completed)",
+        "pendingAriaTemplate": "{label} (not completed)",
+        "points": {
+          "title": "Scores",
+          "leaderLabel": "Leader",
+          "columns": {
+            "player": "Player",
+            "score": "Score"
+          }
+        },
+        "ranking": {
+          "title": "Ranking",
+          "columns": {
+            "rank": "Rank",
+            "player": "Player",
+            "score": "Score"
+          }
+        },
+        "binaryWin": {
+          "title": "Result",
+          "winLabel": "Won",
+          "loseLabel": "Lost",
+          "pendingLabel": "Pending"
+        },
+        "objectives": {
+          "title": "Objectives",
+          "completedLabel": "Completed",
+          "pendingLabel": "Pending",
+          "columns": {
+            "player": "Player"
+          }
+        }
       },
       "actionLog": {
         "title": "Events",
@@ -3129,9 +3191,12 @@
       },
       "rightColumn": {
         "tabsAriaLabel": "Session panels",
+        "tabScore": "Score",
+        "tabTurn": "Turn",
+        "tabWidget": "Widget",
+        "tabNotes": "Notes",
         "tabTools": "Tools",
-        "tabChat": "Chat",
-        "tabNotes": "Notes"
+        "tabChat": "Chat"
       },
       "tools": {
         "title": "Tools",
@@ -3147,7 +3212,23 @@
         "sendAriaLabel": "Send message",
         "visibilityPrivate": "Private",
         "visibilityShared": "Shared",
-        "emptyMessage": "No messages yet."
+        "emptyMessage": "No messages yet.",
+        "newMessagesToast": "{count, plural, one {# new message} other {# new messages}}",
+        "newMessagesToastAriaLabel": "New messages available — click to scroll to bottom"
+      },
+      "chatAgent": {
+        "title": "ChatAgent",
+        "onlineLabel": "Online",
+        "latencyAriaLabel": "Latency {ms}ms",
+        "agentNameAriaLabel": "Agent name {name}",
+        "collapsedAriaLabel": "ChatAgent collapsed — click to expand",
+        "expandedAriaLabel": "ChatAgent expanded — click to collapse"
+      },
+      "mobile": {
+        "openSheetCta": "Open panel",
+        "closeSheetAriaLabel": "Close panel",
+        "drawerTitle": "Session tools",
+        "tabsAriaLabel": "Tool tabs"
       },
       "notes": {
         "title": "Notes",
@@ -3168,6 +3249,51 @@
         "winnerLabel": "Winner",
         "acknowledgeCta": "Got it",
         "viewSummaryCta": "View summary"
+      },
+      "toolkitRenderer": {
+        "title": "Tools",
+        "emptyTitle": "No active widgets",
+        "emptyBody": "Enable widgets from the toolkit to use them during the session.",
+        "unknownTitle": "Unsupported widget",
+        "unknownBody": "Update the app to support this widget type.",
+        "expandAriaTemplate": "Expand widget {name}",
+        "collapseAriaTemplate": "Collapse widget {name}",
+        "randomGenerator": {
+          "heading": "Generator",
+          "rollLabel": "Roll",
+          "lastLabel": "Last"
+        },
+        "turnManager": {
+          "heading": "Turn manager",
+          "prevLabel": "Prev",
+          "nextLabel": "Next",
+          "turnOfLabel": "Turn of",
+          "phaseLabel": "Phase"
+        },
+        "scoreTracker": {
+          "heading": "Score",
+          "incrementAriaTemplate": "Increment {name} score",
+          "decrementAriaTemplate": "Decrement {name} score"
+        },
+        "resourceManager": {
+          "heading": "Resources",
+          "sharedHeading": "Shared resources",
+          "incrementAriaTemplate": "Increment {label}",
+          "decrementAriaTemplate": "Decrement {label}"
+        },
+        "noteManager": {
+          "heading": "Notes",
+          "inputAriaLabel": "Write a shared note",
+          "savingLabel": "Saving…",
+          "savedLabel": "Saved"
+        },
+        "whiteboard": {
+          "heading": "Whiteboard",
+          "toolPenLabel": "Pen",
+          "toolEraserLabel": "Eraser",
+          "toolCircleLabel": "Circle",
+          "placeholderLabel": "Shared drawing area"
+        }
       }
     },
     "sessionSummary": {
@@ -3246,7 +3372,9 @@
           "continueLive": "Go to live session"
         },
         "notFound": {
-          "title": "Session not found",
+          "title": "No active session",
+          "description": "The requested session does not exist or has not been created yet.",
+          "newSession": "Start new session",
           "backToSessions": "Back to sessions"
         }
       }
@@ -3877,6 +4005,19 @@
       "error": {
         "title": "Could not load statistics",
         "description": "A network error occurred. Check your connection and try again."
+      },
+      "trend": {
+        "title": "Win rate trend",
+        "empty": "Not enough data for a trend",
+        "month": "Month",
+        "winRate": "Win rate"
+      },
+      "range": {
+        "label": "Filter period",
+        "all": "All",
+        "30d": "30d",
+        "90d": "90d",
+        "12m": "12mo"
       }
     },
     "new": {
@@ -3929,6 +4070,10 @@
         "saving": "Saving…",
         "cancel": "Cancel",
         "draft": "Draft"
+      },
+      "draft": {
+        "saving": "Saving…",
+        "saved": "Draft saved {time}"
       },
       "success": {
         "toast": "Game recorded",
@@ -4074,6 +4219,13 @@
         "deleteToast": "Record deleted",
         "deleteToastDescription": "The record was deleted successfully"
       },
+      "conflict": {
+        "title": "Concurrent edit",
+        "description": "Someone modified this game while you were editing. Reload the latest data or overwrite with your changes.",
+        "reload": "Reload",
+        "overwrite": "Overwrite anyway",
+        "stillConflict": "Your save was also beaten by another edit. Try again."
+      },
       "error": {
         "loadFailed": "Could not load the record",
         "updateFailed": "Update failed",
@@ -4091,6 +4243,57 @@
         "cancel": "Cancel",
         "back": "← Back"
       }
+    },
+    "share": {
+      "button": "Share",
+      "dialogTitle": "Share play record",
+      "dialogDescription": "Generate a public link to share this play record with anyone.",
+      "generate": "Generate link",
+      "generating": "Generating…",
+      "urlLabel": "Share link",
+      "copy": "Copy",
+      "copied": "Link copied",
+      "revoke": "Revoke",
+      "revoking": "Revoking…",
+      "notShared": "Not shared yet",
+      "errorGenerate": "Could not generate the link. Please try again.",
+      "errorRevoke": "Could not revoke the link. Please try again."
+    },
+    "photos": {
+      "sectionTitle": "Game photos",
+      "addButton": "Add photo",
+      "dialogTitle": "Upload photo",
+      "dialogDescription": "JPG, PNG, WebP or HEIC · max 5MB · up to 10 photos.",
+      "selectLabel": "Select photo",
+      "captionLabel": "Caption (optional)",
+      "captionPlaceholder": "E.g. final board",
+      "extractScoreLabel": "Extract score from photo (OCR)",
+      "ocrResultTitle": "Detected text",
+      "uploadCta": "Upload",
+      "uploading": "Uploading…",
+      "emptyTitle": "No photos",
+      "emptyDescription": "Upload a photo of the board or the table.",
+      "photoAltFallback": "Game photo",
+      "dedupToast": "This photo is already attached.",
+      "uploadError": "Photo upload failed.",
+      "tooLarge": "File too large, max 5MB.",
+      "tooMany": "Max 10 photos per game.",
+      "badFormat": "Unsupported format. Use JPG, PNG, WebP or HEIC.",
+      "heicFailed": "HEIC conversion failed. Try JPEG or PNG.",
+      "lightboxClose": "Close",
+      "lightboxPrev": "Previous",
+      "lightboxNext": "Next"
+    },
+    "history": {
+      "button": "History",
+      "dialogTitle": "Change history",
+      "dialogDescription": "Last 5 previous versions. You can restore any version.",
+      "versionLabel": "v{n}",
+      "restore": "Restore",
+      "restoring": "Restoring…",
+      "empty": "No previous versions",
+      "restored": "Version restored",
+      "errorRestore": "Could not restore version. Please try again."
     },
     "kbGlobale": {
       "hero": {

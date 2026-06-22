@@ -354,6 +354,7 @@ builder.Services.AddMediatR(cfg =>
     cfg.AddOpenBehavior(typeof(Api.BoundedContexts.SessionTracking.Application.Behaviors.ValidatePlayerRoleBehavior<,>)); // Issue #4765: Role validation
     cfg.AddOpenBehavior(typeof(Api.BoundedContexts.KbQuality.Application.Behaviors.EvalRateLimitBehavior<,>)); // Issue #1675: KB quality eval sliding rate limit (registered BEFORE cost cap)
     cfg.AddOpenBehavior(typeof(Api.BoundedContexts.KbQuality.Application.Behaviors.EvalCostCapBehavior<,>)); // Issue #1675: KB quality eval cost cap (D-H, A1)
+    cfg.AddOpenBehavior(typeof(Api.BoundedContexts.UserNotifications.Application.Behaviors.NotificationDedupePipelineBehavior<,>)); // #2383 (ADR-068/072): swallow 23505 on UX_notifications_user_source_event_id (race-safe idempotent dispatch)
     var mediatrLicenseKey = Environment.GetEnvironmentVariable("MEDIATR_LICENSE_KEY");
     if (!string.IsNullOrWhiteSpace(mediatrLicenseKey))
         cfg.LicenseKey = mediatrLicenseKey;
@@ -744,6 +745,35 @@ app.MapHealthChecks("/health/config", new Microsoft.AspNetCore.Diagnostics.Healt
     }
 });
 
+// Seed / RAG state probe (#2126 D3). Surfaces the SeedStateHealthCheck Data
+// (seed_state, pdf_total, pdf_ready, pdf_failed, chunk_count, embedding_count)
+// at a stable JSON path so a dev (or a monitoring scrape) can see whether the
+// stack is `empty`, `indexing`, `partial_failed`, or `ready` without parsing
+// the noisier global /health response.
+app.MapHealthChecks("/health/seed", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains(Api.Infrastructure.Health.Models.HealthCheckTags.Seed),
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var seedCheck = report.Entries.FirstOrDefault(e => string.Equals(e.Key, "seed_state", StringComparison.Ordinal));
+        var data = seedCheck.Value.Data ?? new Dictionary<string, object>(StringComparer.Ordinal);
+        var result = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            seed_state = data.TryGetValue("seed_state", out var s) ? s : "unknown",
+            pdf_total = data.TryGetValue("pdf_total", out var pt) ? pt : 0,
+            pdf_ready = data.TryGetValue("pdf_ready", out var pr) ? pr : 0,
+            pdf_failed = data.TryGetValue("pdf_failed", out var pf) ? pf : 0,
+            chunk_count = data.TryGetValue("chunk_count", out var cc) ? cc : 0,
+            embedding_count = data.TryGetValue("embedding_count", out var ec) ? ec : 0,
+            description = seedCheck.Value.Description,
+            duration = seedCheck.Value.Duration.TotalMilliseconds,
+        }, healthCheckJsonOptions);
+        await context.Response.WriteAsync(result).ConfigureAwait(false);
+    }
+});
+
 // API-01: Create v1 API route group and map routing files
 var v1Api = app.MapGroup("/api/v1");
 
@@ -859,6 +889,7 @@ app.MapAdminBulkImportEndpoints();       // Issue #4354: Bulk import endpoint ro
 app.MapAdminProviderEndpoints();         // Issue #936: Provider token probe observability
 v1Api.MapGroup("/admin/catalog-ingestion").MapAdminCatalogIngestionEndpoints(); // Admin bulk Excel import + enrichment
 v1Api.MapGroup("/admin/catalog/seeds").MapAdminCatalogSeedEndpoints();          // Issue #1903 M6.2: admin catalog seed pipeline
+v1Api.MapGroup("/admin/wikidata/enrichment").MapAdminWikidataCoverEnrichmentEndpoints(); // Issue #1823 Wave 3 M12: admin Wikidata cover trigger
 v1Api.MapGroup("/admin/event-outbox").MapAdminDomainEventOutboxEndpoints();    // Issue #1535 T6: domain_event_outbox health surface
 
 // Issue #1928 Task B (DEC-B-1 + DEC-B-4) — E2E test seeding endpoints, triple-gated:
@@ -918,6 +949,7 @@ v1Api.MapAlertEndpoints();             // Alert management
 v1Api.MapAlertConfigEndpoints();       // Alert rules (Issue #921)
 v1Api.MapAlertConfigurationEndpoints(); // Alert configuration (Issue #915)
 v1Api.MapAdminMetricsEndpoints();      // SP5 F4-C7 #1840: Prometheus metric labels passthrough
+v1Api.MapBggAttemptBeaconEndpoints();  // Issue #2123: anonymous beacon for FE Image-loader ToS guard
 v1Api.MapAlertChannelsEndpoints();     // SP5 F4-C7 #1840: Email/Slack channel CRUD + test-connection
 v1Api.MapNotificationEndpoints();      // User notifications (Issue #2053)
 v1Api.MapNotificationPreferencesEndpoints(); // Notification preferences (Issue #4220)
@@ -946,6 +978,7 @@ v1Api.MapAdminOperationsEndpoints();   // Issue #3696: Operations - Service Cont
 v1Api.MapAdminImpersonationEndpoints(); // SP5 S2: consolidated impersonation API (start/end/revoke/active)
 v1Api.MapAdminTwoFactorComplianceEndpoints(); // SP5 S3 T6: admin 2FA compliance sweep (GET /admin/users/no-2fa)
 v1Api.MapAdminCategoriesEndpoints();   // Issue #1440: SharedGame categories CRUD
+v1Api.MapSharedGameTranslationEndpoints(); // Issue #2339 sub-PR 1/3 Wave 5: SharedGame translations admin CRUD
 v1Api.MapAdminInfrastructureEndpoints(); // AI Infrastructure Dashboard: service status, config, restart
 v1Api.MapDatabaseSyncEndpoints();     // Database sync admin panel
 v1Api.MapAdminDockerEndpoints();       // Issue #139: Docker container management (Phase 3)

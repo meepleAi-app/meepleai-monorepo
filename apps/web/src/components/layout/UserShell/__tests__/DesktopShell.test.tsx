@@ -24,8 +24,9 @@ vi.mock('@/components/layout/SideDrawer/SideDrawer', () => ({
 // #1977 (audit follow-up of umbrella #1974, finding F18): MainSidebar mount
 // was removed from DesktopShell to dedupe primary navigation with the
 // AppTopBar. The component is no longer imported by the shell, so no stub
-// is needed here. `MAIN_NAV_ITEMS` + `MainNavList` are still consumed by the
-// mobile drawer; their own test suites cover that path.
+// is needed here. #2158 (Fix #4): the orphan `MainSidebar/` and the unused
+// `main-nav/` module (MAIN_NAV_ITEMS + MainNavList) were deleted; the mobile
+// drawer uses `SideDrawerItems` (useNavigationItems → UNIFIED_NAV_ITEMS).
 
 vi.mock('@/components/layout/UserShell/SessionBanner', () => ({
   SessionBanner: () => null,

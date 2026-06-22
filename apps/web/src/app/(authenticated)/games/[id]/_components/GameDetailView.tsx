@@ -22,7 +22,7 @@
 
 'use client';
 
-import { useMemo, useState, type ReactElement } from 'react';
+import { useEffect, useMemo, useState, type ReactElement } from 'react';
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -49,6 +49,7 @@ import {
   type GameDetailHeroMeta,
   type TabKey,
 } from '@/components/features/game-detail';
+import { DetailPageContainer } from '@/components/layout/PageContainer';
 import { toast } from '@/components/layout/Toast';
 import { useGameAgents } from '@/hooks/queries/useGameAgents';
 import {
@@ -56,7 +57,9 @@ import {
   useLibraryGameDetail,
   type LibraryGameDetail,
 } from '@/hooks/queries/useLibrary';
+import { useSharedGameDetail } from '@/hooks/useSharedGameDetail';
 import { useTranslation } from '@/hooks/useTranslation';
+import { trackEvent } from '@/lib/analytics/track-event';
 import { useGameLeaderboard } from '@/lib/domain-hooks/useGameLeaderboard';
 import {
   useAddHouseRule,
@@ -429,6 +432,16 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
     enabled: !!gameId && detailQuery.isSuccess && detailQuery.data != null && tab === 'agents',
   });
 
+  // Documents tab KB list (#2309 DEC-A + DEC-B).
+  // `LibraryGameDetail` does not carry the published KB list; `SharedGameDetail`
+  // does (`kbs: PublishedKbPreviewSchema[]`). Fetched lazily only when the user
+  // opens the Documents tab — most never do. The hook's stale-while-revalidate
+  // (60s) means re-opening the tab within a minute hits cache, no refetch.
+  const sharedGameDetailQuery = useSharedGameDetail({
+    id: gameId ?? '',
+    enabled: !!gameId && tab === 'documents',
+  });
+
   // Leaderboard hook (Issue #1466 — lazy, gated by parent + tab + own variant).
   // Only fetches on the Stats tab AND when the game is in the user's library
   // (libraryEntryId present). Community variant locks the tab → no fetch.
@@ -458,6 +471,44 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
 
   // ── Effective detail (fixture takes priority over real data) ─────────────
   const detail = fixture ?? detailQuery.data ?? null;
+
+  // Documents tab adapter (#2309). Maps PublishedKbPreview from SharedGameDetail
+  // to GameDetailKbDocEntry. `PublishedKbPreview` only carries id/language/
+  // totalChunks/indexedAt — sizeFormatted + pages are placeholders until
+  // #2311 (sp4-kb-detail) exposes richer chunk metadata. `href` deep-links to
+  // the KB document detail surface (route exists; layout iteration in #2311).
+  // Declared here (above the FSM conditional renders) to comply with
+  // react-hooks/rules-of-hooks.
+  const documentsTabDocs = useMemo(
+    () =>
+      (sharedGameDetailQuery.data?.kbs ?? []).map(kb => ({
+        id: kb.id,
+        title: `KB ${kb.language.toUpperCase()}`,
+        status: 'indexed' as const,
+        sizeFormatted: '—',
+        pages: 0,
+        chunks: kb.totalChunks,
+        href: `/knowledge-base/${kb.id}`,
+      })),
+    [sharedGameDetailQuery.data]
+  );
+
+  // Telemetry for the edge case where kbStatus='ready' but the published KB
+  // list comes back empty (#2309 DEC-C). Surfaces transient indexing-finalization
+  // races so we can spot real backend inconsistency vs cache lag. Declared
+  // unconditionally per react-hooks/rules-of-hooks; the body itself guards on
+  // detail availability + tab state.
+  useEffect(() => {
+    if (
+      tab === 'documents' &&
+      detail?.kbStatus === 'ready' &&
+      sharedGameDetailQuery.data !== undefined &&
+      documentsTabDocs.length === 0 &&
+      gameId
+    ) {
+      trackEvent('documents_tab_empty_when_kb_ready', { gameId });
+    }
+  }, [tab, detail?.kbStatus, sharedGameDetailQuery.data, documentsTabDocs.length, gameId]);
 
   // ── FSM state derivation ─────────────────────────────────────────────────
   const realKind = useMemo(() => {
@@ -699,7 +750,7 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
       />
 
       {/* Tab panels — role=tabpanel, aria-labelledby wired to tabIdFor */}
-      <div className="container mx-auto max-w-4xl px-4 py-6 sm:px-8">
+      <DetailPageContainer>
         {/* Cell 5: info tab */}
         <div
           role="tabpanel"
@@ -829,16 +880,38 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
         >
           <div className="flex flex-col gap-6">
             <GameDetailAgentsList state={agentsState} labels={agentsLabels} />
-            {/* Inline chat preview (#1471) — empty for now; full chat lives at /library/{id}/agent */}
+            {/* Inline chat preview (#1471) — `messages={[]}` stays empty for now: this
+                is the catalogue preview, not a live thread; full chat lives at
+                /library/{id}/agent. Block A of #2289 / #2247 wires the
+                `disabled` guard so the CTA is unreachable until the SharedGame
+                has indexed KB. Gating drives off `LibraryGameDetail.kbStatus`
+                (`'ready' | 'indexing' | 'error'`) which `useLibraryGameDetail`
+                derives from the existing gamebook merge. `LibraryGameDetail`
+                does NOT carry `hasKnowledgeBase` directly — using the
+                broader `SharedGameDetail` shape here would require a second
+                fetch we don't yet need. */}
             <GameDetailChatTab
               messages={[]}
               openHref={`/library/${gameId}/agent`}
               labels={chatTabLabels}
+              disabled={safeDetail.kbStatus !== 'ready'}
+              disabledTitle={
+                safeDetail.kbStatus !== 'ready'
+                  ? "Disponibile dopo l'indicizzazione del primo PDF di regole."
+                  : undefined
+              }
             />
           </div>
         </div>
 
-        {/* Documents tab */}
+        {/* Documents tab — wired via lazy useSharedGameDetail (#2309 DEC-A+B).
+            Hook gated on `tab === 'documents'` so users who never open the tab
+            don't pay the fetch cost; stale-while-revalidate (60s) absorbs
+            re-opens within the cache window. `PublishedKbPreview` only carries
+            id/language/totalChunks/indexedAt — pages and sizeFormatted are
+            display-only placeholders until #2311 (sp4-kb-detail) exposes the
+            richer metadata. Empty state (DEC-C) is the generic
+            `kbDocLabels.empty` already handled by GameDetailKbDocList. */}
         <div
           role="tabpanel"
           id={panelIdFor('documents')}
@@ -846,9 +919,9 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
           hidden={tab !== 'documents'}
           data-slot="game-detail-panel-documents"
         >
-          <GameDetailKbDocList docs={[]} labels={kbDocLabels} />
+          <GameDetailKbDocList docs={documentsTabDocs} labels={kbDocLabels} />
         </div>
-      </div>
+      </DetailPageContainer>
     </div>
   );
 }

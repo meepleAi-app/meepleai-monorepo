@@ -67,6 +67,7 @@ internal class GetKnowledgeBaseStatusQueryHandler : IQueryHandler<GetKnowledgeBa
                 .AsNoTracking()
                 .Select(p => new
                 {
+                    p.Id,
                     p.ProcessingState,
                     p.ProcessingProgressJson,
                     p.ProcessingError,
@@ -86,8 +87,19 @@ internal class GetKnowledgeBaseStatusQueryHandler : IQueryHandler<GetKnowledgeBa
                     GameName: gameName);
             }
 
+            // Issue #2243 (epic #2242) Block D: fetch the actual ChunkCount for the most-recent
+            // PDF so the "Ready" branch can return real totals instead of (0, 0). Indexed chunks
+            // live on the VectorDocument row that the ingestion pipeline writes/updates at
+            // IndexInVectorStoreAsync; we keep this projection-only and cheap.
+            var indexedChunkCount = await _dbContext.VectorDocuments
+                .AsNoTracking()
+                .Where(v => v.PdfDocumentId == pdf.Id)
+                .Select(v => v.ChunkCount)
+                .FirstOrDefaultAsync(cancellationToken)
+                .ConfigureAwait(false);
+
             var (status, progress, totalChunks, processedChunks, errorMessage) =
-                MapProcessingState(pdf.ProcessingState, pdf.ProcessingProgressJson, pdf.ProcessingError);
+                MapProcessingState(pdf.ProcessingState, pdf.ProcessingProgressJson, pdf.ProcessingError, indexedChunkCount);
 
             return new KnowledgeBaseStatusDto(
                 Status: status,
@@ -114,7 +126,8 @@ internal class GetKnowledgeBaseStatusQueryHandler : IQueryHandler<GetKnowledgeBa
         MapProcessingState(
             string processingState,
             string? processingProgressJson,
-            string? processingError)
+            string? processingError,
+            int indexedChunkCount)
     {
         // Deserialize stored ProcessingProgress JSON if present
         ProcessingProgress? prog = null;
@@ -162,7 +175,9 @@ internal class GetKnowledgeBaseStatusQueryHandler : IQueryHandler<GetKnowledgeBa
                 0,
                 0,
                 null),
-            "Ready" => ("Completed", 100, 0, 0, null),
+            // Issue #2243 Block D: real chunk count instead of (0, 0). All chunks are
+            // processed by the time we hit Ready, so processed == total.
+            "Ready" => ("Completed", 100, indexedChunkCount, indexedChunkCount, null),
             "Failed" => ("Failed", 0, 0, 0, processingError ?? prog?.ErrorMessage ?? "PDF processing failed"),
             _ => ("Pending", 0, 0, 0, null),
         };

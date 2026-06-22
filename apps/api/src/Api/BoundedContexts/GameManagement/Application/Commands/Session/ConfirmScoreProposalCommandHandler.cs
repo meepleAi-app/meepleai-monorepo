@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Hubs;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -20,17 +21,23 @@ internal sealed class ConfirmScoreProposalCommandHandler : IRequestHandler<Confi
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly IHubContext<GameStateHub> _hubContext;
     private readonly ILogger<ConfirmScoreProposalCommandHandler> _logger;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly TimeProvider _timeProvider;
 
     public ConfirmScoreProposalCommandHandler(
         MeepleAiDbContext dbContext,
         ILiveSessionRepository sessionRepository,
         IHubContext<GameStateHub> hubContext,
-        ILogger<ConfirmScoreProposalCommandHandler> logger)
+        ILogger<ConfirmScoreProposalCommandHandler> logger,
+        IUnitOfWork unitOfWork,
+        TimeProvider timeProvider)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _hubContext = hubContext ?? throw new ArgumentNullException(nameof(hubContext));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task Handle(ConfirmScoreProposalCommand request, CancellationToken cancellationToken)
@@ -52,12 +59,20 @@ internal sealed class ConfirmScoreProposalCommandHandler : IRequestHandler<Confi
             .ConfigureAwait(false)
             ?? throw new NotFoundException($"LiveGameSession {request.SessionId} not found in repository");
 
-        // Record score through domain method (validates status, player, dimension)
-        session.RecordScore(request.TargetPlayerId, request.Round, request.Dimension, request.Value);
+        // Record score through domain method (validates status, player, dimension).
+        // Pass the injected TimeProvider so FakeTimeProvider in tests + the audit timeline
+        // see a single deterministic clock — matches the pattern in
+        // RecordLiveSessionScoreCommandHandler and EditLiveSessionScoreCommandHandler.
+        session.RecordScore(
+            request.TargetPlayerId,
+            request.Round,
+            request.Dimension,
+            request.Value,
+            _timeProvider);
 
-        // Persist changes in-memory (LiveSessionRepository uses ConcurrentDictionary).
-        // Scores are batch-persisted to DB when session completes via LiveSessionCompletedEventHandler.
+        // Persist changes via EF-backed repository (Issue #2097 / ADR-060).
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Broadcast confirmation to all session participants
         await _hubContext.Clients.Group($"session:{request.SessionId}")
@@ -69,7 +84,7 @@ internal sealed class ConfirmScoreProposalCommandHandler : IRequestHandler<Confi
                 dimension = request.Dimension,
                 value = request.Value,
                 confirmedBy = request.ConfirmingUserId,
-                timestamp = DateTime.UtcNow
+                timestamp = _timeProvider.GetUtcNow().UtcDateTime
             }, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(

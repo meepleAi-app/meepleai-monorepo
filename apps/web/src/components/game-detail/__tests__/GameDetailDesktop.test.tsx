@@ -12,20 +12,30 @@ const mockHookState = {
   isError: false,
 };
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    replace: vi.fn(),
+    push: vi.fn(),
+    refresh: vi.fn(),
+  }),
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 vi.mock('@/hooks/queries/useLibrary', () => ({
   useLibraryGameDetail: () => mockHookState,
 }));
 
-// Stub the MeepleCard so we don't need its full render tree. F3 #1974
+// Stub GameHero (#2100 M1 replaced legacy MeepleCard hero). F3 #1974
 // regression tests need to assert on the metadata strip; render each
 // metadata `label` inside the stub so `toHaveTextContent` can match
-// without pulling the full primitive.
-vi.mock('@/components/ui/data-display/meeple-card/MeepleCard', () => ({
-  MeepleCard: (props: { title?: string; metadata?: Array<{ label: string }> }) => (
-    <div data-testid="meeple-card">
+// without pulling the full primitive (includes Next/Image which needs
+// extra mocking).
+vi.mock('@/components/game-detail/GameHero', () => ({
+  GameHero: (props: { title?: string; metadata?: Array<{ label: string }> }) => (
+    <div data-testid="game-detail-hero-card">
       {props.title ?? 'no title'}
       {props.metadata?.map((m, i) => (
-        <span key={`meta-${i}`} data-testid={`meeple-card-meta-${i}`}>
+        <span key={`meta-${i}`} data-testid={`game-hero-meta-${i}`}>
           {m.label}
         </span>
       ))}
@@ -99,10 +109,10 @@ describe('GameDetailDesktop', () => {
     expect(screen.getByTestId('game-detail-desktop-error')).toBeInTheDocument();
   });
 
-  it('renders MeepleCard hero and tabs panel when game is loaded', () => {
+  it('renders GameHero v2 and tabs panel when game is loaded', () => {
     mockHookState.data = createGame();
     renderWithQuery(<GameDetailDesktop gameId={GAME_ID} />);
-    expect(screen.getByTestId('meeple-card')).toHaveTextContent('Catan');
+    expect(screen.getByTestId('game-detail-hero-card')).toHaveTextContent('Catan');
     expect(screen.getByRole('tablist', { name: /dettagli gioco/i })).toBeInTheDocument();
   });
 
@@ -116,7 +126,7 @@ describe('GameDetailDesktop', () => {
     mockHookState.data = null;
     // isLoading false, isError false, data null → isNotInLibrary path
     renderWithQuery(<GameDetailDesktop gameId={GAME_ID} />);
-    expect(screen.getByTestId('meeple-card')).toHaveTextContent(/non in libreria/i);
+    expect(screen.getByTestId('game-detail-hero-card')).toHaveTextContent(/non in libreria/i);
     // Tabs still render (they handle isNotInLibrary internally)
     expect(screen.getByRole('tablist', { name: /dettagli gioco/i })).toBeInTheDocument();
   });
@@ -132,7 +142,7 @@ describe('GameDetailDesktop', () => {
       complexityRating: 2.3,
     });
     renderWithQuery(<GameDetailDesktop gameId={GAME_ID} />);
-    const hero = screen.getByTestId('meeple-card');
+    const hero = screen.getByTestId('game-detail-hero-card');
     expect(hero).toHaveTextContent('Klaus Teuber');
     expect(hero).toHaveTextContent(/Complessit.*2\.3/);
   });
@@ -142,7 +152,7 @@ describe('GameDetailDesktop', () => {
     // must degrade gracefully (no empty label, no crash).
     mockHookState.data = createGame({ designers: undefined });
     renderWithQuery(<GameDetailDesktop gameId={GAME_ID} />);
-    const hero = screen.getByTestId('meeple-card');
+    const hero = screen.getByTestId('game-detail-hero-card');
     expect(hero).not.toHaveTextContent('Klaus Teuber');
     // The other strip items still render.
     expect(hero).toHaveTextContent('1995');

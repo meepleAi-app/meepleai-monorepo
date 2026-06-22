@@ -217,6 +217,8 @@ services:
     volumes:
       - ./prometheus.prod.yml:/etc/prometheus/prometheus.yml:ro  # prod-specific labels
       - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
+      # Issue #2470 — Wikidata SSE plane starvation alert.
+      - ./prometheus/alerts/wikidata-sse.yml:/etc/prometheus/wikidata-sse.yml:ro
       - prometheus-prod:/prometheus
     deploy:
       resources:

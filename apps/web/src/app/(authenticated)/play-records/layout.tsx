@@ -1,47 +1,43 @@
 /**
  * Play Records Section Layout
  * Issue #5039 — User Route Consolidation
- * Issue #5045 — Play Records + PageHeader
  *
- * Renders PageHeader with tabs and primary action for the /play-records section.
+ * #2158 (Fix #2 codemod): migrated from legacy PageHeader to MiniNavSlot via
+ * useMiniNavConfig. The `RecordsListView` page already renders a `MobileHeader`
+ * and a sticky `GradientButton` "Nuova partita" that opens `NewPlayRecordSheet`,
+ * which superseded the legacy `primaryAction` linking to `/play-records/new`.
  */
 
 'use client';
 
 import { Suspense, type ReactNode } from 'react';
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 
-import { PageHeader } from '@/components/layout/PageHeader';
+import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
 
-function PlayRecordsHeader() {
-  const router = useRouter();
+function PlayRecordsNav() {
   const searchParams = useSearchParams();
   const tab = searchParams?.get('tab');
-
   const activeTabId = tab === 'stats' ? 'stats' : 'records';
 
-  return (
-    <PageHeader
-      title="Partite & Statistiche"
-      tabs={[
-        { id: 'records', label: 'Partite', href: '/play-records' },
-        { id: 'stats', label: 'Statistiche', href: '/play-records?tab=stats' },
-      ]}
-      activeTabId={activeTabId}
-      primaryAction={{
-        label: 'Nuova Partita',
-        onClick: () => router.push('/play-records/new'),
-      }}
-    />
-  );
+  useMiniNavConfig({
+    breadcrumb: 'Partite & Statistiche',
+    tabs: [
+      { id: 'records', label: 'Partite', href: '/play-records' },
+      { id: 'stats', label: 'Statistiche', href: '/play-records?tab=stats' },
+    ],
+    activeTabId,
+  });
+
+  return null;
 }
 
 export default function PlayRecordsLayout({ children }: { children: ReactNode }) {
   return (
     <>
-      <Suspense fallback={<div className="h-14" />}>
-        <PlayRecordsHeader />
+      <Suspense fallback={null}>
+        <PlayRecordsNav />
       </Suspense>
       {children}
     </>

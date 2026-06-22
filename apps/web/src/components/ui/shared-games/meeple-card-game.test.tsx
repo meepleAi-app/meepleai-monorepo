@@ -127,4 +127,68 @@ describe('MeepleCardGame (v2)', () => {
     );
     expect(container.querySelector('img')).toHaveAttribute('alt', '');
   });
+
+  // Issue #2055 Phase 7 — Wikidata cover attribution footer
+  describe('Wikidata attribution footer', () => {
+    it('renders <footer> with license text when wikidataCoverLicense is provided', () => {
+      const { container } = render(
+        <MeepleCardGame
+          {...baseProps}
+          wikidataCoverLicense="CC BY-SA 4.0"
+          wikidataCoverAttribution="Doe, John"
+          wikidataCoverSourceUrl="https://commons.wikimedia.org/wiki/File:Catan.jpg"
+        />
+      );
+      const footer = container.querySelector('footer');
+      expect(footer).not.toBeNull();
+      expect(footer).toHaveTextContent('CC BY-SA 4.0');
+    });
+
+    it('renders attribution text in footer when provided', () => {
+      render(
+        <MeepleCardGame
+          {...baseProps}
+          wikidataCoverLicense="CC BY 4.0"
+          wikidataCoverAttribution="Jane Smith"
+        />
+      );
+      expect(screen.getByText('Jane Smith')).toBeInTheDocument();
+    });
+
+    it('renders a source link when wikidataCoverSourceUrl is provided', () => {
+      const { container } = render(
+        <MeepleCardGame
+          {...baseProps}
+          wikidataCoverLicense="CC BY-SA 4.0"
+          wikidataCoverSourceUrl="https://commons.wikimedia.org/wiki/File:Catan.jpg"
+        />
+      );
+      const link = container.querySelector('footer a');
+      expect(link).not.toBeNull();
+      expect(link).toHaveAttribute('href', 'https://commons.wikimedia.org/wiki/File:Catan.jpg');
+      expect(link).toHaveAttribute('rel', 'nofollow noopener noreferrer');
+      expect(link).toHaveAttribute('target', '_blank');
+    });
+
+    it('renders no <footer> when wikidataCoverLicense is null', () => {
+      const { container } = render(<MeepleCardGame {...baseProps} wikidataCoverLicense={null} />);
+      expect(container.querySelector('footer')).toBeNull();
+    });
+
+    it('renders no <footer> when wikidataCoverLicense is omitted', () => {
+      const { container } = render(<MeepleCardGame {...baseProps} />);
+      expect(container.querySelector('footer')).toBeNull();
+    });
+
+    it('renders license-only footer when attribution and sourceUrl are absent', () => {
+      const { container } = render(
+        <MeepleCardGame {...baseProps} wikidataCoverLicense="Public Domain" />
+      );
+      const footer = container.querySelector('footer');
+      expect(footer).not.toBeNull();
+      expect(footer).toHaveTextContent('Public Domain');
+      // No separator dots or extra content beyond the license.
+      expect(footer?.querySelector('a')).toBeNull();
+    });
+  });
 });

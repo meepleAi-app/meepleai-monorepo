@@ -48,6 +48,16 @@ export interface UseSharedGameDetailArgs {
   readonly id: string;
   /** SSR seed; passed through to React Query as `initialData`. */
   readonly initialData?: SharedGameDetail;
+  /**
+   * Optional external `enabled` gate. ANDed with the internal `id.length > 0`
+   * defensive check, so callers can defer the fetch (e.g. tab-active lazy
+   * loading per #2309 DEC-B) without losing the empty-id guard.
+   *
+   * Default: `true`. Set to `false` while the consuming surface is hidden
+   * (collapsed tab, off-screen pane) to avoid wasted requests for users
+   * who never expand it.
+   */
+  readonly enabled?: boolean;
 }
 
 export interface UseSharedGameDetailResult {
@@ -106,7 +116,7 @@ export function useSharedGameDetail(args: UseSharedGameDetailArgs): UseSharedGam
     queryFn: () => getSharedGameDetail(args.id),
     initialData: args.initialData,
     staleTime: STALE_MS,
-    enabled: args.id.length > 0,
+    enabled: args.id.length > 0 && (args.enabled ?? true),
   });
 
   const status = deriveFsmStatus(result.data, result.error, result.isLoading);

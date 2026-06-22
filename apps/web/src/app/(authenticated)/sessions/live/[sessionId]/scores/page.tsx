@@ -12,7 +12,7 @@
 
 'use client';
 
-import { use, useCallback, useEffect, useRef } from 'react';
+import { use } from 'react';
 
 import { AutosaveIndicator } from '@/components/session/live/AutosaveIndicator';
 import { ScoreBoard } from '@/components/session/live/ScoreBoard';
@@ -21,66 +21,24 @@ import {
   UpdateSessionScoresError,
   useUpdateSessionScores,
 } from '@/hooks/use-update-session-scores';
+import { useGameObjectivesCatalogue } from '@/hooks/useGameObjectivesCatalogue';
+import { useDebouncedCallback } from '@/lib/session-live/use-debounced-callback';
 import { useLiveSessionStore } from '@/lib/stores/live-session-store';
-
-/**
- * Generic debounced-callback helper. Inlined because `use-debounce` is not part
- * of the workspace and the existing `use-debounce` value-hook under
- * `entity-list-view/hooks` debounces *values*, not *callbacks*.
- */
-function useDebouncedCallback<TArgs extends readonly unknown[]>(
-  callback: (...args: TArgs) => void,
-  delay: number
-): (...args: TArgs) => void {
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const callbackRef = useRef(callback);
-
-  useEffect(() => {
-    callbackRef.current = callback;
-  }, [callback]);
-
-  useEffect(
-    () => () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    },
-    []
-  );
-
-  return useCallback(
-    (...args: TArgs) => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => {
-        callbackRef.current(...args);
-      }, delay);
-    },
-    [delay]
-  );
-}
 
 interface LiveSessionScoresPageProps {
   params: Promise<{ sessionId: string }>;
 }
 
-/**
- * MVP fallback objectives catalogue.
- *
- * The full game-catalogue wiring (Toolkit / SessionDetail) is out of scope for
- * P1; once available, replace this constant with a selector on
- * `useLiveSessionStore` (or a TanStack Query against the game detail endpoint).
- *
- * TODO(#1899-followup): wire real catalogue via live-session-store extension.
- */
-const MVP_OBJECTIVES_CATALOGUE: readonly string[] = [
-  'Vittoria',
-  'Sopravvivenza',
-  'Tesoro',
-  'Boss',
-  'Quest',
-];
-
 export default function LiveSessionScoresPage({ params }: LiveSessionScoresPageProps) {
   const { sessionId } = use(params);
   const players = useLiveSessionStore(s => s.players);
+
+  // #2432: catalogue lookup is centralised at the hook layer so the future
+  // per-game endpoint swap is invisible to this page. Today the store does
+  // not expose gameId here (#1899-followup, same TODO that gates scoringType
+  // wiring); pass null to opt into the default catalogue until the wiring
+  // lands.
+  const availableObjectives = useGameObjectivesCatalogue(null);
 
   /**
    * The live-session store does NOT yet expose `scoringType`. Until the asse-D
@@ -96,7 +54,7 @@ export default function LiveSessionScoresPage({ params }: LiveSessionScoresPageP
   const isHost = players.find(p => p.isHost)?.isHost ?? false;
   const mutation = useUpdateSessionScores();
 
-  const debouncedSave = useDebouncedCallback((payload: ScoreChangePayload) => {
+  const [debouncedSave] = useDebouncedCallback((payload: ScoreChangePayload) => {
     mutation.mutate({
       sessionId,
       scoringType: payload.scoringType,
@@ -112,7 +70,7 @@ export default function LiveSessionScoresPage({ params }: LiveSessionScoresPageP
         <div className="flex justify-end px-4 pt-2">
           <AutosaveIndicator />
         </div>
-        <ScoreBoard sessionId={sessionId} isHost={isHost} />
+        <ScoreBoard sessionId={sessionId} />
       </div>
     );
   }
@@ -134,7 +92,7 @@ export default function LiveSessionScoresPage({ params }: LiveSessionScoresPageP
           // adapter can be removed.
           displayName: p.name,
         }))}
-        availableObjectives={MVP_OBJECTIVES_CATALOGUE}
+        availableObjectives={availableObjectives}
         onChange={debouncedSave}
         disabled={mutation.isPending}
       />

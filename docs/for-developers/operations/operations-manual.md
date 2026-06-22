@@ -26,6 +26,9 @@
 16. [Storage Services](#16-storage-services)
 17. [Incident Response](#17-incident-response)
 18. [Maintenance & Disaster Recovery](#18-maintenance--disaster-recovery)
+19. [Catalog Seed Pipeline (#1903)](#19-catalog-seed-pipeline-1903)
+20. [Catalog Covers — BGG ToS Compliance (#2123)](#20-catalog-covers--bgg-tos-compliance-2123)
+21. [Self-Hosted Runner Recovery](#21-self-hosted-runner-recovery)
 
 ---
 
@@ -2167,6 +2170,7 @@ S3_FORCE_PATH_STYLE=false
 | Access denied | Wrong credentials | Check `storage.secret` |
 | Upload fails | S3_FORCE_PATH_STYLE wrong | Set to `true` for MinIO |
 | Console not loading | Port 9001 not exposed | Check compose override |
+| `Could not determine content length` on R2 PUT | Non-seekable stream + R2 strict checksum validation | Fixed in #2271 (PR #2280) — `S3BlobStorageService.StoreAsync` pre-buffers non-seekable streams + sets `Headers.ContentLength` + `DisableDefaultChecksumValidation`. Health-check (`HEAD` bucket only) does not exercise PUT; rely on `make seed-index` smoke run. |
 
 #### Disaster Recovery
 
@@ -2686,6 +2690,294 @@ erasure requests (designer name → `DELETE WHERE designer_name = 'X'`).
   per request (`BulkEnqueueCatalogSeedsCommandValidator`). Split the paste.
 - **`CatalogSeedApiError` with status 503 in the FE**: kill-switch is active.
   See "Disabling" above.
+
+---
+
+## 20. Catalog Covers — BGG ToS Compliance (#2123)
+
+Issue [#2123](https://github.com/meepleAi-app/meepleai-monorepo/issues/2123) and
+ADR-059 §5 ban all browser-side asset traffic to BoardGameGeek hosts
+(`cf.geekdo-images.com`, `*.boardgamegeek.com`, `images.geekdo.com`,
+`geekdo-images.com`). Covers are served from R2 (PDF-derived, BGG re-uploaded
+server-side, or Wikidata/Wikimedia Commons), with a deterministic placeholder
+as the terminal fallback.
+
+### Alert: `meepleai_bgg_url_attempted_render_total > 0`
+
+**Severity**: P1 (legal exposure — possible ToS violation in flight).
+
+**Trigger**: any browser attempted to render an image whose hostname matches
+the BGG block list. The custom Next.js Image loader caught the attempt and
+redirected to the placeholder, but the attempt itself **must** be
+investigated: it means a code path is passing a BGG URL into `<Image>` instead
+of the runtime-resolved `SharedGameDto.CoverUrl`.
+
+**Investigation steps**:
+
+```bash
+# 1. Identify offending route
+# In Grafana:
+sum by (path) (rate(meepleai_bgg_url_attempted_render_total[5m]))
+
+# 2. Check whether DB rows regressed (seed manifests should be clean)
+psql "$PROD_DB_URL" -c "
+  SELECT COUNT(*) FROM shared_games
+  WHERE image_url ILIKE '%geekdo%' OR image_url ILIKE '%boardgamegeek%'
+     OR thumbnail_url ILIKE '%geekdo%' OR thumbnail_url ILIKE '%boardgamegeek%';"
+# Expected: 0. Nonzero ⇒ a seed import or admin tool rewrote a row;
+# run the nullify UPDATE from migration 20260610152201 manually.
+
+# 3. Check FE source for new raw <Image> consumer that bypassed <Cover>
+cd apps/web && pnpm lint:bgg
+```
+
+**Resolution**:
+
+- DB row pollution: `UPDATE shared_games SET image_url = NULL WHERE image_url ILIKE '%geekdo%' OR image_url ILIKE '%boardgamegeek%';` (same for `thumbnail_url`).
+- FE regression: revert raw `<Image>` consumer to `<Cover>` wrapper.
+- Manifest regression: `python scripts/scrub_bgg_manifest.py` + redeploy seeder.
+
+### Cover resolution health
+
+Metric: `meepleai_cover_resolution_total{source}` — label is one of
+`r2_user`, `r2_pdf`, `r2_bgg`, `r2_wikidata`, `placeholder`. Healthy
+distribution depends on the catalog enrichment progress; if `source="placeholder"`
+exceeds **80%** for more than 15 minutes, the QID bootstrap + M8 batch run
+needs to be performed (or the upstream Wikimedia is degraded).
+
+### Periodic Wikidata QID + M8 re-enrichment
+
+Wave 3 M9 BackgroundService scheduler (tracked separately under epic #1823)
+will automate quarterly re-verification. Until then, the manual procedure for
+newly added games is:
+
+```bash
+# 1. Bootstrap QIDs for games with a BggId but no WikidataQid yet
+python scripts/bootstrap_wikidata_qid.py --connection-string "$STAGING_DB_URL"
+
+# 2. Get the ids of QID-populated games still missing a Wikidata cover
+GAME_IDS=$(psql "$STAGING_DB_URL" -At -c "
+  SELECT id FROM shared_games
+  WHERE wikidata_qid IS NOT NULL
+    AND (wikidata_cover_r2_key IS NULL OR wikidata_qid_last_verified_at < NOW() - INTERVAL '90 days')")
+
+# 3. Trigger the M8 batch via admin endpoint (sequential 1 req/sec Wikimedia limit)
+curl -X POST "https://staging.meepleai.app/api/v1/admin/catalog/covers/enrich-batch" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"gameIds\":[$(echo $GAME_IDS | tr ' ' ',')]}"
+```
+
+Expected success rate ≥80% of QID-populated games; the rest will Skip with
+machine-readable reasons (license not whitelisted, image not available on
+Wikidata, etc.) and fall back to the placeholder.
+
+### CI gating
+
+- `Frontend - BGG Lint` runs `pnpm lint:bgg` per PR.
+- `Backend - BGG ToS IT` runs `BggToSComplianceIntegrationTests` (Testcontainers
+  Postgres) per PR.
+
+Either failure blocks merge. Bypassing requires an explicit lift comment from
+@DegrassiAaron AND a follow-up issue tracking the regression.
+
+---
+
+## 21. Self-Hosted Runner Recovery
+
+### Background
+
+A GitHub Actions self-hosted runner (`meepleai-staging`, ARM64, Hetzner CX31)
+runs deploy + nightly workflows. Going offline → workflow runs queue
+indefinitely with no surface alert from GitHub. Issue #2019 (2026-06-08)
+exposed this: the runner was OOM-killed during `pnpm install`, sat down
+for 4h25min before a maintainer noticed.
+
+### Failure mode: OOM kill
+
+The CX31 has 8GB RAM + 4GB swap. Concurrent Docker workload (postgres,
+embedding, reranker, n8n) reserves ~3GB. A `pnpm install` spike pushes
+the runner past the available memory budget; the kernel OOM-killer
+picks the runner over the (much larger) Docker containers because the
+runner unit has no `MemoryMax` cap and no negative `OOMScoreAdjust`.
+
+journal signature:
+
+```
+actions.runner.<owner>-<repo>.<runner>.service: A process of this unit has been killed by the OOM killer.
+actions.runner.*.service: Failed with result 'oom-kill'.
+```
+
+### Mitigation: systemd override
+
+The override at `infra/runner/systemd-overrides/10-memory-limits.conf`
+caps the runner at 3G via cgroup `memory.max` and deprioritizes it as
+an OOM target. When the cap is approached, systemd kills the runner
+cleanly and `Restart=on-failure RestartSec=30s` brings it back online
+automatically within 30 seconds.
+
+```ini
+[Service]
+MemoryMax=3G
+OOMScoreAdjust=-500
+Restart=on-failure
+RestartSec=30s
+```
+
+### Install procedure
+
+Run on the staging host as root (this is reproducible from the repo,
+no manual transcription):
+
+```bash
+ssh meepleai-staging
+sudo bash /opt/meepleai/repo/infra/runner/apply-memory-overrides.sh
+```
+
+The script:
+
+1. Auto-discovers the `actions.runner.*.service` unit name.
+2. Installs the drop-in at
+   `/etc/systemd/system/<unit>.d/10-memory-limits.conf`.
+3. Runs `systemctl daemon-reload + restart <unit>`.
+4. Verifies `MemoryMax=3221225472` (= 3G), `OOMScoreAdjust=-500`,
+   `Restart=on-failure`. Exits non-zero if any property differs.
+
+Idempotent — safe to re-run after a runner reinstall.
+
+### Verify
+
+```bash
+systemctl show <runner-service> -p MemoryMax,OOMScoreAdjust,Restart,RestartSec
+```
+
+Expected:
+
+```
+MemoryMax=3221225472
+OOMScoreAdjust=-500
+Restart=on-failure
+RestartSec=30s
+```
+
+### Recovery from an offline runner
+
+If the alert `RunnerOffline` (Prometheus, 10m threshold) or
+`RunnerOfflineCritical` (30m) fires:
+
+```bash
+# 1. Inspect
+ssh meepleai-staging
+sudo systemctl status actions.runner.*
+
+# 2. Check OOM history (the failure signature that triggered #2019)
+sudo journalctl -u actions.runner.* --since '1 hour ago' | grep -i oom
+
+# 3. Restart (auto-restart should have engaged; this is a manual fallback)
+sudo systemctl restart actions.runner.*
+
+# 4. If repeated kills despite override: check Docker workload
+docker stats --no-stream
+# Consider capping memory on heaviest containers in compose.staging.yml
+```
+
+### Monitoring
+
+| Alert | Severity | Threshold | Source |
+|---|---|---|---|
+| `RunnerOffline` | warning | offline > 10m | `up{job="github_runner_local"} == 0` |
+| `RunnerOfflineCritical` | critical | offline > 30m | same expr, longer `for:` |
+| `RunnerMemoryNearLimit` | warning | mem.current / MemoryMax > 0.8 for 5m | cgroup memory |
+
+Rules: `infra/prometheus/alerts/runner-availability.yml`
+Companion script: `infra/runner/monitor.sh` (textfile collector emits the
+`up{}` gauge from `systemctl is-active <unit>`).
+
+### Refs
+
+- Issue: [#2019](https://github.com/meepleAi-app/meepleai-monorepo/issues/2019)
+- Companion infra: [#1990](https://github.com/meepleAi-app/meepleai-monorepo/issues/1990) (Phase B soak — incident context)
+- Setup script: `infra/runner/setup-runner.sh`
+- Health monitor: `infra/runner/monitor.sh`
+
+---
+
+## 22. Wikidata SSE Subscriber Starvation
+
+### Alert: `WikidataSseSubscriberStarvation`
+
+| Property | Value |
+|---|---|
+| Severity | warning |
+| Subsystem | wikidata-sse |
+| Threshold | `meepleai_wikidata_sse_subscribers == 0 AND meepleai_wikidata_sse_admin_clients_connected > 0` |
+| Sustained for | 15m |
+| Defined in | `infra/prometheus/alerts/wikidata-sse.yml` |
+
+### What it means
+
+An admin has the wikidata dead-letter visibility page open (it is
+heartbeating every 30s, so the `admin_clients_connected` gauge is
+above zero), but the local broadcaster reports **zero SSE subscribers**.
+Live row updates are silently not flowing — the admin sees a stale page
+until they hard-reload.
+
+Background metric contract:
+
+- `meepleai_wikidata_sse_subscribers` — gauge fed by
+  `IWikidataEnrichmentEventBroadcaster.SubscriberCount`.
+- `meepleai_wikidata_sse_admin_clients_connected` — gauge fed by
+  `WikidataAdminClientHeartbeatTracker.GetConnectedCount(now)`. TTL is
+  90 seconds (3 missed FE pings); entries older are GC'd on read.
+
+### Investigation steps
+
+1. **Confirm the alert is real**. In Grafana → dashboard
+   "Wikidata Cover Enrichment — Pipeline Health" → Panels 9 + 12.
+   Panel 9 should read 0; Panel 12 should be ≥ 1 (one or more admins
+   actively watching). If Panel 12 is also 0, the alert is misfiring
+   — file a sub-issue.
+
+2. **Check publisher activity**. Panel 10 (`SSE publish rate`) — if it
+   is also flat at 0, the alert is benign (nothing to deliver). If it
+   is non-zero, every published event is being dropped on this pod.
+
+3. **Search api logs for failure patterns**. SSH to the running pod
+   and grep:
+
+   ```bash
+   docker logs meepleai-api --since 30m 2>&1 | grep -E \
+     "RedisWikidataEnrichmentEventBroadcaster.*(SUBSCRIBE failed|dropped malformed|UNSUBSCRIBE failed)|InMemoryWikidataEnrichmentEventBroadcaster.*dropped event"
+   ```
+
+   - `failed to open SUBSCRIBE` → Redis backplane handshake broken.
+     Verify Redis health (`docker exec meepleai-redis redis-cli PING`).
+   - `dropped malformed message` → schema-version mismatch between pods
+     after a partial deploy.
+   - Nothing in logs → likely a client-side EventSource drop (step 4).
+
+4. **Ask the admin to hard-reload the page**. If the gauge climbs back
+   to ≥ 1 within 30 seconds, the issue was a stale FE EventSource and
+   the alert clears within ~15 min. If the gauge stays at 0, the SSE
+   endpoint is genuinely starving — investigate reverse-proxy /
+   ingress idle-timeout (Traefik, nginx) on `/api/v1/admin/wikidata/enrichment/events`.
+
+### Resolution paths
+
+| Symptom | Fix |
+|---|---|
+| FE EventSource dropped | Admin hard-reload; consider a future client-side auto-reconnect with exponential backoff |
+| Redis SUBSCRIBE failed | `docker restart meepleai-api` (re-runs `EnsureRedisSubscriptionAsync` lazily on next subscriber) |
+| Proxy idle-timeout | Bump the ingress `proxy_read_timeout` / Traefik `transport.respondingTimeouts.readTimeout` above the 30s heartbeat |
+| Malformed-message rate spike | Roll forward to a single deploy version — partial rollout broke the wire schema |
+
+### Refs
+
+- Issue: [#2470](https://github.com/meepleAi-app/meepleai-monorepo/issues/2470)
+- Companion: [#2256](https://github.com/meepleAi-app/meepleai-monorepo/issues/2256) (Redis backplane shipped in PR #2469)
+- Originating SSE endpoint: `apps/api/src/Api/Routing/Admin/AdminWikidataCoverEnrichmentEndpoints.cs` → `HandleEventsStream`
+- Broadcaster: `apps/api/src/Api/BoundedContexts/SharedGameCatalog/Application/Services/*WikidataEnrichmentEventBroadcaster.cs`
+- Heartbeat tracker: `apps/api/src/Api/BoundedContexts/SharedGameCatalog/Application/Services/WikidataAdminClientHeartbeatTracker.cs`
 
 ---
 

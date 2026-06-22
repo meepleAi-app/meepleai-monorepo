@@ -110,6 +110,20 @@ export interface MeepleCardProps {
   rating?: number;
   ratingMax?: number;
   metadata?: MeepleCardMetadata[];
+  /**
+   * Render a small entity badge ABOVE the title (currently HeroCard only).
+   * Mockup parity: `sp3-shared-game-detail.jsx` GameHero block — pill like
+   * "🎲 GIOCO" / "🃏 SESSIONE" gives the reader a fast type signal before
+   * the title. Opt-in so existing consumers keep their current rendering.
+   */
+  showEntityLabel?: boolean;
+  /**
+   * Display text for the entity badge (e.g. "Gioco", "Sessione"). When
+   * omitted but `showEntityLabel` is true, the badge is hidden — callers
+   * must pass the user-facing localized label explicitly to keep the design
+   * system locale-agnostic.
+   */
+  entityLabel?: string;
   tags?: string[];
   status?: CardStatus;
   badge?: string;
@@ -133,6 +147,44 @@ export interface MeepleCardProps {
   customColor?: string;
   /** Optional test id forwarded to the root wrapper element. */
   'data-testid'?: string;
+  /**
+   * Issue #1823 Wave 3 M14 — license + attribution metadata for the cover
+   * image. Renders a small footer chip under the title when present
+   * (typically Wikidata-sourced covers per ADR DEC-3c whitelist).
+   *
+   * Surface depends on variant: GridCard/ListCard/CompactCard render an
+   * inline `<small>` line; HeroCard/FeaturedCard get a more prominent
+   * footer-row treatment. Variants that explicitly opt-out are responsible
+   * for omitting the prop on their consumers.
+   */
+  attribution?: CoverAttribution;
+  /**
+   * Issue #2055 Phase G AC-G6 — Wikidata cover license + attribution rendered
+   * as a plain-text footer beneath the card. Activated only for
+   * `entity === 'game'`. All three fields are optional so the footer
+   * gracefully degrades; when `wikidataCoverLicense` is null/undefined the
+   * footer renders nothing. BE strips HTML upstream per DEC-G6-1 LOCKED
+   * 2026-06-20 — render as plain text only, do NOT use
+   * `dangerouslySetInnerHTML`.
+   */
+  wikidataCoverLicense?: string | null;
+  wikidataCoverAttribution?: string | null;
+  wikidataCoverSourceUrl?: string | null;
+}
+
+/**
+ * Issue #1823 Wave 3 M14 — minimal license/attribution payload for cover
+ * imagery sourced from external providers (Wikidata Commons, BGG, etc.).
+ * All three fields are optional so the chip degrades gracefully when only
+ * a subset is known.
+ */
+export interface CoverAttribution {
+  /** Plain-text author / artist credit (e.g. "John Doe"). */
+  author?: string | null;
+  /** Whitelisted license identifier (e.g. "CC BY-SA 4.0"). */
+  license?: string | null;
+  /** Canonical source URL — rendered as a `target="_blank"` link on the license tag. */
+  sourceUrl?: string | null;
 }
 
 export interface Carousel3DProps {

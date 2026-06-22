@@ -199,6 +199,10 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
 
                 // f. Create VectorDocumentEntity
                 var vectorDocumentId = Guid.NewGuid();
+#pragma warning disable MAI005 // Out-of-scope for the #2244 / P234 refactor — admin RAG data import
+                                // is a separate ingestion path that bulk-imports pre-existing embeddings (no
+                                // domain event needed since this is import, not new indexing). Migrate to
+                                // domain.ToEntity() pattern if/when this path needs to raise events.
                 var vectorDocument = new VectorDocumentEntity
                 {
                     Id = vectorDocumentId,
@@ -212,6 +216,7 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
                     EmbeddingModel = metadata.EmbeddingModel,
                     EmbeddingDimensions = metadata.EmbeddingDimensions,
                 };
+#pragma warning restore MAI005
 
                 _db.VectorDocuments.Add(vectorDocument);
 

@@ -78,7 +78,22 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
             correlationId: correlationId,
             sourceEventId: message.SourceEventId);
 
-        await _notificationRepository.AddAsync(notification, ct).ConfigureAwait(false);
+        // Issue #2383 / ADR-068/072 follow-up: route the in-app insert through
+        // an atomic add-and-commit so the Postgres 23505 unique_violation that
+        // surfaces when ExistsBySourceEventIdAsync false-negatives under
+        // concurrent dispatch is caught at the repository boundary (mirrors
+        // LedgerEntryRepository.AddAndCommitAsync, CF-2 #1938). 10 of 25
+        // INotificationHandler implementations have no catch-all, so a
+        // bubbling DbUpdateException would surface as an unhandled exception
+        // in the MediatR pipeline.
+        var committed = await _notificationRepository.AddAndCommitAsync(notification, ct).ConfigureAwait(false);
+        if (!committed)
+        {
+            _logger.LogInformation(
+                "Skipping channel dispatch for race-window dedup: user={UserId}, type={Type}, sourceEventId={SourceEventId} (concurrent caller already persisted the in-app row)",
+                message.RecipientUserId, message.Type, message.SourceEventId);
+            return;
+        }
 
         _logger.LogInformation(
             "Created in-app notification {NotificationId} for user {UserId}, type={Type}, correlationId={CorrelationId}",

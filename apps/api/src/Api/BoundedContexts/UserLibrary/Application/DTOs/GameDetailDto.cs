@@ -52,7 +52,21 @@ internal record GameDetailDto(
     LabelDto[]? Labels = null,
 
     // Issue #1824 L3: user-custom cover R2 key (null if no custom cover)
-    string? CustomCoverR2Key = null
+    string? CustomCoverR2Key = null,
+
+    // Issue #2035 — Designer names sourced from the SharedGame catalog M:N relation.
+    // The handler always emits a list (possibly empty) for consistency with the FE
+    // consumer (apps/web/src/components/.../GameDetailDesktop.tsx reads
+    // game?.designers?.[0]?.name). Null only if the DTO is constructed without the
+    // optional parameter (e.g. legacy paths) — current handler never produces null.
+    IReadOnlyList<string>? Designers = null,
+
+    // Issue #2034 — ConnectionBar pill counts (replaces FE-side hardcoded zeros).
+    // AgentCount: total active AgentDefinitions linked to this SharedGame
+    // (community-published, cross-user — AgentDefinition.GameId points to SharedGame).
+    // ChatThreadCount: chat threads owned by the requesting user for this game.
+    int AgentCount = 0,
+    int ChatThreadCount = 0
 );
 
 /// <summary>

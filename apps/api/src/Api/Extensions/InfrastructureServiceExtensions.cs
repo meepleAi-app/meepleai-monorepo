@@ -350,6 +350,13 @@ internal static class InfrastructureServiceExtensions
         // Required for ILlmTierRoutingService and other singleton services that depend on caching
         services.AddSingleton<IHybridCacheService, HybridCacheService>();
 
+        // ADR-062: Cross-replica L1 cache invalidation subscriber
+        // Subscribes to Redis Pub/Sub channel "meepleai:cache-invalidate:tag" on startup so
+        // that any tag-scoped invalidation broadcast by another replica evicts this replica's
+        // L1 entries within sub-second latency. Required for multi-replica deploys; on a
+        // single-replica setup it remains harmless (only self-broadcast messages received).
+        services.AddHostedService<HybridCacheInvalidationSubscriber>();
+
         // AI-10: Cache optimization services
         services.Configure<CacheOptimizationConfiguration>(
             configuration.GetSection("CacheOptimization"));

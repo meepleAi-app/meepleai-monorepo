@@ -281,14 +281,25 @@ describe('sp4 navbar placement', () => {
   it('includes hub and toolkit items', () => {
     const hub = UNIFIED_NAV_ITEMS.find(item => item.id === 'hub');
     const toolkit = UNIFIED_NAV_ITEMS.find(item => item.id === 'toolkit');
-    expect(hub?.href).toBe('/hub/games');
+    // Issue #2190: hub now points to /games multi-tab hub (Asse D P2 #1899)
+    expect(hub?.href).toBe('/games');
     expect(hub?.visibility?.authOnly).toBe(true);
     expect(toolkit?.href).toBe('/toolkit');
     expect(toolkit?.group).toBe('strumenti');
   });
 
-  it('hub activePattern matches any /hub route', () => {
+  it('hub voice is labelled "Games" (Issue #2190 full cleanup)', () => {
+    const hub = UNIFIED_NAV_ITEMS.find(item => item.id === 'hub');
+    // Issue #2190: rename "Hub" voice to "Games" to disambiguate from the
+    // legacy /hub/* route family that was retired by Stage 3 #1026.
+    expect(hub?.label).toBe('Games');
+  });
+
+  it('hub activePattern matches /games or /hub routes', () => {
     const hub = UNIFIED_NAV_ITEMS.find(item => item.id === 'hub')!;
+    // Issue #2190: /games is the canonical hub; /hub/* preserved for legacy bookmarks.
+    expect(isUnifiedNavItemActive(hub, '/games')).toBe(true);
+    expect(isUnifiedNavItemActive(hub, '/games?tab=discover')).toBe(true);
     expect(isUnifiedNavItemActive(hub, '/hub/games')).toBe(true);
     expect(isUnifiedNavItemActive(hub, '/hub/agents')).toBe(true);
     expect(isUnifiedNavItemActive(hub, '/library')).toBe(false);

@@ -56,6 +56,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     // Nullable so pre-#1852 test constructors compile without adding a new mock param.
     private readonly IDomainEventCollector? _eventCollector;
 
+    private readonly IPdfIndexingPipeline _indexingPipeline;
+
     public PdfProcessingPipelineService(
         MeepleAiDbContext db,
         IPdfClaimService pdfClaimService,
@@ -68,6 +70,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         ILogger<PdfProcessingPipelineService> logger,
         ILanguageDetector languageDetector,
         IChunkTranslationService chunkTranslationService,
+        IPdfIndexingPipeline indexingPipeline,
         IRaptorIndexer? raptorIndexer = null,
         IEntityExtractor? entityExtractor = null,
         IVectorStoreAdapter? vectorStore = null,
@@ -87,6 +90,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _languageDetector = languageDetector ?? throw new ArgumentNullException(nameof(languageDetector));
         _chunkTranslationService = chunkTranslationService ?? throw new ArgumentNullException(nameof(chunkTranslationService));
+        _indexingPipeline = indexingPipeline ?? throw new ArgumentNullException(nameof(indexingPipeline));
         _raptorIndexer = raptorIndexer;
         _entityExtractor = entityExtractor;
         _vectorStore = vectorStore;
@@ -530,46 +534,46 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             switch (result.Outcome)
             {
                 case PdfCoverExtractionOutcome.Generated:
-                {
-                    var resourceKey = $"pdf-cover-{pdfDoc.Id}";
-
-                    // Upload thumb + preview as separate blobs. The CoverR2Key
-                    // we persist is the resourceKey prefix — the resolver
-                    // endpoint reconstructs `{prefix}/{size}.webp` at read time.
-                    using (var thumbStream = new MemoryStream(result.ThumbnailWebp!, writable: false))
                     {
-                        await _blobStorageService.StoreAsync(
-                            thumbStream, "thumb.webp", BlobCategory.GameImage, resourceKey, cancellationToken)
-                            .ConfigureAwait(false);
+                        var resourceKey = $"pdf-cover-{pdfDoc.Id}";
+
+                        // Upload thumb + preview as separate blobs. The CoverR2Key
+                        // we persist is the resourceKey prefix — the resolver
+                        // endpoint reconstructs `{prefix}/{size}.webp` at read time.
+                        using (var thumbStream = new MemoryStream(result.ThumbnailWebp!, writable: false))
+                        {
+                            await _blobStorageService.StoreAsync(
+                                thumbStream, "thumb.webp", BlobCategory.GameImage, resourceKey, cancellationToken)
+                                .ConfigureAwait(false);
+                        }
+                        using (var previewStream = new MemoryStream(result.PreviewWebp!, writable: false))
+                        {
+                            await _blobStorageService.StoreAsync(
+                                previewStream, "preview.webp", BlobCategory.GameImage, resourceKey, cancellationToken)
+                                .ConfigureAwait(false);
+                        }
+
+                        pdfDoc.CoverR2Key = resourceKey;
+                        pdfDoc.CoverGenerationStatus = "Generated";
+                        pdfDoc.CoverPageIndex = result.SelectedPageIndex;
+                        pdfDoc.CoverGenerationError = null;
+
+                        // Issue #1852 (Gap A): raise the propagation event so
+                        // PdfCoverGeneratedEventHandler can populate SharedGame.PdfCoverR2Key.
+                        // Dispatched by MeepleAiDbContext.SaveChangesAsync (~line 154) after
+                        // the pipeline transitions to Chunking. Guard is present so existing
+                        // test constructors that omit eventCollector keep working.
+                        _eventCollector?.Collect(new PdfCoverGeneratedEvent(
+                            pdfDocumentId: pdfDoc.Id,
+                            sharedGameId: pdfDoc.SharedGameId,
+                            coverR2Key: resourceKey,
+                            coverPageIndex: result.SelectedPageIndex ?? 0));
+
+                        _logger.LogInformation(
+                            "[PdfPipeline] Cover image generated for PDF {PdfId} from page {PageIndex} (resourceKey={ResourceKey})",
+                            pdfDoc.Id, result.SelectedPageIndex, resourceKey);
+                        break;
                     }
-                    using (var previewStream = new MemoryStream(result.PreviewWebp!, writable: false))
-                    {
-                        await _blobStorageService.StoreAsync(
-                            previewStream, "preview.webp", BlobCategory.GameImage, resourceKey, cancellationToken)
-                            .ConfigureAwait(false);
-                    }
-
-                    pdfDoc.CoverR2Key = resourceKey;
-                    pdfDoc.CoverGenerationStatus = "Generated";
-                    pdfDoc.CoverPageIndex = result.SelectedPageIndex;
-                    pdfDoc.CoverGenerationError = null;
-
-                    // Issue #1852 (Gap A): raise the propagation event so
-                    // PdfCoverGeneratedEventHandler can populate SharedGame.PdfCoverR2Key.
-                    // Dispatched by MeepleAiDbContext.SaveChangesAsync (~line 154) after
-                    // the pipeline transitions to Chunking. Guard is present so existing
-                    // test constructors that omit eventCollector keep working.
-                    _eventCollector?.Collect(new PdfCoverGeneratedEvent(
-                        pdfDocumentId: pdfDoc.Id,
-                        sharedGameId: pdfDoc.SharedGameId,
-                        coverR2Key: resourceKey,
-                        coverPageIndex: result.SelectedPageIndex ?? 0));
-
-                    _logger.LogInformation(
-                        "[PdfPipeline] Cover image generated for PDF {PdfId} from page {PageIndex} (resourceKey={ResourceKey})",
-                        pdfDoc.Id, result.SelectedPageIndex, resourceKey);
-                    break;
-                }
                 case PdfCoverExtractionOutcome.Skipped:
                     pdfDoc.CoverGenerationStatus = "Skipped";
                     pdfDoc.CoverPageIndex = result.SelectedPageIndex;
@@ -743,47 +747,30 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     {
         var chunkCount = translatedChunks.Count;
 
-        // Update or create VectorDocument record (tracking)
+        // VectorDocument create/update + domain event publication now centralised
+        // in IPdfIndexingPipeline (#2244 / epic #2242). The pipeline handles the
+        // DbUpdateConcurrencyException internally with the same "Quartz must see
+        // success" semantics this path needs.
+        await _indexingPipeline.IndexAsync(
+            pdfDocumentId: pdfDoc.Id,
+            gameId: pdfDoc.SharedGameId,
+            sharedGameId: pdfDoc.SharedGameId,
+            chunkCount: chunkCount,
+            totalCharacters: pdfDoc.ExtractedText?.Length ?? 0,
+            language: string.IsNullOrWhiteSpace(pdfDoc.Language) ? "en" : pdfDoc.Language,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        // Re-read the (now persisted) entity so the pgvector block below has
+        // its Id — the pipeline owns the SaveChanges, but the rest of this
+        // method still needs the tracked row to delete stale embeddings.
         var vectorDoc = await _db.VectorDocuments
+            .AsTracking()
             .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfDoc.Id, cancellationToken)
             .ConfigureAwait(false);
-
-        if (vectorDoc == null)
+        if (vectorDoc is null)
         {
-            vectorDoc = new VectorDocumentEntity
-            {
-                Id = Guid.NewGuid(),
-                GameId = pdfDoc.SharedGameId,
-                SharedGameId = pdfDoc.SharedGameId,
-                PdfDocumentId = pdfDoc.Id,
-                IndexingStatus = "completed",
-                ChunkCount = chunkCount,
-                TotalCharacters = pdfDoc.ExtractedText?.Length ?? 0,
-                IndexedAt = _timeProvider.GetUtcNow().UtcDateTime
-            };
-            _db.VectorDocuments.Add(vectorDoc);
-        }
-        else
-        {
-            vectorDoc.IndexingStatus = "completed";
-            vectorDoc.ChunkCount = chunkCount;
-            vectorDoc.TotalCharacters = pdfDoc.ExtractedText?.Length ?? 0;
-            vectorDoc.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
-        }
-
-        try
-        {
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (DbUpdateConcurrencyException ex)
-        {
-            MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                nameof(PdfProcessingPipelineService),
-                MeepleAiMetrics.PdfConcurrencyCategories.B);
-            _logger.LogWarning(ex,
-                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                pdfDoc.Id, nameof(PdfProcessingPipelineService));
-            return; // CRITICAL: do not throw — Quartz must see job as successful
+            // Pipeline swallowed a concurrency conflict — exit without indexing.
+            return;
         }
 
         // Index embeddings in pgvector for semantic search

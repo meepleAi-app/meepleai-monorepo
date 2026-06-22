@@ -210,7 +210,7 @@ internal static class PdfUploadTestHelpers
             MinPlayers = 2,
             MaxPlayers = 4,
             PlayingTimeMinutes = 30,
-                        CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow
         };
         context.SharedGames.Add(game);
         await context.SaveChangesAsync(ct);

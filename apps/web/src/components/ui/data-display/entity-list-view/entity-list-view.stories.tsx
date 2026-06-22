@@ -32,7 +32,7 @@ const mockGames: Game[] = [
     minPlayers: 3,
     maxPlayers: 6,
     playtime: 480,
-    imageUrl: 'https://cf.geekdo-images.com/0jySN1LmpUusSZfWwOLI9g__original/img/0dxeEjHJiuYYsOXC4xS5M8cL08Q=/0x0/filters:format(jpeg)/pic7493297.jpg',
+    imageUrl: 'https://placehold.co/600x400/4f46e5/ffffff?text=cover-187da5)/pic7493297.jpg',
   },
   {
     id: '2',
@@ -42,7 +42,7 @@ const mockGames: Game[] = [
     minPlayers: 1,
     maxPlayers: 4,
     playtime: 120,
-    imageUrl: 'https://cf.geekdo-images.com/sZYp_3BTDGjh2unaZfZmuA__original/img/pBaOL7vJBzDrs99j04-BLvmS4B8=/0x0/filters:format(jpeg)/pic2437871.jpg',
+    imageUrl: 'https://placehold.co/600x400/4f46e5/ffffff?text=cover-55b86e)/pic2437871.jpg',
   },
   {
     id: '3',
@@ -52,7 +52,7 @@ const mockGames: Game[] = [
     minPlayers: 1,
     maxPlayers: 5,
     playtime: 70,
-    imageUrl: 'https://cf.geekdo-images.com/yLZJCVLlIx4c7eJEWUNJ7w__original/img/uIjeoKgHMcRkEjGOQVGLg2JD75E=/0x0/filters:format(jpeg)/pic4458123.jpg',
+    imageUrl: 'https://placehold.co/600x400/4f46e5/ffffff?text=cover-77862b)/pic4458123.jpg',
   },
   {
     id: '4',
@@ -62,7 +62,7 @@ const mockGames: Game[] = [
     minPlayers: 2,
     maxPlayers: 4,
     playtime: 45,
-    imageUrl: 'https://cf.geekdo-images.com/aPSHJO0d0XOpQR5X-wJonw__original/img/qIncPzl-00XM5c8dnD9c9HTi-XM=/0x0/filters:format(jpeg)/pic6973671.jpg',
+    imageUrl: 'https://placehold.co/600x400/4f46e5/ffffff?text=cover-4dd855)/pic6973671.jpg',
   },
   {
     id: '5',
@@ -72,7 +72,7 @@ const mockGames: Game[] = [
     minPlayers: 2,
     maxPlayers: 2,
     playtime: 30,
-    imageUrl: 'https://cf.geekdo-images.com/WzNs1mA_o22ZXLJ9uS9MOw__original/img/S_1xSDQ82TJ2VuGzf6NfNHJFm_0=/0x0/filters:format(jpeg)/pic2576399.jpg',
+    imageUrl: 'https://placehold.co/600x400/4f46e5/ffffff?text=cover-529339)/pic2576399.jpg',
   },
   {
     id: '6',
@@ -82,7 +82,7 @@ const mockGames: Game[] = [
     minPlayers: 1,
     maxPlayers: 5,
     playtime: 120,
-    imageUrl: 'https://cf.geekdo-images.com/wg9oOLcsKvDesSUdZQ4rxw__original/img/FS1RE8Ue6nk1pNbPI3l-OSapQGc=/0x0/filters:format(jpeg)/pic3536616.jpg',
+    imageUrl: 'https://placehold.co/600x400/4f46e5/ffffff?text=cover-6a331b)/pic3536616.jpg',
   },
   {
     id: '7',
@@ -92,7 +92,7 @@ const mockGames: Game[] = [
     minPlayers: 2,
     maxPlayers: 4,
     playtime: 120,
-    imageUrl: 'https://cf.geekdo-images.com/x3zxjr-Vw5iU4yDPg70Jgw__original/img/FpyxH41Y6_ROoePAilPNEhXnzO8=/0x0/filters:format(jpeg)/pic3490053.jpg',
+    imageUrl: 'https://placehold.co/600x400/4f46e5/ffffff?text=cover-2eba80)/pic3490053.jpg',
   },
   {
     id: '8',
@@ -102,7 +102,7 @@ const mockGames: Game[] = [
     minPlayers: 1,
     maxPlayers: 4,
     playtime: 120,
-    imageUrl: 'https://cf.geekdo-images.com/0vJwP6NGa7GHPZKC3gplUw__original/img/cI7AHdRqLhx_-o28urDcmXFu3gE=/0x0/filters:format(jpeg)/pic7615963.jpg',
+    imageUrl: 'https://placehold.co/600x400/4f46e5/ffffff?text=cover-4c4ca7)/pic7615963.jpg',
   },
 ];
 

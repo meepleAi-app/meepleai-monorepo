@@ -45,7 +45,7 @@ ambiguity. Each route is also classified by **Tier** (S/M/L) to gate dispatch st
 > (umbrella #1023) until Stage 2 path-migration lands. Target path
 > `apps/web/src/components/features/gamebook/` (NON `components/v2/gamebook/` per nuove
 > implementazioni post-PR #1025). Storyboard iframe references added to
-> `nanolith-game-night-storyboard.html` (step 00 + step 11a + step E4).
+> `librogame-game-night-storyboard.html` (step 00 + step 11a + step E4 — file renamed from `nanolith-game-night-storyboard.html` post-IA consolidation #871, sync 2026-06-08 #2025).
 
 > **Updated 2026-05-12 (follow-up cleanup)** post code-review PR #1056: aggiornati
 > count references `~80 → ~83` (intro paragraph L14) e `In scope: 80 → 83` (Scope L48-50)
@@ -719,7 +719,7 @@ instead.
 | `/library/[gameId]` | `sp4-game-detail.html` + `librogame-runthrough-game-detail.html` + `librogame-runthrough-game-onboarding.html` | IA closes #871 (PR #1037); onboarding gap-coverage 2026-05-12 (pending Stage-2); libro variant audit #1551 → **0% drift** (see [libro-detail-gap-report.md](../../../admin-mockups/design_handoff/libro-detail-gap-report.md)) |
 | `/library/[gameId]/agent` | `sp4-agent-detail.html` + `sp4-game-chat-tab.html` | — |
 | `/library/[gameId]/play` | `librogame-runthrough-resume-picker.html` + `sp6-libro-game-resume-state.html` | Libro-game |
-| `/library/[gameId]/play/[campaignId]` | `librogame-runthrough-play-session.html` + `sp6-libro-game-index.html` | 4 stati v1 congelati + 3 stati SP8 companion (state-05 diary, state-06 paragrafi-drawer, state-07 end-campaign) brief 2026-05-30; nuovo jsx twin con 3 lab interattivi; deviazione narrativa dati documentata (nuovi stati riferiscono §214/Tainted Grail/Niamh, congelati §289/Eldoria/Voidstone) |
+| `/library/[gameId]/play/[campaignId]` | `librogame-runthrough-play-session.html` | 4 stati v1 congelati + 3 stati SP8 companion (state-05 diary, state-06 paragrafi-drawer, state-07 end-campaign) brief 2026-05-30; nuovo jsx twin con 3 lab interattivi; deviazione narrativa dati documentata (nuovi stati riferiscono §214/Tainted Grail/Niamh, congelati §289/Eldoria/Voidstone). NOTA: precedente reference a `sp6-libro-game-index.html` rimosso 2026-06-08 #2025 (è index `/gamebook` lista manuali, NON play-session) |
 | `/library/[gameId]/play/[campaignId]/translate` | `librogame-runthrough-translate-viewer.html` + `sp6-libro-game-photo-upload.html` | Tier S done (PR #790) |
 | `/library/[gameId]/play/[campaignId]/encounter` | `librogame-runthrough-encounter-cheatsheet.html` | Tier S done (PR #1525, parse-centric MVP; state D deferred) |
 | `/library/[gameId]/toolbox` · `/toolkit` · `/toolkit/[sessionId]` | `sp4-toolkit-detail.html` ↻ | — |
@@ -755,7 +755,7 @@ instead.
 | `/sessions/live/[id]` (+ `/agent`, `/photos`, `/players`, `/scores`) | `sp4-session-live.html` + `librogame-runthrough-session-end.html` | Consolidation 2026-05-31 applicabile (stesso pattern `?tab=`); coexistenza route fisiche da pianificare |
 | `/game-nights` | `sp4-game-nights-index.html` | Tier L pending |
 | `/game-nights/new` | `sp7-game-night-create.html` | Tier L+ DONE (PR #1297 components, PR #1302 orchestrator, PR #1305 W4 E2E + a11y + conformity entry); baseline PNGs auto-generated post-merge via bootstrap workflows |
-| `/game-nights/[id]` · `/[id]/edit` | `sp7-game-night-detail-rsvp.html` + `nanolith-game-night-storyboard.html` | Tier M done (PR #1171, RSVP cluster); tabbed/host surfaces pending |
+| `/game-nights/[id]` · `/[id]/edit` | `sp7-game-night-detail-rsvp.html` + `librogame-game-night-storyboard.html` | Tier M done (PR #1171, RSVP cluster); tabbed/host surfaces pending. NOTA: `nanolith-game-night-storyboard.html` renamed to `librogame-game-night-storyboard.html` post-IA consolidation #871 (sync 2026-06-08 #2025); edit variant gap → vedi B21 #2026 |
 
 ### Authenticated — Play Records, Toolkit, Gamebook, Agents, KB
 

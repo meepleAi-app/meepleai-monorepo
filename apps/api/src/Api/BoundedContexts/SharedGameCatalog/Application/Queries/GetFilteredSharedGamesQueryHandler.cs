@@ -1,6 +1,7 @@
 using System.Globalization;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
+using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Models;
@@ -21,15 +22,18 @@ internal sealed class GetFilteredSharedGamesQueryHandler : IRequestHandler<GetFi
     private readonly MeepleAiDbContext _context;
     private readonly IBlobStorageService _blobStorage;
     private readonly ILogger<GetFilteredSharedGamesQueryHandler> _logger;
+    private readonly IGameTitleResolver _titleResolver;
 
     public GetFilteredSharedGamesQueryHandler(
         MeepleAiDbContext context,
         IBlobStorageService blobStorage,
-        ILogger<GetFilteredSharedGamesQueryHandler> logger)
+        ILogger<GetFilteredSharedGamesQueryHandler> logger,
+        IGameTitleResolver titleResolver)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _blobStorage = blobStorage ?? throw new ArgumentNullException(nameof(blobStorage));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _titleResolver = titleResolver ?? throw new ArgumentNullException(nameof(titleResolver));
     }
 
     public async Task<PagedResult<SharedGameDto>> Handle(GetFilteredSharedGamesQuery query, CancellationToken cancellationToken)
@@ -91,6 +95,20 @@ internal sealed class GetFilteredSharedGamesQueryHandler : IRequestHandler<GetFi
 
         // Issue #1852 (Gap A): resolve cover URL (L4 → L2 priority) per entity sequentially.
         var games = new List<SharedGameDto>(entities.Count);
+
+        // Issue #2243 (epic #2242) Block B: pre-compute KbsCount per page (real chunk count from
+        // VectorDocuments) instead of hardcoding 0. Single batched query avoids N+1.
+        var pageGameIds = entities.Select(e => e.Id).ToList();
+        var kbsCountByGame = await _context.VectorDocuments
+            .AsNoTracking()
+            .Where(v => v.SharedGameId != null
+                && pageGameIds.Contains(v.SharedGameId.Value)
+                && v.IndexingStatus == "completed")
+            .GroupBy(v => v.SharedGameId!.Value)
+            .Select(grp => new { GameId = grp.Key, Count = grp.Count() })
+            .ToDictionaryAsync(x => x.GameId, x => x.Count, cancellationToken)
+            .ConfigureAwait(false);
+
         foreach (var g in entities)
         {
             var coverUrl = await CoverUrlResolver
@@ -109,8 +127,9 @@ internal sealed class GetFilteredSharedGamesQueryHandler : IRequestHandler<GetFi
                 g.MinAge,
                 g.ComplexityRating,
                 g.AverageRating,
-                g.ImageUrl,
-                g.ThumbnailUrl,
+                // Issue #2123 — tombstone fields (entity columns now nullable post Phase A).
+                g.ImageUrl ?? string.Empty,
+                g.ThumbnailUrl ?? string.Empty,
                 (GameStatus)g.Status,
                 g.CreatedAt,
                 g.ModifiedAt,
@@ -121,22 +140,32 @@ internal sealed class GetFilteredSharedGamesQueryHandler : IRequestHandler<GetFi
                 // default-argument elision (CS0854).
                 0,      // ToolkitsCount
                 0,      // AgentsCount
-                0,      // KbsCount
+                kbsCountByGame.GetValueOrDefault(g.Id, 0),  // KbsCount — issue #2243 Block B
                 0,      // NewThisWeekCount
                 0,      // ContributorsCount
                 false,  // IsTopRated
                 false,  // IsNew
-                CoverUrl: coverUrl));
+                CoverUrl: coverUrl,
+                // Issue #2055 Phase G AC-G6 — Wikidata cover attribution (HTML-stripped per DEC-G6-1).
+                WikidataCoverLicense: g.WikidataCoverLicense,
+                WikidataCoverAttribution: AttributionTextExtractor.Strip(g.WikidataCoverAttribution),
+                WikidataCoverSourceUrl: g.WikidataCoverSourceUrl));
         }
+
+        // Issue #2339 (Wave 4 Task 13 — DEC-WIRING): enrich SharedGameDto.Translations
+        // for the page. Batch one round-trip via IGameTitleResolver.GetByGameIdsAsync.
+        var enriched = await _titleResolver
+            .EnrichAsync(games, cancellationToken)
+            .ConfigureAwait(false);
 
         _logger.LogInformation(
             "Retrieved {Count} filtered shared games (Total: {Total}) for page {Page}",
-            games.Count,
+            enriched.Count,
             total,
             query.PageNumber);
 
         return new PagedResult<SharedGameDto>(
-            Items: games,
+            Items: enriched,
             Total: total,
             Page: query.PageNumber,
             PageSize: query.PageSize);

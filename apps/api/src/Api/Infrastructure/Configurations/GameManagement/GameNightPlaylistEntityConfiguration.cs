@@ -60,9 +60,14 @@ internal sealed class GameNightPlaylistEntityConfiguration : IEntityTypeConfigur
             .HasColumnName("updated_at")
             .IsRequired();
 
-        builder.Property(p => p.RowVersion)
-            .HasColumnName("row_version")
-            .IsRowVersion();
+        // Optimistic concurrency via PostgreSQL's xmin system column (Issue #2306).
+        // Replaces the silently-disabled bytea row_version (no trigger populated it).
+        // Server-owned, collision-safe (xmin = unique transaction id per row UPDATE).
+        builder.Property(p => p.Xmin)
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
 
         // Soft-delete query filter
         builder.HasQueryFilter(p => !p.IsDeleted);

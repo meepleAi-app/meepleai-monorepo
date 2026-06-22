@@ -28,6 +28,11 @@ describe('HubLayout', () => {
     expect(screen.getByRole('searchbox', { name: /cerca/i })).toBeInTheDocument();
   });
 
+  it('hides the search bar when showSearch={false} (#2193 sub#2)', () => {
+    render(<HubLayout showSearch={false}>child</HubLayout>);
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
+  });
+
   it('renders the search bar with a custom placeholder', () => {
     render(<HubLayout searchPlaceholder="Cerca giochi...">child</HubLayout>);
     expect(screen.getByRole('searchbox', { name: /cerca giochi/i })).toBeInTheDocument();

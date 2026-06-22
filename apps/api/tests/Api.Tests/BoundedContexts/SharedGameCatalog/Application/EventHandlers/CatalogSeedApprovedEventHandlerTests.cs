@@ -213,4 +213,125 @@ public sealed class CatalogSeedApprovedEventHandlerTests
         // GetByBggIdAsync should not have been called when BggId is null
         _games.Verify(r => r.GetByBggIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Issue #1823 M8.5 — WikidataQid forwarding from draft to aggregate
+    // ──────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_DraftWithWikidataQid_AssignsQidToNewSkeleton()
+    {
+        var draft = SeedFetchedDraft();
+        draft.WikidataQid = "Q98056728";
+        var approvedByUserId = Guid.NewGuid();
+
+        _drafts.Setup(r => r.GetByIdAsync(draft.Id, It.IsAny<CancellationToken>())).ReturnsAsync(draft);
+        _games.Setup(r => r.GetByBggIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+              .ReturnsAsync((SharedGame?)null);
+
+        SharedGame? added = null;
+        _games.Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()))
+              .Callback<SharedGame, CancellationToken>((g, _) => added = g)
+              .Returns(Task.CompletedTask);
+
+        await Handler().Handle(
+            new CatalogSeedApprovedEvent(draft.Id, draft.ResultingSharedGameId!.Value, approvedByUserId),
+            default);
+
+        added.Should().NotBeNull();
+        added!.WikidataQid.Should().Be("Q98056728",
+            "M8.5: forwards draft.WikidataQid to the new skeleton BEFORE persistence so M9 scheduler can pick it up immediately");
+    }
+
+    [Fact]
+    public async Task Handle_DraftWithoutWikidataQid_NewSkeletonHasNullQid()
+    {
+        var draft = SeedFetchedDraft();
+        draft.WikidataQid = null;
+
+        _drafts.Setup(r => r.GetByIdAsync(draft.Id, It.IsAny<CancellationToken>())).ReturnsAsync(draft);
+        _games.Setup(r => r.GetByBggIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+              .ReturnsAsync((SharedGame?)null);
+
+        SharedGame? added = null;
+        _games.Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()))
+              .Callback<SharedGame, CancellationToken>((g, _) => added = g)
+              .Returns(Task.CompletedTask);
+
+        await Handler().Handle(
+            new CatalogSeedApprovedEvent(draft.Id, draft.ResultingSharedGameId!.Value, Guid.NewGuid()),
+            default);
+
+        added.Should().NotBeNull();
+        added!.WikidataQid.Should().BeNull(
+            "no QID on the draft means the skeleton is left for M9 to skip with reason=qid-missing");
+    }
+
+    [Fact]
+    public async Task Handle_DraftWithWikidataQid_ExistingAggregateWithoutQid_AssignsQidToExisting()
+    {
+        var draft = SeedFetchedDraft(bggId: 12345);
+        draft.WikidataQid = "Q98056728";
+        var approvedByUserId = Guid.NewGuid();
+
+        var existing = SharedGame.CreateSkeleton("Catan", Guid.NewGuid(), TimeProvider.System, bggId: 12345);
+        existing.WikidataQid.Should().BeNull("precondition: existing aggregate has no QID yet");
+
+        _drafts.Setup(r => r.GetByIdAsync(draft.Id, It.IsAny<CancellationToken>())).ReturnsAsync(draft);
+        _games.Setup(r => r.GetByBggIdAsync(12345, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+
+        await Handler().Handle(
+            new CatalogSeedApprovedEvent(draft.Id, draft.ResultingSharedGameId!.Value, approvedByUserId),
+            default);
+
+        existing.WikidataQid.Should().Be("Q98056728",
+            "M8.5 back-fills the QID onto the existing aggregate so M9 can later enrich");
+        _games.Verify(r => r.Update(existing), Times.Once,
+            "the modified aggregate must be marked for EF update");
+        _uow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_DraftWithWikidataQid_ExistingAggregateWithSameQid_NoOp()
+    {
+        var draft = SeedFetchedDraft(bggId: 12345);
+        draft.WikidataQid = "Q98056728";
+
+        var existing = SharedGame.CreateSkeleton("Catan", Guid.NewGuid(), TimeProvider.System, bggId: 12345);
+        existing.AssignWikidataQid("Q98056728", Guid.NewGuid());
+
+        _drafts.Setup(r => r.GetByIdAsync(draft.Id, It.IsAny<CancellationToken>())).ReturnsAsync(draft);
+        _games.Setup(r => r.GetByBggIdAsync(12345, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+
+        await Handler().Handle(
+            new CatalogSeedApprovedEvent(draft.Id, draft.ResultingSharedGameId!.Value, Guid.NewGuid()),
+            default);
+
+        // Update is NOT called because we short-circuit when existing already has a QID,
+        // even if it's the same QID — the guard short-circuits on the WikidataQid presence
+        // check before attempting AssignWikidataQid.
+        _games.Verify(r => r.Update(It.IsAny<SharedGame>()), Times.Never,
+            "no domain mutation means no need to call Update");
+    }
+
+    [Fact]
+    public async Task Handle_DraftWithWikidataQid_ExistingAggregateWithDifferentQid_DoesNotOverwrite()
+    {
+        var draft = SeedFetchedDraft(bggId: 12345);
+        draft.WikidataQid = "Q98056728";
+
+        var existing = SharedGame.CreateSkeleton("Catan", Guid.NewGuid(), TimeProvider.System, bggId: 12345);
+        existing.AssignWikidataQid("Q42", Guid.NewGuid());
+
+        _drafts.Setup(r => r.GetByIdAsync(draft.Id, It.IsAny<CancellationToken>())).ReturnsAsync(draft);
+        _games.Setup(r => r.GetByBggIdAsync(12345, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+
+        await Handler().Handle(
+            new CatalogSeedApprovedEvent(draft.Id, draft.ResultingSharedGameId!.Value, Guid.NewGuid()),
+            default);
+
+        existing.WikidataQid.Should().Be("Q42",
+            "M8.5 must NOT clobber a different QID already on the aggregate (admin / human curation wins)");
+        _games.Verify(r => r.Update(It.IsAny<SharedGame>()), Times.Never);
+    }
 }

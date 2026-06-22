@@ -118,30 +118,39 @@ const nextConfig = {
   output: 'standalone', // Enable Docker-optimized output
   compress: false, // Disable compression to prevent ERR_CONTENT_DECODING_FAILED in proxy
 
-  // Issue #2209: Next.js Image optimization - configure remote image domains
+  // Issue #2209: Next.js Image optimization — configure remote image domains.
+  //
+  // Issue #2123 — BGG ToS compliance:
+  //   - Removed `cf.geekdo-images.com` and `**.boardgamegeek.com` from the
+  //     allowlist. ADR-059 §5 bans user-side BGG asset traffic.
+  //   - Removed the catch-all `{ hostname: '**' }`. Without it, every new
+  //     legitimate hostname requires an explicit PR review — this is the
+  //     true fail-closed posture the previous allowlist only pretended to
+  //     have.
+  //
+  // To add a new image host: append an entry below + justify in PR description.
+  // Adding `geekdo` or `boardgamegeek` is blocked by the `pnpm lint:bgg` CI gate
+  // and by the ESLint custom rule `local/no-bgg-host`.
   images: {
+    // Issue #2123 — custom loader runtime guard. Redirects any BGG-host src to
+    // the static placeholder + fires a beacon to /api/metrics/bgg-attempt so
+    // ops can observe the (must-be-zero) `meepleai_bgg_url_attempted_render_total`
+    // counter. See src/lib/images/safe-loader.ts for the implementation rationale.
+    loader: 'custom',
+    loaderFile: './src/lib/images/safe-loader.ts',
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'picsum.photos',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'cf.geekdo-images.com',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: '**.boardgamegeek.com',
-        pathname: '/**',
-      },
-      // Wildcard catch-all for user-provided / admin-provided image URLs
-      // (badge iconUrl, game cover images from arbitrary CDNs, etc.)
-      {
-        protocol: 'https',
-        hostname: '**',
-      },
+      // Storybook + dev placeholder service
+      { protocol: 'https', hostname: 'picsum.photos', pathname: '/**' },
+      { protocol: 'https', hostname: 'placehold.co', pathname: '/**' },
+      // Cloudflare R2 — production cover assets (covers/{gameId}/cover.webp)
+      { protocol: 'https', hostname: '**.r2.cloudflarestorage.com', pathname: '/**' },
+      { protocol: 'https', hostname: '*.r2.dev', pathname: '/**' },
+      // Wikimedia Commons — attribution back-link target + canonical asset host
+      { protocol: 'https', hostname: 'commons.wikimedia.org', pathname: '/**' },
+      { protocol: 'https', hostname: 'upload.wikimedia.org', pathname: '/**' },
+      // Self-hosted assets on the production domain
+      { protocol: 'https', hostname: 'meepleai.app', pathname: '/**' },
+      { protocol: 'https', hostname: 'staging.meepleai.app', pathname: '/**' },
     ],
   },
 
@@ -293,6 +302,14 @@ const nextConfig = {
       //   '/games/:id/strategies'  → '/discover/:id?tab=strategies'
 
       // ── Legacy redirects (pre-Issue #5039) ───────────────────────────────
+      // Issue #2190 (2026-06-13): retire /hub/games list page in favor of the
+      // canonical multi-tab hub at /games (Asse D P2 #1899, default tab=discover).
+      // The detail sub-route /hub/games/[id] remains in place (out of scope, #2118).
+      {
+        source: '/hub/games',
+        destination: '/games?tab=discover',
+        permanent: true,
+      },
       // Issue #3843: Redirect old /giochi route to new /games route
       {
         source: '/giochi/:id*',

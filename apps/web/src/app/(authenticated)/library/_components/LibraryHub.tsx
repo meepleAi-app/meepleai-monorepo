@@ -51,11 +51,11 @@ import {
   type LibraryTabConfig,
   type LibraryViewMode,
 } from '@/components/features/library';
+import { HubPageContainer } from '@/components/layout/PageContainer';
 import { useHybridHubItems } from '@/hooks/queries/useHybridHubItems';
 import { useLibrary, useRemoveGameFromLibrary } from '@/hooks/queries/useLibrary';
 import { useActivityFeed } from '@/hooks/useActivityFeed';
 import { useAdminRole } from '@/hooks/useAdminRole';
-import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 import { deriveGamesTabEntries } from '@/lib/library/games-tab-filters';
@@ -468,27 +468,16 @@ export function LibraryHub(): ReactElement {
     if (stateOverride != null) router.push(pathname);
   }, [stateOverride, router, pathname]);
 
-  // ─── MiniNav ───
-  const miniNavConfig = useMemo(
-    () => ({
-      breadcrumb: 'Libreria · Hub',
-      tabs: [
-        { id: 'hub', label: 'Hub', href: '/library' },
-        { id: 'wishlist', label: 'Wishlist', href: '/library/wishlist', count: 0 },
-      ],
-      activeTabId: 'hub',
-      primaryAction: { label: t('pages.library.hero.cta.add'), icon: '＋', onClick: handleAddGame },
-    }),
-    [t, handleAddGame]
-  );
-  useMiniNavConfig(miniNavConfig);
-
   // ─── Render ───
+  // #2158 — MiniNavSlot config rimossa: LibraryHub ha già 6 tab interne (HUB_TABS)
+  // e il CTA "+ Aggiungi gioco" vive in LibraryHeroDesktop. Registrare anche
+  // breadcrumb/tabs/primaryAction sul MiniNavSlot creava duplicazione visiva e
+  // ridondanza semantica (Hub/Wishlist non aggiungono nulla rispetto alle hub tabs).
   return (
-    <div
+    <HubPageContainer
       data-slot="library-hub-v2"
       data-state={effectiveKind}
-      className="mx-auto flex max-w-[1440px] flex-col gap-6 p-6 pb-24 sm:p-7"
+      className="gap-6 p-6 pb-24 sm:p-7"
     >
       <LibraryHeroDesktop
         labels={heroLabels}
@@ -585,6 +574,6 @@ export function LibraryHub(): ReactElement {
         onApply={setActiveFilters}
         onClear={() => setActiveFilters({})}
       />
-    </div>
+    </HubPageContainer>
   );
 }

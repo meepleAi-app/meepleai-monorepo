@@ -610,6 +610,25 @@ public class PlayRecordTests
 
     #endregion
 
+    #region Soft Delete Tests
+
+    [Fact]
+    public void SoftDelete_SetsFlagsAndRaisesEvent()
+    {
+        // Arrange
+        var record = CreateTestRecord();
+
+        // Act
+        record.SoftDelete();
+
+        // Assert
+        record.IsDeleted.Should().BeTrue();
+        record.DeletedAt.Should().NotBeNull();
+        (record.DomainEvents.Any(e => e is PlayRecordDeletedEvent)).Should().BeTrue();
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private static PlayRecord CreateTestRecord()

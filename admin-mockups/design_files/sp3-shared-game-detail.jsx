@@ -64,8 +64,6 @@ const PUB_KBS = [
   { id:'kb-wing-faq', title:'wingspan-faq-bgg.md', kind:'MD',  pages: 8,  lang:'EN', size:'180 KB' },
   { id:'kb-wing-asia', title:'wingspan-asia-rules.pdf', kind:'PDF', pages: 12, lang:'EN', size:'2.1 MB' },
   { id:'kb-wing-europe', title:'wingspan-europe.pdf', kind:'PDF', pages: 8, lang:'EN', size:'1.4 MB' },
-  { id:'kb-wing-bgg', title:'BoardGameGeek FAQ', kind:'URL', pages: null, lang:'EN', size:null,
-    url:'boardgamegeek.com/wingspan/faq' },
   { id:'kb-wing-errata', title:'wingspan-errata-2024.pdf', kind:'PDF', pages: 4, lang:'EN', size:'320 KB' },
 ];
 
